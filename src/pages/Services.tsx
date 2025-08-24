@@ -1,279 +1,224 @@
-import { useState, useEffect } from 'react';
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+import { useState } from "react";
 import { Navigation } from "@/components/layout/Navigation";
 import { Footer } from "@/components/layout/Footer";
-import { Search, Filter, Star, Clock, Users, TrendingUp, Zap } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Star, Users, Search, Package } from "lucide-react";
+import { Link } from "react-router-dom";
 
-export default function Services() {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [services, setServices] = useState([]);
-  const [loading, setLoading] = useState(true);
+const Services = () => {
+  const [searchTerm, setSearchTerm] = useState("");
 
-  // Sample services data (will be replaced with real data from Supabase)
-  const sampleServices = [
+  const topServices = [
     {
-      id: '1',
-      name: 'Instagram Followers',
-      description: 'High-quality Instagram followers from real accounts',
-      category: 'instagram',
-      price: 0.01,
-      min_quantity: 100,
-      max_quantity: 100000,
-      estimated_time: '0-1 hour',
-      features: ['Real accounts', 'No password required', 'Instant start', 'Lifetime guarantee']
+      id: 1,
+      rank: 1,
+      icon: "📦",
+      title: "Premium BOT START MIX",
+      subtitle: "BOT START • boostlega.online",
+      provider: "Direct provider",
+      activeAccounts: "3519 active accounts",
+      category: "Ads",
+      price: "$6.9",
+      featured: true
     },
     {
-      id: '2',
-      name: 'YouTube Views',
-      description: 'Boost your YouTube video views with real engagement',
-      category: 'youtube',
-      price: 0.05,
-      min_quantity: 1000,
-      max_quantity: 1000000,
-      estimated_time: '1-6 hours',
-      features: ['Real views', 'High retention', 'Safe for monetization', '24/7 support']
+      id: 2,
+      rank: 1,
+      icon: "📦",
+      title: "Premium подписчики 14 DAYS",
+      subtitle: "Telegram Premium подписчик • boostlega.online",
+      provider: "Direct provider",
+      activeAccounts: "2600 active accounts",
+      category: "Ads",
+      price: "$8.1",
+      featured: false
     },
     {
-      id: '3',
-      name: 'TikTok Likes',
-      description: 'Get more likes on your TikTok videos instantly',
-      category: 'tiktok',
-      price: 0.02,
-      min_quantity: 100,
-      max_quantity: 500000,
-      estimated_time: '0-30 minutes',
-      features: ['Instant delivery', 'Real users', 'No drop guarantee', 'Worldwide']
+      id: 3,
+      rank: 1,
+      icon: "⭐",
+      title: "Premium BOT START | NO ACTIVITY | 30 DAYS",
+      subtitle: "Premium BOT START • testagram.com",
+      provider: "Direct provider",
+      activeAccounts: "12778 active accounts",
+      category: "Ads",
+      price: "$4",
+      featured: false
     },
     {
-      id: '4',
-      name: 'Twitter Followers',
-      description: 'Grow your Twitter following with active users',
-      category: 'twitter',
-      price: 0.03,
-      min_quantity: 50,
-      max_quantity: 50000,
-      estimated_time: '1-2 hours',
-      features: ['Active users', 'Profile picture', 'Bio included', 'Safe delivery']
-    },
-    {
-      id: '5',
-      name: 'Facebook Page Likes',
-      description: 'Increase your Facebook page likes from real users',
-      category: 'facebook',
-      price: 0.04,
-      min_quantity: 100,
-      max_quantity: 100000,
-      estimated_time: '2-4 hours',
-      features: ['Real users', 'Mixed gender', 'Worldwide', 'No password']
-    },
-    {
-      id: '6',
-      name: 'LinkedIn Connections',
-      description: 'Professional LinkedIn connections for networking',
-      category: 'linkedin',
-      price: 0.08,
-      min_quantity: 50,
-      max_quantity: 10000,
-      estimated_time: '6-12 hours',
-      features: ['Professional profiles', 'Real accounts', 'Slow delivery', 'Safe method']
+      id: 4,
+      rank: 1,
+      icon: "🎯",
+      title: "IG ru Подписчики RU HQ ( 6 ≡ 30 )",
+      subtitle: "Instagram подписчик (таргет) • asmm.pro",
+      provider: "Direct provider",
+      activeAccounts: "8500 active accounts",
+      category: "Ads",
+      price: "$5.4",
+      featured: false
     }
   ];
 
-  const categories = [
-    { id: 'all', name: 'All Services', icon: '🌟' },
-    { id: 'instagram', name: 'Instagram', icon: '📸' },
-    { id: 'youtube', name: 'YouTube', icon: '🎥' },
-    { id: 'tiktok', name: 'TikTok', icon: '🎵' },
-    { id: 'twitter', name: 'Twitter', icon: '🐦' },
-    { id: 'facebook', name: 'Facebook', icon: '👥' },
-    { id: 'linkedin', name: 'LinkedIn', icon: '💼' }
+  const socialPlatforms = [
+    { id: 'all', name: 'All', color: 'bg-blue-500' },
+    { id: 'telegram', name: 'Telegram', color: 'bg-blue-400' },
+    { id: 'instagram', name: 'Instagram', color: 'bg-pink-500' },
+    { id: 'tiktok', name: 'TikTok', color: 'bg-black' },
+    { id: 'vk', name: 'VK', color: 'bg-blue-600' },
+    { id: 'youtube', name: 'Youtube', color: 'bg-red-500' },
+    { id: 'facebook', name: 'Facebook', color: 'bg-blue-700' },
+    { id: 'twitter', name: 'Twitter', color: 'bg-sky-400' }
   ];
 
-  useEffect(() => {
-    const fetchServices = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('services')
-          .select('*')
-          .eq('is_active', true);
-        
-        if (error) throw error;
-        
-        // Use sample data if no services in database
-        setServices(data?.length > 0 ? data : sampleServices);
-      } catch (error) {
-        console.error('Error fetching services:', error);
-        setServices(sampleServices);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchServices();
-  }, []);
-
-  const filteredServices = services.filter(service => {
-    const matchesSearch = service.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         service.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || service.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
-
-  const getCategoryIcon = (category: string) => {
-    const cat = categories.find(c => c.id === category);
-    return cat ? cat.icon : '🌟';
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-secondary/10">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-purple-900">
       <Navigation />
       
-      {/* Hero Section */}
-      <section className="pt-20 pb-12">
-        <div className="container mx-auto px-4">
-          <div className="text-center max-w-4xl mx-auto mb-12">
-            <h1 className="text-5xl font-bold bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent mb-6">
-              Premium SMM Services
-            </h1>
-            <p className="text-xl text-muted-foreground">
-              Choose from our wide range of high-quality social media marketing services
-            </p>
+      <div className="container mx-auto px-4 pt-32 pb-16">
+        {/* Header Section */}
+        <div className="text-center mb-12">
+          <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-6">
+            <span className="text-2xl">🚀</span>
           </div>
-          
-          {/* Search and Filter */}
-          <div className="max-w-2xl mx-auto mb-8">
-            <div className="relative">
-              <Search className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+          <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
+            Top SMM Panel Services
+          </h1>
+          <p className="text-gray-300 text-lg max-w-2xl mx-auto mb-2">
+            Choose the best services
+          </p>
+          <p className="text-gray-400 text-sm">
+            Top is calculated by service money flow, so this is the list of biggest services
+          </p>
+        </div>
+
+        {/* Search and Filter Section */}
+        <div className="max-w-4xl mx-auto mb-8">
+          <div className="flex flex-col md:flex-row gap-4 mb-6">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
               <Input
-                placeholder="Search services..."
+                placeholder="likes instagram"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 h-12 text-lg"
+                className="pl-10 bg-slate-800 border-slate-700 text-white placeholder-gray-400"
               />
             </div>
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white px-8">
+              Search
+            </Button>
           </div>
-          
-          {/* Category Tabs */}
-          <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="max-w-4xl mx-auto">
-            <TabsList className="grid grid-cols-4 md:grid-cols-7 mb-8">
-              {categories.map(category => (
-                <TabsTrigger key={category.id} value={category.id} className="text-xs md:text-sm">
-                  <span className="mr-1">{category.icon}</span>
-                  <span className="hidden md:inline">{category.name}</span>
-                  <span className="md:hidden">{category.name.split(' ')[0]}</span>
-                </TabsTrigger>
-              ))}
+
+          <Tabs defaultValue="services" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 bg-slate-800 border-slate-700">
+              <TabsTrigger value="providers" className="text-gray-300">Providers</TabsTrigger>
+              <TabsTrigger value="services" className="text-gray-300">Services</TabsTrigger>
             </TabsList>
           </Tabs>
-        </div>
-      </section>
 
-      {/* Services Grid */}
-      <section className="pb-20">
-        <div className="container mx-auto px-4">
-          {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[...Array(6)].map((_, i) => (
-                <Card key={i} className="p-6 animate-pulse">
-                  <div className="h-4 bg-muted rounded mb-4"></div>
-                  <div className="h-3 bg-muted rounded mb-2"></div>
-                  <div className="h-3 bg-muted rounded mb-4"></div>
-                  <div className="h-8 bg-muted rounded"></div>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredServices.map((service) => (
-                <Card key={service.id} className="p-6 bg-card/70 backdrop-blur-sm hover:bg-card/90 transition-all hover-scale border-primary/10 hover:border-primary/30">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <span className="text-2xl">{getCategoryIcon(service.category)}</span>
-                      <Badge variant="secondary" className="capitalize">
-                        {service.category}
-                      </Badge>
+          <div className="flex justify-end mt-4">
+            <Select defaultValue="usd">
+              <SelectTrigger className="w-32 bg-slate-800 border-slate-700 text-white">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="usd">USD</SelectItem>
+                <SelectItem value="eur">EUR</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Social Platform Filters */}
+        <div className="flex flex-wrap justify-center gap-2 mb-8">
+          {socialPlatforms.map((platform) => (
+            <Button
+              key={platform.id}
+              variant={platform.id === 'all' ? 'default' : 'outline'}
+              size="sm"
+              className={`${platform.id === 'all' ? 'bg-blue-600' : 'bg-slate-800 border-slate-700 text-gray-300'} hover:bg-opacity-80`}
+            >
+              {platform.name}
+            </Button>
+          ))}
+        </div>
+
+        {/* Services List */}
+        <div className="max-w-6xl mx-auto space-y-4">
+          {topServices.map((service) => (
+            <Card key={service.id} className="bg-slate-800/50 border-slate-700 hover:bg-slate-800/70 transition-colors">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="text-2xl font-bold text-gray-400 min-w-[2rem]">
+                      {service.rank}
                     </div>
-                    <div className="flex items-center gap-1 text-yellow-500">
-                      <Star className="h-4 w-4 fill-current" />
-                      <span className="text-sm font-medium">4.9</span>
-                    </div>
-                  </div>
-                  
-                  <h3 className="text-xl font-bold mb-2">{service.name}</h3>
-                  <p className="text-muted-foreground mb-4 line-clamp-2">{service.description}</p>
-                  
-                  <div className="space-y-3 mb-6">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="flex items-center gap-1">
-                        <TrendingUp className="h-4 w-4" />
-                        Price per 1K
-                      </span>
-                      <span className="font-bold text-primary">${service.price.toFixed(3)}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="flex items-center gap-1">
-                        <Users className="h-4 w-4" />
-                        Min/Max
-                      </span>
-                      <span>{service.min_quantity.toLocaleString()} - {service.max_quantity.toLocaleString()}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-4 w-4" />
-                        Delivery
-                      </span>
-                      <span>{service.estimated_time}</span>
-                    </div>
-                  </div>
-                  
-                  {service.features && (
-                    <div className="mb-6">
-                      <div className="flex flex-wrap gap-1">
-                        {service.features.slice(0, 3).map((feature, index) => (
-                          <Badge key={index} variant="outline" className="text-xs">
-                            {feature}
-                          </Badge>
-                        ))}
-                        {service.features.length > 3 && (
-                          <Badge variant="outline" className="text-xs">
-                            +{service.features.length - 3} more
-                          </Badge>
-                        )}
+                    
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-slate-700 rounded flex items-center justify-center">
+                        <span className="text-lg">{service.icon}</span>
+                      </div>
+                      
+                      <div>
+                        <h3 className="text-white font-semibold text-lg">{service.title}</h3>
+                        <p className="text-gray-400 text-sm">{service.subtitle}</p>
                       </div>
                     </div>
-                  )}
-                  
-                  <Button asChild className="w-full">
-                    <Link to={`/new-order?service=${service.id}`}>
-                      <Zap className="mr-2 h-4 w-4" />
-                      Order Now
-                    </Link>
-                  </Button>
-                </Card>
-              ))}
-            </div>
-          )}
-          
-          {!loading && filteredServices.length === 0 && (
-            <div className="text-center py-12">
-              <div className="text-6xl mb-4">🔍</div>
-              <h3 className="text-2xl font-bold mb-2">No services found</h3>
-              <p className="text-muted-foreground">
-                Try adjusting your search terms or category filter
-              </p>
-            </div>
-          )}
-        </div>
-      </section>
+                  </div>
 
+                  <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="destructive" className="bg-red-600 text-white">
+                        {service.provider}
+                      </Badge>
+                      <div className="flex items-center gap-1 text-green-400">
+                        <Users className="w-4 h-4" />
+                        <span className="text-sm">{service.activeAccounts}</span>
+                      </div>
+                    </div>
+
+                    <Badge variant="secondary" className="bg-slate-700 text-gray-300">
+                      {service.category}
+                    </Badge>
+
+                    <div className="text-right">
+                      <div className="text-xl font-bold text-white">≈ {service.price}</div>
+                    </div>
+
+                    <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                      Buy
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* CTA Section */}
+        <div className="mt-16 text-center">
+          <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-secondary/5 max-w-2xl mx-auto">
+            <CardContent className="p-8">
+              <h3 className="text-2xl font-bold mb-4 text-white">Want to List Your Services?</h3>
+              <p className="text-gray-300 mb-6">
+                Join our platform and showcase your SMM services to thousands of potential customers
+              </p>
+              <Button asChild size="lg" className="bg-gradient-primary hover:shadow-glow">
+                <Link to="/auth">Get Started</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+      
       <Footer />
     </div>
   );
-}
+};
+
+export default Services;

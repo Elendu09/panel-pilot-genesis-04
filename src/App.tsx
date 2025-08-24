@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,13 +9,11 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { HelmetProvider } from "react-helmet-async";
 import Index from "./pages/Index";
-import CreatePanel from "./pages/CreatePanel";
-import BestServices from "./pages/BestServices";
+import Services from "./pages/Services";
 import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 import PanelOwnerDashboard from "./pages/PanelOwnerDashboard";
 import PanelOnboarding from "./pages/panel/PanelOnboarding";
 import NotFound from "./pages/NotFound";
-import Services from "./pages/Services";
 import NewOrder from "./pages/NewOrder";
 import OrderManagement from "./pages/OrderManagement";
 import Features from "./pages/Features";
@@ -45,8 +44,7 @@ const App = () => (
             <BrowserRouter>
               <Routes>
                 <Route path="/" element={<Index />} />
-                <Route path="/create-panel" element={<CreatePanel />} />
-                <Route path="/best-services" element={<BestServices />} />
+                <Route path="/services" element={<Services />} />
                 <Route path="/theme-one" element={<ThemeOne />} />
                 <Route path="/theme-two" element={<ThemeTwo />} />
                 <Route path="/theme-three" element={<ThemeThree />} />
@@ -56,9 +54,8 @@ const App = () => (
                 <Route path="/pricing" element={<Pricing />} />
                 <Route path="/docs" element={<Documentation />} />
                 <Route path="/contact" element={<Contact />} />
-                <Route path="/services" element={<Services />} />
-        <Route path="/new-order" element={<NewOrder />} />
-        <Route path="/orders" element={<OrderManagement />} />
+                <Route path="/new-order" element={<NewOrder />} />
+                <Route path="/orders" element={<OrderManagement />} />
                 <Route path="/user-home" element={<UserHome />} />
                 
                 {/* Admin Portal - Super Admin Dashboard */}
