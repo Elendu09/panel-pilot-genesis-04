@@ -17,6 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { BottomNav } from "@/components/ui/bottom-nav";
 import ProviderManagement from "./panel/ProviderManagement";
 import GeneralSettings from "./panel/GeneralSettings";
 import PaymentMethods from "./panel/PaymentMethods";
@@ -45,6 +46,13 @@ const PanelOwnerDashboard = () => {
     { name: 'Support', href: '/panel/support', icon: MessageSquare },
   ];
 
+  const bottomNavItems = [
+    { name: 'Dashboard', href: '/panel', icon: LayoutDashboard },
+    { name: 'Services', href: '/panel/services', icon: Package },
+    { name: 'Orders', href: '/panel/orders', icon: CreditCard, badge: 3 },
+    { name: 'Analytics', href: '/panel/analytics', icon: BarChart3 },
+  ];
+
   const { signOut } = useAuth();
 
   const isActive = (path: string) => location.pathname === path;
@@ -63,11 +71,17 @@ const PanelOwnerDashboard = () => {
         <link rel="canonical" href={canonicalUrl} />
       </Helmet>
       {/* Sidebar */}
-      <div className={`${sidebarOpen ? 'w-64' : 'w-16'} bg-card border-r border-border transition-all duration-300`}>
+      <div className={`hidden md:block ${sidebarOpen ? 'w-64' : 'w-16'} bg-card border-r border-border transition-all duration-300`}>
         <div className="p-4">
           <div className="flex items-center justify-between">
-            <div className={`${sidebarOpen ? 'block' : 'hidden'}`}>
-              <h2 className="text-lg font-semibold">Panel Owner</h2>
+            <div className={`${sidebarOpen ? 'block' : 'hidden'} flex items-center gap-2`}>
+              <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
+                <Package className="w-4 h-4 text-primary-foreground" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold">Panel Owner</h2>
+                <p className="text-xs text-muted-foreground">SMM Manager</p>
+              </div>
             </div>
             <div className="flex items-center space-x-2">
               <ThemeToggle />
@@ -112,7 +126,7 @@ const PanelOwnerDashboard = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 p-8">
+      <div className="flex-1 p-4 md:p-8 pb-20 md:pb-8">
         <Routes>
           <Route index element={<PanelOverview />} />
           <Route path="services" element={<div>Services Management (Coming Soon)</div>} />
@@ -124,6 +138,9 @@ const PanelOwnerDashboard = () => {
           <Route path="support" element={<SupportCenter />} />
         </Routes>
       </div>
+
+      {/* Mobile Bottom Navigation */}
+      <BottomNav items={bottomNavItems} />
     </div>
   );
 };

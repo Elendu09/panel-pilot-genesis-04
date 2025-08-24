@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { BottomNav } from "@/components/ui/bottom-nav";
 import PanelManagement from "./admin/PanelManagement";
 import UserManagement from "./admin/UserManagement";
 import PlatformSettings from "./admin/PlatformSettings";
@@ -34,6 +35,13 @@ const SuperAdminDashboard = () => {
     { name: 'Payments', href: '/admin/payments', icon: CreditCard },
   ];
 
+  const bottomNavItems = [
+    { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
+    { name: 'Panels', href: '/admin/panels', icon: BarChart3 },
+    { name: 'Users', href: '/admin/users', icon: Users },
+    { name: 'Settings', href: '/admin/settings', icon: Settings },
+  ];
+
   const isActive = (path: string) => location.pathname === path;
 
 
@@ -46,11 +54,17 @@ const SuperAdminDashboard = () => {
         <link rel="canonical" href={canonicalUrl} />
       </Helmet>
       {/* Sidebar */}
-      <div className={`${sidebarOpen ? 'w-64' : 'w-16'} bg-card border-r border-border transition-all duration-300`}>
+      <div className={`hidden md:block ${sidebarOpen ? 'w-64' : 'w-16'} bg-card border-r border-border transition-all duration-300`}>
         <div className="p-4">
           <div className="flex items-center justify-between">
-            <div className={`${sidebarOpen ? 'block' : 'hidden'}`}>
-              <h2 className="text-lg font-semibold">Super Admin</h2>
+            <div className={`${sidebarOpen ? 'block' : 'hidden'} flex items-center gap-2`}>
+              <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
+                <Shield className="w-4 h-4 text-primary-foreground" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold">Super Admin</h2>
+                <p className="text-xs text-muted-foreground">System Control</p>
+              </div>
             </div>
             <div className="flex items-center space-x-2">
               <ThemeToggle />
@@ -94,7 +108,7 @@ const SuperAdminDashboard = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 p-8">
+      <div className="flex-1 p-4 md:p-8 pb-20 md:pb-8">
         <Routes>
           <Route index element={<AdminOverview />} />
           <Route path="panels" element={<PanelManagement />} />
@@ -104,6 +118,9 @@ const SuperAdminDashboard = () => {
           <Route path="payments" element={<div>Payment Management (Coming Soon)</div>} />
         </Routes>
       </div>
+
+      {/* Mobile Bottom Navigation */}
+      <BottomNav items={bottomNavItems} />
     </div>
   );
 };

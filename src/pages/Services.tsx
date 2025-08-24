@@ -8,8 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Star, Users, Search, Package } from "lucide-react";
+import { Star, Users, Search, Package, TrendingUp, Shield, Clock, CheckCircle } from "lucide-react";
 import { Link } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 
 const Services = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -77,23 +78,29 @@ const Services = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-purple-900">
+    <div className="min-h-screen bg-gradient-hero">
+      <Helmet>
+        <title>Top SMM Services | SMMPilot Platform</title>
+        <meta name="description" content="Discover the best SMM panel services with high quality providers, competitive pricing, and reliable delivery for Instagram, YouTube, TikTok and more." />
+        <meta name="keywords" content="SMM services, social media marketing, instagram followers, youtube subscribers, tiktok likes, best SMM panel" />
+        <link rel="canonical" href={`${typeof window !== 'undefined' ? window.location.origin : ''}/services`} />
+      </Helmet>
       <Navigation />
       
       <div className="container mx-auto px-4 pt-32 pb-16">
         {/* Header Section */}
         <div className="text-center mb-12">
-          <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-6">
-            <span className="text-2xl">🚀</span>
+          <div className="w-16 h-16 bg-gradient-primary rounded-full flex items-center justify-center mx-auto mb-6 shadow-glow">
+            <TrendingUp className="w-8 h-8 text-primary-foreground" />
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
+          <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-primary bg-clip-text text-transparent">
             Top SMM Panel Services
           </h1>
-          <p className="text-gray-300 text-lg max-w-2xl mx-auto mb-2">
-            Choose the best services
+          <p className="text-muted-foreground text-lg max-w-2xl mx-auto mb-2">
+            Premium quality services with proven performance
           </p>
-          <p className="text-gray-400 text-sm">
-            Top is calculated by service money flow, so this is the list of biggest services
+          <p className="text-muted-foreground/70 text-sm">
+            Ranked by service quality, reliability and customer satisfaction
           </p>
         </div>
 
@@ -101,47 +108,52 @@ const Services = () => {
         <div className="max-w-4xl mx-auto mb-8">
           <div className="flex flex-col md:flex-row gap-4 mb-6">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+              <Search className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
               <Input
-                placeholder="likes instagram"
+                placeholder="Search services (e.g., instagram likes, youtube views)"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-slate-800 border-slate-700 text-white placeholder-gray-400"
+                className="pl-10 bg-card border-border text-foreground placeholder-muted-foreground"
               />
             </div>
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white px-8">
+            <Button className="bg-gradient-primary hover:shadow-glow px-8">
+              <Search className="w-4 h-4 mr-2" />
               Search
             </Button>
           </div>
 
           <Tabs defaultValue="services" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 bg-slate-800 border-slate-700">
-              <TabsTrigger value="providers" className="text-gray-300">Providers</TabsTrigger>
-              <TabsTrigger value="services" className="text-gray-300">Services</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 bg-card border-border">
+              <TabsTrigger value="providers">Top Providers</TabsTrigger>
+              <TabsTrigger value="services">All Services</TabsTrigger>
             </TabsList>
           </Tabs>
 
           <div className="flex justify-end mt-4">
             <Select defaultValue="usd">
-              <SelectTrigger className="w-32 bg-slate-800 border-slate-700 text-white">
+              <SelectTrigger className="w-32 bg-card border-border">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="usd">USD</SelectItem>
-                <SelectItem value="eur">EUR</SelectItem>
+                <SelectItem value="usd">USD $</SelectItem>
+                <SelectItem value="eur">EUR €</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
 
         {/* Social Platform Filters */}
-        <div className="flex flex-wrap justify-center gap-2 mb-8">
+        <div className="flex flex-wrap justify-center gap-3 mb-8">
           {socialPlatforms.map((platform) => (
             <Button
               key={platform.id}
               variant={platform.id === 'all' ? 'default' : 'outline'}
               size="sm"
-              className={`${platform.id === 'all' ? 'bg-blue-600' : 'bg-slate-800 border-slate-700 text-gray-300'} hover:bg-opacity-80`}
+              className={`transition-all duration-300 ${
+                platform.id === 'all' 
+                  ? 'bg-gradient-primary shadow-glow' 
+                  : 'bg-card border-border hover:border-primary/50 hover:bg-card/80'
+              }`}
             >
               {platform.name}
             </Button>
@@ -151,47 +163,54 @@ const Services = () => {
         {/* Services List */}
         <div className="max-w-6xl mx-auto space-y-4">
           {topServices.map((service) => (
-            <Card key={service.id} className="bg-slate-800/50 border-slate-700 hover:bg-slate-800/70 transition-colors">
+            <Card key={service.id} className="bg-card/50 border-border/50 hover:bg-card/80 hover:border-primary/20 transition-all duration-300 group">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <div className="text-2xl font-bold text-gray-400 min-w-[2rem]">
-                      {service.rank}
+                    <div className="text-2xl font-bold text-primary min-w-[2rem] bg-gradient-primary bg-clip-text text-transparent">
+                      #{service.rank}
                     </div>
                     
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-slate-700 rounded flex items-center justify-center">
+                      <div className="w-10 h-10 bg-gradient-primary rounded-lg flex items-center justify-center shadow-glow group-hover:scale-110 transition-transform">
                         <span className="text-lg">{service.icon}</span>
                       </div>
                       
                       <div>
-                        <h3 className="text-white font-semibold text-lg">{service.title}</h3>
-                        <p className="text-gray-400 text-sm">{service.subtitle}</p>
+                        <h3 className="font-semibold text-lg text-foreground group-hover:text-primary transition-colors">{service.title}</h3>
+                        <p className="text-muted-foreground text-sm">{service.subtitle}</p>
                       </div>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-6">
                     <div className="flex items-center gap-2">
-                      <Badge variant="destructive" className="bg-red-600 text-white">
+                      <Badge className="bg-gradient-success text-white border-0">
+                        <Shield className="w-3 h-3 mr-1" />
                         {service.provider}
                       </Badge>
-                      <div className="flex items-center gap-1 text-green-400">
+                      <div className="flex items-center gap-1 text-primary">
                         <Users className="w-4 h-4" />
-                        <span className="text-sm">{service.activeAccounts}</span>
+                        <span className="text-sm font-medium">{service.activeAccounts}</span>
                       </div>
                     </div>
 
-                    <Badge variant="secondary" className="bg-slate-700 text-gray-300">
+                    <Badge variant="secondary" className="bg-accent text-accent-foreground">
+                      <Package className="w-3 h-3 mr-1" />
                       {service.category}
                     </Badge>
 
                     <div className="text-right">
-                      <div className="text-xl font-bold text-white">≈ {service.price}</div>
+                      <div className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">≈ {service.price}</div>
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                        <span>4.9</span>
+                      </div>
                     </div>
 
-                    <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-                      Buy
+                    <Button className="bg-gradient-primary hover:shadow-glow transition-all duration-300">
+                      <Package className="w-4 h-4 mr-2" />
+                      Order Now
                     </Button>
                   </div>
                 </div>
@@ -202,15 +221,29 @@ const Services = () => {
 
         {/* CTA Section */}
         <div className="mt-16 text-center">
-          <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-secondary/5 max-w-2xl mx-auto">
+          <Card className="border-primary/20 bg-gradient-card max-w-2xl mx-auto shadow-elegant">
             <CardContent className="p-8">
-              <h3 className="text-2xl font-bold mb-4 text-white">Want to List Your Services?</h3>
-              <p className="text-gray-300 mb-6">
-                Join our platform and showcase your SMM services to thousands of potential customers
+              <div className="flex items-center justify-center mb-4">
+                <div className="w-12 h-12 bg-gradient-primary rounded-full flex items-center justify-center shadow-glow">
+                  <TrendingUp className="w-6 h-6 text-primary-foreground" />
+                </div>
+              </div>
+              <h3 className="text-2xl font-bold mb-4 bg-gradient-primary bg-clip-text text-transparent">Want to List Your Services?</h3>
+              <p className="text-muted-foreground mb-6 leading-relaxed">
+                Join thousands of successful SMM providers and showcase your services to a global audience. 
+                Get verified, build trust, and grow your business with our platform.
               </p>
-              <Button asChild size="lg" className="bg-gradient-primary hover:shadow-glow">
-                <Link to="/auth">Get Started</Link>
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Button asChild size="lg" className="bg-gradient-primary hover:shadow-glow">
+                  <Link to="/auth">
+                    <CheckCircle className="w-5 h-5 mr-2" />
+                    Become a Provider
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" size="lg">
+                  <Link to="/contact">Learn More</Link>
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>

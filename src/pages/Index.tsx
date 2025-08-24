@@ -12,7 +12,7 @@ const Index = () => {
   const canonicalUrl = typeof window !== 'undefined' ? window.location.origin : '';
   
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background dark">
       <Helmet>
         <title>SMMPilot - Professional SMM Panel Platform</title>
         <meta 
