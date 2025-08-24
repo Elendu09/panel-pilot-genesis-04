@@ -1,8 +1,10 @@
+
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ServiceShowcase } from "./ServiceShowcase";
 import { AnimatedText } from "@/components/ui/animated-text";
+
 export const HeroSection = () => {
   return <>
       <section className="relative min-h-screen bg-gradient-hero overflow-hidden perspective-1000">
@@ -52,12 +54,14 @@ export const HeroSection = () => {
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
               <Button asChild size="lg" className="bg-gradient-primary hover:shadow-glow text-lg px-8 py-6 rounded-full">
-                <Link to="/register">
+                <Link to="/create-panel">
                   Create panel <ArrowRight className="ml-2 w-5 h-5" />
                 </Link>
               </Button>
-              <Button variant="outline" size="lg" className="text-lg px-8 py-6 border-primary/30 hover:bg-primary/10 rounded-full">
-                Best SMM services
+              <Button asChild variant="outline" size="lg" className="text-lg px-8 py-6 border-primary/30 hover:bg-primary/10 rounded-full">
+                <Link to="/best-services">
+                  Best SMM services
+                </Link>
               </Button>
             </div>
           </div>

@@ -1,20 +1,23 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Menu, X, Zap, Users, Shield, LogOut } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
 export const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { user, profile, signOut } = useAuth();
+  const location = useLocation();
+  const isHomepage = location.pathname === '/';
 
   const getDashboardPath = () => {
     switch (profile?.role) {
-      case 'super_admin':
+      case 'admin':
         return '/admin';
       case 'panel_owner':
-        return '/user';
+        return '/panel';
       case 'buyer':
         return '/client';
       default:
@@ -52,7 +55,7 @@ export const Navigation = () => {
           </div>
 
           <div className="hidden md:flex items-center space-x-4">
-            <ThemeToggle />
+            {!isHomepage && <ThemeToggle />}
             {user ? (
               <div className="flex items-center space-x-4">
                 <span className="text-sm text-muted-foreground">
@@ -107,7 +110,7 @@ export const Navigation = () => {
                 Contact
               </Link>
               <div className="flex flex-col space-y-2 pt-4">
-                <ThemeToggle />
+                {!isHomepage && <ThemeToggle />}
                 {user ? (
                   <div className="space-y-2">
                     <div className="px-4 py-2 text-sm text-muted-foreground border-b">

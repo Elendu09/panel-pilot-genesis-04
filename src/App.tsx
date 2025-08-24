@@ -8,6 +8,8 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { HelmetProvider } from "react-helmet-async";
 import Index from "./pages/Index";
+import CreatePanel from "./pages/CreatePanel";
+import BestServices from "./pages/BestServices";
 import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 import PanelOwnerDashboard from "./pages/PanelOwnerDashboard";
 import PanelOnboarding from "./pages/panel/PanelOnboarding";
@@ -43,6 +45,8 @@ const App = () => (
             <BrowserRouter>
               <Routes>
                 <Route path="/" element={<Index />} />
+                <Route path="/create-panel" element={<CreatePanel />} />
+                <Route path="/best-services" element={<BestServices />} />
                 <Route path="/theme-one" element={<ThemeOne />} />
                 <Route path="/theme-two" element={<ThemeTwo />} />
                 <Route path="/theme-three" element={<ThemeThree />} />
