@@ -15,14 +15,10 @@ const Index = () => {
   // Force dark mode on homepage only (without changing saved preference)
   useEffect(() => {
     const root = document.documentElement;
-    const prevWasLight = root.classList.contains('light');
+    // Only enforce dark here; do not "restore" on unmount to avoid overriding dashboard toggles.
     root.classList.remove('light');
     root.classList.add('dark');
-    return () => {
-      // Restore previous preference when leaving homepage
-      root.classList.remove('dark');
-      if (prevWasLight) root.classList.add('light');
-    };
+    // No cleanup: the ThemeProvider will handle other routes correctly.
   }, []);
   
   return (

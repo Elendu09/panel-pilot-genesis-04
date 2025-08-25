@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Routes, Route, Link, useLocation } from "react-router-dom";
 import { 
@@ -46,7 +47,6 @@ const SuperAdminDashboard = () => {
 
   const isActive = (path: string) => location.pathname === path;
 
-
   return (
     <div className="min-h-screen bg-background flex">
       <Helmet>
@@ -56,15 +56,15 @@ const SuperAdminDashboard = () => {
         <link rel="canonical" href={canonicalUrl} />
       </Helmet>
       {/* Sidebar */}
-      <div className={`hidden md:block ${sidebarOpen ? 'w-64' : 'w-20'} bg-card border-r border-border transition-all duration-300 relative`}>
+      <div className={`hidden md:block ${sidebarOpen ? 'w-72' : 'w-24'} bg-card border-r border-border transition-all duration-300 relative`}>
         <div className="p-4">
           <div className="flex items-center justify-between">
-            <div className={`${sidebarOpen ? 'block' : 'hidden'} flex items-center gap-2`}>
-              <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
-                <Shield className="w-4 h-4 text-primary-foreground" />
+            <div className={`${sidebarOpen ? 'flex' : 'hidden'} items-center gap-3`}>
+              <div className="w-9 h-9 bg-gradient-primary rounded-lg flex items-center justify-center">
+                <Shield className="w-5 h-5 text-primary-foreground" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold">Super Admin</h2>
+                <h2 className="text-base font-semibold leading-tight">Super Admin</h2>
                 <p className="text-xs text-muted-foreground">System Control</p>
               </div>
             </div>
@@ -74,37 +74,38 @@ const SuperAdminDashboard = () => {
                 variant="ghost"
                 size="sm"
                 onClick={() => setSidebarOpen(!sidebarOpen)}
+                aria-label="Toggle sidebar"
               >
-                {sidebarOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+                {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </Button>
             </div>
           </div>
         </div>
 
-        <nav className="px-4 space-y-2">
+        <nav className={`px-3 space-y-2 ${sidebarOpen ? '' : 'pt-4'}`}>
           {navigation.map((item) => (
             <Link
               key={item.name}
               to={item.href}
               title={item.name}
-              className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors ${
+              className={`group flex items-center rounded-lg transition-colors ${
                 isActive(item.href)
                   ? 'bg-primary text-primary-foreground'
                   : 'text-muted-foreground hover:text-foreground hover:bg-accent'
-              } ${sidebarOpen ? 'justify-start' : 'justify-center px-2'}`}
+              } ${sidebarOpen ? 'justify-start px-3 py-2 gap-3' : 'justify-center px-0 py-3'}`}
             >
-              <item.icon className="w-6 h-6" />
-              {sidebarOpen && <span>{item.name}</span>}
+              <item.icon className={`${sidebarOpen ? 'w-5 h-5' : 'w-7 h-7'} shrink-0`} />
+              {sidebarOpen && <span className="text-sm font-medium">{item.name}</span>}
             </Link>
           ))}
         </nav>
 
-        <div className="absolute bottom-4 left-4 right-4">
+        <div className="absolute bottom-4 left-3 right-3">
           <Button
             variant="ghost"
-            className="w-full justify-start text-muted-foreground hover:text-foreground"
+            className={`w-full ${sidebarOpen ? 'justify-start' : 'justify-center'} text-muted-foreground hover:text-foreground`}
           >
-            <LogOut className="w-4 h-4 mr-3" />
+            <LogOut className={`${sidebarOpen ? 'w-4 h-4 mr-3' : 'w-6 h-6'} `} />
             {sidebarOpen && <span>Logout</span>}
           </Button>
         </div>

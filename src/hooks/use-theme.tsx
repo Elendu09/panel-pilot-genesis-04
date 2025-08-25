@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState } from "react"
 
 type Theme = "dark" | "light" | "system"
@@ -32,15 +33,21 @@ export function ThemeProvider({
 
   useEffect(() => {
     const root = window.document.documentElement
+    const path = window.location.pathname
 
+    // Always start from a clean state
     root.classList.remove("light", "dark")
 
+    // Force dark ONLY on homepage
+    if (path === "/") {
+      root.classList.add("dark")
+      return
+    }
+
     if (theme === "system") {
-      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
-        .matches
+      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
         ? "dark"
         : "light"
-
       root.classList.add(systemTheme)
       return
     }
@@ -50,9 +57,9 @@ export function ThemeProvider({
 
   const value = {
     theme,
-    setTheme: (theme: Theme) => {
-      localStorage.setItem(storageKey, theme)
-      setTheme(theme)
+    setTheme: (t: Theme) => {
+      localStorage.setItem(storageKey, t)
+      setTheme(t)
     },
   }
 

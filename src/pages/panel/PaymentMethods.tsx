@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,8 +9,12 @@ import { Badge } from "@/components/ui/badge";
 import { CreditCard, Plus, Settings, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+const GLOBAL_STORAGE_KEY = "globalPaymentEnabled";
+
 const PaymentMethods = () => {
   const { toast } = useToast();
+  const [globalEnabledCount, setGlobalEnabledCount] = useState(0);
+
   const [paymentMethods, setPaymentMethods] = useState([
     {
       id: 1,
@@ -50,6 +55,19 @@ const PaymentMethods = () => {
     config: {}
   });
 
+  useEffect(() => {
+    // Read globally enabled methods from Admin Payment Management
+    try {
+      const raw = localStorage.getItem(GLOBAL_STORAGE_KEY);
+      if (raw) {
+        const arr: string[] = JSON.parse(raw);
+        setGlobalEnabledCount(arr.length);
+      }
+    } catch {
+      setGlobalEnabledCount(0);
+    }
+  }, []);
+
   const toggleMethod = (id: number) => {
     setPaymentMethods(methods =>
       methods.map(method =>
@@ -72,7 +90,7 @@ const PaymentMethods = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold">Payment Methods</h1>
           <p className="text-muted-foreground">Configure how customers can pay for services</p>
@@ -85,6 +103,17 @@ const PaymentMethods = () => {
           Add Payment Method
         </Button>
       </div>
+
+      <Card className="bg-gradient-card border-border shadow-card">
+        <CardHeader>
+          <CardTitle className="text-base">
+            Global methods available from platform: <span className="font-semibold">{globalEnabledCount}</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm text-muted-foreground">
+          You can add any of the enabled global methods to your panel. Contact the platform admin if you need another provider enabled globally.
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6">
         {paymentMethods.map((method) => (
@@ -127,7 +156,7 @@ const PaymentMethods = () => {
                   <div key={key} className="space-y-1">
                     <Label className="text-sm capitalize">{key.replace(/([A-Z])/g, ' $1')}</Label>
                     <Input
-                      type={key.includes('secret') || key.includes('Secret') ? "password" : "text"}
+                      type={key.toLowerCase().includes('secret') ? "password" : "text"}
                       value={value as string}
                       readOnly
                       className="bg-muted"
@@ -170,7 +199,7 @@ const PaymentMethods = () => {
                   </select>
                 </div>
               </div>
-              <div className="flex space-x-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Button
                   onClick={() => setShowAddForm(false)}
                   variant="outline"
