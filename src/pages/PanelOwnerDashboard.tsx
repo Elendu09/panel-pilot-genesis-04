@@ -71,7 +71,7 @@ const PanelOwnerDashboard = () => {
         <link rel="canonical" href={canonicalUrl} />
       </Helmet>
       {/* Sidebar */}
-      <div className={`hidden md:block ${sidebarOpen ? 'w-64' : 'w-16'} bg-card border-r border-border transition-all duration-300`}>
+      <div className={`hidden md:block ${sidebarOpen ? 'w-64' : 'w-20'} bg-card border-r border-border transition-all duration-300 relative`}>
         <div className="p-4">
           <div className="flex items-center justify-between">
             <div className={`${sidebarOpen ? 'block' : 'hidden'} flex items-center gap-2`}>
@@ -101,13 +101,14 @@ const PanelOwnerDashboard = () => {
             <Link
               key={item.name}
               to={item.href}
+              title={item.name}
               className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors ${
                 isActive(item.href)
                   ? 'bg-primary text-primary-foreground'
                   : 'text-muted-foreground hover:text-foreground hover:bg-accent'
-              }`}
+              } ${sidebarOpen ? 'justify-start' : 'justify-center px-2'}`}
             >
-              <item.icon className="w-5 h-5" />
+              <item.icon className="w-6 h-6" />
               {sidebarOpen && <span>{item.name}</span>}
             </Link>
           ))}
