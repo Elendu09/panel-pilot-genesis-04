@@ -74,26 +74,31 @@ const PanelOwnerDashboard = () => {
       <div className={`hidden md:block ${sidebarOpen ? 'w-72' : 'w-24'} bg-card border-r border-border transition-all duration-300 relative`}>
         <div className="p-4">
           <div className="flex items-center justify-between">
-            <div className={`${sidebarOpen ? 'flex' : 'hidden'} items-center gap-3`}>
-              <div className="w-9 h-9 bg-gradient-primary rounded-lg flex items-center justify-center">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="w-9 h-9 bg-gradient-primary rounded-lg flex items-center justify-center shrink-0">
                 <Package className="w-5 h-5 text-primary-foreground" />
               </div>
-              <div>
-                <h2 className="text-base font-semibold">Panel Owner</h2>
-                <p className="text-xs text-muted-foreground">SMM Manager</p>
-              </div>
+              {sidebarOpen && (
+                <div className="min-w-0">
+                  <h2 className="text-base font-semibold leading-tight truncate">Panel Owner</h2>
+                  <p className="text-xs text-muted-foreground truncate">SMM Manager</p>
+                </div>
+              )}
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center gap-2 shrink-0">
               <ThemeToggle />
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-                aria-label="Toggle sidebar"
-              >
-                {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-              </Button>
             </div>
+          </div>
+          <div className="flex justify-end mt-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              aria-label="Toggle sidebar"
+              className="h-8 w-8 p-0"
+            >
+              {sidebarOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+            </Button>
           </div>
         </div>
 
