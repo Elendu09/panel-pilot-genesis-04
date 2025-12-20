@@ -18,7 +18,9 @@ import {
   Bell,
   ChevronLeft,
   ChevronRight,
-  Sparkles
+  Sparkles,
+  Code,
+  FileText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +39,8 @@ import DomainSettings from "./panel/DomainSettings";
 import ServicesManagement from "./panel/ServicesManagement";
 import OrdersManagement from "./panel/OrdersManagement";
 import UserManagement from "./panel/UserManagement";
+import APIManagement from "./panel/APIManagement";
+import BlogManagement from "./panel/BlogManagement";
 import { Helmet } from "react-helmet-async";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -58,6 +62,8 @@ const PanelOwnerDashboard = () => {
 
   const settingsNavigation = [
     { name: 'Providers', href: '/panel/providers', icon: Plug },
+    { name: 'API', href: '/panel/api', icon: Code },
+    { name: 'Blog', href: '/panel/blog', icon: FileText },
     { name: 'Domain', href: '/panel/domain', icon: Globe },
     { name: 'Design', href: '/panel/design', icon: Palette },
     { name: 'Settings', href: '/panel/settings', icon: Settings },
@@ -336,6 +342,8 @@ const PanelOwnerDashboard = () => {
             <Route path="design" element={<DesignCustomization />} />
             <Route path="settings" element={<GeneralSettings />} />
             <Route path="support" element={<SupportCenter />} />
+            <Route path="api" element={<APIManagement />} />
+            <Route path="blog" element={<BlogManagement />} />
           </Routes>
         </div>
       </main>

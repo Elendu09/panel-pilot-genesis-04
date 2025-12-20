@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { 
   ShoppingCart, 
   Search, 
-  Filter, 
   MoreVertical, 
   Eye,
   RefreshCw,
@@ -11,8 +10,6 @@ import {
   Clock,
   AlertCircle,
   DollarSign,
-  TrendingUp,
-  Package,
   ChevronDown,
   ChevronUp,
   MessageSquare,
@@ -20,10 +17,12 @@ import {
   Bell,
   BellOff,
   Loader2,
-  ExternalLink
+  ExternalLink,
+  Zap,
+  TrendingUp
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -52,7 +51,8 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 // Mock data for orders
 const mockOrders = [
@@ -66,12 +66,12 @@ const mockOrders = [
 ];
 
 const statusConfig = {
-  pending: { label: "Pending", color: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20", icon: Clock },
-  in_progress: { label: "In Progress", color: "bg-blue-500/10 text-blue-500 border-blue-500/20", icon: Loader2 },
-  completed: { label: "Completed", color: "bg-green-500/10 text-green-500 border-green-500/20", icon: CheckCircle },
-  partial: { label: "Partial", color: "bg-orange-500/10 text-orange-500 border-orange-500/20", icon: AlertCircle },
-  cancelled: { label: "Cancelled", color: "bg-red-500/10 text-red-500 border-red-500/20", icon: XCircle },
-  refunded: { label: "Refunded", color: "bg-purple-500/10 text-purple-500 border-purple-500/20", icon: RefreshCw },
+  pending: { label: "Pending", color: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20", icon: Clock, glow: "shadow-yellow-500/20" },
+  in_progress: { label: "In Progress", color: "bg-blue-500/10 text-blue-500 border-blue-500/20", icon: Loader2, glow: "shadow-blue-500/20" },
+  completed: { label: "Completed", color: "bg-green-500/10 text-green-500 border-green-500/20", icon: CheckCircle, glow: "shadow-green-500/20" },
+  partial: { label: "Partial", color: "bg-orange-500/10 text-orange-500 border-orange-500/20", icon: AlertCircle, glow: "shadow-orange-500/20" },
+  cancelled: { label: "Cancelled", color: "bg-red-500/10 text-red-500 border-red-500/20", icon: XCircle, glow: "shadow-red-500/20" },
+  refunded: { label: "Refunded", color: "bg-purple-500/10 text-purple-500 border-purple-500/20", icon: RefreshCw, glow: "shadow-purple-500/20" },
 };
 
 const OrdersManagement = () => {
@@ -194,9 +194,15 @@ const OrdersManagement = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col md:flex-row md:items-center justify-between gap-4"
+      >
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold">Orders Management</h1>
+          <h1 className="text-2xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">
+            Orders Management
+          </h1>
           <p className="text-muted-foreground">Track and manage customer orders in real-time</p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -204,6 +210,7 @@ const OrdersManagement = () => {
             variant="outline"
             size="sm"
             onClick={() => setNotificationsEnabled(!notificationsEnabled)}
+            className="glass-card border-border/50"
           >
             {notificationsEnabled ? (
               <><Bell className="w-4 h-4 mr-2" /> Notifications On</>
@@ -211,383 +218,342 @@ const OrdersManagement = () => {
               <><BellOff className="w-4 h-4 mr-2" /> Notifications Off</>
             )}
           </Button>
-          <Button variant="outline" size="sm" onClick={exportOrders}>
+          <Button variant="outline" size="sm" onClick={exportOrders} className="glass-card border-border/50">
             <Download className="w-4 h-4 mr-2" />
             Export
           </Button>
         </div>
-      </div>
+      </motion.div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-card to-card/80">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <ShoppingCart className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Today's Orders</p>
-                <p className="text-2xl font-bold">{todayOrders}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-gradient-to-br from-card to-card/80">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-yellow-500/10">
-                <Clock className="w-5 h-5 text-yellow-500" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Pending</p>
-                <p className="text-2xl font-bold">{pendingOrders}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-gradient-to-br from-card to-card/80">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-blue-500/10">
-                <Loader2 className="w-5 h-5 text-blue-500" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">In Progress</p>
-                <p className="text-2xl font-bold">{inProgressOrders}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-gradient-to-br from-card to-card/80">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-green-500/10">
-                <DollarSign className="w-5 h-5 text-green-500" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Today's Revenue</p>
-                <p className="text-2xl font-bold">${todayRevenue.toFixed(2)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {[
+          { label: "Today's Orders", value: todayOrders, icon: ShoppingCart, color: "primary", trend: "+12%" },
+          { label: "Pending", value: pendingOrders, icon: Clock, color: "yellow-500", trend: null },
+          { label: "In Progress", value: inProgressOrders, icon: Zap, color: "blue-500", trend: null },
+          { label: "Today's Revenue", value: `$${todayRevenue.toFixed(2)}`, icon: DollarSign, color: "green-500", trend: "+8%" },
+        ].map((stat, index) => (
+          <motion.div
+            key={stat.label}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.1 }}
+          >
+            <Card className="glass-card-hover overflow-hidden">
+              <CardContent className="p-4 relative">
+                <div className="absolute top-0 right-0 w-20 h-20 opacity-10">
+                  <div className={cn(
+                    "w-full h-full rounded-full blur-2xl",
+                    stat.color === "primary" ? "bg-primary" : `bg-${stat.color}`
+                  )} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={cn(
+                      "p-2.5 rounded-xl",
+                      stat.color === "primary" ? "bg-primary/10" : `bg-${stat.color}/10`
+                    )}>
+                      <stat.icon className={cn(
+                        "w-5 h-5",
+                        stat.color === "primary" ? "text-primary" : `text-${stat.color}`
+                      )} />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">{stat.label}</p>
+                      <p className="text-2xl font-bold">{stat.value}</p>
+                    </div>
+                  </div>
+                  {stat.trend && (
+                    <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
+                      <TrendingUp className="w-3 h-3 mr-1" />
+                      {stat.trend}
+                    </Badge>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        ))}
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col md:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input 
-            placeholder="Search by order ID, customer, or service..." 
-            className="pl-9"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full md:w-48">
-            <SelectValue placeholder="Filter by status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="in_progress">In Progress</SelectItem>
-            <SelectItem value="completed">Completed</SelectItem>
-            <SelectItem value="partial">Partial</SelectItem>
-            <SelectItem value="cancelled">Cancelled</SelectItem>
-            <SelectItem value="refunded">Refunded</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      {/* Status Filters */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="flex flex-wrap gap-2"
+      >
+        {["all", "pending", "in_progress", "completed", "partial", "cancelled", "refunded"].map((status) => {
+          const isActive = statusFilter === status;
+          const config = status !== "all" ? statusConfig[status as keyof typeof statusConfig] : null;
+          return (
+            <button
+              key={status}
+              onClick={() => setStatusFilter(status)}
+              className={cn(
+                "px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200",
+                isActive 
+                  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" 
+                  : "glass-card hover:bg-accent/50 text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {status === "all" ? "All Orders" : config?.label}
+            </button>
+          );
+        })}
+      </motion.div>
 
-      {/* Orders Table */}
-      <Card>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border">
-                <th className="text-left p-4 font-medium text-muted-foreground">Order</th>
-                <th className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell">Customer</th>
-                <th className="text-left p-4 font-medium text-muted-foreground hidden lg:table-cell">Quantity</th>
-                <th className="text-left p-4 font-medium text-muted-foreground">Status</th>
-                <th className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell">Progress</th>
-                <th className="text-left p-4 font-medium text-muted-foreground">Price</th>
-                <th className="text-left p-4 font-medium text-muted-foreground"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredOrders.map((order) => {
-                const statusInfo = statusConfig[order.status as keyof typeof statusConfig];
-                const StatusIcon = statusInfo.icon;
-                const isExpanded = expandedOrder === order.id;
+      {/* Search */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        className="relative"
+      >
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Input 
+          placeholder="Search by order ID, customer, or service..." 
+          className="pl-9 bg-card/50 backdrop-blur-sm border-border/50"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+      </motion.div>
 
-                return (
-                  <>
-                    <tr key={order.id} className="border-b border-border/50 hover:bg-accent/30 transition-colors">
-                      <td className="p-4">
-                        <div className="flex items-center gap-3">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
-                            onClick={() => setExpandedOrder(isExpanded ? null : order.id)}
-                          >
-                            {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                          </Button>
-                          <div>
-                            <p className="font-medium">{order.id}</p>
-                            <p className="text-xs text-muted-foreground">{order.service}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="p-4 hidden md:table-cell">
-                        <span className="text-sm">{order.customer}</span>
-                      </td>
-                      <td className="p-4 hidden lg:table-cell">
-                        <span className="text-sm">{order.quantity.toLocaleString()}</span>
-                      </td>
-                      <td className="p-4">
-                        <Badge variant="outline" className={statusInfo.color}>
-                          <StatusIcon className={`w-3 h-3 mr-1 ${order.status === "in_progress" ? "animate-spin" : ""}`} />
-                          {statusInfo.label}
-                        </Badge>
-                      </td>
-                      <td className="p-4 hidden md:table-cell">
-                        <div className="flex items-center gap-2 min-w-32">
-                          <Progress value={order.progress} className="h-2" />
-                          <span className="text-xs text-muted-foreground w-10">{Math.round(order.progress)}%</span>
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <span className="font-medium">${order.price.toFixed(2)}</span>
-                      </td>
-                      <td className="p-4">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreVertical className="w-4 h-4" />
+      {/* Orders List */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+      >
+        <Card className="glass-card overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-border/50 bg-muted/30">
+                  <th className="text-left p-4 font-medium text-muted-foreground">Order</th>
+                  <th className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell">Customer</th>
+                  <th className="text-left p-4 font-medium text-muted-foreground hidden lg:table-cell">Quantity</th>
+                  <th className="text-left p-4 font-medium text-muted-foreground">Status</th>
+                  <th className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell">Progress</th>
+                  <th className="text-left p-4 font-medium text-muted-foreground">Price</th>
+                  <th className="text-left p-4 font-medium text-muted-foreground"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <AnimatePresence>
+                  {filteredOrders.map((order, index) => {
+                    const statusInfo = statusConfig[order.status as keyof typeof statusConfig];
+                    const StatusIcon = statusInfo.icon;
+                    const isExpanded = expandedOrder === order.id;
+
+                    return (
+                      <motion.tr
+                        key={order.id}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        className="border-b border-border/30 hover:bg-accent/30 transition-colors group"
+                      >
+                        <td className="p-4">
+                          <div className="flex items-center gap-3">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 shrink-0"
+                              onClick={() => setExpandedOrder(isExpanded ? null : order.id)}
+                            >
+                              {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                             </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => viewOrderDetails(order)}>
-                              <Eye className="w-4 h-4 mr-2" /> View Details
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            {order.status === "pending" && (
-                              <DropdownMenuItem onClick={() => updateOrderStatus(order.id, "in_progress")}>
-                                <Loader2 className="w-4 h-4 mr-2" /> Start Processing
-                              </DropdownMenuItem>
-                            )}
-                            {order.status === "in_progress" && (
-                              <DropdownMenuItem onClick={() => updateOrderStatus(order.id, "completed")}>
-                                <CheckCircle className="w-4 h-4 mr-2" /> Mark Complete
-                              </DropdownMenuItem>
-                            )}
-                            {!["cancelled", "refunded", "completed"].includes(order.status) && (
-                              <>
-                                <DropdownMenuItem onClick={() => cancelOrder(order.id)}>
-                                  <XCircle className="w-4 h-4 mr-2" /> Cancel Order
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => openRefundDialog(order)}>
-                                  <RefreshCw className="w-4 h-4 mr-2" /> Refund
-                                </DropdownMenuItem>
-                              </>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </td>
-                    </tr>
-                    {isExpanded && (
-                      <tr className="bg-accent/20">
-                        <td colSpan={7} className="p-4">
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                             <div>
-                              <p className="text-muted-foreground mb-1">Target Link</p>
-                              <a href={order.link} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
-                                {order.link.substring(0, 40)}...
-                                <ExternalLink className="w-3 h-3" />
-                              </a>
+                              <p className="font-medium group-hover:text-primary transition-colors">{order.id}</p>
+                              <p className="text-xs text-muted-foreground">{order.service}</p>
                             </div>
-                            <div>
-                              <p className="text-muted-foreground mb-1">Count</p>
-                              <p>Start: {order.startCount.toLocaleString()} → Current: {order.currentCount.toLocaleString()}</p>
-                            </div>
-                            <div>
-                              <p className="text-muted-foreground mb-1">Created</p>
-                              <p>{order.createdAt}</p>
-                            </div>
-                            {order.notes && (
-                              <div className="md:col-span-3">
-                                <p className="text-muted-foreground mb-1">Notes</p>
-                                <p className="whitespace-pre-wrap">{order.notes}</p>
-                              </div>
-                            )}
                           </div>
                         </td>
-                      </tr>
-                    )}
-                  </>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-        {filteredOrders.length === 0 && (
-          <div className="p-8 text-center">
-            <ShoppingCart className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
-            <p className="text-muted-foreground">No orders found</p>
+                        <td className="p-4 hidden md:table-cell">
+                          <span className="text-sm">{order.customer}</span>
+                        </td>
+                        <td className="p-4 hidden lg:table-cell">
+                          <span className="text-sm">{order.quantity.toLocaleString()}</span>
+                        </td>
+                        <td className="p-4">
+                          <Badge variant="outline" className={cn(statusInfo.color, "shadow-sm", statusInfo.glow)}>
+                            <StatusIcon className={cn("w-3 h-3 mr-1", order.status === "in_progress" && "animate-spin")} />
+                            {statusInfo.label}
+                          </Badge>
+                        </td>
+                        <td className="p-4 hidden md:table-cell">
+                          <div className="flex items-center gap-2 min-w-32">
+                            <Progress 
+                              value={order.progress} 
+                              className={cn(
+                                "h-2",
+                                order.status === "completed" && "[&>div]:bg-green-500",
+                                order.status === "in_progress" && "[&>div]:bg-blue-500",
+                                order.status === "partial" && "[&>div]:bg-orange-500"
+                              )}
+                            />
+                            <span className="text-xs text-muted-foreground w-10">{Math.round(order.progress)}%</span>
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <span className="font-semibold">${order.price.toFixed(2)}</span>
+                        </td>
+                        <td className="p-4">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity">
+                                <MoreVertical className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="glass-card">
+                              <DropdownMenuItem onClick={() => viewOrderDetails(order)}>
+                                <Eye className="w-4 h-4 mr-2" /> View Details
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              {order.status === "pending" && (
+                                <DropdownMenuItem onClick={() => updateOrderStatus(order.id, "in_progress")}>
+                                  <Loader2 className="w-4 h-4 mr-2" /> Start Processing
+                                </DropdownMenuItem>
+                              )}
+                              {order.status === "in_progress" && (
+                                <DropdownMenuItem onClick={() => updateOrderStatus(order.id, "completed")}>
+                                  <CheckCircle className="w-4 h-4 mr-2" /> Mark Complete
+                                </DropdownMenuItem>
+                              )}
+                              {!["cancelled", "refunded", "completed"].includes(order.status) && (
+                                <>
+                                  <DropdownMenuItem onClick={() => cancelOrder(order.id)}>
+                                    <XCircle className="w-4 h-4 mr-2" /> Cancel Order
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => openRefundDialog(order)}>
+                                    <RefreshCw className="w-4 h-4 mr-2" /> Refund
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </td>
+                      </motion.tr>
+                    );
+                  })}
+                </AnimatePresence>
+              </tbody>
+            </table>
           </div>
-        )}
-      </Card>
+
+          {filteredOrders.length === 0 && (
+            <div className="p-12 text-center">
+              <ShoppingCart className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+              <h3 className="font-medium text-lg">No orders found</h3>
+              <p className="text-muted-foreground text-sm">Try adjusting your search or filter criteria</p>
+            </div>
+          )}
+        </Card>
+      </motion.div>
 
       {/* Order Details Dialog */}
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-lg glass-card border-border/50">
           <DialogHeader>
             <DialogTitle>Order Details - {selectedOrder?.id}</DialogTitle>
             <DialogDescription>
-              View complete order information and manage order
+              View complete order information
             </DialogDescription>
           </DialogHeader>
           {selectedOrder && (
-            <Tabs defaultValue="details" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="details">Details</TabsTrigger>
-                <TabsTrigger value="progress">Progress</TabsTrigger>
-                <TabsTrigger value="notes">Notes</TabsTrigger>
-              </TabsList>
-              <TabsContent value="details" className="space-y-4 mt-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-muted-foreground">Service</Label>
-                    <p className="font-medium">{selectedOrder.service}</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Customer</Label>
-                    <p className="font-medium">{selectedOrder.customer}</p>
-                  </div>
-                  <div className="col-span-2">
-                    <Label className="text-muted-foreground">Target Link</Label>
-                    <a href={selectedOrder.link} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
-                      {selectedOrder.link}
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Quantity</Label>
-                    <p className="font-medium">{selectedOrder.quantity.toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Price</Label>
-                    <p className="font-medium">${selectedOrder.price.toFixed(2)}</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Status</Label>
-                    <Badge variant="outline" className={statusConfig[selectedOrder.status as keyof typeof statusConfig].color}>
-                      {statusConfig[selectedOrder.status as keyof typeof statusConfig].label}
-                    </Badge>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Created</Label>
-                    <p className="font-medium">{selectedOrder.createdAt}</p>
-                  </div>
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="glass-card p-3 rounded-lg">
+                  <p className="text-xs text-muted-foreground">Service</p>
+                  <p className="font-medium">{selectedOrder.service}</p>
                 </div>
-              </TabsContent>
-              <TabsContent value="progress" className="space-y-4 mt-4">
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex justify-between mb-2">
-                      <Label>Delivery Progress</Label>
-                      <span className="text-sm font-medium">{Math.round(selectedOrder.progress)}%</span>
-                    </div>
-                    <Progress value={selectedOrder.progress} className="h-3" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="p-4 rounded-lg bg-accent/50">
-                      <p className="text-sm text-muted-foreground">Start Count</p>
-                      <p className="text-xl font-bold">{selectedOrder.startCount.toLocaleString()}</p>
-                    </div>
-                    <div className="p-4 rounded-lg bg-accent/50">
-                      <p className="text-sm text-muted-foreground">Current Count</p>
-                      <p className="text-xl font-bold">{selectedOrder.currentCount.toLocaleString()}</p>
-                    </div>
-                  </div>
-                  <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/20">
-                    <p className="text-sm text-muted-foreground">Delivered</p>
-                    <p className="text-xl font-bold text-green-500">
-                      +{(selectedOrder.currentCount - selectedOrder.startCount).toLocaleString()}
-                    </p>
-                  </div>
+                <div className="glass-card p-3 rounded-lg">
+                  <p className="text-xs text-muted-foreground">Customer</p>
+                  <p className="font-medium">{selectedOrder.customer}</p>
                 </div>
-              </TabsContent>
-              <TabsContent value="notes" className="space-y-4 mt-4">
-                {selectedOrder.notes && (
-                  <div className="p-4 rounded-lg bg-accent/50">
-                    <Label className="text-muted-foreground mb-2 block">Existing Notes</Label>
-                    <p className="whitespace-pre-wrap">{selectedOrder.notes}</p>
-                  </div>
-                )}
-                <div className="space-y-2">
-                  <Label>Add Note</Label>
-                  <Textarea 
-                    placeholder="Add internal note about this order..."
-                    value={newOrderNote}
-                    onChange={(e) => setNewOrderNote(e.target.value)}
-                  />
-                  <Button onClick={addOrderNote} size="sm">
-                    <MessageSquare className="w-4 h-4 mr-2" />
-                    Add Note
-                  </Button>
+                <div className="glass-card p-3 rounded-lg">
+                  <p className="text-xs text-muted-foreground">Quantity</p>
+                  <p className="font-medium">{selectedOrder.quantity.toLocaleString()}</p>
                 </div>
-              </TabsContent>
-            </Tabs>
+                <div className="glass-card p-3 rounded-lg">
+                  <p className="text-xs text-muted-foreground">Price</p>
+                  <p className="font-medium text-primary">${selectedOrder.price.toFixed(2)}</p>
+                </div>
+              </div>
+
+              <div className="glass-card p-3 rounded-lg">
+                <p className="text-xs text-muted-foreground mb-1">Target Link</p>
+                <a href={selectedOrder.link} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1 text-sm">
+                  {selectedOrder.link}
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+
+              <div className="glass-card p-3 rounded-lg">
+                <p className="text-xs text-muted-foreground mb-2">Progress</p>
+                <Progress value={selectedOrder.progress} className="h-3" />
+                <p className="text-xs text-muted-foreground mt-1">
+                  {selectedOrder.currentCount.toLocaleString()} / {(selectedOrder.startCount + selectedOrder.quantity).toLocaleString()}
+                </p>
+              </div>
+
+              {selectedOrder.notes && (
+                <div className="glass-card p-3 rounded-lg">
+                  <p className="text-xs text-muted-foreground mb-1">Notes</p>
+                  <p className="text-sm whitespace-pre-wrap">{selectedOrder.notes}</p>
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Add a note..."
+                  value={newOrderNote}
+                  onChange={(e) => setNewOrderNote(e.target.value)}
+                  className="bg-background/50"
+                />
+                <Button onClick={addOrderNote} size="sm" className="bg-gradient-to-r from-primary to-primary/80">
+                  <MessageSquare className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDetailsOpen(false)}>Close</Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Refund Dialog */}
       <Dialog open={isRefundOpen} onOpenChange={setIsRefundOpen}>
-        <DialogContent>
+        <DialogContent className="glass-card border-border/50">
           <DialogHeader>
             <DialogTitle>Process Refund</DialogTitle>
             <DialogDescription>
-              Issue a refund for order {selectedOrder?.id}
+              Refund for order {selectedOrder?.id}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>Refund Amount</Label>
-              <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input 
-                  type="number" 
-                  step="0.01"
-                  className="pl-9"
-                  value={refundAmount}
-                  onChange={(e) => setRefundAmount(e.target.value)}
-                />
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Original amount: ${selectedOrder?.price.toFixed(2)}
-              </p>
+              <Input
+                type="number"
+                value={refundAmount}
+                onChange={(e) => setRefundAmount(e.target.value)}
+                step="0.01"
+                className="bg-background/50"
+              />
             </div>
             <div className="space-y-2">
-              <Label>Reason for Refund</Label>
-              <Textarea 
-                placeholder="Enter reason for refund..."
+              <Label>Reason</Label>
+              <Textarea
+                placeholder="Enter refund reason..."
                 value={refundReason}
                 onChange={(e) => setRefundReason(e.target.value)}
+                className="bg-background/50"
               />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsRefundOpen(false)}>Cancel</Button>
             <Button onClick={processRefund} className="bg-gradient-to-r from-primary to-primary/80">
-              <RefreshCw className="w-4 h-4 mr-2" />
               Process Refund
             </Button>
           </DialogFooter>
