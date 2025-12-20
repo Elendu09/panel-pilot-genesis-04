@@ -29,6 +29,8 @@ import SupportCenter from "./panel/SupportCenter";
 import { useAuth } from '@/contexts/AuthContext';
 import PanelOverview from "./panel/PanelOverview";
 import DomainSettings from "./panel/DomainSettings";
+import ServicesManagement from "./panel/ServicesManagement";
+import OrdersManagement from "./panel/OrdersManagement";
 import { Helmet } from "react-helmet-async";
 
 const PanelOwnerDashboard = () => {
@@ -131,8 +133,8 @@ const PanelOwnerDashboard = () => {
       <div className="flex-1 p-4 md:p-8 pb-20 md:pb-8">
         <Routes>
           <Route index element={<PanelOverview />} />
-          <Route path="services" element={<div>Services Management (Coming Soon)</div>} />
-          <Route path="orders" element={<div>Orders Management (Coming Soon)</div>} />
+          <Route path="services" element={<ServicesManagement />} />
+          <Route path="orders" element={<OrdersManagement />} />
           <Route path="customers" element={<div>Customer Management (Coming Soon)</div>} />
           <Route path="analytics" element={<Analytics />} />
           <Route path="settings" element={<GeneralSettings />} />
