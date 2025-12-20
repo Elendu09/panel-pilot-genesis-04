@@ -14,6 +14,233 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          id: string
+          ip_address: unknown
+          panel_id: string | null
+          resource_id: string | null
+          resource_type: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          ip_address?: unknown
+          panel_id?: string | null
+          resource_id?: string | null
+          resource_type?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          ip_address?: unknown
+          panel_id?: string | null
+          resource_id?: string | null
+          resource_type?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_logs_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      blog_posts: {
+        Row: {
+          content: string | null
+          created_at: string
+          excerpt: string | null
+          featured_image_url: string | null
+          id: string
+          panel_id: string | null
+          published_at: string | null
+          seo_description: string | null
+          seo_title: string | null
+          slug: string
+          status: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          excerpt?: string | null
+          featured_image_url?: string | null
+          id?: string
+          panel_id?: string | null
+          published_at?: string | null
+          seo_description?: string | null
+          seo_title?: string | null
+          slug: string
+          status?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          excerpt?: string | null
+          featured_image_url?: string | null
+          id?: string
+          panel_id?: string | null
+          published_at?: string | null
+          seo_description?: string | null
+          seo_title?: string | null
+          slug?: string
+          status?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blog_posts_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_users: {
+        Row: {
+          balance: number | null
+          created_at: string
+          email: string
+          full_name: string | null
+          id: string
+          is_active: boolean | null
+          last_login_at: string | null
+          panel_id: string | null
+          total_spent: number | null
+          updated_at: string
+        }
+        Insert: {
+          balance?: number | null
+          created_at?: string
+          email: string
+          full_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_login_at?: string | null
+          panel_id?: string | null
+          total_spent?: number | null
+          updated_at?: string
+        }
+        Update: {
+          balance?: number | null
+          created_at?: string
+          email?: string
+          full_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_login_at?: string | null
+          panel_id?: string | null
+          total_spent?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_users_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      domain_verifications: {
+        Row: {
+          created_at: string
+          dns_records: Json | null
+          domain: string
+          expires_at: string | null
+          id: string
+          panel_id: string | null
+          updated_at: string
+          verification_status: string | null
+          verification_token: string
+          verification_type: string
+          verified_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          dns_records?: Json | null
+          domain: string
+          expires_at?: string | null
+          id?: string
+          panel_id?: string | null
+          updated_at?: string
+          verification_status?: string | null
+          verification_token: string
+          verification_type: string
+          verified_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          dns_records?: Json | null
+          domain?: string
+          expires_at?: string | null
+          id?: string
+          panel_id?: string | null
+          updated_at?: string
+          verification_status?: string | null
+          verification_token?: string
+          verification_type?: string
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "domain_verifications_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_send_logs: {
+        Row: {
+          created_at: string
+          email: string
+          email_action_type: string
+          id: string
+          metadata: Json
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          email_action_type: string
+          id?: string
+          metadata?: Json
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          email_action_type?: string
+          id?: string
+          metadata?: Json
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
           buyer_id: string | null
@@ -333,7 +560,10 @@ export type Database = {
           custom_branding: Json | null
           custom_domain: string | null
           description: string | null
+          dns_records: Json | null
           domain: string | null
+          domain_verification_status: string | null
+          domain_verification_token: string | null
           features: Json | null
           id: string
           is_approved: boolean | null
@@ -345,6 +575,7 @@ export type Database = {
           primary_color: string | null
           secondary_color: string | null
           settings: Json | null
+          ssl_status: string | null
           status: Database["public"]["Enums"]["panel_status"] | null
           subdomain: string
           theme_type: Database["public"]["Enums"]["theme_type"] | null
@@ -357,7 +588,10 @@ export type Database = {
           custom_branding?: Json | null
           custom_domain?: string | null
           description?: string | null
+          dns_records?: Json | null
           domain?: string | null
+          domain_verification_status?: string | null
+          domain_verification_token?: string | null
           features?: Json | null
           id?: string
           is_approved?: boolean | null
@@ -369,6 +603,7 @@ export type Database = {
           primary_color?: string | null
           secondary_color?: string | null
           settings?: Json | null
+          ssl_status?: string | null
           status?: Database["public"]["Enums"]["panel_status"] | null
           subdomain: string
           theme_type?: Database["public"]["Enums"]["theme_type"] | null
@@ -381,7 +616,10 @@ export type Database = {
           custom_branding?: Json | null
           custom_domain?: string | null
           description?: string | null
+          dns_records?: Json | null
           domain?: string | null
+          domain_verification_status?: string | null
+          domain_verification_token?: string | null
           features?: Json | null
           id?: string
           is_approved?: boolean | null
@@ -393,6 +631,7 @@ export type Database = {
           primary_color?: string | null
           secondary_color?: string | null
           settings?: Json | null
+          ssl_status?: string | null
           status?: Database["public"]["Enums"]["panel_status"] | null
           subdomain?: string
           theme_type?: Database["public"]["Enums"]["theme_type"] | null
@@ -415,9 +654,12 @@ export type Database = {
           balance: number | null
           created_at: string
           email: string
+          email_verified_at: string | null
           full_name: string | null
           id: string
           is_active: boolean | null
+          onboarding_completed_at: string | null
+          onboarding_step: number | null
           role: Database["public"]["Enums"]["user_role"]
           total_spent: number | null
           updated_at: string
@@ -428,9 +670,12 @@ export type Database = {
           balance?: number | null
           created_at?: string
           email: string
+          email_verified_at?: string | null
           full_name?: string | null
           id?: string
           is_active?: boolean | null
+          onboarding_completed_at?: string | null
+          onboarding_step?: number | null
           role?: Database["public"]["Enums"]["user_role"]
           total_spent?: number | null
           updated_at?: string
@@ -441,15 +686,71 @@ export type Database = {
           balance?: number | null
           created_at?: string
           email?: string
+          email_verified_at?: string | null
           full_name?: string | null
           id?: string
           is_active?: boolean | null
+          onboarding_completed_at?: string | null
+          onboarding_step?: number | null
           role?: Database["public"]["Enums"]["user_role"]
           total_spent?: number | null
           updated_at?: string
           user_id?: string
         }
         Relationships: []
+      }
+      provider_integrations: {
+        Row: {
+          api_endpoint: string
+          api_key: string
+          balance: number | null
+          created_at: string
+          id: string
+          is_active: boolean | null
+          last_sync_at: string | null
+          panel_id: string | null
+          provider_name: string
+          settings: Json | null
+          sync_status: string | null
+          updated_at: string
+        }
+        Insert: {
+          api_endpoint: string
+          api_key: string
+          balance?: number | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          last_sync_at?: string | null
+          panel_id?: string | null
+          provider_name: string
+          settings?: Json | null
+          sync_status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          api_endpoint?: string
+          api_key?: string
+          balance?: number | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          last_sync_at?: string | null
+          panel_id?: string | null
+          provider_name?: string
+          settings?: Json | null
+          sync_status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_integrations_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       providers: {
         Row: {
@@ -664,17 +965,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      approve_panel: {
-        Args: { panel_id: string }
+      approve_panel: { Args: { panel_id: string }; Returns: boolean }
+      generate_order_number: { Args: never; Returns: string }
+      generate_subdomain: { Args: { panel_name: string }; Returns: string }
+      get_masked_provider_credentials: {
+        Args: { provider_id: string }
+        Returns: Json
+      }
+      has_completed_onboarding: { Args: { user_id: string }; Returns: boolean }
+      is_admin: { Args: never; Returns: boolean }
+      is_email_verified: { Args: { user_id: string }; Returns: boolean }
+      update_user_role: {
+        Args: {
+          new_role: Database["public"]["Enums"]["user_role"]
+          target_user_id: string
+        }
         Returns: boolean
-      }
-      generate_order_number: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      generate_subdomain: {
-        Args: { panel_name: string }
-        Returns: string
       }
     }
     Enums: {
