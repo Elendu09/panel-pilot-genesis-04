@@ -41,6 +41,7 @@ import OrdersManagement from "./panel/OrdersManagement";
 import UserManagement from "./panel/UserManagement";
 import APIManagement from "./panel/APIManagement";
 import BlogManagement from "./panel/BlogManagement";
+import CustomerManagement from "./panel/CustomerManagement";
 import { Helmet } from "react-helmet-async";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -335,7 +336,7 @@ const PanelOwnerDashboard = () => {
             <Route index element={<PanelOverview />} />
             <Route path="services" element={<ServicesManagement />} />
             <Route path="orders" element={<OrdersManagement />} />
-            <Route path="customers" element={<UserManagement />} />
+            <Route path="customers" element={<CustomerManagement />} />
             <Route path="analytics" element={<Analytics />} />
             <Route path="providers" element={<ProviderManagement />} />
             <Route path="domain" element={<DomainSettings />} />
