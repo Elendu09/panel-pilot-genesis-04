@@ -29,7 +29,10 @@ import {
   RefreshCw,
   Check,
   Loader2,
-  Percent
+  Percent,
+  Target,
+  FileText,
+  FileSpreadsheet
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -66,6 +69,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { exportToCSV, exportToPDF, serviceColumns } from "@/lib/export-utils";
+import { PricingOptimizer } from "@/components/panel/PricingOptimizer";
+import { supabase } from "@/integrations/supabase/client";
 
 // Mock data for services
 const mockServices = [
