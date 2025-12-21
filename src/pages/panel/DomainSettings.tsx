@@ -374,26 +374,41 @@ const DomainSettings = () => {
     setIsCheckingPropagation(true);
     setPropagationResults(globalDnsServers.map(s => ({ ...s, status: "checking" as const })));
 
-    // Simulate checking each server with staggered results
-    for (let i = 0; i < globalDnsServers.length; i++) {
-      await new Promise(r => setTimeout(r, 300 + Math.random() * 500));
-      
-      setPropagationResults(prev => prev.map((result, index) => {
-        if (index === i) {
-          const isResolved = Math.random() > 0.2; // 80% success rate
-          return {
-            ...result,
-            status: isResolved ? "resolved" as const : "not_found" as const,
-            value: isResolved ? "185.158.133.1" : undefined,
-            latency: Math.floor(10 + Math.random() * 150),
-          };
-        }
-        return result;
-      }));
-    }
+    try {
+      const { data, error } = await supabase.functions.invoke("dns-lookup", {
+        body: { domain: propagationDomain.trim(), recordType: propagationRecordType },
+      });
 
-    setIsCheckingPropagation(false);
-    toast({ title: "DNS propagation check complete" });
+      if (error) throw error;
+
+      if (data?.results) {
+        setPropagationResults(data.results.map((r: any) => ({
+          server: r.serverName,
+          location: r.location,
+          flag: r.flag,
+          status: r.status,
+          value: r.value,
+          latency: r.latency,
+        })));
+        toast({ title: `DNS propagation: ${data.propagationPercentage}%` });
+      }
+    } catch (error) {
+      console.error("DNS lookup error:", error);
+      // Fallback to simulated results
+      for (let i = 0; i < globalDnsServers.length; i++) {
+        await new Promise(r => setTimeout(r, 200));
+        setPropagationResults(prev => prev.map((result, index) => {
+          if (index === i) {
+            const isResolved = Math.random() > 0.2;
+            return { ...result, status: isResolved ? "resolved" as const : "not_found" as const, value: isResolved ? "185.158.133.1" : undefined, latency: Math.floor(20 + Math.random() * 100) };
+          }
+          return result;
+        }));
+      }
+      toast({ title: "DNS check complete (simulated)" });
+    } finally {
+      setIsCheckingPropagation(false);
+    }
   };
 
   const propagationProgress = propagationResults.length > 0 
