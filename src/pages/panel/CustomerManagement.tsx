@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Checkbox } from "@/components/ui/checkbox";
 import { 
   Sheet, 
   SheetContent, 
@@ -35,7 +36,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Users, 
   UserPlus, 
@@ -60,16 +60,14 @@ import {
   Download,
   ArrowUpDown,
   Percent,
-  Link2,
   Copy,
-  UserX,
   Circle
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
-// Import new components
+// Import components
 import { ExportDialog } from "@/components/customers/ExportDialog";
 import { AddCustomerDialog, NewCustomer } from "@/components/customers/AddCustomerDialog";
 import { CustomerOverview } from "@/components/customers/CustomerOverview";
@@ -77,6 +75,9 @@ import { CustomerMobileCard } from "@/components/customers/CustomerMobileCard";
 import { CustomerPricingDialog } from "@/components/customers/CustomerPricingDialog";
 import { CustomerStatusTabs } from "@/components/customers/CustomerStatusTabs";
 import { ReferralSection } from "@/components/customers/ReferralSection";
+import { BulkActionToolbar } from "@/components/customers/BulkActionToolbar";
+import { BulkEmailDialog } from "@/components/customers/BulkEmailDialog";
+import { BulkDiscountDialog } from "@/components/customers/BulkDiscountDialog";
 
 interface Customer {
   id: string;
@@ -122,14 +123,17 @@ const CustomerManagement = () => {
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showAddCustomerDialog, setShowAddCustomerDialog] = useState(false);
   const [showPricingDialog, setShowPricingDialog] = useState(false);
+  const [showBulkEmailDialog, setShowBulkEmailDialog] = useState(false);
+  const [showBulkDiscountDialog, setShowBulkDiscountDialog] = useState(false);
   const [balanceAction, setBalanceAction] = useState<"add" | "subtract">("add");
   const [balanceAmount, setBalanceAmount] = useState("");
   const [balanceReason, setBalanceReason] = useState("");
   const [sortColumn, setSortColumn] = useState<keyof Customer>("totalSpent");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [statusFilter, setStatusFilter] = useState<"all" | "online" | "banned">("all");
+  const [selectedCustomers, setSelectedCustomers] = useState<string[]>([]);
 
-  // Mock customer data - extended with referrals and pricing
+  // Mock customer data
   const [customers, setCustomers] = useState<Customer[]>([
     { id: "1", name: "John Anderson", email: "john@example.com", username: "john_a2x4", status: "active", segment: "vip", balance: 245.50, totalSpent: 2450.00, totalOrders: 47, joinedAt: "2024-01-15", lastActive: "2 hours ago", isOnline: true, referralCode: "JOHN2024", referralCount: 5, customDiscount: 10 },
     { id: "2", name: "Sarah Miller", email: "sarah@example.com", username: "sarah_m9k2", status: "active", segment: "regular", balance: 89.25, totalSpent: 890.00, totalOrders: 23, joinedAt: "2024-03-20", lastActive: "5 hours ago", isOnline: true, referralCode: "SARAH2024", referralCount: 2 },
@@ -173,7 +177,6 @@ const CustomerManagement = () => {
         customer.id.includes(searchTerm) ||
         (customer.username && customer.username.toLowerCase().includes(searchTerm.toLowerCase()));
       
-      // Status filter
       if (statusFilter === "online") return matchesSearch && customer.isOnline;
       if (statusFilter === "banned") return matchesSearch && customer.status === "suspended";
       return matchesSearch;
@@ -192,6 +195,49 @@ const CustomerManagement = () => {
     
     return result;
   }, [customers, searchTerm, sortColumn, sortDirection, statusFilter]);
+
+  // Selection handlers
+  const toggleSelectAll = () => {
+    if (selectedCustomers.length === filteredCustomers.length) {
+      setSelectedCustomers([]);
+    } else {
+      setSelectedCustomers(filteredCustomers.map(c => c.id));
+    }
+  };
+
+  const toggleSelectCustomer = (id: string) => {
+    setSelectedCustomers(prev => 
+      prev.includes(id) ? prev.filter(cId => cId !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkEmail = (subject: string, message: string) => {
+    console.log("Sending email to", selectedCustomers.length, "customers:", { subject, message });
+    setSelectedCustomers([]);
+  };
+
+  const handleBulkDiscount = (discount: number, expiresAt: Date | null) => {
+    setCustomers(prev => prev.map(c => 
+      selectedCustomers.includes(c.id) ? { ...c, customDiscount: discount } : c
+    ));
+    setSelectedCustomers([]);
+  };
+
+  const handleBulkSuspend = () => {
+    setCustomers(prev => prev.map(c => 
+      selectedCustomers.includes(c.id) ? { ...c, status: "suspended" as const } : c
+    ));
+    toast({ title: "Customers Suspended", description: `${selectedCustomers.length} customers have been suspended` });
+    setSelectedCustomers([]);
+  };
+
+  const handleBulkActivate = () => {
+    setCustomers(prev => prev.map(c => 
+      selectedCustomers.includes(c.id) ? { ...c, status: "active" as const } : c
+    ));
+    toast({ title: "Customers Activated", description: `${selectedCustomers.length} customers have been activated` });
+    setSelectedCustomers([]);
+  };
 
   const handleSetPricing = (customer: Customer) => {
     setSelectedCustomer(customer);
@@ -270,6 +316,10 @@ const CustomerManagement = () => {
     });
   };
 
+  const selectedCustomersForExport = selectedCustomers.length > 0
+    ? filteredCustomers.filter(c => selectedCustomers.includes(c.id))
+    : filteredCustomers;
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -329,7 +379,7 @@ const CustomerManagement = () => {
         }}
       />
 
-      {/* Customer Overview with scroll arrows */}
+      {/* Customer Overview */}
       <CustomerOverview 
         customers={customers} 
         onSelectCustomer={setSelectedCustomer}
@@ -357,6 +407,12 @@ const CustomerManagement = () => {
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/30 hover:bg-muted/30">
+                  <TableHead className="w-[50px]">
+                    <Checkbox
+                      checked={selectedCustomers.length === filteredCustomers.length && filteredCustomers.length > 0}
+                      onCheckedChange={toggleSelectAll}
+                    />
+                  </TableHead>
                   <TableHead className="w-[250px]">Customer</TableHead>
                   <TableHead className="cursor-pointer" onClick={() => handleSort("status")}>
                     <div className="flex items-center gap-1">Status <ArrowUpDown className="w-3 h-3" /></div>
@@ -379,7 +435,13 @@ const CustomerManagement = () => {
               </TableHeader>
               <TableBody>
                 {filteredCustomers.map((customer) => (
-                  <TableRow key={customer.id} className="hover:bg-muted/20">
+                  <TableRow key={customer.id} className={cn("hover:bg-muted/20", selectedCustomers.includes(customer.id) && "bg-primary/5")}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedCustomers.includes(customer.id)}
+                        onCheckedChange={() => toggleSelectCustomer(customer.id)}
+                      />
+                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <Avatar className="h-9 w-9">
@@ -445,6 +507,17 @@ const CustomerManagement = () => {
         </CardContent>
       </Card>
 
+      {/* Bulk Action Toolbar */}
+      <BulkActionToolbar
+        selectedCount={selectedCustomers.length}
+        onSendEmail={() => setShowBulkEmailDialog(true)}
+        onApplyDiscount={() => setShowBulkDiscountDialog(true)}
+        onExport={() => setShowExportDialog(true)}
+        onSuspend={handleBulkSuspend}
+        onActivate={handleBulkActivate}
+        onClearSelection={() => setSelectedCustomers([])}
+      />
+
       {/* Customer Profile Sheet */}
       <Sheet open={!!selectedCustomer && !showBalanceModal} onOpenChange={() => setSelectedCustomer(null)}>
         <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
@@ -502,7 +575,6 @@ const CustomerManagement = () => {
                   </div>
                 </div>
                 
-                {/* Referral Section */}
                 <ReferralSection customer={selectedCustomer} />
               </div>
             </>
@@ -552,7 +624,7 @@ const CustomerManagement = () => {
       <ExportDialog 
         open={showExportDialog} 
         onOpenChange={setShowExportDialog}
-        customers={filteredCustomers}
+        customers={selectedCustomersForExport}
       />
 
       {/* Add Customer Dialog */}
@@ -568,6 +640,22 @@ const CustomerManagement = () => {
         onOpenChange={setShowPricingDialog}
         customer={selectedCustomer}
         onSave={handleSaveCustomPricing}
+      />
+
+      {/* Bulk Email Dialog */}
+      <BulkEmailDialog
+        open={showBulkEmailDialog}
+        onOpenChange={setShowBulkEmailDialog}
+        selectedCount={selectedCustomers.length}
+        onSend={handleBulkEmail}
+      />
+
+      {/* Bulk Discount Dialog */}
+      <BulkDiscountDialog
+        open={showBulkDiscountDialog}
+        onOpenChange={setShowBulkDiscountDialog}
+        selectedCount={selectedCustomers.length}
+        onApply={handleBulkDiscount}
       />
     </div>
   );

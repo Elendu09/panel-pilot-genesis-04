@@ -2,20 +2,17 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { 
   CreditCard, 
   Check, 
   Zap, 
   Crown, 
   Wallet, 
-  Plus, 
   ArrowUpRight,
   Calendar,
   DollarSign,
-  TrendingUp,
-  Sparkles
+  Sparkles,
+  Percent
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { useAuth } from '@/contexts/AuthContext';
@@ -23,6 +20,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
+import { TransactionHistory } from '@/components/billing/TransactionHistory';
+import { CommissionTracker } from '@/components/billing/CommissionTracker';
+import { QuickDeposit } from '@/components/billing/QuickDeposit';
+import { PaymentMethodsQuickAccess } from '@/components/billing/PaymentMethodsQuickAccess';
 
 interface Subscription {
   id: string;
@@ -48,11 +49,6 @@ const plans = [
       'Subdomain Only',
       '100 Orders/month'
     ],
-    limitations: [
-      'No Custom Domain',
-      'Limited API Access',
-      'Standard Support'
-    ]
   },
   {
     name: 'Basic',
@@ -71,7 +67,6 @@ const plans = [
       'API Access',
       'Custom Branding'
     ],
-    limitations: []
   },
   {
     name: 'Pro',
@@ -91,7 +86,6 @@ const plans = [
       'Dedicated Account Manager',
       'Custom Integrations'
     ],
-    limitations: []
   }
 ];
 
@@ -101,8 +95,7 @@ const Billing = () => {
   const [loading, setLoading] = useState(true);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [panelBalance, setPanelBalance] = useState(0);
-  const [addFundsOpen, setAddFundsOpen] = useState(false);
-  const [fundAmount, setFundAmount] = useState('10');
+  const [depositLoading, setDepositLoading] = useState(false);
 
   useEffect(() => {
     fetchBillingData();
@@ -112,7 +105,6 @@ const Billing = () => {
     if (!profile?.id) return;
 
     try {
-      // Get panel data
       const { data: panel } = await supabase
         .from('panels')
         .select('id, balance')
@@ -122,7 +114,6 @@ const Billing = () => {
       if (panel) {
         setPanelBalance(panel.balance || 0);
 
-        // Get subscription
         const { data: sub } = await supabase
           .from('panel_subscriptions')
           .select('*')
@@ -156,7 +147,6 @@ const Billing = () => {
         return;
       }
 
-      // Upsert subscription
       const { error } = await supabase
         .from('panel_subscriptions')
         .upsert({
@@ -180,13 +170,8 @@ const Billing = () => {
     }
   };
 
-  const handleAddFunds = async () => {
-    const amount = parseFloat(fundAmount);
-    if (isNaN(amount) || amount <= 0) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Enter a valid amount' });
-      return;
-    }
-
+  const handleDeposit = async (amount: number, method: string) => {
+    setDepositLoading(true);
     try {
       const { data: panel } = await supabase
         .from('panels')
@@ -203,13 +188,18 @@ const Billing = () => {
 
       if (error) throw error;
 
-      toast({ title: 'Success', description: `Added $${amount.toFixed(2)} to your balance` });
-      setAddFundsOpen(false);
+      toast({ title: 'Success', description: `Added $${amount.toFixed(2)} via ${method}` });
       fetchBillingData();
     } catch (error) {
       console.error('Error adding funds:', error);
       toast({ variant: 'destructive', title: 'Error', description: 'Failed to add funds' });
+    } finally {
+      setDepositLoading(false);
     }
+  };
+
+  const handlePayCommission = () => {
+    toast({ title: 'Commission Payment', description: 'Redirecting to payment...' });
   };
 
   const currentPlan = subscription?.plan_type || 'free';
@@ -228,8 +218,8 @@ const Billing = () => {
     return (
       <div className="space-y-6 animate-pulse">
         <div className="h-8 bg-muted rounded w-1/4"></div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {[1, 2, 3].map(i => <div key={i} className="h-96 bg-muted rounded-xl"></div>)}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map(i => <div key={i} className="h-32 bg-muted rounded-xl"></div>)}
         </div>
       </div>
     );
@@ -250,94 +240,48 @@ const Billing = () => {
       {/* Header */}
       <motion.div variants={itemVariants}>
         <h1 className="text-2xl md:text-3xl font-bold">Billing & Subscription</h1>
-        <p className="text-muted-foreground">Manage your subscription plan and add funds</p>
+        <p className="text-muted-foreground">Manage your subscription, balance, and transactions</p>
       </motion.div>
 
-      {/* Balance & Current Plan Cards */}
-      <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* Overview Cards Row */}
+      <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Balance Card */}
-        <Card className="glass-card-hover relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl" />
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+        <Card className="bg-card/60 backdrop-blur-xl border-border/50 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl" />
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-muted-foreground mb-2">
               <Wallet className="w-4 h-4" />
-              Panel Balance
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-end justify-between">
-              <div>
-                <p className="text-3xl font-bold text-emerald-500">${panelBalance.toFixed(2)}</p>
-                <p className="text-xs text-muted-foreground mt-1">Available for services</p>
-              </div>
-              <Dialog open={addFundsOpen} onOpenChange={setAddFundsOpen}>
-                <DialogTrigger asChild>
-                  <Button size="sm" className="gap-2">
-                    <Plus className="w-4 h-4" />
-                    Add Funds
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="glass">
-                  <DialogHeader>
-                    <DialogTitle>Add Funds to Balance</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4 pt-4">
-                    <div className="grid grid-cols-4 gap-2">
-                      {['10', '25', '50', '100'].map(amount => (
-                        <Button
-                          key={amount}
-                          variant={fundAmount === amount ? 'default' : 'outline'}
-                          onClick={() => setFundAmount(amount)}
-                          className="w-full"
-                        >
-                          ${amount}
-                        </Button>
-                      ))}
-                    </div>
-                    <div className="relative">
-                      <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        type="number"
-                        value={fundAmount}
-                        onChange={(e) => setFundAmount(e.target.value)}
-                        className="pl-9"
-                        placeholder="Custom amount"
-                      />
-                    </div>
-                    <Button onClick={handleAddFunds} className="w-full">
-                      Add ${fundAmount || '0'}
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
+              <span className="text-sm">Panel Balance</span>
             </div>
+            <p className="text-2xl lg:text-3xl font-bold text-emerald-500">${panelBalance.toFixed(2)}</p>
           </CardContent>
         </Card>
 
-        {/* Current Plan Card */}
-        <Card className="glass-card-hover relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-2xl" />
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+        {/* Commission Due */}
+        <Card className="bg-card/60 backdrop-blur-xl border-border/50 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-orange-500/10 rounded-full blur-2xl" />
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-muted-foreground mb-2">
+              <Percent className="w-4 h-4" />
+              <span className="text-sm">Commission Due</span>
+            </div>
+            <p className="text-2xl lg:text-3xl font-bold text-orange-500">$45.00</p>
+          </CardContent>
+        </Card>
+
+        {/* Current Plan */}
+        <Card className="bg-card/60 backdrop-blur-xl border-border/50 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-primary/10 rounded-full blur-2xl" />
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-muted-foreground mb-2">
               <CreditCard className="w-4 h-4" />
-              Current Plan
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-end justify-between">
-              <div>
-                <p className="text-3xl font-bold capitalize">{currentPlan}</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {subscription?.expires_at 
-                    ? `Renews ${new Date(subscription.expires_at).toLocaleDateString()}`
-                    : 'No expiration'
-                  }
-                </p>
-              </div>
+              <span className="text-sm">Current Plan</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <p className="text-2xl lg:text-3xl font-bold capitalize">{currentPlan}</p>
               <Badge className={cn(
                 "capitalize",
-                subscription?.status === 'active' && "bg-emerald-500/20 text-emerald-500",
-                subscription?.status === 'expired' && "bg-red-500/20 text-red-500"
+                subscription?.status === 'active' && "bg-emerald-500/20 text-emerald-500"
               )}>
                 {subscription?.status || 'active'}
               </Badge>
@@ -345,36 +289,51 @@ const Billing = () => {
           </CardContent>
         </Card>
 
-        {/* Next Billing Card */}
-        <Card className="glass-card-hover relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-violet-500/10 rounded-full blur-2xl" />
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+        {/* Next Billing */}
+        <Card className="bg-card/60 backdrop-blur-xl border-border/50 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-violet-500/10 rounded-full blur-2xl" />
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-muted-foreground mb-2">
               <Calendar className="w-4 h-4" />
-              Next Billing
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div>
-              <p className="text-3xl font-bold">
-                ${plans.find(p => p.name.toLowerCase() === currentPlan)?.price || 0}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {subscription?.expires_at 
-                  ? new Date(subscription.expires_at).toLocaleDateString()
-                  : 'N/A'
-                }
-              </p>
+              <span className="text-sm">Next Billing</span>
             </div>
+            <p className="text-2xl lg:text-3xl font-bold">
+              ${plans.find(p => p.name.toLowerCase() === currentPlan)?.price || 0}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {subscription?.expires_at 
+                ? new Date(subscription.expires_at).toLocaleDateString()
+                : 'N/A'
+              }
+            </p>
           </CardContent>
         </Card>
+      </motion.div>
+
+      {/* Main Grid - Deposit + Payment Methods / Commission */}
+      <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Quick Deposit */}
+        <div className="lg:col-span-2">
+          <QuickDeposit onDeposit={handleDeposit} loading={depositLoading} />
+        </div>
+
+        {/* Sidebar - Payment Methods & Commission */}
+        <div className="space-y-6">
+          <PaymentMethodsQuickAccess />
+          <CommissionTracker onPayCommission={handlePayCommission} />
+        </div>
+      </motion.div>
+
+      {/* Transaction History */}
+      <motion.div variants={itemVariants}>
+        <TransactionHistory />
       </motion.div>
 
       {/* Pricing Plans */}
       <motion.div variants={itemVariants}>
         <h2 className="text-xl font-bold mb-4">Choose Your Plan</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {plans.map((plan, index) => {
+          {plans.map((plan) => {
             const Icon = plan.icon;
             const isCurrent = currentPlan === plan.name.toLowerCase();
             
@@ -392,7 +351,7 @@ const Billing = () => {
                   </div>
                 )}
                 <Card className={cn(
-                  "glass-card-hover h-full relative overflow-hidden transition-all duration-300",
+                  "bg-card/60 backdrop-blur-xl border-border/50 h-full relative overflow-hidden transition-all duration-300 hover:border-primary/30",
                   plan.popular && "border-primary/50 shadow-lg shadow-primary/10",
                   isCurrent && "ring-2 ring-primary"
                 )}>
