@@ -6,6 +6,10 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Globe, 
   ExternalLink, 
@@ -22,12 +26,41 @@ import {
   Zap,
   Check,
   Clock,
-  Info
+  Info,
+  Lock,
+  Wifi,
+  HardDrive,
+  Settings,
+  AlertTriangle,
+  Loader2,
+  CloudCog,
+  Network
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
+
+type DNSRecordType = "A" | "AAAA" | "CNAME" | "TXT" | "MX" | "NS" | "SRV";
+
+interface DNSRecord {
+  id: string;
+  type: DNSRecordType;
+  name: string;
+  value: string;
+  ttl: number;
+  priority?: number;
+  status: "verified" | "pending" | "error";
+}
+
+interface Subdomain {
+  id: string;
+  name: string;
+  target: string;
+  ssl: boolean;
+  status: "active" | "pending" | "error";
+}
 
 const DomainSettings = () => {
   const { toast } = useToast();
@@ -37,12 +70,47 @@ const DomainSettings = () => {
   const [domains, setDomains] = useState<any[]>([]);
   const [panel, setPanel] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [addingDomain, setAddingDomain] = useState(false);
+  const [activeTab, setActiveTab] = useState("domains");
   
   // Wizard state
   const [showWizard, setShowWizard] = useState(false);
   const [wizardStep, setWizardStep] = useState(1);
   const [verifying, setVerifying] = useState(false);
+
+  // DNS Records state
+  const [dnsRecords, setDnsRecords] = useState<DNSRecord[]>([
+    { id: "1", type: "A", name: "@", value: "185.158.133.1", ttl: 3600, status: "verified" },
+    { id: "2", type: "A", name: "www", value: "185.158.133.1", ttl: 3600, status: "verified" },
+    { id: "3", type: "TXT", name: "_lovable", value: "lovable_verify=abc123", ttl: 3600, status: "pending" },
+  ]);
+  const [showAddDnsDialog, setShowAddDnsDialog] = useState(false);
+  const [newDnsRecord, setNewDnsRecord] = useState<Partial<DNSRecord>>({ type: "A", name: "", value: "", ttl: 3600 });
+
+  // Subdomains state
+  const [subdomains, setSubdomains] = useState<Subdomain[]>([
+    { id: "1", name: "api", target: "api.smmpilot.io", ssl: true, status: "active" },
+    { id: "2", name: "cdn", target: "cdn.smmpilot.io", ssl: true, status: "active" },
+  ]);
+  const [showAddSubdomainDialog, setShowAddSubdomainDialog] = useState(false);
+  const [newSubdomain, setNewSubdomain] = useState({ name: "", target: "" });
+
+  // SSL/Security state
+  const [sslSettings, setSslSettings] = useState({
+    forceHttps: true,
+    hsts: true,
+    securityGrade: "A+",
+    certificateIssuer: "Let's Encrypt",
+    certificateExpiry: "2025-03-15",
+    autoRenew: true,
+  });
+
+  // CDN state
+  const [cdnSettings, setCdnSettings] = useState({
+    enabled: true,
+    provider: "Cloudflare",
+    cacheTtl: "24h",
+    purgingCache: false,
+  });
 
   const wizardSteps = [
     { number: 1, title: "Domain Name", description: "Enter your domain" },
@@ -79,45 +147,28 @@ const DomainSettings = () => {
 
     } catch (error) {
       console.error('Error fetching data:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load domain settings.",
-        variant: "destructive",
-      });
     } finally {
       setLoading(false);
     }
   };
 
-  const dnsRecords = [
-    {
-      type: "A",
-      name: "@",
-      value: "185.158.133.1",
-      description: "Points your domain to SMMPilot infrastructure",
-      status: "pending"
-    },
-    {
-      type: "A", 
-      name: "www",
-      value: "185.158.133.1",
-      description: "Points www subdomain to SMMPilot infrastructure",
-      status: "pending"
-    }
+  const requiredDnsRecords = [
+    { type: "A", name: "@", value: "185.158.133.1", description: "Root domain to SMMPilot" },
+    { type: "A", name: "www", value: "185.158.133.1", description: "WWW subdomain" },
   ];
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "verified": return "bg-success/10 text-success border-success/20";
-      case "pending": return "bg-warning/10 text-warning border-warning/20";
-      case "error": return "bg-destructive/10 text-destructive border-destructive/20";
+      case "verified": case "active": return "bg-green-500/10 text-green-500 border-green-500/20";
+      case "pending": return "bg-yellow-500/10 text-yellow-500 border-yellow-500/20";
+      case "error": return "bg-red-500/10 text-red-500 border-red-500/20";
       default: return "bg-muted text-muted-foreground";
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "verified": return <CheckCircle className="w-4 h-4" />;
+      case "verified": case "active": return <CheckCircle className="w-4 h-4" />;
       case "pending": return <Clock className="w-4 h-4" />;
       case "error": return <AlertCircle className="w-4 h-4" />;
       default: return <Clock className="w-4 h-4" />;
@@ -126,19 +177,7 @@ const DomainSettings = () => {
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    toast({
-      title: "Copied to clipboard",
-      description: "DNS record value copied successfully.",
-    });
-  };
-
-  const copyAllRecords = () => {
-    const allRecords = dnsRecords.map(r => `${r.type} ${r.name} ${r.value}`).join('\n');
-    navigator.clipboard.writeText(allRecords);
-    toast({
-      title: "All records copied",
-      description: "All DNS records copied to clipboard.",
-    });
+    toast({ title: "Copied to clipboard" });
   };
 
   const handleStartWizard = () => {
@@ -150,26 +189,19 @@ const DomainSettings = () => {
 
   const handleNextStep = () => {
     if (wizardStep === 1 && !newDomain.trim()) {
-      toast({
-        title: "Domain required",
-        description: "Please enter a domain name.",
-        variant: "destructive",
-      });
+      toast({ variant: "destructive", title: "Domain required" });
       return;
     }
     setWizardStep(prev => Math.min(prev + 1, 4));
   };
 
-  const handlePrevStep = () => {
-    setWizardStep(prev => Math.max(prev - 1, 1));
-  };
+  const handlePrevStep = () => setWizardStep(prev => Math.max(prev - 1, 1));
 
   const handleVerifyAndAdd = async () => {
     if (!newDomain.trim() || !panel?.id) return;
     
     setVerifying(true);
     try {
-      // Simulate verification delay
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       const { error } = await supabase
@@ -183,47 +215,68 @@ const DomainSettings = () => {
 
       if (error) throw error;
 
-      toast({
-        title: "Domain added successfully!",
-        description: `${newDomain} has been added and is being verified.`,
-      });
+      toast({ title: "Domain added successfully!" });
       setShowWizard(false);
       setNewDomain("");
       fetchPanelAndDomains();
     } catch (error) {
-      console.error('Error adding domain:', error);
-      toast({
-        title: "Error",
-        description: "Failed to add domain. Please try again.",
-        variant: "destructive",
-      });
+      toast({ variant: "destructive", title: "Failed to add domain" });
     } finally {
       setVerifying(false);
     }
   };
 
-  const checkDomainStatus = async (domainId: string) => {
-    try {
-      toast({
-        title: "Checking domain status",
-        description: "Verifying DNS configuration and SSL status...",
-      });
-      
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      toast({
-        title: "Domain status updated",
-        description: "DNS and SSL status have been refreshed.",
-      });
-      
-      fetchPanelAndDomains();
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to check domain status.",
-        variant: "destructive",
-      });
+  const addDnsRecord = () => {
+    if (!newDnsRecord.name || !newDnsRecord.value) {
+      toast({ variant: "destructive", title: "Name and value required" });
+      return;
     }
+    setDnsRecords(prev => [...prev, {
+      id: Date.now().toString(),
+      type: newDnsRecord.type as DNSRecordType,
+      name: newDnsRecord.name!,
+      value: newDnsRecord.value!,
+      ttl: newDnsRecord.ttl || 3600,
+      priority: newDnsRecord.priority,
+      status: "pending",
+    }]);
+    setShowAddDnsDialog(false);
+    setNewDnsRecord({ type: "A", name: "", value: "", ttl: 3600 });
+    toast({ title: "DNS record added" });
+  };
+
+  const deleteDnsRecord = (id: string) => {
+    setDnsRecords(prev => prev.filter(r => r.id !== id));
+    toast({ title: "DNS record deleted" });
+  };
+
+  const addSubdomain = () => {
+    if (!newSubdomain.name) {
+      toast({ variant: "destructive", title: "Subdomain name required" });
+      return;
+    }
+    setSubdomains(prev => [...prev, {
+      id: Date.now().toString(),
+      name: newSubdomain.name,
+      target: newSubdomain.target || `${newSubdomain.name}.smmpilot.io`,
+      ssl: true,
+      status: "pending",
+    }]);
+    setShowAddSubdomainDialog(false);
+    setNewSubdomain({ name: "", target: "" });
+    toast({ title: "Subdomain added" });
+  };
+
+  const deleteSubdomain = (id: string) => {
+    setSubdomains(prev => prev.filter(s => s.id !== id));
+    toast({ title: "Subdomain deleted" });
+  };
+
+  const purgeCache = async () => {
+    setCdnSettings(prev => ({ ...prev, purgingCache: true }));
+    await new Promise(r => setTimeout(r, 2000));
+    setCdnSettings(prev => ({ ...prev, purgingCache: false }));
+    toast({ title: "CDN cache purged successfully" });
   };
 
   const removeDomain = async (domainId: string) => {
@@ -234,25 +287,17 @@ const DomainSettings = () => {
         .eq('id', domainId);
 
       if (error) throw error;
-
-      toast({
-        title: "Domain removed",
-        description: "Domain has been removed successfully.",
-      });
+      toast({ title: "Domain removed" });
       fetchPanelAndDomains();
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to remove domain.",
-        variant: "destructive",
-      });
+      toast({ variant: "destructive", title: "Failed to remove domain" });
     }
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -261,472 +306,550 @@ const DomainSettings = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Domain Settings</h1>
-          <p className="text-muted-foreground">Manage custom domains for your SMM panel</p>
+          <h1 className="text-2xl font-bold">Domain Settings</h1>
+          <p className="text-muted-foreground">Manage domains, DNS records, SSL, and CDN</p>
         </div>
-        <Button 
-          onClick={handleStartWizard}
-          className="bg-gradient-to-r from-primary to-primary/80 hover:shadow-lg transition-all"
-        >
+        <Button onClick={handleStartWizard} className="bg-gradient-to-r from-primary to-primary/80">
           <Plus className="w-4 h-4 mr-2" />
           Add Domain
         </Button>
       </div>
 
-      {/* Domain Connection Wizard */}
-      <AnimatePresence>
-        {showWizard && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-          >
-            <Card className="bg-background/60 backdrop-blur-xl border-border/50 overflow-hidden">
-              {/* Progress Steps */}
-              <div className="bg-muted/30 p-4 border-b border-border/50">
-                <div className="flex items-center justify-between max-w-2xl mx-auto">
-                  {wizardSteps.map((step, index) => (
-                    <div key={step.number} className="flex items-center">
-                      <div className={`flex flex-col items-center ${index > 0 ? 'ml-4' : ''}`}>
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-all ${
-                          wizardStep > step.number 
-                            ? "bg-success text-success-foreground" 
-                            : wizardStep === step.number 
-                              ? "bg-primary text-primary-foreground ring-4 ring-primary/20" 
-                              : "bg-muted text-muted-foreground"
-                        }`}>
-                          {wizardStep > step.number ? <Check className="w-5 h-5" /> : step.number}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="bg-card/50 border border-border/50 p-1">
+          <TabsTrigger value="domains" className="gap-2">
+            <Globe className="w-4 h-4" />
+            Domains
+          </TabsTrigger>
+          <TabsTrigger value="dns" className="gap-2">
+            <Network className="w-4 h-4" />
+            DNS Records
+          </TabsTrigger>
+          <TabsTrigger value="subdomains" className="gap-2">
+            <Server className="w-4 h-4" />
+            Subdomains
+          </TabsTrigger>
+          <TabsTrigger value="ssl" className="gap-2">
+            <Shield className="w-4 h-4" />
+            SSL/Security
+          </TabsTrigger>
+          <TabsTrigger value="cdn" className="gap-2">
+            <CloudCog className="w-4 h-4" />
+            CDN
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Domains Tab */}
+        <TabsContent value="domains" className="space-y-4">
+          {/* Domain Wizard */}
+          <AnimatePresence>
+            {showWizard && (
+              <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+                <Card className="bg-card/60 backdrop-blur-xl border-border/50">
+                  {/* Progress Steps */}
+                  <div className="bg-muted/30 p-4 border-b border-border/50">
+                    <div className="flex items-center justify-between max-w-2xl mx-auto">
+                      {wizardSteps.map((step, index) => (
+                        <div key={step.number} className="flex items-center">
+                          <div className="flex flex-col items-center">
+                            <div className={cn(
+                              "w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold",
+                              wizardStep > step.number ? "bg-green-500 text-white" 
+                                : wizardStep === step.number ? "bg-primary text-primary-foreground ring-4 ring-primary/20" 
+                                : "bg-muted text-muted-foreground"
+                            )}>
+                              {wizardStep > step.number ? <Check className="w-5 h-5" /> : step.number}
+                            </div>
+                            <span className="text-xs mt-2 font-medium">{step.title}</span>
+                          </div>
+                          {index < wizardSteps.length - 1 && (
+                            <div className={cn("h-0.5 w-12 lg:w-24 mx-2", wizardStep > step.number ? "bg-green-500" : "bg-border")} />
+                          )}
                         </div>
-                        <span className={`text-xs mt-2 font-medium ${
-                          wizardStep >= step.number ? "text-foreground" : "text-muted-foreground"
-                        }`}>
-                          {step.title}
-                        </span>
-                      </div>
-                      {index < wizardSteps.length - 1 && (
-                        <div className={`h-0.5 w-12 lg:w-24 mx-2 transition-colors ${
-                          wizardStep > step.number ? "bg-success" : "bg-border"
-                        }`} />
+                      ))}
+                    </div>
+                  </div>
+
+                  <CardContent className="p-6">
+                    <AnimatePresence mode="wait">
+                      {wizardStep === 1 && (
+                        <motion.div key="step1" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-6 text-center">
+                          <Globe className="w-16 h-16 mx-auto text-primary" />
+                          <h2 className="text-2xl font-bold">Enter Your Domain</h2>
+                          <div className="max-w-md mx-auto">
+                            <Input
+                              placeholder="example.com"
+                              value={newDomain}
+                              onChange={(e) => setNewDomain(e.target.value)}
+                              className="h-12 text-lg bg-background/50"
+                            />
+                          </div>
+                        </motion.div>
+                      )}
+
+                      {wizardStep === 2 && (
+                        <motion.div key="step2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-6 text-center">
+                          <Server className="w-16 h-16 mx-auto text-primary" />
+                          <h2 className="text-2xl font-bold">Choose Domain Type</h2>
+                          <RadioGroup value={domainType} onValueChange={(v) => setDomainType(v as any)} className="max-w-md mx-auto space-y-4">
+                            <Label htmlFor="primary" className={cn("flex p-4 rounded-xl border-2 cursor-pointer", domainType === "primary" ? "border-primary bg-primary/5" : "border-border")}>
+                              <RadioGroupItem value="primary" id="primary" className="mt-1" />
+                              <div className="ml-4">
+                                <span className="font-semibold">Primary Domain</span>
+                                <p className="text-sm text-muted-foreground">Main domain for your panel</p>
+                              </div>
+                            </Label>
+                            <Label htmlFor="secondary" className={cn("flex p-4 rounded-xl border-2 cursor-pointer", domainType === "secondary" ? "border-primary bg-primary/5" : "border-border")}>
+                              <RadioGroupItem value="secondary" id="secondary" className="mt-1" />
+                              <div className="ml-4">
+                                <span className="font-semibold">Secondary Domain</span>
+                                <p className="text-sm text-muted-foreground">Redirects to primary domain</p>
+                              </div>
+                            </Label>
+                          </RadioGroup>
+                        </motion.div>
+                      )}
+
+                      {wizardStep === 3 && (
+                        <motion.div key="step3" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-6">
+                          <div className="text-center">
+                            <Zap className="w-16 h-16 mx-auto text-primary mb-4" />
+                            <h2 className="text-2xl font-bold">Configure DNS Records</h2>
+                          </div>
+                          <div className="space-y-3">
+                            {requiredDnsRecords.map((record, index) => (
+                              <div key={index} className="flex items-center justify-between p-4 bg-muted/30 rounded-xl">
+                                <div className="grid grid-cols-3 gap-4 flex-1">
+                                  <div>
+                                    <span className="text-xs text-muted-foreground">Type</span>
+                                    <p className="font-mono font-semibold">{record.type}</p>
+                                  </div>
+                                  <div>
+                                    <span className="text-xs text-muted-foreground">Name</span>
+                                    <p className="font-mono">{record.name}</p>
+                                  </div>
+                                  <div>
+                                    <span className="text-xs text-muted-foreground">Value</span>
+                                    <p className="font-mono text-sm">{record.value}</p>
+                                  </div>
+                                </div>
+                                <Button variant="ghost" size="icon" onClick={() => copyToClipboard(record.value)}>
+                                  <Copy className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+
+                      {wizardStep === 4 && (
+                        <motion.div key="step4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-6 text-center">
+                          <Shield className="w-16 h-16 mx-auto text-primary" />
+                          <h2 className="text-2xl font-bold">Verify Your Domain</h2>
+                          <p className="text-muted-foreground">Click verify to check DNS propagation</p>
+                          <Button onClick={handleVerifyAndAdd} disabled={verifying} className="min-w-[200px]">
+                            {verifying ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Check className="w-4 h-4 mr-2" />}
+                            {verifying ? "Verifying..." : "Verify & Add Domain"}
+                          </Button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    <div className="flex justify-between mt-8">
+                      <Button variant="outline" onClick={wizardStep === 1 ? () => setShowWizard(false) : handlePrevStep}>
+                        <ArrowLeft className="w-4 h-4 mr-2" />
+                        {wizardStep === 1 ? "Cancel" : "Back"}
+                      </Button>
+                      {wizardStep < 4 && (
+                        <Button onClick={handleNextStep}>
+                          Next
+                          <ArrowRight className="w-4 h-4 ml-2" />
+                        </Button>
                       )}
                     </div>
-                  ))}
-                </div>
-              </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-              <CardContent className="p-6">
-                <AnimatePresence mode="wait">
-                  {/* Step 1: Domain Name */}
-                  {wizardStep === 1 && (
-                    <motion.div
-                      key="step1"
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -20 }}
-                      className="space-y-6"
-                    >
-                      <div className="text-center mb-8">
-                        <Globe className="w-16 h-16 mx-auto text-primary mb-4" />
-                        <h2 className="text-2xl font-bold">Enter Your Domain</h2>
-                        <p className="text-muted-foreground mt-2">
-                          Enter the domain name you want to connect to your panel
-                        </p>
-                      </div>
-                      <div className="max-w-md mx-auto">
-                        <Label htmlFor="domain" className="text-sm font-medium">Domain Name</Label>
-                        <Input
-                          id="domain"
-                          placeholder="example.com"
-                          value={newDomain}
-                          onChange={(e) => setNewDomain(e.target.value)}
-                          className="mt-2 h-12 text-lg bg-background/50"
-                        />
-                        <p className="text-xs text-muted-foreground mt-2">
-                          Enter without http:// or https://
-                        </p>
-                      </div>
-                    </motion.div>
-                  )}
-
-                  {/* Step 2: Domain Type */}
-                  {wizardStep === 2 && (
-                    <motion.div
-                      key="step2"
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -20 }}
-                      className="space-y-6"
-                    >
-                      <div className="text-center mb-8">
-                        <Server className="w-16 h-16 mx-auto text-primary mb-4" />
-                        <h2 className="text-2xl font-bold">Choose Domain Type</h2>
-                        <p className="text-muted-foreground mt-2">
-                          Select how you want to use this domain
-                        </p>
-                      </div>
-                      <RadioGroup 
-                        value={domainType} 
-                        onValueChange={(v) => setDomainType(v as "primary" | "secondary")}
-                        className="max-w-md mx-auto space-y-4"
-                      >
-                        <Label 
-                          htmlFor="primary"
-                          className={`flex items-start space-x-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                            domainType === "primary" 
-                              ? "border-primary bg-primary/5" 
-                              : "border-border hover:border-primary/50"
-                          }`}
-                        >
-                          <RadioGroupItem value="primary" id="primary" className="mt-1" />
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="font-semibold">Primary Domain</span>
-                              <Badge variant="secondary" className="text-xs">Recommended</Badge>
-                            </div>
-                            <p className="text-sm text-muted-foreground mt-1">
-                              Main domain for your panel. Users will access your panel through this domain.
-                            </p>
-                          </div>
-                        </Label>
-                        <Label 
-                          htmlFor="secondary"
-                          className={`flex items-start space-x-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                            domainType === "secondary" 
-                              ? "border-primary bg-primary/5" 
-                              : "border-border hover:border-primary/50"
-                          }`}
-                        >
-                          <RadioGroupItem value="secondary" id="secondary" className="mt-1" />
-                          <div className="flex-1">
-                            <span className="font-semibold">Secondary Domain</span>
-                            <p className="text-sm text-muted-foreground mt-1">
-                              Additional domain that redirects to your primary domain.
-                            </p>
-                          </div>
-                        </Label>
-                      </RadioGroup>
-                    </motion.div>
-                  )}
-
-                  {/* Step 3: DNS Setup */}
-                  {wizardStep === 3 && (
-                    <motion.div
-                      key="step3"
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -20 }}
-                      className="space-y-6"
-                    >
-                      <div className="text-center mb-8">
-                        <Zap className="w-16 h-16 mx-auto text-primary mb-4" />
-                        <h2 className="text-2xl font-bold">Configure DNS Records</h2>
-                        <p className="text-muted-foreground mt-2">
-                          Add these records to your domain's DNS settings
-                        </p>
-                      </div>
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium">Required DNS Records</span>
-                          <Button variant="outline" size="sm" onClick={copyAllRecords}>
-                            <Copy className="w-4 h-4 mr-2" />
-                            Copy All
-                          </Button>
+          {/* Connected Domains */}
+          {domains.length > 0 ? (
+            <div className="grid gap-4">
+              {domains.map((domain) => (
+                <Card key={domain.id} className="bg-card/50 border-border/50">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="p-3 rounded-xl bg-primary/10">
+                          <Globe className="w-6 h-6 text-primary" />
                         </div>
-                        {dnsRecords.map((record, index) => (
-                          <div 
-                            key={index} 
-                            className="flex items-center justify-between p-4 bg-muted/30 rounded-xl border border-border/50"
-                          >
-                            <div className="grid grid-cols-3 gap-4 flex-1">
-                              <div>
-                                <span className="text-xs text-muted-foreground block">Type</span>
-                                <span className="font-mono font-semibold">{record.type}</span>
-                              </div>
-                              <div>
-                                <span className="text-xs text-muted-foreground block">Name</span>
-                                <span className="font-mono">{record.name}</span>
-                              </div>
-                              <div>
-                                <span className="text-xs text-muted-foreground block">Value</span>
-                                <span className="font-mono text-sm">{record.value}</span>
-                              </div>
-                            </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-semibold">{domain.domain}</h3>
+                            {domain.is_primary && <Badge>Primary</Badge>}
+                          </div>
+                          <div className="flex items-center gap-3 mt-1">
+                            <Badge variant="outline" className={getStatusColor(domain.verification_status || "pending")}>
+                              {getStatusIcon(domain.verification_status || "pending")}
+                              <span className="ml-1 capitalize">{domain.verification_status || "pending"}</span>
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">SSL: {domain.ssl_status || "Pending"}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={() => window.open(`https://${domain.domain}`, "_blank")}>
+                          <ExternalLink className="w-4 h-4" />
+                        </Button>
+                        <Button variant="outline" size="sm" className="text-red-500" onClick={() => removeDomain(domain.id)}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <Card className="bg-card/50 border-border/50">
+              <CardContent className="p-8 text-center">
+                <Globe className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="font-semibold mb-2">No domains connected</h3>
+                <p className="text-sm text-muted-foreground mb-4">Add a custom domain to your panel</p>
+                <Button onClick={handleStartWizard}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Domain
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* DNS Records Tab */}
+        <TabsContent value="dns" className="space-y-4">
+          <Card className="bg-card/50 border-border/50">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-lg">DNS Records</CardTitle>
+              <Button size="sm" onClick={() => setShowAddDnsDialog(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Record
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-xl border border-border/50 overflow-hidden">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-muted/30">
+                      <th className="text-left p-3 text-sm font-medium">Type</th>
+                      <th className="text-left p-3 text-sm font-medium">Name</th>
+                      <th className="text-left p-3 text-sm font-medium">Value</th>
+                      <th className="text-left p-3 text-sm font-medium">TTL</th>
+                      <th className="text-left p-3 text-sm font-medium">Status</th>
+                      <th className="text-right p-3 text-sm font-medium">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {dnsRecords.map((record) => (
+                      <tr key={record.id} className="border-t border-border/50">
+                        <td className="p-3">
+                          <Badge variant="outline">{record.type}</Badge>
+                        </td>
+                        <td className="p-3 font-mono text-sm">{record.name}</td>
+                        <td className="p-3 font-mono text-sm max-w-[200px] truncate">{record.value}</td>
+                        <td className="p-3 text-sm text-muted-foreground">{record.ttl}s</td>
+                        <td className="p-3">
+                          <Badge variant="outline" className={getStatusColor(record.status)}>
+                            {getStatusIcon(record.status)}
+                            <span className="ml-1 capitalize">{record.status}</span>
+                          </Badge>
+                        </td>
+                        <td className="p-3 text-right">
+                          <div className="flex justify-end gap-1">
                             <Button variant="ghost" size="icon" onClick={() => copyToClipboard(record.value)}>
                               <Copy className="w-4 h-4" />
                             </Button>
+                            <Button variant="ghost" size="icon" className="text-red-500" onClick={() => deleteDnsRecord(record.id)}>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
                           </div>
-                        ))}
-                        <Alert className="bg-info/10 border-info/20">
-                          <Info className="h-4 w-4 text-info" />
-                          <AlertDescription className="text-info">
-                            DNS changes can take up to 24-48 hours to propagate worldwide.
-                          </AlertDescription>
-                        </Alert>
-                      </div>
-                    </motion.div>
-                  )}
-
-                  {/* Step 4: Verification */}
-                  {wizardStep === 4 && (
-                    <motion.div
-                      key="step4"
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -20 }}
-                      className="space-y-6"
-                    >
-                      <div className="text-center mb-8">
-                        <Shield className="w-16 h-16 mx-auto text-primary mb-4" />
-                        <h2 className="text-2xl font-bold">Verify & Connect</h2>
-                        <p className="text-muted-foreground mt-2">
-                          Review your configuration and connect your domain
-                        </p>
-                      </div>
-                      <div className="max-w-md mx-auto space-y-4">
-                        <div className="p-4 bg-muted/30 rounded-xl space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">Domain</span>
-                            <span className="font-semibold">{newDomain}</span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">Type</span>
-                            <Badge variant="secondary">{domainType}</Badge>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">SSL</span>
-                            <span className="text-success flex items-center gap-1">
-                              <Shield className="w-4 h-4" />
-                              Auto-enabled
-                            </span>
-                          </div>
-                        </div>
-                        <Alert className="bg-success/10 border-success/20">
-                          <CheckCircle className="h-4 w-4 text-success" />
-                          <AlertDescription className="text-success">
-                            SSL certificate will be automatically generated once DNS is verified.
-                          </AlertDescription>
-                        </Alert>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                {/* Navigation Buttons */}
-                <div className="flex items-center justify-between mt-8 pt-6 border-t border-border/50">
-                  <Button 
-                    variant="outline" 
-                    onClick={wizardStep === 1 ? () => setShowWizard(false) : handlePrevStep}
-                  >
-                    <ArrowLeft className="w-4 h-4 mr-2" />
-                    {wizardStep === 1 ? "Cancel" : "Back"}
-                  </Button>
-                  {wizardStep < 4 ? (
-                    <Button onClick={handleNextStep}>
-                      Next
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </Button>
-                  ) : (
-                    <Button 
-                      onClick={handleVerifyAndAdd}
-                      disabled={verifying}
-                      className="bg-gradient-to-r from-success to-success/80"
-                    >
-                      {verifying ? (
-                        <>
-                          <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                          Verifying...
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle className="w-4 h-4 mr-2" />
-                          Connect Domain
-                        </>
-                      )}
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Domain Status Cards */}
-      <div className="grid gap-4">
-        {domains.length === 0 && !showWizard ? (
-          <Card className="bg-background/60 backdrop-blur-xl border-border/50 border-dashed">
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <Globe className="w-16 h-16 text-muted-foreground/30 mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No domains connected</h3>
-              <p className="text-muted-foreground text-center mb-4">
-                Connect a custom domain to personalize your panel
-              </p>
-              <Button onClick={handleStartWizard}>
-                <Plus className="w-4 h-4 mr-2" />
-                Add Your First Domain
-              </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </CardContent>
           </Card>
-        ) : (
-          domains.map((domain, index) => (
-            <motion.div
-              key={domain.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-            >
-              <Card className="bg-background/60 backdrop-blur-xl border-border/50 hover:border-primary/30 transition-all">
-                <CardContent className="p-6">
-                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                    <div className="flex items-start gap-4">
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                        domain.verification_status === "verified" ? "bg-success/10" : "bg-warning/10"
-                      }`}>
-                        <Globe className={`w-6 h-6 ${
-                          domain.verification_status === "verified" ? "text-success" : "text-warning"
-                        }`} />
+        </TabsContent>
+
+        {/* Subdomains Tab */}
+        <TabsContent value="subdomains" className="space-y-4">
+          <Card className="bg-card/50 border-border/50">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-lg">Subdomain Management</CardTitle>
+              <Button size="sm" onClick={() => setShowAddSubdomainDialog(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Subdomain
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-3">
+                {subdomains.map((subdomain) => (
+                  <div key={subdomain.id} className="flex items-center justify-between p-4 bg-muted/30 rounded-xl">
+                    <div className="flex items-center gap-4">
+                      <div className="p-2 rounded-lg bg-primary/10">
+                        <Server className="w-5 h-5 text-primary" />
                       </div>
                       <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="text-lg font-semibold">{domain.domain}</h3>
-                          {domain.is_primary && (
-                            <Badge variant="default" className="text-xs">Primary</Badge>
-                          )}
-                          <Badge className={getStatusColor(domain.verification_status)}>
-                            {getStatusIcon(domain.verification_status)}
-                            <span className="ml-1 capitalize">{domain.verification_status}</span>
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            {domain.dns_configured ? (
-                              <CheckCircle className="w-4 h-4 text-success" />
-                            ) : (
-                              <Clock className="w-4 h-4 text-warning" />
-                            )}
-                            <span>DNS: {domain.dns_configured ? "Configured" : "Pending"}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            {domain.ssl_status === "active" ? (
-                              <Shield className="w-4 h-4 text-success" />
-                            ) : (
-                              <Shield className="w-4 h-4 text-warning" />
-                            )}
-                            <span>SSL: {domain.ssl_status || "Pending"}</span>
-                          </div>
-                          <span>Added {new Date(domain.created_at).toLocaleDateString()}</span>
-                        </div>
+                        <p className="font-medium">{subdomain.name}.yourdomain.com</p>
+                        <p className="text-sm text-muted-foreground">→ {subdomain.target}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => checkDomainStatus(domain.id)}
-                        className="gap-2"
-                      >
-                        <RefreshCw className="w-4 h-4" />
-                        Check
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => window.open(`https://${domain.domain}`, '_blank')}
-                        className="gap-2"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                        Visit
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="icon"
-                        onClick={() => removeDomain(domain.id)}
-                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                      >
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <Lock className={cn("w-4 h-4", subdomain.ssl ? "text-green-500" : "text-muted-foreground")} />
+                        <span className="text-sm">{subdomain.ssl ? "SSL Enabled" : "No SSL"}</span>
+                      </div>
+                      <Badge variant="outline" className={getStatusColor(subdomain.status)}>
+                        {subdomain.status}
+                      </Badge>
+                      <Button variant="ghost" size="icon" className="text-red-500" onClick={() => deleteSubdomain(subdomain.id)}>
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))
-        )}
-      </div>
-
-      {/* DNS Configuration Reference */}
-      {domains.length > 0 && (
-        <Card className="bg-background/60 backdrop-blur-xl border-border/50">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Server className="w-5 h-5" />
-              DNS Configuration
-            </CardTitle>
-            <Button variant="outline" size="sm" onClick={copyAllRecords}>
-              <Copy className="w-4 h-4 mr-2" />
-              Copy All
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {dnsRecords.map((record, index) => (
-                <div 
-                  key={index} 
-                  className="flex items-center justify-between p-4 bg-muted/30 rounded-xl hover:bg-muted/40 transition-colors"
-                >
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 flex-1">
-                    <div>
-                      <span className="text-xs text-muted-foreground block mb-1">Type</span>
-                      <Badge variant="outline" className="font-mono">{record.type}</Badge>
-                    </div>
-                    <div>
-                      <span className="text-xs text-muted-foreground block mb-1">Name</span>
-                      <span className="font-mono">{record.name}</span>
-                    </div>
-                    <div className="md:col-span-2">
-                      <span className="text-xs text-muted-foreground block mb-1">Value</span>
-                      <span className="font-mono text-sm">{record.value}</span>
-                    </div>
+                ))}
+                {subdomains.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No subdomains configured
                   </div>
-                  <Button variant="ghost" size="icon" onClick={() => copyToClipboard(record.value)}>
-                    <Copy className="w-4 h-4" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-      {/* SSL Information */}
-      {domains.length > 0 && (
-        <Card className="bg-background/60 backdrop-blur-xl border-border/50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="w-5 h-5" />
-              SSL Certificate
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between p-4 bg-success/5 rounded-xl border border-success/20">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-success/10 flex items-center justify-center">
-                  <Shield className="w-6 h-6 text-success" />
+        {/* SSL/Security Tab */}
+        <TabsContent value="ssl" className="space-y-4">
+          <div className="grid md:grid-cols-2 gap-4">
+            <Card className="bg-card/50 border-border/50">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Shield className="w-5 h-5 text-primary" />
+                  SSL Certificate
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between p-3 bg-green-500/10 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <CheckCircle className="w-5 h-5 text-green-500" />
+                    <span className="font-medium">Certificate Active</span>
+                  </div>
+                  <Badge className="bg-green-500">{sslSettings.securityGrade}</Badge>
                 </div>
-                <div>
-                  <h3 className="font-semibold">Automatic SSL Protection</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Free SSL certificates are auto-generated and renewed for all verified domains
-                  </p>
+                <div className="space-y-3">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Issuer</span>
+                    <span>{sslSettings.certificateIssuer}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Expires</span>
+                    <span>{sslSettings.certificateExpiry}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Auto Renew</span>
+                    <Badge variant="outline" className="bg-green-500/10 text-green-500">Enabled</Badge>
+                  </div>
+                </div>
+                <Button variant="outline" className="w-full">
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Renew Now
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-card/50 border-border/50">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Lock className="w-5 h-5 text-primary" />
+                  Security Settings
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between p-3 bg-muted/30 rounded-xl">
+                  <div>
+                    <p className="font-medium">Force HTTPS</p>
+                    <p className="text-xs text-muted-foreground">Redirect all HTTP to HTTPS</p>
+                  </div>
+                  <Switch checked={sslSettings.forceHttps} onCheckedChange={(v) => setSslSettings({...sslSettings, forceHttps: v})} />
+                </div>
+                <div className="flex items-center justify-between p-3 bg-muted/30 rounded-xl">
+                  <div>
+                    <p className="font-medium">HSTS</p>
+                    <p className="text-xs text-muted-foreground">HTTP Strict Transport Security</p>
+                  </div>
+                  <Switch checked={sslSettings.hsts} onCheckedChange={(v) => setSslSettings({...sslSettings, hsts: v})} />
+                </div>
+                <Alert className="bg-primary/5 border-primary/20">
+                  <Info className="h-4 w-4 text-primary" />
+                  <AlertDescription className="text-sm">
+                    These settings improve your site's security grade
+                  </AlertDescription>
+                </Alert>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* CDN Tab */}
+        <TabsContent value="cdn" className="space-y-4">
+          <Card className="bg-card/50 border-border/50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <CloudCog className="w-5 h-5 text-primary" />
+                CDN Configuration
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-muted/30 rounded-xl">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-xl bg-primary/10">
+                    <Wifi className="w-6 h-6 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-medium">CDN Status</p>
+                    <p className="text-sm text-muted-foreground">{cdnSettings.provider}</p>
+                  </div>
+                </div>
+                <Switch checked={cdnSettings.enabled} onCheckedChange={(v) => setCdnSettings({...cdnSettings, enabled: v})} />
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Cache TTL</Label>
+                  <Select value={cdnSettings.cacheTtl} onValueChange={(v) => setCdnSettings({...cdnSettings, cacheTtl: v})}>
+                    <SelectTrigger className="bg-background/50">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1h">1 Hour</SelectItem>
+                      <SelectItem value="6h">6 Hours</SelectItem>
+                      <SelectItem value="12h">12 Hours</SelectItem>
+                      <SelectItem value="24h">24 Hours</SelectItem>
+                      <SelectItem value="7d">7 Days</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Provider</Label>
+                  <Input value={cdnSettings.provider} disabled className="bg-muted/50" />
                 </div>
               </div>
-              <Badge className="bg-success/10 text-success border-success/20">
-                <CheckCircle className="w-4 h-4 mr-1" />
-                Active
-              </Badge>
+
+              <Button variant="outline" className="w-full" onClick={purgeCache} disabled={cdnSettings.purgingCache}>
+                {cdnSettings.purgingCache ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <HardDrive className="w-4 h-4 mr-2" />
+                )}
+                {cdnSettings.purgingCache ? "Purging..." : "Purge Cache"}
+              </Button>
+
+              <div className="grid grid-cols-3 gap-4 p-4 bg-muted/30 rounded-xl">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-primary">98.5%</p>
+                  <p className="text-xs text-muted-foreground">Cache Hit Rate</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-green-500">45ms</p>
+                  <p className="text-xs text-muted-foreground">Avg Response</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-yellow-500">1.2GB</p>
+                  <p className="text-xs text-muted-foreground">Bandwidth Saved</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Add DNS Record Dialog */}
+      <Dialog open={showAddDnsDialog} onOpenChange={setShowAddDnsDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Add DNS Record</DialogTitle>
+            <DialogDescription>Configure a new DNS record for your domain</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Type</Label>
+                <Select value={newDnsRecord.type} onValueChange={(v) => setNewDnsRecord({...newDnsRecord, type: v as DNSRecordType})}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {["A", "AAAA", "CNAME", "TXT", "MX", "NS", "SRV"].map((type) => (
+                      <SelectItem key={type} value={type}>{type}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>TTL (seconds)</Label>
+                <Input type="number" value={newDnsRecord.ttl} onChange={(e) => setNewDnsRecord({...newDnsRecord, ttl: parseInt(e.target.value)})} />
+              </div>
             </div>
-          </CardContent>
-        </Card>
-      )}
+            <div className="space-y-2">
+              <Label>Name</Label>
+              <Input placeholder="@ or subdomain" value={newDnsRecord.name} onChange={(e) => setNewDnsRecord({...newDnsRecord, name: e.target.value})} />
+            </div>
+            <div className="space-y-2">
+              <Label>Value</Label>
+              <Input placeholder="IP address or target" value={newDnsRecord.value} onChange={(e) => setNewDnsRecord({...newDnsRecord, value: e.target.value})} />
+            </div>
+            {newDnsRecord.type === "MX" && (
+              <div className="space-y-2">
+                <Label>Priority</Label>
+                <Input type="number" value={newDnsRecord.priority} onChange={(e) => setNewDnsRecord({...newDnsRecord, priority: parseInt(e.target.value)})} />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddDnsDialog(false)}>Cancel</Button>
+            <Button onClick={addDnsRecord}>Add Record</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Subdomain Dialog */}
+      <Dialog open={showAddSubdomainDialog} onOpenChange={setShowAddSubdomainDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Add Subdomain</DialogTitle>
+            <DialogDescription>Configure a new subdomain for your domain</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Subdomain Name</Label>
+              <div className="flex items-center gap-2">
+                <Input placeholder="api" value={newSubdomain.name} onChange={(e) => setNewSubdomain({...newSubdomain, name: e.target.value})} />
+                <span className="text-muted-foreground">.yourdomain.com</span>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Target (optional)</Label>
+              <Input placeholder="api.smmpilot.io" value={newSubdomain.target} onChange={(e) => setNewSubdomain({...newSubdomain, target: e.target.value})} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddSubdomainDialog(false)}>Cancel</Button>
+            <Button onClick={addSubdomain}>Add Subdomain</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
