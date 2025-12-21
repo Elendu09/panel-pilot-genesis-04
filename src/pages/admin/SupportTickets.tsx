@@ -3,6 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { 
   MessageSquare, 
   Clock, 
@@ -13,19 +17,32 @@ import {
   Calendar,
   ArrowUpRight,
   Inbox,
-  RefreshCw
+  RefreshCw,
+  Send,
+  Reply
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
+import { useToast } from '@/hooks/use-toast';
+
+interface TicketMessage {
+  id: string;
+  content: string;
+  sender: string;
+  sender_type: 'user' | 'admin';
+  created_at: string;
+}
 
 interface Ticket {
   id: string;
   subject: string;
   status: string;
   priority: string;
+  messages?: any[];
   created_at: string;
+  messages?: TicketMessage[];
   user?: {
     email: string;
     full_name: string;
@@ -36,9 +53,15 @@ interface Ticket {
 }
 
 const SupportTickets = () => {
+  const { toast } = useToast();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [replyText, setReplyText] = useState('');
+  const [newStatus, setNewStatus] = useState('');
+  const [newPriority, setNewPriority] = useState('');
 
   useEffect(() => {
     fetchTickets();
@@ -55,11 +78,76 @@ const SupportTickets = () => {
         `)
         .order('created_at', { ascending: false });
 
-      setTickets((data || []) as Ticket[]);
+      setTickets((data || []) as unknown as Ticket[]);
     } catch (error) {
       console.error('Error fetching tickets:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const openTicketDetails = (ticket: Ticket) => {
+    setSelectedTicket(ticket);
+    setNewStatus(ticket.status);
+    setNewPriority(ticket.priority);
+    setReplyText('');
+    setDetailsDialogOpen(true);
+  };
+
+  const handleSendReply = async () => {
+    if (!selectedTicket || !replyText.trim()) return;
+
+    try {
+      const currentMessages = Array.isArray(selectedTicket.messages) ? selectedTicket.messages : [];
+      const newMessage = {
+        id: crypto.randomUUID(),
+        content: replyText,
+        sender: 'Admin',
+        sender_type: 'admin',
+        created_at: new Date().toISOString()
+      };
+
+      await supabase
+        .from('support_tickets')
+        .update({
+          messages: [...currentMessages, newMessage] as any,
+          status: newStatus,
+          priority: newPriority
+        })
+        .eq('id', selectedTicket.id);
+
+      toast({
+        title: "Reply Sent",
+        description: "Your reply has been sent to the user"
+      });
+
+      setReplyText('');
+      fetchTickets();
+      setDetailsDialogOpen(false);
+    } catch (error) {
+      console.error('Error sending reply:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to send reply"
+      });
+    }
+  };
+
+  const updateTicketStatus = async (ticketId: string, status: string) => {
+    try {
+      await supabase
+        .from('support_tickets')
+        .update({ status })
+        .eq('id', ticketId);
+
+      toast({
+        title: "Status Updated",
+        description: `Ticket marked as ${status}`
+      });
+      fetchTickets();
+    } catch (error) {
+      console.error('Error updating ticket:', error);
     }
   };
 
@@ -120,6 +208,13 @@ const SupportTickets = () => {
     inProgress: tickets.filter(t => t.status === 'in_progress').length,
     resolved: tickets.filter(t => t.status === 'resolved').length
   };
+
+  const quickReplies = [
+    "Thank you for contacting support. We're looking into your issue.",
+    "Your issue has been resolved. Please let us know if you need further assistance.",
+    "We need more information to help you. Please provide additional details.",
+    "This has been escalated to our technical team."
+  ];
 
   return (
     <motion.div
@@ -230,6 +325,7 @@ const SupportTickets = () => {
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
                       className="glass-card-hover p-4 space-y-3 cursor-pointer group"
+                      onClick={() => openTicketDetails(ticket)}
                     >
                       <div className="flex items-start justify-between gap-2">
                         <p className="font-medium text-sm group-hover:text-primary transition-colors line-clamp-2">
@@ -257,7 +353,7 @@ const SupportTickets = () => {
                       
                       <div className="opacity-0 group-hover:opacity-100 transition-opacity">
                         <Button size="sm" variant="outline" className="w-full text-xs gap-1">
-                          View Details <ArrowUpRight className="w-3 h-3" />
+                          View & Reply <ArrowUpRight className="w-3 h-3" />
                         </Button>
                       </div>
                     </motion.div>
@@ -268,6 +364,127 @@ const SupportTickets = () => {
           );
         })}
       </motion.div>
+
+      {/* Ticket Details Dialog */}
+      <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageSquare className="w-5 h-5" />
+              {selectedTicket?.subject}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedTicket && (
+            <div className="space-y-4 mt-4">
+              {/* Ticket Info */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-3 bg-accent/50 rounded-lg">
+                  <p className="text-xs text-muted-foreground">User</p>
+                  <p className="font-medium">{selectedTicket.user?.full_name || selectedTicket.user?.email}</p>
+                </div>
+                <div className="p-3 bg-accent/50 rounded-lg">
+                  <p className="text-xs text-muted-foreground">Created</p>
+                  <p className="font-medium">{new Date(selectedTicket.created_at).toLocaleString()}</p>
+                </div>
+              </div>
+
+              {/* Status & Priority Controls */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Status</Label>
+                  <Select value={newStatus} onValueChange={setNewStatus}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="open">Open</SelectItem>
+                      <SelectItem value="in_progress">In Progress</SelectItem>
+                      <SelectItem value="resolved">Resolved</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Priority</Label>
+                  <Select value={newPriority} onValueChange={setNewPriority}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="low">Low</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="high">High</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Message History */}
+              <div className="space-y-2">
+                <Label>Message History</Label>
+                <div className="border border-border rounded-lg p-4 max-h-60 overflow-y-auto space-y-3">
+                  {Array.isArray(selectedTicket.messages) && selectedTicket.messages.length > 0 ? (
+                    selectedTicket.messages.map((msg: TicketMessage) => (
+                      <div
+                        key={msg.id}
+                        className={cn(
+                          "p-3 rounded-lg",
+                          msg.sender_type === 'admin' ? 'bg-primary/10 ml-8' : 'bg-accent/50 mr-8'
+                        )}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs font-medium">{msg.sender}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(msg.created_at).toLocaleString()}
+                          </span>
+                        </div>
+                        <p className="text-sm">{msg.content}</p>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-4">No messages yet</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Quick Replies */}
+              <div className="space-y-2">
+                <Label>Quick Replies</Label>
+                <div className="flex flex-wrap gap-2">
+                  {quickReplies.map((reply, index) => (
+                    <Button
+                      key={index}
+                      variant="outline"
+                      size="sm"
+                      className="text-xs"
+                      onClick={() => setReplyText(reply)}
+                    >
+                      {reply.substring(0, 30)}...
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Reply Input */}
+              <div className="space-y-2">
+                <Label>Your Reply</Label>
+                <Textarea
+                  placeholder="Type your reply here..."
+                  value={replyText}
+                  onChange={(e) => setReplyText(e.target.value)}
+                  rows={4}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDetailsDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSendReply} disabled={!replyText.trim()}>
+              <Send className="w-4 h-4 mr-2" />
+              Send Reply
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 };

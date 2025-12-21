@@ -2,10 +2,13 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { 
@@ -14,7 +17,6 @@ import {
   XCircle, 
   Clock, 
   DollarSign,
-  Users,
   Globe,
   Search,
   Eye,
@@ -22,7 +24,11 @@ import {
   Ban,
   Calendar,
   TrendingUp,
-  Activity
+  Activity,
+  Save,
+  Package,
+  Users,
+  CreditCard
 } from "lucide-react";
 
 interface Panel {
@@ -36,6 +42,8 @@ interface Panel {
   total_orders: number;
   owner_id: string;
   created_at: string;
+  commission_rate: number;
+  balance: number;
   owner?: {
     email: string;
     full_name: string;
@@ -49,6 +57,19 @@ const PanelManagement = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedPanel, setSelectedPanel] = useState<Panel | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: "",
+    description: "",
+    commission_rate: 5,
+    status: "pending" as Panel['status']
+  });
+  const [panelStats, setPanelStats] = useState({
+    services: 0,
+    orders: 0,
+    clients: 0
+  });
 
   useEffect(() => {
     fetchPanels();
@@ -77,6 +98,24 @@ const PanelManagement = () => {
     }
   };
 
+  const fetchPanelStats = async (panelId: string) => {
+    try {
+      const [servicesRes, ordersRes, clientsRes] = await Promise.all([
+        supabase.from('services').select('id', { count: 'exact' }).eq('panel_id', panelId),
+        supabase.from('orders').select('id', { count: 'exact' }).eq('panel_id', panelId),
+        supabase.from('client_users').select('id', { count: 'exact' }).eq('panel_id', panelId)
+      ]);
+      
+      setPanelStats({
+        services: servicesRes.count || 0,
+        orders: ordersRes.count || 0,
+        clients: clientsRes.count || 0
+      });
+    } catch (error) {
+      console.error('Error fetching panel stats:', error);
+    }
+  };
+
   const updatePanelStatus = async (panelId: string, newStatus: 'active' | 'suspended') => {
     try {
       await supabase
@@ -84,7 +123,6 @@ const PanelManagement = () => {
         .update({ status: newStatus })
         .eq('id', panelId);
 
-      // If approving, also call the approve_panel function
       if (newStatus === 'active') {
         await supabase.rpc('approve_panel', { panel_id: panelId });
       }
@@ -100,6 +138,53 @@ const PanelManagement = () => {
         variant: "destructive",
         title: "Error",
         description: "Failed to update panel status"
+      });
+    }
+  };
+
+  const openEditDialog = (panel: Panel) => {
+    setSelectedPanel(panel);
+    setEditForm({
+      name: panel.name,
+      description: panel.description || "",
+      commission_rate: panel.commission_rate || 5,
+      status: panel.status
+    });
+    setEditDialogOpen(true);
+  };
+
+  const openDetailsDialog = async (panel: Panel) => {
+    setSelectedPanel(panel);
+    await fetchPanelStats(panel.id);
+    setDetailsDialogOpen(true);
+  };
+
+  const handleSavePanel = async () => {
+    if (!selectedPanel) return;
+    
+    try {
+      await supabase
+        .from('panels')
+        .update({
+          name: editForm.name,
+          description: editForm.description,
+          commission_rate: editForm.commission_rate,
+          status: editForm.status
+        })
+        .eq('id', selectedPanel.id);
+
+      toast({
+        title: "Panel Updated",
+        description: "Panel settings saved successfully"
+      });
+      setEditDialogOpen(false);
+      fetchPanels();
+    } catch (error) {
+      console.error('Error updating panel:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to update panel"
       });
     }
   };
@@ -247,7 +332,7 @@ const PanelManagement = () => {
                   <TableHead>Owner</TableHead>
                   <TableHead>Domain</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Orders</TableHead>
+                  <TableHead>Commission</TableHead>
                   <TableHead>Revenue</TableHead>
                   <TableHead>Created</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -285,10 +370,7 @@ const PanelManagement = () => {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Activity className="w-3 h-3 text-muted-foreground" />
-                        <span className="font-medium">{panel.total_orders || 0}</span>
-                      </div>
+                      <span className="font-medium">{panel.commission_rate || 5}%</span>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
@@ -305,12 +387,22 @@ const PanelManagement = () => {
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
                         <Button
-                          onClick={() => setSelectedPanel(panel)}
+                          onClick={() => openDetailsDialog(panel)}
                           variant="ghost"
                           size="sm"
                           className="h-8 w-8 p-0"
+                          title="View Details"
                         >
                           <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          onClick={() => openEditDialog(panel)}
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          title="Edit Panel"
+                        >
+                          <Edit className="w-4 h-4" />
                         </Button>
                         {panel.status === 'pending' && (
                           <Button
@@ -318,6 +410,7 @@ const PanelManagement = () => {
                             variant="ghost"
                             size="sm"
                             className="h-8 w-8 p-0 text-green-500 hover:text-green-600"
+                            title="Approve"
                           >
                             <CheckCircle className="w-4 h-4" />
                           </Button>
@@ -328,6 +421,7 @@ const PanelManagement = () => {
                             variant="ghost"
                             size="sm"
                             className="h-8 w-8 p-0 text-red-500 hover:text-red-600"
+                            title="Suspend"
                           >
                             <Ban className="w-4 h-4" />
                           </Button>
@@ -349,6 +443,176 @@ const PanelManagement = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Edit Panel Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit Panel</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Panel Name</Label>
+              <Input
+                id="name"
+                value={editForm.name}
+                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={editForm.description}
+                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                rows={3}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="commission">Commission Rate (%)</Label>
+                <Input
+                  id="commission"
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={editForm.commission_rate}
+                  onChange={(e) => setEditForm({ ...editForm, commission_rate: parseFloat(e.target.value) })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="status">Status</Label>
+                <Select
+                  value={editForm.status}
+                  onValueChange={(value: Panel['status']) => setEditForm({ ...editForm, status: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="suspended">Suspended</SelectItem>
+                    <SelectItem value="rejected">Rejected</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSavePanel}>
+              <Save className="w-4 h-4 mr-2" />
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Panel Details Dialog */}
+      <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{selectedPanel?.name}</DialogTitle>
+          </DialogHeader>
+          {selectedPanel && (
+            <Tabs defaultValue="overview" className="mt-4">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="stats">Statistics</TabsTrigger>
+                <TabsTrigger value="owner">Owner Info</TabsTrigger>
+              </TabsList>
+              <TabsContent value="overview" className="space-y-4 mt-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 bg-accent/50 rounded-lg">
+                    <p className="text-sm text-muted-foreground">Subdomain</p>
+                    <p className="font-medium">{selectedPanel.subdomain}.smmpilot.online</p>
+                  </div>
+                  <div className="p-4 bg-accent/50 rounded-lg">
+                    <p className="text-sm text-muted-foreground">Status</p>
+                    <Badge className={getStatusColor(selectedPanel.status)}>
+                      {selectedPanel.status}
+                    </Badge>
+                  </div>
+                  <div className="p-4 bg-accent/50 rounded-lg">
+                    <p className="text-sm text-muted-foreground">Commission Rate</p>
+                    <p className="font-medium">{selectedPanel.commission_rate || 5}%</p>
+                  </div>
+                  <div className="p-4 bg-accent/50 rounded-lg">
+                    <p className="text-sm text-muted-foreground">Balance</p>
+                    <p className="font-medium">${selectedPanel.balance?.toFixed(2) || '0.00'}</p>
+                  </div>
+                </div>
+                <div className="p-4 bg-accent/50 rounded-lg">
+                  <p className="text-sm text-muted-foreground">Description</p>
+                  <p>{selectedPanel.description || 'No description provided'}</p>
+                </div>
+              </TabsContent>
+              <TabsContent value="stats" className="mt-4">
+                <div className="grid grid-cols-3 gap-4">
+                  <Card className="bg-gradient-card">
+                    <CardContent className="p-4 text-center">
+                      <Package className="w-8 h-8 mx-auto text-primary mb-2" />
+                      <p className="text-2xl font-bold">{panelStats.services}</p>
+                      <p className="text-sm text-muted-foreground">Services</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-gradient-card">
+                    <CardContent className="p-4 text-center">
+                      <Activity className="w-8 h-8 mx-auto text-primary mb-2" />
+                      <p className="text-2xl font-bold">{panelStats.orders}</p>
+                      <p className="text-sm text-muted-foreground">Orders</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-gradient-card">
+                    <CardContent className="p-4 text-center">
+                      <Users className="w-8 h-8 mx-auto text-primary mb-2" />
+                      <p className="text-2xl font-bold">{panelStats.clients}</p>
+                      <p className="text-sm text-muted-foreground">Clients</p>
+                    </CardContent>
+                  </Card>
+                </div>
+                <Card className="mt-4 bg-gradient-card">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Monthly Revenue</p>
+                        <p className="text-2xl font-bold">${selectedPanel.monthly_revenue?.toFixed(2) || '0.00'}</p>
+                      </div>
+                      <DollarSign className="w-10 h-10 text-primary" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              <TabsContent value="owner" className="mt-4">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4 p-4 bg-accent/50 rounded-lg">
+                    <div className="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center">
+                      <Users className="w-6 h-6 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-medium">{selectedPanel.owner?.full_name || 'No Name'}</p>
+                      <p className="text-sm text-muted-foreground">{selectedPanel.owner?.email}</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 bg-accent/50 rounded-lg">
+                      <p className="text-sm text-muted-foreground">Owner ID</p>
+                      <p className="font-mono text-xs">{selectedPanel.owner_id}</p>
+                    </div>
+                    <div className="p-4 bg-accent/50 rounded-lg">
+                      <p className="text-sm text-muted-foreground">Panel Created</p>
+                      <p className="font-medium">
+                        {new Date(selectedPanel.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

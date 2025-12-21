@@ -2,10 +2,12 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { 
@@ -15,16 +17,20 @@ import {
   Shield, 
   DollarSign,
   Search,
-  Filter,
-  MoreHorizontal,
   Edit,
   Ban,
+  Calendar,
+  Save,
   Mail,
-  Calendar
+  CreditCard,
+  Activity,
+  Crown,
+  Eye
 } from "lucide-react";
 
 interface User {
   id: string;
+  user_id: string;
   email: string;
   full_name: string;
   role: 'admin' | 'panel_owner';
@@ -35,6 +41,14 @@ interface User {
   avatar_url?: string;
 }
 
+interface UserRole {
+  id: string;
+  user_id: string;
+  role: string;
+  granted_at: string;
+  expires_at?: string;
+}
+
 const UserManagement = () => {
   const { toast } = useToast();
   const [users, setUsers] = useState<User[]>([]);
@@ -42,6 +56,15 @@ const UserManagement = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [userRoles, setUserRoles] = useState<UserRole[]>([]);
+  const [userPanels, setUserPanels] = useState<any[]>([]);
+  const [editForm, setEditForm] = useState({
+    full_name: "",
+    balance: 0,
+    is_active: true
+  });
 
   useEffect(() => {
     fetchUsers();
@@ -67,6 +90,20 @@ const UserManagement = () => {
     }
   };
 
+  const fetchUserDetails = async (user: User) => {
+    try {
+      const [rolesRes, panelsRes] = await Promise.all([
+        supabase.from('user_roles').select('*').eq('user_id', user.user_id),
+        supabase.from('panels').select('*').eq('owner_id', user.id)
+      ]);
+      
+      setUserRoles(rolesRes.data || []);
+      setUserPanels(panelsRes.data || []);
+    } catch (error) {
+      console.error('Error fetching user details:', error);
+    }
+  };
+
   const toggleUserStatus = async (user: User) => {
     try {
       await supabase
@@ -85,6 +122,77 @@ const UserManagement = () => {
         variant: "destructive",
         title: "Error",
         description: "Failed to update user status"
+      });
+    }
+  };
+
+  const openEditDialog = (user: User) => {
+    setSelectedUser(user);
+    setEditForm({
+      full_name: user.full_name || "",
+      balance: user.balance || 0,
+      is_active: user.is_active
+    });
+    setEditDialogOpen(true);
+  };
+
+  const openDetailsDialog = async (user: User) => {
+    setSelectedUser(user);
+    await fetchUserDetails(user);
+    setDetailsDialogOpen(true);
+  };
+
+  const handleSaveUser = async () => {
+    if (!selectedUser) return;
+    
+    try {
+      await supabase
+        .from('profiles')
+        .update({
+          full_name: editForm.full_name,
+          balance: editForm.balance,
+          is_active: editForm.is_active
+        })
+        .eq('id', selectedUser.id);
+
+      toast({
+        title: "User Updated",
+        description: "User settings saved successfully"
+      });
+      setEditDialogOpen(false);
+      fetchUsers();
+    } catch (error) {
+      console.error('Error updating user:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to update user"
+      });
+    }
+  };
+
+  const adjustBalance = async (amount: number) => {
+    if (!selectedUser) return;
+    
+    try {
+      const newBalance = (selectedUser.balance || 0) + amount;
+      await supabase
+        .from('profiles')
+        .update({ balance: newBalance })
+        .eq('id', selectedUser.id);
+
+      toast({
+        title: "Balance Updated",
+        description: `Balance adjusted by $${amount.toFixed(2)}`
+      });
+      fetchUsers();
+      setDetailsDialogOpen(false);
+    } catch (error) {
+      console.error('Error adjusting balance:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to adjust balance"
       });
     }
   };
@@ -161,7 +269,7 @@ const UserManagement = () => {
         </Card>
       </div>
 
-      {/* Filters and Search */}
+      {/* Users Table */}
       <Card className="bg-gradient-card border-border shadow-card">
         <CardHeader>
           <CardTitle>Users</CardTitle>
@@ -282,10 +390,20 @@ const UserManagement = () => {
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
                         <Button
-                          onClick={() => setSelectedUser(user)}
+                          onClick={() => openDetailsDialog(user)}
                           variant="ghost"
                           size="sm"
                           className="h-8 w-8 p-0"
+                          title="View Details"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          onClick={() => openEditDialog(user)}
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          title="Edit User"
                         >
                           <Edit className="w-4 h-4" />
                         </Button>
@@ -294,6 +412,7 @@ const UserManagement = () => {
                           variant="ghost"
                           size="sm"
                           className={`h-8 w-8 p-0 ${!user.is_active ? 'text-green-500 hover:text-green-600' : 'text-red-500 hover:text-red-600'}`}
+                          title={user.is_active ? 'Deactivate' : 'Activate'}
                         >
                           {user.is_active ? <Ban className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
                         </Button>
@@ -314,6 +433,172 @@ const UserManagement = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Edit User Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit User</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="flex items-center gap-3 p-3 bg-accent/50 rounded-lg">
+              <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center">
+                <Mail className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Email</p>
+                <p className="font-medium">{selectedUser?.email}</p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="full_name">Full Name</Label>
+              <Input
+                id="full_name"
+                value={editForm.full_name}
+                onChange={(e) => setEditForm({ ...editForm, full_name: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="balance">Balance ($)</Label>
+              <Input
+                id="balance"
+                type="number"
+                step="0.01"
+                value={editForm.balance}
+                onChange={(e) => setEditForm({ ...editForm, balance: parseFloat(e.target.value) })}
+              />
+            </div>
+            <div className="flex items-center justify-between p-4 border border-border rounded-lg">
+              <div>
+                <Label>Account Status</Label>
+                <p className="text-sm text-muted-foreground">Enable or disable user access</p>
+              </div>
+              <Button
+                variant={editForm.is_active ? "default" : "outline"}
+                size="sm"
+                onClick={() => setEditForm({ ...editForm, is_active: !editForm.is_active })}
+              >
+                {editForm.is_active ? "Active" : "Inactive"}
+              </Button>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveUser}>
+              <Save className="w-4 h-4 mr-2" />
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* User Details Dialog */}
+      <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{selectedUser?.full_name || selectedUser?.email}</DialogTitle>
+          </DialogHeader>
+          {selectedUser && (
+            <Tabs defaultValue="overview" className="mt-4">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="panels">Panels</TabsTrigger>
+                <TabsTrigger value="roles">Roles</TabsTrigger>
+              </TabsList>
+              <TabsContent value="overview" className="space-y-4 mt-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 bg-accent/50 rounded-lg">
+                    <p className="text-sm text-muted-foreground">Email</p>
+                    <p className="font-medium">{selectedUser.email}</p>
+                  </div>
+                  <div className="p-4 bg-accent/50 rounded-lg">
+                    <p className="text-sm text-muted-foreground">Status</p>
+                    <Badge className={selectedUser.is_active ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}>
+                      {selectedUser.is_active ? 'Active' : 'Inactive'}
+                    </Badge>
+                  </div>
+                  <div className="p-4 bg-accent/50 rounded-lg">
+                    <p className="text-sm text-muted-foreground">Balance</p>
+                    <p className="font-medium text-lg">${selectedUser.balance?.toFixed(2) || '0.00'}</p>
+                  </div>
+                  <div className="p-4 bg-accent/50 rounded-lg">
+                    <p className="text-sm text-muted-foreground">Total Spent</p>
+                    <p className="font-medium text-lg">${selectedUser.total_spent?.toFixed(2) || '0.00'}</p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={() => adjustBalance(10)}>
+                    <CreditCard className="w-4 h-4 mr-2" />
+                    Add $10
+                  </Button>
+                  <Button size="sm" onClick={() => adjustBalance(50)}>
+                    <CreditCard className="w-4 h-4 mr-2" />
+                    Add $50
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => adjustBalance(-10)}>
+                    Deduct $10
+                  </Button>
+                </div>
+              </TabsContent>
+              <TabsContent value="panels" className="mt-4">
+                {userPanels.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Activity className="w-10 h-10 mx-auto text-muted-foreground mb-2" />
+                    <p className="text-muted-foreground">No panels owned</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {userPanels.map((panel) => (
+                      <div key={panel.id} className="flex items-center justify-between p-3 bg-accent/50 rounded-lg">
+                        <div>
+                          <p className="font-medium">{panel.name}</p>
+                          <p className="text-sm text-muted-foreground">{panel.subdomain}.smmpilot.online</p>
+                        </div>
+                        <Badge className={panel.status === 'active' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}>
+                          {panel.status}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+              <TabsContent value="roles" className="mt-4">
+                <div className="space-y-4">
+                  <div className="p-4 bg-accent/50 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Crown className="w-5 h-5 text-primary" />
+                      <p className="font-medium">Current Role</p>
+                    </div>
+                    <Badge className={selectedUser.role === 'admin' ? 'bg-red-500/20 text-red-400' : 'bg-blue-500/20 text-blue-400'}>
+                      {selectedUser.role}
+                    </Badge>
+                  </div>
+                  {userRoles.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">Additional Roles</p>
+                      {userRoles.map((role) => (
+                        <div key={role.id} className="flex items-center justify-between p-3 border border-border rounded-lg">
+                          <div>
+                            <Badge>{role.role}</Badge>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Granted: {new Date(role.granted_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                          {role.expires_at && (
+                            <p className="text-xs text-muted-foreground">
+                              Expires: {new Date(role.expires_at).toLocaleDateString()}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+            </Tabs>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

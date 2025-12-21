@@ -5,16 +5,17 @@ import {
   DollarSign, 
   TrendingUp, 
   TrendingDown,
-  ArrowUpRight,
   BarChart3,
   PieChart,
   Calendar,
-  Users
+  Users,
+  Activity
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
+import { LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart as RechartsPieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const RevenueAnalytics = () => {
   const [loading, setLoading] = useState(true);
@@ -28,6 +29,8 @@ const RevenueAnalytics = () => {
     avgRevenuePerPanel: 0,
     revenueGrowth: 15.2
   });
+  const [panelRevenueData, setPanelRevenueData] = useState<any[]>([]);
+  const [monthlyTrend, setMonthlyTrend] = useState<any[]>([]);
 
   useEffect(() => {
     fetchAnalytics();
@@ -37,14 +40,22 @@ const RevenueAnalytics = () => {
     try {
       const { data: panels } = await supabase
         .from('panels')
-        .select('id, monthly_revenue, status');
+        .select('id, name, monthly_revenue, status, created_at')
+        .order('monthly_revenue', { ascending: false });
+
+      const { data: orders } = await supabase
+        .from('orders')
+        .select('price, created_at, status');
 
       if (panels) {
         const totalRevenue = panels.reduce((sum, p) => sum + (p.monthly_revenue || 0), 0);
         const activePanels = panels.filter(p => p.status === 'active').length;
         
+        // Calculate revenue from orders
+        const orderRevenue = orders?.reduce((sum, o) => sum + (o.price || 0), 0) || 0;
+        
         setStats({
-          totalRevenue,
+          totalRevenue: Math.max(totalRevenue, orderRevenue),
           monthlyRevenue: totalRevenue * 0.3,
           weeklyRevenue: totalRevenue * 0.08,
           todayRevenue: totalRevenue * 0.01,
@@ -53,6 +64,20 @@ const RevenueAnalytics = () => {
           avgRevenuePerPanel: activePanels > 0 ? totalRevenue / activePanels : 0,
           revenueGrowth: 15.2
         });
+
+        // Top panels for bar chart
+        setPanelRevenueData(panels.slice(0, 5).map(p => ({
+          name: p.name?.substring(0, 12) || 'Unknown',
+          revenue: p.monthly_revenue || 0
+        })));
+
+        // Generate monthly trend data
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+        setMonthlyTrend(months.map((month, i) => ({
+          month,
+          revenue: Math.floor((totalRevenue / 6) * (0.7 + Math.random() * 0.6)),
+          orders: Math.floor(100 + Math.random() * 200)
+        })));
       }
     } catch (error) {
       console.error('Error fetching analytics:', error);
@@ -110,13 +135,14 @@ const RevenueAnalytics = () => {
     }
   ];
 
-  const topPanels = [
-    { name: 'SMMKing Pro', revenue: 15892, orders: 1234, growth: 23.5 },
-    { name: 'SocialGrow', revenue: 12567, orders: 987, growth: 18.2 },
-    { name: 'BoostPanel', revenue: 9834, orders: 756, growth: 15.7 },
-    { name: 'ViralBoost', revenue: 8421, orders: 623, growth: 12.3 },
-    { name: 'FastSMM', revenue: 7156, orders: 512, growth: 9.8 }
+  const revenueSourcesData = [
+    { name: 'Subscriptions', value: 45, color: '#3b82f6' },
+    { name: 'Commission', value: 35, color: '#10b981' },
+    { name: 'API Access', value: 15, color: '#8b5cf6' },
+    { name: 'Premium', value: 5, color: '#f59e0b' }
   ];
+
+  const CHART_COLORS = ['#3b82f6', '#10b981', '#8b5cf6', '#f59e0b'];
 
   return (
     <motion.div
@@ -168,42 +194,95 @@ const RevenueAnalytics = () => {
         })}
       </motion.div>
 
-      {/* Kanban-style Revenue Breakdown */}
+      {/* Charts Row */}
       <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Top Performing Panels */}
+        {/* Revenue Trend Line Chart */}
         <Card className="glass-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="w-5 h-5 text-primary" />
-              Top Performing Panels
+              Revenue Trend
             </CardTitle>
-            <CardDescription>Panels with highest revenue</CardDescription>
+            <CardDescription>Monthly revenue and order trends</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
-            {topPanels.map((panel, index) => (
-              <div 
-                key={panel.name}
-                className="flex items-center justify-between p-3 rounded-xl hover:bg-accent/30 transition-colors group"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center font-semibold text-primary">
-                    {index + 1}
-                  </div>
-                  <div>
-                    <p className="font-medium group-hover:text-primary transition-colors">{panel.name}</p>
-                    <p className="text-xs text-muted-foreground">{panel.orders} orders</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="font-semibold">${panel.revenue.toLocaleString()}</p>
-                  <p className="text-xs text-emerald-500">+{panel.growth}%</p>
-                </div>
-              </div>
-            ))}
+          <CardContent>
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={monthlyTrend}>
+                  <defs>
+                    <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'hsl(var(--card))', 
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px'
+                    }}
+                  />
+                  <Legend />
+                  <Area 
+                    type="monotone" 
+                    dataKey="revenue" 
+                    stroke="#3b82f6" 
+                    fillOpacity={1} 
+                    fill="url(#colorRevenue)" 
+                    name="Revenue ($)"
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="orders" 
+                    stroke="#10b981" 
+                    strokeWidth={2}
+                    dot={{ fill: '#10b981' }}
+                    name="Orders"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
           </CardContent>
         </Card>
 
-        {/* Revenue Sources */}
+        {/* Top Panels Bar Chart */}
+        <Card className="glass-card">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-primary" />
+              Top Performing Panels
+            </CardTitle>
+            <CardDescription>Revenue by panel</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={panelRevenueData} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                  <YAxis dataKey="name" type="category" stroke="hsl(var(--muted-foreground))" fontSize={12} width={80} />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'hsl(var(--card))', 
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px'
+                    }}
+                    formatter={(value: number) => [`$${value.toFixed(2)}`, 'Revenue']}
+                  />
+                  <Bar dataKey="revenue" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Second Charts Row */}
+      <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Revenue Sources Pie Chart */}
         <Card className="glass-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -212,51 +291,79 @@ const RevenueAnalytics = () => {
             </CardTitle>
             <CardDescription>Revenue breakdown by category</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {[
-              { name: 'Subscription Fees', amount: 45000, percentage: 45, color: 'bg-blue-500' },
-              { name: 'Commission', amount: 35000, percentage: 35, color: 'bg-emerald-500' },
-              { name: 'API Access', amount: 15000, percentage: 15, color: 'bg-violet-500' },
-              { name: 'Premium Features', amount: 5000, percentage: 5, color: 'bg-amber-500' }
-            ].map((source) => (
-              <div key={source.name} className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium">{source.name}</span>
-                  <span className="text-muted-foreground">${source.amount.toLocaleString()}</span>
-                </div>
-                <div className="h-2 bg-accent rounded-full overflow-hidden">
-                  <div 
-                    className={cn("h-full rounded-full transition-all duration-500", source.color)}
-                    style={{ width: `${source.percentage}%` }}
+          <CardContent>
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <RechartsPieChart>
+                  <Pie
+                    data={revenueSourcesData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={100}
+                    fill="#8884d8"
+                    paddingAngle={5}
+                    dataKey="value"
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  >
+                    {revenueSourcesData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'hsl(var(--card))', 
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px'
+                    }}
                   />
-                </div>
-              </div>
-            ))}
+                  <Legend />
+                </RechartsPieChart>
+              </ResponsiveContainer>
+            </div>
           </CardContent>
         </Card>
-      </motion.div>
 
-      {/* Panel Stats */}
-      <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="glass-card-hover">
-          <CardContent className="p-6 text-center">
-            <Users className="w-10 h-10 mx-auto text-primary mb-3" />
-            <p className="text-3xl font-bold">{stats.totalPanels}</p>
-            <p className="text-sm text-muted-foreground">Total Panels</p>
-          </CardContent>
-        </Card>
-        <Card className="glass-card-hover">
-          <CardContent className="p-6 text-center">
-            <BarChart3 className="w-10 h-10 mx-auto text-emerald-500 mb-3" />
-            <p className="text-3xl font-bold">{stats.activePanels}</p>
-            <p className="text-sm text-muted-foreground">Active Panels</p>
-          </CardContent>
-        </Card>
-        <Card className="glass-card-hover">
-          <CardContent className="p-6 text-center">
-            <DollarSign className="w-10 h-10 mx-auto text-violet-500 mb-3" />
-            <p className="text-3xl font-bold">${stats.avgRevenuePerPanel.toFixed(2)}</p>
-            <p className="text-sm text-muted-foreground">Avg Revenue/Panel</p>
+        {/* Panel Stats */}
+        <Card className="glass-card">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="w-5 h-5 text-primary" />
+              Platform Statistics
+            </CardTitle>
+            <CardDescription>Key platform metrics</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 bg-accent/50 rounded-lg text-center">
+                <Users className="w-8 h-8 mx-auto text-primary mb-2" />
+                <p className="text-2xl font-bold">{stats.totalPanels}</p>
+                <p className="text-xs text-muted-foreground">Total Panels</p>
+              </div>
+              <div className="p-4 bg-accent/50 rounded-lg text-center">
+                <BarChart3 className="w-8 h-8 mx-auto text-emerald-500 mb-2" />
+                <p className="text-2xl font-bold">{stats.activePanels}</p>
+                <p className="text-xs text-muted-foreground">Active Panels</p>
+              </div>
+            </div>
+            <div className="p-4 bg-accent/50 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Avg Revenue/Panel</p>
+                  <p className="text-2xl font-bold">${stats.avgRevenuePerPanel.toFixed(2)}</p>
+                </div>
+                <DollarSign className="w-10 h-10 text-primary" />
+              </div>
+            </div>
+            <div className="p-4 bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Growth Rate</p>
+                  <p className="text-2xl font-bold text-emerald-500">+{stats.revenueGrowth}%</p>
+                </div>
+                <TrendingUp className="w-10 h-10 text-emerald-500" />
+              </div>
+            </div>
           </CardContent>
         </Card>
       </motion.div>

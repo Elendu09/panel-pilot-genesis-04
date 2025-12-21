@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_webhooks: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          events: string[]
+          failure_count: number
+          id: string
+          is_active: boolean
+          last_status: number | null
+          last_triggered_at: string | null
+          name: string
+          secret: string | null
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          events?: string[]
+          failure_count?: number
+          id?: string
+          is_active?: boolean
+          last_status?: number | null
+          last_triggered_at?: string | null
+          name: string
+          secret?: string | null
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          events?: string[]
+          failure_count?: number
+          id?: string
+          is_active?: boolean
+          last_status?: number | null
+          last_triggered_at?: string | null
+          name?: string
+          secret?: string | null
+          updated_at?: string
+          url?: string
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           action: string
@@ -698,6 +743,39 @@ export type Database = {
           },
         ]
       }
+      platform_settings: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          setting_key: string
+          setting_value: Json
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          setting_key: string
+          setting_value?: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          setting_key?: string
+          setting_value?: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -956,6 +1034,33 @@ export type Database = {
           },
         ]
       }
+      system_health_logs: {
+        Row: {
+          component: string
+          created_at: string
+          id: string
+          message: string | null
+          metrics: Json | null
+          status: string
+        }
+        Insert: {
+          component: string
+          created_at?: string
+          id?: string
+          message?: string | null
+          metrics?: Json | null
+          status: string
+        }
+        Update: {
+          component?: string
+          created_at?: string
+          id?: string
+          message?: string | null
+          metrics?: Json | null
+          status?: string
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
           amount: number
@@ -1010,6 +1115,36 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          granted_at: string
+          granted_by: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -1023,7 +1158,15 @@ export type Database = {
         Returns: Json
       }
       has_completed_onboarding: { Args: { user_id: string }; Returns: boolean }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       is_admin: { Args: never; Returns: boolean }
+      is_any_admin: { Args: { _user_id: string }; Returns: boolean }
       is_email_verified: { Args: { user_id: string }; Returns: boolean }
       update_user_role: {
         Args: {
@@ -1034,6 +1177,7 @@ export type Database = {
       }
     }
     Enums: {
+      app_role: "super_admin" | "admin" | "moderator" | "support"
       order_status:
         | "pending"
         | "in_progress"
@@ -1182,6 +1326,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["super_admin", "admin", "moderator", "support"],
       order_status: [
         "pending",
         "in_progress",

@@ -13,7 +13,9 @@ import {
   Crown,
   DollarSign,
   MessageSquare,
-  FileText
+  FileText,
+  Webhook,
+  Server
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
@@ -29,6 +31,8 @@ import RevenueAnalytics from "./admin/RevenueAnalytics";
 import SupportTickets from "./admin/SupportTickets";
 import AuditLogs from "./admin/AuditLogs";
 import AdminMoreMenu from "./admin/AdminMoreMenu";
+import WebhookManagement from "./admin/WebhookManagement";
+import SystemHealth from "./admin/SystemHealth";
 import { Helmet } from "react-helmet-async";
 
 const SuperAdminDashboard = () => {
@@ -43,9 +47,9 @@ const SuperAdminDashboard = () => {
     { name: 'Subscriptions', href: '/admin/subscriptions', icon: Crown },
     { name: 'Revenue', href: '/admin/revenue', icon: DollarSign },
     { name: 'Tickets', href: '/admin/tickets', icon: MessageSquare },
+    { name: 'Webhooks', href: '/admin/webhooks', icon: Webhook },
+    { name: 'System', href: '/admin/system', icon: Server },
     { name: 'Logs', href: '/admin/logs', icon: FileText },
-    { name: 'Security', href: '/admin/security', icon: Shield },
-    { name: 'Payments', href: '/admin/payments', icon: CreditCard },
     { name: 'Settings', href: '/admin/settings', icon: Settings },
   ];
 
@@ -132,6 +136,8 @@ const SuperAdminDashboard = () => {
           <Route path="subscriptions" element={<SubscriptionManagement />} />
           <Route path="revenue" element={<RevenueAnalytics />} />
           <Route path="tickets" element={<SupportTickets />} />
+          <Route path="webhooks" element={<WebhookManagement />} />
+          <Route path="system" element={<SystemHealth />} />
           <Route path="logs" element={<AuditLogs />} />
           <Route path="settings" element={<PlatformSettings />} />
           <Route path="security" element={<SecuritySettings />} />
