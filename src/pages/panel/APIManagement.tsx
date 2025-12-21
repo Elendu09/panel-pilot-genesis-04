@@ -2,7 +2,7 @@ import { useState } from "react";
 import { 
   Key, Copy, RefreshCw, Eye, EyeOff, Code, Send, CheckCircle, XCircle, Clock,
   BarChart3, Webhook, FileText, ChevronDown, ChevronRight, Zap, Shield, Activity,
-  Terminal, BookOpen, Play
+  Terminal, BookOpen, Play, AlertCircle, RotateCcw, ExternalLink
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,10 +13,40 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useWebhooks, WebhookEventType } from "@/hooks/use-webhooks";
+
+// Webhook event definitions
+const webhookEvents = {
+  orders: {
+    label: "Order Events",
+    events: [
+      { id: "order.created" as WebhookEventType, name: "Order Created", description: "Triggered when a new order is placed" },
+      { id: "order.completed" as WebhookEventType, name: "Order Completed", description: "Triggered when an order is fulfilled" },
+      { id: "order.cancelled" as WebhookEventType, name: "Order Cancelled", description: "Triggered when an order is cancelled" },
+      { id: "order.refunded" as WebhookEventType, name: "Order Refunded", description: "Triggered when an order is refunded" },
+    ]
+  },
+  gateway: {
+    label: "Gateway Events",
+    events: [
+      { id: "gateway.requested" as WebhookEventType, name: "Gateway Requested", description: "New payment gateway request submitted" },
+      { id: "gateway.approved" as WebhookEventType, name: "Gateway Approved", description: "Payment gateway request approved" },
+      { id: "gateway.rejected" as WebhookEventType, name: "Gateway Rejected", description: "Payment gateway request rejected" },
+    ]
+  },
+  dns: {
+    label: "DNS Events",
+    events: [
+      { id: "dns.propagated" as WebhookEventType, name: "DNS Propagated", description: "DNS records fully propagated" },
+      { id: "dns.failed" as WebhookEventType, name: "DNS Failed", description: "DNS propagation failed" },
+    ]
+  }
+};
 
 const APIManagement = () => {
   const [showApiKey, setShowApiKey] = useState(false);
@@ -25,6 +55,12 @@ const APIManagement = () => {
   const [webhookEnabled, setWebhookEnabled] = useState(true);
   const [expandedEndpoint, setExpandedEndpoint] = useState<string | null>("services");
   const [selectedLanguage, setSelectedLanguage] = useState("curl");
+  const [selectedEvents, setSelectedEvents] = useState<WebhookEventType[]>([
+    "order.created", "order.completed", "gateway.approved", "dns.propagated"
+  ]);
+  const [autoRefreshLogs, setAutoRefreshLogs] = useState(false);
+
+  const { sending, deliveries, testWebhook: sendTestWebhook } = useWebhooks();
 
   const apiKey = "sk_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
   const maskedKey = "sk_live_xxxx...xxxx";
@@ -151,8 +187,27 @@ axios.post(apiUrl, data)
     setIsRegenerateOpen(false);
   };
 
-  const testWebhook = () => {
-    toast({ title: "Test webhook sent successfully" });
+  const handleTestWebhook = async () => {
+    if (!webhookUrl) {
+      toast({ variant: "destructive", title: "Please enter a webhook URL" });
+      return;
+    }
+    await sendTestWebhook(webhookUrl);
+  };
+
+  const toggleEvent = (eventId: WebhookEventType) => {
+    setSelectedEvents(prev => 
+      prev.includes(eventId) 
+        ? prev.filter(e => e !== eventId)
+        : [...prev, eventId]
+    );
+  };
+
+  const saveWebhookConfig = () => {
+    toast({ 
+      title: "Webhook configuration saved", 
+      description: `${selectedEvents.length} events enabled` 
+    });
   };
 
   return (
@@ -342,48 +397,158 @@ axios.post(apiUrl, data)
           </motion.div>
         </TabsContent>
 
-        {/* Webhooks Tab */}
+        {/* Webhooks Tab - Enhanced */}
         <TabsContent value="webhooks" className="space-y-6">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-            <Card className="glass-card">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Webhook className="w-5 h-5 text-primary" />
-                  Webhook Configuration
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Enable Webhooks</p>
-                    <p className="text-sm text-muted-foreground">Receive real-time updates for order status changes</p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Webhook Configuration */}
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+              <Card className="glass-card">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Webhook className="w-5 h-5 text-primary" />
+                    Webhook Configuration
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">Enable Webhooks</p>
+                      <p className="text-sm text-muted-foreground">Receive real-time event notifications</p>
+                    </div>
+                    <Switch checked={webhookEnabled} onCheckedChange={setWebhookEnabled} />
                   </div>
-                  <Switch checked={webhookEnabled} onCheckedChange={setWebhookEnabled} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Webhook URL</Label>
-                  <div className="flex flex-col md:flex-row gap-2">
-                    <Input value={webhookUrl} onChange={(e) => setWebhookUrl(e.target.value)} placeholder="https://your-domain.com/webhook" className="flex-1 bg-background/50" />
-                    <Button onClick={testWebhook} className="gap-2">
-                      <Send className="w-4 h-4" />
-                      Test
-                    </Button>
+                  
+                  <div className="space-y-2">
+                    <Label>Webhook URL</Label>
+                    <div className="flex flex-col md:flex-row gap-2">
+                      <Input 
+                        value={webhookUrl} 
+                        onChange={(e) => setWebhookUrl(e.target.value)} 
+                        placeholder="https://your-domain.com/webhook" 
+                        className="flex-1 bg-background/50" 
+                      />
+                      <Button onClick={handleTestWebhook} disabled={sending} className="gap-2">
+                        {sending ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                        Test
+                      </Button>
+                    </div>
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Events</Label>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {["order.created", "order.completed", "order.cancelled", "order.refunded"].map((event) => (
-                      <div key={event} className="glass-card p-3 rounded-lg flex items-center justify-between">
-                        <span className="text-sm font-mono">{event}</span>
-                        <Switch defaultChecked />
+
+                  {/* Event Type Selection */}
+                  <div className="space-y-4">
+                    <Label>Event Types</Label>
+                    {Object.entries(webhookEvents).map(([category, { label, events }]) => (
+                      <div key={category} className="space-y-2">
+                        <p className="text-sm font-medium text-muted-foreground">{label}</p>
+                        <div className="grid gap-2">
+                          {events.map((event) => (
+                            <div 
+                              key={event.id} 
+                              className="glass-card p-3 rounded-lg flex items-start gap-3 hover:bg-accent/30 transition-colors"
+                            >
+                              <Checkbox 
+                                id={event.id}
+                                checked={selectedEvents.includes(event.id)}
+                                onCheckedChange={() => toggleEvent(event.id)}
+                              />
+                              <div className="flex-1">
+                                <label htmlFor={event.id} className="text-sm font-medium cursor-pointer">
+                                  {event.name}
+                                </label>
+                                <p className="text-xs text-muted-foreground">{event.description}</p>
+                              </div>
+                              <Badge variant="outline" className="font-mono text-xs shrink-0">
+                                {event.id}
+                              </Badge>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     ))}
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+
+                  <Button onClick={saveWebhookConfig} className="w-full bg-gradient-to-r from-primary to-primary/80">
+                    Save Configuration
+                  </Button>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Delivery Logs */}
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+              <Card className="glass-card">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2">
+                      <Activity className="w-5 h-5 text-primary" />
+                      Delivery Logs
+                    </CardTitle>
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="auto-refresh" className="text-sm text-muted-foreground">Auto-refresh</Label>
+                      <Switch 
+                        id="auto-refresh"
+                        checked={autoRefreshLogs}
+                        onCheckedChange={setAutoRefreshLogs}
+                      />
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3 max-h-[500px] overflow-y-auto">
+                    {deliveries.length === 0 ? (
+                      <div className="text-center py-8">
+                        <Webhook className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                        <p className="text-muted-foreground">No webhook deliveries yet</p>
+                        <p className="text-sm text-muted-foreground">Test your webhook to see delivery logs</p>
+                      </div>
+                    ) : (
+                      deliveries.map((delivery) => (
+                        <div 
+                          key={delivery.id}
+                          className="glass-card p-3 rounded-lg space-y-2"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Badge 
+                                variant="outline" 
+                                className={cn(
+                                  "font-mono text-xs",
+                                  delivery.status === "success" && "bg-green-500/10 text-green-500 border-green-500/20",
+                                  delivery.status === "failed" && "bg-destructive/10 text-destructive border-destructive/20",
+                                  delivery.status === "pending" && "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
+                                )}
+                              >
+                                {delivery.status === "success" && <CheckCircle className="w-3 h-3 mr-1" />}
+                                {delivery.status === "failed" && <XCircle className="w-3 h-3 mr-1" />}
+                                {delivery.status === "pending" && <Clock className="w-3 h-3 mr-1" />}
+                                {delivery.statusCode || delivery.status.toUpperCase()}
+                              </Badge>
+                              <span className="text-sm font-mono">{delivery.event}</span>
+                            </div>
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(delivery.createdAt).toLocaleTimeString()}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate font-mono">{delivery.url}</p>
+                          {delivery.retries > 0 && (
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <RotateCcw className="w-3 h-3" />
+                              {delivery.retries} retries
+                            </div>
+                          )}
+                          {delivery.response && (
+                            <pre className="text-xs bg-muted/50 p-2 rounded overflow-x-auto max-h-20">
+                              {delivery.response.substring(0, 200)}...
+                            </pre>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </div>
         </TabsContent>
 
         {/* Logs Tab */}
@@ -396,33 +561,41 @@ axios.post(apiUrl, data)
                   Recent API Calls
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-0">
+              <CardContent>
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
-                      <tr className="border-b border-border/50 bg-muted/30">
-                        <th className="text-left p-4 font-medium text-muted-foreground">Endpoint</th>
-                        <th className="text-left p-4 font-medium text-muted-foreground">Method</th>
-                        <th className="text-left p-4 font-medium text-muted-foreground">Status</th>
-                        <th className="text-left p-4 font-medium text-muted-foreground">Time</th>
-                        <th className="text-left p-4 font-medium text-muted-foreground">Date</th>
+                      <tr className="border-b border-border/50">
+                        <th className="text-left p-3 text-sm font-medium text-muted-foreground">Endpoint</th>
+                        <th className="text-left p-3 text-sm font-medium text-muted-foreground">Method</th>
+                        <th className="text-left p-3 text-sm font-medium text-muted-foreground">Status</th>
+                        <th className="text-left p-3 text-sm font-medium text-muted-foreground">Time</th>
+                        <th className="text-left p-3 text-sm font-medium text-muted-foreground">Date</th>
                       </tr>
                     </thead>
                     <tbody>
                       {apiLogs.map((log) => (
                         <tr key={log.id} className="border-b border-border/30 hover:bg-accent/30 transition-colors">
-                          <td className="p-4"><code className="text-sm font-mono">{log.endpoint}</code></td>
-                          <td className="p-4">
-                            <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20">{log.method}</Badge>
+                          <td className="p-3 font-mono text-sm">{log.endpoint}</td>
+                          <td className="p-3">
+                            <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20">
+                              {log.method}
+                            </Badge>
                           </td>
-                          <td className="p-4">
-                            <Badge variant="outline" className={log.status === 200 ? "bg-green-500/10 text-green-500 border-green-500/20" : "bg-red-500/10 text-red-500 border-red-500/20"}>
-                              {log.status === 200 ? <CheckCircle className="w-3 h-3 mr-1" /> : <XCircle className="w-3 h-3 mr-1" />}
+                          <td className="p-3">
+                            <Badge 
+                              variant="outline" 
+                              className={cn(
+                                log.status === 200 
+                                  ? "bg-green-500/10 text-green-500 border-green-500/20" 
+                                  : "bg-destructive/10 text-destructive border-destructive/20"
+                              )}
+                            >
                               {log.status}
                             </Badge>
                           </td>
-                          <td className="p-4"><span className="text-sm text-muted-foreground flex items-center gap-1"><Clock className="w-3 h-3" />{log.time}</span></td>
-                          <td className="p-4"><span className="text-sm text-muted-foreground">{log.date}</span></td>
+                          <td className="p-3 text-sm text-muted-foreground">{log.time}</td>
+                          <td className="p-3 text-sm text-muted-foreground">{log.date}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -436,14 +609,18 @@ axios.post(apiUrl, data)
 
       {/* Regenerate Key Dialog */}
       <Dialog open={isRegenerateOpen} onOpenChange={setIsRegenerateOpen}>
-        <DialogContent className="glass-card border-border/50">
+        <DialogContent className="glass-card">
           <DialogHeader>
             <DialogTitle>Regenerate API Key</DialogTitle>
             <DialogDescription>
-              This will invalidate your current API key. All applications using the old key will stop working.
+              This will invalidate your current API key. All applications using the current key will need to be updated.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="gap-2">
+          <div className="flex items-center gap-2 p-4 bg-destructive/10 rounded-lg">
+            <AlertCircle className="w-5 h-5 text-destructive" />
+            <p className="text-sm text-destructive">This action cannot be undone</p>
+          </div>
+          <DialogFooter>
             <Button variant="outline" onClick={() => setIsRegenerateOpen(false)}>Cancel</Button>
             <Button variant="destructive" onClick={regenerateKey}>Regenerate Key</Button>
           </DialogFooter>
