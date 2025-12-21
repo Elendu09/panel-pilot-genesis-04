@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { LucideIcon, Plus, X, Package, ShoppingCart, Users, BarChart3 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -27,6 +27,7 @@ interface BottomNavProps {
 
 export const BottomNav = ({ items, className, showFab = false, fabItems }: BottomNavProps) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [fabOpen, setFabOpen] = useState(false);
 
   const isActive = (path: string) => {
@@ -37,10 +38,10 @@ export const BottomNav = ({ items, className, showFab = false, fabItems }: Botto
   };
 
   const defaultFabItems: FabMenuItem[] = fabItems || [
-    { name: 'Add Service', icon: Package, action: () => console.log('Add Service'), color: 'bg-purple-500' },
-    { name: 'New Order', icon: ShoppingCart, action: () => console.log('New Order'), color: 'bg-blue-500' },
-    { name: 'Add Customer', icon: Users, action: () => console.log('Add Customer'), color: 'bg-green-500' },
-    { name: 'Analytics', icon: BarChart3, action: () => console.log('Analytics'), color: 'bg-orange-500' },
+    { name: 'Add Service', icon: Package, action: () => navigate('/panel/services'), color: 'bg-purple-500' },
+    { name: 'New Order', icon: ShoppingCart, action: () => navigate('/panel/orders'), color: 'bg-blue-500' },
+    { name: 'Add Customer', icon: Users, action: () => navigate('/panel/customers'), color: 'bg-green-500' },
+    { name: 'Analytics', icon: BarChart3, action: () => navigate('/panel/analytics'), color: 'bg-orange-500' },
   ];
 
   return (
@@ -58,90 +59,39 @@ export const BottomNav = ({ items, className, showFab = false, fabItems }: Botto
         )}
       </AnimatePresence>
 
-      {/* Floating Bottom Navigation */}
-      <div className={cn(
-        "bottom-nav-floating md:hidden safe-area-bottom",
-        className
-      )}>
-        <nav className="flex items-center justify-around px-2 py-3">
-          {items.map((item) => {
-            const active = isActive(item.href);
-            return (
-              <Link
-                key={item.name}
-                to={item.href}
-                className={cn(
-                  "flex flex-col items-center justify-center px-4 py-2 rounded-xl transition-all duration-300 min-w-0 flex-1 relative group",
-                  active
-                    ? "text-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {/* Active Indicator Pill */}
-                {active && (
-                  <motion.div
-                    layoutId="activeTab"
-                    className="absolute inset-0 bg-primary/10 rounded-xl border border-primary/20"
-                    initial={false}
-                    transition={{ type: "spring", stiffness: 500, damping: 35 }}
-                  />
-                )}
-                
-                <div className="relative z-10">
-                  <div className="relative">
-                    <item.icon className={cn(
-                      "h-5 w-5 mb-1 transition-transform duration-200",
-                      active && "scale-110"
-                    )} />
-                    
-                    {/* Badge */}
-                    {item.badge && item.badge > 0 && (
-                      <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse-glow">
-                        {item.badge > 99 ? '99+' : item.badge}
-                      </span>
-                    )}
-                  </div>
-                  <span className={cn(
-                    "text-[10px] font-medium truncate max-w-full transition-all duration-200",
-                    active && "font-semibold"
-                  )}>
-                    {item.name}
-                  </span>
-                </div>
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
-
-      {/* Enhanced FAB with Menu */}
+      {/* Enhanced FAB with Menu - positioned inside safe area */}
       {showFab && (
-        <div className="fixed bottom-24 right-4 z-50 md:hidden">
+        <div className="fixed bottom-[5.5rem] right-4 z-50 md:hidden">
           {/* FAB Menu Items */}
           <AnimatePresence>
             {fabOpen && (
-              <div className="absolute bottom-16 right-0 flex flex-col-reverse items-end gap-3 mb-2">
+              <div className="absolute bottom-14 right-0 flex flex-col-reverse items-end gap-2 mb-2">
                 {defaultFabItems.map((item, index) => (
                   <motion.button
                     key={item.name}
-                    initial={{ opacity: 0, scale: 0, y: 20 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0, y: 20 }}
-                    transition={{ delay: index * 0.05 }}
+                    initial={{ opacity: 0, scale: 0.5, x: 20 }}
+                    animate={{ opacity: 1, scale: 1, x: 0 }}
+                    exit={{ opacity: 0, scale: 0.5, x: 20 }}
+                    transition={{ delay: index * 0.05, type: "spring", stiffness: 400, damping: 25 }}
                     onClick={() => {
                       item.action();
                       setFabOpen(false);
                     }}
-                    className="flex items-center gap-3 group"
+                    className="flex items-center gap-2 group"
                   >
-                    <span className="px-3 py-1.5 rounded-lg bg-card/95 backdrop-blur-xl border border-border/50 text-sm font-medium shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                    <motion.span 
+                      initial={{ opacity: 0, x: 10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.05 + 0.1 }}
+                      className="px-3 py-1.5 rounded-lg bg-card/95 backdrop-blur-xl border border-border/50 text-xs font-medium shadow-lg whitespace-nowrap"
+                    >
                       {item.name}
-                    </span>
+                    </motion.span>
                     <div className={cn(
-                      "w-12 h-12 rounded-full flex items-center justify-center text-white shadow-lg",
+                      "w-10 h-10 rounded-full flex items-center justify-center text-white shadow-lg",
                       item.color
                     )}>
-                      <item.icon className="w-5 h-5" />
+                      <item.icon className="w-4 h-4" />
                     </div>
                   </motion.button>
                 ))}
@@ -153,17 +103,79 @@ export const BottomNav = ({ items, className, showFab = false, fabItems }: Botto
           <motion.button
             onClick={() => setFabOpen(!fabOpen)}
             className={cn(
-              "fab w-14 h-14",
-              fabOpen && "bg-destructive"
+              "w-12 h-12 rounded-full flex items-center justify-center text-white shadow-lg",
+              "bg-gradient-to-br from-primary to-primary/80",
+              "transition-all duration-200",
+              fabOpen && "bg-gradient-to-br from-destructive to-destructive/80"
             )}
             animate={{ rotate: fabOpen ? 45 : 0 }}
             transition={{ duration: 0.2 }}
+            whileTap={{ scale: 0.95 }}
             aria-label="Quick actions"
           >
-            {fabOpen ? <X className="w-6 h-6" /> : <Plus className="w-6 h-6" />}
+            {fabOpen ? <X className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
           </motion.button>
         </div>
       )}
+
+      {/* Floating Bottom Navigation */}
+      <div className={cn(
+        "fixed bottom-0 left-0 right-0 z-30 md:hidden",
+        "bg-card/95 backdrop-blur-xl border-t border-border/50",
+        "pb-safe",
+        className
+      )}>
+        <nav className="flex items-stretch justify-around h-16 px-1">
+          {items.map((item) => {
+            const active = isActive(item.href);
+            return (
+              <Link
+                key={item.name}
+                to={item.href}
+                className={cn(
+                  "flex flex-col items-center justify-center flex-1 relative",
+                  "transition-colors duration-200",
+                  active
+                    ? "text-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {/* Active Indicator */}
+                {active && (
+                  <motion.div
+                    layoutId="bottomNavActiveTab"
+                    className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-primary rounded-full"
+                    initial={false}
+                    transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                  />
+                )}
+                
+                <div className="flex flex-col items-center justify-center gap-0.5">
+                  <div className="relative">
+                    <item.icon className={cn(
+                      "w-5 h-5 transition-transform duration-200",
+                      active && "scale-105"
+                    )} />
+                    
+                    {/* Badge */}
+                    {item.badge && item.badge > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] px-1 bg-destructive text-destructive-foreground text-[9px] font-bold rounded-full flex items-center justify-center">
+                        {item.badge > 99 ? '99+' : item.badge}
+                      </span>
+                    )}
+                  </div>
+                  <span className={cn(
+                    "text-[10px] font-medium leading-tight",
+                    active && "font-semibold"
+                  )}>
+                    {item.name}
+                  </span>
+                </div>
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
     </>
   );
 };

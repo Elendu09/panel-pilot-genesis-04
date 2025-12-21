@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState } from "react"
 
 type Theme = "dark" | "light" | "system"
@@ -23,8 +22,8 @@ const ThemeProviderContext = createContext<ThemeProviderState>(initialState)
 
 export function ThemeProvider({
   children,
-  defaultTheme = "system",
-  storageKey = "vite-ui-theme",
+  defaultTheme = "dark",
+  storageKey = "smm-panel-theme",
   ...props
 }: ThemeProviderProps) {
   const [theme, setTheme] = useState<Theme>(
@@ -34,6 +33,10 @@ export function ThemeProvider({
   useEffect(() => {
     const root = window.document.documentElement
     const path = window.location.pathname
+
+    // Add transition class for smooth theme changes
+    root.style.setProperty("--theme-transition", "background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease")
+    root.classList.add("theme-transition")
 
     // Always start from a clean state
     root.classList.remove("light", "dark")
@@ -53,6 +56,21 @@ export function ThemeProvider({
     }
 
     root.classList.add(theme)
+  }, [theme])
+
+  // Listen for system theme changes
+  useEffect(() => {
+    if (theme !== "system") return
+
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
+    const handleChange = () => {
+      const root = window.document.documentElement
+      root.classList.remove("light", "dark")
+      root.classList.add(mediaQuery.matches ? "dark" : "light")
+    }
+
+    mediaQuery.addEventListener("change", handleChange)
+    return () => mediaQuery.removeEventListener("change", handleChange)
   }, [theme])
 
   const value = {
