@@ -1,93 +1,140 @@
 import React from "react";
 
-// Official payment gateway SVG icons
+// Official Stripe SVG Icon
 export const StripeIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
     <rect width="32" height="32" rx="6" fill="#635BFF"/>
-    <path d="M14.5 12.5C14.5 11.67 15.17 11 16 11C17.5 11 19 11.75 20 13L22.5 10.5C21 8.5 18.5 7.5 16 7.5C12.67 7.5 10 10 10 13C10 18.5 18 17.5 18 20.5C18 21.5 17 22 16 22C14 22 12.5 21 11.5 19.5L9 22C10.5 24 13 25 16 25C19.33 25 22 22.67 22 20C22 14 14.5 15.5 14.5 12.5Z" fill="white"/>
+    <path fillRule="evenodd" clipRule="evenodd" d="M15.2 13.2c0-.8.7-1.2 1.8-1.2 1.6 0 3.6.5 5.2 1.4V9.2c-1.7-.7-3.5-1-5.2-1-4.3 0-7.1 2.2-7.1 6 0 5.8 8 4.9 8 7.4 0 1-.9 1.3-2.1 1.3-1.8 0-4.2-.8-6-1.8v4.3c2 .9 4.1 1.3 6 1.3 4.4 0 7.4-2.2 7.4-6 0-6.3-8-5.2-8-7.5z" fill="white"/>
   </svg>
 );
 
+// Official PayPal SVG Icon
 export const PayPalIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
     <rect width="32" height="32" rx="6" fill="#003087"/>
-    <path d="M22.5 10.5C22.5 7.5 20 6 16.5 6H10L7 24H11L12 18H15C19 18 22.5 16 22.5 12V10.5Z" fill="#27346A"/>
-    <path d="M11 10H15.5C17.5 10 18.5 11 18.5 12.5C18.5 14.5 17 16 14.5 16H12L11 10Z" fill="white"/>
-    <path d="M24.5 12.5C24.5 9.5 22 8 18.5 8H14L11 26H15L16 20H19C23 20 24.5 17 24.5 14V12.5Z" fill="#0079C1"/>
-    <path d="M15 12H18.5C20 12 20.5 13 20.5 14.5C20.5 16.5 19 18 16.5 18H14L15 12Z" fill="white"/>
+    <path d="M23.2 11.2c0 3.5-2.8 6.2-6.8 6.2h-1.7l-.8 5.2H11l.2-1.2 2.6-16.2h5c2.8 0 4.4 1.6 4.4 4v2zm-6.5 3.5c1.9 0 3.2-1.2 3.2-3.2 0-1.2-.8-2-2.2-2h-1.4l-.8 5.2h1.2z" fill="#009CDE"/>
+    <path d="M9.5 25.2l2.6-16.2h5c2.8 0 4.4 1.6 4.4 4v2c0 3.5-2.8 6.2-6.8 6.2h-1.7l-.8 5.2H9.5v-1.2zm5.2-8.7c1.9 0 3.2-1.2 3.2-3.2 0-1.2-.8-2-2.2-2h-1.4l-.8 5.2h1.2z" fill="white"/>
   </svg>
 );
 
+// Official Visa SVG Icon
 export const VisaIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
     <rect width="32" height="32" rx="6" fill="#1A1F71"/>
-    <path d="M13.5 20.5L15 11.5H17.5L16 20.5H13.5Z" fill="white"/>
-    <path d="M22.5 11.5L20.5 17.5L20 14.5L19 12.5C19 12.5 18.5 11.5 17 11.5H13L12.5 11.75L15 14.5L16.5 20.5H19L24 11.5H22.5Z" fill="white"/>
-    <path d="M11 20.5L8.5 11.5H6L6.25 12C7.5 14.5 9 17.5 9.5 20.5H11Z" fill="white"/>
+    <path d="M13.5 21H11.2L12.7 11H15L13.5 21Z" fill="white"/>
+    <path d="M22 11.2C21.5 11 20.7 10.8 19.8 10.8C17.5 10.8 15.8 12 15.8 13.8C15.8 15.2 17 15.9 18 16.4C19 16.9 19.3 17.2 19.3 17.6C19.3 18.2 18.5 18.5 17.8 18.5C16.8 18.5 16.3 18.4 15.5 18L15.2 17.9L14.9 20C15.5 20.3 16.5 20.5 17.5 20.5C20 20.5 21.6 19.3 21.6 17.4C21.6 16.3 20.9 15.5 19.5 14.8C18.6 14.4 18 14.1 18 13.6C18 13.2 18.4 12.8 19.3 12.8C20.1 12.8 20.7 12.9 21.1 13.1L21.3 13.2L22 11.2Z" fill="white"/>
+    <path d="M25.2 11H23.4C22.8 11 22.4 11.2 22.1 11.8L18.6 21H21.1L21.6 19.5H24.6L24.9 21H27.1L25.2 11ZM22.3 17.6L23.4 14.3L24 17.6H22.3Z" fill="white"/>
+    <path d="M10.3 11L8 17.8L7.7 16.4C7.2 14.8 5.7 13.1 4 12.2L6.1 21H8.6L12.8 11H10.3Z" fill="white"/>
+    <path d="M6.5 11H2.7L2.6 11.2C5.5 11.9 7.4 13.6 8.1 15.6L7.3 11.8C7.2 11.2 6.9 11 6.5 11Z" fill="#F9A51A"/>
   </svg>
 );
 
+// Official Mastercard SVG Icon
 export const MastercardIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <rect width="32" height="32" rx="6" fill="#000000"/>
+    <rect width="32" height="32" rx="6" fill="#1A1F71"/>
     <circle cx="12" cy="16" r="7" fill="#EB001B"/>
     <circle cx="20" cy="16" r="7" fill="#F79E1B"/>
-    <path d="M16 10.5C17.5 11.5 18.5 13.5 18.5 16C18.5 18.5 17.5 20.5 16 21.5C14.5 20.5 13.5 18.5 13.5 16C13.5 13.5 14.5 11.5 16 10.5Z" fill="#FF5F00"/>
+    <path d="M16 10.5C17.5 11.8 18.5 13.8 18.5 16C18.5 18.2 17.5 20.2 16 21.5C14.5 20.2 13.5 18.2 13.5 16C13.5 13.8 14.5 11.8 16 10.5Z" fill="#FF5F00"/>
   </svg>
 );
 
+// Official Apple Pay SVG Icon
 export const ApplePayIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
     <rect width="32" height="32" rx="6" fill="#000000"/>
-    <path d="M10.5 12C10.5 10.5 11.5 9.5 13 9.5C13.5 9.5 14 9.75 14.5 10C14 9 13 8 11.5 8C10 8 9 9.5 9 11.5C9 13.5 10.5 15 11.5 15C12 15 12.5 14.75 13 14.5C12.5 14.75 12 15 11.5 15C10 15 9 14 9 12.5C9 13.5 9.5 14.5 10.5 15C10 15 9.5 14.5 9.5 13.5C9.5 12.5 10 12 10.5 12Z" fill="white"/>
-    <text x="8" y="23" fill="white" fontSize="7" fontFamily="system-ui" fontWeight="600">Pay</text>
+    <path d="M9.8 12.5C9.5 12.9 9 13.2 8.5 13.2C8.4 12.6 8.7 12 9 11.6C9.3 11.2 9.9 10.8 10.3 10.8C10.4 11.4 10.1 12 9.8 12.5ZM10.3 13.4C9.5 13.4 8.8 13.9 8.4 13.9C8 13.9 7.4 13.4 6.7 13.5C5.8 13.5 5 14 4.5 14.8C3.5 16.4 4.2 18.8 5.2 20.1C5.7 20.7 6.3 21.5 7.1 21.4C7.8 21.4 8.1 21 8.9 21C9.7 21 10 21.4 10.7 21.4C11.5 21.4 12 20.7 12.5 20.1C13.1 19.4 13.3 18.7 13.3 18.7C13.3 18.7 12 18.2 12 16.7C12 15.4 13 14.8 13.1 14.7C12.5 13.8 11.5 13.4 10.3 13.4Z" fill="white"/>
+    <path d="M17.5 11.4C19.2 11.4 20.4 12.6 20.4 14.3C20.4 16 19.2 17.2 17.4 17.2H15.4V20.1C15.4 20.9 15.8 21.3 16.6 21.3H17V21.9H13.9V21.3H14.3C15.1 21.3 15.4 20.9 15.4 20.1V12.6C15.4 11.8 15.1 11.4 14.3 11.4H13.9V10.8H17.5V11.4ZM15.4 16.6H17.2C18.6 16.6 19.4 15.8 19.4 14.3C19.4 12.8 18.6 12 17.2 12H15.4V16.6Z" fill="white"/>
+    <path d="M24.5 21.9C22.7 21.9 21.5 20.6 21.5 18.8C21.5 17 22.7 15.7 24.4 15.7C26.1 15.7 27.2 16.9 27.2 18.6V19H22.4C22.5 20.3 23.2 21.3 24.6 21.3C25.5 21.3 26.2 20.9 26.5 20.2L27.1 20.5C26.6 21.4 25.7 21.9 24.5 21.9ZM24.4 16.3C23.3 16.3 22.6 17 22.4 18.4H26.3C26.2 17 25.5 16.3 24.4 16.3Z" fill="white"/>
   </svg>
 );
 
+// Official Google Pay SVG Icon
 export const GooglePayIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <rect width="32" height="32" rx="6" fill="white" stroke="#E5E5E5"/>
-    <path d="M16.5 16.5V20H14.5V12H18C18.75 12 19.5 12.25 20 12.75C20.5 13.25 20.75 14 20.75 14.5C20.75 15 20.5 15.75 20 16.25C19.5 16.75 18.75 17 18 17H16.5V16.5ZM16.5 13.5V15.5H18C18.5 15.5 18.75 15.25 19 15C19.25 14.75 19.25 14.25 19 14C18.75 13.75 18.5 13.5 18 13.5H16.5Z" fill="#4285F4"/>
-    <path d="M24 16C24 15.5 24 15 23.75 14.5H20V17H22.25C22 17.75 21.5 18.25 21 18.5V20H22.75C23.75 19 24 17.5 24 16Z" fill="#4285F4"/>
-    <path d="M17 21C18.25 21 19.25 20.5 20 20L18.25 18.5C17.75 18.75 17.25 19 16.5 19C15.25 19 14.25 18 14 17H12.25V18.5C13 20 15 21 17 21Z" fill="#34A853"/>
-    <path d="M14 16.5C14 16.25 14 16 14 15.75C14 15.5 14 15.25 14 15H12.25V16.5C12 17 12 17.25 12.25 17.5L14 16.5Z" fill="#FBBC05"/>
-    <path d="M17 13C17.75 13 18.25 13.25 18.75 13.75L20.25 12.25C19.25 11.5 18.25 11 17 11C15 11 13 12 12.25 14L14 15.5C14.25 14.25 15.5 13 17 13Z" fill="#EA4335"/>
+    <rect width="32" height="32" rx="6" fill="white" stroke="#E5E5E5" strokeWidth="0.5"/>
+    <path d="M15.5 16.5V20H14V11.5H17.5C18.3 11.5 19 11.8 19.6 12.4C20.2 13 20.5 13.7 20.5 14.5C20.5 15.3 20.2 16 19.6 16.6C19 17.2 18.3 17.5 17.5 17.5H15.5V16.5ZM15.5 13V16H17.6C18 16 18.4 15.8 18.7 15.5C19 15.2 19.2 14.8 19.2 14.5C19.2 14.2 19 13.8 18.7 13.5C18.4 13.2 18 13 17.6 13H15.5Z" fill="#4285F4"/>
+    <path d="M24 16.2C24 15.7 24 15.2 23.9 14.7H20.5V17.4H22.5C22.4 18 22.1 18.5 21.6 18.9L23.1 20C24 19.2 24.5 17.9 24.5 16.4L24 16.2Z" fill="#4285F4"/>
+    <path d="M17.5 24C19 24 20.3 23.5 21.3 22.7L19.8 21.6C19.2 22 18.4 22.3 17.5 22.3C15.8 22.3 14.3 21.1 13.8 19.5L12.2 20.6C13.2 22.6 15.2 24 17.5 24Z" fill="#34A853"/>
+    <path d="M13.8 19.5C13.6 19 13.5 18.5 13.5 18C13.5 17.5 13.6 17 13.8 16.5L12.2 15.4C11.7 16.4 11.5 17.2 11.5 18C11.5 18.8 11.7 19.6 12.2 20.6L13.8 19.5Z" fill="#FBBC05"/>
+    <path d="M17.5 13.7C18.5 13.7 19.3 14 20 14.6L21.4 13.2C20.3 12.2 18.9 11.5 17.5 11.5C15.2 11.5 13.2 12.9 12.2 14.9L13.8 16C14.3 14.4 15.8 13.2 17.5 13.2V13.7Z" fill="#EA4335"/>
   </svg>
 );
 
+// Official Bitcoin SVG Icon
 export const BitcoinIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
     <rect width="32" height="32" rx="6" fill="#F7931A"/>
-    <path d="M22 14C22.5 11.5 20.5 10.25 18 9.75L18.5 7.5L17 7.25L16.5 9.5C16.25 9.5 15.75 9.5 15.5 9.5L16 7.25L14.5 7L14 9.25C13.75 9.25 13.5 9.25 13.25 9.25L11 9L10.75 10.5C10.75 10.5 12 10.75 12 10.75C12.5 10.75 12.75 11.25 12.75 11.5L12 15.25C12 15.25 12 15.25 12.25 15.25L12 15.25L11 20C11 20.25 10.75 20.5 10.5 20.5C10.5 20.5 9.25 20.25 9.25 20.25L9 22L11 22.5L10.5 25L12 25.25L12.5 23C12.75 23 13 23 13.25 23L12.75 25.25L14.25 25.5L14.75 23.25C17.25 23.5 19.25 23.25 20 21C20.5 19 19.75 17.75 18 17.25C19.25 16.75 20 16 20.25 14.5L22 14ZM17.5 20C17.25 21.75 14.5 21 13.5 20.75L14 18C15 18.25 17.75 18.25 17.5 20ZM18 14.25C17.75 15.75 15.5 15.25 14.75 15L15.25 12.5C16 12.75 18.25 12.5 18 14.25Z" fill="white"/>
+    <path d="M22.5 13.9C22.8 11.8 21.2 10.7 19 10V8.2L17.8 8.5V10C17.5 10 17.1 10.1 16.8 10.1V8.5L15.6 8.8V10.5C15.3 10.5 15.1 10.6 14.8 10.6L13.2 10.9V12.2C13.2 12.2 14.1 12 14.1 12C14.5 12 14.7 12.2 14.7 12.5V17.8C14.7 18 14.6 18.3 14.2 18.4C14.2 18.4 13.3 18.2 13.3 18.2L13 19.7L14.5 20C14.8 20.1 15 20.1 15.3 20.2V22L16.5 21.7V20.3C16.8 20.4 17.2 20.4 17.5 20.4V21.8L18.7 21.5V19.9C20.8 19.7 22.3 19 22.5 17.2C22.7 15.7 22 15 21 14.6C21.8 14.2 22.4 13.5 22.5 13.9ZM19.5 17C19.5 18.2 17.5 18.4 16.8 18.4V15.7C17.5 15.7 19.5 15.7 19.5 17ZM18.8 13.5C18.8 14.6 17.1 14.7 16.5 14.7V12.3C17.1 12.3 18.8 12.3 18.8 13.5Z" fill="white"/>
   </svg>
 );
 
+// Official Razorpay SVG Icon
 export const RazorpayIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
     <rect width="32" height="32" rx="6" fill="#072654"/>
-    <path d="M10 8L14 24H17L21 12L23 24H26L20 8H17L13 20L11 8H10Z" fill="white"/>
+    <path d="M13.2 9L9.5 23H12.2L13.5 19H16.2L18.5 23H21.5L16 13.5L17.5 9H13.2Z" fill="white"/>
+    <path d="M18.5 9L22.5 23H19.8L18.5 9Z" fill="#3395FF"/>
   </svg>
 );
 
+// Official Coinbase SVG Icon
 export const CoinbaseIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
     <rect width="32" height="32" rx="6" fill="#0052FF"/>
-    <circle cx="16" cy="16" r="10" fill="white"/>
-    <circle cx="16" cy="16" r="6" fill="#0052FF"/>
+    <path d="M16 6C10.5 6 6 10.5 6 16C6 21.5 10.5 26 16 26C21.5 26 26 21.5 26 16C26 10.5 21.5 6 16 6ZM16 22C12.7 22 10 19.3 10 16C10 12.7 12.7 10 16 10C19.3 10 22 12.7 22 16C22 19.3 19.3 22 16 22Z" fill="white"/>
+    <circle cx="16" cy="16" r="3" fill="white"/>
   </svg>
 );
 
+// Official Wise SVG Icon
 export const WiseIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
     <rect width="32" height="32" rx="6" fill="#9FE870"/>
-    <path d="M8 12L12 20L16 12L20 20L24 12" stroke="#163300" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+    <path d="M7 14L10.5 20L14 14L17.5 20L21 14L24.5 20L25 14" stroke="#163300" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
   </svg>
 );
 
+// Official Skrill SVG Icon
 export const SkrillIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <rect width="32" height="32" rx="6" fill="#8B2B92"/>
-    <text x="6" y="21" fill="white" fontSize="10" fontFamily="system-ui" fontWeight="700">S</text>
+    <rect width="32" height="32" rx="6" fill="#862165"/>
+    <path d="M20.5 13C20.5 11.1 18.9 10 16.5 10H11V22H13.5V18H16.5C18.9 18 20.5 16.9 20.5 15V13ZM18 15C18 15.8 17.3 16 16.5 16H13.5V12H16.5C17.3 12 18 12.2 18 13V15Z" fill="white"/>
+  </svg>
+);
+
+// Paystack Icon
+export const PaystackIcon = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect width="32" height="32" rx="6" fill="#00C3F7"/>
+    <path d="M8 10H24V12H8V10ZM8 14H20V16H8V14ZM8 18H24V20H8V18ZM8 22H16V24H8V22Z" fill="white"/>
+  </svg>
+);
+
+// Flutterwave Icon
+export const FlutterwaveIcon = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect width="32" height="32" rx="6" fill="#F5A623"/>
+    <path d="M8 11C8 9.9 8.9 9 10 9H22C23.1 9 24 9.9 24 11V21C24 22.1 23.1 23 22 23H10C8.9 23 8 22.1 8 21V11Z" fill="white" fillOpacity="0.2"/>
+    <path d="M12 14L16 18L20 14" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
+// Square Icon
+export const SquareIcon = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect width="32" height="32" rx="6" fill="#000000"/>
+    <rect x="8" y="8" width="16" height="16" rx="3" fill="white"/>
+    <rect x="11" y="11" width="10" height="10" rx="1" fill="#000000"/>
+  </svg>
+);
+
+// Amazon Pay Icon
+export const AmazonPayIcon = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect width="32" height="32" rx="6" fill="#FF9900"/>
+    <path d="M10 16C10 13.2 12.2 11 15 11H17C19.8 11 22 13.2 22 16C22 18.8 19.8 21 17 21H15C12.2 21 10 18.8 10 16Z" fill="white"/>
+    <path d="M14 15L16 17L20 13" stroke="#FF9900" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 );
 
@@ -95,27 +142,36 @@ export const SkrillIcon = ({ className }: { className?: string }) => (
 export const GenericPaymentIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
     <rect width="32" height="32" rx="6" fill="hsl(var(--muted))"/>
-    <rect x="6" y="10" width="20" height="12" rx="2" fill="hsl(var(--muted-foreground))" opacity="0.5"/>
+    <rect x="6" y="10" width="20" height="12" rx="2" stroke="hsl(var(--muted-foreground))" strokeWidth="1.5" fill="none"/>
     <rect x="6" y="14" width="20" height="3" fill="hsl(var(--muted-foreground))" opacity="0.3"/>
     <rect x="8" y="18" width="6" height="2" rx="1" fill="hsl(var(--muted-foreground))" opacity="0.5"/>
   </svg>
 );
 
 // Map gateway IDs to their icons
-export const getPaymentIcon = (gatewayId: string) => {
+export const getPaymentIcon = (gatewayId: string): React.FC<{ className?: string }> => {
   const icons: Record<string, React.FC<{ className?: string }>> = {
     stripe: StripeIcon,
     paypal: PayPalIcon,
     visa: VisaIcon,
     mastercard: MastercardIcon,
     applepay: ApplePayIcon,
+    apple_pay: ApplePayIcon,
     googlepay: GooglePayIcon,
-    coinbase: BitcoinIcon,
+    google_pay: GooglePayIcon,
+    coinbase: CoinbaseIcon,
     btcpay: BitcoinIcon,
     bitcoin: BitcoinIcon,
+    crypto: BitcoinIcon,
     razorpay: RazorpayIcon,
     wise: WiseIcon,
+    transferwise: WiseIcon,
     skrill: SkrillIcon,
+    paystack: PaystackIcon,
+    flutterwave: FlutterwaveIcon,
+    square: SquareIcon,
+    amazonpay: AmazonPayIcon,
+    amazon_pay: AmazonPayIcon,
   };
-  return icons[gatewayId] || GenericPaymentIcon;
+  return icons[gatewayId.toLowerCase()] || GenericPaymentIcon;
 };
