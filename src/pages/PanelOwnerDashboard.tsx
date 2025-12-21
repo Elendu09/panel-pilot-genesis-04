@@ -49,6 +49,7 @@ import BlogManagement from "./panel/BlogManagement";
 import CustomerManagement from "./panel/CustomerManagement";
 import PaymentMethods from "./panel/PaymentMethods";
 import SecuritySettings from "./panel/SecuritySettings";
+import MoreMenu from "./panel/MoreMenu";
 import { Helmet } from "react-helmet-async";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -89,7 +90,7 @@ const PanelOwnerDashboard = () => {
     { name: 'Services', href: '/panel/services', icon: Package },
     { name: 'Orders', href: '/panel/orders', icon: ShoppingCart, badge: 3 },
     { name: 'Analytics', href: '/panel/analytics', icon: BarChart3 },
-    { name: 'More', href: '/panel/settings', icon: Settings },
+    { name: 'More', href: '/panel/more', icon: Settings },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -364,12 +365,13 @@ const PanelOwnerDashboard = () => {
             <Route path="blog" element={<BlogManagement />} />
             <Route path="payments" element={<PaymentMethods />} />
             <Route path="security" element={<SecuritySettings />} />
+            <Route path="more" element={<MoreMenu />} />
           </Routes>
         </div>
       </main>
 
       {/* Mobile Bottom Navigation */}
-      <BottomNav items={bottomNavItems} showFab fabAction={() => console.log('FAB clicked')} />
+      <BottomNav items={bottomNavItems} showFab />
 
       {/* Onboarding Tour */}
       <OnboardingTour isOpen={tourOpen} onComplete={completeTour} />
