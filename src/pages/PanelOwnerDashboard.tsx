@@ -51,7 +51,11 @@ import PaymentMethods from "./panel/PaymentMethods";
 import SecuritySettings from "./panel/SecuritySettings";
 import MoreMenu from "./panel/MoreMenu";
 import Billing from "./panel/Billing";
+import Integrations from "./panel/Integrations";
 import { Helmet } from "react-helmet-async";
+import { cn } from "@/lib/utils";
+import { motion, AnimatePresence } from "framer-motion";
+import { LowBalanceAlert } from "@/components/panel/LowBalanceAlert";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -153,6 +157,9 @@ const PanelOwnerDashboard = () => {
         <meta name="robots" content="noindex,nofollow" />
         <link rel="canonical" href={canonicalUrl} />
       </Helmet>
+
+      {/* Low Balance Alert */}
+      <LowBalanceAlert balance={5} threshold={10} commissionDue={25.50} />
 
       {/* Glassmorphic Sidebar */}
       <aside className={cn(
@@ -367,6 +374,7 @@ const PanelOwnerDashboard = () => {
             <Route path="payments" element={<PaymentMethods />} />
             <Route path="security" element={<SecuritySettings />} />
             <Route path="billing" element={<Billing />} />
+            <Route path="integrations" element={<Integrations />} />
             <Route path="more" element={<MoreMenu />} />
           </Routes>
         </div>

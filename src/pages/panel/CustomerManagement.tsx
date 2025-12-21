@@ -35,6 +35,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Users, 
   UserPlus, 
@@ -57,7 +58,12 @@ import {
   Minus,
   History,
   Download,
-  ArrowUpDown
+  ArrowUpDown,
+  Percent,
+  Link2,
+  Copy,
+  UserX,
+  Circle
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
@@ -68,6 +74,7 @@ import { ExportDialog } from "@/components/customers/ExportDialog";
 import { AddCustomerDialog, NewCustomer } from "@/components/customers/AddCustomerDialog";
 import { CustomerOverview } from "@/components/customers/CustomerOverview";
 import { CustomerMobileCard } from "@/components/customers/CustomerMobileCard";
+import { CustomerPricingDialog } from "@/components/customers/CustomerPricingDialog";
 
 interface Customer {
   id: string;
@@ -82,6 +89,11 @@ interface Customer {
   totalOrders: number;
   joinedAt: string;
   lastActive: string;
+  isOnline?: boolean;
+  referralCode?: string;
+  referredBy?: string;
+  referralCount?: number;
+  customDiscount?: number;
 }
 
 interface Transaction {
@@ -107,24 +119,26 @@ const CustomerManagement = () => {
   const [showBalanceModal, setShowBalanceModal] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showAddCustomerDialog, setShowAddCustomerDialog] = useState(false);
+  const [showPricingDialog, setShowPricingDialog] = useState(false);
   const [balanceAction, setBalanceAction] = useState<"add" | "subtract">("add");
   const [balanceAmount, setBalanceAmount] = useState("");
   const [balanceReason, setBalanceReason] = useState("");
   const [sortColumn, setSortColumn] = useState<keyof Customer>("totalSpent");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  const [statusFilter, setStatusFilter] = useState<"all" | "online" | "banned">("all");
 
-  // Mock customer data - extended
+  // Mock customer data - extended with referrals and pricing
   const [customers, setCustomers] = useState<Customer[]>([
-    { id: "1", name: "John Anderson", email: "john@example.com", username: "john_a2x4", status: "active", segment: "vip", balance: 245.50, totalSpent: 2450.00, totalOrders: 47, joinedAt: "2024-01-15", lastActive: "2 hours ago" },
-    { id: "2", name: "Sarah Miller", email: "sarah@example.com", username: "sarah_m9k2", status: "active", segment: "regular", balance: 89.25, totalSpent: 890.00, totalOrders: 23, joinedAt: "2024-03-20", lastActive: "5 hours ago" },
-    { id: "3", name: "Mike Johnson", email: "mike@example.com", username: "mike_j7b3", status: "active", segment: "new", balance: 50.00, totalSpent: 50.00, totalOrders: 2, joinedAt: "2024-11-01", lastActive: "1 day ago" },
-    { id: "4", name: "Emma Wilson", email: "emma@example.com", username: "emma_w4p1", status: "inactive", segment: "regular", balance: 0, totalSpent: 340.00, totalOrders: 8, joinedAt: "2024-06-10", lastActive: "2 weeks ago" },
-    { id: "5", name: "Chris Davis", email: "chris@example.com", username: "chris_d8n5", status: "suspended", segment: "regular", balance: 15.00, totalSpent: 120.00, totalOrders: 5, joinedAt: "2024-08-05", lastActive: "1 month ago" },
-    { id: "6", name: "Alex Thompson", email: "alex@example.com", username: "alex_t3c9", status: "active", segment: "vip", balance: 500.00, totalSpent: 5200.00, totalOrders: 89, joinedAt: "2023-06-15", lastActive: "30 min ago" },
-    { id: "7", name: "Lisa Chen", email: "lisa@example.com", username: "lisa_c6r7", status: "active", segment: "regular", balance: 125.00, totalSpent: 780.00, totalOrders: 18, joinedAt: "2024-04-22", lastActive: "3 hours ago" },
-    { id: "8", name: "David Brown", email: "david@example.com", username: "david_b1q8", status: "active", segment: "new", balance: 25.00, totalSpent: 25.00, totalOrders: 1, joinedAt: "2024-11-15", lastActive: "Just now" },
-    { id: "9", name: "Maria Garcia", email: "maria@example.com", username: "maria_g5f2", status: "active", segment: "vip", balance: 320.00, totalSpent: 3100.00, totalOrders: 62, joinedAt: "2023-09-10", lastActive: "1 hour ago" },
-    { id: "10", name: "James Wilson", email: "james@example.com", username: "james_w0h4", status: "active", segment: "regular", balance: 45.00, totalSpent: 420.00, totalOrders: 12, joinedAt: "2024-07-18", lastActive: "6 hours ago" },
+    { id: "1", name: "John Anderson", email: "john@example.com", username: "john_a2x4", status: "active", segment: "vip", balance: 245.50, totalSpent: 2450.00, totalOrders: 47, joinedAt: "2024-01-15", lastActive: "2 hours ago", isOnline: true, referralCode: "JOHN2024", referralCount: 5, customDiscount: 10 },
+    { id: "2", name: "Sarah Miller", email: "sarah@example.com", username: "sarah_m9k2", status: "active", segment: "regular", balance: 89.25, totalSpent: 890.00, totalOrders: 23, joinedAt: "2024-03-20", lastActive: "5 hours ago", isOnline: true, referralCode: "SARAH2024", referralCount: 2 },
+    { id: "3", name: "Mike Johnson", email: "mike@example.com", username: "mike_j7b3", status: "active", segment: "new", balance: 50.00, totalSpent: 50.00, totalOrders: 2, joinedAt: "2024-11-01", lastActive: "1 day ago", isOnline: false, referralCode: "MIKE2024", referredBy: "JOHN2024" },
+    { id: "4", name: "Emma Wilson", email: "emma@example.com", username: "emma_w4p1", status: "inactive", segment: "regular", balance: 0, totalSpent: 340.00, totalOrders: 8, joinedAt: "2024-06-10", lastActive: "2 weeks ago", isOnline: false },
+    { id: "5", name: "Chris Davis", email: "chris@example.com", username: "chris_d8n5", status: "suspended", segment: "regular", balance: 15.00, totalSpent: 120.00, totalOrders: 5, joinedAt: "2024-08-05", lastActive: "1 month ago", isOnline: false },
+    { id: "6", name: "Alex Thompson", email: "alex@example.com", username: "alex_t3c9", status: "active", segment: "vip", balance: 500.00, totalSpent: 5200.00, totalOrders: 89, joinedAt: "2023-06-15", lastActive: "30 min ago", isOnline: true, referralCode: "ALEX2024", referralCount: 12, customDiscount: 15 },
+    { id: "7", name: "Lisa Chen", email: "lisa@example.com", username: "lisa_c6r7", status: "active", segment: "regular", balance: 125.00, totalSpent: 780.00, totalOrders: 18, joinedAt: "2024-04-22", lastActive: "3 hours ago", isOnline: true, referralCode: "LISA2024" },
+    { id: "8", name: "David Brown", email: "david@example.com", username: "david_b1q8", status: "active", segment: "new", balance: 25.00, totalSpent: 25.00, totalOrders: 1, joinedAt: "2024-11-15", lastActive: "Just now", isOnline: true, referredBy: "ALEX2024" },
+    { id: "9", name: "Maria Garcia", email: "maria@example.com", username: "maria_g5f2", status: "active", segment: "vip", balance: 320.00, totalSpent: 3100.00, totalOrders: 62, joinedAt: "2023-09-10", lastActive: "1 hour ago", isOnline: false, referralCode: "MARIA2024", referralCount: 8 },
+    { id: "10", name: "James Wilson", email: "james@example.com", username: "james_w0h4", status: "active", segment: "regular", balance: 45.00, totalSpent: 420.00, totalOrders: 12, joinedAt: "2024-07-18", lastActive: "6 hours ago", isOnline: false },
   ]);
 
   const mockTransactions: Transaction[] = [
@@ -140,19 +154,28 @@ const CustomerManagement = () => {
     { id: "ORD-2840", service: "TikTok Likes 500", amount: 8.99, status: "completed", date: "2024-11-10" },
   ];
 
+  const onlineCount = customers.filter(c => c.isOnline).length;
+  const bannedCount = customers.filter(c => c.status === "suspended").length;
+
   const stats = [
     { title: "Total Customers", value: customers.length, change: "+156", trend: "up", icon: Users },
-    { title: "New This Month", value: customers.filter(c => c.segment === "new").length, change: "+23%", trend: "up", icon: UserPlus },
+    { title: "Online Now", value: onlineCount, change: `${onlineCount}`, trend: "up", icon: Circle },
     { title: "Active Users", value: customers.filter(c => c.status === "active").length, change: "+12%", trend: "up", icon: UserCheck },
     { title: "VIP Members", value: customers.filter(c => c.segment === "vip").length, change: "+5", trend: "up", icon: Crown },
   ];
 
   const filteredCustomers = useMemo(() => {
-    let result = customers.filter(customer =>
-      customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (customer.username && customer.username.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
+    let result = customers.filter(customer => {
+      const matchesSearch = customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        customer.id.includes(searchTerm) ||
+        (customer.username && customer.username.toLowerCase().includes(searchTerm.toLowerCase()));
+      
+      // Status filter
+      if (statusFilter === "online") return matchesSearch && customer.isOnline;
+      if (statusFilter === "banned") return matchesSearch && customer.status === "suspended";
+      return matchesSearch;
+    });
     
     result.sort((a, b) => {
       const aVal = a[sortColumn];
@@ -166,7 +189,23 @@ const CustomerManagement = () => {
     });
     
     return result;
-  }, [customers, searchTerm, sortColumn, sortDirection]);
+  }, [customers, searchTerm, sortColumn, sortDirection, statusFilter]);
+
+  const handleSetPricing = (customer: Customer) => {
+    setSelectedCustomer(customer);
+    setShowPricingDialog(true);
+  };
+
+  const handleSaveCustomPricing = (customerId: string, discount: number) => {
+    setCustomers(prev => prev.map(c => 
+      c.id === customerId ? { ...c, customDiscount: discount } : c
+    ));
+  };
+
+  const copyReferralCode = (code: string) => {
+    navigator.clipboard.writeText(code);
+    toast({ title: "Copied!", description: `Referral code ${code} copied to clipboard` });
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
