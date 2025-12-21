@@ -172,8 +172,11 @@ export type Database = {
           is_active: boolean | null
           last_login_at: string | null
           panel_id: string | null
+          password_hash: string | null
+          password_temp: string | null
           total_spent: number | null
           updated_at: string
+          username: string | null
         }
         Insert: {
           balance?: number | null
@@ -184,8 +187,11 @@ export type Database = {
           is_active?: boolean | null
           last_login_at?: string | null
           panel_id?: string | null
+          password_hash?: string | null
+          password_temp?: string | null
           total_spent?: number | null
           updated_at?: string
+          username?: string | null
         }
         Update: {
           balance?: number | null
@@ -196,8 +202,11 @@ export type Database = {
           is_active?: boolean | null
           last_login_at?: string | null
           panel_id?: string | null
+          password_hash?: string | null
+          password_temp?: string | null
           total_spent?: number | null
           updated_at?: string
+          username?: string | null
         }
         Relationships: [
           {
