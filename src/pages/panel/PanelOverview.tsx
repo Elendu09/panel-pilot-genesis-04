@@ -16,14 +16,30 @@ import {
   Activity,
   ExternalLink,
   Plus,
-  RefreshCw
+  RefreshCw,
+  Radio,
+  Loader2,
+  CheckCircle,
+  AlertCircle,
+  XCircle
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import type { RealtimeChannel } from '@supabase/supabase-js';
+
+interface LiveOrder {
+  id: string;
+  order_number: string;
+  status: string;
+  price: number;
+  created_at: string;
+  target_url: string;
+  service?: { name: string };
+}
 
 const PanelOverview = () => {
   const { profile } = useAuth();
@@ -35,6 +51,12 @@ const PanelOverview = () => {
     activeServices: 0,
     totalCustomers: 0
   });
+  
+  // Live orders state
+  const [liveOrders, setLiveOrders] = useState<LiveOrder[]>([]);
+  const [isLive, setIsLive] = useState(true);
+  const [lastRefresh, setLastRefresh] = useState(new Date());
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     const fetchPanelData = async () => {
@@ -64,6 +86,16 @@ const PanelOverview = () => {
             .eq('panel_id', panel.id)
             .eq('is_active', true);
 
+          // Fetch recent orders for live widget
+          const { data: recentOrders } = await supabase
+            .from('orders')
+            .select('id, order_number, status, price, created_at, target_url')
+            .eq('panel_id', panel.id)
+            .order('created_at', { ascending: false })
+            .limit(5);
+
+          setLiveOrders((recentOrders || []) as LiveOrder[]);
+
           const uniqueCustomers = new Set(orders?.map(o => o.buyer_id) || []).size;
           const totalRevenue = orders?.reduce((sum, order) => sum + Number(order.price), 0) || 0;
 
@@ -83,6 +115,100 @@ const PanelOverview = () => {
 
     fetchPanelData();
   }, [profile?.id]);
+
+  // Realtime subscription for orders
+  useEffect(() => {
+    if (!panelData?.id) return;
+
+    let channel: RealtimeChannel;
+
+    const setupRealtime = () => {
+      channel = supabase
+        .channel('live-orders')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'orders',
+            filter: `panel_id=eq.${panelData.id}`
+          },
+          (payload) => {
+            console.log('Realtime order update:', payload);
+            setLastRefresh(new Date());
+            
+            if (payload.eventType === 'INSERT') {
+              const newOrder = payload.new as LiveOrder;
+              setLiveOrders(prev => [newOrder, ...prev.slice(0, 4)]);
+              setStats(prev => ({
+                ...prev,
+                totalOrders: prev.totalOrders + 1,
+                totalRevenue: prev.totalRevenue + Number(newOrder.price)
+              }));
+            } else if (payload.eventType === 'UPDATE') {
+              setLiveOrders(prev => prev.map(o => 
+                o.id === (payload.new as LiveOrder).id ? payload.new as LiveOrder : o
+              ));
+            }
+          }
+        )
+        .subscribe((status) => {
+          setIsLive(status === 'SUBSCRIBED');
+        });
+    };
+
+    setupRealtime();
+
+    return () => {
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+    };
+  }, [panelData?.id]);
+
+  // Auto-refresh every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setLastRefresh(new Date());
+    }, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleManualRefresh = async () => {
+    if (!panelData?.id) return;
+    setRefreshing(true);
+    
+    const { data } = await supabase
+      .from('orders')
+      .select('id, order_number, status, price, created_at, target_url')
+      .eq('panel_id', panelData.id)
+      .order('created_at', { ascending: false })
+      .limit(5);
+    
+    setLiveOrders((data || []) as LiveOrder[]);
+    setLastRefresh(new Date());
+    setRefreshing(false);
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'completed': return CheckCircle;
+      case 'in_progress': return Loader2;
+      case 'pending': return Clock;
+      case 'cancelled': return XCircle;
+      default: return AlertCircle;
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed': return 'bg-emerald-500/20 text-emerald-500';
+      case 'in_progress': return 'bg-blue-500/20 text-blue-500';
+      case 'pending': return 'bg-amber-500/20 text-amber-500';
+      case 'cancelled': return 'bg-red-500/20 text-red-500';
+      default: return 'bg-slate-500/20 text-slate-500';
+    }
+  };
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -270,6 +396,133 @@ const PanelOverview = () => {
           );
         })}
       </motion.div>
+
+      {/* Quick Actions & Recent Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Quick Actions */}
+        <motion.div variants={itemVariants} className="lg:col-span-1">
+          <Card className="glass-card h-full">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Quick Actions</CardTitle>
+              <CardDescription>Common tasks and shortcuts</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {quickActions.map((action, index) => (
+                <Link
+                  key={action.title}
+                  to={action.href}
+                  className="flex items-center gap-3 p-3 rounded-xl hover:bg-accent/50 transition-all duration-200 group"
+                >
+                  <div className={cn("p-2 rounded-lg bg-accent", action.color)}>
+                    <action.icon className="w-4 h-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium group-hover:text-primary transition-colors">{action.title}</p>
+                    <p className="text-xs text-muted-foreground">{action.description}</p>
+                  </div>
+                  <ArrowUpRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                </Link>
+              ))}
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Live Orders Widget */}
+        <motion.div variants={itemVariants} className="lg:col-span-2">
+          <Card className="glass-card h-full">
+            <CardHeader className="pb-3 flex flex-row items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <div className={cn(
+                    "w-2 h-2 rounded-full animate-pulse",
+                    isLive ? "bg-emerald-500" : "bg-amber-500"
+                  )} />
+                  <Badge variant="outline" className={cn(
+                    "text-xs gap-1",
+                    isLive ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30" : "bg-amber-500/10 text-amber-500"
+                  )}>
+                    <Radio className="w-3 h-3" />
+                    {isLive ? 'LIVE' : 'Connecting...'}
+                  </Badge>
+                </div>
+                <div>
+                  <CardTitle className="text-lg">Live Orders</CardTitle>
+                  <CardDescription className="text-xs">
+                    Updated {lastRefresh.toLocaleTimeString()}
+                  </CardDescription>
+                </div>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleManualRefresh}
+                disabled={refreshing}
+                className="gap-2"
+              >
+                <RefreshCw className={cn("w-4 h-4", refreshing && "animate-spin")} />
+                Refresh
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <AnimatePresence mode="popLayout">
+                  {liveOrders.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <ShoppingCart className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">No orders yet</p>
+                    </div>
+                  ) : (
+                    liveOrders.map((order, index) => {
+                      const StatusIcon = getStatusIcon(order.status);
+                      return (
+                        <motion.div
+                          key={order.id}
+                          initial={{ opacity: 0, x: -20, scale: 0.95 }}
+                          animate={{ opacity: 1, x: 0, scale: 1 }}
+                          exit={{ opacity: 0, x: 20, scale: 0.95 }}
+                          transition={{ delay: index * 0.05 }}
+                          layout
+                          className="flex items-center justify-between p-3 rounded-xl hover:bg-accent/30 transition-colors group"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                              <Package className="w-5 h-5 text-primary" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium">{order.order_number}</p>
+                              <p className="text-xs text-muted-foreground truncate max-w-[150px]">
+                                {order.target_url || 'No target'}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="text-sm font-semibold">${Number(order.price).toFixed(2)}</span>
+                            <Badge 
+                              variant="outline" 
+                              className={cn("text-xs gap-1", getStatusColor(order.status))}
+                            >
+                              <StatusIcon className={cn(
+                                "w-3 h-3",
+                                order.status === 'in_progress' && "animate-spin"
+                              )} />
+                              {order.status.replace('_', ' ')}
+                            </Badge>
+                          </div>
+                        </motion.div>
+                      );
+                    })
+                  )}
+                </AnimatePresence>
+              </div>
+              <div className="mt-4 pt-3 border-t border-border/50">
+                <Button variant="outline" size="sm" asChild className="w-full">
+                  <Link to="/panel/orders">View All Orders</Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
 
       {/* Quick Actions & Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

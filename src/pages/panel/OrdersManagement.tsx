@@ -192,7 +192,7 @@ const OrdersManagement = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 overflow-x-hidden">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -226,7 +226,7 @@ const OrdersManagement = () => {
       </motion.div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         {[
           { label: "Today's Orders", value: todayOrders, icon: ShoppingCart, color: "primary", trend: "+12%" },
           { label: "Pending", value: pendingOrders, icon: Clock, color: "yellow-500", trend: null },
@@ -276,12 +276,12 @@ const OrdersManagement = () => {
         ))}
       </div>
 
-      {/* Status Filters */}
+      {/* Status Filters - Horizontal scroll on mobile */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="flex flex-wrap gap-2"
+        className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 md:flex-wrap scrollbar-hide"
       >
         {["all", "pending", "in_progress", "completed", "partial", "cancelled", "refunded"].map((status) => {
           const isActive = statusFilter === status;
