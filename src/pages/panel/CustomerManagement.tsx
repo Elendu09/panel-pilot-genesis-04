@@ -51,28 +51,29 @@ import {
   Wallet,
   ArrowUpRight,
   ArrowDownRight,
-  Clock,
   Crown,
-  Star,
   UserCheck,
   Plus,
   Minus,
   History,
   Download,
-  Zap,
-  Trophy,
-  ArrowUpDown,
-  ChevronDown
+  ArrowUpDown
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
+// Import new components
+import { ExportDialog } from "@/components/customers/ExportDialog";
+import { AddCustomerDialog, NewCustomer } from "@/components/customers/AddCustomerDialog";
+import { CustomerOverview } from "@/components/customers/CustomerOverview";
+import { CustomerMobileCard } from "@/components/customers/CustomerMobileCard";
 
 interface Customer {
   id: string;
   name: string;
   email: string;
+  username?: string;
   avatar?: string;
   status: "active" | "inactive" | "suspended";
   segment: "vip" | "regular" | "new";
@@ -104,6 +105,8 @@ const CustomerManagement = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [showBalanceModal, setShowBalanceModal] = useState(false);
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [showAddCustomerDialog, setShowAddCustomerDialog] = useState(false);
   const [balanceAction, setBalanceAction] = useState<"add" | "subtract">("add");
   const [balanceAmount, setBalanceAmount] = useState("");
   const [balanceReason, setBalanceReason] = useState("");
@@ -111,18 +114,18 @@ const CustomerManagement = () => {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
   // Mock customer data - extended
-  const customers: Customer[] = [
-    { id: "1", name: "John Anderson", email: "john@example.com", status: "active", segment: "vip", balance: 245.50, totalSpent: 2450.00, totalOrders: 47, joinedAt: "2024-01-15", lastActive: "2 hours ago" },
-    { id: "2", name: "Sarah Miller", email: "sarah@example.com", status: "active", segment: "regular", balance: 89.25, totalSpent: 890.00, totalOrders: 23, joinedAt: "2024-03-20", lastActive: "5 hours ago" },
-    { id: "3", name: "Mike Johnson", email: "mike@example.com", status: "active", segment: "new", balance: 50.00, totalSpent: 50.00, totalOrders: 2, joinedAt: "2024-11-01", lastActive: "1 day ago" },
-    { id: "4", name: "Emma Wilson", email: "emma@example.com", status: "inactive", segment: "regular", balance: 0, totalSpent: 340.00, totalOrders: 8, joinedAt: "2024-06-10", lastActive: "2 weeks ago" },
-    { id: "5", name: "Chris Davis", email: "chris@example.com", status: "suspended", segment: "regular", balance: 15.00, totalSpent: 120.00, totalOrders: 5, joinedAt: "2024-08-05", lastActive: "1 month ago" },
-    { id: "6", name: "Alex Thompson", email: "alex@example.com", status: "active", segment: "vip", balance: 500.00, totalSpent: 5200.00, totalOrders: 89, joinedAt: "2023-06-15", lastActive: "30 min ago" },
-    { id: "7", name: "Lisa Chen", email: "lisa@example.com", status: "active", segment: "regular", balance: 125.00, totalSpent: 780.00, totalOrders: 18, joinedAt: "2024-04-22", lastActive: "3 hours ago" },
-    { id: "8", name: "David Brown", email: "david@example.com", status: "active", segment: "new", balance: 25.00, totalSpent: 25.00, totalOrders: 1, joinedAt: "2024-11-15", lastActive: "Just now" },
-    { id: "9", name: "Maria Garcia", email: "maria@example.com", status: "active", segment: "vip", balance: 320.00, totalSpent: 3100.00, totalOrders: 62, joinedAt: "2023-09-10", lastActive: "1 hour ago" },
-    { id: "10", name: "James Wilson", email: "james@example.com", status: "active", segment: "regular", balance: 45.00, totalSpent: 420.00, totalOrders: 12, joinedAt: "2024-07-18", lastActive: "6 hours ago" },
-  ];
+  const [customers, setCustomers] = useState<Customer[]>([
+    { id: "1", name: "John Anderson", email: "john@example.com", username: "john_a2x4", status: "active", segment: "vip", balance: 245.50, totalSpent: 2450.00, totalOrders: 47, joinedAt: "2024-01-15", lastActive: "2 hours ago" },
+    { id: "2", name: "Sarah Miller", email: "sarah@example.com", username: "sarah_m9k2", status: "active", segment: "regular", balance: 89.25, totalSpent: 890.00, totalOrders: 23, joinedAt: "2024-03-20", lastActive: "5 hours ago" },
+    { id: "3", name: "Mike Johnson", email: "mike@example.com", username: "mike_j7b3", status: "active", segment: "new", balance: 50.00, totalSpent: 50.00, totalOrders: 2, joinedAt: "2024-11-01", lastActive: "1 day ago" },
+    { id: "4", name: "Emma Wilson", email: "emma@example.com", username: "emma_w4p1", status: "inactive", segment: "regular", balance: 0, totalSpent: 340.00, totalOrders: 8, joinedAt: "2024-06-10", lastActive: "2 weeks ago" },
+    { id: "5", name: "Chris Davis", email: "chris@example.com", username: "chris_d8n5", status: "suspended", segment: "regular", balance: 15.00, totalSpent: 120.00, totalOrders: 5, joinedAt: "2024-08-05", lastActive: "1 month ago" },
+    { id: "6", name: "Alex Thompson", email: "alex@example.com", username: "alex_t3c9", status: "active", segment: "vip", balance: 500.00, totalSpent: 5200.00, totalOrders: 89, joinedAt: "2023-06-15", lastActive: "30 min ago" },
+    { id: "7", name: "Lisa Chen", email: "lisa@example.com", username: "lisa_c6r7", status: "active", segment: "regular", balance: 125.00, totalSpent: 780.00, totalOrders: 18, joinedAt: "2024-04-22", lastActive: "3 hours ago" },
+    { id: "8", name: "David Brown", email: "david@example.com", username: "david_b1q8", status: "active", segment: "new", balance: 25.00, totalSpent: 25.00, totalOrders: 1, joinedAt: "2024-11-15", lastActive: "Just now" },
+    { id: "9", name: "Maria Garcia", email: "maria@example.com", username: "maria_g5f2", status: "active", segment: "vip", balance: 320.00, totalSpent: 3100.00, totalOrders: 62, joinedAt: "2023-09-10", lastActive: "1 hour ago" },
+    { id: "10", name: "James Wilson", email: "james@example.com", username: "james_w0h4", status: "active", segment: "regular", balance: 45.00, totalSpent: 420.00, totalOrders: 12, joinedAt: "2024-07-18", lastActive: "6 hours ago" },
+  ]);
 
   const mockTransactions: Transaction[] = [
     { id: "t1", type: "credit", amount: 100.00, description: "Balance top-up via PayPal", date: "2024-11-15" },
@@ -144,59 +147,11 @@ const CustomerManagement = () => {
     { title: "VIP Members", value: customers.filter(c => c.segment === "vip").length, change: "+5", trend: "up", icon: Crown },
   ];
 
-  // Kanban column definitions
-  const kanbanColumns = useMemo(() => [
-    {
-      id: "top-spenders",
-      title: "Top Spenders",
-      icon: Trophy,
-      color: "text-yellow-500",
-      bgColor: "bg-yellow-500/10",
-      borderColor: "border-yellow-500/30",
-      customers: [...customers].sort((a, b) => b.totalSpent - a.totalSpent).slice(0, 3),
-    },
-    {
-      id: "vip",
-      title: "VIP Members",
-      icon: Crown,
-      color: "text-purple-500",
-      bgColor: "bg-purple-500/10",
-      borderColor: "border-purple-500/30",
-      customers: customers.filter(c => c.segment === "vip"),
-    },
-    {
-      id: "most-active",
-      title: "Most Active",
-      icon: Zap,
-      color: "text-blue-500",
-      bgColor: "bg-blue-500/10",
-      borderColor: "border-blue-500/30",
-      customers: [...customers].sort((a, b) => b.totalOrders - a.totalOrders).slice(0, 3),
-    },
-    {
-      id: "regular",
-      title: "Regular Users",
-      icon: Users,
-      color: "text-green-500",
-      bgColor: "bg-green-500/10",
-      borderColor: "border-green-500/30",
-      customers: customers.filter(c => c.segment === "regular" && c.status === "active"),
-    },
-    {
-      id: "new",
-      title: "New Users",
-      icon: Star,
-      color: "text-cyan-500",
-      bgColor: "bg-cyan-500/10",
-      borderColor: "border-cyan-500/30",
-      customers: customers.filter(c => c.segment === "new"),
-    },
-  ], [customers]);
-
   const filteredCustomers = useMemo(() => {
     let result = customers.filter(customer =>
       customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.email.toLowerCase().includes(searchTerm.toLowerCase())
+      customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (customer.username && customer.username.toLowerCase().includes(searchTerm.toLowerCase()))
     );
     
     result.sort((a, b) => {
@@ -253,17 +208,25 @@ const CustomerManagement = () => {
     toast({ title: `${action} - ${customer.name}`, description: `Action "${action}" performed successfully.` });
   };
 
-  const exportToCSV = () => {
-    const headers = ["Name", "Email", "Status", "Segment", "Balance", "Total Spent", "Orders", "Joined"];
-    const rows = filteredCustomers.map(c => [c.name, c.email, c.status, c.segment, c.balance, c.totalSpent, c.totalOrders, c.joinedAt]);
-    const csv = [headers, ...rows].map(r => r.join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "customers.csv";
-    a.click();
-    toast({ title: "Exported", description: "Customer data exported to CSV" });
+  const handleAddCustomer = (newCustomer: NewCustomer) => {
+    const customer: Customer = {
+      id: `${Date.now()}`,
+      name: newCustomer.fullName,
+      email: newCustomer.email,
+      username: newCustomer.username,
+      status: newCustomer.status,
+      segment: newCustomer.segment,
+      balance: newCustomer.balance,
+      totalSpent: 0,
+      totalOrders: 0,
+      joinedAt: new Date().toISOString().split('T')[0],
+      lastActive: "Just now",
+    };
+    setCustomers(prev => [customer, ...prev]);
+    toast({ 
+      title: "Customer Created", 
+      description: `${newCustomer.fullName} has been added successfully.` 
+    });
   };
 
   return (
@@ -271,38 +234,41 @@ const CustomerManagement = () => {
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Customer Management</h1>
-          <p className="text-muted-foreground">Manage your panel's customers and their accounts</p>
+          <h1 className="text-2xl md:text-3xl font-bold">Customer Management</h1>
+          <p className="text-muted-foreground text-sm md:text-base">Manage your panel's customers and their accounts</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={exportToCSV}>
+          <Button variant="outline" onClick={() => setShowExportDialog(true)}>
             <Download className="w-4 h-4 mr-2" />
-            Export CSV
+            <span className="hidden sm:inline">Export</span>
           </Button>
-          <Button className="bg-gradient-to-r from-primary to-primary/80">
+          <Button 
+            className="bg-gradient-to-r from-primary to-primary/80"
+            onClick={() => setShowAddCustomerDialog(true)}
+          >
             <UserPlus className="w-4 h-4 mr-2" />
-            Add Customer
+            <span className="hidden sm:inline">Add Customer</span>
           </Button>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         {stats.map((stat, index) => (
           <motion.div key={index} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1 }}>
             <Card className="bg-card/60 backdrop-blur-xl border-border/50 hover:border-primary/30 transition-all">
-              <CardContent className="p-6">
+              <CardContent className="p-4 md:p-6">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">{stat.title}</p>
-                    <p className="text-3xl font-bold mt-1">{stat.value.toLocaleString()}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs md:text-sm text-muted-foreground truncate">{stat.title}</p>
+                    <p className="text-xl md:text-3xl font-bold mt-1">{stat.value.toLocaleString()}</p>
                     <div className="flex items-center mt-2">
-                      {stat.trend === "up" ? <TrendingUp className="w-4 h-4 text-green-500 mr-1" /> : <TrendingDown className="w-4 h-4 text-destructive mr-1" />}
-                      <span className={`text-sm font-medium ${stat.trend === "up" ? "text-green-500" : "text-destructive"}`}>{stat.change}</span>
+                      {stat.trend === "up" ? <TrendingUp className="w-3 h-3 md:w-4 md:h-4 text-green-500 mr-1" /> : <TrendingDown className="w-3 h-3 md:w-4 md:h-4 text-destructive mr-1" />}
+                      <span className={`text-xs md:text-sm font-medium ${stat.trend === "up" ? "text-green-500" : "text-destructive"}`}>{stat.change}</span>
                     </div>
                   </div>
-                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                    <stat.icon className="w-6 h-6 text-primary" />
+                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                    <stat.icon className="w-5 h-5 md:w-6 md:h-6 text-primary" />
                   </div>
                 </div>
               </CardContent>
@@ -311,59 +277,11 @@ const CustomerManagement = () => {
         ))}
       </div>
 
-      {/* Kanban View */}
-      <Card className="bg-card/60 backdrop-blur-xl border-border/50">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg">Customer Overview</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ScrollArea className="w-full">
-            <div className="flex gap-4 pb-4 min-w-max">
-              {kanbanColumns.map((column) => (
-                <div key={column.id} className={cn("w-64 flex-shrink-0 rounded-xl border-2 p-4", column.borderColor, column.bgColor)}>
-                  <div className="flex items-center gap-2 mb-4">
-                    <column.icon className={cn("w-5 h-5", column.color)} />
-                    <h3 className="font-semibold">{column.title}</h3>
-                    <Badge variant="secondary" className="ml-auto">{column.customers.length}</Badge>
-                  </div>
-                  <div className="space-y-3">
-                    {column.customers.slice(0, 4).map((customer) => (
-                      <motion.div
-                        key={customer.id}
-                        whileHover={{ scale: 1.02 }}
-                        className="bg-card/80 backdrop-blur-sm rounded-lg p-3 border border-border/50 cursor-pointer hover:border-primary/30 transition-all"
-                        onClick={() => setSelectedCustomer(customer)}
-                      >
-                        <div className="flex items-center gap-2 mb-2">
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src={customer.avatar} />
-                            <AvatarFallback className="text-xs bg-primary/10 text-primary">{customer.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm truncate">{customer.name}</p>
-                            <p className="text-xs text-muted-foreground truncate">{customer.email}</p>
-                          </div>
-                        </div>
-                        <div className="flex justify-between text-xs">
-                          <span className="text-muted-foreground">Balance</span>
-                          <span className="font-medium text-primary">${customer.balance.toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between text-xs mt-1">
-                          <span className="text-muted-foreground">Spent</span>
-                          <span className="font-medium">${customer.totalSpent.toFixed(0)}</span>
-                        </div>
-                      </motion.div>
-                    ))}
-                    {column.customers.length > 4 && (
-                      <p className="text-xs text-center text-muted-foreground">+{column.customers.length - 4} more</p>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </ScrollArea>
-        </CardContent>
-      </Card>
+      {/* Customer Overview with scroll arrows */}
+      <CustomerOverview 
+        customers={customers} 
+        onSelectCustomer={setSelectedCustomer}
+      />
 
       {/* Search & Table View */}
       <Card className="bg-card/60 backdrop-blur-xl border-border/50">
@@ -373,7 +291,7 @@ const CustomerManagement = () => {
             <div className="relative w-full lg:w-80">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
               <Input
-                placeholder="Search customers..."
+                placeholder="Search by name, email, username..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 bg-background/60"
@@ -382,7 +300,8 @@ const CustomerManagement = () => {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="rounded-lg border border-border/50 overflow-hidden">
+          {/* Desktop Table View */}
+          <div className="hidden md:block rounded-lg border border-border/50 overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/30 hover:bg-muted/30">
@@ -451,6 +370,21 @@ const CustomerManagement = () => {
               </TableBody>
             </Table>
           </div>
+
+          {/* Mobile Card View */}
+          <div className="md:hidden space-y-4">
+            {filteredCustomers.map((customer) => (
+              <CustomerMobileCard
+                key={customer.id}
+                customer={customer}
+                onView={setSelectedCustomer}
+                onEdit={(c) => handleCustomerAction("Edit", c)}
+                onAdjustBalance={(c) => { setSelectedCustomer(c); setShowBalanceModal(true); }}
+                onSuspend={(c) => handleCustomerAction("Suspend", c)}
+              />
+            ))}
+          </div>
+
           <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
             <span>Showing {filteredCustomers.length} of {customers.length} customers</span>
           </div>
@@ -471,6 +405,9 @@ const CustomerManagement = () => {
                   <div>
                     <SheetTitle className="flex items-center gap-2">{selectedCustomer.name}{selectedCustomer.segment === "vip" && <Crown className="w-5 h-5 text-purple-500" />}</SheetTitle>
                     <SheetDescription>{selectedCustomer.email}</SheetDescription>
+                    {selectedCustomer.username && (
+                      <p className="text-sm text-muted-foreground mt-1">@{selectedCustomer.username}</p>
+                    )}
                   </div>
                 </div>
               </SheetHeader>
@@ -553,6 +490,20 @@ const CustomerManagement = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Export Dialog */}
+      <ExportDialog 
+        open={showExportDialog} 
+        onOpenChange={setShowExportDialog}
+        customers={filteredCustomers}
+      />
+
+      {/* Add Customer Dialog */}
+      <AddCustomerDialog
+        open={showAddCustomerDialog}
+        onOpenChange={setShowAddCustomerDialog}
+        onAdd={handleAddCustomer}
+      />
     </div>
   );
 };
