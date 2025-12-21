@@ -204,6 +204,7 @@ export type Database = {
         Row: {
           balance: number | null
           created_at: string
+          custom_discount: number | null
           email: string
           full_name: string | null
           id: string
@@ -212,6 +213,9 @@ export type Database = {
           panel_id: string | null
           password_hash: string | null
           password_temp: string | null
+          referral_code: string | null
+          referral_count: number | null
+          referred_by: string | null
           total_spent: number | null
           updated_at: string
           username: string | null
@@ -219,6 +223,7 @@ export type Database = {
         Insert: {
           balance?: number | null
           created_at?: string
+          custom_discount?: number | null
           email: string
           full_name?: string | null
           id?: string
@@ -227,6 +232,9 @@ export type Database = {
           panel_id?: string | null
           password_hash?: string | null
           password_temp?: string | null
+          referral_code?: string | null
+          referral_count?: number | null
+          referred_by?: string | null
           total_spent?: number | null
           updated_at?: string
           username?: string | null
@@ -234,6 +242,7 @@ export type Database = {
         Update: {
           balance?: number | null
           created_at?: string
+          custom_discount?: number | null
           email?: string
           full_name?: string | null
           id?: string
@@ -242,6 +251,9 @@ export type Database = {
           panel_id?: string | null
           password_hash?: string | null
           password_temp?: string | null
+          referral_code?: string | null
+          referral_count?: number | null
+          referred_by?: string | null
           total_spent?: number | null
           updated_at?: string
           username?: string | null
@@ -252,6 +264,13 @@ export type Database = {
             columns: ["panel_id"]
             isOneToOne: false
             referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_users_referred_by_fkey"
+            columns: ["referred_by"]
+            isOneToOne: false
+            referencedRelation: "client_users"
             referencedColumns: ["id"]
           },
         ]
@@ -1021,6 +1040,74 @@ export type Database = {
             columns: ["panel_id"]
             isOneToOne: false
             referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referral_rewards: {
+        Row: {
+          created_at: string
+          id: string
+          order_amount: number
+          order_id: string | null
+          panel_id: string | null
+          referred_id: string
+          referrer_id: string
+          reward_amount: number
+          reward_percentage: number | null
+          status: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_amount: number
+          order_id?: string | null
+          panel_id?: string | null
+          referred_id: string
+          referrer_id: string
+          reward_amount: number
+          reward_percentage?: number | null
+          status?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_amount?: number
+          order_id?: string | null
+          panel_id?: string | null
+          referred_id?: string
+          referrer_id?: string
+          reward_amount?: number
+          reward_percentage?: number | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_rewards_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_rewards_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_rewards_referred_id_fkey"
+            columns: ["referred_id"]
+            isOneToOne: false
+            referencedRelation: "client_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_rewards_referrer_id_fkey"
+            columns: ["referrer_id"]
+            isOneToOne: false
+            referencedRelation: "client_users"
             referencedColumns: ["id"]
           },
         ]

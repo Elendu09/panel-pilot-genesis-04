@@ -75,6 +75,8 @@ import { AddCustomerDialog, NewCustomer } from "@/components/customers/AddCustom
 import { CustomerOverview } from "@/components/customers/CustomerOverview";
 import { CustomerMobileCard } from "@/components/customers/CustomerMobileCard";
 import { CustomerPricingDialog } from "@/components/customers/CustomerPricingDialog";
+import { CustomerStatusTabs } from "@/components/customers/CustomerStatusTabs";
+import { ReferralSection } from "@/components/customers/ReferralSection";
 
 interface Customer {
   id: string;
@@ -316,6 +318,17 @@ const CustomerManagement = () => {
         ))}
       </div>
 
+      {/* Kanban-style Status Tabs */}
+      <CustomerStatusTabs
+        activeTab={statusFilter}
+        onTabChange={setStatusFilter}
+        counts={{
+          all: customers.length,
+          online: onlineCount,
+          banned: bannedCount,
+        }}
+      />
+
       {/* Customer Overview with scroll arrows */}
       <CustomerOverview 
         customers={customers} 
@@ -399,6 +412,8 @@ const CustomerManagement = () => {
                           <DropdownMenuItem onClick={() => setSelectedCustomer(customer)}><Eye className="w-4 h-4 mr-2" />View</DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleCustomerAction("Edit", customer)}><Edit className="w-4 h-4 mr-2" />Edit</DropdownMenuItem>
                           <DropdownMenuItem onClick={() => { setSelectedCustomer(customer); setShowBalanceModal(true); }}><Wallet className="w-4 h-4 mr-2" />Adjust Balance</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleSetPricing(customer)}><Percent className="w-4 h-4 mr-2" />Set Pricing</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => copyReferralCode(customer.referralCode || "")}><Copy className="w-4 h-4 mr-2" />Copy Referral</DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem onClick={() => handleCustomerAction("Suspend", customer)} className="text-destructive"><Ban className="w-4 h-4 mr-2" />Suspend</DropdownMenuItem>
                         </DropdownMenuContent>
@@ -486,6 +501,9 @@ const CustomerManagement = () => {
                     ))}
                   </div>
                 </div>
+                
+                {/* Referral Section */}
+                <ReferralSection customer={selectedCustomer} />
               </div>
             </>
           )}
@@ -542,6 +560,14 @@ const CustomerManagement = () => {
         open={showAddCustomerDialog}
         onOpenChange={setShowAddCustomerDialog}
         onAdd={handleAddCustomer}
+      />
+
+      {/* Customer Pricing Dialog */}
+      <CustomerPricingDialog
+        open={showPricingDialog}
+        onOpenChange={setShowPricingDialog}
+        customer={selectedCustomer}
+        onSave={handleSaveCustomPricing}
       />
     </div>
   );

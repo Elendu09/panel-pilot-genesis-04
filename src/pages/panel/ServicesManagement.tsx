@@ -91,6 +91,7 @@ import {
 
 import { DraggableServiceItem, ServiceItem } from "@/components/services/DraggableServiceItem";
 import { ServiceImportDialog } from "@/components/services/ServiceImportDialog";
+import { ServiceEditDialog } from "@/components/services/ServiceEditDialog";
 
 // Mock data
 const createMockServices = (): ServiceItem[] => [
@@ -139,17 +140,6 @@ const ServicesManagement = () => {
   
   // Edit service state
   const [editingService, setEditingService] = useState<ServiceItem | null>(null);
-  const [editFormData, setEditFormData] = useState({
-    name: "",
-    description: "",
-    price: 0,
-    category: "",
-    minQty: 0,
-    maxQty: 0,
-    seoTitle: "",
-    seoDescription: "",
-    imageUrl: "",
-  });
 
   // DnD sensors
   const sensors = useSensors(
@@ -313,26 +303,24 @@ const ServicesManagement = () => {
   // Edit service
   const openEditDialog = (service: ServiceItem) => {
     setEditingService(service);
-    setEditFormData({
-      name: service.name,
-      description: "",
-      price: service.price,
-      category: service.category,
-      minQty: service.minQty,
-      maxQty: service.maxQty,
-      seoTitle: "",
-      seoDescription: "",
-      imageUrl: service.imageUrl || "",
-    });
     setIsEditDialogOpen(true);
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = (updatedService: any) => {
     if (!editingService) return;
     
     setServices(prev => prev.map(s =>
       s.id === editingService.id
-        ? { ...s, ...editFormData }
+        ? { 
+            ...s, 
+            name: updatedService.name,
+            description: updatedService.description,
+            price: updatedService.price,
+            category: updatedService.category,
+            minQty: updatedService.minQty,
+            maxQty: updatedService.maxQty,
+            imageUrl: updatedService.imageUrl,
+          }
         : s
     ));
     toast({ title: "Service updated successfully" });
@@ -832,151 +820,25 @@ const ServicesManagement = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Service Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="glass-card max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Edit Service</DialogTitle>
-            <DialogDescription>Update service details, pricing, and SEO settings</DialogDescription>
-          </DialogHeader>
-          <Tabs defaultValue="general" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="general">General</TabsTrigger>
-              <TabsTrigger value="pricing">Pricing</TabsTrigger>
-              <TabsTrigger value="seo">SEO</TabsTrigger>
-            </TabsList>
-            <TabsContent value="general" className="space-y-4 mt-4">
-              <div className="space-y-2">
-                <Label>Service Name</Label>
-                <Input 
-                  value={editFormData.name}
-                  onChange={(e) => setEditFormData(prev => ({ ...prev, name: e.target.value }))}
-                  className="bg-background/50"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Description</Label>
-                <Textarea 
-                  value={editFormData.description}
-                  onChange={(e) => setEditFormData(prev => ({ ...prev, description: e.target.value }))}
-                  className="bg-background/50"
-                  rows={3}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Category</Label>
-                <Select 
-                  value={editFormData.category}
-                  onValueChange={(v) => setEditFormData(prev => ({ ...prev, category: v }))}
-                >
-                  <SelectTrigger className="bg-background/50">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.filter(c => c.id !== "all").map(c => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <Image className="w-4 h-4" />
-                  Service Image URL
-                </Label>
-                <Input 
-                  value={editFormData.imageUrl}
-                  onChange={(e) => setEditFormData(prev => ({ ...prev, imageUrl: e.target.value }))}
-                  placeholder="https://..."
-                  className="bg-background/50"
-                />
-              </div>
-            </TabsContent>
-            <TabsContent value="pricing" className="space-y-4 mt-4">
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label>Price (per 1k)</Label>
-                  <Input 
-                    type="number"
-                    value={editFormData.price}
-                    onChange={(e) => setEditFormData(prev => ({ ...prev, price: Number(e.target.value) }))}
-                    step="0.01"
-                    className="bg-background/50"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Min Quantity</Label>
-                  <Input 
-                    type="number"
-                    value={editFormData.minQty}
-                    onChange={(e) => setEditFormData(prev => ({ ...prev, minQty: Number(e.target.value) }))}
-                    className="bg-background/50"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Max Quantity</Label>
-                  <Input 
-                    type="number"
-                    value={editFormData.maxQty}
-                    onChange={(e) => setEditFormData(prev => ({ ...prev, maxQty: Number(e.target.value) }))}
-                    className="bg-background/50"
-                  />
-                </div>
-              </div>
-              {editingService && (
-                <div className="p-3 rounded-lg bg-muted/50 border">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Original Provider Price:</span>
-                    <span className="font-medium">${editingService.originalPrice.toFixed(2)}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm mt-1">
-                    <span className="text-muted-foreground">Current Markup:</span>
-                    <Badge variant="outline" className="text-emerald-500">
-                      +{((editFormData.price - editingService.originalPrice) / editingService.originalPrice * 100).toFixed(0)}%
-                    </Badge>
-                  </div>
-                </div>
-              )}
-              <Button variant="outline" className="w-full" onClick={() => {
-                toast({ title: "Syncing from provider...", description: "This would fetch latest price from API" });
-              }}>
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Sync from Provider
-              </Button>
-            </TabsContent>
-            <TabsContent value="seo" className="space-y-4 mt-4">
-              <div className="space-y-2">
-                <Label>SEO Title</Label>
-                <Input 
-                  value={editFormData.seoTitle}
-                  onChange={(e) => setEditFormData(prev => ({ ...prev, seoTitle: e.target.value }))}
-                  placeholder="Custom title for search engines"
-                  className="bg-background/50"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>SEO Description</Label>
-                <Textarea 
-                  value={editFormData.seoDescription}
-                  onChange={(e) => setEditFormData(prev => ({ ...prev, seoDescription: e.target.value }))}
-                  placeholder="Meta description for search engines"
-                  className="bg-background/50"
-                  rows={3}
-                />
-              </div>
-              <p className="text-xs text-muted-foreground">
-                SEO fields help your services appear better in search results when customers browse your panel.
-              </p>
-            </TabsContent>
-          </Tabs>
-          <DialogFooter className="flex-col sm:flex-row gap-2 mt-4">
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSaveEdit} className="bg-gradient-to-r from-primary to-primary/80">
-              Save Changes
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Edit Service Dialog - Using new tabbed ServiceEditDialog */}
+      <ServiceEditDialog
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        service={editingService ? {
+          id: editingService.id,
+          name: editingService.name,
+          description: "",
+          category: editingService.category,
+          provider: editingService.provider,
+          originalPrice: editingService.originalPrice,
+          price: editingService.price,
+          minQty: editingService.minQty,
+          maxQty: editingService.maxQty,
+          imageUrl: editingService.imageUrl,
+          orders: editingService.orders,
+        } : null}
+        onSave={handleSaveEdit}
+      />
     </div>
   );
 };
