@@ -16,7 +16,9 @@ import {
   Crown,
   LogOut,
   ChevronRight,
-  Sparkles
+  Sparkles,
+  Webhook,
+  Activity
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { useAuth } from '@/contexts/AuthContext';
@@ -56,6 +58,8 @@ const AdminMoreMenu = () => {
         { name: 'Platform Settings', href: '/admin/settings', icon: Settings },
         { name: 'Security', href: '/admin/security', icon: Shield },
         { name: 'Support Tickets', href: '/admin/tickets', icon: MessageSquare },
+        { name: 'Webhooks', href: '/admin/webhooks', icon: Webhook },
+        { name: 'System Health', href: '/admin/system', icon: Activity },
         { name: 'Audit Logs', href: '/admin/logs', icon: FileText }
       ]
     }

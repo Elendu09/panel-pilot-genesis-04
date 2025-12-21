@@ -992,6 +992,7 @@ export type Database = {
           priority: string | null
           status: string | null
           subject: string
+          ticket_type: string
           updated_at: string
           user_id: string | null
         }
@@ -1003,6 +1004,7 @@ export type Database = {
           priority?: string | null
           status?: string | null
           subject: string
+          ticket_type?: string
           updated_at?: string
           user_id?: string | null
         }
@@ -1014,6 +1016,7 @@ export type Database = {
           priority?: string | null
           status?: string | null
           subject?: string
+          ticket_type?: string
           updated_at?: string
           user_id?: string | null
         }

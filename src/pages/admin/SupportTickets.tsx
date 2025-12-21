@@ -19,7 +19,8 @@ import {
   Inbox,
   RefreshCw,
   Send,
-  Reply
+  Reply,
+  Crown
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { supabase } from '@/integrations/supabase/client';
@@ -40,8 +41,8 @@ interface Ticket {
   subject: string;
   status: string;
   priority: string;
-  messages?: any[];
   created_at: string;
+  ticket_type?: string;
   messages?: TicketMessage[];
   user?: {
     email: string;
@@ -57,6 +58,7 @@ const SupportTickets = () => {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [ticketTypeFilter, setTicketTypeFilter] = useState<'all' | 'user_to_panel' | 'panel_to_admin'>('all');
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [replyText, setReplyText] = useState('');
@@ -187,10 +189,12 @@ const SupportTickets = () => {
     return colors[priority] || colors.medium;
   };
 
-  const filteredTickets = tickets.filter(ticket =>
-    ticket.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ticket.user?.email?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredTickets = tickets.filter(ticket => {
+    const matchesSearch = ticket.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      ticket.user?.email?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesType = ticketTypeFilter === 'all' || ticket.ticket_type === ticketTypeFilter;
+    return matchesSearch && matchesType;
+  });
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -270,15 +274,27 @@ const SupportTickets = () => {
         ))}
       </motion.div>
 
-      {/* Search */}
-      <motion.div variants={itemVariants} className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          placeholder="Search tickets..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10"
-        />
+      {/* Search and Filter */}
+      <motion.div variants={itemVariants} className="flex flex-col md:flex-row gap-4">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Search tickets..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <Select value={ticketTypeFilter} onValueChange={(value: 'all' | 'user_to_panel' | 'panel_to_admin') => setTicketTypeFilter(value)}>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="Filter by type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Tickets</SelectItem>
+            <SelectItem value="user_to_panel">User Tickets</SelectItem>
+            <SelectItem value="panel_to_admin">Panel Owner Tickets</SelectItem>
+          </SelectContent>
+        </Select>
       </motion.div>
 
       {/* Kanban Board */}
@@ -339,6 +355,12 @@ const SupportTickets = () => {
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <User className="w-3 h-3" />
                         <span className="truncate">{ticket.user?.full_name || ticket.user?.email || 'Unknown'}</span>
+                        {ticket.ticket_type === 'panel_to_admin' && (
+                          <Badge variant="outline" className="text-[10px] bg-violet-500/10 text-violet-500 border-violet-500/20">
+                            <Crown className="w-2 h-2 mr-0.5" />
+                            Panel Owner
+                          </Badge>
+                        )}
                       </div>
                       
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
