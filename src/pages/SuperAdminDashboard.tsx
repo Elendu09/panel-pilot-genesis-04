@@ -15,7 +15,10 @@ import {
   MessageSquare,
   FileText,
   Webhook,
-  Server
+  Server,
+  Megaphone,
+  Database,
+  Download
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
@@ -33,6 +36,10 @@ import AuditLogs from "./admin/AuditLogs";
 import AdminMoreMenu from "./admin/AdminMoreMenu";
 import WebhookManagement from "./admin/WebhookManagement";
 import SystemHealth from "./admin/SystemHealth";
+import ProviderManagement from "./admin/ProviderManagement";
+import AnnouncementsManagement from "./admin/AnnouncementsManagement";
+import ReportsExport from "./admin/ReportsExport";
+import BackupManagement from "./admin/BackupManagement";
 import { Helmet } from "react-helmet-async";
 
 const SuperAdminDashboard = () => {
@@ -44,11 +51,14 @@ const SuperAdminDashboard = () => {
     { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
     { name: 'Panels', href: '/admin/panels', icon: BarChart3 },
     { name: 'Users', href: '/admin/users', icon: Users },
+    { name: 'Providers', href: '/admin/providers', icon: Server },
     { name: 'Subscriptions', href: '/admin/subscriptions', icon: Crown },
     { name: 'Revenue', href: '/admin/revenue', icon: DollarSign },
     { name: 'Tickets', href: '/admin/tickets', icon: MessageSquare },
+    { name: 'Announcements', href: '/admin/announcements', icon: Megaphone },
     { name: 'Webhooks', href: '/admin/webhooks', icon: Webhook },
-    { name: 'System', href: '/admin/system', icon: Server },
+    { name: 'Reports', href: '/admin/reports', icon: Download },
+    { name: 'Backups', href: '/admin/backups', icon: Database },
     { name: 'Logs', href: '/admin/logs', icon: FileText },
     { name: 'Settings', href: '/admin/settings', icon: Settings },
   ];
@@ -138,6 +148,10 @@ const SuperAdminDashboard = () => {
           <Route path="tickets" element={<SupportTickets />} />
           <Route path="webhooks" element={<WebhookManagement />} />
           <Route path="system" element={<SystemHealth />} />
+          <Route path="providers" element={<ProviderManagement />} />
+          <Route path="announcements" element={<AnnouncementsManagement />} />
+          <Route path="reports" element={<ReportsExport />} />
+          <Route path="backups" element={<BackupManagement />} />
           <Route path="logs" element={<AuditLogs />} />
           <Route path="settings" element={<PlatformSettings />} />
           <Route path="security" element={<SecuritySettings />} />
