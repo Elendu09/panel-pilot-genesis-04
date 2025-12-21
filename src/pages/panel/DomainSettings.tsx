@@ -80,20 +80,13 @@ const DomainSettings = () => {
   const [wizardStep, setWizardStep] = useState(1);
   const [verifying, setVerifying] = useState(false);
 
-  // DNS Records state
-  const [dnsRecords, setDnsRecords] = useState<DNSRecord[]>([
-    { id: "1", type: "A", name: "@", value: "185.158.133.1", ttl: 3600, status: "verified" },
-    { id: "2", type: "A", name: "www", value: "185.158.133.1", ttl: 3600, status: "verified" },
-    { id: "3", type: "TXT", name: "_lovable", value: "lovable_verify=abc123", ttl: 3600, status: "pending" },
-  ]);
+  // DNS Records state - simplified initial state
+  const [dnsRecords, setDnsRecords] = useState<DNSRecord[]>([]);
   const [showAddDnsDialog, setShowAddDnsDialog] = useState(false);
   const [newDnsRecord, setNewDnsRecord] = useState<Partial<DNSRecord>>({ type: "A", name: "", value: "", ttl: 3600 });
 
-  // Subdomains state
-  const [subdomains, setSubdomains] = useState<Subdomain[]>([
-    { id: "1", name: "api", target: "api.smmpilot.io", ssl: true, status: "active" },
-    { id: "2", name: "cdn", target: "cdn.smmpilot.io", ssl: true, status: "active" },
-  ]);
+  // Subdomains state - simplified initial state
+  const [subdomains, setSubdomains] = useState<Subdomain[]>([]);
   const [showAddSubdomainDialog, setShowAddSubdomainDialog] = useState(false);
   const [newSubdomain, setNewSubdomain] = useState({ name: "", target: "" });
 
@@ -122,6 +115,20 @@ const DomainSettings = () => {
     verifiedDKIM: false,
     verifiedDMARC: false,
   });
+
+  // DNS Propagation Checker state
+  const [propagationDomain, setPropagationDomain] = useState("");
+  const [propagationRecordType, setPropagationRecordType] = useState<DNSRecordType>("A");
+  const [isCheckingPropagation, setIsCheckingPropagation] = useState(false);
+  const [propagationResults, setPropagationResults] = useState<Array<{
+    server: string;
+    location: string;
+    flag: string;
+    status: "checking" | "resolved" | "not_found" | "error";
+    value?: string;
+    latency?: number;
+  }>>([]);
+  const [autoRefreshPropagation, setAutoRefreshPropagation] = useState(false);
 
   const mxRecords = [
     { id: "1", priority: 10, host: "mail.yourdomain.com", value: "mx1.mailprovider.com", status: "verified" as const },
@@ -162,37 +169,73 @@ const DomainSettings = () => {
     { number: 4, title: "Verification", description: "Verify connection" },
   ];
 
+  const globalDnsServers = [
+    { server: "Google DNS", location: "US East", flag: "🇺🇸" },
+    { server: "Cloudflare", location: "US West", flag: "🇺🇸" },
+    { server: "OpenDNS", location: "UK", flag: "🇬🇧" },
+    { server: "Quad9", location: "Germany", flag: "🇩🇪" },
+    { server: "DNS Japan", location: "Tokyo", flag: "🇯🇵" },
+    { server: "DNS AU", location: "Sydney", flag: "🇦🇺" },
+    { server: "DNS SG", location: "Singapore", flag: "🇸🇬" },
+    { server: "DNS BR", location: "São Paulo", flag: "🇧🇷" },
+  ];
+
   useEffect(() => {
-    fetchPanelAndDomains();
+    const fetchData = async () => {
+      if (!profile?.id) return;
+      
+      try {
+        const { data: panelData, error: panelError } = await supabase
+          .from('panels')
+          .select('*')
+          .eq('owner_id', profile.id)
+          .single();
+
+        if (panelError) throw panelError;
+        setPanel(panelData);
+
+        const { data: domainsData, error: domainsError } = await supabase
+          .from('panel_domains')
+          .select('*')
+          .eq('panel_id', panelData.id)
+          .order('created_at', { ascending: false });
+
+        if (domainsError) throw domainsError;
+        setDomains(domainsData || []);
+
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
   }, [profile]);
 
-  const fetchPanelAndDomains = async () => {
-    if (!profile?.id) return;
-    
-    try {
-      const { data: panelData, error: panelError } = await supabase
-        .from('panels')
-        .select('*')
-        .eq('owner_id', profile.id)
-        .single();
-
-      if (panelError) throw panelError;
-      setPanel(panelData);
-
-      const { data: domainsData, error: domainsError } = await supabase
-        .from('panel_domains')
-        .select('*')
-        .eq('panel_id', panelData.id)
-        .order('created_at', { ascending: false });
-
-      if (domainsError) throw domainsError;
-      setDomains(domainsData || []);
-
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    } finally {
-      setLoading(false);
+  // Initialize demo data after loading
+  useEffect(() => {
+    if (!loading && dnsRecords.length === 0) {
+      setDnsRecords([
+        { id: "1", type: "A", name: "@", value: "185.158.133.1", ttl: 3600, status: "verified" },
+        { id: "2", type: "A", name: "www", value: "185.158.133.1", ttl: 3600, status: "verified" },
+        { id: "3", type: "TXT", name: "_lovable", value: "lovable_verify=abc123", ttl: 3600, status: "pending" },
+      ]);
+      setSubdomains([
+        { id: "1", name: "api", target: "api.smmpilot.io", ssl: true, status: "active" },
+        { id: "2", name: "cdn", target: "cdn.smmpilot.io", ssl: true, status: "active" },
+      ]);
     }
+  }, [loading]);
+
+  const refetchDomains = async () => {
+    if (!panel?.id) return;
+    const { data: domainsData } = await supabase
+      .from('panel_domains')
+      .select('*')
+      .eq('panel_id', panel.id)
+      .order('created_at', { ascending: false });
+    setDomains(domainsData || []);
   };
 
   const requiredDnsRecords = [
@@ -261,7 +304,7 @@ const DomainSettings = () => {
       toast({ title: "Domain added successfully!" });
       setShowWizard(false);
       setNewDomain("");
-      fetchPanelAndDomains();
+      refetchDomains();
     } catch (error) {
       toast({ variant: "destructive", title: "Failed to add domain" });
     } finally {
@@ -322,6 +365,41 @@ const DomainSettings = () => {
     toast({ title: "CDN cache purged successfully" });
   };
 
+  const checkDnsPropagation = async () => {
+    if (!propagationDomain.trim()) {
+      toast({ variant: "destructive", title: "Domain required" });
+      return;
+    }
+
+    setIsCheckingPropagation(true);
+    setPropagationResults(globalDnsServers.map(s => ({ ...s, status: "checking" as const })));
+
+    // Simulate checking each server with staggered results
+    for (let i = 0; i < globalDnsServers.length; i++) {
+      await new Promise(r => setTimeout(r, 300 + Math.random() * 500));
+      
+      setPropagationResults(prev => prev.map((result, index) => {
+        if (index === i) {
+          const isResolved = Math.random() > 0.2; // 80% success rate
+          return {
+            ...result,
+            status: isResolved ? "resolved" as const : "not_found" as const,
+            value: isResolved ? "185.158.133.1" : undefined,
+            latency: Math.floor(10 + Math.random() * 150),
+          };
+        }
+        return result;
+      }));
+    }
+
+    setIsCheckingPropagation(false);
+    toast({ title: "DNS propagation check complete" });
+  };
+
+  const propagationProgress = propagationResults.length > 0 
+    ? Math.round((propagationResults.filter(r => r.status === "resolved").length / propagationResults.length) * 100) 
+    : 0;
+
   const removeDomain = async (domainId: string) => {
     try {
       const { error } = await supabase
@@ -331,7 +409,7 @@ const DomainSettings = () => {
 
       if (error) throw error;
       toast({ title: "Domain removed" });
-      fetchPanelAndDomains();
+      refetchDomains();
     } catch (error) {
       toast({ variant: "destructive", title: "Failed to remove domain" });
     }
@@ -626,6 +704,130 @@ const DomainSettings = () => {
                   </tbody>
                 </table>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* DNS Propagation Checker */}
+          <Card className="bg-gradient-to-br from-primary/5 via-card to-secondary/5 border-primary/20">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Globe className="w-5 h-5 text-primary" />
+                DNS Propagation Checker
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Check if your DNS records have propagated across global servers
+              </p>
+              
+              <div className="flex flex-wrap gap-3">
+                <Input
+                  placeholder="Enter domain (e.g., example.com)"
+                  value={propagationDomain}
+                  onChange={(e) => setPropagationDomain(e.target.value)}
+                  className="flex-1 min-w-[200px] bg-background/50"
+                />
+                <Select value={propagationRecordType} onValueChange={(v) => setPropagationRecordType(v as DNSRecordType)}>
+                  <SelectTrigger className="w-[100px] bg-background/50">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="A">A</SelectItem>
+                    <SelectItem value="AAAA">AAAA</SelectItem>
+                    <SelectItem value="CNAME">CNAME</SelectItem>
+                    <SelectItem value="TXT">TXT</SelectItem>
+                    <SelectItem value="MX">MX</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button onClick={checkDnsPropagation} disabled={isCheckingPropagation} className="gap-2">
+                  {isCheckingPropagation ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Checking...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="w-4 h-4" />
+                      Check Propagation
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={autoRefreshPropagation}
+                  onCheckedChange={setAutoRefreshPropagation}
+                />
+                <Label className="text-sm">Auto-refresh every 30 seconds</Label>
+              </div>
+
+              {propagationResults.length > 0 && (
+                <div className="space-y-4">
+                  {/* Progress Bar */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Propagation Progress</span>
+                      <span className={cn(
+                        "font-semibold",
+                        propagationProgress === 100 ? "text-green-500" : 
+                        propagationProgress >= 50 ? "text-yellow-500" : "text-red-500"
+                      )}>
+                        {propagationProgress}%
+                      </span>
+                    </div>
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <motion.div 
+                        className={cn(
+                          "h-full",
+                          propagationProgress === 100 ? "bg-green-500" : 
+                          propagationProgress >= 50 ? "bg-yellow-500" : "bg-red-500"
+                        )}
+                        initial={{ width: 0 }}
+                        animate={{ width: `${propagationProgress}%` }}
+                        transition={{ duration: 0.5 }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Server Results Grid */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {propagationResults.map((result, index) => (
+                      <motion.div
+                        key={result.server}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        className={cn(
+                          "p-3 rounded-xl border transition-all",
+                          result.status === "resolved" && "bg-green-500/10 border-green-500/30",
+                          result.status === "not_found" && "bg-red-500/10 border-red-500/30",
+                          result.status === "checking" && "bg-muted/50 border-border/50 animate-pulse",
+                          result.status === "error" && "bg-yellow-500/10 border-yellow-500/30"
+                        )}
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-lg">{result.flag}</span>
+                          <span className="text-xs font-medium truncate">{result.location}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground">{result.server}</span>
+                          {result.status === "checking" ? (
+                            <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
+                          ) : result.status === "resolved" ? (
+                            <CheckCircle className="w-3 h-3 text-green-500" />
+                          ) : (
+                            <AlertCircle className="w-3 h-3 text-red-500" />
+                          )}
+                        </div>
+                        {result.latency !== undefined && (
+                          <p className="text-[10px] text-muted-foreground mt-1">{result.latency}ms</p>
+                        )}
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

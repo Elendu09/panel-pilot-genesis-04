@@ -27,11 +27,13 @@ import {
   RefreshCw,
   Wand2,
   Type,
-  PaintBucket
+  PaintBucket,
+  AlertCircle
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 const DesignCustomization = () => {
   const { toast } = useToast();
@@ -157,30 +159,45 @@ const DesignCustomization = () => {
 
     setIsGeneratingTheme(true);
     
-    // Simulated AI theme generation
-    await new Promise(resolve => setTimeout(resolve, 2500));
-    
-    // Generate random theme colors based on prompt keywords
-    const colors = {
-      primary: "#" + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0'),
-      secondary: "#" + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0'),
-      bg: aiPrompt.toLowerCase().includes("dark") ? "#0F172A" : "#FFFFFF",
-      surface: aiPrompt.toLowerCase().includes("dark") ? "#1E293B" : "#F8FAFC",
-    };
-    
-    setCustomization(prev => ({
-      ...prev,
-      primaryColor: colors.primary,
-      secondaryColor: colors.secondary,
-      backgroundColor: colors.bg,
-      surfaceColor: colors.surface,
-    }));
-    
-    setIsGeneratingTheme(false);
-    toast({
-      title: "AI Theme Generated",
-      description: "Your custom theme has been created based on your prompt.",
-    });
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-theme', {
+        body: { prompt: aiPrompt }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      const colors = data.colors;
+      
+      setCustomization(prev => ({
+        ...prev,
+        primaryColor: colors.primary,
+        secondaryColor: colors.secondary,
+        accentColor: colors.accent,
+        backgroundColor: colors.background,
+        surfaceColor: colors.surface,
+        textColor: colors.text,
+      }));
+      
+      toast({
+        title: "AI Theme Generated",
+        description: "Your custom theme has been created based on your prompt.",
+      });
+    } catch (error) {
+      console.error("Failed to generate theme:", error);
+      toast({
+        variant: "destructive",
+        title: "Failed to generate theme",
+        description: error instanceof Error ? error.message : "Please try again later.",
+      });
+    } finally {
+      setIsGeneratingTheme(false);
+    }
   };
 
   const handleSave = () => {
