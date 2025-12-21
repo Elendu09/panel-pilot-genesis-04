@@ -50,6 +50,7 @@ import CustomerManagement from "./panel/CustomerManagement";
 import PaymentMethods from "./panel/PaymentMethods";
 import SecuritySettings from "./panel/SecuritySettings";
 import MoreMenu from "./panel/MoreMenu";
+import Billing from "./panel/Billing";
 import { Helmet } from "react-helmet-async";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -365,6 +366,7 @@ const PanelOwnerDashboard = () => {
             <Route path="blog" element={<BlogManagement />} />
             <Route path="payments" element={<PaymentMethods />} />
             <Route path="security" element={<SecuritySettings />} />
+            <Route path="billing" element={<Billing />} />
             <Route path="more" element={<MoreMenu />} />
           </Routes>
         </div>

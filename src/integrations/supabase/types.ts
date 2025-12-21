@@ -515,6 +515,53 @@ export type Database = {
           },
         ]
       }
+      panel_subscriptions: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          id: string
+          panel_id: string
+          payment_id: string | null
+          plan_type: Database["public"]["Enums"]["subscription_plan"]
+          price: number
+          started_at: string
+          status: Database["public"]["Enums"]["subscription_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          panel_id: string
+          payment_id?: string | null
+          plan_type?: Database["public"]["Enums"]["subscription_plan"]
+          price?: number
+          started_at?: string
+          status?: Database["public"]["Enums"]["subscription_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          panel_id?: string
+          payment_id?: string | null
+          plan_type?: Database["public"]["Enums"]["subscription_plan"]
+          price?: number
+          started_at?: string
+          status?: Database["public"]["Enums"]["subscription_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "panel_subscriptions_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: true
+            referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       panel_templates: {
         Row: {
           created_at: string
@@ -555,6 +602,7 @@ export type Database = {
       }
       panels: {
         Row: {
+          balance: number | null
           commission_rate: number | null
           created_at: string
           custom_branding: Json | null
@@ -583,6 +631,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          balance?: number | null
           commission_rate?: number | null
           created_at?: string
           custom_branding?: Json | null
@@ -611,6 +660,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          balance?: number | null
           commission_rate?: number | null
           created_at?: string
           custom_branding?: Json | null
@@ -1001,6 +1051,8 @@ export type Database = {
         | "linkedin"
         | "telegram"
         | "other"
+      subscription_plan: "free" | "basic" | "pro"
+      subscription_status: "active" | "expired" | "cancelled" | "pending"
       theme_type: "dark_gradient" | "professional" | "vibrant"
       user_role: "admin" | "panel_owner"
     }
@@ -1149,6 +1201,8 @@ export const Constants = {
         "telegram",
         "other",
       ],
+      subscription_plan: ["free", "basic", "pro"],
+      subscription_status: ["active", "expired", "cancelled", "pending"],
       theme_type: ["dark_gradient", "professional", "vibrant"],
       user_role: ["admin", "panel_owner"],
     },
