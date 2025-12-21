@@ -315,28 +315,26 @@ const PaymentMethods = () => {
           { label: "Categories", value: Object.keys(paymentGateways).length, icon: Globe, color: "text-yellow-500" },
         ].map((stat, index) => (
           <motion.div key={stat.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1 }}>
-            <Card className="glass-card-hover">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-xl bg-muted">
-                    <stat.icon className={cn("w-5 h-5", stat.color)} />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">{stat.label}</p>
-                    <p className="text-2xl font-bold">{stat.value}</p>
-                  </div>
+            <div className="glass-stat-card p-4">
+              <div className="flex items-center gap-3 relative z-10">
+                <div className={cn("p-2.5 rounded-xl", stat.color === "text-primary" ? "bg-primary/20" : stat.color === "text-blue-500" ? "bg-blue-500/20" : stat.color === "text-green-500" ? "bg-green-500/20" : "bg-yellow-500/20")}>
+                  <stat.icon className={cn("w-5 h-5", stat.color)} />
                 </div>
-              </CardContent>
-            </Card>
+                <div>
+                  <p className="text-sm text-muted-foreground">{stat.label}</p>
+                  <p className="text-2xl font-bold">{stat.value}</p>
+                </div>
+              </div>
+            </div>
           </motion.div>
         ))}
       </div>
 
       {/* Payment Statistics by User */}
-      <Card className="bg-card/60 backdrop-blur-xl border-border/50">
+      <Card className="glass-chart border-border/50">
         <CardHeader className="pb-3">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-primary/10"><BarChart3 className="w-5 h-5 text-primary" /></div>
+            <div className="p-2 rounded-xl bg-primary/20"><BarChart3 className="w-5 h-5 text-primary" /></div>
             <div>
               <CardTitle className="text-lg">Payment Statistics by User</CardTitle>
               <p className="text-sm text-muted-foreground">Top depositors and payment activity</p>
@@ -353,7 +351,7 @@ const PaymentMethods = () => {
                   { name: "Alex T.", amount: 1820, method: "PayPal" },
                   { name: "Maria G.", amount: 1540, method: "Stripe" },
                 ].map((user, i) => (
-                  <div key={i} className="flex items-center justify-between p-2 bg-muted/30 rounded-lg">
+                  <div key={i} className="flex items-center justify-between p-2 bg-muted/30 rounded-lg backdrop-blur-sm">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-muted-foreground">#{i+1}</span>
                       <span className="font-medium text-sm">{user.name}</span>
@@ -390,7 +388,7 @@ const PaymentMethods = () => {
                   { user: "Mike J.", amount: 25, time: "15m ago" },
                   { user: "Emma W.", amount: 100, time: "1h ago" },
                 ].map((tx, i) => (
-                  <div key={i} className="flex items-center justify-between p-2 bg-muted/30 rounded-lg">
+                  <div key={i} className="flex items-center justify-between p-2 bg-muted/30 rounded-lg backdrop-blur-sm">
                     <span className="text-sm">{tx.user}</span>
                     <div className="text-right">
                       <span className="font-medium text-green-500">+${tx.amount}</span>
