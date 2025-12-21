@@ -8,6 +8,7 @@ export const useOnboardingTour = () => {
   const { user, profile } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [hasCompleted, setHasCompleted] = useState(true);
+  const [isReady, setIsReady] = useState(false);
 
   // Get user-specific storage key
   const getStorageKey = useCallback(() => {
@@ -22,8 +23,11 @@ export const useOnboardingTour = () => {
     if (!storageKey || !profile) {
       setHasCompleted(true);
       setIsOpen(false);
+      setIsReady(false);
       return;
     }
+
+    setIsReady(true);
 
     try {
       const completedData = localStorage.getItem(storageKey);
@@ -75,18 +79,26 @@ export const useOnboardingTour = () => {
 
   const restartTour = useCallback(() => {
     const storageKey = getStorageKey();
-    if (!storageKey) return;
-
+    
+    // Force open tour regardless of storage key
+    // This ensures manual trigger always works
     try {
-      localStorage.removeItem(storageKey);
-      setHasCompleted(false);
-      setIsOpen(true);
+      if (storageKey) {
+        localStorage.removeItem(storageKey);
+      }
     } catch {
-      // localStorage might be blocked
+      // localStorage might be blocked, continue anyway
     }
+    
+    setHasCompleted(false);
+    // Use setTimeout to ensure state updates are processed
+    setTimeout(() => {
+      setIsOpen(true);
+    }, 50);
   }, [getStorageKey]);
 
   const openTour = useCallback(() => {
+    setHasCompleted(false);
     setIsOpen(true);
   }, []);
 
@@ -97,6 +109,7 @@ export const useOnboardingTour = () => {
   return {
     isOpen,
     hasCompleted,
+    isReady,
     completeTour,
     restartTour,
     openTour,

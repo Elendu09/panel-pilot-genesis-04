@@ -106,6 +106,44 @@ export type Database = {
           },
         ]
       }
+      balance_alerts: {
+        Row: {
+          alert_type: string
+          created_at: string
+          current_balance: number
+          id: string
+          is_read: boolean | null
+          panel_id: string | null
+          threshold: number
+        }
+        Insert: {
+          alert_type?: string
+          created_at?: string
+          current_balance: number
+          id?: string
+          is_read?: boolean | null
+          panel_id?: string | null
+          threshold: number
+        }
+        Update: {
+          alert_type?: string
+          created_at?: string
+          current_balance?: number
+          id?: string
+          is_read?: boolean | null
+          panel_id?: string | null
+          threshold?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "balance_alerts_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       blog_posts: {
         Row: {
           content: string | null
@@ -522,6 +560,8 @@ export type Database = {
           created_at: string | null
           custom_css: string | null
           id: string
+          low_balance_alert_enabled: boolean | null
+          low_balance_threshold: number | null
           maintenance_message: string | null
           maintenance_mode: boolean | null
           panel_id: string | null
@@ -536,6 +576,8 @@ export type Database = {
           created_at?: string | null
           custom_css?: string | null
           id?: string
+          low_balance_alert_enabled?: boolean | null
+          low_balance_threshold?: number | null
           maintenance_message?: string | null
           maintenance_mode?: boolean | null
           panel_id?: string | null
@@ -550,6 +592,8 @@ export type Database = {
           created_at?: string | null
           custom_css?: string | null
           id?: string
+          low_balance_alert_enabled?: boolean | null
+          low_balance_threshold?: number | null
           maintenance_message?: string | null
           maintenance_mode?: boolean | null
           panel_id?: string | null
@@ -752,6 +796,54 @@ export type Database = {
           },
         ]
       }
+      platform_fees: {
+        Row: {
+          created_at: string
+          description: string | null
+          fee_amount: number
+          fee_percentage: number
+          id: string
+          order_amount: number
+          order_id: string | null
+          panel_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          fee_amount: number
+          fee_percentage?: number
+          id?: string
+          order_amount: number
+          order_id?: string | null
+          panel_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          fee_amount?: number
+          fee_percentage?: number
+          id?: string
+          order_amount?: number
+          order_id?: string | null
+          panel_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_fees_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_fees_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       platform_settings: {
         Row: {
           category: string
@@ -938,9 +1030,11 @@ export type Database = {
           category: Database["public"]["Enums"]["service_category"]
           created_at: string
           description: string | null
+          display_order: number | null
           estimated_time: string | null
           features: Json | null
           id: string
+          image_url: string | null
           is_active: boolean | null
           max_quantity: number | null
           min_quantity: number | null
@@ -954,9 +1048,11 @@ export type Database = {
           category: Database["public"]["Enums"]["service_category"]
           created_at?: string
           description?: string | null
+          display_order?: number | null
           estimated_time?: string | null
           features?: Json | null
           id?: string
+          image_url?: string | null
           is_active?: boolean | null
           max_quantity?: number | null
           min_quantity?: number | null
@@ -970,9 +1066,11 @@ export type Database = {
           category?: Database["public"]["Enums"]["service_category"]
           created_at?: string
           description?: string | null
+          display_order?: number | null
           estimated_time?: string | null
           features?: Json | null
           id?: string
+          image_url?: string | null
           is_active?: boolean | null
           max_quantity?: number | null
           min_quantity?: number | null
