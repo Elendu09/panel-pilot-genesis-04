@@ -7,11 +7,12 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CreditCard, Plus, Settings, Search, CheckCircle, AlertCircle, Globe, Wallet, Bitcoin, Building2, Smartphone, DollarSign, Eye, EyeOff, Play, Loader2, Sparkles, Send, RefreshCw, Clock } from "lucide-react";
+import { CreditCard, Plus, Settings, Search, CheckCircle, AlertCircle, Globe, Wallet, Bitcoin, Building2, Smartphone, DollarSign, Eye, EyeOff, Play, Loader2, Sparkles, Send, RefreshCw, Clock, TrendingUp, Users, BarChart3 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Textarea } from "@/components/ui/textarea";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { StripeIcon, PayPalIcon, BitcoinIcon, getPaymentIcon } from "@/components/payment/PaymentIcons";
 
 // Worldwide payment gateways
 const paymentGateways = {
@@ -330,6 +331,78 @@ const PaymentMethods = () => {
           </motion.div>
         ))}
       </div>
+
+      {/* Payment Statistics by User */}
+      <Card className="bg-card/60 backdrop-blur-xl border-border/50">
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-primary/10"><BarChart3 className="w-5 h-5 text-primary" /></div>
+            <div>
+              <CardTitle className="text-lg">Payment Statistics by User</CardTitle>
+              <p className="text-sm text-muted-foreground">Top depositors and payment activity</p>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid md:grid-cols-3 gap-6">
+            <div>
+              <h4 className="font-medium mb-3 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-green-500" />Top Depositors</h4>
+              <div className="space-y-2">
+                {[
+                  { name: "John A.", amount: 2450, method: "Stripe" },
+                  { name: "Alex T.", amount: 1820, method: "PayPal" },
+                  { name: "Maria G.", amount: 1540, method: "Stripe" },
+                ].map((user, i) => (
+                  <div key={i} className="flex items-center justify-between p-2 bg-muted/30 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-muted-foreground">#{i+1}</span>
+                      <span className="font-medium text-sm">{user.name}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-bold text-green-500">${user.amount}</span>
+                      <p className="text-xs text-muted-foreground">{user.method}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <h4 className="font-medium mb-3 flex items-center gap-2"><CreditCard className="w-4 h-4 text-blue-500" />Method Usage</h4>
+              <div className="space-y-2">
+                {[
+                  { method: "Stripe", percent: 45, color: "bg-[#635BFF]" },
+                  { method: "PayPal", percent: 30, color: "bg-[#003087]" },
+                  { method: "Crypto", percent: 15, color: "bg-[#F7931A]" },
+                  { method: "Other", percent: 10, color: "bg-muted-foreground" },
+                ].map((item) => (
+                  <div key={item.method} className="space-y-1">
+                    <div className="flex justify-between text-sm"><span>{item.method}</span><span className="font-medium">{item.percent}%</span></div>
+                    <div className="h-2 bg-muted rounded-full overflow-hidden"><div className={cn("h-full rounded-full", item.color)} style={{ width: `${item.percent}%` }} /></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <h4 className="font-medium mb-3 flex items-center gap-2"><Users className="w-4 h-4 text-purple-500" />Recent Transactions</h4>
+              <div className="space-y-2">
+                {[
+                  { user: "Sarah M.", amount: 50, time: "2m ago" },
+                  { user: "Mike J.", amount: 25, time: "15m ago" },
+                  { user: "Emma W.", amount: 100, time: "1h ago" },
+                ].map((tx, i) => (
+                  <div key={i} className="flex items-center justify-between p-2 bg-muted/30 rounded-lg">
+                    <span className="text-sm">{tx.user}</span>
+                    <div className="text-right">
+                      <span className="font-medium text-green-500">+${tx.amount}</span>
+                      <p className="text-xs text-muted-foreground">{tx.time}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Search */}
       <div className="relative">

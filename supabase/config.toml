@@ -2,3 +2,9 @@ project_id = "tooudgubuhxjbbvzjcgx"
 
 [functions.generate-theme]
 verify_jwt = false
+
+[functions.webhook-notify]
+verify_jwt = false
+
+[functions.dns-lookup]
+verify_jwt = false
