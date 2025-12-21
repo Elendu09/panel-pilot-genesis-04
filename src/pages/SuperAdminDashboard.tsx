@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Routes, Route, Link, useLocation } from "react-router-dom";
 import { 
@@ -10,10 +9,13 @@ import {
   CreditCard,
   Menu,
   X,
-  LogOut
+  LogOut,
+  Crown,
+  DollarSign,
+  MessageSquare,
+  FileText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { BottomNav } from "@/components/ui/bottom-nav";
 import PanelManagement from "./admin/PanelManagement";
@@ -22,6 +24,11 @@ import PlatformSettings from "./admin/PlatformSettings";
 import AdminOverview from "./admin/AdminOverview";
 import PaymentManagement from "./admin/PaymentManagement";
 import SecuritySettings from "./admin/SecuritySettings";
+import SubscriptionManagement from "./admin/SubscriptionManagement";
+import RevenueAnalytics from "./admin/RevenueAnalytics";
+import SupportTickets from "./admin/SupportTickets";
+import AuditLogs from "./admin/AuditLogs";
+import AdminMoreMenu from "./admin/AdminMoreMenu";
 import { Helmet } from "react-helmet-async";
 
 const SuperAdminDashboard = () => {
@@ -31,18 +38,23 @@ const SuperAdminDashboard = () => {
 
   const navigation = [
     { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
-    { name: 'Panel Management', href: '/admin/panels', icon: BarChart3 },
-    { name: 'User Management', href: '/admin/users', icon: Users },
-    { name: 'Platform Settings', href: '/admin/settings', icon: Settings },
+    { name: 'Panels', href: '/admin/panels', icon: BarChart3 },
+    { name: 'Users', href: '/admin/users', icon: Users },
+    { name: 'Subscriptions', href: '/admin/subscriptions', icon: Crown },
+    { name: 'Revenue', href: '/admin/revenue', icon: DollarSign },
+    { name: 'Tickets', href: '/admin/tickets', icon: MessageSquare },
+    { name: 'Logs', href: '/admin/logs', icon: FileText },
     { name: 'Security', href: '/admin/security', icon: Shield },
     { name: 'Payments', href: '/admin/payments', icon: CreditCard },
+    { name: 'Settings', href: '/admin/settings', icon: Settings },
   ];
 
   const bottomNavItems = [
-    { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
+    { name: 'Home', href: '/admin', icon: LayoutDashboard },
     { name: 'Panels', href: '/admin/panels', icon: BarChart3 },
     { name: 'Users', href: '/admin/users', icon: Users },
-    { name: 'Settings', href: '/admin/settings', icon: Settings },
+    { name: 'Revenue', href: '/admin/revenue', icon: DollarSign },
+    { name: 'More', href: '/admin/more', icon: Settings },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -117,9 +129,14 @@ const SuperAdminDashboard = () => {
           <Route index element={<AdminOverview />} />
           <Route path="panels" element={<PanelManagement />} />
           <Route path="users" element={<UserManagement />} />
+          <Route path="subscriptions" element={<SubscriptionManagement />} />
+          <Route path="revenue" element={<RevenueAnalytics />} />
+          <Route path="tickets" element={<SupportTickets />} />
+          <Route path="logs" element={<AuditLogs />} />
           <Route path="settings" element={<PlatformSettings />} />
           <Route path="security" element={<SecuritySettings />} />
           <Route path="payments" element={<PaymentManagement />} />
+          <Route path="more" element={<AdminMoreMenu />} />
         </Routes>
       </div>
 
