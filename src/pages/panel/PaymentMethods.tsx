@@ -7,8 +7,9 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CreditCard, Plus, Settings, Search, CheckCircle, AlertCircle, Globe, Wallet, Bitcoin, Building2, Smartphone, DollarSign, Eye, EyeOff, Play, Loader2 } from "lucide-react";
+import { CreditCard, Plus, Settings, Search, CheckCircle, AlertCircle, Globe, Wallet, Bitcoin, Building2, Smartphone, DollarSign, Eye, EyeOff, Play, Loader2, Sparkles, Send, RefreshCw, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Textarea } from "@/components/ui/textarea";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
@@ -112,6 +113,20 @@ const PaymentMethods = () => {
   const [showSecretKey, setShowSecretKey] = useState(false);
   const [testing, setTesting] = useState(false);
   const [formData, setFormData] = useState({ apiKey: "", secretKey: "", testMode: true, minDeposit: "5", maxDeposit: "1000", feePercentage: "0", fixedFee: "0" });
+  
+  // Platform methods state
+  const [showRequestDialog, setShowRequestDialog] = useState(false);
+  const [requestForm, setRequestForm] = useState({ gatewayName: "", reason: "", expectedVolume: "" });
+  const [pendingRequests, setPendingRequests] = useState(0);
+  const [syncing, setSyncing] = useState(false);
+  const [lastSynced, setLastSynced] = useState<Date | null>(null);
+  
+  // Platform-enabled gateways (simulating admin-enabled methods)
+  const platformGateways = [
+    { id: "stripe", name: "Stripe", icon: "💳", enabled: true, fee: "2.9% + $0.30" },
+    { id: "paypal", name: "PayPal", icon: "🅿️", enabled: true, fee: "2.9% + $0.30" },
+    { id: "coinbase", name: "Coinbase Commerce", icon: "₿", enabled: true, fee: "1%" },
+  ];
 
   const filteredGateways = paymentGateways[activeCategory].filter(g => 
     g.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -159,6 +174,36 @@ const PaymentMethods = () => {
     toast({ title: "Connection successful", description: `${selectedGateway?.name} API is responding correctly` });
   };
 
+  const enablePlatformGateway = (gatewayId: string) => {
+    const gateway = platformGateways.find(g => g.id === gatewayId);
+    if (gateway) {
+      setConfiguredGateways(prev => ({
+        ...prev,
+        [gatewayId]: { enabled: true, apiKey: "platform_inherited", secretKey: "platform_inherited" }
+      }));
+      toast({ title: `${gateway.name} enabled`, description: "Using platform configuration" });
+    }
+  };
+
+  const submitGatewayRequest = () => {
+    if (!requestForm.gatewayName.trim()) {
+      toast({ variant: "destructive", title: "Gateway name required" });
+      return;
+    }
+    setPendingRequests(prev => prev + 1);
+    setShowRequestDialog(false);
+    setRequestForm({ gatewayName: "", reason: "", expectedVolume: "" });
+    toast({ title: "Request submitted", description: "The platform admin will review your request" });
+  };
+
+  const syncWithPlatform = async () => {
+    setSyncing(true);
+    await new Promise(r => setTimeout(r, 2000));
+    setSyncing(false);
+    setLastSynced(new Date());
+    toast({ title: "Synced with platform", description: "Payment methods are up to date" });
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -172,6 +217,93 @@ const PaymentMethods = () => {
           {enabledCount} Active
         </Badge>
       </motion.div>
+
+      {/* Platform Methods Section */}
+      <Card className="bg-gradient-to-br from-primary/10 via-card to-secondary/10 border-primary/30">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-primary/20">
+                <Sparkles className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-lg">Platform-Enabled Gateways</CardTitle>
+                <p className="text-sm text-muted-foreground">One-click enable with inherited settings from platform</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {pendingRequests > 0 && (
+                <Badge variant="secondary" className="gap-1">
+                  <Clock className="w-3 h-3" />
+                  {pendingRequests} Pending
+                </Badge>
+              )}
+              <Button variant="outline" size="sm" onClick={() => setShowRequestDialog(true)} className="gap-2">
+                <Send className="w-4 h-4" />
+                Request Gateway
+              </Button>
+              <Button variant="outline" size="sm" onClick={syncWithPlatform} disabled={syncing} className="gap-2">
+                {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                Sync
+              </Button>
+            </div>
+          </div>
+          {lastSynced && (
+            <p className="text-xs text-muted-foreground mt-2">
+              Last synced: {lastSynced.toLocaleTimeString()}
+            </p>
+          )}
+        </CardHeader>
+        <CardContent>
+          <div className="grid md:grid-cols-3 gap-4">
+            {platformGateways.map((gateway) => {
+              const isEnabled = !!configuredGateways[gateway.id];
+              
+              return (
+                <motion.div
+                  key={gateway.id}
+                  whileHover={{ scale: 1.02 }}
+                  className={cn(
+                    "p-4 rounded-xl border-2 transition-all",
+                    isEnabled 
+                      ? "border-green-500/50 bg-green-500/5" 
+                      : "border-primary/20 bg-card/50 hover:border-primary/40"
+                  )}
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <span className="text-3xl">{gateway.icon}</span>
+                      <div>
+                        <h4 className="font-semibold">{gateway.name}</h4>
+                        <p className="text-xs text-muted-foreground">Fee: {gateway.fee}</p>
+                      </div>
+                    </div>
+                    <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
+                      Platform
+                    </Badge>
+                  </div>
+                  
+                  {isEnabled ? (
+                    <div className="flex items-center gap-2 text-sm text-green-500">
+                      <CheckCircle className="w-4 h-4" />
+                      <span>Enabled (Inherited)</span>
+                    </div>
+                  ) : (
+                    <Button 
+                      size="sm" 
+                      className="w-full gap-2"
+                      onClick={() => enablePlatformGateway(gateway.id)}
+                    >
+                      <Plus className="w-4 h-4" />
+                      One-Click Enable
+                    </Button>
+                  )}
+                </motion.div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -334,6 +466,40 @@ const PaymentMethods = () => {
                 Save
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Request Gateway Dialog */}
+      <Dialog open={showRequestDialog} onOpenChange={setShowRequestDialog}>
+        <DialogContent className="sm:max-w-[400px] glass-card border-border/50">
+          <DialogHeader>
+            <DialogTitle>Request New Gateway</DialogTitle>
+            <DialogDescription>Request a payment gateway to be enabled by the platform admin</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <Label>Gateway Name</Label>
+              <Input value={requestForm.gatewayName} onChange={(e) => setRequestForm({...requestForm, gatewayName: e.target.value})} placeholder="e.g., Wise, Revolut" className="bg-background/50" />
+            </div>
+            <div className="space-y-2">
+              <Label>Reason (Optional)</Label>
+              <Textarea value={requestForm.reason} onChange={(e) => setRequestForm({...requestForm, reason: e.target.value})} placeholder="Why do you need this gateway?" className="bg-background/50" rows={3} />
+            </div>
+            <div className="space-y-2">
+              <Label>Expected Monthly Volume</Label>
+              <select className="w-full p-2 rounded-md border bg-background/50" value={requestForm.expectedVolume} onChange={(e) => setRequestForm({...requestForm, expectedVolume: e.target.value})}>
+                <option value="">Select volume</option>
+                <option value="low">Under $1,000</option>
+                <option value="medium">$1,000 - $10,000</option>
+                <option value="high">$10,000 - $50,000</option>
+                <option value="enterprise">Over $50,000</option>
+              </select>
+            </div>
+            <Button className="w-full gap-2" onClick={submitGatewayRequest}>
+              <Send className="w-4 h-4" />
+              Submit Request
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

@@ -20,7 +20,8 @@ import {
   Sparkles,
   Code,
   FileText,
-  HelpCircle
+  HelpCircle,
+  CreditCard
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,6 +46,7 @@ import UserManagement from "./panel/UserManagement";
 import APIManagement from "./panel/APIManagement";
 import BlogManagement from "./panel/BlogManagement";
 import CustomerManagement from "./panel/CustomerManagement";
+import PaymentMethods from "./panel/PaymentMethods";
 import { Helmet } from "react-helmet-async";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -67,6 +69,7 @@ const PanelOwnerDashboard = () => {
 
   const settingsNavigation = [
     { name: 'Providers', href: '/panel/providers', icon: Plug },
+    { name: 'Payments', href: '/panel/payments', icon: CreditCard },
     { name: 'API', href: '/panel/api', icon: Code },
     { name: 'Blog', href: '/panel/blog', icon: FileText },
     { name: 'Domain', href: '/panel/domain', icon: Globe },
@@ -356,6 +359,7 @@ const PanelOwnerDashboard = () => {
             <Route path="support" element={<SupportCenter />} />
             <Route path="api" element={<APIManagement />} />
             <Route path="blog" element={<BlogManagement />} />
+            <Route path="payments" element={<PaymentMethods />} />
           </Routes>
         </div>
       </main>
