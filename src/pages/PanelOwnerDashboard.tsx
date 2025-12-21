@@ -21,7 +21,8 @@ import {
   Code,
   FileText,
   HelpCircle,
-  CreditCard
+  CreditCard,
+  Shield
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,6 +48,7 @@ import APIManagement from "./panel/APIManagement";
 import BlogManagement from "./panel/BlogManagement";
 import CustomerManagement from "./panel/CustomerManagement";
 import PaymentMethods from "./panel/PaymentMethods";
+import SecuritySettings from "./panel/SecuritySettings";
 import { Helmet } from "react-helmet-async";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -74,6 +76,7 @@ const PanelOwnerDashboard = () => {
     { name: 'Blog', href: '/panel/blog', icon: FileText },
     { name: 'Domain', href: '/panel/domain', icon: Globe },
     { name: 'Design', href: '/panel/design', icon: Palette },
+    { name: 'Security', href: '/panel/security', icon: Shield },
     { name: 'Settings', href: '/panel/settings', icon: Settings },
   ];
 
@@ -360,6 +363,7 @@ const PanelOwnerDashboard = () => {
             <Route path="api" element={<APIManagement />} />
             <Route path="blog" element={<BlogManagement />} />
             <Route path="payments" element={<PaymentMethods />} />
+            <Route path="security" element={<SecuritySettings />} />
           </Routes>
         </div>
       </main>
