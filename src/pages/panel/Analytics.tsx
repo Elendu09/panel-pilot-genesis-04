@@ -351,7 +351,7 @@ const Analytics = () => {
   const firstName = profile?.full_name?.split(' ')[0] || 'there';
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 overflow-x-hidden">
       {/* Welcome Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
