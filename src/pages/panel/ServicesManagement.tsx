@@ -25,7 +25,11 @@ import {
   Layers,
   Power,
   Zap,
-  Eye
+  Eye,
+  RefreshCw,
+  Check,
+  Loader2,
+  Percent
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -60,17 +64,33 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 // Mock data for services
 const mockServices = [
-  { id: 1, name: "Instagram Followers", category: "instagram", provider: "Provider A", minQty: 100, maxQty: 10000, price: 2.50, status: true, orders: 1250 },
-  { id: 2, name: "Instagram Likes", category: "instagram", provider: "Provider A", minQty: 50, maxQty: 5000, price: 1.20, status: true, orders: 3420 },
-  { id: 3, name: "Facebook Page Likes", category: "facebook", provider: "Provider B", minQty: 100, maxQty: 50000, price: 3.00, status: true, orders: 890 },
-  { id: 4, name: "Twitter Followers", category: "twitter", provider: "Provider A", minQty: 100, maxQty: 20000, price: 2.80, status: false, orders: 456 },
-  { id: 5, name: "YouTube Views", category: "youtube", provider: "Provider C", minQty: 500, maxQty: 100000, price: 0.80, status: true, orders: 2340 },
-  { id: 6, name: "TikTok Likes", category: "tiktok", provider: "Provider B", minQty: 100, maxQty: 50000, price: 1.50, status: true, orders: 5670 },
-  { id: 7, name: "LinkedIn Connections", category: "linkedin", provider: "Provider A", minQty: 50, maxQty: 5000, price: 5.00, status: true, orders: 234 },
-  { id: 8, name: "Telegram Members", category: "telegram", provider: "Provider C", minQty: 100, maxQty: 10000, price: 4.00, status: false, orders: 567 },
+  { id: 1, name: "Instagram Followers", category: "instagram", provider: "Provider A", minQty: 100, maxQty: 10000, price: 2.50, originalPrice: 2.00, status: true, orders: 1250, providerId: "p1" },
+  { id: 2, name: "Instagram Likes", category: "instagram", provider: "Provider A", minQty: 50, maxQty: 5000, price: 1.20, originalPrice: 0.96, status: true, orders: 3420, providerId: "p1" },
+  { id: 3, name: "Facebook Page Likes", category: "facebook", provider: "Provider B", minQty: 100, maxQty: 50000, price: 3.00, originalPrice: 2.40, status: true, orders: 890, providerId: "p2" },
+  { id: 4, name: "Twitter Followers", category: "twitter", provider: "Provider A", minQty: 100, maxQty: 20000, price: 2.80, originalPrice: 2.24, status: false, orders: 456, providerId: "p1" },
+  { id: 5, name: "YouTube Views", category: "youtube", provider: "Provider C", minQty: 500, maxQty: 100000, price: 0.80, originalPrice: 0.64, status: true, orders: 2340, providerId: "p3" },
+  { id: 6, name: "TikTok Likes", category: "tiktok", provider: "Provider B", minQty: 100, maxQty: 50000, price: 1.50, originalPrice: 1.20, status: true, orders: 5670, providerId: "p2" },
+  { id: 7, name: "LinkedIn Connections", category: "linkedin", provider: "Provider A", minQty: 50, maxQty: 5000, price: 5.00, originalPrice: 4.00, status: true, orders: 234, providerId: "p1" },
+  { id: 8, name: "Telegram Members", category: "telegram", provider: "Provider C", minQty: 100, maxQty: 10000, price: 4.00, originalPrice: 3.20, status: false, orders: 567, providerId: "p3" },
+];
+
+// Mock fetched services from provider
+const mockFetchedServices = [
+  { id: 101, name: "Instagram Followers - Premium", category: "instagram", price: 2.50, minQty: 100, maxQty: 50000, description: "High quality followers with profile pictures" },
+  { id: 102, name: "Instagram Followers - Regular", category: "instagram", price: 1.80, minQty: 100, maxQty: 100000, description: "Standard quality followers" },
+  { id: 103, name: "Instagram Likes - Real", category: "instagram", price: 1.20, minQty: 50, maxQty: 10000, description: "Real and active users" },
+  { id: 104, name: "Instagram Views - Story", category: "instagram", price: 0.50, minQty: 100, maxQty: 50000, description: "Story views from real accounts" },
+  { id: 105, name: "YouTube Views - High Retention", category: "youtube", price: 3.00, minQty: 500, maxQty: 100000, description: "80%+ watch time retention" },
+  { id: 106, name: "YouTube Subscribers", category: "youtube", price: 5.00, minQty: 100, maxQty: 10000, description: "Real subscribers with notifications" },
+  { id: 107, name: "TikTok Followers", category: "tiktok", price: 2.00, minQty: 100, maxQty: 50000, description: "Active TikTok followers" },
+  { id: 108, name: "TikTok Likes - Fast", category: "tiktok", price: 0.80, minQty: 100, maxQty: 100000, description: "Fast delivery within 1 hour" },
+  { id: 109, name: "Twitter Followers - USA", category: "twitter", price: 4.00, minQty: 100, maxQty: 20000, description: "USA-based followers" },
+  { id: 110, name: "Facebook Page Likes", category: "facebook", price: 2.50, minQty: 100, maxQty: 50000, description: "Worldwide page likes" },
 ];
 
 const categories = [
@@ -90,6 +110,16 @@ const providers = [
   { id: "provider-c", name: "Provider C" },
 ];
 
+interface FetchedService {
+  id: number;
+  name: string;
+  category: string;
+  price: number;
+  minQty: number;
+  maxQty: number;
+  description: string;
+}
+
 const ServicesManagement = () => {
   const [services, setServices] = useState(mockServices);
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -98,7 +128,29 @@ const ServicesManagement = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isBulkDialogOpen, setIsBulkDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [bulkAction, setBulkAction] = useState("");
+  
+  // Import dialog state
+  const [importStep, setImportStep] = useState<"select" | "services">("select");
+  const [selectedProvider, setSelectedProvider] = useState("");
+  const [globalMarkup, setGlobalMarkup] = useState(25);
+  const [isFetching, setIsFetching] = useState(false);
+  const [fetchedServices, setFetchedServices] = useState<FetchedService[]>([]);
+  const [selectedImportServices, setSelectedImportServices] = useState<number[]>([]);
+  const [serviceMarkups, setServiceMarkups] = useState<Record<number, number>>({});
+  const [importSearchQuery, setImportSearchQuery] = useState("");
+  
+  // Edit service state
+  const [editingService, setEditingService] = useState<typeof mockServices[0] | null>(null);
+  const [editFormData, setEditFormData] = useState({
+    name: "",
+    description: "",
+    price: 0,
+    category: "",
+    minQty: 0,
+    maxQty: 0
+  });
 
   // Filter services
   const filteredServices = services.filter(service => {
@@ -106,6 +158,12 @@ const ServicesManagement = () => {
     const matchesSearch = service.name.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
+
+  // Filter fetched services for import
+  const filteredFetchedServices = fetchedServices.filter(service =>
+    service.name.toLowerCase().includes(importSearchQuery.toLowerCase()) ||
+    service.category.toLowerCase().includes(importSearchQuery.toLowerCase())
+  );
 
   // Stats
   const totalServices = services.length;
@@ -182,6 +240,112 @@ const ServicesManagement = () => {
     return cat ? cat.icon : Globe;
   };
 
+  // Import functions
+  const handleFetchServices = async () => {
+    if (!selectedProvider) {
+      toast({ title: "Please select a provider", variant: "destructive" });
+      return;
+    }
+    setIsFetching(true);
+    // Simulate API fetch
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    setFetchedServices(mockFetchedServices);
+    setSelectedImportServices([]);
+    setServiceMarkups({});
+    setImportStep("services");
+    setIsFetching(false);
+  };
+
+  const toggleImportService = (id: number) => {
+    setSelectedImportServices(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  const selectAllImportServices = () => {
+    if (selectedImportServices.length === filteredFetchedServices.length) {
+      setSelectedImportServices([]);
+    } else {
+      setSelectedImportServices(filteredFetchedServices.map(s => s.id));
+    }
+  };
+
+  const getServiceFinalPrice = (service: FetchedService) => {
+    const markup = serviceMarkups[service.id] ?? globalMarkup;
+    return service.price * (1 + markup / 100);
+  };
+
+  const handleImportSelected = () => {
+    const newServices = selectedImportServices.map(id => {
+      const service = fetchedServices.find(s => s.id === id)!;
+      const markup = serviceMarkups[service.id] ?? globalMarkup;
+      const finalPrice = service.price * (1 + markup / 100);
+      return {
+        id: Date.now() + service.id,
+        name: service.name,
+        category: service.category,
+        provider: providers.find(p => p.id === selectedProvider)?.name || "Unknown",
+        minQty: service.minQty,
+        maxQty: service.maxQty,
+        price: parseFloat(finalPrice.toFixed(2)),
+        originalPrice: service.price,
+        status: true,
+        orders: 0,
+        providerId: selectedProvider
+      };
+    });
+    
+    setServices(prev => [...prev, ...newServices]);
+    toast({ title: `${selectedImportServices.length} services imported successfully` });
+    resetImportDialog();
+  };
+
+  const resetImportDialog = () => {
+    setIsImportDialogOpen(false);
+    setImportStep("select");
+    setSelectedProvider("");
+    setGlobalMarkup(25);
+    setFetchedServices([]);
+    setSelectedImportServices([]);
+    setServiceMarkups({});
+    setImportSearchQuery("");
+  };
+
+  // Edit service functions
+  const openEditDialog = (service: typeof mockServices[0]) => {
+    setEditingService(service);
+    setEditFormData({
+      name: service.name,
+      description: "",
+      price: service.price,
+      category: service.category,
+      minQty: service.minQty,
+      maxQty: service.maxQty
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingService) return;
+    
+    setServices(prev => prev.map(s =>
+      s.id === editingService.id
+        ? { ...s, ...editFormData }
+        : s
+    ));
+    toast({ title: "Service updated successfully" });
+    setIsEditDialogOpen(false);
+    setEditingService(null);
+  };
+
+  const handleSyncFromProvider = () => {
+    toast({ title: "Syncing from provider...", description: "Service details will be updated shortly" });
+    // In real app, would fetch latest data from provider API
+    setTimeout(() => {
+      toast({ title: "Service synced successfully" });
+    }, 1500);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -197,49 +361,211 @@ const ServicesManagement = () => {
           <p className="text-muted-foreground">Manage your SMM services, pricing, and providers</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+          <Dialog open={isImportDialogOpen} onOpenChange={(open) => {
+            if (!open) resetImportDialog();
+            else setIsImportDialogOpen(true);
+          }}>
             <DialogTrigger asChild>
               <Button variant="outline" size="sm" className="glass-card border-border/50">
                 <Upload className="w-4 h-4 mr-2" />
                 Import
               </Button>
             </DialogTrigger>
-            <DialogContent className="glass-card border-border/50">
+            <DialogContent className={cn(
+              "glass-card border-border/50",
+              importStep === "services" && "max-w-4xl"
+            )}>
               <DialogHeader>
-                <DialogTitle>Import Services from Provider</DialogTitle>
+                <DialogTitle>
+                  {importStep === "select" ? "Import Services from Provider" : "Select Services to Import"}
+                </DialogTitle>
                 <DialogDescription>
-                  Fetch and import services from your connected API providers
+                  {importStep === "select" 
+                    ? "Fetch and import services from your connected API providers"
+                    : `${fetchedServices.length} services found. Select which ones to import.`
+                  }
                 </DialogDescription>
               </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label>Select Provider</Label>
-                  <Select>
-                    <SelectTrigger className="bg-background/50">
-                      <SelectValue placeholder="Choose a provider" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {providers.map(p => (
-                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              
+              {importStep === "select" ? (
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label>Select Provider</Label>
+                    <Select value={selectedProvider} onValueChange={setSelectedProvider}>
+                      <SelectTrigger className="bg-background/50">
+                        <SelectValue placeholder="Choose a provider" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {providers.map(p => (
+                          <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Default Price Markup (%)</Label>
+                    <div className="flex items-center gap-2">
+                      <Input 
+                        type="number" 
+                        value={globalMarkup}
+                        onChange={(e) => setGlobalMarkup(Number(e.target.value))}
+                        className="bg-background/50" 
+                      />
+                      <Percent className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      This markup will be applied to all imported services by default
+                    </p>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={resetImportDialog}>Cancel</Button>
+                    <Button 
+                      onClick={handleFetchServices}
+                      disabled={isFetching || !selectedProvider}
+                      className="bg-gradient-to-r from-primary to-primary/80"
+                    >
+                      {isFetching ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Download className="w-4 h-4 mr-2" />
+                      )}
+                      Fetch Services
+                    </Button>
+                  </DialogFooter>
                 </div>
-                <div className="space-y-2">
-                  <Label>Price Markup (%)</Label>
-                  <Input type="number" placeholder="20" defaultValue="20" className="bg-background/50" />
+              ) : (
+                <div className="space-y-4 py-4">
+                  {/* Search and Select All */}
+                  <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+                    <div className="relative flex-1 max-w-xs">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search services..."
+                        value={importSearchQuery}
+                        onChange={(e) => setImportSearchQuery(e.target.value)}
+                        className="pl-9 bg-background/50"
+                      />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={selectAllImportServices}
+                      >
+                        {selectedImportServices.length === filteredFetchedServices.length ? (
+                          <><Square className="w-4 h-4 mr-2" /> Deselect All</>
+                        ) : (
+                          <><CheckSquare className="w-4 h-4 mr-2" /> Select All</>
+                        )}
+                      </Button>
+                      <Badge variant="secondary" className="px-3 py-1">
+                        {selectedImportServices.length} selected
+                      </Badge>
+                    </div>
+                  </div>
+
+                  {/* Global Markup */}
+                  <div className="flex items-center gap-4 p-3 rounded-lg border border-border/50 bg-background/30">
+                    <Percent className="w-4 h-4 text-muted-foreground" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">Global Markup</p>
+                      <p className="text-xs text-muted-foreground">Applied to services without custom markup</p>
+                    </div>
+                    <Input
+                      type="number"
+                      value={globalMarkup}
+                      onChange={(e) => setGlobalMarkup(Number(e.target.value))}
+                      className="w-20 bg-background/50"
+                    />
+                    <span className="text-sm text-muted-foreground">%</span>
+                  </div>
+
+                  {/* Services List */}
+                  <ScrollArea className="h-[400px] rounded-lg border border-border/50">
+                    <div className="space-y-2 p-2">
+                      {filteredFetchedServices.map((service) => {
+                        const isSelected = selectedImportServices.includes(service.id);
+                        const finalPrice = getServiceFinalPrice(service);
+                        const CategoryIcon = getCategoryIcon(service.category);
+                        
+                        return (
+                          <motion.div
+                            key={service.id}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className={cn(
+                              "p-4 rounded-lg border transition-all cursor-pointer",
+                              isSelected 
+                                ? "border-primary bg-primary/5" 
+                                : "border-border/30 hover:border-border/60 bg-background/30"
+                            )}
+                            onClick={() => toggleImportService(service.id)}
+                          >
+                            <div className="flex items-start gap-4">
+                              <Checkbox
+                                checked={isSelected}
+                                onCheckedChange={() => toggleImportService(service.id)}
+                                className="mt-1"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <CategoryIcon className="w-4 h-4 text-primary" />
+                                  <span className="font-medium truncate">{service.name}</span>
+                                  <Badge variant="outline" className="text-xs capitalize">
+                                    {service.category}
+                                  </Badge>
+                                </div>
+                                <p className="text-xs text-muted-foreground mb-2">{service.description}</p>
+                                <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+                                  <span>Min: {service.minQty.toLocaleString()}</span>
+                                  <span>Max: {service.maxQty.toLocaleString()}</span>
+                                </div>
+                              </div>
+                              <div className="text-right space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm text-muted-foreground line-through">
+                                    ${service.price.toFixed(2)}
+                                  </span>
+                                  <span className="text-sm font-semibold text-primary">
+                                    ${finalPrice.toFixed(2)}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                                  <Input
+                                    type="number"
+                                    placeholder={`${globalMarkup}%`}
+                                    value={serviceMarkups[service.id] ?? ""}
+                                    onChange={(e) => setServiceMarkups(prev => ({
+                                      ...prev,
+                                      [service.id]: e.target.value ? Number(e.target.value) : globalMarkup
+                                    }))}
+                                    className="w-16 h-7 text-xs bg-background/50"
+                                  />
+                                  <span className="text-xs text-muted-foreground">%</span>
+                                </div>
+                              </div>
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                  </ScrollArea>
+
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setImportStep("select")}>
+                      Back
+                    </Button>
+                    <Button
+                      onClick={handleImportSelected}
+                      disabled={selectedImportServices.length === 0}
+                      className="bg-gradient-to-r from-primary to-primary/80"
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Import {selectedImportServices.length} Services
+                    </Button>
+                  </DialogFooter>
                 </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsImportDialogOpen(false)}>Cancel</Button>
-                <Button onClick={() => {
-                  toast({ title: "Services imported successfully" });
-                  setIsImportDialogOpen(false);
-                }} className="bg-gradient-to-r from-primary to-primary/80">
-                  <Download className="w-4 h-4 mr-2" />
-                  Fetch & Import
-                </Button>
-              </DialogFooter>
+              )}
             </DialogContent>
           </Dialog>
 
@@ -558,8 +884,15 @@ const ServicesManagement = () => {
                             </span>
                           </td>
                           <td className="p-4">
-                            <span className="font-semibold text-primary">${service.price.toFixed(2)}</span>
-                            <span className="text-xs text-muted-foreground ml-1">/1k</span>
+                            <div>
+                              <span className="font-semibold text-primary">${service.price.toFixed(2)}</span>
+                              <span className="text-xs text-muted-foreground ml-1">/1k</span>
+                              {service.originalPrice && (
+                                <p className="text-xs text-muted-foreground line-through">
+                                  ${service.originalPrice.toFixed(2)}
+                                </p>
+                              )}
+                            </div>
                           </td>
                           <td className="p-4">
                             <Switch
@@ -579,7 +912,7 @@ const ServicesManagement = () => {
                                 <DropdownMenuItem>
                                   <Eye className="w-4 h-4 mr-2" /> View
                                 </DropdownMenuItem>
-                                <DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => openEditDialog(service)}>
                                   <Edit className="w-4 h-4 mr-2" /> Edit
                                 </DropdownMenuItem>
                                 <DropdownMenuItem>
@@ -631,6 +964,107 @@ const ServicesManagement = () => {
               className={bulkAction !== "delete" ? "bg-gradient-to-r from-primary to-primary/80" : ""}
             >
               Confirm {bulkAction}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Service Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-lg glass-card border-border/50">
+          <DialogHeader>
+            <DialogTitle>Edit Service</DialogTitle>
+            <DialogDescription>
+              Update service details. Changes will affect how this service appears to customers.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            {editingService?.provider && (
+              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border/50">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline">Imported from {editingService.provider}</Badge>
+                </div>
+                <Button variant="outline" size="sm" onClick={handleSyncFromProvider}>
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Sync from Provider
+                </Button>
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label>Service Name</Label>
+              <Input
+                value={editFormData.name}
+                onChange={(e) => setEditFormData(prev => ({ ...prev, name: e.target.value }))}
+                className="bg-background/50"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <Textarea
+                value={editFormData.description}
+                onChange={(e) => setEditFormData(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Describe your service..."
+                className="bg-background/50"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Category</Label>
+                <Select
+                  value={editFormData.category}
+                  onValueChange={(value) => setEditFormData(prev => ({ ...prev, category: value }))}
+                >
+                  <SelectTrigger className="bg-background/50">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.filter(c => c.id !== "all").map(c => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Price (per 1000)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={editFormData.price}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, price: Number(e.target.value) }))}
+                  className="bg-background/50"
+                />
+                {editingService?.originalPrice && (
+                  <p className="text-xs text-muted-foreground">
+                    Original: ${editingService.originalPrice.toFixed(2)}
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Min Quantity</Label>
+                <Input
+                  type="number"
+                  value={editFormData.minQty}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, minQty: Number(e.target.value) }))}
+                  className="bg-background/50"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Max Quantity</Label>
+                <Input
+                  type="number"
+                  value={editFormData.maxQty}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, maxQty: Number(e.target.value) }))}
+                  className="bg-background/50"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveEdit} className="bg-gradient-to-r from-primary to-primary/80">
+              Save Changes
             </Button>
           </DialogFooter>
         </DialogContent>

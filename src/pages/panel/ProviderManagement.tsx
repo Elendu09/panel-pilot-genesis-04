@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,7 +33,10 @@ import {
   XCircle,
   ArrowRight,
   Package,
-  Loader2
+  Loader2,
+  AlertTriangle,
+  TrendingUp,
+  TrendingDown
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -47,6 +50,14 @@ interface Provider {
   created_at: string;
 }
 
+interface BalanceState {
+  balance: number | null;
+  currency: string;
+  loading: boolean;
+  error: string | null;
+  lastUpdated: Date | null;
+}
+
 // Popular SMM Providers marketplace
 const popularProviders = [
   { name: "SMMRush", endpoint: "https://smmrush.com/api/v2", category: "General", rating: 4.8 },
@@ -58,6 +69,8 @@ const popularProviders = [
   { name: "BulqFollowers", endpoint: "https://bulqfollowers.com/api/v2", category: "General", rating: 4.5 },
   { name: "SocialPanel24", endpoint: "https://socialpanel24.com/api/v2", category: "General", rating: 4.2 },
 ];
+
+const LOW_BALANCE_THRESHOLD = 50; // Warn when balance drops below this
 
 const ProviderManagement = () => {
   const { profile } = useAuth();
@@ -77,10 +90,25 @@ const ProviderManagement = () => {
     api_endpoint: "",
     api_key: ""
   });
+  
+  // Balance state for each provider
+  const [balances, setBalances] = useState<Record<string, BalanceState>>({});
+  const [refreshingAll, setRefreshingAll] = useState(false);
 
   useEffect(() => {
     fetchProviders();
   }, [profile]);
+
+  // Auto-fetch balances when providers are loaded
+  useEffect(() => {
+    if (providers.length > 0) {
+      providers.forEach(provider => {
+        if (provider.is_active && !balances[provider.id]?.loading) {
+          fetchProviderBalance(provider);
+        }
+      });
+    }
+  }, [providers]);
 
   const fetchProviders = async () => {
     if (!profile?.id) return;
@@ -106,6 +134,86 @@ const ProviderManagement = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchProviderBalance = useCallback(async (provider: Provider) => {
+    // Set loading state
+    setBalances(prev => ({
+      ...prev,
+      [provider.id]: {
+        ...prev[provider.id],
+        loading: true,
+        error: null
+      }
+    }));
+
+    try {
+      const { data, error } = await supabase.functions.invoke('provider-balance', {
+        body: {
+          api_endpoint: provider.api_endpoint,
+          api_key: provider.api_key
+        }
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (data.success) {
+        setBalances(prev => ({
+          ...prev,
+          [provider.id]: {
+            balance: data.balance,
+            currency: data.currency || 'USD',
+            loading: false,
+            error: null,
+            lastUpdated: new Date()
+          }
+        }));
+
+        // Update balance in database
+        await supabase
+          .from('providers')
+          .update({ balance: data.balance })
+          .eq('id', provider.id);
+
+      } else {
+        setBalances(prev => ({
+          ...prev,
+          [provider.id]: {
+            balance: null,
+            currency: 'USD',
+            loading: false,
+            error: data.error || 'Failed to fetch balance',
+            lastUpdated: null
+          }
+        }));
+      }
+    } catch (error: any) {
+      console.error('Error fetching balance:', error);
+      setBalances(prev => ({
+        ...prev,
+        [provider.id]: {
+          balance: null,
+          currency: 'USD',
+          loading: false,
+          error: error.message || 'Connection failed',
+          lastUpdated: null
+        }
+      }));
+    }
+  }, []);
+
+  const refreshAllBalances = async () => {
+    setRefreshingAll(true);
+    const activeProviders = providers.filter(p => p.is_active);
+    
+    for (const provider of activeProviders) {
+      await fetchProviderBalance(provider);
+    }
+    
+    setRefreshingAll(false);
+    toast({ title: "All balances refreshed" });
   };
 
   const handleSaveProvider = async () => {
@@ -139,16 +247,23 @@ const ProviderManagement = () => {
           
         toast({ title: "Provider Updated" });
       } else {
-        await supabase
+        const { data: newProvider } = await supabase
           .from('providers')
           .insert({
             panel_id: panelData.id,
             name: formData.name,
             api_endpoint: formData.api_endpoint,
             api_key: formData.api_key
-          });
+          })
+          .select()
+          .single();
           
         toast({ title: "Provider Added" });
+        
+        // Auto-fetch balance for new provider
+        if (newProvider) {
+          setTimeout(() => fetchProviderBalance(newProvider), 500);
+        }
       }
 
       setDialogOpen(false);
@@ -170,6 +285,11 @@ const ProviderManagement = () => {
 
       fetchProviders();
       toast({ title: `Provider ${!provider.is_active ? 'activated' : 'deactivated'}` });
+      
+      // Fetch balance if activating
+      if (!provider.is_active) {
+        setTimeout(() => fetchProviderBalance({ ...provider, is_active: true }), 500);
+      }
     } catch (error) {
       toast({ variant: "destructive", title: "Error" });
     }
@@ -178,6 +298,12 @@ const ProviderManagement = () => {
   const deleteProvider = async (providerId: string) => {
     try {
       await supabase.from('providers').delete().eq('id', providerId);
+      // Clean up balance state
+      setBalances(prev => {
+        const newBalances = { ...prev };
+        delete newBalances[providerId];
+        return newBalances;
+      });
       fetchProviders();
       toast({ title: "Provider Deleted" });
     } catch (error) {
@@ -187,10 +313,22 @@ const ProviderManagement = () => {
 
   const testConnection = async (provider: Provider) => {
     setTestingConnection(provider.id);
-    // Simulate API test
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await fetchProviderBalance(provider);
     setTestingConnection(null);
-    toast({ title: "Connection Successful", description: `${provider.name} is responding correctly` });
+    
+    const balanceState = balances[provider.id];
+    if (balanceState?.error) {
+      toast({ 
+        variant: "destructive",
+        title: "Connection Failed", 
+        description: balanceState.error 
+      });
+    } else {
+      toast({ 
+        title: "Connection Successful", 
+        description: `${provider.name} is responding correctly` 
+      });
+    }
   };
 
   const handleImportServices = async () => {
@@ -235,13 +373,23 @@ const ProviderManagement = () => {
     setDialogOpen(true);
   };
 
-  const totalBalance = providers.reduce((sum, provider) => sum + (provider.balance || 0), 0);
+  // Calculate total balance from fetched balances
+  const totalBalance = Object.values(balances).reduce((sum, b) => sum + (b.balance || 0), 0);
   const activeProviders = providers.filter(p => p.is_active).length;
 
   const filteredMarketplace = popularProviders.filter(p => 
     p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     p.category.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const formatTimeAgo = (date: Date | null) => {
+    if (!date) return "Never";
+    const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
+    if (seconds < 60) return "Just now";
+    if (seconds < 3600) return `${Math.floor(seconds / 60)} min ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`;
+    return date.toLocaleDateString();
+  };
 
   return (
     <div className="space-y-6">
@@ -257,10 +405,21 @@ const ProviderManagement = () => {
           </h1>
           <p className="text-muted-foreground">Connect SMM providers and import services</p>
         </div>
-        <Button onClick={openAddDialog} className="gap-2 bg-gradient-to-r from-primary to-primary/80 shadow-lg shadow-primary/20">
-          <Plus className="w-4 h-4" />
-          Add Provider
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={refreshAllBalances}
+            disabled={refreshingAll}
+            className="gap-2"
+          >
+            <RefreshCw className={cn("w-4 h-4", refreshingAll && "animate-spin")} />
+            Refresh All
+          </Button>
+          <Button onClick={openAddDialog} className="gap-2 bg-gradient-to-r from-primary to-primary/80 shadow-lg shadow-primary/20">
+            <Plus className="w-4 h-4" />
+            Add Provider
+          </Button>
+        </div>
       </motion.div>
 
       {/* Stats */}
@@ -328,94 +487,149 @@ const ProviderManagement = () => {
               </motion.div>
             ) : (
               <div className="grid gap-4">
-                {providers.map((provider, index) => (
-                  <motion.div
-                    key={provider.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                  >
-                    <Card className="glass-card-hover overflow-hidden">
-                      <CardContent className="p-4 md:p-6">
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                          {/* Provider Info */}
-                          <div className="flex items-start gap-4">
-                            <div className={cn(
-                              "p-3 rounded-xl",
-                              provider.is_active ? "bg-green-500/10" : "bg-muted"
-                            )}>
-                              <Server className={cn(
-                                "w-6 h-6",
-                                provider.is_active ? "text-green-500" : "text-muted-foreground"
-                              )} />
-                            </div>
-                            <div className="space-y-1">
-                              <h3 className="font-semibold text-lg">{provider.name}</h3>
-                              <p className="text-sm text-muted-foreground font-mono truncate max-w-xs">
-                                {provider.api_endpoint}
-                              </p>
-                              <div className="flex flex-wrap items-center gap-2 mt-2">
-                                <Badge variant={provider.is_active ? "default" : "secondary"} 
-                                  className={provider.is_active ? "bg-green-500/10 text-green-500 border-green-500/20" : ""}>
-                                  {provider.is_active ? <CheckCircle className="w-3 h-3 mr-1" /> : <AlertCircle className="w-3 h-3 mr-1" />}
-                                  {provider.is_active ? "Active" : "Inactive"}
-                                </Badge>
-                                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-                                  <DollarSign className="w-3 h-3 mr-1" />
-                                  ${provider.balance?.toFixed(2) || '0.00'}
-                                </Badge>
-                                <Badge variant="outline" className="text-muted-foreground">
-                                  <Clock className="w-3 h-3 mr-1" />
-                                  {new Date(provider.created_at).toLocaleDateString()}
-                                </Badge>
+                {providers.map((provider, index) => {
+                  const balanceState = balances[provider.id] || { balance: null, loading: false, error: null, lastUpdated: null, currency: 'USD' };
+                  const isLowBalance = balanceState.balance !== null && balanceState.balance < LOW_BALANCE_THRESHOLD;
+                  
+                  return (
+                    <motion.div
+                      key={provider.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                    >
+                      <Card className="glass-card-hover overflow-hidden">
+                        <CardContent className="p-4 md:p-6">
+                          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            {/* Provider Info */}
+                            <div className="flex items-start gap-4">
+                              <div className={cn(
+                                "p-3 rounded-xl",
+                                provider.is_active ? "bg-green-500/10" : "bg-muted"
+                              )}>
+                                <Server className={cn(
+                                  "w-6 h-6",
+                                  provider.is_active ? "text-green-500" : "text-muted-foreground"
+                                )} />
+                              </div>
+                              <div className="space-y-1">
+                                <h3 className="font-semibold text-lg">{provider.name}</h3>
+                                <p className="text-sm text-muted-foreground font-mono truncate max-w-xs">
+                                  {provider.api_endpoint}
+                                </p>
+                                <div className="flex flex-wrap items-center gap-2 mt-2">
+                                  <Badge variant={provider.is_active ? "default" : "secondary"} 
+                                    className={provider.is_active ? "bg-green-500/10 text-green-500 border-green-500/20" : ""}>
+                                    {provider.is_active ? <CheckCircle className="w-3 h-3 mr-1" /> : <AlertCircle className="w-3 h-3 mr-1" />}
+                                    {provider.is_active ? "Active" : "Inactive"}
+                                  </Badge>
+                                  
+                                  {/* Balance Badge */}
+                                  {balanceState.loading ? (
+                                    <Badge variant="outline" className="bg-muted/50">
+                                      <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                      Loading...
+                                    </Badge>
+                                  ) : balanceState.error ? (
+                                    <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20">
+                                      <XCircle className="w-3 h-3 mr-1" />
+                                      Error
+                                    </Badge>
+                                  ) : balanceState.balance !== null ? (
+                                    <Badge 
+                                      variant="outline" 
+                                      className={cn(
+                                        isLowBalance 
+                                          ? "bg-warning/10 text-warning border-warning/20" 
+                                          : "bg-primary/10 text-primary border-primary/20"
+                                      )}
+                                    >
+                                      <DollarSign className="w-3 h-3 mr-1" />
+                                      {balanceState.balance.toFixed(2)} {balanceState.currency}
+                                      {isLowBalance && <AlertTriangle className="w-3 h-3 ml-1" />}
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="outline" className="text-muted-foreground">
+                                      <DollarSign className="w-3 h-3 mr-1" />
+                                      --
+                                    </Badge>
+                                  )}
+                                  
+                                  <Badge variant="outline" className="text-muted-foreground">
+                                    <Clock className="w-3 h-3 mr-1" />
+                                    {formatTimeAgo(balanceState.lastUpdated)}
+                                  </Badge>
+                                </div>
+                                
+                                {/* Low Balance Warning */}
+                                {isLowBalance && (
+                                  <p className="text-xs text-warning flex items-center gap-1 mt-1">
+                                    <AlertTriangle className="w-3 h-3" />
+                                    Low balance warning - consider adding funds
+                                  </p>
+                                )}
                               </div>
                             </div>
-                          </div>
 
-                          {/* Actions */}
-                          <div className="flex flex-wrap items-center gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => testConnection(provider)}
-                              disabled={testingConnection === provider.id}
-                              className="gap-2"
-                            >
-                              {testingConnection === provider.id ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                              ) : (
-                                <Play className="w-4 h-4" />
-                              )}
-                              Test
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedProvider(provider);
-                                setImportDialogOpen(true);
-                              }}
-                              className="gap-2"
-                            >
-                              <Download className="w-4 h-4" />
-                              Import
-                            </Button>
-                            <Switch
-                              checked={provider.is_active}
-                              onCheckedChange={() => toggleProviderStatus(provider)}
-                            />
-                            <Button variant="ghost" size="icon" onClick={() => openEditDialog(provider)}>
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="text-destructive" onClick={() => deleteProvider(provider.id)}>
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+                            {/* Actions */}
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => fetchProviderBalance(provider)}
+                                disabled={balanceState.loading}
+                                className="gap-2"
+                              >
+                                {balanceState.loading ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <RefreshCw className="w-4 h-4" />
+                                )}
+                                Refresh
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => testConnection(provider)}
+                                disabled={testingConnection === provider.id}
+                                className="gap-2"
+                              >
+                                {testingConnection === provider.id ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <Play className="w-4 h-4" />
+                                )}
+                                Test
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedProvider(provider);
+                                  setImportDialogOpen(true);
+                                }}
+                                className="gap-2"
+                              >
+                                <Download className="w-4 h-4" />
+                                Import
+                              </Button>
+                              <Switch
+                                checked={provider.is_active}
+                                onCheckedChange={() => toggleProviderStatus(provider)}
+                              />
+                              <Button variant="ghost" size="icon" onClick={() => openEditDialog(provider)}>
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="text-destructive" onClick={() => deleteProvider(provider.id)}>
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
                           </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                ))}
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  );
+                })}
               </div>
             )}
           </AnimatePresence>
@@ -551,6 +765,12 @@ const ProviderManagement = () => {
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Endpoint</span>
                     <span className="font-mono text-xs truncate max-w-[200px]">{selectedProvider?.api_endpoint}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Current Balance</span>
+                    <span className="font-medium text-primary">
+                      ${balances[selectedProvider?.id || '']?.balance?.toFixed(2) || '--'}
+                    </span>
                   </div>
                 </div>
 
