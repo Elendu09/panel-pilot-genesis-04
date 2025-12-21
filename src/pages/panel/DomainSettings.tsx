@@ -34,7 +34,10 @@ import {
   AlertTriangle,
   Loader2,
   CloudCog,
-  Network
+  Network,
+  Mail,
+  FileText,
+  BookOpen
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -111,6 +114,46 @@ const DomainSettings = () => {
     cacheTtl: "24h",
     purgingCache: false,
   });
+
+  // Email configuration state
+  const [emailSettings, setEmailSettings] = useState({
+    provider: "custom",
+    verifiedSPF: true,
+    verifiedDKIM: false,
+    verifiedDMARC: false,
+  });
+
+  const mxRecords = [
+    { id: "1", priority: 10, host: "mail.yourdomain.com", value: "mx1.mailprovider.com", status: "verified" as const },
+    { id: "2", priority: 20, host: "mail.yourdomain.com", value: "mx2.mailprovider.com", status: "pending" as const },
+  ];
+
+  const emailAuthRecords = [
+    {
+      type: "SPF",
+      name: "@",
+      value: "v=spf1 include:_spf.google.com ~all",
+      description: "Specifies which mail servers can send email on behalf of your domain",
+      status: emailSettings.verifiedSPF ? "verified" : "pending",
+      guide: "SPF (Sender Policy Framework) helps prevent email spoofing by specifying which mail servers are authorized to send emails for your domain.",
+    },
+    {
+      type: "DKIM",
+      name: "google._domainkey",
+      value: "v=DKIM1; k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC...",
+      description: "Adds a digital signature to outgoing emails for verification",
+      status: emailSettings.verifiedDKIM ? "verified" : "pending",
+      guide: "DKIM (DomainKeys Identified Mail) adds a digital signature to your emails, allowing recipients to verify that the email came from your domain and hasn't been altered.",
+    },
+    {
+      type: "DMARC",
+      name: "_dmarc",
+      value: "v=DMARC1; p=quarantine; rua=mailto:dmarc@yourdomain.com",
+      description: "Defines how receiving servers should handle failed SPF/DKIM checks",
+      status: emailSettings.verifiedDMARC ? "verified" : "pending",
+      guide: "DMARC (Domain-based Message Authentication, Reporting & Conformance) tells receiving mail servers what to do when an email fails SPF or DKIM checks.",
+    },
+  ];
 
   const wizardSteps = [
     { number: 1, title: "Domain Name", description: "Enter your domain" },
@@ -336,6 +379,10 @@ const DomainSettings = () => {
           <TabsTrigger value="cdn" className="gap-2">
             <CloudCog className="w-4 h-4" />
             CDN
+          </TabsTrigger>
+          <TabsTrigger value="email" className="gap-2">
+            <Mail className="w-4 h-4" />
+            Email
           </TabsTrigger>
         </TabsList>
 
@@ -769,6 +816,256 @@ const DomainSettings = () => {
                   <p className="text-2xl font-bold text-yellow-500">1.2GB</p>
                   <p className="text-xs text-muted-foreground">Bandwidth Saved</p>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Email Configuration Tab */}
+        <TabsContent value="email" className="space-y-4">
+          {/* Email Overview */}
+          <div className="grid md:grid-cols-3 gap-4">
+            <Card className="bg-card/50 border-border/50">
+              <CardContent className="p-4 text-center">
+                <div className={cn(
+                  "w-12 h-12 rounded-xl mx-auto mb-3 flex items-center justify-center",
+                  emailSettings.verifiedSPF ? "bg-green-500/10" : "bg-yellow-500/10"
+                )}>
+                  {emailSettings.verifiedSPF ? (
+                    <CheckCircle className="w-6 h-6 text-green-500" />
+                  ) : (
+                    <AlertCircle className="w-6 h-6 text-yellow-500" />
+                  )}
+                </div>
+                <p className="font-semibold">SPF</p>
+                <p className="text-xs text-muted-foreground">
+                  {emailSettings.verifiedSPF ? "Configured" : "Not configured"}
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="bg-card/50 border-border/50">
+              <CardContent className="p-4 text-center">
+                <div className={cn(
+                  "w-12 h-12 rounded-xl mx-auto mb-3 flex items-center justify-center",
+                  emailSettings.verifiedDKIM ? "bg-green-500/10" : "bg-yellow-500/10"
+                )}>
+                  {emailSettings.verifiedDKIM ? (
+                    <CheckCircle className="w-6 h-6 text-green-500" />
+                  ) : (
+                    <AlertCircle className="w-6 h-6 text-yellow-500" />
+                  )}
+                </div>
+                <p className="font-semibold">DKIM</p>
+                <p className="text-xs text-muted-foreground">
+                  {emailSettings.verifiedDKIM ? "Configured" : "Not configured"}
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="bg-card/50 border-border/50">
+              <CardContent className="p-4 text-center">
+                <div className={cn(
+                  "w-12 h-12 rounded-xl mx-auto mb-3 flex items-center justify-center",
+                  emailSettings.verifiedDMARC ? "bg-green-500/10" : "bg-yellow-500/10"
+                )}>
+                  {emailSettings.verifiedDMARC ? (
+                    <CheckCircle className="w-6 h-6 text-green-500" />
+                  ) : (
+                    <AlertCircle className="w-6 h-6 text-yellow-500" />
+                  )}
+                </div>
+                <p className="font-semibold">DMARC</p>
+                <p className="text-xs text-muted-foreground">
+                  {emailSettings.verifiedDMARC ? "Configured" : "Not configured"}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* MX Records */}
+          <Card className="bg-card/50 border-border/50">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Mail className="w-5 h-5 text-primary" />
+                MX Records (Mail Exchange)
+              </CardTitle>
+              <Button size="sm" variant="outline">
+                <Plus className="w-4 h-4 mr-2" />
+                Add MX Record
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-4">
+                MX records direct emails sent to your domain to the correct mail servers.
+              </p>
+              <div className="rounded-xl border border-border/50 overflow-hidden">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-muted/30">
+                      <th className="text-left p-3 text-sm font-medium">Priority</th>
+                      <th className="text-left p-3 text-sm font-medium">Host</th>
+                      <th className="text-left p-3 text-sm font-medium">Points To</th>
+                      <th className="text-left p-3 text-sm font-medium">Status</th>
+                      <th className="text-right p-3 text-sm font-medium">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {mxRecords.map((record) => (
+                      <tr key={record.id} className="border-t border-border/50">
+                        <td className="p-3 font-mono">{record.priority}</td>
+                        <td className="p-3 font-mono text-sm">{record.host}</td>
+                        <td className="p-3 font-mono text-sm">{record.value}</td>
+                        <td className="p-3">
+                          <Badge variant="outline" className={getStatusColor(record.status)}>
+                            {getStatusIcon(record.status)}
+                            <span className="ml-1 capitalize">{record.status}</span>
+                          </Badge>
+                        </td>
+                        <td className="p-3 text-right">
+                          <Button variant="ghost" size="icon" onClick={() => copyToClipboard(record.value)}>
+                            <Copy className="w-4 h-4" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Email Authentication (SPF/DKIM/DMARC) */}
+          <Card className="bg-card/50 border-border/50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Shield className="w-5 h-5 text-primary" />
+                Email Authentication Records
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Configure SPF, DKIM, and DMARC to improve email deliverability and prevent spoofing.
+              </p>
+              
+              {emailAuthRecords.map((record, index) => (
+                <div key={index} className="border border-border/50 rounded-xl overflow-hidden">
+                  <div className="flex items-center justify-between p-4 bg-muted/20">
+                    <div className="flex items-center gap-3">
+                      <div className={cn(
+                        "p-2 rounded-lg",
+                        record.status === "verified" ? "bg-green-500/10" : "bg-yellow-500/10"
+                      )}>
+                        {record.status === "verified" ? (
+                          <CheckCircle className="w-5 h-5 text-green-500" />
+                        ) : (
+                          <Clock className="w-5 h-5 text-yellow-500" />
+                        )}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-semibold">{record.type}</h4>
+                          <Badge variant="outline" className={getStatusColor(record.status)}>
+                            {record.status}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground">{record.description}</p>
+                      </div>
+                    </div>
+                    <Button variant="outline" size="sm" className="gap-2">
+                      <BookOpen className="w-4 h-4" />
+                      Guide
+                    </Button>
+                  </div>
+                  
+                  <div className="p-4 space-y-3">
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Record Type</Label>
+                        <p className="font-mono text-sm">TXT</p>
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Name / Host</Label>
+                        <p className="font-mono text-sm">{record.name}</p>
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Value</Label>
+                      <div className="flex items-center gap-2 mt-1">
+                        <code className="flex-1 p-2 bg-muted/30 rounded-lg text-xs font-mono overflow-x-auto">
+                          {record.value}
+                        </code>
+                        <Button variant="outline" size="icon" onClick={() => copyToClipboard(record.value)}>
+                          <Copy className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    <Alert className="bg-primary/5 border-primary/20">
+                      <Info className="h-4 w-4 text-primary" />
+                      <AlertDescription className="text-sm">
+                        {record.guide}
+                      </AlertDescription>
+                    </Alert>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          {/* Email Provider Setup */}
+          <Card className="bg-card/50 border-border/50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Settings className="w-5 h-5 text-primary" />
+                Email Provider Setup Guides
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-4">
+                Quick setup guides for popular email providers
+              </p>
+              <div className="grid md:grid-cols-3 gap-3">
+                {[
+                  { name: "Google Workspace", icon: "📧", link: "https://support.google.com/a/answer/140034" },
+                  { name: "Microsoft 365", icon: "📨", link: "https://docs.microsoft.com/en-us/microsoft-365/admin/get-help-with-domains/create-dns-records-at-any-dns-hosting-provider" },
+                  { name: "Zoho Mail", icon: "✉️", link: "https://www.zoho.com/mail/help/adminconsole/configure-email-delivery.html" },
+                  { name: "Proton Mail", icon: "🔒", link: "https://proton.me/support/custom-domain-proton-mail" },
+                  { name: "Fastmail", icon: "⚡", link: "https://www.fastmail.help/hc/en-us/articles/1500000280261" },
+                  { name: "Resend", icon: "📬", link: "https://resend.com/docs/dashboard/domains/introduction" },
+                ].map((provider) => (
+                  <Button
+                    key={provider.name}
+                    variant="outline"
+                    className="justify-start gap-3 h-auto py-3"
+                    onClick={() => window.open(provider.link, "_blank")}
+                  >
+                    <span className="text-xl">{provider.icon}</span>
+                    <div className="text-left">
+                      <p className="font-medium">{provider.name}</p>
+                      <p className="text-xs text-muted-foreground">Setup Guide</p>
+                    </div>
+                    <ExternalLink className="w-4 h-4 ml-auto" />
+                  </Button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Email Testing */}
+          <Card className="bg-gradient-to-br from-primary/10 via-card to-secondary/10 border-primary/20">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-xl bg-primary/10">
+                  <FileText className="w-8 h-8 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold">Test Your Email Configuration</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Send a test email to verify your SPF, DKIM, and DMARC are working correctly
+                  </p>
+                </div>
+                <Button className="gap-2">
+                  <Mail className="w-4 h-4" />
+                  Send Test Email
+                </Button>
               </div>
             </CardContent>
           </Card>
