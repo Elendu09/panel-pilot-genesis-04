@@ -15,12 +15,12 @@ import {
   Palette,
   Plug,
   Search,
-  Bell,
   ChevronLeft,
   ChevronRight,
   Sparkles,
   Code,
-  FileText
+  FileText,
+  HelpCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +28,9 @@ import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { BottomNav } from "@/components/ui/bottom-nav";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { NotificationCenter } from "@/components/notifications/NotificationCenter";
+import { OnboardingTour } from "@/components/onboarding/OnboardingTour";
+import { useOnboardingTour } from "@/hooks/use-onboarding-tour";
 import ProviderManagement from "./panel/ProviderManagement";
 import GeneralSettings from "./panel/GeneralSettings";
 import DesignCustomization from "./panel/DesignCustomization";
@@ -52,6 +55,7 @@ const PanelOwnerDashboard = () => {
   const location = useLocation();
   const canonicalUrl = typeof window !== 'undefined' ? `${window.location.origin}${location.pathname}` : '';
   const { profile, signOut } = useAuth();
+  const { isOpen: tourOpen, completeTour, restartTour } = useOnboardingTour();
 
   const mainNavigation = [
     { name: 'Dashboard', href: '/panel', icon: LayoutDashboard },
@@ -290,7 +294,17 @@ const PanelOwnerDashboard = () => {
             "flex items-center gap-2",
             !sidebarOpen && "flex-col"
           )}>
+            <NotificationCenter />
             <ThemeToggle />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={restartTour}
+              className="h-9 w-9 text-muted-foreground hover:text-foreground"
+              title="Restart Tour"
+            >
+              <HelpCircle className="w-4 h-4" />
+            </Button>
             <Button
               variant="ghost"
               size="icon"
@@ -322,10 +336,7 @@ const PanelOwnerDashboard = () => {
             <span className="font-bold">SMMPilot</span>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-destructive rounded-full" />
-            </Button>
+            <NotificationCenter variant="sheet" />
             <ThemeToggle />
           </div>
         </header>
@@ -351,6 +362,9 @@ const PanelOwnerDashboard = () => {
 
       {/* Mobile Bottom Navigation */}
       <BottomNav items={bottomNavItems} showFab fabAction={() => console.log('FAB clicked')} />
+
+      {/* Onboarding Tour */}
+      <OnboardingTour isOpen={tourOpen} onComplete={completeTour} />
     </div>
   );
 };
