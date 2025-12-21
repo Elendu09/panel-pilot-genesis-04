@@ -11,258 +11,323 @@ import {
   Headphones,
   Gift
 } from "lucide-react";
+import { motion } from "framer-motion";
 
 export const FeaturesSection = () => {
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.15
+      }
+    }
+  };
+
+  const cardVariants = {
+    hidden: { opacity: 0, y: 40, rotateX: -5 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      rotateX: 0,
+      transition: {
+        type: "spring" as const,
+        stiffness: 80,
+        damping: 15
+      }
+    }
+  };
+
+  const featureCardVariants = {
+    hidden: { opacity: 0, scale: 0.9 },
+    visible: { 
+      opacity: 1, 
+      scale: 1,
+      transition: {
+        type: "spring" as const,
+        stiffness: 100,
+        damping: 15
+      }
+    }
+  };
+
   return (
-    <section className="py-20 bg-background relative overflow-hidden">
+    <section className="py-24 bg-background relative overflow-hidden">
+      {/* Background decoration */}
+      <div className="absolute inset-0 bg-mesh opacity-30" />
+
       {/* Header */}
-      <div className="container mx-auto px-4 text-center mb-16">
-        <h2 className="text-4xl md:text-5xl font-bold mb-6">
+      <div className="container mx-auto px-4 text-center mb-16 relative z-10">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-6"
+        >
+          <Zap className="w-4 h-4 text-primary" />
+          <span className="text-sm font-medium text-primary">Powerful Features</span>
+        </motion.div>
+
+        <motion.h2 
+          className="text-4xl md:text-5xl font-bold mb-6"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.1 }}
+        >
           <span className="bg-gradient-primary bg-clip-text text-transparent">
             No code solution
           </span>
-        </h2>
+        </motion.h2>
       </div>
 
       {/* Main Feature Cards */}
-      <div className="container mx-auto px-4">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-7xl mx-auto mb-16">
+      <div className="container mx-auto px-4 relative z-10">
+        <motion.div 
+          className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-7xl mx-auto mb-16"
+          variants={containerVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-50px" }}
+        >
           {/* Payment Systems Card */}
-          <div className="bg-gradient-card border border-border rounded-2xl p-8 shadow-card hover:shadow-glow transition-all duration-500 group hover:scale-105 hover:-translate-y-2 relative overflow-hidden">
+          <motion.div 
+            variants={cardVariants}
+            whileHover={{ y: -8, scale: 1.02 }}
+            className="glass-card p-8 group relative overflow-hidden"
+          >
             {/* Animated background */}
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+            <motion.div 
+              className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+            />
             
             <div className="text-center mb-8 relative z-10">
-              <div className="text-6xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-2 group-hover:animate-pulse">200+</div>
+              <motion.div 
+                className="text-6xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-2"
+                whileHover={{ scale: 1.1 }}
+              >
+                200+
+              </motion.div>
               <h3 className="text-xl font-semibold mb-2 group-hover:text-primary transition-colors">Payment systems</h3>
               <p className="text-muted-foreground">for every country</p>
             </div>
             <div className="space-y-3 relative z-10">
-              <div className="flex items-center justify-between p-4 bg-gradient-to-r from-background/80 to-background/60 rounded-lg border border-primary/20 hover:border-primary/40 transition-all group/item">
-                <span className="font-medium flex items-center gap-3">
-                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center text-white text-xs font-bold">P</div>
-                  PayTM
-                </span>
-                <div className="w-6 h-6 bg-gradient-to-br from-blue-400 to-blue-600 rounded opacity-80 group-hover/item:opacity-100"></div>
-              </div>
-              <div className="flex items-center justify-between p-4 bg-gradient-to-r from-background/80 to-background/60 rounded-lg border border-primary/20 hover:border-primary/40 transition-all group/item">
-                <span className="font-medium flex items-center gap-3">
-                  <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center text-white text-xs font-bold">U</div>
-                  UPI
-                </span>
-                <div className="w-6 h-6 bg-gradient-to-br from-green-400 to-green-600 rounded-full opacity-80 group-hover/item:opacity-100"></div>
-              </div>
-              <div className="flex items-center justify-between p-4 bg-gradient-to-r from-background/80 to-background/60 rounded-lg border border-primary/20 hover:border-primary/40 transition-all group/item">
-                <span className="font-medium flex items-center gap-3">
-                  <div className="w-8 h-8 bg-gradient-to-br from-yellow-500 to-amber-500 rounded-lg flex items-center justify-center text-white text-xs font-bold">₮</div>
-                  USDT
-                </span>
-                <div className="w-6 h-6 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-full opacity-80 group-hover/item:opacity-100"></div>
-              </div>
-              <div className="flex items-center justify-between p-4 bg-gradient-to-r from-background/80 to-background/60 rounded-lg border border-primary/20 hover:border-primary/40 transition-all group/item">
-                <span className="font-medium flex items-center gap-3">
-                  <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg flex items-center justify-center text-white text-xs font-bold">S</div>
-                  Stripe
-                </span>
-                <div className="w-6 h-6 bg-gradient-to-br from-purple-400 to-indigo-500 rounded opacity-80 group-hover/item:opacity-100"></div>
-              </div>
-              <div className="flex items-center justify-between p-4 bg-gradient-to-r from-background/80 to-background/60 rounded-lg border border-primary/20 hover:border-primary/40 transition-all group/item">
-                <span className="font-medium flex items-center gap-3">
-                  <div className="w-8 h-8 bg-gradient-to-br from-red-500 to-rose-600 rounded-lg flex items-center justify-center text-white text-xs font-bold">PM</div>
-                  Perfect Money
-                </span>
-                <div className="w-6 h-6 bg-gradient-to-br from-red-400 to-rose-500 rounded opacity-80 group-hover/item:opacity-100"></div>
-              </div>
-              <div className="text-center text-primary/70 text-sm mt-6 font-medium group-hover:text-primary transition-colors">
+              {[
+                { name: "PayTM", letter: "P", gradient: "from-blue-500 to-blue-600" },
+                { name: "UPI", letter: "U", gradient: "from-green-500 to-green-600" },
+                { name: "USDT", letter: "₮", gradient: "from-yellow-500 to-amber-500" },
+                { name: "Stripe", letter: "S", gradient: "from-purple-500 to-indigo-600" },
+                { name: "Perfect Money", letter: "PM", gradient: "from-red-500 to-rose-600" },
+              ].map((payment, index) => (
+                <motion.div 
+                  key={payment.name}
+                  className="flex items-center justify-between p-4 bg-background/60 rounded-lg border border-primary/20 hover:border-primary/40 transition-all"
+                  initial={{ opacity: 0, x: -20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.1 }}
+                  whileHover={{ x: 5, backgroundColor: "hsl(var(--primary) / 0.1)" }}
+                >
+                  <span className="font-medium flex items-center gap-3">
+                    <div className={`w-8 h-8 bg-gradient-to-br ${payment.gradient} rounded-lg flex items-center justify-center text-white text-xs font-bold`}>
+                      {payment.letter}
+                    </div>
+                    {payment.name}
+                  </span>
+                  <motion.div 
+                    className={`w-6 h-6 bg-gradient-to-br ${payment.gradient} rounded-full`}
+                    whileHover={{ scale: 1.2, rotate: 180 }}
+                  />
+                </motion.div>
+              ))}
+              <p className="text-center text-primary/70 text-sm mt-6 font-medium group-hover:text-primary transition-colors">
                 and much more...
-              </div>
+              </p>
             </div>
-          </div>
+          </motion.div>
 
           {/* Center Enhanced Dashboard Card */}
-          <div className="bg-gradient-card border border-border rounded-2xl p-8 shadow-card hover:shadow-glow transition-all duration-500 group hover:scale-105 hover:-translate-y-2 relative overflow-hidden">
+          <motion.div 
+            variants={cardVariants}
+            whileHover={{ y: -8, scale: 1.02 }}
+            className="glass-card p-8 group relative overflow-hidden"
+          >
             {/* Animated particles background */}
             <div className="absolute inset-0">
-              <div className="absolute top-10 left-10 w-2 h-2 bg-primary/30 rounded-full animate-ping"></div>
-              <div className="absolute top-20 right-16 w-1 h-1 bg-accent/50 rounded-full animate-pulse delay-300"></div>
-              <div className="absolute bottom-16 left-20 w-1.5 h-1.5 bg-primary/40 rounded-full animate-ping delay-700"></div>
+              <motion.div 
+                className="absolute top-10 left-10 w-2 h-2 bg-primary/30 rounded-full"
+                animate={{ scale: [1, 1.5, 1], opacity: [0.3, 0.7, 0.3] }}
+                transition={{ duration: 2, repeat: Infinity }}
+              />
+              <motion.div 
+                className="absolute top-20 right-16 w-1 h-1 bg-accent/50 rounded-full"
+                animate={{ scale: [1, 2, 1], opacity: [0.5, 1, 0.5] }}
+                transition={{ duration: 2.5, repeat: Infinity, delay: 0.5 }}
+              />
+              <motion.div 
+                className="absolute bottom-16 left-20 w-1.5 h-1.5 bg-primary/40 rounded-full"
+                animate={{ scale: [1, 1.8, 1], opacity: [0.4, 0.8, 0.4] }}
+                transition={{ duration: 3, repeat: Infinity, delay: 1 }}
+              />
             </div>
             
             <div className="text-center relative z-10">
-              <h3 className="text-xl font-semibold mb-2 bg-gradient-primary bg-clip-text text-transparent group-hover:animate-pulse">Easy start</h3>
+              <h3 className="text-xl font-semibold mb-2 bg-gradient-primary bg-clip-text text-transparent">Easy start</h3>
               <p className="text-muted-foreground mb-8">to run own panel</p>
             </div>
             
             {/* Enhanced Dashboard Visual */}
             <div className="relative w-56 h-56 mx-auto mb-6">
               {/* Outer glow ring */}
-              <div className="absolute inset-0 rounded-full border-4 border-primary/20 group-hover:border-primary/40 transition-all duration-500 animate-spin-slow"></div>
+              <motion.div 
+                className="absolute inset-0 rounded-full border-4 border-primary/20"
+                animate={{ rotate: 360 }}
+                transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+              />
               
               {/* Feature Icons */}
-              <div className="absolute top-2 left-1/2 transform -translate-x-1/2 bg-gradient-card rounded-lg p-2 border border-primary/30 group-hover:border-primary/50 transition-all">
-                <Shield className="w-4 h-4 text-primary" />
-                <span className="text-xs text-primary font-medium block mt-1">DDOS</span>
-              </div>
-              
-              <div className="absolute top-1/2 left-2 transform -translate-y-1/2 bg-gradient-card rounded-lg p-2 border border-primary/30 group-hover:border-primary/50 transition-all">
-                <TrendingUp className="w-4 h-4 text-primary" />
-                <span className="text-xs text-primary font-medium block mt-1">Tracker</span>
-              </div>
-              
-              <div className="absolute top-1/2 right-2 transform -translate-y-1/2 bg-gradient-card rounded-lg p-2 border border-primary/30 group-hover:border-primary/50 transition-all">
-                <Zap className="w-4 h-4 text-primary" />
-                <span className="text-xs text-primary font-medium block mt-1">Premium</span>
-              </div>
-              
-              <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-gradient-card rounded-lg p-2 border border-primary/30 group-hover:border-primary/50 transition-all">
-                <Headphones className="w-4 h-4 text-primary" />
-                <span className="text-xs text-primary font-medium block mt-1">Support</span>
-              </div>
+              {[
+                { icon: Shield, label: "DDOS", position: "top-2 left-1/2 -translate-x-1/2" },
+                { icon: TrendingUp, label: "Tracker", position: "top-1/2 left-2 -translate-y-1/2" },
+                { icon: Zap, label: "Premium", position: "top-1/2 right-2 -translate-y-1/2" },
+                { icon: Headphones, label: "Support", position: "bottom-2 left-1/2 -translate-x-1/2" },
+              ].map((item, index) => (
+                <motion.div
+                  key={item.label}
+                  className={`absolute ${item.position} transform glass-card rounded-lg p-2 border border-primary/30`}
+                  initial={{ opacity: 0, scale: 0 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: 0.5 + index * 0.1 }}
+                  whileHover={{ scale: 1.1, borderColor: "hsl(var(--primary))" }}
+                >
+                  <item.icon className="w-4 h-4 text-primary" />
+                  <span className="text-xs text-primary font-medium block mt-1">{item.label}</span>
+                </motion.div>
+              ))}
               
               {/* Center Dashboard */}
-              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-20 h-20 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center shadow-glow group-hover:shadow-xl transition-all duration-500 group-hover:scale-110">
-                <Zap className="w-10 h-10 text-primary-foreground animate-pulse" />
-              </div>
-              
-              {/* Animated connection lines */}
-              <div className="absolute top-1/2 left-1/2 w-0.5 h-16 bg-gradient-to-t from-primary/60 to-transparent transform-gpu origin-bottom -translate-x-1/2 -rotate-12 group-hover:rotate-12 transition-transform duration-1000"></div>
-              <div className="absolute top-1/2 left-1/2 w-0.5 h-16 bg-gradient-to-t from-primary/60 to-transparent transform-gpu origin-bottom -translate-x-1/2 rotate-12 group-hover:-rotate-12 transition-transform duration-1000"></div>
+              <motion.div 
+                className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-20 h-20 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center shadow-glow"
+                animate={{ 
+                  boxShadow: [
+                    "0 0 20px hsl(var(--primary) / 0.3)",
+                    "0 0 40px hsl(var(--primary) / 0.5)",
+                    "0 0 20px hsl(var(--primary) / 0.3)"
+                  ]
+                }}
+                transition={{ duration: 2, repeat: Infinity }}
+                whileHover={{ scale: 1.1 }}
+              >
+                <Zap className="w-10 h-10 text-primary-foreground" />
+              </motion.div>
             </div>
-          </div>
+          </motion.div>
 
           {/* Language Localizations Card */}
-          <div className="bg-gradient-card border border-border rounded-2xl p-8 shadow-card hover:shadow-glow transition-all duration-500 group hover:scale-105 hover:-translate-y-2 relative overflow-hidden">
+          <motion.div 
+            variants={cardVariants}
+            whileHover={{ y: -8, scale: 1.02 }}
+            className="glass-card p-8 group relative overflow-hidden"
+          >
             {/* Animated background */}
-            <div className="absolute inset-0 bg-gradient-to-br from-accent/10 via-transparent to-primary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+            <motion.div 
+              className="absolute inset-0 bg-gradient-to-br from-accent/10 via-transparent to-primary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+            />
             
             <div className="text-center mb-8 relative z-10">
-              <div className="text-6xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-2 group-hover:animate-pulse">20+</div>
+              <motion.div 
+                className="text-6xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-2"
+                whileHover={{ scale: 1.1 }}
+              >
+                20+
+              </motion.div>
               <h3 className="text-xl font-semibold mb-2 group-hover:text-primary transition-colors">Language</h3>
               <p className="text-muted-foreground">localizations</p>
             </div>
             <div className="grid grid-cols-5 gap-3 relative z-10">
               {[
-                { flag: "🇩🇪", name: "DE", color: "from-red-500 to-yellow-500" },
-                { flag: "🇰🇷", name: "KR", color: "from-blue-500 to-red-500" },
-                { flag: "🇺🇸", name: "US", color: "from-blue-500 to-red-500" },
-                { flag: "🇮🇳", name: "IN", color: "from-orange-500 to-green-500" },
-                { flag: "🇵🇰", name: "PK", color: "from-green-500 to-white" },
+                { flag: "🇩🇪", name: "DE", gradient: "from-red-500 to-yellow-500" },
+                { flag: "🇰🇷", name: "KR", gradient: "from-blue-500 to-red-500" },
+                { flag: "🇺🇸", name: "US", gradient: "from-blue-500 to-red-500" },
+                { flag: "🇮🇳", name: "IN", gradient: "from-orange-500 to-green-500" },
+                { flag: "🇵🇰", name: "PK", gradient: "from-green-500 to-white" },
               ].map((country, index) => (
-                <div key={index} className={`aspect-square bg-gradient-to-br ${country.color} p-0.5 rounded-lg hover:scale-110 transition-all duration-300 group/flag`}>
+                <motion.div 
+                  key={index} 
+                  className={`aspect-square bg-gradient-to-br ${country.gradient} p-0.5 rounded-lg`}
+                  initial={{ opacity: 0, scale: 0 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.1 }}
+                  whileHover={{ scale: 1.15, y: -5 }}
+                >
                   <div className="w-full h-full bg-background/90 rounded-md flex flex-col items-center justify-center p-2 hover:bg-background/70 transition-colors">
-                    <div className="text-2xl mb-1 group-hover/flag:scale-110 transition-transform">{country.flag}</div>
-                    <div className="text-xs text-primary font-medium group-hover/flag:text-primary/80">{country.name}</div>
+                    <div className="text-2xl mb-1">{country.flag}</div>
+                    <div className="text-xs text-primary font-medium">{country.name}</div>
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
 
         {/* Bottom Features Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
-          <div className="text-center p-8 bg-gradient-card border border-border rounded-xl shadow-card hover:shadow-glow transition-all duration-500 group hover:scale-105 hover:-translate-y-2 relative overflow-hidden">
-            {/* Animated background */}
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-            
-            {/* Icon with glow effect */}
-            <div className="relative z-10 mb-6">
-              <div className="w-16 h-16 mx-auto bg-gradient-to-br from-primary/20 to-accent/20 rounded-xl flex items-center justify-center group-hover:shadow-glow transition-all duration-300 group-hover:scale-110">
-                <QrCode className="w-8 h-8 text-primary group-hover:text-primary/80 transition-colors" />
+        <motion.div 
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto"
+          variants={containerVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-50px" }}
+        >
+          {[
+            { icon: QrCode, title: "Promocode", desc: "Create promo codes to attract new users or retain old ones", gradient: "from-blue-500 to-cyan-500" },
+            { icon: MessageSquare, title: "Pop-up messages", desc: "Notify your users and keep in touch with them", gradient: "from-purple-500 to-pink-500" },
+            { icon: Droplets, title: "Drip Feed", desc: "Raise social engagement at the desired speed", gradient: "from-green-500 to-emerald-500" },
+            { icon: Zap, title: "Integrations", desc: "We have a bunch of integrations to fit in your panel", gradient: "from-amber-500 to-orange-500" },
+          ].map((feature, index) => (
+            <motion.div
+              key={feature.title}
+              variants={featureCardVariants}
+              whileHover={{ y: -8, scale: 1.02 }}
+              className="text-center p-8 glass-card group relative overflow-hidden"
+            >
+              {/* Animated background */}
+              <motion.div 
+                className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+              />
+              
+              {/* Icon with glow effect */}
+              <div className="relative z-10 mb-6">
+                <motion.div 
+                  className={`w-16 h-16 mx-auto bg-gradient-to-br ${feature.gradient} rounded-xl flex items-center justify-center shadow-lg`}
+                  whileHover={{ rotate: [0, -5, 5, 0], scale: 1.1 }}
+                  transition={{ duration: 0.4 }}
+                >
+                  <feature.icon className="w-8 h-8 text-white" />
+                </motion.div>
               </div>
-              {/* Floating particles */}
-              <div className="absolute top-0 right-0 w-1 h-1 bg-primary/50 rounded-full animate-ping"></div>
-              <div className="absolute bottom-0 left-0 w-0.5 h-0.5 bg-accent/60 rounded-full animate-pulse delay-500"></div>
-            </div>
-            
-            <h3 className="font-semibold mb-3 text-lg group-hover:text-primary transition-colors relative z-10">Promocode</h3>
-            <p className="text-sm text-muted-foreground group-hover:text-muted-foreground/80 transition-colors relative z-10">Create promo codes to attract new users or retain old ones</p>
-            
-            {/* Gift icon decoration */}
-            <div className="absolute top-4 right-4 opacity-20 group-hover:opacity-40 transition-opacity">
-              <Gift className="w-6 h-6 text-primary" />
-            </div>
-          </div>
-          
-          <div className="text-center p-8 bg-gradient-card border border-border rounded-xl shadow-card hover:shadow-glow transition-all duration-500 group hover:scale-105 hover:-translate-y-2 relative overflow-hidden">
-            {/* Animated background */}
-            <div className="absolute inset-0 bg-gradient-to-br from-accent/10 via-transparent to-primary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-            
-            {/* Icon with glow effect */}
-            <div className="relative z-10 mb-6">
-              <div className="w-16 h-16 mx-auto bg-gradient-to-br from-accent/20 to-primary/20 rounded-xl flex items-center justify-center group-hover:shadow-glow transition-all duration-300 group-hover:scale-110">
-                <MessageSquare className="w-8 h-8 text-primary group-hover:text-primary/80 transition-colors" />
-              </div>
-              {/* Message bubbles animation */}
-              <div className="absolute -top-1 -right-1 w-2 h-2 bg-accent/60 rounded-full animate-bounce"></div>
-              <div className="absolute -top-2 right-2 w-1 h-1 bg-primary/50 rounded-full animate-bounce delay-200"></div>
-            </div>
-            
-            <h3 className="font-semibold mb-3 text-lg group-hover:text-primary transition-colors relative z-10">Pop-up messages</h3>
-            <p className="text-sm text-muted-foreground group-hover:text-muted-foreground/80 transition-colors relative z-10">Notify your users and keep in touch with them</p>
-            
-            {/* Notification dot */}
-            <div className="absolute top-4 right-4 w-3 h-3 bg-accent rounded-full opacity-30 group-hover:opacity-60 transition-all animate-pulse"></div>
-          </div>
-          
-          <div className="text-center p-8 bg-gradient-card border border-border rounded-xl shadow-card hover:shadow-glow transition-all duration-500 group hover:scale-105 hover:-translate-y-2 relative overflow-hidden">
-            {/* Animated background */}
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-            
-            {/* Icon with glow effect */}
-            <div className="relative z-10 mb-6">
-              <div className="w-16 h-16 mx-auto bg-gradient-to-br from-blue-500/20 to-cyan-500/20 rounded-xl flex items-center justify-center group-hover:shadow-glow transition-all duration-300 group-hover:scale-110">
-                <Droplets className="w-8 h-8 text-primary group-hover:text-primary/80 transition-colors" />
-              </div>
-              {/* Drip animation */}
-              <div className="absolute top-12 left-1/2 transform -translate-x-1/2">
-                <div className="w-1 h-1 bg-blue-400 rounded-full animate-ping opacity-60"></div>
-              </div>
-            </div>
-            
-            <h3 className="font-semibold mb-3 text-lg group-hover:text-primary transition-colors relative z-10">Drip Feed</h3>
-            <p className="text-sm text-muted-foreground group-hover:text-muted-foreground/80 transition-colors relative z-10">Raise social engagement at the desired speed</p>
-            
-            {/* Speed lines */}
-            <div className="absolute top-1/2 right-4 transform -translate-y-1/2 opacity-20 group-hover:opacity-40 transition-opacity">
-              <div className="space-y-1">
-                <div className="w-4 h-0.5 bg-primary rounded-full"></div>
-                <div className="w-3 h-0.5 bg-primary rounded-full"></div>
-                <div className="w-2 h-0.5 bg-primary rounded-full"></div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="text-center p-8 bg-gradient-card border border-border rounded-xl shadow-card hover:shadow-glow transition-all duration-500 group hover:scale-105 hover:-translate-y-2 relative overflow-hidden">
-            {/* Animated background */}
-            <div className="absolute inset-0 bg-gradient-to-br from-accent/10 via-transparent to-primary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-            
-            {/* Icon with glow effect */}
-            <div className="relative z-10 mb-6">
-              <div className="w-16 h-16 mx-auto bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-xl flex items-center justify-center group-hover:shadow-glow transition-all duration-300 group-hover:scale-110">
-                <Zap className="w-8 h-8 text-primary group-hover:text-primary/80 transition-colors animate-pulse" />
-              </div>
-              {/* Electric sparks */}
-              <div className="absolute top-2 right-2 w-1 h-1 bg-yellow-400 rounded-full animate-ping"></div>
-              <div className="absolute bottom-2 left-2 w-0.5 h-0.5 bg-orange-400 rounded-full animate-pulse delay-300"></div>
-            </div>
-            
-            <h3 className="font-semibold mb-3 text-lg group-hover:text-primary transition-colors relative z-10">Integrations</h3>
-            <p className="text-sm text-muted-foreground group-hover:text-muted-foreground/80 transition-colors relative z-10">We have a bunch of integrations to fit in your panel</p>
-            
-            {/* Connection nodes */}
-            <div className="absolute top-4 right-4 opacity-20 group-hover:opacity-40 transition-opacity">
-              <div className="w-4 h-4 relative">
-                <div className="absolute w-1 h-1 bg-primary rounded-full top-0 left-0"></div>
-                <div className="absolute w-1 h-1 bg-primary rounded-full top-0 right-0"></div>
-                <div className="absolute w-1 h-1 bg-primary rounded-full bottom-0 left-0"></div>
-                <div className="absolute w-1 h-1 bg-primary rounded-full bottom-0 right-0"></div>
-                <div className="absolute w-0.5 h-4 bg-primary/50 left-1/2 transform -translate-x-1/2"></div>
-                <div className="absolute w-4 h-0.5 bg-primary/50 top-1/2 transform -translate-y-1/2"></div>
-              </div>
-            </div>
-          </div>
-        </div>
+              
+              <h3 className="font-semibold mb-3 text-lg group-hover:text-primary transition-colors relative z-10">
+                {feature.title}
+              </h3>
+              <p className="text-sm text-muted-foreground relative z-10">
+                {feature.desc}
+              </p>
+
+              {/* Bottom accent */}
+              <motion.div 
+                className={`absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r ${feature.gradient}`}
+                initial={{ scaleX: 0 }}
+                whileInView={{ scaleX: 1 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.5, duration: 0.5 }}
+                style={{ transformOrigin: "left" }}
+              />
+            </motion.div>
+          ))}
+        </motion.div>
       </div>
     </section>
   );
