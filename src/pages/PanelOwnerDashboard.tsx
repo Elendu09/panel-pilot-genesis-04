@@ -56,8 +56,6 @@ import { Helmet } from "react-helmet-async";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { LowBalanceAlert } from "@/components/panel/LowBalanceAlert";
-import { cn } from "@/lib/utils";
-import { motion, AnimatePresence } from "framer-motion";
 
 const PanelOwnerDashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
