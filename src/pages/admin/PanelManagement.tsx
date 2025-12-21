@@ -232,59 +232,59 @@ const PanelManagement = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
-          <h1 className="text-3xl font-bold">Panel Management</h1>
-          <p className="text-muted-foreground">Monitor and manage all SMM panels on the platform</p>
+          <h1 className="text-2xl md:text-3xl font-bold">Panel Management</h1>
+          <p className="text-sm text-muted-foreground">Monitor and manage all SMM panels on the platform</p>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
         <Card className="bg-gradient-card border-border shadow-card">
-          <CardContent className="p-6">
+          <CardContent className="p-4 md:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Panels</p>
-                <p className="text-2xl font-bold text-primary">{totalPanels}</p>
+                <p className="text-xs md:text-sm font-medium text-muted-foreground">Total Panels</p>
+                <p className="text-xl md:text-2xl font-bold text-primary">{totalPanels}</p>
               </div>
-              <Monitor className="w-8 h-8 text-primary" />
+              <Monitor className="w-6 h-6 md:w-8 md:h-8 text-primary" />
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-card border-border shadow-card">
-          <CardContent className="p-6">
+          <CardContent className="p-4 md:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Active Panels</p>
-                <p className="text-2xl font-bold text-primary">{activePanels}</p>
+                <p className="text-xs md:text-sm font-medium text-muted-foreground">Active Panels</p>
+                <p className="text-xl md:text-2xl font-bold text-primary">{activePanels}</p>
               </div>
-              <CheckCircle className="w-8 h-8 text-primary" />
+              <CheckCircle className="w-6 h-6 md:w-8 md:h-8 text-primary" />
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-card border-border shadow-card">
-          <CardContent className="p-6">
+          <CardContent className="p-4 md:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Pending Approval</p>
-                <p className="text-2xl font-bold text-primary">{pendingPanels}</p>
+                <p className="text-xs md:text-sm font-medium text-muted-foreground">Pending</p>
+                <p className="text-xl md:text-2xl font-bold text-primary">{pendingPanels}</p>
               </div>
-              <Clock className="w-8 h-8 text-primary" />
+              <Clock className="w-6 h-6 md:w-8 md:h-8 text-primary" />
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-card border-border shadow-card">
-          <CardContent className="p-6">
+          <CardContent className="p-4 md:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Monthly Revenue</p>
-                <p className="text-2xl font-bold text-primary">${totalRevenue.toFixed(2)}</p>
+                <p className="text-xs md:text-sm font-medium text-muted-foreground">Revenue</p>
+                <p className="text-xl md:text-2xl font-bold text-primary">${totalRevenue.toFixed(0)}</p>
               </div>
-              <DollarSign className="w-8 h-8 text-primary" />
+              <DollarSign className="w-6 h-6 md:w-8 md:h-8 text-primary" />
             </div>
           </CardContent>
         </Card>
@@ -325,113 +325,130 @@ const PanelManagement = () => {
               <p className="text-muted-foreground">Loading panels...</p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Panel</TableHead>
-                  <TableHead>Owner</TableHead>
-                  <TableHead>Domain</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Commission</TableHead>
-                  <TableHead>Revenue</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              {/* Desktop Table View */}
+              <div className="hidden lg:block overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Panel</TableHead>
+                      <TableHead>Owner</TableHead>
+                      <TableHead>Domain</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Commission</TableHead>
+                      <TableHead>Revenue</TableHead>
+                      <TableHead>Created</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredPanels.map((panel) => (
+                      <TableRow key={panel.id}>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">{panel.name}</p>
+                            <p className="text-sm text-muted-foreground line-clamp-1">{panel.description || 'No description'}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">{panel.owner?.full_name || 'No Name'}</p>
+                            <p className="text-sm text-muted-foreground">{panel.owner?.email}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Globe className="w-3 h-3 text-muted-foreground" />
+                            <span className="text-sm font-mono">{panel.custom_domain || `${panel.subdomain}.smmpilot.online`}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={getStatusColor(panel.status)}>
+                            {getStatusIcon(panel.status)}
+                            <span className="ml-1 capitalize">{panel.status}</span>
+                          </Badge>
+                        </TableCell>
+                        <TableCell><span className="font-medium">{panel.commission_rate || 5}%</span></TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <TrendingUp className="w-3 h-3 text-muted-foreground" />
+                            <span className="font-medium">${panel.monthly_revenue?.toFixed(2) || '0.00'}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                            <Calendar className="w-3 h-3" />{new Date(panel.created_at).toLocaleDateString()}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button onClick={() => openDetailsDialog(panel)} variant="ghost" size="sm" className="h-8 w-8 p-0" title="View Details"><Eye className="w-4 h-4" /></Button>
+                            <Button onClick={() => openEditDialog(panel)} variant="ghost" size="sm" className="h-8 w-8 p-0" title="Edit Panel"><Edit className="w-4 h-4" /></Button>
+                            {panel.status === 'pending' && (
+                              <Button onClick={() => updatePanelStatus(panel.id, 'active')} variant="ghost" size="sm" className="h-8 w-8 p-0 text-green-500 hover:text-green-600" title="Approve"><CheckCircle className="w-4 h-4" /></Button>
+                            )}
+                            {panel.status === 'active' && (
+                              <Button onClick={() => updatePanelStatus(panel.id, 'suspended')} variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-500 hover:text-red-600" title="Suspend"><Ban className="w-4 h-4" /></Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile Card View */}
+              <div className="lg:hidden space-y-3">
                 {filteredPanels.map((panel) => (
-                  <TableRow key={panel.id}>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{panel.name}</p>
-                        <p className="text-sm text-muted-foreground line-clamp-1">
-                          {panel.description || 'No description'}
-                        </p>
+                  <div key={panel.id} className="p-4 rounded-xl border border-border bg-accent/30">
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold truncate">{panel.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{panel.owner?.email}</p>
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{panel.owner?.full_name || 'No Name'}</p>
-                        <p className="text-sm text-muted-foreground">{panel.owner?.email}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Globe className="w-3 h-3 text-muted-foreground" />
-                        <span className="text-sm font-mono">
-                          {panel.custom_domain || `${panel.subdomain}.smmpilot.online`}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={getStatusColor(panel.status)}>
+                      <Badge className={`shrink-0 ${getStatusColor(panel.status)}`}>
                         {getStatusIcon(panel.status)}
                         <span className="ml-1 capitalize">{panel.status}</span>
                       </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <span className="font-medium">{panel.commission_rate || 5}%</span>
-                    </TableCell>
-                    <TableCell>
+                    </div>
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground mb-3">
+                      <Globe className="w-3 h-3" />
+                      <span className="font-mono truncate">{panel.custom_domain || `${panel.subdomain}.smmpilot.online`}</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-sm mb-3">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Commission</p>
+                        <p className="font-medium">{panel.commission_rate || 5}%</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Revenue</p>
+                        <p className="font-medium">${panel.monthly_revenue?.toFixed(0) || '0'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Orders</p>
+                        <p className="font-medium">{panel.total_orders || 0}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between pt-3 border-t border-border">
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <Calendar className="w-3 h-3" />{new Date(panel.created_at).toLocaleDateString()}
+                      </div>
                       <div className="flex items-center gap-1">
-                        <TrendingUp className="w-3 h-3 text-muted-foreground" />
-                        <span className="font-medium">${panel.monthly_revenue?.toFixed(2) || '0.00'}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <Calendar className="w-3 h-3" />
-                        {new Date(panel.created_at).toLocaleDateString()}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          onClick={() => openDetailsDialog(panel)}
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0"
-                          title="View Details"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          onClick={() => openEditDialog(panel)}
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0"
-                          title="Edit Panel"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
+                        <Button onClick={() => openDetailsDialog(panel)} variant="ghost" size="sm" className="h-8 w-8 p-0"><Eye className="w-4 h-4" /></Button>
+                        <Button onClick={() => openEditDialog(panel)} variant="ghost" size="sm" className="h-8 w-8 p-0"><Edit className="w-4 h-4" /></Button>
                         {panel.status === 'pending' && (
-                          <Button
-                            onClick={() => updatePanelStatus(panel.id, 'active')}
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0 text-green-500 hover:text-green-600"
-                            title="Approve"
-                          >
-                            <CheckCircle className="w-4 h-4" />
-                          </Button>
+                          <Button onClick={() => updatePanelStatus(panel.id, 'active')} variant="ghost" size="sm" className="h-8 w-8 p-0 text-green-500"><CheckCircle className="w-4 h-4" /></Button>
                         )}
                         {panel.status === 'active' && (
-                          <Button
-                            onClick={() => updatePanelStatus(panel.id, 'suspended')}
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0 text-red-500 hover:text-red-600"
-                            title="Suspend"
-                          >
-                            <Ban className="w-4 h-4" />
-                          </Button>
+                          <Button onClick={() => updatePanelStatus(panel.id, 'suspended')} variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-500"><Ban className="w-4 h-4" /></Button>
                         )}
                       </div>
-                    </TableCell>
-                  </TableRow>
+                    </div>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+            </>
           )}
 
           {!loading && filteredPanels.length === 0 && (

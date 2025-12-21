@@ -1,0 +1,263 @@
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { 
+  Search, 
+  Book, 
+  HelpCircle, 
+  Zap, 
+  CreditCard, 
+  Globe, 
+  Shield, 
+  Settings,
+  ChevronRight
+} from "lucide-react";
+
+interface FAQItem {
+  question: string;
+  answer: string;
+}
+
+interface KnowledgeCategory {
+  id: string;
+  title: string;
+  icon: React.ElementType;
+  color: string;
+  faqs: FAQItem[];
+}
+
+const knowledgeCategories: KnowledgeCategory[] = [
+  {
+    id: "getting-started",
+    title: "Getting Started",
+    icon: Zap,
+    color: "text-blue-500 bg-blue-500/10",
+    faqs: [
+      {
+        question: "How do I set up my SMM panel?",
+        answer: "After creating your account, go to General Settings to configure your panel name, description, and branding. Then set up your services by going to Services Management and adding services from your connected providers."
+      },
+      {
+        question: "How do I connect a provider API?",
+        answer: "Navigate to Provider Management, click 'Add Provider', and enter your provider's API endpoint and API key. The system will automatically verify the connection and sync available services."
+      },
+      {
+        question: "What's the difference between provider and panel prices?",
+        answer: "Provider price is what you pay to the upstream provider for each service. Panel price is what you charge your customers. The difference is your profit margin."
+      }
+    ]
+  },
+  {
+    id: "payments",
+    title: "Payments & Billing",
+    icon: CreditCard,
+    color: "text-emerald-500 bg-emerald-500/10",
+    faqs: [
+      {
+        question: "What payment methods are supported?",
+        answer: "We support 200+ payment systems including PayPal, Stripe, Paystack, Korapay, Flutterwave, PerfectMoney, Cryptomus, USDT, and bank transfers for multiple countries."
+      },
+      {
+        question: "How do commissions work?",
+        answer: "The platform charges a small commission (default 5%) on completed orders. You only pay when you earn - zero fees if you have no income."
+      },
+      {
+        question: "When do I receive payouts?",
+        answer: "Payouts are processed automatically based on your configured payment schedule. You can view pending payouts in your Billing section."
+      }
+    ]
+  },
+  {
+    id: "domains",
+    title: "Custom Domains",
+    icon: Globe,
+    color: "text-violet-500 bg-violet-500/10",
+    faqs: [
+      {
+        question: "How do I connect my own domain?",
+        answer: "Go to Domain Settings, enter your domain, and follow the DNS configuration instructions. You'll need to add CNAME records pointing to our servers. SSL certificates are automatically provisioned."
+      },
+      {
+        question: "How long does DNS propagation take?",
+        answer: "DNS changes typically propagate within 24-48 hours, though most changes reflect within a few hours. Use the 'Verify DNS' button to check status."
+      },
+      {
+        question: "Can I use a subdomain instead of a full domain?",
+        answer: "Yes! You can use either a custom subdomain (shop.yourdomain.com) or a full domain (yourdomain.com). Both are fully supported."
+      }
+    ]
+  },
+  {
+    id: "security",
+    title: "Security & Account",
+    icon: Shield,
+    color: "text-amber-500 bg-amber-500/10",
+    faqs: [
+      {
+        question: "How do I enable two-factor authentication?",
+        answer: "Go to Security Settings and enable 2FA. You'll need an authenticator app like Google Authenticator or Authy to set it up."
+      },
+      {
+        question: "What should I do if I suspect unauthorized access?",
+        answer: "Immediately change your password, enable 2FA if not already active, and review your recent activity in the Audit Logs. Contact support if you notice suspicious activity."
+      },
+      {
+        question: "How is my data protected?",
+        answer: "We use industry-standard encryption for all data at rest and in transit. API keys are encrypted and never displayed in full. Regular security audits ensure ongoing protection."
+      }
+    ]
+  },
+  {
+    id: "orders",
+    title: "Orders & Services",
+    icon: Settings,
+    color: "text-pink-500 bg-pink-500/10",
+    faqs: [
+      {
+        question: "What happens if an order fails?",
+        answer: "Failed orders are automatically refunded to the customer's balance. You can also manually refund orders from the Order Management page."
+      },
+      {
+        question: "Can I set custom prices for services?",
+        answer: "Yes! Each service can have its own custom price. You can also use the Pricing Optimizer tool to automatically suggest optimal pricing based on market rates."
+      },
+      {
+        question: "How do I track order progress?",
+        answer: "Orders sync with provider status automatically. View real-time progress in Order Management. Customers can also track their orders on your storefront."
+      }
+    ]
+  }
+];
+
+export const KnowledgeBase = () => {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+  const filteredCategories = knowledgeCategories.map(category => ({
+    ...category,
+    faqs: category.faqs.filter(faq =>
+      faq.question.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      faq.answer.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  })).filter(category => 
+    selectedCategory === null || category.id === selectedCategory
+  ).filter(category => 
+    searchTerm === "" || category.faqs.length > 0
+  );
+
+  const totalFAQs = knowledgeCategories.reduce((sum, cat) => sum + cat.faqs.length, 0);
+
+  return (
+    <div className="space-y-6">
+      {/* Search Header */}
+      <Card className="bg-gradient-card border-border">
+        <CardContent className="p-4 md:p-6">
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
+            <div className="p-3 rounded-xl bg-primary/10">
+              <Book className="w-6 h-6 text-primary" />
+            </div>
+            <div className="flex-1">
+              <h2 className="text-xl font-bold">Knowledge Base</h2>
+              <p className="text-sm text-muted-foreground">
+                {totalFAQs} articles across {knowledgeCategories.length} categories
+              </p>
+            </div>
+            <div className="relative w-full md:w-72">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search knowledge base..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Category Pills */}
+      <div className="flex flex-wrap gap-2">
+        <Badge
+          variant={selectedCategory === null ? "default" : "outline"}
+          className="cursor-pointer px-3 py-1.5 text-sm"
+          onClick={() => setSelectedCategory(null)}
+        >
+          All Categories
+        </Badge>
+        {knowledgeCategories.map((category) => {
+          const Icon = category.icon;
+          return (
+            <Badge
+              key={category.id}
+              variant={selectedCategory === category.id ? "default" : "outline"}
+              className="cursor-pointer px-3 py-1.5 text-sm gap-1.5"
+              onClick={() => setSelectedCategory(category.id)}
+            >
+              <Icon className="w-3 h-3" />
+              {category.title}
+            </Badge>
+          );
+        })}
+      </div>
+
+      {/* FAQ Sections */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {filteredCategories.map((category) => {
+          const Icon = category.icon;
+          return (
+            <Card key={category.id} className="bg-gradient-card border-border">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-3 text-base">
+                  <div className={`p-2 rounded-lg ${category.color}`}>
+                    <Icon className="w-4 h-4" />
+                  </div>
+                  {category.title}
+                  <Badge variant="secondary" className="ml-auto text-xs">
+                    {category.faqs.length}
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                {category.faqs.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    No matching articles found
+                  </p>
+                ) : (
+                  <Accordion type="single" collapsible className="w-full">
+                    {category.faqs.map((faq, index) => (
+                      <AccordionItem key={index} value={`${category.id}-${index}`} className="border-border/50">
+                        <AccordionTrigger className="text-left text-sm hover:no-underline py-3">
+                          <span className="flex items-start gap-2 pr-2">
+                            <HelpCircle className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                            {faq.question}
+                          </span>
+                        </AccordionTrigger>
+                        <AccordionContent className="text-sm text-muted-foreground pl-6">
+                          {faq.answer}
+                        </AccordionContent>
+                      </AccordionItem>
+                    ))}
+                  </Accordion>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      {filteredCategories.length === 0 && (
+        <Card className="bg-gradient-card border-border">
+          <CardContent className="py-12 text-center">
+            <HelpCircle className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+            <h3 className="text-lg font-semibold mb-2">No Results Found</h3>
+            <p className="text-muted-foreground">
+              Try adjusting your search or browse all categories
+            </p>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+};

@@ -19,8 +19,10 @@ import {
   Send,
   Users,
   HeadphonesIcon,
-  Inbox
+  Inbox,
+  Book
 } from "lucide-react";
+import { KnowledgeBase } from "@/components/support/KnowledgeBase";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -445,16 +447,24 @@ const SupportCenter = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={(val) => { setActiveTab(val); setSelectedTicket(null); }}>
-        <TabsList className="grid w-full max-w-md grid-cols-2">
-          <TabsTrigger value="customer" className="gap-2">
-            <Users className="w-4 h-4" />
+        <TabsList className="grid w-full max-w-lg grid-cols-3">
+          <TabsTrigger value="knowledge" className="gap-2 text-xs sm:text-sm">
+            <Book className="w-4 h-4 hidden sm:block" />
+            Knowledge Base
+          </TabsTrigger>
+          <TabsTrigger value="customer" className="gap-2 text-xs sm:text-sm">
+            <Users className="w-4 h-4 hidden sm:block" />
             Customer Tickets
           </TabsTrigger>
-          <TabsTrigger value="platform" className="gap-2">
-            <HeadphonesIcon className="w-4 h-4" />
+          <TabsTrigger value="platform" className="gap-2 text-xs sm:text-sm">
+            <HeadphonesIcon className="w-4 h-4 hidden sm:block" />
             Platform Support
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="knowledge" className="mt-6">
+          <KnowledgeBase />
+        </TabsContent>
 
         <TabsContent value="customer" className="mt-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

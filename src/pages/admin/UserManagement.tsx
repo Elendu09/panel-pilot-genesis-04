@@ -211,59 +211,59 @@ const UserManagement = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
-          <h1 className="text-3xl font-bold">User Management</h1>
-          <p className="text-muted-foreground">Manage all platform users, roles, and permissions</p>
+          <h1 className="text-2xl md:text-3xl font-bold">User Management</h1>
+          <p className="text-sm text-muted-foreground">Manage all platform users, roles, and permissions</p>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
         <Card className="bg-gradient-card border-border shadow-card">
-          <CardContent className="p-6">
+          <CardContent className="p-4 md:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Users</p>
-                <p className="text-2xl font-bold text-primary">{totalUsers}</p>
+                <p className="text-xs md:text-sm font-medium text-muted-foreground">Total Users</p>
+                <p className="text-xl md:text-2xl font-bold text-primary">{totalUsers}</p>
               </div>
-              <Users className="w-8 h-8 text-primary" />
+              <Users className="w-6 h-6 md:w-8 md:h-8 text-primary" />
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-card border-border shadow-card">
-          <CardContent className="p-6">
+          <CardContent className="p-4 md:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Active Users</p>
-                <p className="text-2xl font-bold text-primary">{activeUsers}</p>
+                <p className="text-xs md:text-sm font-medium text-muted-foreground">Active Users</p>
+                <p className="text-xl md:text-2xl font-bold text-primary">{activeUsers}</p>
               </div>
-              <UserCheck className="w-8 h-8 text-primary" />
+              <UserCheck className="w-6 h-6 md:w-8 md:h-8 text-primary" />
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-card border-border shadow-card">
-          <CardContent className="p-6">
+          <CardContent className="p-4 md:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Panel Owners</p>
-                <p className="text-2xl font-bold text-primary">{panelOwners}</p>
+                <p className="text-xs md:text-sm font-medium text-muted-foreground">Panel Owners</p>
+                <p className="text-xl md:text-2xl font-bold text-primary">{panelOwners}</p>
               </div>
-              <Shield className="w-8 h-8 text-primary" />
+              <Shield className="w-6 h-6 md:w-8 md:h-8 text-primary" />
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-card border-border shadow-card">
-          <CardContent className="p-6">
+          <CardContent className="p-4 md:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Revenue</p>
-                <p className="text-2xl font-bold text-primary">${totalRevenue.toFixed(2)}</p>
+                <p className="text-xs md:text-sm font-medium text-muted-foreground">Total Revenue</p>
+                <p className="text-xl md:text-2xl font-bold text-primary">${totalRevenue.toFixed(2)}</p>
               </div>
-              <DollarSign className="w-8 h-8 text-primary" />
+              <DollarSign className="w-6 h-6 md:w-8 md:h-8 text-primary" />
             </div>
           </CardContent>
         </Card>
@@ -303,125 +303,123 @@ const UserManagement = () => {
               <p className="text-muted-foreground">Loading users...</p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Balance</TableHead>
-                  <TableHead>Total Spent</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Joined</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              {/* Desktop Table View */}
+              <div className="hidden lg:block overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>User</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Balance</TableHead>
+                      <TableHead>Total Spent</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Joined</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredUsers.map((user) => (
+                      <TableRow key={user.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center">
+                              {user.avatar_url ? (
+                                <img src={user.avatar_url} alt={user.full_name || user.email} className="w-8 h-8 rounded-full" />
+                              ) : (
+                                <span className="text-sm font-medium">{(user.full_name || user.email).charAt(0).toUpperCase()}</span>
+                              )}
+                            </div>
+                            <div>
+                              <p className="font-medium">{user.full_name || 'No Name'}</p>
+                              <p className="text-sm text-muted-foreground">{user.email}</p>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={user.role === 'admin' ? 'destructive' : 'default'} className={user.role === 'admin' ? 'bg-red-500/20 text-red-400' : 'bg-blue-500/20 text-blue-400'}>
+                            {user.role === 'admin' ? <><Shield className="w-3 h-3 mr-1" />Admin</> : <><Users className="w-3 h-3 mr-1" />Panel Owner</>}
+                          </Badge>
+                        </TableCell>
+                        <TableCell><span className="font-medium">${user.balance?.toFixed(2) || '0.00'}</span></TableCell>
+                        <TableCell><span className="font-medium">${user.total_spent?.toFixed(2) || '0.00'}</span></TableCell>
+                        <TableCell>
+                          <Badge variant={user.is_active ? "default" : "secondary"} className={user.is_active ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}>
+                            {user.is_active ? <><UserCheck className="w-3 h-3 mr-1" />Active</> : <><UserX className="w-3 h-3 mr-1" />Inactive</>}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                            <Calendar className="w-3 h-3" />{new Date(user.created_at).toLocaleDateString()}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button onClick={() => openDetailsDialog(user)} variant="ghost" size="sm" className="h-8 w-8 p-0" title="View Details"><Eye className="w-4 h-4" /></Button>
+                            <Button onClick={() => openEditDialog(user)} variant="ghost" size="sm" className="h-8 w-8 p-0" title="Edit User"><Edit className="w-4 h-4" /></Button>
+                            <Button onClick={() => toggleUserStatus(user)} variant="ghost" size="sm" className={`h-8 w-8 p-0 ${!user.is_active ? 'text-green-500 hover:text-green-600' : 'text-red-500 hover:text-red-600'}`} title={user.is_active ? 'Deactivate' : 'Activate'}>
+                              {user.is_active ? <Ban className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile Card View */}
+              <div className="lg:hidden space-y-3">
                 {filteredUsers.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell>
+                  <div key={user.id} className="p-4 rounded-xl border border-border bg-accent/30">
+                    <div className="flex items-start justify-between gap-3 mb-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center">
+                        <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center shrink-0">
                           {user.avatar_url ? (
-                            <img
-                              src={user.avatar_url}
-                              alt={user.full_name || user.email}
-                              className="w-8 h-8 rounded-full"
-                            />
+                            <img src={user.avatar_url} alt={user.full_name || user.email} className="w-10 h-10 rounded-full" />
                           ) : (
-                            <span className="text-sm font-medium">
-                              {(user.full_name || user.email).charAt(0).toUpperCase()}
-                            </span>
+                            <span className="text-sm font-medium">{(user.full_name || user.email).charAt(0).toUpperCase()}</span>
                           )}
                         </div>
-                        <div>
-                          <p className="font-medium">{user.full_name || 'No Name'}</p>
-                          <p className="text-sm text-muted-foreground">{user.email}</p>
+                        <div className="min-w-0">
+                          <p className="font-medium truncate">{user.full_name || 'No Name'}</p>
+                          <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                         </div>
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={user.role === 'admin' ? 'destructive' : 'default'}
-                        className={user.role === 'admin' ? 'bg-red-500/20 text-red-400' : 'bg-blue-500/20 text-blue-400'}
-                      >
-                        {user.role === 'admin' ? (
-                          <>
-                            <Shield className="w-3 h-3 mr-1" />
-                            Admin
-                          </>
-                        ) : (
-                          <>
-                            <Users className="w-3 h-3 mr-1" />
-                            Panel Owner
-                          </>
-                        )}
+                      <Badge variant={user.is_active ? "default" : "secondary"} className={`shrink-0 ${user.is_active ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
+                        {user.is_active ? 'Active' : 'Inactive'}
                       </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <span className="font-medium">${user.balance?.toFixed(2) || '0.00'}</span>
-                    </TableCell>
-                    <TableCell>
-                      <span className="font-medium">${user.total_spent?.toFixed(2) || '0.00'}</span>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={user.is_active ? "default" : "secondary"}
-                        className={user.is_active ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}
-                      >
-                        {user.is_active ? (
-                          <>
-                            <UserCheck className="w-3 h-3 mr-1" />
-                            Active
-                          </>
-                        ) : (
-                          <>
-                            <UserX className="w-3 h-3 mr-1" />
-                            Inactive
-                          </>
-                        )}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <Calendar className="w-3 h-3" />
-                        {new Date(user.created_at).toLocaleDateString()}
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-sm mb-3">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Role</p>
+                        <Badge variant="outline" className="text-xs mt-1">{user.role === 'admin' ? 'Admin' : 'Panel Owner'}</Badge>
                       </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          onClick={() => openDetailsDialog(user)}
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0"
-                          title="View Details"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          onClick={() => openEditDialog(user)}
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0"
-                          title="Edit User"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          onClick={() => toggleUserStatus(user)}
-                          variant="ghost"
-                          size="sm"
-                          className={`h-8 w-8 p-0 ${!user.is_active ? 'text-green-500 hover:text-green-600' : 'text-red-500 hover:text-red-600'}`}
-                          title={user.is_active ? 'Deactivate' : 'Activate'}
-                        >
+                      <div>
+                        <p className="text-xs text-muted-foreground">Balance</p>
+                        <p className="font-medium">${user.balance?.toFixed(2) || '0.00'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Spent</p>
+                        <p className="font-medium">${user.total_spent?.toFixed(2) || '0.00'}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between pt-3 border-t border-border">
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <Calendar className="w-3 h-3" />{new Date(user.created_at).toLocaleDateString()}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button onClick={() => openDetailsDialog(user)} variant="ghost" size="sm" className="h-8 w-8 p-0"><Eye className="w-4 h-4" /></Button>
+                        <Button onClick={() => openEditDialog(user)} variant="ghost" size="sm" className="h-8 w-8 p-0"><Edit className="w-4 h-4" /></Button>
+                        <Button onClick={() => toggleUserStatus(user)} variant="ghost" size="sm" className={`h-8 w-8 p-0 ${!user.is_active ? 'text-green-500' : 'text-red-500'}`}>
                           {user.is_active ? <Ban className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
                         </Button>
                       </div>
-                    </TableCell>
-                  </TableRow>
+                    </div>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+            </>
           )}
 
           {!loading && filteredUsers.length === 0 && (
