@@ -1,4 +1,4 @@
-
+import { useState, useEffect, useMemo } from "react";
 import { Helmet } from "react-helmet-async";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,11 +8,11 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign, CreditCard, Landmark, Coins, Save, CheckCircle2, Search, Filter } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { DollarSign, CreditCard, Landmark, Coins, Save, CheckCircle2, Search, Filter, Loader2, XCircle, Clock } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
-// Generate a broad catalog of payment methods (60+)
-// In production these would come from your backend or a config table.
+// Payment method types
 type Method = {
   id: string;
   name: string;
@@ -40,31 +40,123 @@ const ALL_METHODS: Method[] = baseMethods.map((name, idx) => ({
   region: undefined,
 }));
 
-const STORAGE_KEY = "globalPaymentEnabled";
+interface Transaction {
+  id: string;
+  type: string;
+  amount: number;
+  payment_method: string | null;
+  status: string | null;
+  created_at: string;
+  description: string | null;
+}
+
+interface PlatformFee {
+  id: string;
+  fee_amount: number;
+  order_amount: number;
+  fee_percentage: number;
+  created_at: string;
+  description: string | null;
+}
 
 const PaymentManagement = () => {
   const canonicalUrl = typeof window !== 'undefined' ? `${window.location.origin}/admin/payments` : '';
+  const { toast } = useToast();
 
   const [enabled, setEnabled] = useState<Set<string>>(new Set());
   const [exposeToPanels, setExposeToPanels] = useState(true);
   const [query, setQuery] = useState("");
   const [catFilter, setCatFilter] = useState<Method["category"] | "all">("all");
+  
+  // Real data states
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [platformFees, setPlatformFees] = useState<PlatformFee[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  // Load from localStorage on mount
+  // Platform settings from DB
+  const [platformCommission, setPlatformCommission] = useState(5);
+  const [gatewayFee, setGatewayFee] = useState(2.9);
+  const [fixedFee, setFixedFee] = useState(0.30);
+  const [minPayout, setMinPayout] = useState(25);
+  const [payoutSchedule, setPayoutSchedule] = useState("weekly");
+
+  // Load data on mount
   useEffect(() => {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      try {
-        const parsed: string[] = JSON.parse(raw);
-        setEnabled(new Set(parsed));
-      } catch {}
-    }
+    fetchData();
   }, []);
 
-  // Persist to localStorage whenever enabled set changes
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(enabled)));
-  }, [enabled]);
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      // Fetch transactions
+      const { data: txData } = await supabase
+        .from('transactions')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (txData) setTransactions(txData);
+
+      // Fetch platform fees
+      const { data: feeData } = await supabase
+        .from('platform_fees')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (feeData) setPlatformFees(feeData);
+
+      // Fetch platform settings
+      const { data: settings } = await supabase
+        .from('platform_settings')
+        .select('*')
+        .eq('category', 'payments');
+
+      if (settings) {
+        settings.forEach(s => {
+          const val = s.setting_value;
+          if (s.setting_key === 'platform_commission' && typeof val === 'number') setPlatformCommission(val);
+          if (s.setting_key === 'gateway_fee' && typeof val === 'number') setGatewayFee(val);
+          if (s.setting_key === 'fixed_fee' && typeof val === 'number') setFixedFee(val);
+          if (s.setting_key === 'min_payout' && typeof val === 'number') setMinPayout(val);
+          if (s.setting_key === 'payout_schedule' && typeof val === 'string') setPayoutSchedule(val);
+          if (s.setting_key === 'enabled_methods' && Array.isArray(val)) setEnabled(new Set(val as string[]));
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching payment data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const settingsToUpsert = [
+        { setting_key: 'platform_commission', setting_value: platformCommission, category: 'payments' },
+        { setting_key: 'gateway_fee', setting_value: gatewayFee, category: 'payments' },
+        { setting_key: 'fixed_fee', setting_value: fixedFee, category: 'payments' },
+        { setting_key: 'min_payout', setting_value: minPayout, category: 'payments' },
+        { setting_key: 'payout_schedule', setting_value: payoutSchedule, category: 'payments' },
+        { setting_key: 'enabled_methods', setting_value: Array.from(enabled), category: 'payments' },
+      ];
+
+      for (const setting of settingsToUpsert) {
+        await supabase
+          .from('platform_settings')
+          .upsert(setting, { onConflict: 'setting_key' });
+      }
+
+      toast({ title: 'Settings saved successfully' });
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      toast({ variant: 'destructive', title: 'Failed to save settings' });
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase().trim();
@@ -87,6 +179,38 @@ const PaymentManagement = () => {
   const enableAll = () => setEnabled(new Set(ALL_METHODS.map(m => m.id)));
   const disableAll = () => setEnabled(new Set());
 
+  // Calculate analytics
+  const totalRevenue = transactions
+    .filter(t => t.type === 'deposit' && t.status === 'completed')
+    .reduce((sum, t) => sum + t.amount, 0);
+  
+  const totalFees = platformFees.reduce((sum, f) => sum + f.fee_amount, 0);
+  
+  const pendingPayouts = transactions
+    .filter(t => t.type === 'withdrawal' && t.status === 'pending')
+    .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+
+  const getStatusBadge = (status: string | null) => {
+    switch (status) {
+      case 'completed':
+        return <Badge className="bg-green-500/10 text-green-500"><CheckCircle2 className="w-3 h-3 mr-1" /> Completed</Badge>;
+      case 'pending':
+        return <Badge className="bg-yellow-500/10 text-yellow-500"><Clock className="w-3 h-3 mr-1" /> Pending</Badge>;
+      case 'failed':
+        return <Badge className="bg-red-500/10 text-red-500"><XCircle className="w-3 h-3 mr-1" /> Failed</Badge>;
+      default:
+        return <Badge variant="outline">{status || 'Unknown'}</Badge>;
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 animate-fade-in">
       <Helmet>
@@ -101,8 +225,51 @@ const PaymentManagement = () => {
           <h1 className="text-3xl font-bold">Payments</h1>
           <p className="text-muted-foreground">Gateways, global methods, fees and payout settings</p>
         </div>
-        <Button className="bg-gradient-primary hover:shadow-glow"><Save className="w-4 h-4 mr-2" /> Save</Button>
+        <Button onClick={handleSave} disabled={saving} className="bg-gradient-primary hover:shadow-glow">
+          {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+          Save
+        </Button>
       </header>
+
+      {/* Analytics Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="bg-card/60 backdrop-blur-xl border-border/50">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-muted-foreground mb-2">
+              <DollarSign className="w-4 h-4" />
+              <span className="text-sm">Total Revenue</span>
+            </div>
+            <p className="text-2xl font-bold text-green-500">${totalRevenue.toFixed(2)}</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-card/60 backdrop-blur-xl border-border/50">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-muted-foreground mb-2">
+              <CreditCard className="w-4 h-4" />
+              <span className="text-sm">Platform Fees</span>
+            </div>
+            <p className="text-2xl font-bold text-primary">${totalFees.toFixed(2)}</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-card/60 backdrop-blur-xl border-border/50">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-muted-foreground mb-2">
+              <Landmark className="w-4 h-4" />
+              <span className="text-sm">Pending Payouts</span>
+            </div>
+            <p className="text-2xl font-bold text-amber-500">${pendingPayouts.toFixed(2)}</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-card/60 backdrop-blur-xl border-border/50">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-muted-foreground mb-2">
+              <Coins className="w-4 h-4" />
+              <span className="text-sm">Transactions</span>
+            </div>
+            <p className="text-2xl font-bold">{transactions.length}</p>
+          </CardContent>
+        </Card>
+      </div>
 
       <Tabs defaultValue="gateways" className="w-full">
         <TabsList className="grid w-full grid-cols-4">
@@ -223,15 +390,70 @@ const PaymentManagement = () => {
             <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <Label>Platform commission (%)</Label>
-                <Input type="number" min={0} max={20} defaultValue={5} />
+                <Input 
+                  type="number" 
+                  min={0} 
+                  max={20} 
+                  value={platformCommission}
+                  onChange={(e) => setPlatformCommission(parseFloat(e.target.value) || 0)}
+                />
               </div>
               <div>
                 <Label>Gateway fee (%)</Label>
-                <Input type="number" min={0} max={10} step={0.1} defaultValue={2.9} />
+                <Input 
+                  type="number" 
+                  min={0} 
+                  max={10} 
+                  step={0.1} 
+                  value={gatewayFee}
+                  onChange={(e) => setGatewayFee(parseFloat(e.target.value) || 0)}
+                />
               </div>
               <div>
                 <Label>Fixed fee ($)</Label>
-                <Input type="number" min={0} step={0.01} defaultValue={0.30} />
+                <Input 
+                  type="number" 
+                  min={0} 
+                  step={0.01} 
+                  value={fixedFee}
+                  onChange={(e) => setFixedFee(parseFloat(e.target.value) || 0)}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Recent Fees from Database */}
+          <Card className="bg-gradient-card border-border shadow-card">
+            <CardHeader>
+              <CardTitle>Recent Platform Fees</CardTitle>
+              <CardDescription>Fees collected from panel transactions</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="text-left text-muted-foreground">
+                    <tr>
+                      <th className="py-2">Date</th>
+                      <th className="py-2">Order Amount</th>
+                      <th className="py-2">Fee %</th>
+                      <th className="py-2">Fee Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {platformFees.length === 0 ? (
+                      <tr><td colSpan={4} className="py-4 text-center text-muted-foreground">No fees collected yet</td></tr>
+                    ) : (
+                      platformFees.slice(0, 5).map((fee) => (
+                        <tr key={fee.id} className="border-t border-border">
+                          <td className="py-3">{new Date(fee.created_at).toLocaleDateString()}</td>
+                          <td className="py-3">${fee.order_amount.toFixed(2)}</td>
+                          <td className="py-3">{fee.fee_percentage}%</td>
+                          <td className="py-3 font-medium text-green-500">${fee.fee_amount.toFixed(2)}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
               </div>
             </CardContent>
           </Card>
@@ -247,11 +469,16 @@ const PaymentManagement = () => {
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label>Minimum payout ($)</Label>
-                  <Input type="number" min={1} defaultValue={25} />
+                  <Input 
+                    type="number" 
+                    min={1} 
+                    value={minPayout}
+                    onChange={(e) => setMinPayout(parseFloat(e.target.value) || 25)}
+                  />
                 </div>
                 <div>
                   <Label>Schedule</Label>
-                  <Select defaultValue="weekly">
+                  <Select value={payoutSchedule} onValueChange={setPayoutSchedule}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="daily">Daily</SelectItem>
@@ -266,33 +493,33 @@ const PaymentManagement = () => {
 
             <Card className="bg-gradient-card border-border shadow-card">
               <CardHeader>
-                <CardTitle>Recent payouts</CardTitle>
-                <CardDescription>Latest payout operations</CardDescription>
+                <CardTitle>Recent Transactions</CardTitle>
+                <CardDescription>Latest payment operations from database</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead className="text-left text-muted-foreground">
                       <tr>
-                        <th className="py-2">ID</th>
+                        <th className="py-2">Date</th>
+                        <th className="py-2">Type</th>
                         <th className="py-2">Amount</th>
-                        <th className="py-2">Method</th>
                         <th className="py-2">Status</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {[1,2,3,4].map((i) => (
-                        <tr key={i} className="border-t border-border">
-                          <td className="py-3">#P{i}203</td>
-                          <td className="py-3">$ {(100+i*23).toFixed(2)}</td>
-                          <td className="py-3">Stripe</td>
-                          <td className="py-3">
-                            <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded bg-accent">
-                              <CheckCircle2 className="w-3 h-3" /> Paid
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
+                      {transactions.length === 0 ? (
+                        <tr><td colSpan={4} className="py-4 text-center text-muted-foreground">No transactions yet</td></tr>
+                      ) : (
+                        transactions.slice(0, 5).map((tx) => (
+                          <tr key={tx.id} className="border-t border-border">
+                            <td className="py-3">{new Date(tx.created_at).toLocaleDateString()}</td>
+                            <td className="py-3 capitalize">{tx.type}</td>
+                            <td className="py-3">${Math.abs(tx.amount).toFixed(2)}</td>
+                            <td className="py-3">{getStatusBadge(tx.status)}</td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
