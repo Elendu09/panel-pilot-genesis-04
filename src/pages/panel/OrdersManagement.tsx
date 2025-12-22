@@ -110,7 +110,12 @@ const OrdersManagement = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setOrders(data || []);
+      // Transform data to match Order type (buyer comes as array from join)
+      const transformedOrders = (data || []).map(order => ({
+        ...order,
+        buyer: Array.isArray(order.buyer) ? order.buyer[0] : order.buyer
+      }));
+      setOrders(transformedOrders);
     } catch (error) {
       console.error('Error fetching orders:', error);
       toast({ variant: 'destructive', title: 'Error', description: 'Failed to load orders' });

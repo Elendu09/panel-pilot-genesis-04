@@ -535,11 +535,12 @@ const CustomerManagement = () => {
           {selectedCustomers.length > 0 && (
             <BulkActionToolbar
               selectedCount={selectedCustomers.length}
-              onEmail={() => setShowBulkEmailDialog(true)}
-              onDiscount={() => setShowBulkDiscountDialog(true)}
+              onSendEmail={() => setShowBulkEmailDialog(true)}
+              onApplyDiscount={() => setShowBulkDiscountDialog(true)}
+              onExport={() => setShowExportDialog(true)}
               onSuspend={handleBulkSuspend}
               onActivate={handleBulkActivate}
-              onClear={() => setSelectedCustomers([])}
+              onClearSelection={() => setSelectedCustomers([])}
             />
           )}
 
@@ -678,10 +679,11 @@ const CustomerManagement = () => {
             {filteredCustomers.map((customer) => (
               <CustomerMobileCard
                 key={customer.id}
-                customer={customer}
-                onSelect={() => setSelectedCustomer(customer)}
-                onBalanceAdjust={() => { setSelectedCustomer(customer); setShowBalanceModal(true); }}
-                onSetPricing={() => handleSetPricing(customer)}
+                customer={customer as any}
+                onView={() => setSelectedCustomer(customer)}
+                onEdit={() => setSelectedCustomer(customer)}
+                onAdjustBalance={() => { setSelectedCustomer(customer); setShowBalanceModal(true); }}
+                onSuspend={async () => { setSelectedCustomers([customer.id]); await handleBulkSuspend(); }}
               />
             ))}
           </div>
