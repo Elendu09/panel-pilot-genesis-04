@@ -1,6 +1,34 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
+interface DesignCustomization {
+  primaryColor?: string;
+  secondaryColor?: string;
+  accentColor?: string;
+  backgroundColor?: string;
+  surfaceColor?: string;
+  textColor?: string;
+  mutedColor?: string;
+  borderRadius?: string;
+  logoUrl?: string;
+  companyName?: string;
+  tagline?: string;
+  heroTitle?: string;
+  heroSubtitle?: string;
+  heroCta?: string;
+  showHero?: boolean;
+  showFeatures?: boolean;
+  showStats?: boolean;
+  showFaqs?: boolean;
+  showTestimonials?: boolean;
+  features?: Array<{ icon: string; title: string; description: string }>;
+  stats?: Array<{ value: string; label: string }>;
+  faqs?: Array<{ question: string; answer: string }>;
+  footerText?: string;
+  footerAbout?: string;
+  footerContact?: string;
+}
+
 interface TenantPanel {
   id: string;
   name: string;
@@ -11,6 +39,7 @@ interface TenantPanel {
   secondary_color: string;
   logo_url?: string;
   status: string;
+  custom_branding?: DesignCustomization;
   settings?: {
     seo_title?: string;
     seo_description?: string;
@@ -102,6 +131,7 @@ export function useTenant(): TenantDetectionResult {
             secondary_color,
             logo_url,
             status,
+            custom_branding,
             panel_settings (
               seo_title,
               seo_description,
@@ -130,6 +160,7 @@ export function useTenant(): TenantDetectionResult {
               secondary_color,
               logo_url,
               status,
+              custom_branding,
               panel_settings (
                 seo_title,
                 seo_description,
@@ -164,6 +195,7 @@ export function useTenant(): TenantDetectionResult {
               secondary_color,
               logo_url,
               status,
+              custom_branding,
               panel_settings (
                 seo_title,
                 seo_description,
@@ -188,8 +220,10 @@ export function useTenant(): TenantDetectionResult {
 
         if (panelData) {
           const settings = panelData.panel_settings;
+          const branding = panelData.custom_branding;
           setPanel({
             ...panelData,
+            custom_branding: branding && typeof branding === 'object' ? branding as DesignCustomization : undefined,
             settings: Array.isArray(settings) ? settings[0] : settings || {}
           });
         } else {
