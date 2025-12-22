@@ -11,6 +11,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { motion } from "framer-motion";
+import AdminViewToggle from "@/components/admin/AdminViewToggle";
+import KanbanColumn from "@/components/admin/KanbanColumn";
+import KanbanCard from "@/components/admin/KanbanCard";
 import { 
   Monitor, 
   CheckCircle, 
@@ -59,6 +63,9 @@ const PanelManagement = () => {
   const [selectedPanel, setSelectedPanel] = useState<Panel | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [view, setView] = useState<'table' | 'kanban'>(() => {
+    return (localStorage.getItem('panelManagementView') as 'table' | 'kanban') || 'table';
+  });
   const [editForm, setEditForm] = useState({
     name: "",
     description: "",
@@ -74,6 +81,10 @@ const PanelManagement = () => {
   useEffect(() => {
     fetchPanels();
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem('panelManagementView', view);
+  }, [view]);
 
   const fetchPanels = async () => {
     try {
@@ -197,9 +208,13 @@ const PanelManagement = () => {
     return matchesSearch && matchesStatus;
   });
 
+  const pendingPanels = filteredPanels.filter(p => p.status === 'pending');
+  const activePanels = filteredPanels.filter(p => p.status === 'active');
+  const suspendedPanels = filteredPanels.filter(p => p.status === 'suspended' || p.status === 'rejected');
+
   const totalPanels = panels.length;
-  const activePanels = panels.filter(p => p.status === 'active').length;
-  const pendingPanels = panels.filter(p => p.status === 'pending').length;
+  const totalActivePanels = panels.filter(p => p.status === 'active').length;
+  const totalPendingPanels = panels.filter(p => p.status === 'pending').length;
   const totalRevenue = panels.reduce((sum, panel) => sum + (panel.monthly_revenue || 0), 0);
 
   const getStatusIcon = (status: string) => {
@@ -219,113 +234,247 @@ const PanelManagement = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active':
-        return 'bg-green-500/20 text-green-400';
+        return 'bg-emerald-500/20 text-emerald-400';
       case 'pending':
-        return 'bg-yellow-500/20 text-yellow-400';
+        return 'bg-amber-500/20 text-amber-400';
       case 'suspended':
       case 'rejected':
         return 'bg-red-500/20 text-red-400';
       default:
-        return 'bg-gray-500/20 text-gray-400';
+        return 'bg-muted text-muted-foreground';
     }
   };
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { staggerChildren: 0.05 } }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 }
+  };
+
+  const renderPanelCard = (panel: Panel) => (
+    <KanbanCard 
+      key={panel.id}
+      variant={panel.status === 'active' ? 'success' : panel.status === 'pending' ? 'warning' : 'danger'}
+      onClick={() => openDetailsDialog(panel)}
+    >
+      <div className="space-y-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <h4 className="font-semibold truncate">{panel.name}</h4>
+            <p className="text-xs text-muted-foreground truncate">{panel.owner?.email}</p>
+          </div>
+          <Badge className={getStatusColor(panel.status)}>
+            {getStatusIcon(panel.status)}
+            <span className="ml-1 capitalize">{panel.status}</span>
+          </Badge>
+        </div>
+        
+        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          <Globe className="w-3 h-3" />
+          <span className="font-mono truncate">{panel.custom_domain || `${panel.subdomain}.smmpilot.online`}</span>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2 text-center">
+          <div className="p-2 bg-accent/50 rounded-lg">
+            <p className="text-xs text-muted-foreground">Commission</p>
+            <p className="font-semibold text-sm">{panel.commission_rate || 5}%</p>
+          </div>
+          <div className="p-2 bg-accent/50 rounded-lg">
+            <p className="text-xs text-muted-foreground">Revenue</p>
+            <p className="font-semibold text-sm">${panel.monthly_revenue?.toFixed(0) || '0'}</p>
+          </div>
+          <div className="p-2 bg-accent/50 rounded-lg">
+            <p className="text-xs text-muted-foreground">Orders</p>
+            <p className="font-semibold text-sm">{panel.total_orders || 0}</p>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between pt-2 border-t border-border">
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Calendar className="w-3 h-3" />
+            {new Date(panel.created_at).toLocaleDateString()}
+          </div>
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Button onClick={(e) => { e.stopPropagation(); openEditDialog(panel); }} variant="ghost" size="sm" className="h-7 w-7 p-0">
+              <Edit className="w-3 h-3" />
+            </Button>
+            {panel.status === 'pending' && (
+              <Button onClick={(e) => { e.stopPropagation(); updatePanelStatus(panel.id, 'active'); }} variant="ghost" size="sm" className="h-7 w-7 p-0 text-emerald-500">
+                <CheckCircle className="w-3 h-3" />
+              </Button>
+            )}
+            {panel.status === 'active' && (
+              <Button onClick={(e) => { e.stopPropagation(); updatePanelStatus(panel.id, 'suspended'); }} variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-500">
+                <Ban className="w-3 h-3" />
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+    </KanbanCard>
+  );
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+    <motion.div 
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="space-y-6"
+    >
+      <motion.div variants={itemVariants} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold">Panel Management</h1>
           <p className="text-sm text-muted-foreground">Monitor and manage all SMM panels on the platform</p>
         </div>
-      </div>
+        <AdminViewToggle view={view} onViewChange={setView} />
+      </motion.div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
-        <Card className="bg-gradient-card border-border shadow-card">
+      <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
+        <Card className="glass-card-hover">
           <CardContent className="p-4 md:p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs md:text-sm font-medium text-muted-foreground">Total Panels</p>
-                <p className="text-xl md:text-2xl font-bold text-primary">{totalPanels}</p>
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5">
+                <Monitor className="w-6 h-6 text-primary" />
               </div>
-              <Monitor className="w-6 h-6 md:w-8 md:h-8 text-primary" />
+              <div>
+                <p className="text-xl md:text-2xl font-bold">{totalPanels}</p>
+                <p className="text-xs md:text-sm text-muted-foreground">Total Panels</p>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-card border-border shadow-card">
+        <Card className="glass-card-hover">
           <CardContent className="p-4 md:p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs md:text-sm font-medium text-muted-foreground">Active Panels</p>
-                <p className="text-xl md:text-2xl font-bold text-primary">{activePanels}</p>
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-500/20 to-emerald-500/5">
+                <CheckCircle className="w-6 h-6 text-emerald-500" />
               </div>
-              <CheckCircle className="w-6 h-6 md:w-8 md:h-8 text-primary" />
+              <div>
+                <p className="text-xl md:text-2xl font-bold">{totalActivePanels}</p>
+                <p className="text-xs md:text-sm text-muted-foreground">Active Panels</p>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-card border-border shadow-card">
+        <Card className="glass-card-hover">
           <CardContent className="p-4 md:p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs md:text-sm font-medium text-muted-foreground">Pending</p>
-                <p className="text-xl md:text-2xl font-bold text-primary">{pendingPanels}</p>
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-gradient-to-br from-amber-500/20 to-amber-500/5">
+                <Clock className="w-6 h-6 text-amber-500" />
               </div>
-              <Clock className="w-6 h-6 md:w-8 md:h-8 text-primary" />
+              <div>
+                <p className="text-xl md:text-2xl font-bold">{totalPendingPanels}</p>
+                <p className="text-xs md:text-sm text-muted-foreground">Pending</p>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-card border-border shadow-card">
+        <Card className="glass-card-hover">
           <CardContent className="p-4 md:p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs md:text-sm font-medium text-muted-foreground">Revenue</p>
-                <p className="text-xl md:text-2xl font-bold text-primary">${totalRevenue.toFixed(0)}</p>
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-500/5">
+                <DollarSign className="w-6 h-6 text-blue-500" />
               </div>
-              <DollarSign className="w-6 h-6 md:w-8 md:h-8 text-primary" />
+              <div>
+                <p className="text-xl md:text-2xl font-bold">${totalRevenue.toFixed(0)}</p>
+                <p className="text-xs md:text-sm text-muted-foreground">Revenue</p>
+              </div>
             </div>
           </CardContent>
         </Card>
-      </div>
+      </motion.div>
 
-      {/* Panels Table */}
-      <Card className="bg-gradient-card border-border shadow-card">
-        <CardHeader>
-          <CardTitle>Panels</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search panels by name or subdomain..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full md:w-[180px]">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="suspended">Suspended</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+      {/* Filters */}
+      <motion.div variants={itemVariants} className="flex flex-col md:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search panels by name or subdomain..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-full md:w-[180px]">
+            <SelectValue placeholder="Filter by status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="suspended">Suspended</SelectItem>
+          </SelectContent>
+        </Select>
+      </motion.div>
 
-          {loading ? (
-            <div className="text-center py-8">
-              <Monitor className="w-8 h-8 animate-pulse mx-auto mb-4 text-muted-foreground" />
-              <p className="text-muted-foreground">Loading panels...</p>
-            </div>
-          ) : (
-            <>
+      {/* Content */}
+      {loading ? (
+        <motion.div variants={itemVariants} className="text-center py-8">
+          <Monitor className="w-8 h-8 animate-pulse mx-auto mb-4 text-muted-foreground" />
+          <p className="text-muted-foreground">Loading panels...</p>
+        </motion.div>
+      ) : view === 'kanban' ? (
+        /* Kanban View */
+        <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <KanbanColumn
+            title="Pending"
+            count={pendingPanels.length}
+            icon={Clock}
+            color="from-amber-500 to-amber-600"
+            bgColor="bg-amber-500/10"
+            textColor="text-amber-500"
+            emptyMessage="No pending panels"
+            loading={loading}
+          >
+            {pendingPanels.map(renderPanelCard)}
+          </KanbanColumn>
+
+          <KanbanColumn
+            title="Active"
+            count={activePanels.length}
+            icon={CheckCircle}
+            color="from-emerald-500 to-emerald-600"
+            bgColor="bg-emerald-500/10"
+            textColor="text-emerald-500"
+            emptyMessage="No active panels"
+            loading={loading}
+          >
+            {activePanels.map(renderPanelCard)}
+          </KanbanColumn>
+
+          <KanbanColumn
+            title="Suspended"
+            count={suspendedPanels.length}
+            icon={XCircle}
+            color="from-red-500 to-red-600"
+            bgColor="bg-red-500/10"
+            textColor="text-red-500"
+            emptyMessage="No suspended panels"
+            loading={loading}
+          >
+            {suspendedPanels.map(renderPanelCard)}
+          </KanbanColumn>
+        </motion.div>
+      ) : (
+        /* Table View */
+        <motion.div variants={itemVariants}>
+          <Card className="glass-card">
+            <CardHeader className="border-b border-border/50">
+              <CardTitle className="flex items-center gap-2">
+                <Monitor className="w-5 h-5 text-primary" />
+                Panels
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-6">
               {/* Desktop Table View */}
               <div className="hidden lg:block overflow-x-auto">
                 <Table>
@@ -343,7 +492,7 @@ const PanelManagement = () => {
                   </TableHeader>
                   <TableBody>
                     {filteredPanels.map((panel) => (
-                      <TableRow key={panel.id}>
+                      <TableRow key={panel.id} className="hover:bg-accent/30 transition-colors">
                         <TableCell>
                           <div>
                             <p className="font-medium">{panel.name}</p>
@@ -385,7 +534,7 @@ const PanelManagement = () => {
                             <Button onClick={() => openDetailsDialog(panel)} variant="ghost" size="sm" className="h-8 w-8 p-0" title="View Details"><Eye className="w-4 h-4" /></Button>
                             <Button onClick={() => openEditDialog(panel)} variant="ghost" size="sm" className="h-8 w-8 p-0" title="Edit Panel"><Edit className="w-4 h-4" /></Button>
                             {panel.status === 'pending' && (
-                              <Button onClick={() => updatePanelStatus(panel.id, 'active')} variant="ghost" size="sm" className="h-8 w-8 p-0 text-green-500 hover:text-green-600" title="Approve"><CheckCircle className="w-4 h-4" /></Button>
+                              <Button onClick={() => updatePanelStatus(panel.id, 'active')} variant="ghost" size="sm" className="h-8 w-8 p-0 text-emerald-500 hover:text-emerald-600" title="Approve"><CheckCircle className="w-4 h-4" /></Button>
                             )}
                             {panel.status === 'active' && (
                               <Button onClick={() => updatePanelStatus(panel.id, 'suspended')} variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-500 hover:text-red-600" title="Suspend"><Ban className="w-4 h-4" /></Button>
@@ -401,7 +550,7 @@ const PanelManagement = () => {
               {/* Mobile Card View */}
               <div className="lg:hidden space-y-3">
                 {filteredPanels.map((panel) => (
-                  <div key={panel.id} className="p-4 rounded-xl border border-border bg-accent/30">
+                  <div key={panel.id} className="p-4 rounded-xl border border-border bg-accent/30 hover:bg-accent/50 transition-colors">
                     <div className="flex items-start justify-between gap-3 mb-3">
                       <div className="min-w-0 flex-1">
                         <p className="font-semibold truncate">{panel.name}</p>
@@ -438,7 +587,7 @@ const PanelManagement = () => {
                         <Button onClick={() => openDetailsDialog(panel)} variant="ghost" size="sm" className="h-8 w-8 p-0"><Eye className="w-4 h-4" /></Button>
                         <Button onClick={() => openEditDialog(panel)} variant="ghost" size="sm" className="h-8 w-8 p-0"><Edit className="w-4 h-4" /></Button>
                         {panel.status === 'pending' && (
-                          <Button onClick={() => updatePanelStatus(panel.id, 'active')} variant="ghost" size="sm" className="h-8 w-8 p-0 text-green-500"><CheckCircle className="w-4 h-4" /></Button>
+                          <Button onClick={() => updatePanelStatus(panel.id, 'active')} variant="ghost" size="sm" className="h-8 w-8 p-0 text-emerald-500"><CheckCircle className="w-4 h-4" /></Button>
                         )}
                         {panel.status === 'active' && (
                           <Button onClick={() => updatePanelStatus(panel.id, 'suspended')} variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-500"><Ban className="w-4 h-4" /></Button>
@@ -448,18 +597,18 @@ const PanelManagement = () => {
                   </div>
                 ))}
               </div>
-            </>
-          )}
 
-          {!loading && filteredPanels.length === 0 && (
-            <div className="text-center py-12">
-              <Monitor className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-lg font-semibold mb-2">No panels found</h3>
-              <p className="text-muted-foreground">Try adjusting your search or filter criteria</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              {filteredPanels.length === 0 && (
+                <div className="text-center py-12">
+                  <Monitor className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                  <h3 className="text-lg font-semibold mb-2">No panels found</h3>
+                  <p className="text-muted-foreground">Try adjusting your search or filter criteria</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
 
       {/* Edit Panel Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
@@ -567,21 +716,21 @@ const PanelManagement = () => {
               </TabsContent>
               <TabsContent value="stats" className="mt-4">
                 <div className="grid grid-cols-3 gap-4">
-                  <Card className="bg-gradient-card">
+                  <Card className="glass-card-hover">
                     <CardContent className="p-4 text-center">
                       <Package className="w-8 h-8 mx-auto text-primary mb-2" />
                       <p className="text-2xl font-bold">{panelStats.services}</p>
                       <p className="text-sm text-muted-foreground">Services</p>
                     </CardContent>
                   </Card>
-                  <Card className="bg-gradient-card">
+                  <Card className="glass-card-hover">
                     <CardContent className="p-4 text-center">
                       <Activity className="w-8 h-8 mx-auto text-primary mb-2" />
                       <p className="text-2xl font-bold">{panelStats.orders}</p>
                       <p className="text-sm text-muted-foreground">Orders</p>
                     </CardContent>
                   </Card>
-                  <Card className="bg-gradient-card">
+                  <Card className="glass-card-hover">
                     <CardContent className="p-4 text-center">
                       <Users className="w-8 h-8 mx-auto text-primary mb-2" />
                       <p className="text-2xl font-bold">{panelStats.clients}</p>
@@ -589,7 +738,7 @@ const PanelManagement = () => {
                     </CardContent>
                   </Card>
                 </div>
-                <Card className="mt-4 bg-gradient-card">
+                <Card className="mt-4 glass-card-hover">
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div>
@@ -630,7 +779,7 @@ const PanelManagement = () => {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </motion.div>
   );
 };
 

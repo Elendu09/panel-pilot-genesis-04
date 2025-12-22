@@ -13,12 +13,18 @@ import {
   Activity,
   RefreshCw,
   Filter,
-  Clock
+  Clock,
+  Plus,
+  Trash2,
+  Key
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
+import AdminViewToggle from "@/components/admin/AdminViewToggle";
+import KanbanColumn from "@/components/admin/KanbanColumn";
+import KanbanCard from "@/components/admin/KanbanCard";
 
 interface AuditLog {
   id: string;
@@ -38,10 +44,17 @@ const AuditLogs = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [actionFilter, setActionFilter] = useState('all');
+  const [view, setView] = useState<'table' | 'kanban'>(() => {
+    return (localStorage.getItem('auditLogsView') as 'table' | 'kanban') || 'table';
+  });
 
   useEffect(() => {
     fetchLogs();
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem('auditLogsView', view);
+  }, [view]);
 
   const fetchLogs = async () => {
     try {
@@ -67,7 +80,24 @@ const AuditLogs = () => {
       login: 'bg-violet-500/20 text-violet-500',
       role_change: 'bg-amber-500/20 text-amber-500'
     };
-    return colors[action.toLowerCase()] || 'bg-slate-500/20 text-slate-500';
+    return colors[action.toLowerCase()] || 'bg-muted text-muted-foreground';
+  };
+
+  const getActionIcon = (action: string) => {
+    switch (action.toLowerCase()) {
+      case 'create':
+        return Plus;
+      case 'update':
+        return RefreshCw;
+      case 'delete':
+        return Trash2;
+      case 'login':
+        return Key;
+      case 'role_change':
+        return Shield;
+      default:
+        return Activity;
+    }
   };
 
   const getResourceIcon = (type: string) => {
@@ -88,6 +118,11 @@ const AuditLogs = () => {
     return matchesSearch && matchesAction;
   });
 
+  const createLogs = filteredLogs.filter(l => l.action.toLowerCase() === 'create');
+  const updateLogs = filteredLogs.filter(l => l.action.toLowerCase() === 'update');
+  const deleteLogs = filteredLogs.filter(l => l.action.toLowerCase() === 'delete');
+  const authLogs = filteredLogs.filter(l => ['login', 'role_change'].includes(l.action.toLowerCase()));
+
   const uniqueActions = [...new Set(logs.map(l => l.action.toLowerCase()))];
 
   const containerVariants = {
@@ -98,6 +133,56 @@ const AuditLogs = () => {
   const itemVariants = {
     hidden: { opacity: 0, x: -20 },
     visible: { opacity: 1, x: 0 }
+  };
+
+  const renderLogCard = (log: AuditLog) => {
+    const ActionIcon = getActionIcon(log.action);
+    const ResourceIcon = getResourceIcon(log.resource_type);
+    
+    return (
+      <KanbanCard 
+        key={log.id}
+        variant={log.action === 'create' ? 'success' : log.action === 'delete' ? 'danger' : log.action === 'update' ? 'info' : 'warning'}
+      >
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <div className={cn("p-1.5 rounded-lg", getActionColor(log.action).replace('text-', 'bg-').split(' ')[0])}>
+              <ActionIcon className="w-3 h-3" />
+            </div>
+            <Badge className={cn("text-xs capitalize", getActionColor(log.action))}>
+              {log.action.replace('_', ' ')}
+            </Badge>
+            {log.resource_type && (
+              <Badge variant="outline" className="text-xs capitalize">
+                {log.resource_type}
+              </Badge>
+            )}
+          </div>
+          
+          {log.user && (
+            <div className="flex items-center gap-2 text-sm">
+              <div className="w-6 h-6 bg-primary/20 rounded-full flex items-center justify-center">
+                <span className="text-xs font-medium">{(log.user.full_name || log.user.email).charAt(0).toUpperCase()}</span>
+              </div>
+              <span className="truncate text-muted-foreground">
+                {log.user.full_name || log.user.email}
+              </span>
+            </div>
+          )}
+          
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Calendar className="w-3 h-3" />
+            {new Date(log.created_at).toLocaleString()}
+          </div>
+
+          {log.details && Object.keys(log.details).length > 0 && (
+            <div className="text-xs bg-accent/50 rounded-lg p-2 font-mono overflow-x-auto max-h-20">
+              {JSON.stringify(log.details, null, 2)}
+            </div>
+          )}
+        </div>
+      </KanbanCard>
+    );
   };
 
   return (
@@ -118,17 +203,20 @@ const AuditLogs = () => {
           <h1 className="text-2xl md:text-3xl font-bold">Audit Logs</h1>
           <p className="text-muted-foreground">Track all system activities and changes</p>
         </div>
-        <Button onClick={fetchLogs} variant="outline" className="gap-2">
-          <RefreshCw className="w-4 h-4" />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-3">
+          <AdminViewToggle view={view} onViewChange={setView} />
+          <Button onClick={fetchLogs} variant="outline" className="gap-2">
+            <RefreshCw className="w-4 h-4" />
+            Refresh
+          </Button>
+        </div>
       </motion.div>
 
       {/* Stats */}
       <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="glass-card-hover">
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10">
+            <div className="p-3 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5">
               <FileText className="w-5 h-5 text-primary" />
             </div>
             <div>
@@ -139,8 +227,8 @@ const AuditLogs = () => {
         </Card>
         <Card className="glass-card-hover">
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-emerald-500/10">
-              <Activity className="w-5 h-5 text-emerald-500" />
+            <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-500/20 to-emerald-500/5">
+              <Plus className="w-5 h-5 text-emerald-500" />
             </div>
             <div>
               <p className="text-2xl font-bold">{logs.filter(l => l.action === 'create').length}</p>
@@ -150,7 +238,7 @@ const AuditLogs = () => {
         </Card>
         <Card className="glass-card-hover">
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-blue-500/10">
+            <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-500/5">
               <RefreshCw className="w-5 h-5 text-blue-500" />
             </div>
             <div>
@@ -161,7 +249,7 @@ const AuditLogs = () => {
         </Card>
         <Card className="glass-card-hover">
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-amber-500/10">
+            <div className="p-3 rounded-xl bg-gradient-to-br from-amber-500/20 to-amber-500/5">
               <Shield className="w-5 h-5 text-amber-500" />
             </div>
             <div>
@@ -197,88 +285,148 @@ const AuditLogs = () => {
         </Select>
       </motion.div>
 
-      {/* Logs List */}
-      <Card className="glass-card">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="w-5 h-5 text-primary" />
-            Activity Timeline
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="space-y-4">
-              {[1, 2, 3, 4, 5].map(i => (
-                <div key={i} className="h-16 bg-muted rounded-xl animate-pulse" />
-              ))}
-            </div>
-          ) : filteredLogs.length === 0 ? (
-            <div className="text-center py-12">
-              <FileText className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">No logs found</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {filteredLogs.map((log, index) => {
-                const ResourceIcon = getResourceIcon(log.resource_type);
-                
-                return (
-                  <motion.div
-                    key={log.id}
-                    variants={itemVariants}
-                    className="flex items-start gap-4 p-4 rounded-xl hover:bg-accent/30 transition-colors group"
-                  >
-                    {/* Timeline indicator */}
-                    <div className="relative flex flex-col items-center">
-                      <div className="w-10 h-10 rounded-lg bg-accent flex items-center justify-center">
-                        <ResourceIcon className="w-5 h-5 text-muted-foreground" />
-                      </div>
-                      {index < filteredLogs.length - 1 && (
-                        <div className="w-0.5 h-full bg-border absolute top-12" />
-                      )}
-                    </div>
+      {/* Content */}
+      {loading ? (
+        <motion.div variants={itemVariants} className="text-center py-8">
+          <FileText className="w-8 h-8 animate-pulse mx-auto mb-4 text-muted-foreground" />
+          <p className="text-muted-foreground">Loading logs...</p>
+        </motion.div>
+      ) : view === 'kanban' ? (
+        /* Kanban View */
+        <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <KanbanColumn
+            title="Create"
+            count={createLogs.length}
+            icon={Plus}
+            color="from-emerald-500 to-emerald-600"
+            bgColor="bg-emerald-500/10"
+            textColor="text-emerald-500"
+            emptyMessage="No create actions"
+            loading={loading}
+          >
+            {createLogs.slice(0, 10).map(renderLogCard)}
+          </KanbanColumn>
 
-                    {/* Log content */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-wrap items-center gap-2 mb-1">
-                        <Badge className={cn("text-xs capitalize", getActionColor(log.action))}>
-                          {log.action.replace('_', ' ')}
-                        </Badge>
-                        {log.resource_type && (
-                          <Badge variant="outline" className="text-xs capitalize">
-                            {log.resource_type}
-                          </Badge>
-                        )}
-                      </div>
-                      
-                      <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-                        {log.user && (
-                          <div className="flex items-center gap-1">
-                            <User className="w-3 h-3" />
-                            <span className="truncate max-w-[200px]">
-                              {log.user.full_name || log.user.email}
-                            </span>
+          <KanbanColumn
+            title="Update"
+            count={updateLogs.length}
+            icon={RefreshCw}
+            color="from-blue-500 to-blue-600"
+            bgColor="bg-blue-500/10"
+            textColor="text-blue-500"
+            emptyMessage="No update actions"
+            loading={loading}
+          >
+            {updateLogs.slice(0, 10).map(renderLogCard)}
+          </KanbanColumn>
+
+          <KanbanColumn
+            title="Delete"
+            count={deleteLogs.length}
+            icon={Trash2}
+            color="from-red-500 to-red-600"
+            bgColor="bg-red-500/10"
+            textColor="text-red-500"
+            emptyMessage="No delete actions"
+            loading={loading}
+          >
+            {deleteLogs.slice(0, 10).map(renderLogCard)}
+          </KanbanColumn>
+
+          <KanbanColumn
+            title="Auth & Roles"
+            count={authLogs.length}
+            icon={Shield}
+            color="from-amber-500 to-amber-600"
+            bgColor="bg-amber-500/10"
+            textColor="text-amber-500"
+            emptyMessage="No auth actions"
+            loading={loading}
+          >
+            {authLogs.slice(0, 10).map(renderLogCard)}
+          </KanbanColumn>
+        </motion.div>
+      ) : (
+        /* Timeline View */
+        <motion.div variants={itemVariants}>
+          <Card className="glass-card">
+            <CardHeader className="border-b border-border/50">
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="w-5 h-5 text-primary" />
+                Activity Timeline
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-6">
+              {filteredLogs.length === 0 ? (
+                <div className="text-center py-12">
+                  <FileText className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">No logs found</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {filteredLogs.map((log, index) => {
+                    const ResourceIcon = getResourceIcon(log.resource_type);
+                    const ActionIcon = getActionIcon(log.action);
+                    
+                    return (
+                      <motion.div
+                        key={log.id}
+                        variants={itemVariants}
+                        className="flex items-start gap-4 p-4 rounded-xl hover:bg-accent/30 transition-colors group border border-transparent hover:border-border"
+                      >
+                        {/* Timeline indicator */}
+                        <div className="relative flex flex-col items-center">
+                          <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center", getActionColor(log.action).replace('text-', 'bg-').split(' ')[0])}>
+                            <ActionIcon className="w-5 h-5" />
                           </div>
-                        )}
-                        <div className="flex items-center gap-1">
-                          <Calendar className="w-3 h-3" />
-                          {new Date(log.created_at).toLocaleString()}
+                          {index < filteredLogs.length - 1 && (
+                            <div className="w-0.5 h-full bg-border absolute top-12" />
+                          )}
                         </div>
-                      </div>
-                      
-                      {log.details && Object.keys(log.details).length > 0 && (
-                        <div className="mt-2 text-xs bg-accent/50 rounded-lg p-2 font-mono overflow-x-auto">
-                          {JSON.stringify(log.details, null, 2)}
+
+                        {/* Log content */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2 mb-1">
+                            <Badge className={cn("text-xs capitalize", getActionColor(log.action))}>
+                              {log.action.replace('_', ' ')}
+                            </Badge>
+                            {log.resource_type && (
+                              <Badge variant="outline" className="text-xs capitalize">
+                                {log.resource_type}
+                              </Badge>
+                            )}
+                          </div>
+                          
+                          <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                            {log.user && (
+                              <div className="flex items-center gap-1">
+                                <User className="w-3 h-3" />
+                                <span className="truncate max-w-[200px]">
+                                  {log.user.full_name || log.user.email}
+                                </span>
+                              </div>
+                            )}
+                            <div className="flex items-center gap-1">
+                              <Calendar className="w-3 h-3" />
+                              {new Date(log.created_at).toLocaleString()}
+                            </div>
+                          </div>
+                          
+                          {log.details && Object.keys(log.details).length > 0 && (
+                            <div className="mt-2 text-xs bg-accent/50 rounded-lg p-2 font-mono overflow-x-auto">
+                              {JSON.stringify(log.details, null, 2)}
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
     </motion.div>
   );
 };

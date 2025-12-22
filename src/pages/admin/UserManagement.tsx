@@ -10,6 +10,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { motion } from "framer-motion";
+import AdminViewToggle from "@/components/admin/AdminViewToggle";
+import KanbanColumn from "@/components/admin/KanbanColumn";
+import KanbanCard from "@/components/admin/KanbanCard";
 import { 
   Users, 
   UserCheck, 
@@ -60,6 +64,9 @@ const UserManagement = () => {
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
   const [userPanels, setUserPanels] = useState<any[]>([]);
+  const [view, setView] = useState<'table' | 'kanban'>(() => {
+    return (localStorage.getItem('userManagementView') as 'table' | 'kanban') || 'table';
+  });
   const [editForm, setEditForm] = useState({
     full_name: "",
     balance: 0,
@@ -69,6 +76,10 @@ const UserManagement = () => {
   useEffect(() => {
     fetchUsers();
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem('userManagementView', view);
+  }, [view]);
 
   const fetchUsers = async () => {
     try {
@@ -204,106 +215,245 @@ const UserManagement = () => {
     return matchesSearch && matchesRole;
   });
 
+  const activeUsers = filteredUsers.filter(u => u.is_active && u.role !== 'admin');
+  const inactiveUsers = filteredUsers.filter(u => !u.is_active);
+  const adminUsers = filteredUsers.filter(u => u.role === 'admin');
+
   const totalUsers = users.length;
-  const activeUsers = users.filter(u => u.is_active).length;
+  const totalActiveUsers = users.filter(u => u.is_active).length;
   const panelOwners = users.filter(u => u.role === 'panel_owner').length;
   const totalRevenue = users.reduce((sum, user) => sum + (user.total_spent || 0), 0);
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { staggerChildren: 0.05 } }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 }
+  };
+
+  const renderUserCard = (user: User) => (
+    <KanbanCard 
+      key={user.id}
+      variant={user.role === 'admin' ? 'info' : user.is_active ? 'success' : 'danger'}
+      onClick={() => openDetailsDialog(user)}
+    >
+      <div className="space-y-3">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center shrink-0">
+            {user.avatar_url ? (
+              <img src={user.avatar_url} alt={user.full_name || user.email} className="w-10 h-10 rounded-full" />
+            ) : (
+              <span className="text-sm font-medium">{(user.full_name || user.email).charAt(0).toUpperCase()}</span>
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <h4 className="font-semibold truncate">{user.full_name || 'No Name'}</h4>
+            <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Badge variant={user.role === 'admin' ? 'destructive' : 'default'} className={user.role === 'admin' ? 'bg-red-500/20 text-red-400' : 'bg-blue-500/20 text-blue-400'}>
+            {user.role === 'admin' ? <><Shield className="w-3 h-3 mr-1" />Admin</> : <><Users className="w-3 h-3 mr-1" />Panel Owner</>}
+          </Badge>
+          <Badge variant={user.is_active ? "default" : "secondary"} className={user.is_active ? "bg-emerald-500/20 text-emerald-400" : "bg-red-500/20 text-red-400"}>
+            {user.is_active ? 'Active' : 'Inactive'}
+          </Badge>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 text-center">
+          <div className="p-2 bg-accent/50 rounded-lg">
+            <p className="text-xs text-muted-foreground">Balance</p>
+            <p className="font-semibold text-sm">${user.balance?.toFixed(2) || '0.00'}</p>
+          </div>
+          <div className="p-2 bg-accent/50 rounded-lg">
+            <p className="text-xs text-muted-foreground">Total Spent</p>
+            <p className="font-semibold text-sm">${user.total_spent?.toFixed(2) || '0.00'}</p>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between pt-2 border-t border-border">
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Calendar className="w-3 h-3" />
+            {new Date(user.created_at).toLocaleDateString()}
+          </div>
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Button onClick={(e) => { e.stopPropagation(); openEditDialog(user); }} variant="ghost" size="sm" className="h-7 w-7 p-0">
+              <Edit className="w-3 h-3" />
+            </Button>
+            <Button 
+              onClick={(e) => { e.stopPropagation(); toggleUserStatus(user); }} 
+              variant="ghost" 
+              size="sm" 
+              className={`h-7 w-7 p-0 ${!user.is_active ? 'text-emerald-500' : 'text-red-500'}`}
+            >
+              {user.is_active ? <Ban className="w-3 h-3" /> : <UserCheck className="w-3 h-3" />}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </KanbanCard>
+  );
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+    <motion.div 
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="space-y-6"
+    >
+      <motion.div variants={itemVariants} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold">User Management</h1>
           <p className="text-sm text-muted-foreground">Manage all platform users, roles, and permissions</p>
         </div>
-      </div>
+        <AdminViewToggle view={view} onViewChange={setView} />
+      </motion.div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
-        <Card className="bg-gradient-card border-border shadow-card">
+      <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
+        <Card className="glass-card-hover">
           <CardContent className="p-4 md:p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs md:text-sm font-medium text-muted-foreground">Total Users</p>
-                <p className="text-xl md:text-2xl font-bold text-primary">{totalUsers}</p>
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5">
+                <Users className="w-6 h-6 text-primary" />
               </div>
-              <Users className="w-6 h-6 md:w-8 md:h-8 text-primary" />
+              <div>
+                <p className="text-xl md:text-2xl font-bold">{totalUsers}</p>
+                <p className="text-xs md:text-sm text-muted-foreground">Total Users</p>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-card border-border shadow-card">
+        <Card className="glass-card-hover">
           <CardContent className="p-4 md:p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs md:text-sm font-medium text-muted-foreground">Active Users</p>
-                <p className="text-xl md:text-2xl font-bold text-primary">{activeUsers}</p>
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-500/20 to-emerald-500/5">
+                <UserCheck className="w-6 h-6 text-emerald-500" />
               </div>
-              <UserCheck className="w-6 h-6 md:w-8 md:h-8 text-primary" />
+              <div>
+                <p className="text-xl md:text-2xl font-bold">{totalActiveUsers}</p>
+                <p className="text-xs md:text-sm text-muted-foreground">Active Users</p>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-card border-border shadow-card">
+        <Card className="glass-card-hover">
           <CardContent className="p-4 md:p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs md:text-sm font-medium text-muted-foreground">Panel Owners</p>
-                <p className="text-xl md:text-2xl font-bold text-primary">{panelOwners}</p>
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-gradient-to-br from-violet-500/20 to-violet-500/5">
+                <Shield className="w-6 h-6 text-violet-500" />
               </div>
-              <Shield className="w-6 h-6 md:w-8 md:h-8 text-primary" />
+              <div>
+                <p className="text-xl md:text-2xl font-bold">{panelOwners}</p>
+                <p className="text-xs md:text-sm text-muted-foreground">Panel Owners</p>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-card border-border shadow-card">
+        <Card className="glass-card-hover">
           <CardContent className="p-4 md:p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs md:text-sm font-medium text-muted-foreground">Total Revenue</p>
-                <p className="text-xl md:text-2xl font-bold text-primary">${totalRevenue.toFixed(2)}</p>
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-500/5">
+                <DollarSign className="w-6 h-6 text-blue-500" />
               </div>
-              <DollarSign className="w-6 h-6 md:w-8 md:h-8 text-primary" />
+              <div>
+                <p className="text-xl md:text-2xl font-bold">${totalRevenue.toFixed(2)}</p>
+                <p className="text-xs md:text-sm text-muted-foreground">Total Revenue</p>
+              </div>
             </div>
           </CardContent>
         </Card>
-      </div>
+      </motion.div>
 
-      {/* Users Table */}
-      <Card className="bg-gradient-card border-border shadow-card">
-        <CardHeader>
-          <CardTitle>Users</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search users by email or name..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-            <Select value={roleFilter} onValueChange={setRoleFilter}>
-              <SelectTrigger className="w-full md:w-[180px]">
-                <SelectValue placeholder="Filter by role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Roles</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
-                <SelectItem value="panel_owner">Panel Owner</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+      {/* Filters */}
+      <motion.div variants={itemVariants} className="flex flex-col md:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search users by email or name..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Select value={roleFilter} onValueChange={setRoleFilter}>
+          <SelectTrigger className="w-full md:w-[180px]">
+            <SelectValue placeholder="Filter by role" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Roles</SelectItem>
+            <SelectItem value="admin">Admin</SelectItem>
+            <SelectItem value="panel_owner">Panel Owner</SelectItem>
+          </SelectContent>
+        </Select>
+      </motion.div>
 
-          {loading ? (
-            <div className="text-center py-8">
-              <Users className="w-8 h-8 animate-pulse mx-auto mb-4 text-muted-foreground" />
-              <p className="text-muted-foreground">Loading users...</p>
-            </div>
-          ) : (
-            <>
+      {/* Content */}
+      {loading ? (
+        <motion.div variants={itemVariants} className="text-center py-8">
+          <Users className="w-8 h-8 animate-pulse mx-auto mb-4 text-muted-foreground" />
+          <p className="text-muted-foreground">Loading users...</p>
+        </motion.div>
+      ) : view === 'kanban' ? (
+        /* Kanban View */
+        <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <KanbanColumn
+            title="Active Users"
+            count={activeUsers.length}
+            icon={UserCheck}
+            color="from-emerald-500 to-emerald-600"
+            bgColor="bg-emerald-500/10"
+            textColor="text-emerald-500"
+            emptyMessage="No active users"
+            loading={loading}
+          >
+            {activeUsers.map(renderUserCard)}
+          </KanbanColumn>
+
+          <KanbanColumn
+            title="Inactive Users"
+            count={inactiveUsers.length}
+            icon={UserX}
+            color="from-red-500 to-red-600"
+            bgColor="bg-red-500/10"
+            textColor="text-red-500"
+            emptyMessage="No inactive users"
+            loading={loading}
+          >
+            {inactiveUsers.map(renderUserCard)}
+          </KanbanColumn>
+
+          <KanbanColumn
+            title="Admins"
+            count={adminUsers.length}
+            icon={Shield}
+            color="from-violet-500 to-violet-600"
+            bgColor="bg-violet-500/10"
+            textColor="text-violet-500"
+            emptyMessage="No admins"
+            loading={loading}
+          >
+            {adminUsers.map(renderUserCard)}
+          </KanbanColumn>
+        </motion.div>
+      ) : (
+        /* Table View */
+        <motion.div variants={itemVariants}>
+          <Card className="glass-card">
+            <CardHeader className="border-b border-border/50">
+              <CardTitle className="flex items-center gap-2">
+                <Users className="w-5 h-5 text-primary" />
+                Users
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-6">
               {/* Desktop Table View */}
               <div className="hidden lg:block overflow-x-auto">
                 <Table>
@@ -320,7 +470,7 @@ const UserManagement = () => {
                   </TableHeader>
                   <TableBody>
                     {filteredUsers.map((user) => (
-                      <TableRow key={user.id}>
+                      <TableRow key={user.id} className="hover:bg-accent/30 transition-colors">
                         <TableCell>
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center">
@@ -344,7 +494,7 @@ const UserManagement = () => {
                         <TableCell><span className="font-medium">${user.balance?.toFixed(2) || '0.00'}</span></TableCell>
                         <TableCell><span className="font-medium">${user.total_spent?.toFixed(2) || '0.00'}</span></TableCell>
                         <TableCell>
-                          <Badge variant={user.is_active ? "default" : "secondary"} className={user.is_active ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}>
+                          <Badge variant={user.is_active ? "default" : "secondary"} className={user.is_active ? "bg-emerald-500/20 text-emerald-400" : "bg-red-500/20 text-red-400"}>
                             {user.is_active ? <><UserCheck className="w-3 h-3 mr-1" />Active</> : <><UserX className="w-3 h-3 mr-1" />Inactive</>}
                           </Badge>
                         </TableCell>
@@ -357,7 +507,7 @@ const UserManagement = () => {
                           <div className="flex items-center justify-end gap-2">
                             <Button onClick={() => openDetailsDialog(user)} variant="ghost" size="sm" className="h-8 w-8 p-0" title="View Details"><Eye className="w-4 h-4" /></Button>
                             <Button onClick={() => openEditDialog(user)} variant="ghost" size="sm" className="h-8 w-8 p-0" title="Edit User"><Edit className="w-4 h-4" /></Button>
-                            <Button onClick={() => toggleUserStatus(user)} variant="ghost" size="sm" className={`h-8 w-8 p-0 ${!user.is_active ? 'text-green-500 hover:text-green-600' : 'text-red-500 hover:text-red-600'}`} title={user.is_active ? 'Deactivate' : 'Activate'}>
+                            <Button onClick={() => toggleUserStatus(user)} variant="ghost" size="sm" className={`h-8 w-8 p-0 ${!user.is_active ? 'text-emerald-500 hover:text-emerald-600' : 'text-red-500 hover:text-red-600'}`} title={user.is_active ? 'Deactivate' : 'Activate'}>
                               {user.is_active ? <Ban className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
                             </Button>
                           </div>
@@ -371,7 +521,7 @@ const UserManagement = () => {
               {/* Mobile Card View */}
               <div className="lg:hidden space-y-3">
                 {filteredUsers.map((user) => (
-                  <div key={user.id} className="p-4 rounded-xl border border-border bg-accent/30">
+                  <div key={user.id} className="p-4 rounded-xl border border-border bg-accent/30 hover:bg-accent/50 transition-colors">
                     <div className="flex items-start justify-between gap-3 mb-3">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center shrink-0">
@@ -386,7 +536,7 @@ const UserManagement = () => {
                           <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                         </div>
                       </div>
-                      <Badge variant={user.is_active ? "default" : "secondary"} className={`shrink-0 ${user.is_active ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
+                      <Badge variant={user.is_active ? "default" : "secondary"} className={`shrink-0 ${user.is_active ? "bg-emerald-500/20 text-emerald-400" : "bg-red-500/20 text-red-400"}`}>
                         {user.is_active ? 'Active' : 'Inactive'}
                       </Badge>
                     </div>
@@ -411,7 +561,7 @@ const UserManagement = () => {
                       <div className="flex items-center gap-1">
                         <Button onClick={() => openDetailsDialog(user)} variant="ghost" size="sm" className="h-8 w-8 p-0"><Eye className="w-4 h-4" /></Button>
                         <Button onClick={() => openEditDialog(user)} variant="ghost" size="sm" className="h-8 w-8 p-0"><Edit className="w-4 h-4" /></Button>
-                        <Button onClick={() => toggleUserStatus(user)} variant="ghost" size="sm" className={`h-8 w-8 p-0 ${!user.is_active ? 'text-green-500' : 'text-red-500'}`}>
+                        <Button onClick={() => toggleUserStatus(user)} variant="ghost" size="sm" className={`h-8 w-8 p-0 ${!user.is_active ? 'text-emerald-500' : 'text-red-500'}`}>
                           {user.is_active ? <Ban className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
                         </Button>
                       </div>
@@ -419,18 +569,18 @@ const UserManagement = () => {
                   </div>
                 ))}
               </div>
-            </>
-          )}
 
-          {!loading && filteredUsers.length === 0 && (
-            <div className="text-center py-12">
-              <Users className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-lg font-semibold mb-2">No users found</h3>
-              <p className="text-muted-foreground">Try adjusting your search or filter criteria</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              {filteredUsers.length === 0 && (
+                <div className="text-center py-12">
+                  <Users className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                  <h3 className="text-lg font-semibold mb-2">No users found</h3>
+                  <p className="text-muted-foreground">Try adjusting your search or filter criteria</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
 
       {/* Edit User Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
@@ -511,7 +661,7 @@ const UserManagement = () => {
                   </div>
                   <div className="p-4 bg-accent/50 rounded-lg">
                     <p className="text-sm text-muted-foreground">Status</p>
-                    <Badge className={selectedUser.is_active ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}>
+                    <Badge className={selectedUser.is_active ? "bg-emerald-500/20 text-emerald-400" : "bg-red-500/20 text-red-400"}>
                       {selectedUser.is_active ? 'Active' : 'Inactive'}
                     </Badge>
                   </div>
@@ -552,7 +702,7 @@ const UserManagement = () => {
                           <p className="font-medium">{panel.name}</p>
                           <p className="text-sm text-muted-foreground">{panel.subdomain}.smmpilot.online</p>
                         </div>
-                        <Badge className={panel.status === 'active' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}>
+                        <Badge className={panel.status === 'active' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}>
                           {panel.status}
                         </Badge>
                       </div>
@@ -597,7 +747,7 @@ const UserManagement = () => {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </motion.div>
   );
 };
 
