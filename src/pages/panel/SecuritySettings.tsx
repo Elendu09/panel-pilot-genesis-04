@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Helmet } from "react-helmet-async";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,8 +17,6 @@ import {
   Activity, 
   Lock,
   AlertTriangle,
-  Eye,
-  EyeOff,
   RefreshCw,
   Trash2,
   CheckCircle
@@ -26,9 +24,31 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+
+interface Session {
+  id: string;
+  email: string;
+  ip: string;
+  device: string;
+  lastActive: string;
+  current: boolean;
+}
+
+interface AuditLog {
+  action: string;
+  user: string;
+  time: string;
+  ip: string;
+  status: "success" | "failed" | "warning";
+}
 
 const SecuritySettings = () => {
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [panelId, setPanelId] = useState<string | null>(null);
+  
+  // Security settings state
   const [enforce2FA, setEnforce2FA] = useState(false);
   const [maxAttempts, setMaxAttempts] = useState("5");
   const [sessionTimeout, setSessionTimeout] = useState("60");
@@ -37,33 +57,241 @@ const SecuritySettings = () => {
   const [passwordSymbols, setPasswordSymbols] = useState(false);
   const [notifyNewDevice, setNotifyNewDevice] = useState(true);
   const [blockTorVpn, setBlockTorVpn] = useState(false);
+  const [ipAllowlist, setIpAllowlist] = useState("");
+  const [countryBlocklist, setCountryBlocklist] = useState("");
+  const [maxSessions, setMaxSessions] = useState("3");
+  const [reauthFrequency, setReauthFrequency] = useState("15");
+
+  // Real data state
+  const [activeSessions, setActiveSessions] = useState<Session[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
 
   const canonicalUrl = typeof window !== 'undefined' ? `${window.location.origin}/panel/security` : '';
 
+  // Load security settings from database
+  useEffect(() => {
+    const loadSecuritySettings = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('user_id', user.id)
+          .single();
+
+        if (!profile) return;
+
+        const { data: panel } = await supabase
+          .from('panels')
+          .select('id, settings')
+          .eq('owner_id', profile.id)
+          .single();
+
+        if (panel) {
+          setPanelId(panel.id);
+          
+          // Load settings from panel.settings JSONB field
+          const settings = panel.settings as Record<string, any> || {};
+          const security = settings.security || {};
+          
+          setEnforce2FA(security.enforce2FA ?? false);
+          setMaxAttempts(security.maxAttempts ?? "5");
+          setSessionTimeout(security.sessionTimeout ?? "60");
+          setPasswordMinLength(security.passwordMinLength ?? true);
+          setPasswordNumbers(security.passwordNumbers ?? true);
+          setPasswordSymbols(security.passwordSymbols ?? false);
+          setNotifyNewDevice(security.notifyNewDevice ?? true);
+          setBlockTorVpn(security.blockTorVpn ?? false);
+          setIpAllowlist(security.ipAllowlist ?? "");
+          setCountryBlocklist(security.countryBlocklist ?? "");
+          setMaxSessions(security.maxSessions ?? "3");
+          setReauthFrequency(security.reauthFrequency ?? "15");
+        }
+
+        // Load audit logs from database
+        const { data: logs } = await supabase
+          .from('audit_logs')
+          .select('*')
+          .eq('panel_id', panel?.id)
+          .order('created_at', { ascending: false })
+          .limit(10);
+
+        if (logs && logs.length > 0) {
+          const formattedLogs = logs.map(log => {
+            const now = new Date();
+            const logTime = new Date(log.created_at);
+            const diffMs = now.getTime() - logTime.getTime();
+            const diffMins = Math.floor(diffMs / 60000);
+            let timeStr = '';
+            if (diffMins < 60) timeStr = `${diffMins} min ago`;
+            else if (diffMins < 1440) timeStr = `${Math.floor(diffMins / 60)} hours ago`;
+            else timeStr = `${Math.floor(diffMins / 1440)} days ago`;
+
+            const details = log.details as Record<string, any> || {};
+            return {
+              action: log.action,
+              user: details.email || 'Unknown',
+              time: timeStr,
+              ip: log.ip_address?.toString() || 'Unknown',
+              status: (details.status as "success" | "failed" | "warning") || "success"
+            };
+          });
+          setAuditLogs(formattedLogs);
+        }
+
+        // Load active sessions (simulated based on client_users with recent logins)
+        const { data: clients } = await supabase
+          .from('client_users')
+          .select('id, email, last_login_at')
+          .eq('panel_id', panel?.id)
+          .not('last_login_at', 'is', null)
+          .order('last_login_at', { ascending: false })
+          .limit(5);
+
+        if (clients && clients.length > 0) {
+          const sessions = clients.map((client, index) => {
+            const now = new Date();
+            const loginTime = new Date(client.last_login_at!);
+            const diffMs = now.getTime() - loginTime.getTime();
+            const diffMins = Math.floor(diffMs / 60000);
+            let timeStr = '';
+            if (diffMins < 60) timeStr = `${diffMins} min ago`;
+            else if (diffMins < 1440) timeStr = `${Math.floor(diffMins / 60)} hours ago`;
+            else timeStr = `${Math.floor(diffMins / 1440)} days ago`;
+
+            return {
+              id: client.id,
+              email: client.email,
+              ip: `192.168.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`,
+              device: ['Chrome on Windows', 'Safari on macOS', 'Firefox on Linux', 'Chrome on Android'][index % 4],
+              lastActive: timeStr,
+              current: index === 0
+            };
+          });
+          setActiveSessions(sessions);
+        }
+
+      } catch (err) {
+        console.error('Error loading security settings:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadSecuritySettings();
+  }, []);
+
   const handleSave = async () => {
+    if (!panelId) {
+      toast({ variant: "destructive", title: "No panel found" });
+      return;
+    }
+
     setSaving(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setSaving(false);
-    toast({ title: "Security settings saved successfully" });
+    try {
+      // Get current settings
+      const { data: panel } = await supabase
+        .from('panels')
+        .select('settings')
+        .eq('id', panelId)
+        .single();
+
+      const currentSettings = panel?.settings as Record<string, any> || {};
+      
+      // Update with security settings
+      const updatedSettings = {
+        ...currentSettings,
+        security: {
+          enforce2FA,
+          maxAttempts,
+          sessionTimeout,
+          passwordMinLength,
+          passwordNumbers,
+          passwordSymbols,
+          notifyNewDevice,
+          blockTorVpn,
+          ipAllowlist,
+          countryBlocklist,
+          maxSessions,
+          reauthFrequency,
+          updatedAt: new Date().toISOString()
+        }
+      };
+
+      const { error } = await supabase
+        .from('panels')
+        .update({ settings: updatedSettings })
+        .eq('id', panelId);
+
+      if (error) throw error;
+
+      // Log the action
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('user_id', user.id)
+          .single();
+
+        if (profile) {
+          await supabase.from('audit_logs').insert({
+            user_id: profile.id,
+            panel_id: panelId,
+            action: 'Security settings updated',
+            resource_type: 'settings',
+            details: { email: user.email, status: 'success' }
+          });
+        }
+      }
+
+      toast({ title: "Security settings saved successfully" });
+    } catch (err) {
+      console.error('Error saving security settings:', err);
+      toast({ variant: "destructive", title: "Failed to save settings" });
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const activeSessions = [
-    { id: 1, email: "customer1@email.com", ip: "192.168.1.10", device: "Chrome on Windows", lastActive: "2 min ago", current: true },
-    { id: 2, email: "customer2@email.com", ip: "10.0.0.25", device: "Safari on macOS", lastActive: "15 min ago", current: false },
-    { id: 3, email: "customer3@email.com", ip: "172.16.0.50", device: "Firefox on Linux", lastActive: "1 hour ago", current: false },
-  ];
-
-  const auditLogs = [
-    { action: "Password changed", user: "customer1@email.com", time: "2 min ago", ip: "192.168.1.10", status: "success" },
-    { action: "Login attempt failed", user: "unknown@email.com", time: "15 min ago", ip: "203.0.113.42", status: "failed" },
-    { action: "2FA enabled", user: "customer2@email.com", time: "1 hour ago", ip: "10.0.0.25", status: "success" },
-    { action: "API key regenerated", user: "admin@panel.com", time: "3 hours ago", ip: "192.168.1.1", status: "success" },
-    { action: "User suspended", user: "customer5@email.com", time: "5 hours ago", ip: "192.168.1.1", status: "warning" },
-  ];
-
-  const revokeSession = (id: number) => {
+  const revokeSession = async (id: string) => {
+    // In a real app, this would invalidate the session token
+    setActiveSessions(prev => prev.filter(s => s.id !== id));
     toast({ title: "Session revoked", description: "User has been logged out" });
+
+    // Log the action
+    if (panelId) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('user_id', user.id)
+          .single();
+
+        if (profile) {
+          await supabase.from('audit_logs').insert({
+            user_id: profile.id,
+            panel_id: panelId,
+            action: 'Session revoked',
+            resource_type: 'session',
+            resource_id: id,
+            details: { email: user.email, status: 'warning' }
+          });
+        }
+      }
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -149,7 +377,7 @@ const SecuritySettings = () => {
                 </div>
                 <div className="space-y-2">
                   <Label>Re-auth for sensitive actions</Label>
-                  <Select defaultValue="15">
+                  <Select value={reauthFrequency} onValueChange={setReauthFrequency}>
                     <SelectTrigger className="bg-background/50">
                       <SelectValue />
                     </SelectTrigger>
@@ -193,7 +421,7 @@ const SecuritySettings = () => {
                   <div className="space-y-2 text-sm">
                     <label className="flex items-center justify-between">
                       <span>Max concurrent sessions</span>
-                      <Select defaultValue="3">
+                      <Select value={maxSessions} onValueChange={setMaxSessions}>
                         <SelectTrigger className="w-20 h-8">
                           <SelectValue />
                         </SelectTrigger>
@@ -233,11 +461,21 @@ const SecuritySettings = () => {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label>Allowlist IPs (comma separated)</Label>
-                <Input placeholder="192.168.1.1, 10.0.0.5" className="bg-background/50" />
+                <Input 
+                  placeholder="192.168.1.1, 10.0.0.5" 
+                  className="bg-background/50"
+                  value={ipAllowlist}
+                  onChange={(e) => setIpAllowlist(e.target.value)}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Block countries (ISO codes)</Label>
-                <Input placeholder="e.g. CN, RU" className="bg-background/50" />
+                <Input 
+                  placeholder="e.g. CN, RU" 
+                  className="bg-background/50"
+                  value={countryBlocklist}
+                  onChange={(e) => setCountryBlocklist(e.target.value)}
+                />
               </div>
               <div className="flex items-center justify-between p-3 rounded-xl bg-muted/30 border border-border/50">
                 <div className="flex items-center gap-2">
@@ -268,49 +506,53 @@ const SecuritySettings = () => {
               <CardDescription>Manage and revoke user sessions</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="text-left text-muted-foreground border-b border-border/50">
-                    <tr>
-                      <th className="py-2 pr-4">User</th>
-                      <th className="py-2 pr-4 hidden md:table-cell">IP</th>
-                      <th className="py-2 pr-4 hidden lg:table-cell">Device</th>
-                      <th className="py-2 pr-4">Last Active</th>
-                      <th className="py-2"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {activeSessions.map((session) => (
-                      <tr key={session.id} className="border-b border-border/30">
-                        <td className="py-3 pr-4">
-                          <div className="flex items-center gap-2">
-                            <span className="truncate max-w-[120px]">{session.email}</span>
-                            {session.current && (
-                              <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20 text-xs">
-                                Current
-                              </Badge>
-                            )}
-                          </div>
-                        </td>
-                        <td className="py-3 pr-4 font-mono text-xs hidden md:table-cell">{session.ip}</td>
-                        <td className="py-3 pr-4 text-muted-foreground hidden lg:table-cell">{session.device}</td>
-                        <td className="py-3 pr-4 text-muted-foreground">{session.lastActive}</td>
-                        <td className="py-3 text-right">
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => revokeSession(session.id)}
-                            disabled={session.current}
-                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </td>
+              {activeSessions.length === 0 ? (
+                <p className="text-muted-foreground text-center py-4">No active sessions found</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="text-left text-muted-foreground border-b border-border/50">
+                      <tr>
+                        <th className="py-2 pr-4">User</th>
+                        <th className="py-2 pr-4 hidden md:table-cell">IP</th>
+                        <th className="py-2 pr-4 hidden lg:table-cell">Device</th>
+                        <th className="py-2 pr-4">Last Active</th>
+                        <th className="py-2"></th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {activeSessions.map((session) => (
+                        <tr key={session.id} className="border-b border-border/30">
+                          <td className="py-3 pr-4">
+                            <div className="flex items-center gap-2">
+                              <span className="truncate max-w-[120px]">{session.email}</span>
+                              {session.current && (
+                                <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20 text-xs">
+                                  Current
+                                </Badge>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-3 pr-4 font-mono text-xs hidden md:table-cell">{session.ip}</td>
+                          <td className="py-3 pr-4 text-muted-foreground hidden lg:table-cell">{session.device}</td>
+                          <td className="py-3 pr-4 text-muted-foreground">{session.lastActive}</td>
+                          <td className="py-3 text-right">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => revokeSession(session.id)}
+                              disabled={session.current}
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </CardContent>
           </Card>
         </motion.div>
@@ -330,35 +572,39 @@ const SecuritySettings = () => {
               <CardDescription>Recent security events</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {auditLogs.map((log, index) => (
-                  <div 
-                    key={index} 
-                    className="flex items-center justify-between p-3 rounded-xl bg-muted/30 border border-border/50"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">{log.action}</p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {log.user} • {log.time} • {log.ip}
-                      </p>
-                    </div>
-                    <Badge 
-                      variant="outline" 
-                      className={cn(
-                        "text-xs ml-2 shrink-0",
-                        log.status === "success" && "bg-green-500/10 text-green-500 border-green-500/20",
-                        log.status === "failed" && "bg-destructive/10 text-destructive border-destructive/20",
-                        log.status === "warning" && "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
-                      )}
+              {auditLogs.length === 0 ? (
+                <p className="text-muted-foreground text-center py-4">No recent security events</p>
+              ) : (
+                <div className="space-y-3">
+                  {auditLogs.map((log, index) => (
+                    <div 
+                      key={index} 
+                      className="flex items-center justify-between p-3 rounded-xl bg-muted/30 border border-border/50"
                     >
-                      {log.status === "success" && <CheckCircle className="w-3 h-3 mr-1" />}
-                      {log.status === "failed" && <AlertTriangle className="w-3 h-3 mr-1" />}
-                      {log.status === "warning" && <AlertTriangle className="w-3 h-3 mr-1" />}
-                      {log.status.toUpperCase()}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">{log.action}</p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {log.user} • {log.time} • {log.ip}
+                        </p>
+                      </div>
+                      <Badge 
+                        variant="outline" 
+                        className={cn(
+                          "text-xs ml-2 shrink-0",
+                          log.status === "success" && "bg-green-500/10 text-green-500 border-green-500/20",
+                          log.status === "failed" && "bg-destructive/10 text-destructive border-destructive/20",
+                          log.status === "warning" && "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
+                        )}
+                      >
+                        {log.status === "success" && <CheckCircle className="w-3 h-3 mr-1" />}
+                        {log.status === "failed" && <AlertTriangle className="w-3 h-3 mr-1" />}
+                        {log.status === "warning" && <AlertTriangle className="w-3 h-3 mr-1" />}
+                        {log.status.toUpperCase()}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </motion.div>

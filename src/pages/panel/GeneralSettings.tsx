@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,35 +6,177 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { RefreshCw, Save } from "lucide-react";
 
 const GeneralSettings = () => {
   const { toast } = useToast();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [panelId, setPanelId] = useState<string | null>(null);
+  
   const [settings, setSettings] = useState({
-    panelName: "MyAwesomePanel",
-    description: "Premium SMM services for social media growth",
+    panelName: "",
+    description: "",
     maintenanceMode: false,
+    maintenanceMessage: "",
     allowRegistration: true,
     requireEmailVerification: false,
     defaultCurrency: "USD",
     minOrderAmount: "1.00",
     maxOrderAmount: "100000.00",
-    supportEmail: "support@myawesomepanel.com",
+    supportEmail: "",
     termsOfService: "",
     privacyPolicy: ""
   });
 
-  const handleSave = () => {
-    toast({
-      title: "Settings saved",
-      description: "Your panel settings have been updated successfully.",
-    });
+  // Load settings from database
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('user_id', user.id)
+          .single();
+
+        if (!profile) return;
+
+        // Load panel data
+        const { data: panel, error: panelError } = await supabase
+          .from('panels')
+          .select('id, name, description, settings')
+          .eq('owner_id', profile.id)
+          .single();
+
+        if (panelError) throw panelError;
+        if (!panel) return;
+
+        setPanelId(panel.id);
+
+        // Load panel_settings
+        const { data: panelSettings } = await supabase
+          .from('panel_settings')
+          .select('*')
+          .eq('panel_id', panel.id)
+          .single();
+
+        const panelSettingsData = panel.settings as Record<string, any> || {};
+        const generalSettings = panelSettingsData.general || {};
+        const contactInfo = panelSettings?.contact_info as Record<string, any> || {};
+
+        setSettings({
+          panelName: panel.name || "",
+          description: panel.description || "",
+          maintenanceMode: panelSettings?.maintenance_mode ?? false,
+          maintenanceMessage: panelSettings?.maintenance_message || "",
+          allowRegistration: generalSettings.allowRegistration ?? true,
+          requireEmailVerification: generalSettings.requireEmailVerification ?? false,
+          defaultCurrency: generalSettings.defaultCurrency || "USD",
+          minOrderAmount: generalSettings.minOrderAmount || "1.00",
+          maxOrderAmount: generalSettings.maxOrderAmount || "100000.00",
+          supportEmail: contactInfo.email || "",
+          termsOfService: generalSettings.termsOfService || "",
+          privacyPolicy: generalSettings.privacyPolicy || ""
+        });
+
+      } catch (err) {
+        console.error('Error loading settings:', err);
+        toast({
+          variant: "destructive",
+          title: "Failed to load settings",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadSettings();
+  }, [toast]);
+
+  const handleSave = async () => {
+    if (!panelId) {
+      toast({ variant: "destructive", title: "No panel found" });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      // Update panel name and description
+      const { error: panelError } = await supabase
+        .from('panels')
+        .update({
+          name: settings.panelName,
+          description: settings.description,
+          settings: {
+            general: {
+              allowRegistration: settings.allowRegistration,
+              requireEmailVerification: settings.requireEmailVerification,
+              defaultCurrency: settings.defaultCurrency,
+              minOrderAmount: settings.minOrderAmount,
+              maxOrderAmount: settings.maxOrderAmount,
+              termsOfService: settings.termsOfService,
+              privacyPolicy: settings.privacyPolicy,
+              updatedAt: new Date().toISOString()
+            }
+          }
+        })
+        .eq('id', panelId);
+
+      if (panelError) throw panelError;
+
+      // Upsert panel_settings
+      const { error: settingsError } = await supabase
+        .from('panel_settings')
+        .upsert({
+          panel_id: panelId,
+          maintenance_mode: settings.maintenanceMode,
+          maintenance_message: settings.maintenanceMessage,
+          contact_info: { email: settings.supportEmail }
+        }, {
+          onConflict: 'panel_id'
+        });
+
+      if (settingsError) throw settingsError;
+
+      toast({
+        title: "Settings saved",
+        description: "Your panel settings have been updated successfully.",
+      });
+    } catch (err) {
+      console.error('Error saving settings:', err);
+      toast({
+        variant: "destructive",
+        title: "Failed to save settings",
+        description: "Please try again.",
+      });
+    } finally {
+      setSaving(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">General Settings</h1>
-        <p className="text-muted-foreground">Configure your panel's basic settings and preferences</p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">General Settings</h1>
+          <p className="text-muted-foreground">Configure your panel's basic settings and preferences</p>
+        </div>
+        <Button onClick={handleSave} disabled={saving} className="bg-gradient-primary hover:shadow-glow">
+          {saving ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+          Save Settings
+        </Button>
       </div>
 
       <div className="grid gap-6">
@@ -91,6 +233,18 @@ const GeneralSettings = () => {
                 onCheckedChange={(checked) => setSettings({...settings, maintenanceMode: checked})}
               />
             </div>
+            {settings.maintenanceMode && (
+              <div className="space-y-2">
+                <Label htmlFor="maintenanceMessage">Maintenance Message</Label>
+                <Textarea
+                  id="maintenanceMessage"
+                  value={settings.maintenanceMessage}
+                  onChange={(e) => setSettings({...settings, maintenanceMessage: e.target.value})}
+                  placeholder="We're currently performing scheduled maintenance. Please check back later."
+                  rows={2}
+                />
+              </div>
+            )}
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Allow Registration</Label>
@@ -183,12 +337,6 @@ const GeneralSettings = () => {
             </div>
           </CardContent>
         </Card>
-
-        <div className="flex justify-end">
-          <Button onClick={handleSave} className="bg-gradient-primary hover:shadow-glow">
-            Save Settings
-          </Button>
-        </div>
       </div>
     </div>
   );
