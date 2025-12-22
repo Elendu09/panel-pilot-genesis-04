@@ -46,18 +46,27 @@ export function useTenant(): TenantDetectionResult {
         const hostname = window.location.hostname;
         
         // Platform domains (admin/management interface)
+        // The main platform domain is smmpilot.online (without subdomain)
         const platformDomains = [
           'localhost',
           'lovable.app',
-          // Add other platform domains here
+          'smmpilot.online', // Main platform domain
         ];
 
-        // Check if this is a platform domain
+        // Check if this is a platform domain (exact match or lovable.app subdomain for preview)
         const isPlatform = platformDomains.some(domain => 
-          hostname === domain || hostname.endsWith(`.${domain}`)
+          hostname === domain || 
+          hostname.endsWith('.lovable.app') || // Preview domains
+          (domain === 'smmpilot.online' && hostname === 'smmpilot.online') ||
+          (domain === 'smmpilot.online' && hostname === 'www.smmpilot.online')
         );
 
-        if (isPlatform) {
+        // Check if it's a subdomain of smmpilot.online (tenant domain)
+        const isSubdomainOfPlatform = hostname.endsWith('.smmpilot.online') && 
+          hostname !== 'smmpilot.online' && 
+          hostname !== 'www.smmpilot.online';
+
+        if (isPlatform && !isSubdomainOfPlatform) {
           setIsPlatformDomain(true);
           setIsTenantDomain(false);
           setPanel(null);
@@ -68,6 +77,17 @@ export function useTenant(): TenantDetectionResult {
         // This is a tenant domain - try to find the panel
         setIsPlatformDomain(false);
         setIsTenantDomain(true);
+
+        let subdomain: string | null = null;
+        
+        // Extract subdomain from hostname
+        if (isSubdomainOfPlatform) {
+          // For *.smmpilot.online, extract the subdomain
+          subdomain = hostname.replace('.smmpilot.online', '');
+        } else {
+          // For custom domains, we'll try to match by custom_domain first
+          subdomain = null;
+        }
 
         // First, try to find by custom domain
         let { data: panelData, error: panelError } = await supabase

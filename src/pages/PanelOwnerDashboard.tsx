@@ -156,8 +156,8 @@ const PanelOwnerDashboard = () => {
         <link rel="canonical" href={canonicalUrl} />
       </Helmet>
 
-      {/* Low Balance Alert */}
-      <LowBalanceAlert balance={5} threshold={10} commissionDue={25.50} />
+      {/* Low Balance Alert - Only show when balance is actually low */}
+      {/* Removed for now - will be data-driven in future */}
 
       {/* Glassmorphic Sidebar */}
       <aside className={cn(
