@@ -36,8 +36,11 @@ import {
   MessageCircle,
   HelpCircle,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Globe,
+  CheckCircle
 } from "lucide-react";
+import { LiveStorefrontPreview } from "@/components/design/LiveStorefrontPreview";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -46,10 +49,12 @@ import { supabase } from "@/integrations/supabase/client";
 const DesignCustomization = () => {
   const { toast } = useToast();
   const [panelId, setPanelId] = useState<string | null>(null);
+  const [panelSubdomain, setPanelSubdomain] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [selectedTheme, setSelectedTheme] = useState("dark_gradient");
   const [activeTab, setActiveTab] = useState("themes");
+  const [previewMode, setPreviewMode] = useState<"local" | "live">("local");
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "tablet" | "mobile">("desktop");
   const [isGeneratingTheme, setIsGeneratingTheme] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
@@ -181,7 +186,7 @@ const DesignCustomization = () => {
 
         const { data: panel, error } = await supabase
           .from('panels')
-          .select('id, custom_branding, theme_type, primary_color, secondary_color, name')
+          .select('id, subdomain, custom_branding, theme_type, primary_color, secondary_color, name')
           .eq('owner_id', profile.id)
           .single();
 
@@ -189,6 +194,7 @@ const DesignCustomization = () => {
         if (!panel) return;
 
         setPanelId(panel.id);
+        setPanelSubdomain(panel.subdomain);
 
         // Load saved customization from custom_branding
         if (panel.custom_branding && typeof panel.custom_branding === 'object') {
@@ -961,30 +967,56 @@ const DesignCustomization = () => {
         {/* Preview Header */}
         <div className="flex items-center justify-between p-3 border-b border-border/50 bg-card/50">
           <div className="flex items-center gap-2">
-            <Eye className="w-4 h-4 text-muted-foreground" />
-            <span className="font-medium text-sm">Live Preview</span>
+            <div className="flex bg-muted rounded-lg p-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  "h-7 px-3 text-xs gap-1.5",
+                  previewMode === "local" && "bg-background shadow-sm"
+                )}
+                onClick={() => setPreviewMode("local")}
+              >
+                <Eye className="w-3 h-3" />
+                Local
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  "h-7 px-3 text-xs gap-1.5",
+                  previewMode === "live" && "bg-background shadow-sm"
+                )}
+                onClick={() => setPreviewMode("live")}
+              >
+                <Globe className="w-3 h-3" />
+                Live
+              </Button>
+            </div>
           </div>
           <div className="flex items-center gap-2">
-            <div className="flex bg-muted rounded-lg p-1">
-              {[
-                { device: "desktop" as const, icon: Monitor },
-                { device: "tablet" as const, icon: Tablet },
-                { device: "mobile" as const, icon: Smartphone },
-              ].map(({ device, icon: Icon }) => (
-                <Button
-                  key={device}
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    "h-8 w-8 p-0",
-                    previewDevice === device && "bg-background shadow-sm"
-                  )}
-                  onClick={() => setPreviewDevice(device)}
-                >
-                  <Icon className="w-4 h-4" />
-                </Button>
-              ))}
-            </div>
+            {previewMode === "local" && (
+              <div className="flex bg-muted rounded-lg p-1">
+                {[
+                  { device: "desktop" as const, icon: Monitor },
+                  { device: "tablet" as const, icon: Tablet },
+                  { device: "mobile" as const, icon: Smartphone },
+                ].map(({ device, icon: Icon }) => (
+                  <Button
+                    key={device}
+                    variant="ghost"
+                    size="sm"
+                    className={cn(
+                      "h-8 w-8 p-0",
+                      previewDevice === device && "bg-background shadow-sm"
+                    )}
+                    onClick={() => setPreviewDevice(device)}
+                  >
+                    <Icon className="w-4 h-4" />
+                  </Button>
+                ))}
+              </div>
+            )}
             <Button variant="outline" size="sm" onClick={handlePreviewNewTab} className="gap-2">
               <ExternalLink className="w-4 h-4" />
               Open
@@ -993,16 +1025,19 @@ const DesignCustomization = () => {
         </div>
 
         {/* Preview Content */}
-        <div className="flex-1 p-4 overflow-auto flex items-start justify-center bg-[#1a1a2e]">
-          <motion.div
-            layout
-            className="bg-background rounded-lg overflow-hidden shadow-2xl transition-all duration-300"
-            style={{
-              width: deviceSizes[previewDevice].width,
-              maxWidth: deviceSizes[previewDevice].maxWidth,
-              minHeight: "400px",
-            }}
-          >
+        {previewMode === "live" ? (
+          <LiveStorefrontPreview subdomain={panelSubdomain || undefined} />
+        ) : (
+          <div className="flex-1 p-4 overflow-auto flex items-start justify-center bg-[#1a1a2e]">
+            <motion.div
+              layout
+              className="bg-background rounded-lg overflow-hidden shadow-2xl transition-all duration-300"
+              style={{
+                width: deviceSizes[previewDevice].width,
+                maxWidth: deviceSizes[previewDevice].maxWidth,
+                minHeight: "400px",
+              }}
+            >
             {/* Full Storefront Preview */}
             <div 
               className="min-h-[400px] overflow-y-auto"
@@ -1235,6 +1270,7 @@ const DesignCustomization = () => {
             </div>
           </motion.div>
         </div>
+        )}
       </div>
     </div>
   );
