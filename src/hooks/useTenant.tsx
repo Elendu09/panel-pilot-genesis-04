@@ -102,7 +102,7 @@ export function useTenant(): TenantDetectionResult {
             secondary_color,
             logo_url,
             status,
-            panel_settings!inner (
+            panel_settings (
               seo_title,
               seo_description,
               seo_keywords,
@@ -112,15 +112,12 @@ export function useTenant(): TenantDetectionResult {
               social_links
             )
           `)
-          .or(`custom_domain.eq.${hostname},panel_domains.domain.eq.${hostname}`)
-          .eq('status', 'active')
-          .single();
+          .or(`custom_domain.eq.${hostname}`)
+          .in('status', ['active', 'pending']) // Allow pending panels to load immediately
+          .maybeSingle();
 
         // If not found by custom domain, try by subdomain
-        if (!panelData) {
-          // Extract subdomain (everything before first dot)
-          const subdomain = hostname.split('.')[0];
-          
+        if (!panelData && subdomain) {
           const { data: subdomainPanel, error: subdomainError } = await supabase
             .from('panels')
             .select(`
@@ -133,7 +130,7 @@ export function useTenant(): TenantDetectionResult {
               secondary_color,
               logo_url,
               status,
-              panel_settings!inner (
+              panel_settings (
                 seo_title,
                 seo_description,
                 seo_keywords,
@@ -144,11 +141,45 @@ export function useTenant(): TenantDetectionResult {
               )
             `)
             .eq('subdomain', subdomain)
-            .eq('status', 'active')
-            .single();
+            .in('status', ['active', 'pending']) // Allow pending panels to load immediately
+            .maybeSingle();
 
           panelData = subdomainPanel;
           panelError = subdomainError;
+        }
+
+        // Also try just the subdomain from hostname if not found
+        if (!panelData) {
+          const extractedSubdomain = hostname.split('.')[0];
+          
+          const { data: fallbackPanel, error: fallbackError } = await supabase
+            .from('panels')
+            .select(`
+              id,
+              name,
+              subdomain,
+              custom_domain,
+              theme_type,
+              primary_color,
+              secondary_color,
+              logo_url,
+              status,
+              panel_settings (
+                seo_title,
+                seo_description,
+                seo_keywords,
+                maintenance_mode,
+                maintenance_message,
+                contact_info,
+                social_links
+              )
+            `)
+            .eq('subdomain', extractedSubdomain)
+            .in('status', ['active', 'pending'])
+            .maybeSingle();
+
+          panelData = fallbackPanel;
+          panelError = fallbackError;
         }
 
         if (panelError && panelError.code !== 'PGRST116') {
@@ -156,9 +187,10 @@ export function useTenant(): TenantDetectionResult {
         }
 
         if (panelData) {
+          const settings = panelData.panel_settings;
           setPanel({
             ...panelData,
-            settings: panelData.panel_settings?.[0] || {}
+            settings: Array.isArray(settings) ? settings[0] : settings || {}
           });
         } else {
           setError('Panel not found or inactive');

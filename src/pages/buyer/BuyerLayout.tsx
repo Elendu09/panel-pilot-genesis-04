@@ -19,6 +19,7 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { cn } from "@/lib/utils";
 import { useTenant } from "@/hooks/useTenant";
 import { useBuyerAuth } from "@/contexts/BuyerAuthContext";
+import { LiveChatWidget } from "@/components/support/LiveChatWidget";
 
 interface BuyerLayoutProps {
   children?: React.ReactNode;
@@ -210,6 +211,16 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
           ))}
         </div>
       </nav>
+
+      {/* Live Chat Widget */}
+      {panel?.id && buyer?.id && (
+        <LiveChatWidget 
+          panelId={panel.id} 
+          buyerId={buyer.id}
+          buyerName={buyer.full_name || buyer.email?.split('@')[0]}
+          panelName={panel.name}
+        />
+      )}
     </div>
   );
 };
