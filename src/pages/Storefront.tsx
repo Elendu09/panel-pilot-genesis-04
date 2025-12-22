@@ -7,6 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { SOCIAL_ICONS_MAP } from '@/components/icons/SocialIcons';
+import { cn } from '@/lib/utils';
 import { 
   Search, 
   Filter, 
@@ -18,9 +20,45 @@ import {
   TrendingUp,
   Heart,
   MessageSquare,
-  Eye
+  Eye,
+  Image
 } from 'lucide-react';
 import { toast } from 'sonner';
+
+// Helper component to render service icon
+const ServiceIcon = ({ imageUrl, className }: { imageUrl?: string | null; className?: string }) => {
+  if (!imageUrl) {
+    return (
+      <div className={cn("w-10 h-10 rounded-lg bg-muted flex items-center justify-center", className)}>
+        <Image className="w-5 h-5 text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (imageUrl.startsWith('icon:')) {
+    const iconKey = imageUrl.replace('icon:', '');
+    const iconData = SOCIAL_ICONS_MAP[iconKey];
+    if (iconData) {
+      const IconComponent = iconData.icon;
+      return (
+        <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center", iconData.bgColor, className)}>
+          <IconComponent className="text-white" size={20} />
+        </div>
+      );
+    }
+  }
+
+  return (
+    <img 
+      src={imageUrl} 
+      alt="Service" 
+      className={cn("w-10 h-10 rounded-lg object-cover", className)}
+      onError={(e) => {
+        e.currentTarget.style.display = 'none';
+      }}
+    />
+  );
+};
 
 const Storefront = () => {
   const { panel, loading: tenantLoading, error: tenantError, isTenantDomain } = useTenant();
@@ -216,9 +254,12 @@ const Storefront = () => {
                     onClick={() => setSelectedService(service)}
                   >
                     <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg">{service.name}</CardTitle>
-                        <Badge variant="secondary" className="capitalize">
+                      <div className="flex items-center gap-3">
+                        <ServiceIcon imageUrl={service.image_url} />
+                        <div className="flex-1 min-w-0">
+                          <CardTitle className="text-lg truncate">{service.name}</CardTitle>
+                        </div>
+                        <Badge variant="secondary" className="capitalize shrink-0">
                           {service.category}
                         </Badge>
                       </div>
