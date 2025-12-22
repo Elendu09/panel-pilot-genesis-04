@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,6 +45,9 @@ import { supabase } from "@/integrations/supabase/client";
 
 const DesignCustomization = () => {
   const { toast } = useToast();
+  const [panelId, setPanelId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [selectedTheme, setSelectedTheme] = useState("dark_gradient");
   const [activeTab, setActiveTab] = useState("themes");
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "tablet" | "mobile">("desktop");
@@ -161,6 +164,64 @@ const DesignCustomization = () => {
     },
   ];
 
+  // Load customization from database on mount
+  useEffect(() => {
+    const loadDesignSettings = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('user_id', user.id)
+          .single();
+
+        if (!profile) return;
+
+        const { data: panel, error } = await supabase
+          .from('panels')
+          .select('id, custom_branding, theme_type, primary_color, secondary_color, name')
+          .eq('owner_id', profile.id)
+          .single();
+
+        if (error) throw error;
+        if (!panel) return;
+
+        setPanelId(panel.id);
+
+        // Load saved customization from custom_branding
+        if (panel.custom_branding && typeof panel.custom_branding === 'object') {
+          const saved = panel.custom_branding as Record<string, any>;
+          setCustomization(prev => ({
+            ...prev,
+            ...saved,
+            companyName: saved.companyName || panel.name || prev.companyName,
+            primaryColor: saved.primaryColor || panel.primary_color || prev.primaryColor,
+            secondaryColor: saved.secondaryColor || panel.secondary_color || prev.secondaryColor,
+          }));
+          if (saved.selectedTheme) {
+            setSelectedTheme(saved.selectedTheme);
+          }
+        } else {
+          // Use panel defaults
+          setCustomization(prev => ({
+            ...prev,
+            companyName: panel.name || prev.companyName,
+            primaryColor: panel.primary_color || prev.primaryColor,
+            secondaryColor: panel.secondary_color || prev.secondaryColor,
+          }));
+        }
+      } catch (err) {
+        console.error('Error loading design settings:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDesignSettings();
+  }, []);
+
   const applyTheme = (themeId: string) => {
     const theme = themes.find(t => t.id === themeId);
     if (theme) {
@@ -232,11 +293,47 @@ const DesignCustomization = () => {
     }
   };
 
-  const handleSave = () => {
-    toast({
-      title: "Design saved",
-      description: "Your panel design has been updated successfully.",
-    });
+  const handleSave = async () => {
+    if (!panelId) {
+      toast({ variant: "destructive", title: "No panel found" });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      // Save all customization to custom_branding jsonb field
+      const brandingData = {
+        ...customization,
+        selectedTheme,
+        updatedAt: new Date().toISOString(),
+      };
+
+      const { error } = await supabase
+        .from('panels')
+        .update({
+          custom_branding: brandingData,
+          primary_color: customization.primaryColor,
+          secondary_color: customization.secondaryColor,
+          theme_type: selectedTheme as any,
+        })
+        .eq('id', panelId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Design saved!",
+        description: "Your panel design is now live on your storefront.",
+      });
+    } catch (err) {
+      console.error('Error saving design:', err);
+      toast({
+        variant: "destructive",
+        title: "Failed to save",
+        description: "Please try again.",
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const generatePreviewUrl = () => {
@@ -291,8 +388,8 @@ const DesignCustomization = () => {
             <h1 className="text-2xl font-bold">Design Customization</h1>
             <p className="text-muted-foreground text-sm">Customize your panel's appearance</p>
           </div>
-          <Button onClick={handleSave} className="bg-gradient-to-r from-primary to-primary/80">
-            Save Changes
+          <Button onClick={handleSave} disabled={saving || loading} className="bg-gradient-to-r from-primary to-primary/80">
+            {saving ? 'Saving...' : 'Save Changes'}
           </Button>
         </div>
 
