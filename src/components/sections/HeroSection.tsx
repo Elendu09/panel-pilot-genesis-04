@@ -5,6 +5,7 @@ import { ArrowRight, Sparkles, Zap, TrendingUp, Users, Heart, Eye, MessageCircle
 import { Link } from "react-router-dom";
 import { AnimatedText } from "@/components/ui/animated-text";
 import { motion } from "framer-motion";
+import { TelegramIcon, VoteIcon, ViewsIcon, HeartIcon } from "@/components/icons/SocialIcons";
 
 // Floating feature cards data
 const leftCards = [
@@ -17,12 +18,12 @@ const rightCards = [
   { title: "Ecosystem.", subtitle: "Market transparency", delay: 1.4 },
 ];
 
-// Panel showcase services
+// Panel showcase services with SVG icons
 const showcaseServices = [
-  { emoji: "😎", name: "Telegram Subscribers", price: "$0.3", discount: "-50%", color: "from-blue-500 to-cyan-500" },
-  { emoji: "👋", name: "Premium Votes", price: "$1", discount: "-30%", color: "from-purple-500 to-pink-500" },
-  { emoji: "👀", name: "Channel Viewers", price: "$0.5", color: "from-green-500 to-emerald-500" },
-  { emoji: "❤️", name: "Real Likes", price: "$20", color: "from-red-500 to-orange-500" },
+  { icon: TelegramIcon, name: "Telegram Subscribers", price: "$0.3", discount: "-50%", gradient: "from-blue-500 to-cyan-500" },
+  { icon: VoteIcon, name: "Premium Votes", price: "$1", discount: "-30%", gradient: "from-amber-400 to-yellow-500" },
+  { icon: ViewsIcon, name: "Channel Viewers", price: "$0.5", gradient: "from-green-500 to-emerald-500" },
+  { icon: HeartIcon, name: "Real Likes", price: "$20", gradient: "from-red-500 to-pink-500" },
 ];
 
 export const HeroSection = () => {
@@ -256,7 +257,11 @@ export const HeroSection = () => {
                         </Badge>
                       )}
                       
-                      <div className="text-4xl mb-3">{service.emoji}</div>
+                      {/* Premium SVG Icon */}
+                      <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${service.gradient} flex items-center justify-center mb-3 shadow-lg`}>
+                        <service.icon className="text-white" size={24} />
+                      </div>
+                      
                       <h3 className="font-semibold text-sm mb-2 line-clamp-2">{service.name}</h3>
                       <div className="flex items-center justify-between">
                         <span className="text-xl font-bold text-primary">{service.price}</span>
