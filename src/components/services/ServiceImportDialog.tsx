@@ -250,13 +250,6 @@ export const ServiceImportDialog = ({
     setProviderBalance(null);
     setFetchError(null);
   };
-    setSelectedProvider("");
-    setGlobalMarkup(25);
-    setFetchedServices([]);
-    setSelectedServices([]);
-    setServiceMarkups({});
-    setSearchQuery("");
-  };
 
   return (
     <Dialog open={open} onOpenChange={(open) => !open && reset()}>
