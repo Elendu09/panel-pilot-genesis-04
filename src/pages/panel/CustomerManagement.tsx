@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,11 +61,15 @@ import {
   ArrowUpDown,
   Percent,
   Copy,
-  Circle
+  Circle,
+  RefreshCw,
+  Loader2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { usePanel } from "@/hooks/usePanel";
 
 // Import components
 import { ExportDialog } from "@/components/customers/ExportDialog";
@@ -99,24 +103,10 @@ interface Customer {
   customDiscount?: number;
 }
 
-interface Transaction {
-  id: string;
-  type: "credit" | "debit" | "refund";
-  amount: number;
-  description: string;
-  date: string;
-}
-
-interface Order {
-  id: string;
-  service: string;
-  amount: number;
-  status: string;
-  date: string;
-}
-
 const CustomerManagement = () => {
   const { toast } = useToast();
+  const { panel, loading: panelLoading } = usePanel();
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [showBalanceModal, setShowBalanceModal] = useState(false);
@@ -132,33 +122,53 @@ const CustomerManagement = () => {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [statusFilter, setStatusFilter] = useState<"all" | "online" | "banned">("all");
   const [selectedCustomers, setSelectedCustomers] = useState<string[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
 
-  // Mock customer data
-  const [customers, setCustomers] = useState<Customer[]>([
-    { id: "1", name: "John Anderson", email: "john@example.com", username: "john_a2x4", status: "active", segment: "vip", balance: 245.50, totalSpent: 2450.00, totalOrders: 47, joinedAt: "2024-01-15", lastActive: "2 hours ago", isOnline: true, referralCode: "JOHN2024", referralCount: 5, customDiscount: 10 },
-    { id: "2", name: "Sarah Miller", email: "sarah@example.com", username: "sarah_m9k2", status: "active", segment: "regular", balance: 89.25, totalSpent: 890.00, totalOrders: 23, joinedAt: "2024-03-20", lastActive: "5 hours ago", isOnline: true, referralCode: "SARAH2024", referralCount: 2 },
-    { id: "3", name: "Mike Johnson", email: "mike@example.com", username: "mike_j7b3", status: "active", segment: "new", balance: 50.00, totalSpent: 50.00, totalOrders: 2, joinedAt: "2024-11-01", lastActive: "1 day ago", isOnline: false, referralCode: "MIKE2024", referredBy: "JOHN2024" },
-    { id: "4", name: "Emma Wilson", email: "emma@example.com", username: "emma_w4p1", status: "inactive", segment: "regular", balance: 0, totalSpent: 340.00, totalOrders: 8, joinedAt: "2024-06-10", lastActive: "2 weeks ago", isOnline: false },
-    { id: "5", name: "Chris Davis", email: "chris@example.com", username: "chris_d8n5", status: "suspended", segment: "regular", balance: 15.00, totalSpent: 120.00, totalOrders: 5, joinedAt: "2024-08-05", lastActive: "1 month ago", isOnline: false },
-    { id: "6", name: "Alex Thompson", email: "alex@example.com", username: "alex_t3c9", status: "active", segment: "vip", balance: 500.00, totalSpent: 5200.00, totalOrders: 89, joinedAt: "2023-06-15", lastActive: "30 min ago", isOnline: true, referralCode: "ALEX2024", referralCount: 12, customDiscount: 15 },
-    { id: "7", name: "Lisa Chen", email: "lisa@example.com", username: "lisa_c6r7", status: "active", segment: "regular", balance: 125.00, totalSpent: 780.00, totalOrders: 18, joinedAt: "2024-04-22", lastActive: "3 hours ago", isOnline: true, referralCode: "LISA2024" },
-    { id: "8", name: "David Brown", email: "david@example.com", username: "david_b1q8", status: "active", segment: "new", balance: 25.00, totalSpent: 25.00, totalOrders: 1, joinedAt: "2024-11-15", lastActive: "Just now", isOnline: true, referredBy: "ALEX2024" },
-    { id: "9", name: "Maria Garcia", email: "maria@example.com", username: "maria_g5f2", status: "active", segment: "vip", balance: 320.00, totalSpent: 3100.00, totalOrders: 62, joinedAt: "2023-09-10", lastActive: "1 hour ago", isOnline: false, referralCode: "MARIA2024", referralCount: 8 },
-    { id: "10", name: "James Wilson", email: "james@example.com", username: "james_w0h4", status: "active", segment: "regular", balance: 45.00, totalSpent: 420.00, totalOrders: 12, joinedAt: "2024-07-18", lastActive: "6 hours ago", isOnline: false },
-  ]);
+  useEffect(() => {
+    if (panel?.id) {
+      fetchCustomers();
+    }
+  }, [panel?.id]);
 
-  const mockTransactions: Transaction[] = [
-    { id: "t1", type: "credit", amount: 100.00, description: "Balance top-up via PayPal", date: "2024-11-15" },
-    { id: "t2", type: "debit", amount: 24.99, description: "Order #ORD-2847", date: "2024-11-14" },
-    { id: "t3", type: "debit", amount: 12.50, description: "Order #ORD-2845", date: "2024-11-12" },
-    { id: "t4", type: "refund", amount: 5.00, description: "Partial refund - Order #ORD-2840", date: "2024-11-10" },
-  ];
+  const fetchCustomers = async () => {
+    if (!panel?.id) return;
+    
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('client_users')
+        .select('*')
+        .eq('panel_id', panel.id)
+        .order('created_at', { ascending: false });
 
-  const mockOrders: Order[] = [
-    { id: "ORD-2847", service: "Instagram Followers 1K", amount: 24.99, status: "completed", date: "2024-11-14" },
-    { id: "ORD-2845", service: "YouTube Views 5K", amount: 12.50, status: "in_progress", date: "2024-11-12" },
-    { id: "ORD-2840", service: "TikTok Likes 500", amount: 8.99, status: "completed", date: "2024-11-10" },
-  ];
+      if (error) throw error;
+
+      const formattedCustomers: Customer[] = (data || []).map(c => ({
+        id: c.id,
+        name: c.full_name || c.email.split('@')[0],
+        email: c.email,
+        username: c.username || undefined,
+        status: c.is_active ? 'active' : 'suspended',
+        segment: (c.total_spent || 0) >= 1000 ? 'vip' : (c.total_spent || 0) >= 100 ? 'regular' : 'new',
+        balance: c.balance || 0,
+        totalSpent: c.total_spent || 0,
+        totalOrders: 0, // Would need to join with orders table
+        joinedAt: c.created_at,
+        lastActive: c.last_login_at || c.created_at,
+        isOnline: c.last_login_at ? new Date(c.last_login_at).getTime() > Date.now() - 15 * 60 * 1000 : false,
+        referralCode: c.referral_code || undefined,
+        referralCount: c.referral_count || 0,
+        customDiscount: c.custom_discount || 0,
+      }));
+
+      setCustomers(formattedCustomers);
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to load customers' });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const onlineCount = customers.filter(c => c.isOnline).length;
   const bannedCount = customers.filter(c => c.status === "suspended").length;
@@ -196,7 +206,6 @@ const CustomerManagement = () => {
     return result;
   }, [customers, searchTerm, sortColumn, sortDirection, statusFilter]);
 
-  // Selection handlers
   const toggleSelectAll = () => {
     if (selectedCustomers.length === filteredCustomers.length) {
       setSelectedCustomers([]);
@@ -216,27 +225,64 @@ const CustomerManagement = () => {
     setSelectedCustomers([]);
   };
 
-  const handleBulkDiscount = (discount: number, expiresAt: Date | null) => {
-    setCustomers(prev => prev.map(c => 
-      selectedCustomers.includes(c.id) ? { ...c, customDiscount: discount } : c
-    ));
-    setSelectedCustomers([]);
+  const handleBulkDiscount = async (discount: number, expiresAt: Date | null) => {
+    try {
+      const { error } = await supabase
+        .from('client_users')
+        .update({ custom_discount: discount })
+        .in('id', selectedCustomers);
+
+      if (error) throw error;
+
+      setCustomers(prev => prev.map(c => 
+        selectedCustomers.includes(c.id) ? { ...c, customDiscount: discount } : c
+      ));
+      setSelectedCustomers([]);
+      toast({ title: 'Discount Applied', description: `${discount}% discount applied to ${selectedCustomers.length} customers` });
+    } catch (error) {
+      console.error('Error applying discount:', error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to apply discount' });
+    }
   };
 
-  const handleBulkSuspend = () => {
-    setCustomers(prev => prev.map(c => 
-      selectedCustomers.includes(c.id) ? { ...c, status: "suspended" as const } : c
-    ));
-    toast({ title: "Customers Suspended", description: `${selectedCustomers.length} customers have been suspended` });
-    setSelectedCustomers([]);
+  const handleBulkSuspend = async () => {
+    try {
+      const { error } = await supabase
+        .from('client_users')
+        .update({ is_active: false })
+        .in('id', selectedCustomers);
+
+      if (error) throw error;
+
+      setCustomers(prev => prev.map(c => 
+        selectedCustomers.includes(c.id) ? { ...c, status: "suspended" as const } : c
+      ));
+      toast({ title: "Customers Suspended", description: `${selectedCustomers.length} customers have been suspended` });
+      setSelectedCustomers([]);
+    } catch (error) {
+      console.error('Error suspending customers:', error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to suspend customers' });
+    }
   };
 
-  const handleBulkActivate = () => {
-    setCustomers(prev => prev.map(c => 
-      selectedCustomers.includes(c.id) ? { ...c, status: "active" as const } : c
-    ));
-    toast({ title: "Customers Activated", description: `${selectedCustomers.length} customers have been activated` });
-    setSelectedCustomers([]);
+  const handleBulkActivate = async () => {
+    try {
+      const { error } = await supabase
+        .from('client_users')
+        .update({ is_active: true })
+        .in('id', selectedCustomers);
+
+      if (error) throw error;
+
+      setCustomers(prev => prev.map(c => 
+        selectedCustomers.includes(c.id) ? { ...c, status: "active" as const } : c
+      ));
+      toast({ title: "Customers Activated", description: `${selectedCustomers.length} customers have been activated` });
+      setSelectedCustomers([]);
+    } catch (error) {
+      console.error('Error activating customers:', error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to activate customers' });
+    }
   };
 
   const handleSetPricing = (customer: Customer) => {
@@ -244,10 +290,23 @@ const CustomerManagement = () => {
     setShowPricingDialog(true);
   };
 
-  const handleSaveCustomPricing = (customerId: string, discount: number) => {
-    setCustomers(prev => prev.map(c => 
-      c.id === customerId ? { ...c, customDiscount: discount } : c
-    ));
+  const handleSaveCustomPricing = async (customerId: string, discount: number) => {
+    try {
+      const { error } = await supabase
+        .from('client_users')
+        .update({ custom_discount: discount })
+        .eq('id', customerId);
+
+      if (error) throw error;
+
+      setCustomers(prev => prev.map(c => 
+        c.id === customerId ? { ...c, customDiscount: discount } : c
+      ));
+      toast({ title: 'Pricing Updated', description: `Custom discount set to ${discount}%` });
+    } catch (error) {
+      console.error('Error updating pricing:', error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to update pricing' });
+    }
   };
 
   const copyReferralCode = (code: string) => {
@@ -281,44 +340,110 @@ const CustomerManagement = () => {
     }
   };
 
-  const handleBalanceAdjust = () => {
+  const handleBalanceAdjust = async () => {
     if (!balanceAmount || !selectedCustomer) return;
+    
     const amount = parseFloat(balanceAmount);
-    const action = balanceAction === "add" ? "added to" : "subtracted from";
-    toast({ title: "Balance Updated", description: `$${amount.toFixed(2)} ${action} ${selectedCustomer.name}'s account.` });
-    setShowBalanceModal(false);
-    setBalanceAmount("");
-    setBalanceReason("");
+    const newBalance = balanceAction === "add" 
+      ? selectedCustomer.balance + amount 
+      : selectedCustomer.balance - amount;
+
+    try {
+      const { error } = await supabase
+        .from('client_users')
+        .update({ balance: newBalance })
+        .eq('id', selectedCustomer.id);
+
+      if (error) throw error;
+
+      // Log the transaction
+      await supabase.from('transactions').insert({
+        user_id: selectedCustomer.id,
+        amount: balanceAction === 'add' ? amount : -amount,
+        type: balanceAction === 'add' ? 'deposit' : 'withdrawal',
+        description: balanceReason || `Balance ${balanceAction}`,
+        status: 'completed'
+      });
+
+      setCustomers(prev => prev.map(c => 
+        c.id === selectedCustomer.id ? { ...c, balance: newBalance } : c
+      ));
+
+      const action = balanceAction === "add" ? "added to" : "subtracted from";
+      toast({ title: "Balance Updated", description: `$${amount.toFixed(2)} ${action} ${selectedCustomer.name}'s account.` });
+      setShowBalanceModal(false);
+      setBalanceAmount("");
+      setBalanceReason("");
+    } catch (error) {
+      console.error('Error adjusting balance:', error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to adjust balance' });
+    }
   };
 
   const handleCustomerAction = (action: string, customer: Customer) => {
     toast({ title: `${action} - ${customer.name}`, description: `Action "${action}" performed successfully.` });
   };
 
-  const handleAddCustomer = (newCustomer: NewCustomer) => {
-    const customer: Customer = {
-      id: `${Date.now()}`,
-      name: newCustomer.fullName,
-      email: newCustomer.email,
-      username: newCustomer.username,
-      status: newCustomer.status,
-      segment: newCustomer.segment,
-      balance: newCustomer.balance,
-      totalSpent: 0,
-      totalOrders: 0,
-      joinedAt: new Date().toISOString().split('T')[0],
-      lastActive: "Just now",
-    };
-    setCustomers(prev => [customer, ...prev]);
-    toast({ 
-      title: "Customer Created", 
-      description: `${newCustomer.fullName} has been added successfully.` 
-    });
+  const handleAddCustomer = async (newCustomer: NewCustomer) => {
+    if (!panel?.id) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('client_users')
+        .insert({
+          panel_id: panel.id,
+          email: newCustomer.email,
+          full_name: newCustomer.fullName,
+          username: newCustomer.username,
+          is_active: newCustomer.status === 'active',
+          balance: newCustomer.balance,
+          password_temp: 'temp123', // Would need proper password handling
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const customer: Customer = {
+        id: data.id,
+        name: data.full_name || data.email.split('@')[0],
+        email: data.email,
+        username: data.username || undefined,
+        status: data.is_active ? 'active' : 'suspended',
+        segment: 'new',
+        balance: data.balance || 0,
+        totalSpent: 0,
+        totalOrders: 0,
+        joinedAt: data.created_at,
+        lastActive: data.created_at,
+      };
+
+      setCustomers(prev => [customer, ...prev]);
+      toast({ 
+        title: "Customer Created", 
+        description: `${newCustomer.fullName} has been added successfully.` 
+      });
+    } catch (error) {
+      console.error('Error adding customer:', error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to add customer' });
+    }
   };
 
   const selectedCustomersForExport = selectedCustomers.length > 0
     ? filteredCustomers.filter(c => selectedCustomers.includes(c.id))
     : filteredCustomers;
+
+  if (panelLoading || loading) {
+    return (
+      <div className="space-y-6 animate-pulse">
+        <div className="h-8 bg-muted rounded w-1/4"></div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map(i => <div key={i} className="h-24 bg-muted rounded-xl"></div>)}
+        </div>
+        <div className="h-64 bg-muted rounded-xl"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -329,6 +454,10 @@ const CustomerManagement = () => {
           <p className="text-muted-foreground text-sm md:text-base">Manage your panel's customers and their accounts</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={fetchCustomers}>
+            <RefreshCw className="w-4 h-4 mr-2" />
+            <span className="hidden sm:inline">Refresh</span>
+          </Button>
           <Button variant="outline" onClick={() => setShowExportDialog(true)}>
             <Download className="w-4 h-4 mr-2" />
             <span className="hidden sm:inline">Export</span>
@@ -402,6 +531,18 @@ const CustomerManagement = () => {
           </div>
         </CardHeader>
         <CardContent>
+          {/* Bulk Actions */}
+          {selectedCustomers.length > 0 && (
+            <BulkActionToolbar
+              selectedCount={selectedCustomers.length}
+              onEmail={() => setShowBulkEmailDialog(true)}
+              onDiscount={() => setShowBulkDiscountDialog(true)}
+              onSuspend={handleBulkSuspend}
+              onActivate={handleBulkActivate}
+              onClear={() => setSelectedCustomers([])}
+            />
+          )}
+
           {/* Desktop Table View */}
           <div className="hidden md:block rounded-lg border border-border/50 overflow-hidden">
             <Table>
@@ -413,236 +554,162 @@ const CustomerManagement = () => {
                       onCheckedChange={toggleSelectAll}
                     />
                   </TableHead>
-                  <TableHead className="w-[250px]">Customer</TableHead>
-                  <TableHead className="cursor-pointer" onClick={() => handleSort("status")}>
-                    <div className="flex items-center gap-1">Status <ArrowUpDown className="w-3 h-3" /></div>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => handleSort('balance')}>
+                    <div className="flex items-center gap-1">
+                      Balance
+                      <ArrowUpDown className="w-4 h-4" />
+                    </div>
                   </TableHead>
-                  <TableHead className="cursor-pointer" onClick={() => handleSort("segment")}>
-                    <div className="flex items-center gap-1">Segment <ArrowUpDown className="w-3 h-3" /></div>
+                  <TableHead className="cursor-pointer" onClick={() => handleSort('totalSpent')}>
+                    <div className="flex items-center gap-1">
+                      Spent
+                      <ArrowUpDown className="w-4 h-4" />
+                    </div>
                   </TableHead>
-                  <TableHead className="cursor-pointer text-right" onClick={() => handleSort("balance")}>
-                    <div className="flex items-center justify-end gap-1">Balance <ArrowUpDown className="w-3 h-3" /></div>
-                  </TableHead>
-                  <TableHead className="cursor-pointer text-right" onClick={() => handleSort("totalSpent")}>
-                    <div className="flex items-center justify-end gap-1">Spent <ArrowUpDown className="w-3 h-3" /></div>
-                  </TableHead>
-                  <TableHead className="cursor-pointer text-right" onClick={() => handleSort("totalOrders")}>
-                    <div className="flex items-center justify-end gap-1">Orders <ArrowUpDown className="w-3 h-3" /></div>
-                  </TableHead>
-                  <TableHead>Last Active</TableHead>
-                  <TableHead className="w-[50px]"></TableHead>
+                  <TableHead>Discount</TableHead>
+                  <TableHead className="w-[80px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredCustomers.map((customer) => (
-                  <TableRow key={customer.id} className={cn("hover:bg-muted/20", selectedCustomers.includes(customer.id) && "bg-primary/5")}>
-                    <TableCell>
-                      <Checkbox
-                        checked={selectedCustomers.includes(customer.id)}
-                        onCheckedChange={() => toggleSelectCustomer(customer.id)}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-9 w-9">
-                          <AvatarImage src={customer.avatar} />
-                          <AvatarFallback className="bg-primary/10 text-primary text-sm">{customer.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="flex items-center gap-1">
-                            <p className="font-medium">{customer.name}</p>
-                            {customer.segment === "vip" && <Crown className="w-3 h-3 text-purple-500" />}
-                          </div>
-                          <p className="text-sm text-muted-foreground">{customer.email}</p>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell><Badge className={getStatusColor(customer.status)}>{customer.status}</Badge></TableCell>
-                    <TableCell><Badge className={getSegmentColor(customer.segment)} variant="outline">{customer.segment}</Badge></TableCell>
-                    <TableCell className="text-right font-medium text-primary">${customer.balance.toFixed(2)}</TableCell>
-                    <TableCell className="text-right font-medium">${customer.totalSpent.toFixed(2)}</TableCell>
-                    <TableCell className="text-right">{customer.totalOrders}</TableCell>
-                    <TableCell className="text-muted-foreground text-sm">{customer.lastActive}</TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreVertical className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => setSelectedCustomer(customer)}><Eye className="w-4 h-4 mr-2" />View</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleCustomerAction("Edit", customer)}><Edit className="w-4 h-4 mr-2" />Edit</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => { setSelectedCustomer(customer); setShowBalanceModal(true); }}><Wallet className="w-4 h-4 mr-2" />Adjust Balance</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleSetPricing(customer)}><Percent className="w-4 h-4 mr-2" />Set Pricing</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => copyReferralCode(customer.referralCode || "")}><Copy className="w-4 h-4 mr-2" />Copy Referral</DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => handleCustomerAction("Suspend", customer)} className="text-destructive"><Ban className="w-4 h-4 mr-2" />Suspend</DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                {filteredCustomers.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      No customers found
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  filteredCustomers.map((customer) => (
+                    <TableRow key={customer.id} className="hover:bg-muted/30">
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedCustomers.includes(customer.id)}
+                          onCheckedChange={() => toggleSelectCustomer(customer.id)}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <div className="relative">
+                            <Avatar className="w-9 h-9">
+                              <AvatarFallback className="bg-primary/10 text-primary text-sm">
+                                {customer.name.charAt(0)}
+                              </AvatarFallback>
+                            </Avatar>
+                            {customer.isOnline && (
+                              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-background" />
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-medium flex items-center gap-2">
+                              {customer.name}
+                              {customer.segment === 'vip' && <Crown className="w-4 h-4 text-amber-500" />}
+                            </p>
+                            <p className="text-xs text-muted-foreground">{customer.email}</p>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={getStatusColor(customer.status)}>
+                          {customer.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-medium">${customer.balance.toFixed(2)}</span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-muted-foreground">${customer.totalSpent.toFixed(2)}</span>
+                      </TableCell>
+                      <TableCell>
+                        {customer.customDiscount ? (
+                          <Badge variant="outline" className="bg-green-500/10 text-green-500">
+                            {customer.customDiscount}% off
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreVertical className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="glass">
+                            <DropdownMenuItem onClick={() => setSelectedCustomer(customer)}>
+                              <Eye className="w-4 h-4 mr-2" /> View Details
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleSetPricing(customer)}>
+                              <Percent className="w-4 h-4 mr-2" /> Set Pricing
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => { setSelectedCustomer(customer); setShowBalanceModal(true); }}>
+                              <Wallet className="w-4 h-4 mr-2" /> Adjust Balance
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => handleCustomerAction('Email', customer)}>
+                              <Mail className="w-4 h-4 mr-2" /> Send Email
+                            </DropdownMenuItem>
+                            {customer.referralCode && (
+                              <DropdownMenuItem onClick={() => copyReferralCode(customer.referralCode!)}>
+                                <Copy className="w-4 h-4 mr-2" /> Copy Referral Code
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              className="text-destructive"
+                              onClick={() => customer.status === 'suspended' ? handleBulkActivate() : handleBulkSuspend()}
+                            >
+                              <Ban className="w-4 h-4 mr-2" /> 
+                              {customer.status === 'suspended' ? 'Activate' : 'Suspend'}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>
 
-          {/* Mobile Card View */}
-          <div className="md:hidden space-y-4">
+          {/* Mobile Cards */}
+          <div className="md:hidden space-y-3">
             {filteredCustomers.map((customer) => (
               <CustomerMobileCard
                 key={customer.id}
                 customer={customer}
-                onView={setSelectedCustomer}
-                onEdit={(c) => handleCustomerAction("Edit", c)}
-                onAdjustBalance={(c) => { setSelectedCustomer(c); setShowBalanceModal(true); }}
-                onSuspend={(c) => handleCustomerAction("Suspend", c)}
+                onSelect={() => setSelectedCustomer(customer)}
+                onBalanceAdjust={() => { setSelectedCustomer(customer); setShowBalanceModal(true); }}
+                onSetPricing={() => handleSetPricing(customer)}
               />
             ))}
-          </div>
-
-          <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
-            <span>Showing {filteredCustomers.length} of {customers.length} customers</span>
           </div>
         </CardContent>
       </Card>
 
-      {/* Bulk Action Toolbar */}
-      <BulkActionToolbar
-        selectedCount={selectedCustomers.length}
-        onSendEmail={() => setShowBulkEmailDialog(true)}
-        onApplyDiscount={() => setShowBulkDiscountDialog(true)}
-        onExport={() => setShowExportDialog(true)}
-        onSuspend={handleBulkSuspend}
-        onActivate={handleBulkActivate}
-        onClearSelection={() => setSelectedCustomers([])}
-      />
-
-      {/* Customer Profile Sheet */}
-      <Sheet open={!!selectedCustomer && !showBalanceModal} onOpenChange={() => setSelectedCustomer(null)}>
-        <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
-          {selectedCustomer && (
-            <>
-              <SheetHeader className="space-y-4">
-                <div className="flex items-center gap-4">
-                  <Avatar className="h-16 w-16 ring-2 ring-offset-2 ring-offset-background ring-primary/20">
-                    <AvatarImage src={selectedCustomer.avatar} alt={selectedCustomer.name} />
-                    <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xl">{selectedCustomer.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <SheetTitle className="flex items-center gap-2">{selectedCustomer.name}{selectedCustomer.segment === "vip" && <Crown className="w-5 h-5 text-purple-500" />}</SheetTitle>
-                    <SheetDescription>{selectedCustomer.email}</SheetDescription>
-                    {selectedCustomer.username && (
-                      <p className="text-sm text-muted-foreground mt-1">@{selectedCustomer.username}</p>
-                    )}
-                  </div>
-                </div>
-              </SheetHeader>
-              <div className="mt-6 space-y-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <Card className="bg-muted/30"><CardContent className="p-4 text-center"><p className="text-2xl font-bold text-primary">${selectedCustomer.balance.toFixed(2)}</p><p className="text-sm text-muted-foreground">Balance</p></CardContent></Card>
-                  <Card className="bg-muted/30"><CardContent className="p-4 text-center"><p className="text-2xl font-bold">${selectedCustomer.totalSpent.toFixed(2)}</p><p className="text-sm text-muted-foreground">Total Spent</p></CardContent></Card>
-                </div>
-                <div className="flex gap-2">
-                  <Button className="flex-1" onClick={() => setShowBalanceModal(true)}><Wallet className="w-4 h-4 mr-2" />Adjust Balance</Button>
-                  <Button variant="outline" className="flex-1"><Mail className="w-4 h-4 mr-2" />Send Email</Button>
-                </div>
-                <div>
-                  <h4 className="font-semibold mb-3 flex items-center gap-2"><ShoppingCart className="w-4 h-4" />Recent Orders</h4>
-                  <div className="space-y-2">
-                    {mockOrders.map((order) => (
-                      <div key={order.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                        <div><p className="font-medium text-sm">{order.service}</p><p className="text-xs text-muted-foreground">#{order.id}</p></div>
-                        <div className="text-right"><p className="font-medium">${order.amount}</p><Badge variant="secondary" className="text-xs">{order.status.replace("_", " ")}</Badge></div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <h4 className="font-semibold mb-3 flex items-center gap-2"><History className="w-4 h-4" />Transaction History</h4>
-                  <div className="space-y-2">
-                    {mockTransactions.map((tx) => (
-                      <div key={tx.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${tx.type === "credit" ? "bg-green-500/10" : tx.type === "refund" ? "bg-blue-500/10" : "bg-destructive/10"}`}>
-                            {tx.type === "credit" ? <ArrowUpRight className="w-4 h-4 text-green-500" /> : tx.type === "refund" ? <ArrowUpRight className="w-4 h-4 text-blue-500" /> : <ArrowDownRight className="w-4 h-4 text-destructive" />}
-                          </div>
-                          <div><p className="text-sm">{tx.description}</p><p className="text-xs text-muted-foreground">{tx.date}</p></div>
-                        </div>
-                        <span className={`font-medium ${tx.type === "credit" || tx.type === "refund" ? "text-green-500" : "text-destructive"}`}>{tx.type === "debit" ? "-" : "+"}${tx.amount.toFixed(2)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                
-                <ReferralSection customer={selectedCustomer} />
-              </div>
-            </>
-          )}
-        </SheetContent>
-      </Sheet>
-
-      {/* Balance Adjustment Modal */}
-      <Dialog open={showBalanceModal} onOpenChange={setShowBalanceModal}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Adjust Balance</DialogTitle>
-            <DialogDescription>{selectedCustomer && `Modify ${selectedCustomer.name}'s account balance`}</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="flex gap-2">
-              <Button variant={balanceAction === "add" ? "default" : "outline"} className="flex-1" onClick={() => setBalanceAction("add")}><Plus className="w-4 h-4 mr-2" />Add Funds</Button>
-              <Button variant={balanceAction === "subtract" ? "default" : "outline"} className="flex-1" onClick={() => setBalanceAction("subtract")}><Minus className="w-4 h-4 mr-2" />Subtract</Button>
-            </div>
-            <div>
-              <Label htmlFor="amount">Amount</Label>
-              <div className="relative mt-1">
-                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input id="amount" type="number" placeholder="0.00" value={balanceAmount} onChange={(e) => setBalanceAmount(e.target.value)} className="pl-10" />
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="reason">Reason (optional)</Label>
-              <Input id="reason" placeholder="Enter reason for adjustment" value={balanceReason} onChange={(e) => setBalanceReason(e.target.value)} className="mt-1" />
-            </div>
-            {selectedCustomer && balanceAmount && (
-              <div className="p-4 bg-muted/30 rounded-lg">
-                <p className="text-sm text-muted-foreground mb-2">Preview</p>
-                <div className="flex items-center justify-between"><span>Current:</span><span className="font-medium">${selectedCustomer.balance.toFixed(2)}</span></div>
-                <div className="flex items-center justify-between mt-1"><span>New:</span><span className={`font-bold ${balanceAction === "add" ? "text-green-500" : "text-destructive"}`}>${(balanceAction === "add" ? selectedCustomer.balance + parseFloat(balanceAmount || "0") : selectedCustomer.balance - parseFloat(balanceAmount || "0")).toFixed(2)}</span></div>
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowBalanceModal(false)}>Cancel</Button>
-            <Button onClick={handleBalanceAdjust} className={balanceAction === "add" ? "bg-green-500 hover:bg-green-500/90" : "bg-destructive hover:bg-destructive/90"}>{balanceAction === "add" ? "Add Funds" : "Subtract Funds"}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Export Dialog */}
-      <ExportDialog 
-        open={showExportDialog} 
+      {/* Dialogs */}
+      <ExportDialog
+        open={showExportDialog}
         onOpenChange={setShowExportDialog}
         customers={selectedCustomersForExport}
       />
 
-      {/* Add Customer Dialog */}
       <AddCustomerDialog
         open={showAddCustomerDialog}
         onOpenChange={setShowAddCustomerDialog}
         onAdd={handleAddCustomer}
       />
 
-      {/* Customer Pricing Dialog */}
-      <CustomerPricingDialog
-        open={showPricingDialog}
-        onOpenChange={setShowPricingDialog}
-        customer={selectedCustomer}
-        onSave={handleSaveCustomPricing}
-      />
+      {selectedCustomer && (
+        <CustomerPricingDialog
+          open={showPricingDialog}
+          onOpenChange={setShowPricingDialog}
+          customer={selectedCustomer}
+          onSave={handleSaveCustomPricing}
+        />
+      )}
 
-      {/* Bulk Email Dialog */}
       <BulkEmailDialog
         open={showBulkEmailDialog}
         onOpenChange={setShowBulkEmailDialog}
@@ -650,13 +717,64 @@ const CustomerManagement = () => {
         onSend={handleBulkEmail}
       />
 
-      {/* Bulk Discount Dialog */}
       <BulkDiscountDialog
         open={showBulkDiscountDialog}
         onOpenChange={setShowBulkDiscountDialog}
         selectedCount={selectedCustomers.length}
         onApply={handleBulkDiscount}
       />
+
+      {/* Balance Adjustment Modal */}
+      <Dialog open={showBalanceModal} onOpenChange={setShowBalanceModal}>
+        <DialogContent className="glass">
+          <DialogHeader>
+            <DialogTitle>Adjust Balance</DialogTitle>
+            <DialogDescription>
+              {selectedCustomer?.name} - Current Balance: ${selectedCustomer?.balance.toFixed(2)}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex gap-2">
+              <Button
+                variant={balanceAction === "add" ? "default" : "outline"}
+                onClick={() => setBalanceAction("add")}
+                className="flex-1"
+              >
+                <Plus className="w-4 h-4 mr-2" /> Add
+              </Button>
+              <Button
+                variant={balanceAction === "subtract" ? "default" : "outline"}
+                onClick={() => setBalanceAction("subtract")}
+                className="flex-1"
+              >
+                <Minus className="w-4 h-4 mr-2" /> Subtract
+              </Button>
+            </div>
+            <div>
+              <Label>Amount</Label>
+              <Input
+                type="number"
+                value={balanceAmount}
+                onChange={(e) => setBalanceAmount(e.target.value)}
+                placeholder="0.00"
+                step="0.01"
+              />
+            </div>
+            <div>
+              <Label>Reason (Optional)</Label>
+              <Input
+                value={balanceReason}
+                onChange={(e) => setBalanceReason(e.target.value)}
+                placeholder="Manual adjustment..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowBalanceModal(false)}>Cancel</Button>
+            <Button onClick={handleBalanceAdjust}>Confirm</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

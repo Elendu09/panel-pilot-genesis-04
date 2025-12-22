@@ -17,23 +17,27 @@ import {
   Globe,
   ShoppingCart,
   Clock,
-  Star,
-  Zap
+  Zap,
+  Loader2
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useTenant, useTenantServices } from "@/hooks/useTenant";
+import { useBuyerAuth } from "@/contexts/BuyerAuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import BuyerLayout from "./BuyerLayout";
 
 const BuyerServices = () => {
   const { panel } = useTenant();
+  const { buyer, refreshBuyer } = useBuyerAuth();
   const { services, loading } = useTenantServices(panel?.id);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedService, setSelectedService] = useState<any>(null);
   const [quantity, setQuantity] = useState(1000);
   const [targetUrl, setTargetUrl] = useState("");
+  const [orderLoading, setOrderLoading] = useState(false);
 
   const categories = [
     { id: 'all', name: 'All', icon: Package },
@@ -60,8 +64,8 @@ const BuyerServices = () => {
     return cat ? cat.icon : Globe;
   };
 
-  const handleOrder = () => {
-    if (!selectedService) {
+  const handleOrder = async () => {
+    if (!selectedService || !buyer || !panel) {
       toast({ title: "Please select a service", variant: "destructive" });
       return;
     }
@@ -75,13 +79,72 @@ const BuyerServices = () => {
     }
 
     const totalPrice = (selectedService.price * quantity) / 1000;
-    toast({
-      title: "Order Placed!",
-      description: `Your order for ${quantity} ${selectedService.name} has been placed. Total: $${totalPrice.toFixed(2)}`,
-    });
-    setSelectedService(null);
-    setTargetUrl("");
-    setQuantity(1000);
+    
+    // Check balance
+    if ((buyer.balance || 0) < totalPrice) {
+      toast({ 
+        title: "Insufficient Balance", 
+        description: `You need $${totalPrice.toFixed(2)} but only have $${(buyer.balance || 0).toFixed(2)}`,
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    setOrderLoading(true);
+    try {
+      // Generate order number
+      const orderNumber = `ORD${Date.now()}`;
+
+      // Create order
+      const { error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          order_number: orderNumber,
+          panel_id: panel.id,
+          buyer_id: buyer.id,
+          service_id: selectedService.id,
+          target_url: targetUrl,
+          quantity,
+          price: totalPrice,
+          status: 'pending',
+          progress: 0,
+        });
+
+      if (orderError) throw orderError;
+
+      // Deduct balance
+      const newBalance = (buyer.balance || 0) - totalPrice;
+      const { error: balanceError } = await supabase
+        .from('client_users')
+        .update({ 
+          balance: newBalance,
+          total_spent: (buyer.total_spent || 0) + totalPrice,
+        })
+        .eq('id', buyer.id);
+
+      if (balanceError) throw balanceError;
+
+      // Refresh buyer data
+      await refreshBuyer();
+
+      toast({
+        title: "Order Placed!",
+        description: `Your order for ${quantity.toLocaleString()} ${selectedService.name} has been placed. Total: $${totalPrice.toFixed(2)}`,
+      });
+
+      setSelectedService(null);
+      setTargetUrl("");
+      setQuantity(1000);
+    } catch (error) {
+      console.error('Error placing order:', error);
+      toast({ 
+        title: "Order Failed", 
+        description: "Failed to place order. Please try again.",
+        variant: "destructive" 
+      });
+    } finally {
+      setOrderLoading(false);
+    }
   };
 
   const containerVariants = {
@@ -93,6 +156,9 @@ const BuyerServices = () => {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0 }
   };
+
+  const totalPrice = selectedService ? (selectedService.price * quantity) / 1000 : 0;
+  const hasEnoughBalance = (buyer?.balance || 0) >= totalPrice;
 
   return (
     <BuyerLayout>
@@ -275,20 +341,40 @@ const BuyerServices = () => {
                 </div>
 
                 <div className="pt-4 border-t border-border/50">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-muted-foreground">Your Balance</span>
+                    <span className={cn(
+                      "font-medium",
+                      hasEnoughBalance ? "text-emerald-500" : "text-destructive"
+                    )}>
+                      ${(buyer?.balance || 0).toFixed(2)}
+                    </span>
+                  </div>
                   <div className="flex justify-between items-center mb-4">
                     <span className="text-muted-foreground">Total</span>
                     <span className="text-2xl font-bold">
-                      ${selectedService ? ((selectedService.price * quantity) / 1000).toFixed(2) : '0.00'}
+                      ${totalPrice.toFixed(2)}
                     </span>
                   </div>
+                  
+                  {!hasEnoughBalance && selectedService && (
+                    <p className="text-xs text-destructive mb-2">
+                      Insufficient balance. Please add funds.
+                    </p>
+                  )}
+                  
                   <Button 
                     className="w-full gap-2" 
                     size="lg"
                     onClick={handleOrder}
-                    disabled={!selectedService}
+                    disabled={!selectedService || orderLoading || !hasEnoughBalance}
                   >
-                    <Zap className="w-4 h-4" />
-                    Place Order
+                    {orderLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Zap className="w-4 h-4" />
+                    )}
+                    {orderLoading ? 'Processing...' : 'Place Order'}
                   </Button>
                 </div>
               </CardContent>

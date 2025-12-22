@@ -24,6 +24,7 @@ import { TransactionHistory } from '@/components/billing/TransactionHistory';
 import { CommissionTracker } from '@/components/billing/CommissionTracker';
 import { QuickDeposit } from '@/components/billing/QuickDeposit';
 import { PaymentMethodsQuickAccess } from '@/components/billing/PaymentMethodsQuickAccess';
+import { usePanel } from '@/hooks/usePanel';
 
 interface Subscription {
   id: string;
@@ -32,6 +33,13 @@ interface Subscription {
   status: 'active' | 'expired' | 'cancelled' | 'pending';
   started_at: string;
   expires_at: string | null;
+}
+
+interface CommissionData {
+  commissionRate: number;
+  earnedThisMonth: number;
+  pendingCommission: number;
+  paidCommission: number;
 }
 
 const plans = [
@@ -91,38 +99,64 @@ const plans = [
 
 const Billing = () => {
   const { profile } = useAuth();
+  const { panel } = usePanel();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [panelBalance, setPanelBalance] = useState(0);
   const [depositLoading, setDepositLoading] = useState(false);
+  const [commissionData, setCommissionData] = useState<CommissionData>({
+    commissionRate: 5,
+    earnedThisMonth: 0,
+    pendingCommission: 0,
+    paidCommission: 0,
+  });
 
   useEffect(() => {
-    fetchBillingData();
-  }, [profile?.id]);
+    if (panel?.id) {
+      fetchBillingData();
+    }
+  }, [panel?.id]);
 
   const fetchBillingData = async () => {
-    if (!profile?.id) return;
+    if (!panel?.id) return;
 
     try {
-      const { data: panel } = await supabase
-        .from('panels')
-        .select('id, balance')
-        .eq('owner_id', profile.id)
-        .single();
+      // Fetch panel balance
+      setPanelBalance(panel.balance || 0);
 
-      if (panel) {
-        setPanelBalance(panel.balance || 0);
+      // Fetch subscription
+      const { data: sub } = await supabase
+        .from('panel_subscriptions')
+        .select('*')
+        .eq('panel_id', panel.id)
+        .maybeSingle();
 
-        const { data: sub } = await supabase
-          .from('panel_subscriptions')
-          .select('*')
-          .eq('panel_id', panel.id)
-          .maybeSingle();
+      if (sub) {
+        setSubscription(sub as Subscription);
+      }
 
-        if (sub) {
-          setSubscription(sub as Subscription);
-        }
+      // Fetch commission data from platform_fees
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
+
+      const { data: fees } = await supabase
+        .from('platform_fees')
+        .select('fee_amount, created_at')
+        .eq('panel_id', panel.id);
+
+      if (fees) {
+        const thisMonthFees = fees.filter(f => new Date(f.created_at) >= startOfMonth);
+        const earnedThisMonth = thisMonthFees.reduce((sum, f) => sum + (f.fee_amount || 0), 0);
+        const totalFees = fees.reduce((sum, f) => sum + (f.fee_amount || 0), 0);
+
+        setCommissionData({
+          commissionRate: panel.commission_rate || 5,
+          earnedThisMonth,
+          pendingCommission: earnedThisMonth, // Simplified - all this month is pending
+          paidCommission: totalFees - earnedThisMonth,
+        });
       }
     } catch (error) {
       console.error('Error fetching billing data:', error);
@@ -132,21 +166,12 @@ const Billing = () => {
   };
 
   const handleUpgrade = async (planName: string) => {
+    if (!panel?.id) return;
+
     const plan = plans.find(p => p.name.toLowerCase() === planName.toLowerCase());
     if (!plan) return;
 
     try {
-      const { data: panel } = await supabase
-        .from('panels')
-        .select('id')
-        .eq('owner_id', profile?.id)
-        .single();
-
-      if (!panel) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Panel not found' });
-        return;
-      }
-
       const { error } = await supabase
         .from('panel_subscriptions')
         .upsert({
@@ -171,22 +196,26 @@ const Billing = () => {
   };
 
   const handleDeposit = async (amount: number, method: string) => {
+    if (!panel?.id) return;
+
     setDepositLoading(true);
     try {
-      const { data: panel } = await supabase
-        .from('panels')
-        .select('id, balance')
-        .eq('owner_id', profile?.id)
-        .single();
-
-      if (!panel) return;
-
       const { error } = await supabase
         .from('panels')
-        .update({ balance: (panel.balance || 0) + amount })
+        .update({ balance: panelBalance + amount })
         .eq('id', panel.id);
 
       if (error) throw error;
+
+      // Log transaction
+      await supabase.from('transactions').insert({
+        user_id: profile?.id,
+        amount,
+        type: 'deposit',
+        payment_method: method,
+        description: `Balance top-up via ${method}`,
+        status: 'completed'
+      });
 
       toast({ title: 'Success', description: `Added $${amount.toFixed(2)} via ${method}` });
       fetchBillingData();
@@ -265,7 +294,9 @@ const Billing = () => {
               <Percent className="w-4 h-4" />
               <span className="text-sm">Commission Due</span>
             </div>
-            <p className="text-2xl lg:text-3xl font-bold text-orange-500">$45.00</p>
+            <p className="text-2xl lg:text-3xl font-bold text-orange-500">
+              ${commissionData.pendingCommission.toFixed(2)}
+            </p>
           </CardContent>
         </Card>
 
@@ -320,13 +351,19 @@ const Billing = () => {
         {/* Sidebar - Payment Methods & Commission */}
         <div className="space-y-6">
           <PaymentMethodsQuickAccess />
-          <CommissionTracker onPayCommission={handlePayCommission} />
+          <CommissionTracker 
+            commissionRate={commissionData.commissionRate}
+            earnedThisMonth={commissionData.earnedThisMonth}
+            pendingCommission={commissionData.pendingCommission}
+            paidCommission={commissionData.paidCommission}
+            onPayCommission={handlePayCommission} 
+          />
         </div>
       </motion.div>
 
       {/* Transaction History */}
       <motion.div variants={itemVariants}>
-        <TransactionHistory />
+        <TransactionHistory panelId={panel?.id} />
       </motion.div>
 
       {/* Pricing Plans */}
