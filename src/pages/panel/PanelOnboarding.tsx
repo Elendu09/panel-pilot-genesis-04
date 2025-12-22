@@ -174,7 +174,9 @@ const PanelOnboarding = () => {
             name: panelName,
             description: description || null,
             owner_id: profile?.id,
-            status: 'pending',
+            // Make subdomains live immediately; custom domains still require DNS verification.
+            status: 'active',
+            is_approved: true,
             theme_type: 'dark_gradient',
             subdomain: finalSubdomain,
             custom_domain: domainType === 'custom' ? customDomain : null,
@@ -207,7 +209,7 @@ const PanelOnboarding = () => {
 
       toast({
         title: "Panel Created! 🎉",
-        description: "Your panel is being reviewed and will be active soon."
+        description: "Your subdomain is live now. If you added a custom domain, complete DNS setup to go live."
       });
 
       navigate('/panel');
