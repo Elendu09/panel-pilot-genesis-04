@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Routes, Route, Link, useLocation, Outlet } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { 
   LayoutDashboard, 
   Package,
@@ -8,10 +8,7 @@ import {
   MessageSquare,
   Wallet,
   LogOut,
-  Menu,
-  X,
   Home,
-  History,
   CreditCard,
   HelpCircle
 } from "lucide-react";
@@ -20,8 +17,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { cn } from "@/lib/utils";
-import { motion, AnimatePresence } from "framer-motion";
 import { useTenant } from "@/hooks/useTenant";
+import { useBuyerAuth } from "@/contexts/BuyerAuthContext";
 
 interface BuyerLayoutProps {
   children?: React.ReactNode;
@@ -31,11 +28,12 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
   const { panel } = useTenant();
+  const { buyer, signOut } = useBuyerAuth();
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Services', href: '/services', icon: Package },
-    { name: 'My Orders', href: '/orders', icon: ShoppingCart, badge: 2 },
+    { name: 'My Orders', href: '/orders', icon: ShoppingCart },
     { name: 'Add Funds', href: '/deposit', icon: Wallet },
     { name: 'Support', href: '/support', icon: MessageSquare },
     { name: 'Profile', href: '/profile', icon: User },
@@ -51,11 +49,12 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
 
   const isActive = (path: string) => location.pathname === path;
 
-  // Mock user data - in real app, this would come from buyer auth context
-  const user = {
-    name: "John Doe",
-    email: "john@example.com",
-    balance: 125.50,
+  const userName = buyer?.full_name || buyer?.email?.split('@')[0] || 'User';
+  const userEmail = buyer?.email || '';
+  const userBalance = buyer?.balance || 0;
+
+  const handleSignOut = async () => {
+    await signOut();
   };
 
   return (
@@ -101,7 +100,7 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Your Balance</p>
-                <p className="text-xl font-bold">${user.balance.toFixed(2)}</p>
+                <p className="text-xl font-bold">${userBalance.toFixed(2)}</p>
               </div>
             </div>
             <Button size="sm" className="w-full mt-3 gap-2" asChild>
@@ -126,11 +125,6 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
             >
               <item.icon className="w-5 h-5 shrink-0" />
               <span className="text-sm font-medium">{item.name}</span>
-              {item.badge && (
-                <Badge variant="destructive" className="ml-auto text-[10px] px-1.5 py-0 h-5">
-                  {item.badge}
-                </Badge>
-              )}
             </Link>
           ))}
         </nav>
@@ -140,12 +134,12 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
           <div className="flex items-center gap-3 p-2 rounded-xl bg-sidebar-accent/30">
             <Avatar className="w-9 h-9 border-2 border-primary/20">
               <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
-                {user.name.charAt(0)}
+                {userName.charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{user.name}</p>
-              <p className="text-[10px] text-muted-foreground truncate">{user.email}</p>
+              <p className="text-sm font-medium truncate">{userName}</p>
+              <p className="text-[10px] text-muted-foreground truncate">{userEmail}</p>
             </div>
           </div>
           
@@ -154,7 +148,12 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
             <Button variant="ghost" size="icon" className="h-9 w-9">
               <HelpCircle className="w-4 h-4" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-9 w-9 text-muted-foreground hover:text-foreground"
+              onClick={handleSignOut}
+            >
               <LogOut className="w-4 h-4" />
             </Button>
           </div>
@@ -178,7 +177,7 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-            ${user.balance.toFixed(2)}
+            ${userBalance.toFixed(2)}
           </Badge>
           <ThemeToggle />
         </div>

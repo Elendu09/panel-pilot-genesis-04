@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -14,31 +14,75 @@ import {
   AlertCircle,
   RefreshCw,
   ExternalLink,
-  Filter,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useTenant } from "@/hooks/useTenant";
+import { useBuyerAuth } from "@/contexts/BuyerAuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import BuyerLayout from "./BuyerLayout";
+
+interface Order {
+  id: string;
+  order_number: string;
+  target_url: string;
+  quantity: number;
+  price: number;
+  status: string;
+  progress: number;
+  created_at: string;
+  service?: { name: string } | null;
+}
 
 const BuyerOrders = () => {
   const { panel } = useTenant();
-  const [orders, setOrders] = useState<any[]>([]);
+  const { buyer } = useBuyerAuth();
+  const [orders, setOrders] = useState<Order[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // In real app, fetch buyer's orders from supabase
-    setOrders([
-      { id: 'ORD-001', service: 'Instagram Followers', link: 'https://instagram.com/user1', quantity: 1000, status: 'completed', progress: 100, price: 2.50, createdAt: '2024-12-20T10:30:00Z' },
-      { id: 'ORD-002', service: 'TikTok Likes', link: 'https://tiktok.com/@user/video/123', quantity: 500, status: 'in_progress', progress: 65, price: 1.50, createdAt: '2024-12-21T14:20:00Z' },
-      { id: 'ORD-003', service: 'YouTube Views', link: 'https://youtube.com/watch?v=abc', quantity: 5000, status: 'pending', progress: 0, price: 4.00, createdAt: '2024-12-22T09:15:00Z' },
-      { id: 'ORD-004', service: 'Facebook Page Likes', link: 'https://facebook.com/page', quantity: 2000, status: 'partial', progress: 80, price: 6.00, createdAt: '2024-12-19T16:45:00Z' },
-      { id: 'ORD-005', service: 'Twitter Followers', link: 'https://twitter.com/user', quantity: 500, status: 'cancelled', progress: 0, price: 1.40, createdAt: '2024-12-18T11:30:00Z' },
-    ]);
-    setLoading(false);
-  }, [panel?.id]);
+    if (buyer?.id) {
+      fetchOrders();
+    }
+  }, [buyer?.id]);
+
+  const fetchOrders = async () => {
+    if (!buyer?.id) return;
+
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          service:services(name)
+        `)
+        .eq('buyer_id', buyer.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const formattedOrders: Order[] = (data || []).map(o => ({
+        id: o.id,
+        order_number: o.order_number,
+        target_url: o.target_url,
+        quantity: o.quantity,
+        price: o.price,
+        status: o.status || 'pending',
+        progress: o.progress || 0,
+        created_at: o.created_at,
+        service: o.service,
+      }));
+
+      setOrders(formattedOrders);
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const statusConfig: Record<string, { label: string; icon: any; color: string; spin?: boolean }> = {
     pending: { label: 'Pending', icon: Clock, color: 'bg-amber-500/10 text-amber-500 border-amber-500/20' },
@@ -46,17 +90,15 @@ const BuyerOrders = () => {
     completed: { label: 'Completed', icon: CheckCircle, color: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' },
     partial: { label: 'Partial', icon: AlertCircle, color: 'bg-orange-500/10 text-orange-500 border-orange-500/20' },
     cancelled: { label: 'Cancelled', icon: XCircle, color: 'bg-red-500/10 text-red-500 border-red-500/20' },
-    refunded: { label: 'Refunded', icon: RefreshCw, color: 'bg-purple-500/10 text-purple-500 border-purple-500/20' },
   };
 
   const filteredOrders = orders.filter(order => {
-    const matchesSearch = order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.service.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = order.order_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (order.service?.name || '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
-  // Group orders by status for Kanban view
   const kanbanColumns = [
     { title: 'Pending', status: 'pending', icon: Clock, color: 'from-amber-500 to-amber-600', bg: 'bg-amber-500/10', textColor: 'text-amber-500' },
     { title: 'In Progress', status: 'in_progress', icon: Loader2, color: 'from-blue-500 to-blue-600', bg: 'bg-blue-500/10', textColor: 'text-blue-500' },
@@ -87,6 +129,10 @@ const BuyerOrders = () => {
             <h1 className="text-2xl md:text-3xl font-bold">My Orders</h1>
             <p className="text-muted-foreground">Track and manage your service orders</p>
           </div>
+          <Button variant="outline" size="sm" onClick={fetchOrders}>
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Refresh
+          </Button>
         </motion.div>
 
         {/* Stats */}
@@ -166,7 +212,7 @@ const BuyerOrders = () => {
                     ) : (
                       columnOrders.map((order) => {
                         const config = statusConfig[order.status];
-                        const StatusIcon = config.icon;
+                        const StatusIcon = config?.icon || Clock;
 
                         return (
                           <motion.div
@@ -177,19 +223,19 @@ const BuyerOrders = () => {
                           >
                             <div className="flex items-start justify-between">
                               <div className="flex-1 min-w-0">
-                                <p className="font-medium text-sm truncate">{order.service}</p>
-                                <p className="text-xs text-muted-foreground">{order.id}</p>
+                                <p className="font-medium text-sm truncate">{order.service?.name || 'Unknown'}</p>
+                                <p className="text-xs text-muted-foreground">{order.order_number}</p>
                               </div>
                             </div>
 
                             <a 
-                              href={order.link} 
+                              href={order.target_url} 
                               target="_blank" 
                               rel="noopener noreferrer"
                               className="text-xs text-primary hover:underline truncate block flex items-center gap-1"
                             >
                               <ExternalLink className="w-3 h-3 shrink-0" />
-                              <span className="truncate">{order.link}</span>
+                              <span className="truncate">{order.target_url}</span>
                             </a>
 
                             {order.status === 'in_progress' && (
@@ -208,7 +254,7 @@ const BuyerOrders = () => {
                             </div>
 
                             <p className="text-[10px] text-muted-foreground">
-                              {new Date(order.createdAt).toLocaleDateString()}
+                              {new Date(order.created_at).toLocaleDateString()}
                             </p>
                           </motion.div>
                         );
@@ -229,7 +275,7 @@ const BuyerOrders = () => {
               {filteredOrders
                 .filter(o => !['pending', 'in_progress', 'completed'].includes(o.status))
                 .map((order) => {
-                  const config = statusConfig[order.status];
+                  const config = statusConfig[order.status] || statusConfig.pending;
                   const StatusIcon = config.icon;
 
                   return (
@@ -237,8 +283,8 @@ const BuyerOrders = () => {
                       <CardContent className="p-4 space-y-2">
                         <div className="flex items-start justify-between">
                           <div>
-                            <p className="font-medium">{order.service}</p>
-                            <p className="text-xs text-muted-foreground">{order.id}</p>
+                            <p className="font-medium">{order.service?.name || 'Unknown'}</p>
+                            <p className="text-xs text-muted-foreground">{order.order_number}</p>
                           </div>
                           <Badge variant="outline" className={config.color}>
                             <StatusIcon className={cn("w-3 h-3 mr-1", config.spin && "animate-spin")} />

@@ -5,15 +5,27 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Separator } from '@/components/ui/separator';
+import { Progress } from '@/components/ui/progress';
 import { Helmet } from 'react-helmet-async';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { CheckCircle, Globe, Upload, Palette, Search, Settings, ArrowRight } from 'lucide-react';
+import { 
+  CheckCircle, 
+  Globe, 
+  Upload, 
+  Palette, 
+  Search, 
+  Settings, 
+  ArrowRight,
+  ArrowLeft,
+  Sparkles,
+  Loader2
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
 const PanelOnboarding = () => {
   const [currentStep, setCurrentStep] = useState(0);
@@ -36,7 +48,6 @@ const PanelOnboarding = () => {
   // Step 3: Branding
   const [primaryColor, setPrimaryColor] = useState('#3b82f6');
   const [secondaryColor, setSecondaryColor] = useState('#1e40af');
-  const [logoFile, setLogoFile] = useState<File | null>(null);
 
   // Step 4: SEO
   const [seoTitle, setSeoTitle] = useState('');
@@ -44,11 +55,13 @@ const PanelOnboarding = () => {
   const [seoKeywords, setSeoKeywords] = useState('');
 
   const steps = [
-    { id: 0, title: 'Basic Info', icon: Settings },
-    { id: 1, title: 'Domain Setup', icon: Globe },
-    { id: 2, title: 'Branding', icon: Palette },
-    { id: 3, title: 'SEO Setup', icon: Search },
+    { id: 0, title: 'Basic Info', icon: Settings, description: 'Name your panel' },
+    { id: 1, title: 'Domain', icon: Globe, description: 'Choose your URL' },
+    { id: 2, title: 'Branding', icon: Palette, description: 'Customize look' },
+    { id: 3, title: 'SEO', icon: Search, description: 'Optimize search' },
   ];
+
+  const progress = ((currentStep + 1) / steps.length) * 100;
 
   useEffect(() => {
     if (!user || !profile || profile.role !== 'panel_owner') {
@@ -56,14 +69,13 @@ const PanelOnboarding = () => {
       return;
     }
     
-    // Check if user already has a completed panel
     const checkExistingPanel = async () => {
       const { data: existingPanel } = await supabase
         .from('panels')
         .select('*')
         .eq('owner_id', profile.id)
         .eq('onboarding_completed', true)
-        .single();
+        .maybeSingle();
         
       if (existingPanel) {
         navigate('/panel');
@@ -72,6 +84,17 @@ const PanelOnboarding = () => {
     
     checkExistingPanel();
   }, [user, profile, navigate]);
+
+  // Auto-generate subdomain from panel name
+  useEffect(() => {
+    if (panelName && !subdomain) {
+      const generated = panelName.toLowerCase().replace(/[^a-zA-Z0-9]/g, '').substring(0, 20);
+      setSubdomain(generated);
+      if (generated.length >= 3) {
+        checkSubdomainAvailability(generated);
+      }
+    }
+  }, [panelName]);
 
   const checkSubdomainAvailability = async (subdomainToCheck: string) => {
     if (!subdomainToCheck || subdomainToCheck.length < 3) {
@@ -85,9 +108,9 @@ const PanelOnboarding = () => {
         .from('panels')
         .select('subdomain')
         .eq('subdomain', subdomainToCheck)
-        .single();
+        .maybeSingle();
 
-      setSubdomainAvailable(!data && error?.code === 'PGRST116');
+      setSubdomainAvailable(!data);
     } catch (error) {
       console.error('Error checking subdomain:', error);
       setSubdomainAvailable(null);
@@ -111,12 +134,13 @@ const PanelOnboarding = () => {
   };
 
   const handleNext = () => {
+    if (currentStep === 0 && !panelName.trim()) {
+      toast({ variant: "destructive", title: "Panel name required" });
+      return;
+    }
+    
     if (currentStep === 1 && domainType === 'subdomain' && !subdomainAvailable) {
-      toast({
-        variant: "destructive",
-        title: "Subdomain Required",
-        description: "Please choose an available subdomain."
-      });
+      toast({ variant: "destructive", title: "Please choose an available subdomain" });
       return;
     }
     
@@ -133,26 +157,26 @@ const PanelOnboarding = () => {
 
   const handleComplete = async () => {
     if (!panelName.trim()) {
-      toast({
-        variant: "destructive",
-        title: "Panel Name Required",
-        description: "Please enter a panel name."
-      });
+      toast({ variant: "destructive", title: "Panel name required" });
       return;
     }
 
     setLoading(true);
     try {
+      const finalSubdomain = domainType === 'subdomain' 
+        ? subdomain 
+        : panelName.toLowerCase().replace(/[^a-zA-Z0-9]/g, '').substring(0, 20) || 'panel';
+
       const { error } = await supabase
         .from('panels')
         .insert([
           {
             name: panelName,
             description: description || null,
-            owner_id: profile.id,
+            owner_id: profile?.id,
             status: 'pending',
             theme_type: 'dark_gradient',
-            subdomain: domainType === 'subdomain' ? subdomain : panelName.toLowerCase().replace(/[^a-zA-Z0-9]/g, '').substring(0, 20) || 'panel',
+            subdomain: finalSubdomain,
             custom_domain: domainType === 'custom' ? customDomain : null,
             primary_color: primaryColor,
             secondary_color: secondaryColor,
@@ -162,11 +186,10 @@ const PanelOnboarding = () => {
 
       if (error) throw error;
 
-      // Create panel settings
       const { data: panelData } = await supabase
         .from('panels')
         .select('id')
-        .eq('owner_id', profile.id)
+        .eq('owner_id', profile?.id)
         .single();
 
       if (panelData) {
@@ -183,7 +206,7 @@ const PanelOnboarding = () => {
       }
 
       toast({
-        title: "Panel Created Successfully!",
+        title: "Panel Created! 🎉",
         description: "Your panel is being reviewed and will be active soon."
       });
 
@@ -200,11 +223,24 @@ const PanelOnboarding = () => {
     }
   };
 
+  const stepVariants = {
+    enter: { opacity: 0, x: 20 },
+    center: { opacity: 1, x: 0 },
+    exit: { opacity: 0, x: -20 }
+  };
+
   const renderStepContent = () => {
     switch (currentStep) {
       case 0:
         return (
-          <div className="space-y-6">
+          <motion.div
+            key="step0"
+            variants={stepVariants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            className="space-y-6"
+          >
             <div className="space-y-2">
               <Label htmlFor="panelName">Panel Name *</Label>
               <Input
@@ -212,201 +248,220 @@ const PanelOnboarding = () => {
                 value={panelName}
                 onChange={(e) => setPanelName(e.target.value)}
                 placeholder="My SMM Business"
-                required
+                className="bg-background/50"
               />
               <p className="text-sm text-muted-foreground">
                 This will be displayed as your brand name
               </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="description">Panel Description</Label>
+              <Label htmlFor="description">Description (Optional)</Label>
               <Textarea
                 id="description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Professional SMM services for businesses and individuals..."
+                placeholder="Professional SMM services..."
                 rows={3}
+                className="bg-background/50"
               />
-              <p className="text-sm text-muted-foreground">
-                Brief description of your services (optional)
-              </p>
             </div>
-          </div>
+          </motion.div>
         );
 
       case 1:
         return (
-          <div className="space-y-6">
-            <div className="space-y-4">
-              <Label>Choose Your Domain Setup</Label>
-              <RadioGroup value={domainType} onValueChange={(value: 'subdomain' | 'custom') => setDomainType(value)}>
-                <div className="flex items-center space-x-2 p-4 border rounded-lg">
-                  <RadioGroupItem value="subdomain" id="subdomain" />
-                  <div className="flex-1">
-                    <Label htmlFor="subdomain" className="font-medium">Free Subdomain</Label>
-                    <p className="text-sm text-muted-foreground">Get a free subdomain like yourname.smmpilot.online</p>
-                  </div>
-                  <Badge variant="secondary">Free</Badge>
+          <motion.div
+            key="step1"
+            variants={stepVariants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            className="space-y-6"
+          >
+            <RadioGroup value={domainType} onValueChange={(value: 'subdomain' | 'custom') => setDomainType(value)}>
+              <div className={cn(
+                "flex items-center space-x-3 p-4 rounded-xl border-2 transition-all cursor-pointer",
+                domainType === 'subdomain' ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
+              )}>
+                <RadioGroupItem value="subdomain" id="subdomain" />
+                <div className="flex-1">
+                  <Label htmlFor="subdomain" className="font-medium cursor-pointer">Free Subdomain</Label>
+                  <p className="text-sm text-muted-foreground">yourname.smmpilot.online</p>
                 </div>
-                <div className="flex items-center space-x-2 p-4 border rounded-lg">
-                  <RadioGroupItem value="custom" id="custom" />
-                  <div className="flex-1">
-                    <Label htmlFor="custom" className="font-medium">Custom Domain</Label>
-                    <p className="text-sm text-muted-foreground">Use your own domain (you'll need to configure DNS)</p>
-                  </div>
-                  <Badge variant="outline">Pro</Badge>
+                <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-500">Free</Badge>
+              </div>
+              <div className={cn(
+                "flex items-center space-x-3 p-4 rounded-xl border-2 transition-all cursor-pointer",
+                domainType === 'custom' ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
+              )}>
+                <RadioGroupItem value="custom" id="custom" />
+                <div className="flex-1">
+                  <Label htmlFor="custom" className="font-medium cursor-pointer">Custom Domain</Label>
+                  <p className="text-sm text-muted-foreground">Use your own domain</p>
                 </div>
-              </RadioGroup>
-            </div>
+                <Badge variant="outline">Pro</Badge>
+              </div>
+            </RadioGroup>
 
             {domainType === 'subdomain' && (
               <div className="space-y-2">
-                <Label htmlFor="subdomainInput">Choose Your Subdomain</Label>
+                <Label>Choose Your Subdomain</Label>
                 <div className="flex items-center space-x-2">
                   <Input
-                    id="subdomainInput"
                     value={subdomain}
                     onChange={(e) => handleSubdomainChange(e.target.value)}
                     placeholder="mysmm"
+                    className="bg-background/50"
                   />
-                  <span className="text-sm text-muted-foreground">.smmpilot.online</span>
+                  <span className="text-sm text-muted-foreground whitespace-nowrap">.smmpilot.online</span>
                 </div>
                 {checkingSubdomain && (
-                  <p className="text-sm text-muted-foreground">Checking availability...</p>
+                  <p className="text-sm text-muted-foreground flex items-center gap-2">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    Checking availability...
+                  </p>
                 )}
                 {subdomainAvailable === true && (
-                  <p className="text-sm text-green-600 flex items-center gap-1">
+                  <p className="text-sm text-emerald-500 flex items-center gap-1">
                     <CheckCircle className="w-4 h-4" />
-                    Subdomain available
+                    Subdomain available!
                   </p>
                 )}
                 {subdomainAvailable === false && (
-                  <p className="text-sm text-red-600">Subdomain already taken</p>
+                  <p className="text-sm text-destructive">Subdomain already taken</p>
                 )}
               </div>
             )}
 
             {domainType === 'custom' && (
               <div className="space-y-2">
-                <Label htmlFor="customDomainInput">Your Custom Domain</Label>
+                <Label>Your Custom Domain</Label>
                 <Input
-                  id="customDomainInput"
                   value={customDomain}
                   onChange={(e) => setCustomDomain(e.target.value)}
                   placeholder="yourdomain.com"
+                  className="bg-background/50"
                 />
                 <p className="text-sm text-muted-foreground">
-                  You'll receive DNS configuration instructions after setup
+                  DNS configuration instructions will be provided after setup
                 </p>
               </div>
             )}
-          </div>
+          </motion.div>
         );
 
       case 2:
         return (
-          <div className="space-y-6">
-            <div className="space-y-4">
-              <Label>Brand Colors</Label>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="primaryColor">Primary Color</Label>
-                  <div className="flex items-center space-x-2">
-                    <Input
-                      id="primaryColor"
+          <motion.div
+            key="step2"
+            variants={stepVariants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            className="space-y-6"
+          >
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Primary Color</Label>
+                <div className="flex items-center gap-2">
+                  <div 
+                    className="w-12 h-12 rounded-xl border-2 border-border cursor-pointer overflow-hidden"
+                    style={{ backgroundColor: primaryColor }}
+                  >
+                    <input
                       type="color"
                       value={primaryColor}
                       onChange={(e) => setPrimaryColor(e.target.value)}
-                      className="w-20 h-10 p-1 border rounded"
-                    />
-                    <Input
-                      value={primaryColor}
-                      onChange={(e) => setPrimaryColor(e.target.value)}
-                      placeholder="#3b82f6"
+                      className="w-full h-full opacity-0 cursor-pointer"
                     />
                   </div>
+                  <Input
+                    value={primaryColor}
+                    onChange={(e) => setPrimaryColor(e.target.value)}
+                    className="bg-background/50"
+                  />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="secondaryColor">Secondary Color</Label>
-                  <div className="flex items-center space-x-2">
-                    <Input
-                      id="secondaryColor"
+              </div>
+              <div className="space-y-2">
+                <Label>Secondary Color</Label>
+                <div className="flex items-center gap-2">
+                  <div 
+                    className="w-12 h-12 rounded-xl border-2 border-border cursor-pointer overflow-hidden"
+                    style={{ backgroundColor: secondaryColor }}
+                  >
+                    <input
                       type="color"
                       value={secondaryColor}
                       onChange={(e) => setSecondaryColor(e.target.value)}
-                      className="w-20 h-10 p-1 border rounded"
-                    />
-                    <Input
-                      value={secondaryColor}
-                      onChange={(e) => setSecondaryColor(e.target.value)}
-                      placeholder="#1e40af"
+                      className="w-full h-full opacity-0 cursor-pointer"
                     />
                   </div>
+                  <Input
+                    value={secondaryColor}
+                    onChange={(e) => setSecondaryColor(e.target.value)}
+                    className="bg-background/50"
+                  />
                 </div>
               </div>
             </div>
-            
-            <Separator />
-            
-            <div className="space-y-4">
-              <Label>Logo Upload (Optional)</Label>
-              <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
-                <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground mb-2">Upload your logo (PNG, JPG - Max 2MB)</p>
-                <Input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
-                  className="w-auto mx-auto"
-                />
+
+            {/* Preview */}
+            <div className="p-4 rounded-xl border border-border">
+              <p className="text-sm text-muted-foreground mb-3">Preview</p>
+              <div 
+                className="h-24 rounded-xl flex items-center justify-center text-white font-bold text-xl"
+                style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}
+              >
+                {panelName || 'Your Panel'}
               </div>
             </div>
-          </div>
+          </motion.div>
         );
 
       case 3:
         return (
-          <div className="space-y-6">
+          <motion.div
+            key="step3"
+            variants={stepVariants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            className="space-y-6"
+          >
             <div className="space-y-2">
-              <Label htmlFor="seoTitle">SEO Title</Label>
+              <Label>SEO Title</Label>
               <Input
-                id="seoTitle"
                 value={seoTitle}
                 onChange={(e) => setSeoTitle(e.target.value)}
-                placeholder={panelName ? `${panelName} - Professional SMM Services` : "Your Business - Professional SMM Services"}
+                placeholder={panelName ? `${panelName} - Professional SMM Services` : "Your Business - SMM Services"}
+                className="bg-background/50"
               />
-              <p className="text-sm text-muted-foreground">
-                Appears in search results and browser tabs (50-60 characters recommended)
-              </p>
+              <p className="text-xs text-muted-foreground">50-60 characters recommended</p>
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="seoDescription">SEO Description</Label>
+              <Label>SEO Description</Label>
               <Textarea
-                id="seoDescription"
                 value={seoDescription}
                 onChange={(e) => setSeoDescription(e.target.value)}
-                placeholder="Get professional social media marketing services including followers, likes, views, and more. Boost your online presence today!"
+                placeholder="Get professional social media marketing services..."
                 rows={3}
+                className="bg-background/50"
               />
-              <p className="text-sm text-muted-foreground">
-                Appears in search results (150-160 characters recommended)
-              </p>
+              <p className="text-xs text-muted-foreground">150-160 characters recommended</p>
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="seoKeywords">SEO Keywords</Label>
+              <Label>SEO Keywords</Label>
               <Input
-                id="seoKeywords"
                 value={seoKeywords}
                 onChange={(e) => setSeoKeywords(e.target.value)}
-                placeholder="SMM, social media marketing, followers, likes, Instagram, TikTok"
+                placeholder="SMM, social media marketing, followers, likes"
+                className="bg-background/50"
               />
-              <p className="text-sm text-muted-foreground">
-                Comma-separated keywords related to your services
-              </p>
+              <p className="text-xs text-muted-foreground">Comma-separated keywords</p>
             </div>
-          </div>
+          </motion.div>
         );
 
       default:
@@ -418,79 +473,151 @@ const PanelOnboarding = () => {
     <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-secondary/10 flex items-center justify-center p-4">
       <Helmet>
         <title>Setup Your Panel - SMMPilot</title>
-        <meta name="description" content="Complete your SMM panel setup with domain configuration, branding, and SEO optimization." />
         <meta name="robots" content="noindex,nofollow" />
       </Helmet>
       
-      <Card className="w-full max-w-2xl bg-card/80 backdrop-blur-sm border-border shadow-card">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-            Setup Your Panel
-          </CardTitle>
-          <CardDescription>
-            Complete the setup to launch your professional SMM panel
-          </CardDescription>
-        </CardHeader>
-        
-        <CardContent className="space-y-6">
-          {/* Progress Steps */}
-          <div className="flex justify-between items-center mb-8">
+      <div className="w-full max-w-4xl">
+        {/* Progress Bar */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm text-muted-foreground">Step {currentStep + 1} of {steps.length}</p>
+            <p className="text-sm font-medium">{Math.round(progress)}% Complete</p>
+          </div>
+          <Progress value={progress} className="h-2" />
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Kanban-style Step Cards - Desktop */}
+          <div className="hidden lg:flex flex-col gap-3">
             {steps.map((step, index) => {
               const Icon = step.icon;
               const isActive = index === currentStep;
               const isCompleted = index < currentStep;
               
               return (
-                <div key={step.id} className="flex items-center">
-                  <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 ${
-                    isCompleted ? 'bg-primary border-primary text-primary-foreground' :
-                    isActive ? 'border-primary text-primary' : 'border-border text-muted-foreground'
-                  }`}>
-                    {isCompleted ? <CheckCircle className="w-5 h-5" /> : <Icon className="w-5 h-5" />}
-                  </div>
-                  <span className={`ml-2 text-sm font-medium ${
-                    isActive ? 'text-primary' : isCompleted ? 'text-foreground' : 'text-muted-foreground'
-                  }`}>
-                    {step.title}
-                  </span>
-                  {index < steps.length - 1 && (
-                    <div className={`w-8 h-0.5 ml-4 ${
-                      isCompleted ? 'bg-primary' : 'bg-border'
-                    }`} />
+                <motion.div
+                  key={step.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  <Card className={cn(
+                    "transition-all cursor-pointer",
+                    isActive && "ring-2 ring-primary border-primary shadow-lg shadow-primary/10",
+                    isCompleted && "bg-emerald-500/5 border-emerald-500/20",
+                    !isActive && !isCompleted && "opacity-60 hover:opacity-80"
                   )}
-                </div>
+                  onClick={() => index <= currentStep && setCurrentStep(index)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className={cn(
+                          "w-10 h-10 rounded-xl flex items-center justify-center",
+                          isCompleted ? "bg-emerald-500/10" : isActive ? "bg-primary/10" : "bg-muted"
+                        )}>
+                          {isCompleted ? (
+                            <CheckCircle className="w-5 h-5 text-emerald-500" />
+                          ) : (
+                            <Icon className={cn(
+                              "w-5 h-5",
+                              isActive ? "text-primary" : "text-muted-foreground"
+                            )} />
+                          )}
+                        </div>
+                        <div>
+                          <p className={cn(
+                            "font-medium text-sm",
+                            isActive && "text-primary"
+                          )}>{step.title}</p>
+                          <p className="text-xs text-muted-foreground">{step.description}</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
               );
             })}
           </div>
 
-          {/* Step Content */}
-          <div className="min-h-[300px]">
-            {renderStepContent()}
+          {/* Mobile Step Indicators */}
+          <div className="lg:hidden flex gap-2 mb-4">
+            {steps.map((step, index) => {
+              const Icon = step.icon;
+              const isActive = index === currentStep;
+              const isCompleted = index < currentStep;
+              
+              return (
+                <button
+                  key={step.id}
+                  onClick={() => index <= currentStep && setCurrentStep(index)}
+                  className={cn(
+                    "flex-1 p-3 rounded-xl transition-all",
+                    isActive && "bg-primary text-primary-foreground",
+                    isCompleted && "bg-emerald-500/10 text-emerald-500",
+                    !isActive && !isCompleted && "bg-muted text-muted-foreground"
+                  )}
+                >
+                  {isCompleted ? (
+                    <CheckCircle className="w-5 h-5 mx-auto" />
+                  ) : (
+                    <Icon className="w-5 h-5 mx-auto" />
+                  )}
+                </button>
+              );
+            })}
           </div>
 
-          {/* Navigation */}
-          <div className="flex justify-between pt-6 border-t">
-            <Button
-              variant="outline"
-              onClick={handlePrevious}
-              disabled={currentStep === 0}
-            >
-              Previous
-            </Button>
+          {/* Main Content Card */}
+          <Card className="lg:col-span-3 bg-card/80 backdrop-blur-xl border-border/50 shadow-xl">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-3">
+                <Sparkles className="w-6 h-6 text-primary" />
+                {steps[currentStep].title}
+              </CardTitle>
+              <CardDescription>{steps[currentStep].description}</CardDescription>
+            </CardHeader>
             
-            {currentStep < steps.length - 1 ? (
-              <Button onClick={handleNext} className="gap-2">
-                Next
-                <ArrowRight className="w-4 h-4" />
-              </Button>
-            ) : (
-              <Button onClick={handleComplete} disabled={loading} className="gap-2">
-                {loading ? 'Creating...' : 'Complete Setup'}
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+            <CardContent className="space-y-6">
+              <AnimatePresence mode="wait">
+                {renderStepContent()}
+              </AnimatePresence>
+
+              {/* Navigation */}
+              <div className="flex items-center justify-between pt-6 border-t border-border/50">
+                <Button
+                  variant="outline"
+                  onClick={handlePrevious}
+                  disabled={currentStep === 0}
+                  className="gap-2"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  Previous
+                </Button>
+
+                {currentStep < steps.length - 1 ? (
+                  <Button onClick={handleNext} className="gap-2">
+                    Next
+                    <ArrowRight className="w-4 h-4" />
+                  </Button>
+                ) : (
+                  <Button 
+                    onClick={handleComplete} 
+                    disabled={loading}
+                    className="gap-2 bg-gradient-to-r from-primary to-primary/80"
+                  >
+                    {loading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Sparkles className="w-4 h-4" />
+                    )}
+                    {loading ? 'Creating...' : 'Complete Setup'}
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 };

@@ -41,45 +41,46 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { usePanel } from "@/hooks/usePanel";
 
-// Mock data for orders
-const mockOrders = [
-  { id: "ORD-001", service: "Instagram Followers", customer: "john@example.com", link: "https://instagram.com/user1", quantity: 1000, price: 2.50, status: "completed", progress: 100, startCount: 5000, currentCount: 6000, createdAt: "2024-01-15 14:30", notes: "" },
-  { id: "ORD-002", service: "Instagram Likes", customer: "jane@example.com", link: "https://instagram.com/p/abc123", quantity: 500, price: 0.60, status: "in_progress", progress: 65, startCount: 100, currentCount: 425, createdAt: "2024-01-15 14:25", notes: "" },
-  { id: "ORD-003", service: "YouTube Views", customer: "mike@example.com", link: "https://youtube.com/watch?v=xyz", quantity: 10000, price: 8.00, status: "pending", progress: 0, startCount: 1500, currentCount: 1500, createdAt: "2024-01-15 14:20", notes: "" },
-  { id: "ORD-004", service: "TikTok Likes", customer: "sara@example.com", link: "https://tiktok.com/@user/video/123", quantity: 2000, price: 3.00, status: "in_progress", progress: 40, startCount: 200, currentCount: 1000, createdAt: "2024-01-15 14:15", notes: "Rush order" },
-  { id: "ORD-005", service: "Facebook Page Likes", customer: "tom@example.com", link: "https://facebook.com/page", quantity: 5000, price: 15.00, status: "partial", progress: 80, startCount: 1000, currentCount: 5000, createdAt: "2024-01-15 14:10", notes: "" },
-  { id: "ORD-006", service: "Twitter Followers", customer: "lisa@example.com", link: "https://twitter.com/user", quantity: 500, price: 1.40, status: "cancelled", progress: 0, startCount: 300, currentCount: 300, createdAt: "2024-01-15 14:05", notes: "Customer requested cancellation" },
-  { id: "ORD-007", service: "Instagram Followers", customer: "alex@example.com", link: "https://instagram.com/user2", quantity: 3000, price: 7.50, status: "refunded", progress: 0, startCount: 2000, currentCount: 2000, createdAt: "2024-01-15 14:00", notes: "Full refund issued" },
-];
+interface Order {
+  id: string;
+  order_number: string;
+  target_url: string;
+  quantity: number;
+  price: number;
+  status: string;
+  progress: number;
+  start_count: number;
+  remains: number;
+  notes: string | null;
+  created_at: string;
+  service?: { name: string; category: string } | null;
+  buyer?: { email: string; full_name: string | null } | null;
+}
 
-const statusConfig = {
+const statusConfig: Record<string, { label: string; color: string; icon: any; glow: string }> = {
   pending: { label: "Pending", color: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20", icon: Clock, glow: "shadow-yellow-500/20" },
   in_progress: { label: "In Progress", color: "bg-blue-500/10 text-blue-500 border-blue-500/20", icon: Loader2, glow: "shadow-blue-500/20" },
   completed: { label: "Completed", color: "bg-green-500/10 text-green-500 border-green-500/20", icon: CheckCircle, glow: "shadow-green-500/20" },
   partial: { label: "Partial", color: "bg-orange-500/10 text-orange-500 border-orange-500/20", icon: AlertCircle, glow: "shadow-orange-500/20" },
   cancelled: { label: "Cancelled", color: "bg-red-500/10 text-red-500 border-red-500/20", icon: XCircle, glow: "shadow-red-500/20" },
-  refunded: { label: "Refunded", color: "bg-purple-500/10 text-purple-500 border-purple-500/20", icon: RefreshCw, glow: "shadow-purple-500/20" },
 };
 
 const OrdersManagement = () => {
-  const [orders, setOrders] = useState(mockOrders);
+  const { panel, loading: panelLoading } = usePanel();
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
-  const [selectedOrder, setSelectedOrder] = useState<typeof mockOrders[0] | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isRefundOpen, setIsRefundOpen] = useState(false);
   const [refundAmount, setRefundAmount] = useState("");
@@ -87,34 +88,44 @@ const OrdersManagement = () => {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [newOrderNote, setNewOrderNote] = useState("");
 
-  // Simulate real-time updates
   useEffect(() => {
-    const interval = setInterval(() => {
-      setOrders(prev => prev.map(order => {
-        if (order.status === "in_progress" && order.progress < 100) {
-          const newProgress = Math.min(order.progress + Math.random() * 5, 100);
-          const delivered = Math.floor((order.quantity * newProgress) / 100);
-          return {
-            ...order,
-            progress: newProgress,
-            currentCount: order.startCount + delivered,
-            status: newProgress >= 100 ? "completed" : "in_progress"
-          };
-        }
-        return order;
-      }));
-    }, 5000);
+    if (panel?.id) {
+      fetchOrders();
+    }
+  }, [panel?.id]);
 
-    return () => clearInterval(interval);
-  }, []);
+  const fetchOrders = async () => {
+    if (!panel?.id) return;
+    
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          service:services(name, category),
+          buyer:client_users!orders_buyer_id_fkey(email, full_name)
+        `)
+        .eq('panel_id', panel.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setOrders(data || []);
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to load orders' });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Filter orders
   const filteredOrders = orders.filter(order => {
     const matchesStatus = statusFilter === "all" || order.status === statusFilter;
     const matchesSearch = 
-      order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.customer.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.service.toLowerCase().includes(searchQuery.toLowerCase());
+      order.order_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (order.buyer?.email || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (order.service?.name || '').toLowerCase().includes(searchQuery.toLowerCase());
     return matchesStatus && matchesSearch;
   });
 
@@ -122,64 +133,110 @@ const OrdersManagement = () => {
   const todayOrders = orders.length;
   const pendingOrders = orders.filter(o => o.status === "pending").length;
   const inProgressOrders = orders.filter(o => o.status === "in_progress").length;
-  const todayRevenue = orders.reduce((acc, o) => acc + o.price, 0);
+  const todayRevenue = orders.reduce((acc, o) => acc + (o.price || 0), 0);
 
-  // View order details
-  const viewOrderDetails = (order: typeof mockOrders[0]) => {
+  const viewOrderDetails = (order: Order) => {
     setSelectedOrder(order);
     setIsDetailsOpen(true);
   };
 
-  // Update order status
-  const updateOrderStatus = (orderId: string, newStatus: string) => {
-    setOrders(prev => prev.map(o => 
-      o.id === orderId ? { ...o, status: newStatus } : o
-    ));
-    toast({ title: `Order ${orderId} status updated to ${newStatus}` });
+  const updateOrderStatus = async (orderId: string, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ status: newStatus as any, updated_at: new Date().toISOString() })
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      setOrders(prev => prev.map(o => 
+        o.id === orderId ? { ...o, status: newStatus } : o
+      ));
+      toast({ title: `Order status updated to ${newStatus}` });
+    } catch (error) {
+      console.error('Error updating order:', error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to update order' });
+    }
   };
 
-  // Cancel order
-  const cancelOrder = (orderId: string) => {
-    setOrders(prev => prev.map(o => 
-      o.id === orderId ? { ...o, status: "cancelled", progress: 0 } : o
-    ));
-    toast({ title: `Order ${orderId} cancelled` });
+  const cancelOrder = async (orderId: string) => {
+    await updateOrderStatus(orderId, 'cancelled');
   };
 
-  // Open refund dialog
-  const openRefundDialog = (order: typeof mockOrders[0]) => {
+  const openRefundDialog = (order: Order) => {
     setSelectedOrder(order);
     setRefundAmount(order.price.toFixed(2));
     setIsRefundOpen(true);
   };
 
-  // Process refund
-  const processRefund = () => {
+  const processRefund = async () => {
     if (!selectedOrder) return;
-    setOrders(prev => prev.map(o => 
-      o.id === selectedOrder.id ? { ...o, status: "refunded", notes: `Refund: $${refundAmount} - ${refundReason}` } : o
-    ));
-    toast({ title: `Refund of $${refundAmount} processed for ${selectedOrder.id}` });
-    setIsRefundOpen(false);
-    setRefundReason("");
+    
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ 
+          status: 'cancelled' as any, 
+          notes: `Refund: $${refundAmount} - ${refundReason}`,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', selectedOrder.id);
+
+      if (error) throw error;
+
+      setOrders(prev => prev.map(o => 
+        o.id === selectedOrder.id ? { ...o, status: "cancelled", notes: `Refund: $${refundAmount} - ${refundReason}` } : o
+      ));
+      toast({ title: `Refund of $${refundAmount} processed` });
+      setIsRefundOpen(false);
+      setRefundReason("");
+    } catch (error) {
+      console.error('Error processing refund:', error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to process refund' });
+    }
   };
 
-  // Add note to order
-  const addOrderNote = () => {
+  const addOrderNote = async () => {
     if (!selectedOrder || !newOrderNote.trim()) return;
-    setOrders(prev => prev.map(o => 
-      o.id === selectedOrder.id ? { ...o, notes: o.notes ? `${o.notes}\n${newOrderNote}` : newOrderNote } : o
-    ));
-    setSelectedOrder(prev => prev ? { ...prev, notes: prev.notes ? `${prev.notes}\n${newOrderNote}` : newOrderNote } : null);
-    setNewOrderNote("");
-    toast({ title: "Note added" });
+    
+    const updatedNotes = selectedOrder.notes 
+      ? `${selectedOrder.notes}\n${newOrderNote}` 
+      : newOrderNote;
+
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ notes: updatedNotes, updated_at: new Date().toISOString() })
+        .eq('id', selectedOrder.id);
+
+      if (error) throw error;
+
+      setOrders(prev => prev.map(o => 
+        o.id === selectedOrder.id ? { ...o, notes: updatedNotes } : o
+      ));
+      setSelectedOrder(prev => prev ? { ...prev, notes: updatedNotes } : null);
+      setNewOrderNote("");
+      toast({ title: "Note added" });
+    } catch (error) {
+      console.error('Error adding note:', error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to add note' });
+    }
   };
 
-  // Export orders
   const exportOrders = () => {
     const csv = [
       ["Order ID", "Service", "Customer", "Link", "Quantity", "Price", "Status", "Progress", "Date"],
-      ...filteredOrders.map(o => [o.id, o.service, o.customer, o.link, o.quantity, o.price, o.status, o.progress, o.createdAt])
+      ...filteredOrders.map(o => [
+        o.order_number, 
+        o.service?.name || '', 
+        o.buyer?.email || '', 
+        o.target_url, 
+        o.quantity, 
+        o.price, 
+        o.status, 
+        o.progress || 0, 
+        o.created_at
+      ])
     ].map(row => row.join(",")).join("\n");
     
     const blob = new Blob([csv], { type: "text/csv" });
@@ -190,6 +247,18 @@ const OrdersManagement = () => {
     a.click();
     toast({ title: "Orders exported" });
   };
+
+  if (panelLoading || loading) {
+    return (
+      <div className="space-y-6 animate-pulse">
+        <div className="h-8 bg-muted rounded w-1/4"></div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map(i => <div key={i} className="h-24 bg-muted rounded-xl"></div>)}
+        </div>
+        <div className="h-64 bg-muted rounded-xl"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 overflow-x-hidden">
@@ -206,6 +275,10 @@ const OrdersManagement = () => {
           <p className="text-muted-foreground">Track and manage customer orders in real-time</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" onClick={fetchOrders} className="glass-card border-border/50">
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Refresh
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -228,10 +301,10 @@ const OrdersManagement = () => {
       {/* Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         {[
-          { label: "Today's Orders", value: todayOrders, icon: ShoppingCart, color: "primary", trend: "+12%" },
+          { label: "Total Orders", value: todayOrders, icon: ShoppingCart, color: "primary", trend: null },
           { label: "Pending", value: pendingOrders, icon: Clock, color: "yellow-500", trend: null },
           { label: "In Progress", value: inProgressOrders, icon: Zap, color: "blue-500", trend: null },
-          { label: "Today's Revenue", value: `$${todayRevenue.toFixed(2)}`, icon: DollarSign, color: "green-500", trend: "+8%" },
+          { label: "Revenue", value: `$${todayRevenue.toFixed(2)}`, icon: DollarSign, color: "green-500", trend: null },
         ].map((stat, index) => (
           <motion.div
             key={stat.label}
@@ -263,12 +336,6 @@ const OrdersManagement = () => {
                       <p className="text-2xl font-bold">{stat.value}</p>
                     </div>
                   </div>
-                  {stat.trend && (
-                    <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
-                      <TrendingUp className="w-3 h-3 mr-1" />
-                      {stat.trend}
-                    </Badge>
-                  )}
                 </div>
               </CardContent>
             </Card>
@@ -276,22 +343,22 @@ const OrdersManagement = () => {
         ))}
       </div>
 
-      {/* Status Filters - Horizontal scroll on mobile */}
+      {/* Status Filters */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
         className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 md:flex-wrap scrollbar-hide"
       >
-        {["all", "pending", "in_progress", "completed", "partial", "cancelled", "refunded"].map((status) => {
+        {["all", "pending", "in_progress", "completed", "partial", "cancelled"].map((status) => {
           const isActive = statusFilter === status;
-          const config = status !== "all" ? statusConfig[status as keyof typeof statusConfig] : null;
+          const config = status !== "all" ? statusConfig[status] : null;
           return (
             <button
               key={status}
               onClick={() => setStatusFilter(status)}
               className={cn(
-                "px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200",
+                "px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 whitespace-nowrap",
                 isActive 
                   ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" 
                   : "glass-card hover:bg-accent/50 text-muted-foreground hover:text-foreground"
@@ -340,179 +407,169 @@ const OrdersManagement = () => {
                 </tr>
               </thead>
               <tbody>
-                <AnimatePresence>
-                  {filteredOrders.map((order, index) => {
-                    const statusInfo = statusConfig[order.status as keyof typeof statusConfig];
-                    const StatusIcon = statusInfo.icon;
-                    const isExpanded = expandedOrder === order.id;
+                {filteredOrders.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="p-8 text-center text-muted-foreground">
+                      {loading ? 'Loading orders...' : 'No orders found'}
+                    </td>
+                  </tr>
+                ) : (
+                  <AnimatePresence>
+                    {filteredOrders.map((order, index) => {
+                      const statusInfo = statusConfig[order.status] || statusConfig.pending;
+                      const StatusIcon = statusInfo.icon;
+                      const isExpanded = expandedOrder === order.id;
 
-                    return (
-                      <motion.tr
-                        key={order.id}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.05 }}
-                        className="border-b border-border/30 hover:bg-accent/30 transition-colors group"
-                      >
-                        <td className="p-4">
-                          <div className="flex items-center gap-3">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 shrink-0"
-                              onClick={() => setExpandedOrder(isExpanded ? null : order.id)}
-                            >
-                              {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                            </Button>
-                            <div>
-                              <p className="font-medium group-hover:text-primary transition-colors">{order.id}</p>
-                              <p className="text-xs text-muted-foreground">{order.service}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="p-4 hidden md:table-cell">
-                          <span className="text-sm">{order.customer}</span>
-                        </td>
-                        <td className="p-4 hidden lg:table-cell">
-                          <span className="text-sm">{order.quantity.toLocaleString()}</span>
-                        </td>
-                        <td className="p-4">
-                          <Badge variant="outline" className={cn(statusInfo.color, "shadow-sm", statusInfo.glow)}>
-                            <StatusIcon className={cn("w-3 h-3 mr-1", order.status === "in_progress" && "animate-spin")} />
-                            {statusInfo.label}
-                          </Badge>
-                        </td>
-                        <td className="p-4 hidden md:table-cell">
-                          <div className="flex items-center gap-2 min-w-32">
-                            <Progress 
-                              value={order.progress} 
-                              className={cn(
-                                "h-2",
-                                order.status === "completed" && "[&>div]:bg-green-500",
-                                order.status === "in_progress" && "[&>div]:bg-blue-500",
-                                order.status === "partial" && "[&>div]:bg-orange-500"
-                              )}
-                            />
-                            <span className="text-xs text-muted-foreground w-10">{Math.round(order.progress)}%</span>
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <span className="font-semibold">${order.price.toFixed(2)}</span>
-                        </td>
-                        <td className="p-4">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity">
-                                <MoreVertical className="w-4 h-4" />
+                      return (
+                        <motion.tr
+                          key={order.id}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.05 }}
+                          className="border-b border-border/30 hover:bg-accent/30 transition-colors group"
+                        >
+                          <td className="p-4">
+                            <div className="flex items-center gap-3">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 shrink-0"
+                                onClick={() => setExpandedOrder(isExpanded ? null : order.id)}
+                              >
+                                {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                               </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="glass-card">
-                              <DropdownMenuItem onClick={() => viewOrderDetails(order)}>
-                                <Eye className="w-4 h-4 mr-2" /> View Details
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              {order.status === "pending" && (
-                                <DropdownMenuItem onClick={() => updateOrderStatus(order.id, "in_progress")}>
+                              <div>
+                                <p className="font-medium group-hover:text-primary transition-colors">{order.order_number}</p>
+                                <p className="text-xs text-muted-foreground">{order.service?.name || 'Unknown Service'}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="p-4 hidden md:table-cell">
+                            <span className="text-sm">{order.buyer?.email || 'Unknown'}</span>
+                          </td>
+                          <td className="p-4 hidden lg:table-cell">
+                            <span className="text-sm">{order.quantity.toLocaleString()}</span>
+                          </td>
+                          <td className="p-4">
+                            <Badge variant="outline" className={cn(statusInfo.color, "shadow-sm", statusInfo.glow)}>
+                              <StatusIcon className={cn("w-3 h-3 mr-1", order.status === "in_progress" && "animate-spin")} />
+                              {statusInfo.label}
+                            </Badge>
+                          </td>
+                          <td className="p-4 hidden md:table-cell">
+                            <div className="flex items-center gap-2 min-w-32">
+                              <Progress 
+                                value={order.progress || 0} 
+                                className={cn(
+                                  "h-2",
+                                  order.status === "completed" && "[&>div]:bg-green-500",
+                                  order.status === "in_progress" && "[&>div]:bg-blue-500",
+                                  order.status === "pending" && "[&>div]:bg-yellow-500"
+                                )}
+                              />
+                              <span className="text-xs text-muted-foreground w-12">{order.progress || 0}%</span>
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <span className="font-semibold">${order.price.toFixed(2)}</span>
+                          </td>
+                          <td className="p-4">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <MoreVertical className="w-4 h-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="glass">
+                                <DropdownMenuItem onClick={() => viewOrderDetails(order)}>
+                                  <Eye className="w-4 h-4 mr-2" /> View Details
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => window.open(order.target_url, '_blank')}>
+                                  <ExternalLink className="w-4 h-4 mr-2" /> Open Link
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => updateOrderStatus(order.id, 'in_progress')}>
                                   <Loader2 className="w-4 h-4 mr-2" /> Start Processing
                                 </DropdownMenuItem>
-                              )}
-                              {order.status === "in_progress" && (
-                                <DropdownMenuItem onClick={() => updateOrderStatus(order.id, "completed")}>
-                                  <CheckCircle className="w-4 h-4 mr-2" /> Mark Complete
+                                <DropdownMenuItem onClick={() => updateOrderStatus(order.id, 'completed')}>
+                                  <CheckCircle className="w-4 h-4 mr-2" /> Mark Completed
                                 </DropdownMenuItem>
-                              )}
-                              {!["cancelled", "refunded", "completed"].includes(order.status) && (
-                                <>
-                                  <DropdownMenuItem onClick={() => cancelOrder(order.id)}>
-                                    <XCircle className="w-4 h-4 mr-2" /> Cancel Order
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => openRefundDialog(order)}>
-                                    <RefreshCw className="w-4 h-4 mr-2" /> Refund
-                                  </DropdownMenuItem>
-                                </>
-                              )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </td>
-                      </motion.tr>
-                    );
-                  })}
-                </AnimatePresence>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => cancelOrder(order.id)} className="text-destructive">
+                                  <XCircle className="w-4 h-4 mr-2" /> Cancel Order
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => openRefundDialog(order)} className="text-destructive">
+                                  <RefreshCw className="w-4 h-4 mr-2" /> Process Refund
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </td>
+                        </motion.tr>
+                      );
+                    })}
+                  </AnimatePresence>
+                )}
               </tbody>
             </table>
           </div>
-
-          {filteredOrders.length === 0 && (
-            <div className="p-12 text-center">
-              <ShoppingCart className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-              <h3 className="font-medium text-lg">No orders found</h3>
-              <p className="text-muted-foreground text-sm">Try adjusting your search or filter criteria</p>
-            </div>
-          )}
         </Card>
       </motion.div>
 
       {/* Order Details Dialog */}
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <DialogContent className="max-w-lg glass-card border-border/50">
+        <DialogContent className="glass max-w-lg">
           <DialogHeader>
-            <DialogTitle>Order Details - {selectedOrder?.id}</DialogTitle>
-            <DialogDescription>
-              View complete order information
-            </DialogDescription>
+            <DialogTitle>Order Details</DialogTitle>
+            <DialogDescription>{selectedOrder?.order_number}</DialogDescription>
           </DialogHeader>
           {selectedOrder && (
-            <div className="space-y-4 py-4">
+            <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div className="glass-card p-3 rounded-lg">
-                  <p className="text-xs text-muted-foreground">Service</p>
-                  <p className="font-medium">{selectedOrder.service}</p>
+                <div>
+                  <p className="text-sm text-muted-foreground">Service</p>
+                  <p className="font-medium">{selectedOrder.service?.name || 'Unknown'}</p>
                 </div>
-                <div className="glass-card p-3 rounded-lg">
-                  <p className="text-xs text-muted-foreground">Customer</p>
-                  <p className="font-medium">{selectedOrder.customer}</p>
+                <div>
+                  <p className="text-sm text-muted-foreground">Customer</p>
+                  <p className="font-medium">{selectedOrder.buyer?.email || 'Unknown'}</p>
                 </div>
-                <div className="glass-card p-3 rounded-lg">
-                  <p className="text-xs text-muted-foreground">Quantity</p>
+                <div>
+                  <p className="text-sm text-muted-foreground">Quantity</p>
                   <p className="font-medium">{selectedOrder.quantity.toLocaleString()}</p>
                 </div>
-                <div className="glass-card p-3 rounded-lg">
-                  <p className="text-xs text-muted-foreground">Price</p>
-                  <p className="font-medium text-primary">${selectedOrder.price.toFixed(2)}</p>
+                <div>
+                  <p className="text-sm text-muted-foreground">Price</p>
+                  <p className="font-medium">${selectedOrder.price.toFixed(2)}</p>
                 </div>
               </div>
-
-              <div className="glass-card p-3 rounded-lg">
-                <p className="text-xs text-muted-foreground mb-1">Target Link</p>
-                <a href={selectedOrder.link} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1 text-sm">
-                  {selectedOrder.link}
-                  <ExternalLink className="w-3 h-3" />
+              
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Target URL</p>
+                <a href={selectedOrder.target_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-sm break-all">
+                  {selectedOrder.target_url}
                 </a>
               </div>
 
-              <div className="glass-card p-3 rounded-lg">
-                <p className="text-xs text-muted-foreground mb-2">Progress</p>
-                <Progress value={selectedOrder.progress} className="h-3" />
-                <p className="text-xs text-muted-foreground mt-1">
-                  {selectedOrder.currentCount.toLocaleString()} / {(selectedOrder.startCount + selectedOrder.quantity).toLocaleString()}
-                </p>
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Progress</p>
+                <Progress value={selectedOrder.progress || 0} className="h-2" />
+                <p className="text-xs text-muted-foreground mt-1">{selectedOrder.progress || 0}% complete</p>
               </div>
 
               {selectedOrder.notes && (
-                <div className="glass-card p-3 rounded-lg">
-                  <p className="text-xs text-muted-foreground mb-1">Notes</p>
-                  <p className="text-sm whitespace-pre-wrap">{selectedOrder.notes}</p>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Notes</p>
+                  <p className="text-sm whitespace-pre-wrap bg-muted/30 p-3 rounded-lg">{selectedOrder.notes}</p>
                 </div>
               )}
 
               <div className="flex gap-2">
-                <Input
-                  placeholder="Add a note..."
-                  value={newOrderNote}
+                <Input 
+                  placeholder="Add a note..." 
+                  value={newOrderNote} 
                   onChange={(e) => setNewOrderNote(e.target.value)}
-                  className="bg-background/50"
                 />
-                <Button onClick={addOrderNote} size="sm" className="bg-gradient-to-r from-primary to-primary/80">
+                <Button onClick={addOrderNote} disabled={!newOrderNote.trim()}>
                   <MessageSquare className="w-4 h-4" />
                 </Button>
               </div>
@@ -523,37 +580,33 @@ const OrdersManagement = () => {
 
       {/* Refund Dialog */}
       <Dialog open={isRefundOpen} onOpenChange={setIsRefundOpen}>
-        <DialogContent className="glass-card border-border/50">
+        <DialogContent className="glass">
           <DialogHeader>
             <DialogTitle>Process Refund</DialogTitle>
-            <DialogDescription>
-              Refund for order {selectedOrder?.id}
-            </DialogDescription>
+            <DialogDescription>Order: {selectedOrder?.order_number}</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
+          <div className="space-y-4">
+            <div>
               <Label>Refund Amount</Label>
-              <Input
-                type="number"
-                value={refundAmount}
+              <Input 
+                type="number" 
+                value={refundAmount} 
                 onChange={(e) => setRefundAmount(e.target.value)}
                 step="0.01"
-                className="bg-background/50"
               />
             </div>
-            <div className="space-y-2">
+            <div>
               <Label>Reason</Label>
-              <Textarea
-                placeholder="Enter refund reason..."
-                value={refundReason}
+              <Textarea 
+                value={refundReason} 
                 onChange={(e) => setRefundReason(e.target.value)}
-                className="bg-background/50"
+                placeholder="Enter refund reason..."
               />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsRefundOpen(false)}>Cancel</Button>
-            <Button onClick={processRefund} className="bg-gradient-to-r from-primary to-primary/80">
+            <Button onClick={processRefund} className="bg-destructive text-destructive-foreground">
               Process Refund
             </Button>
           </DialogFooter>

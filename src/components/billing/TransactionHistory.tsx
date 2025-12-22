@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,41 +16,56 @@ import {
   ArrowDownRight, 
   Receipt,
   Download,
-  Filter,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Loader2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Transaction {
   id: string;
-  type: "deposit" | "withdrawal" | "commission" | "subscription";
+  type: string;
   amount: number;
-  method: string;
-  status: "completed" | "pending" | "failed";
-  date: string;
-  description: string;
-  invoiceId?: string;
+  payment_method: string | null;
+  status: string | null;
+  created_at: string;
+  description: string | null;
 }
 
 interface TransactionHistoryProps {
-  transactions?: Transaction[];
+  panelId?: string;
 }
 
-const mockTransactions: Transaction[] = [
-  { id: "TXN001", type: "deposit", amount: 100.00, method: "PayPal", status: "completed", date: "2024-12-20", description: "Balance top-up", invoiceId: "INV-001" },
-  { id: "TXN002", type: "commission", amount: -5.25, method: "Platform Fee", status: "completed", date: "2024-12-19", description: "5% commission on order #ORD-2847" },
-  { id: "TXN003", type: "deposit", amount: 250.00, method: "Stripe", status: "completed", date: "2024-12-18", description: "Balance top-up", invoiceId: "INV-002" },
-  { id: "TXN004", type: "subscription", amount: -15.00, method: "Auto-debit", status: "completed", date: "2024-12-15", description: "Pro plan subscription", invoiceId: "INV-003" },
-  { id: "TXN005", type: "deposit", amount: 50.00, method: "Crypto", status: "pending", date: "2024-12-14", description: "Balance top-up (pending confirmation)" },
-  { id: "TXN006", type: "commission", amount: -3.50, method: "Platform Fee", status: "completed", date: "2024-12-12", description: "5% commission on order #ORD-2845" },
-  { id: "TXN007", type: "withdrawal", amount: -200.00, method: "Bank Transfer", status: "completed", date: "2024-12-10", description: "Withdrawal to bank", invoiceId: "INV-004" },
-];
-
-export const TransactionHistory = ({ transactions = mockTransactions }: TransactionHistoryProps) => {
+export const TransactionHistory = ({ panelId }: TransactionHistoryProps) => {
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "deposit" | "withdrawal" | "commission">("all");
   const [page, setPage] = useState(1);
   const perPage = 5;
+
+  useEffect(() => {
+    fetchTransactions();
+  }, [panelId]);
+
+  const fetchTransactions = async () => {
+    setLoading(true);
+    try {
+      // Fetch transactions for the panel owner
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+      setTransactions(data || []);
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredTransactions = transactions.filter(tx => {
     if (filter === "all") return true;
@@ -70,7 +85,7 @@ export const TransactionHistory = ({ transactions = mockTransactions }: Transact
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string | null) => {
     switch (status) {
       case "completed": return "bg-green-500/10 text-green-500 border-green-500/20";
       case "pending": return "bg-yellow-500/10 text-yellow-500 border-yellow-500/20";
@@ -108,45 +123,51 @@ export const TransactionHistory = ({ transactions = mockTransactions }: Transact
                 <TableHead>Method</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
-                <TableHead className="w-[50px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginatedTransactions.map((tx) => (
-                <TableRow key={tx.id}>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {new Date(tx.date).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={cn("capitalize", getTypeColor(tx.type))}>
-                      {tx.type}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="max-w-[200px] truncate text-sm">
-                    {tx.description}
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {tx.method}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={cn("capitalize text-xs", getStatusColor(tx.status))}>
-                      {tx.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right font-medium">
-                    <span className={tx.amount >= 0 ? "text-green-500" : "text-muted-foreground"}>
-                      {tx.amount >= 0 ? "+" : ""}${Math.abs(tx.amount).toFixed(2)}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    {tx.invoiceId && (
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <Download className="w-4 h-4" />
-                      </Button>
-                    )}
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin mx-auto" />
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : paginatedTransactions.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    No transactions found
+                  </TableCell>
+                </TableRow>
+              ) : (
+                paginatedTransactions.map((tx) => (
+                  <TableRow key={tx.id}>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {new Date(tx.created_at).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={cn("capitalize", getTypeColor(tx.type))}>
+                        {tx.type}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="max-w-[200px] truncate text-sm">
+                      {tx.description || '-'}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {tx.payment_method || '-'}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={cn("capitalize text-xs", getStatusColor(tx.status))}>
+                        {tx.status || 'completed'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right font-medium">
+                      <span className={tx.amount >= 0 ? "text-green-500" : "text-muted-foreground"}>
+                        {tx.amount >= 0 ? "+" : ""}${Math.abs(tx.amount).toFixed(2)}
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </div>

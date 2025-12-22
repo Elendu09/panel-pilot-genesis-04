@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -19,39 +19,89 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useTenant, useTenantServices } from "@/hooks/useTenant";
+import { useBuyerAuth } from "@/contexts/BuyerAuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import BuyerLayout from "./BuyerLayout";
 
+interface Order {
+  id: string;
+  order_number: string;
+  quantity: number;
+  price: number;
+  status: string;
+  progress: number;
+  created_at: string;
+  service?: { name: string } | null;
+}
+
 const BuyerDashboard = () => {
   const { panel } = useTenant();
+  const { buyer } = useBuyerAuth();
   const { services, loading: servicesLoading } = useTenantServices(panel?.id);
   const [stats, setStats] = useState({
     totalOrders: 0,
     pendingOrders: 0,
     completedOrders: 0,
     totalSpent: 0,
-    balance: 125.50, // Mock - would come from buyer auth
   });
-  const [recentOrders, setRecentOrders] = useState<any[]>([]);
+  const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // In real app, fetch buyer's orders from supabase
-    // For now, using mock data
-    setRecentOrders([
-      { id: 'ORD-001', service: 'Instagram Followers', quantity: 1000, status: 'completed', progress: 100, price: 2.50, date: '2024-12-20' },
-      { id: 'ORD-002', service: 'TikTok Likes', quantity: 500, status: 'in_progress', progress: 65, price: 1.50, date: '2024-12-21' },
-      { id: 'ORD-003', service: 'YouTube Views', quantity: 5000, status: 'pending', progress: 0, price: 4.00, date: '2024-12-22' },
-    ]);
-    setStats({
-      totalOrders: 15,
-      pendingOrders: 2,
-      completedOrders: 12,
-      totalSpent: 87.50,
-      balance: 125.50,
-    });
-    setLoading(false);
-  }, [panel?.id]);
+    if (buyer?.id && panel?.id) {
+      fetchBuyerData();
+    }
+  }, [buyer?.id, panel?.id]);
+
+  const fetchBuyerData = async () => {
+    if (!buyer?.id) return;
+
+    setLoading(true);
+    try {
+      // Fetch orders for this buyer
+      const { data: orders, error } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          service:services(name)
+        `)
+        .eq('buyer_id', buyer.id)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+
+      const formattedOrders: Order[] = (orders || []).map(o => ({
+        id: o.id,
+        order_number: o.order_number,
+        quantity: o.quantity,
+        price: o.price,
+        status: o.status || 'pending',
+        progress: o.progress || 0,
+        created_at: o.created_at,
+        service: o.service,
+      }));
+
+      setRecentOrders(formattedOrders);
+
+      // Calculate stats
+      const totalOrders = formattedOrders.length;
+      const pendingOrders = formattedOrders.filter(o => o.status === 'pending').length;
+      const completedOrders = formattedOrders.filter(o => o.status === 'completed').length;
+      const totalSpent = buyer.total_spent || 0;
+
+      setStats({
+        totalOrders,
+        pendingOrders,
+        completedOrders,
+        totalSpent,
+      });
+    } catch (error) {
+      console.error('Error fetching buyer data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -76,14 +126,15 @@ const BuyerDashboard = () => {
     }
   };
 
+  const balance = buyer?.balance || 0;
+
   const statsCards = [
-    { title: 'Balance', value: `$${stats.balance.toFixed(2)}`, icon: Wallet, color: 'from-emerald-500 to-emerald-600', bg: 'bg-emerald-500/10' },
+    { title: 'Balance', value: `$${balance.toFixed(2)}`, icon: Wallet, color: 'from-emerald-500 to-emerald-600', bg: 'bg-emerald-500/10' },
     { title: 'Total Orders', value: stats.totalOrders, icon: ShoppingCart, color: 'from-blue-500 to-blue-600', bg: 'bg-blue-500/10' },
     { title: 'Pending', value: stats.pendingOrders, icon: Clock, color: 'from-amber-500 to-amber-600', bg: 'bg-amber-500/10' },
     { title: 'Total Spent', value: `$${stats.totalSpent.toFixed(2)}`, icon: TrendingUp, color: 'from-violet-500 to-violet-600', bg: 'bg-violet-500/10' },
   ];
 
-  // Kanban columns for orders
   const orderColumns = [
     { title: 'Pending', status: 'pending', icon: Clock, color: 'from-amber-500 to-amber-600', bg: 'bg-amber-500/10', textColor: 'text-amber-500' },
     { title: 'In Progress', status: 'in_progress', icon: Loader2, color: 'from-blue-500 to-blue-600', bg: 'bg-blue-500/10', textColor: 'text-blue-500' },
@@ -100,13 +151,15 @@ const BuyerDashboard = () => {
       >
         {/* Welcome Header */}
         <motion.div variants={itemVariants}>
-          <h1 className="text-2xl md:text-3xl font-bold">Welcome back! 👋</h1>
+          <h1 className="text-2xl md:text-3xl font-bold">
+            Welcome back, {buyer?.full_name?.split(' ')[0] || 'there'}! 👋
+          </h1>
           <p className="text-muted-foreground">Here's an overview of your orders and services</p>
         </motion.div>
 
         {/* Stats Grid */}
         <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {statsCards.map((stat, index) => {
+          {statsCards.map((stat) => {
             const Icon = stat.icon;
             return (
               <Card key={stat.title} className="glass-card-hover relative overflow-hidden">
@@ -197,7 +250,7 @@ const BuyerDashboard = () => {
                         <p className="text-sm text-muted-foreground">No orders</p>
                       </div>
                     ) : (
-                      columnOrders.map((order) => {
+                      columnOrders.slice(0, 3).map((order) => {
                         const statusConfig = getStatusConfig(order.status);
                         const StatusIcon = statusConfig.icon;
 
@@ -210,8 +263,8 @@ const BuyerDashboard = () => {
                           >
                             <div className="flex items-start justify-between">
                               <div>
-                                <p className="font-medium text-sm">{order.service}</p>
-                                <p className="text-xs text-muted-foreground">{order.id}</p>
+                                <p className="font-medium text-sm">{order.service?.name || 'Unknown'}</p>
+                                <p className="text-xs text-muted-foreground">{order.order_number}</p>
                               </div>
                               <Badge variant="outline" className={cn("text-[10px]", statusConfig.color)}>
                                 <StatusIcon className={cn("w-3 h-3 mr-1", statusConfig.spin && "animate-spin")} />
