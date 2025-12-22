@@ -127,84 +127,72 @@ const DomainSettings = () => {
     }
   };
 
-  // Complete domain verification with DNS, HTTP, and SSL checks
+  // Complete domain verification with DNS + real HTTPS reachability (SSL) checks
   const verifyDomainWithChecks = async (domainId: string, domainName: string, showToasts = true) => {
     setVerifyingDomains(prev => new Set(prev).add(domainId));
-    
+
     try {
-      // Step 1: DNS Check
-      const { data: dnsData, error: dnsError } = await supabase.functions.invoke("dns-lookup", {
-        body: { domain: domainName, recordType: "A" },
+      const { data: health, error: healthError } = await supabase.functions.invoke("domain-health-check", {
+        body: { domain: domainName },
       });
 
-      if (dnsError) throw dnsError;
+      if (healthError) throw healthError;
 
-      const hasCorrectDNS = dnsData?.results?.some(
-        (r: any) => r.status === 'resolved' && r.value === LOVABLE_IP
-      );
+      const dnsOk = !!health?.dns_ok;
+      const httpsOk = !!health?.https_ok;
 
-      if (!hasCorrectDNS) {
+      if (!dnsOk) {
         if (showToasts) {
-          toast({ 
-            variant: "destructive", 
-            title: "DNS Not Configured", 
-            description: `Please add an A record pointing to ${LOVABLE_IP}` 
+          toast({
+            variant: "destructive",
+            title: "DNS Not Configured",
+            description: `Your domain must have an A record pointing to ${LOVABLE_IP}. Detected: ${(health?.a_records || []).join(", ") || "none"}`,
           });
         }
         return false;
       }
 
-      // Step 2: HTTP Check - Try to fetch the domain
-      let httpOk = false;
-      try {
-        const httpResponse = await fetch(`https://${domainName}`, { 
-          method: 'HEAD',
-          mode: 'no-cors'
+      if (!httpsOk && showToasts) {
+        toast({
+          variant: "destructive",
+          title: "SSL Not Ready Yet",
+          description: "DNS is correct, but HTTPS is still failing. This usually means SSL is still provisioning or a proxy/CAA record is blocking issuance.",
         });
-        httpOk = true; // no-cors doesn't give us status, but if no error, it's reachable
-      } catch (httpError) {
-        // Try HTTP as fallback
-        try {
-          await fetch(`http://${domainName}`, { method: 'HEAD', mode: 'no-cors' });
-          httpOk = true;
-        } catch {
-          httpOk = false;
-        }
       }
 
-      // Step 3: Update status if DNS is correct
+      // Update domain row
       await supabase
-        .from('panel_domains')
-        .update({ 
-          verification_status: 'verified', 
+        .from("panel_domains")
+        .update({
+          verification_status: "verified",
           verified_at: new Date().toISOString(),
           dns_configured: true,
-          ssl_status: httpOk ? 'active' : 'pending'
+          ssl_status: httpsOk ? "active" : "pending",
         })
-        .eq('id', domainId);
+        .eq("id", domainId);
 
-      // Also update panel status if this is a custom domain
+      // Update panel summary status
       if (panel?.id) {
         await supabase
-          .from('panels')
-          .update({ 
-            domain_verification_status: 'verified',
-            ssl_status: httpOk ? 'active' : 'pending'
+          .from("panels")
+          .update({
+            domain_verification_status: "verified",
+            ssl_status: httpsOk ? "active" : "pending",
           })
-          .eq('id', panel.id);
+          .eq("id", panel.id);
       }
 
-      if (showToasts) {
-        toast({ 
-          title: "Domain Verified!", 
-          description: `${domainName} is now active and pointing to your panel.` 
+      if (showToasts && httpsOk) {
+        toast({
+          title: "Domain Verified!",
+          description: `${domainName} is verified and HTTPS is active.`,
         });
       }
 
       await fetchData();
       return true;
     } catch (error) {
-      console.error('Verification error:', error);
+      console.error("Verification error:", error);
       if (showToasts) {
         toast({ variant: "destructive", title: "Verification Failed" });
       }
