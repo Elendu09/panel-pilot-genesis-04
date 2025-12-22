@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Routes, Route, Link, useLocation } from "react-router-dom";
 import { 
   LayoutDashboard, 
@@ -57,15 +57,59 @@ import { Helmet } from "react-helmet-async";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { LowBalanceAlert } from "@/components/panel/LowBalanceAlert";
+import { supabase } from "@/integrations/supabase/client";
+import { usePanel } from "@/hooks/usePanel";
 
 const PanelOwnerDashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [sidebarStats, setSidebarStats] = useState({ todayRevenue: 0, activeOrders: 0 });
   const location = useLocation();
   const canonicalUrl = typeof window !== 'undefined' ? `${window.location.origin}${location.pathname}` : '';
   const { profile, signOut } = useAuth();
   const { isOpen: tourOpen, completeTour, restartTour } = useOnboardingTour();
   const { pendingCount } = usePendingOrders();
+  const { panel } = usePanel();
+
+  // Fetch real sidebar stats
+  useEffect(() => {
+    const fetchSidebarStats = async () => {
+      if (!panel?.id) return;
+
+      try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // Today's revenue from orders
+        const { data: todayOrders } = await supabase
+          .from('orders')
+          .select('price')
+          .eq('panel_id', panel.id)
+          .gte('created_at', today.toISOString());
+
+        const todayRevenue = todayOrders?.reduce((sum, o) => sum + (o.price || 0), 0) || 0;
+
+        // Active orders (pending + in_progress)
+        const { data: activeOrders } = await supabase
+          .from('orders')
+          .select('id')
+          .eq('panel_id', panel.id)
+          .in('status', ['pending', 'in_progress']);
+
+        setSidebarStats({
+          todayRevenue,
+          activeOrders: activeOrders?.length || 0
+        });
+      } catch (error) {
+        console.error('Error fetching sidebar stats:', error);
+      }
+    };
+
+    fetchSidebarStats();
+    // Refresh every 60 seconds
+    const interval = setInterval(fetchSidebarStats, 60000);
+    return () => clearInterval(interval);
+  }, [panel?.id]);
 
   const mainNavigation = [
     { name: 'Dashboard', href: '/panel', icon: LayoutDashboard },
@@ -276,11 +320,11 @@ const PanelOwnerDashboard = () => {
               >
                 <div className="flex justify-between items-center text-xs">
                   <span className="text-muted-foreground">Today's Revenue</span>
-                  <span className="font-semibold text-primary">$1,234</span>
+                  <span className="font-semibold text-primary">${sidebarStats.todayRevenue.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between items-center text-xs">
                   <span className="text-muted-foreground">Active Orders</span>
-                  <span className="font-semibold">23</span>
+                  <span className="font-semibold">{sidebarStats.activeOrders}</span>
                 </div>
               </motion.div>
             )}
