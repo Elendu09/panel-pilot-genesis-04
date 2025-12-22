@@ -1,128 +1,105 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Sparkles, Zap, TrendingUp, Users } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { ArrowRight, Sparkles, Zap, TrendingUp, Users, Heart, Eye, MessageCircle, Star } from "lucide-react";
 import { Link } from "react-router-dom";
-import { ServiceShowcase } from "./ServiceShowcase";
 import { AnimatedText } from "@/components/ui/animated-text";
 import { motion } from "framer-motion";
+
+// Floating feature cards data
+const leftCards = [
+  { title: "Ultra fast.", subtitle: "Almost speed of light.", delay: 0.8 },
+  { title: "Hot design", subtitle: "Far ahead of others.", delay: 1.2 },
+];
+
+const rightCards = [
+  { title: "Cool functions.", subtitle: "Updates every month.", delay: 1.0 },
+  { title: "Ecosystem.", subtitle: "Market transparency", delay: 1.4 },
+];
+
+// Panel showcase services
+const showcaseServices = [
+  { emoji: "😎", name: "Telegram Subscribers", price: "$0.3", discount: "-50%", color: "from-blue-500 to-cyan-500" },
+  { emoji: "👋", name: "Premium Votes", price: "$1", discount: "-30%", color: "from-purple-500 to-pink-500" },
+  { emoji: "👀", name: "Channel Viewers", price: "$0.5", color: "from-green-500 to-emerald-500" },
+  { emoji: "❤️", name: "Real Likes", price: "$20", color: "from-red-500 to-orange-500" },
+];
 
 export const HeroSection = () => {
   return (
     <section className="relative min-h-screen bg-gradient-hero overflow-hidden perspective-1000">
-      {/* Enhanced 3D Background Pattern */}
-      <div className="absolute inset-0 opacity-10">
+      {/* Enhanced Background Effects */}
+      <div className="absolute inset-0 opacity-20">
         <motion.div 
-          className="absolute top-1/4 left-1/4 w-64 h-64 bg-primary rounded-full blur-3xl"
+          className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary rounded-full blur-[120px]"
           animate={{ 
-            scale: [1, 1.2, 1],
-            opacity: [0.3, 0.5, 0.3]
-          }}
-          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-        />
-        <motion.div 
-          className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-primary rounded-full blur-3xl"
-          animate={{ 
-            scale: [1.2, 1, 1.2],
+            scale: [1, 1.3, 1],
             opacity: [0.2, 0.4, 0.2]
           }}
           transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
         />
         <motion.div 
-          className="absolute top-1/2 left-1/2 w-32 h-32 bg-primary/50 rounded-full blur-2xl transform -translate-x-1/2 -translate-y-1/2"
-          animate={{ rotate: 360 }}
-          transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
+          className="absolute bottom-1/3 right-1/4 w-[500px] h-[500px] bg-primary/50 rounded-full blur-[150px]"
+          animate={{ 
+            scale: [1.2, 1, 1.2],
+            opacity: [0.15, 0.3, 0.15]
+          }}
+          transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
         />
       </div>
-      
-      {/* Floating 3D Elements & Social Media Bubbles */}
-      <div className="absolute inset-0 pointer-events-none">
-        {[
-          { top: "5%", left: "10%", size: 16, delay: 0 },
-          { top: "15%", right: "15%", size: 24, delay: 0.5 },
-          { bottom: "30%", left: "8%", size: 12, delay: 1 },
-          { bottom: "15%", right: "12%", size: 20, delay: 1.5 },
-          { top: "35%", left: "25%", size: 32, delay: 2 },
-          { top: "50%", right: "25%", size: 20, delay: 2.5 },
-          { bottom: "45%", left: "33%", size: 24, delay: 3 },
-          { bottom: "25%", right: "33%", size: 16, delay: 3.5 },
-        ].map((bubble, i) => (
+
+      {/* Left Floating Cards */}
+      <div className="absolute left-4 lg:left-[5%] top-1/4 space-y-4 hidden lg:block z-20">
+        {leftCards.map((card, index) => (
           <motion.div
-            key={i}
-            className="absolute bg-primary/20 rounded-full"
-            style={{ 
-              top: bubble.top, 
-              left: bubble.left, 
-              right: bubble.right,
-              bottom: bubble.bottom,
-              width: bubble.size, 
-              height: bubble.size 
-            }}
-            animate={{ 
-              y: [-10, 10, -10],
-              opacity: [0.2, 0.5, 0.2],
-              scale: [1, 1.1, 1]
-            }}
-            transition={{ 
-              duration: 4 + i * 0.5, 
-              repeat: Infinity, 
-              ease: "easeInOut",
-              delay: bubble.delay
-            }}
-          />
+            key={index}
+            initial={{ opacity: 0, x: -100 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: card.delay, duration: 0.8, ease: "easeOut" }}
+            whileHover={{ scale: 1.05, x: 10 }}
+            className="relative"
+          >
+            <Card className="p-5 bg-card/40 backdrop-blur-xl border border-primary/20 shadow-2xl shadow-primary/10 w-[200px]">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent rounded-lg" />
+              <h3 className="font-bold text-lg text-foreground relative z-10">{card.title}</h3>
+              <p className="text-sm text-muted-foreground mt-1 relative z-10">{card.subtitle}</p>
+              <motion.div 
+                className="absolute -inset-[1px] bg-gradient-to-r from-primary/50 via-primary/20 to-primary/50 rounded-lg opacity-0 blur-sm"
+                whileHover={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+              />
+            </Card>
+          </motion.div>
         ))}
       </div>
 
-      {/* Kanban-style floating cards */}
-      <div className="absolute inset-0 pointer-events-none hidden lg:block">
-        <motion.div
-          className="absolute top-32 left-[5%] glass-card p-4 rounded-xl border border-primary/20"
-          initial={{ opacity: 0, x: -50 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 1, duration: 0.8 }}
-          whileHover={{ scale: 1.05 }}
-        >
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
-              <TrendingUp className="w-4 h-4 text-primary" />
-            </div>
-            <span className="text-sm font-medium">Growth</span>
-          </div>
-          <div className="text-2xl font-bold text-primary">+247%</div>
-        </motion.div>
-
-        <motion.div
-          className="absolute top-48 right-[8%] glass-card p-4 rounded-xl border border-primary/20"
-          initial={{ opacity: 0, x: 50 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 1.2, duration: 0.8 }}
-          whileHover={{ scale: 1.05 }}
-        >
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-8 h-8 rounded-lg bg-success/20 flex items-center justify-center">
-              <Users className="w-4 h-4 text-success" />
-            </div>
-            <span className="text-sm font-medium">Active Users</span>
-          </div>
-          <div className="text-2xl font-bold text-success">12.5K</div>
-        </motion.div>
-
-        <motion.div
-          className="absolute bottom-[35%] left-[8%] glass-card p-4 rounded-xl border border-primary/20"
-          initial={{ opacity: 0, y: 50 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1.4, duration: 0.8 }}
-          whileHover={{ scale: 1.05 }}
-        >
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-8 h-8 rounded-lg bg-warning/20 flex items-center justify-center">
-              <Zap className="w-4 h-4 text-warning" />
-            </div>
-            <span className="text-sm font-medium">Orders Today</span>
-          </div>
-          <div className="text-2xl font-bold text-warning">1,847</div>
-        </motion.div>
+      {/* Right Floating Cards */}
+      <div className="absolute right-4 lg:right-[5%] top-1/4 space-y-4 hidden lg:block z-20">
+        {rightCards.map((card, index) => (
+          <motion.div
+            key={index}
+            initial={{ opacity: 0, x: 100 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: card.delay, duration: 0.8, ease: "easeOut" }}
+            whileHover={{ scale: 1.05, x: -10 }}
+            className="relative"
+          >
+            <Card className="p-5 bg-card/40 backdrop-blur-xl border border-primary/20 shadow-2xl shadow-primary/10 w-[200px]">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent rounded-lg" />
+              <h3 className="font-bold text-lg text-foreground relative z-10">{card.title}</h3>
+              <p className="text-sm text-muted-foreground mt-1 relative z-10">{card.subtitle}</p>
+              <motion.div 
+                className="absolute -inset-[1px] bg-gradient-to-r from-primary/50 via-primary/20 to-primary/50 rounded-lg opacity-0 blur-sm"
+                whileHover={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+              />
+            </Card>
+          </motion.div>
+        ))}
       </div>
 
-      <div className="container mx-auto px-4 text-center relative z-10 pt-32">
+      {/* Main Content */}
+      <div className="container mx-auto px-4 text-center relative z-10 pt-24 lg:pt-32">
         <motion.div 
           className="max-w-4xl mx-auto"
           initial={{ opacity: 0, y: 30 }}
@@ -164,25 +141,19 @@ export const HeroSection = () => {
 
           {/* CTA Buttons */}
           <motion.div 
-            className="flex flex-col sm:flex-row gap-4 justify-center mb-16"
+            className="flex flex-col sm:flex-row gap-4 justify-center mb-12"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5, duration: 0.6 }}
           >
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.98 }}
-            >
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.98 }}>
               <Button asChild size="lg" className="bg-gradient-primary hover:shadow-glow text-lg px-8 py-6 rounded-full">
                 <Link to="/auth">
                   Create panel <ArrowRight className="ml-2 w-5 h-5" />
                 </Link>
               </Button>
             </motion.div>
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.98 }}
-            >
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.98 }}>
               <Button asChild variant="outline" size="lg" className="text-lg px-8 py-6 border-primary/30 hover:bg-primary/10 rounded-full backdrop-blur-sm">
                 <Link to="/services">
                   Best SMM services
@@ -191,26 +162,145 @@ export const HeroSection = () => {
             </motion.div>
           </motion.div>
         </motion.div>
+
+        {/* Animated Text */}
+        <motion.div 
+          className="mb-8"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.7, duration: 0.6 }}
+        >
+          <AnimatedText
+            phrases={[
+              { static: "build an smm panel", bold: "for profit" },
+              { static: "build an smm panel", bold: "for clients" },
+              { static: "build an smm panel", bold: "with ease" }
+            ]}
+          />
+        </motion.div>
+
+        {/* Panel Showcase - Kanban Style */}
+        <motion.div
+          initial={{ opacity: 0, y: 50 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.9, duration: 0.8 }}
+          className="max-w-4xl mx-auto"
+        >
+          <Card className="bg-card/60 backdrop-blur-2xl border border-primary/20 shadow-2xl shadow-primary/10 overflow-hidden">
+            {/* Panel Header */}
+            <div className="flex items-center justify-between p-4 border-b border-border/50 bg-muted/30">
+              <div className="flex items-center gap-4">
+                <span className="font-bold text-lg bg-gradient-primary bg-clip-text text-transparent">PANEL</span>
+                <Button size="sm" variant="default" className="bg-primary/90 text-xs">New order</Button>
+                <Button size="sm" variant="outline" className="text-xs">
+                  My orders <Badge variant="secondary" className="ml-1 text-xs">1</Badge>
+                </Button>
+              </div>
+              <div className="flex items-center gap-4">
+                <motion.span 
+                  className="text-primary font-bold text-xl"
+                  animate={{ scale: [1, 1.05, 1] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                >
+                  $800
+                </motion.span>
+                <Button size="sm" variant="ghost" className="text-xs">Menu</Button>
+              </div>
+            </div>
+
+            {/* Category Tabs */}
+            <div className="flex gap-2 p-4 border-b border-border/50 overflow-x-auto">
+              {['All', 'VK', 'Telegram', 'Instagram', 'More'].map((cat, i) => (
+                <motion.div
+                  key={cat}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 1 + i * 0.1 }}
+                >
+                  <Button 
+                    size="sm" 
+                    variant={i === 0 ? "default" : "outline"}
+                    className={i === 0 ? "bg-primary" : ""}
+                  >
+                    {cat}
+                  </Button>
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Service Cards Grid - Kanban Style */}
+            <div className="p-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {showcaseServices.map((service, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 1.2 + index * 0.1 }}
+                    whileHover={{ y: -5, scale: 1.02 }}
+                    className="group"
+                  >
+                    <Card className="p-4 bg-background/50 backdrop-blur-sm border-border/50 hover:border-primary/50 transition-all relative overflow-hidden">
+                      {/* Glow effect */}
+                      <motion.div
+                        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                        style={{
+                          background: `radial-gradient(circle at center, hsl(var(--primary) / 0.1) 0%, transparent 70%)`
+                        }}
+                      />
+                      
+                      {/* Discount badge */}
+                      {service.discount && (
+                        <Badge className="absolute -top-1 -right-1 bg-green-500 text-white text-xs">
+                          {service.discount}
+                        </Badge>
+                      )}
+                      
+                      <div className="text-4xl mb-3">{service.emoji}</div>
+                      <h3 className="font-semibold text-sm mb-2 line-clamp-2">{service.name}</h3>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xl font-bold text-primary">{service.price}</span>
+                        <span className="text-xs text-muted-foreground">per 100</span>
+                      </div>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          </Card>
+        </motion.div>
+
+        {/* Bottom Stats */}
+        <motion.div 
+          className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto mt-12 mb-8"
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1.5, duration: 0.6 }}
+        >
+          {[
+            { value: "200+", label: "Payment systems", icon: Zap },
+            { value: "Easy start", label: "to run own panel", icon: Star },
+            { value: "20+", label: "Language localizations", icon: MessageCircle },
+            { value: "No code", label: "solution", icon: TrendingUp },
+          ].map((stat, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 1.6 + index * 0.1 }}
+              whileHover={{ y: -5, scale: 1.02 }}
+            >
+              <Card className="p-4 glass-card text-center group">
+                <div className="w-10 h-10 mx-auto mb-3 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                  <stat.icon className="w-5 h-5 text-primary" />
+                </div>
+                <div className="text-xl font-bold text-primary mb-1">{stat.value}</div>
+                <div className="text-xs text-muted-foreground">{stat.label}</div>
+              </Card>
+            </motion.div>
+          ))}
+        </motion.div>
       </div>
-
-      {/* Animated Text Section */}
-      <motion.div 
-        className="container mx-auto px-4 relative z-10 -mt-8 mb-4"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.7, duration: 0.6 }}
-      >
-        <AnimatedText
-          phrases={[
-            { static: "build an smm panel", bold: "for profit" },
-            { static: "build an smm panel", bold: "for clients" },
-            { static: "build an smm panel", bold: "with ease" }
-          ]}
-        />
-      </motion.div>
-
-      {/* Service Showcase */}
-      <ServiceShowcase />
     </section>
   );
 };

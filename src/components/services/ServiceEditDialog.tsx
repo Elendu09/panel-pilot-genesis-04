@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -26,6 +25,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { usePanel } from "@/hooks/usePanel";
 import {
   Settings,
   DollarSign,
@@ -41,7 +42,8 @@ import {
   TrendingUp,
   ShoppingCart,
   Image,
-  Sparkles
+  Sparkles,
+  Loader2
 } from "lucide-react";
 
 interface ServiceEditDialogProps {
@@ -51,16 +53,25 @@ interface ServiceEditDialogProps {
     id: string;
     name: string;
     category: string;
-    provider: string;
+    provider?: string;
+    provider_id?: string;
     price: number;
-    originalPrice: number;
-    minQty: number;
-    maxQty: number;
+    originalPrice?: number;
+    minQty?: number;
+    min_quantity?: number;
+    maxQty?: number;
+    max_quantity?: number;
     description?: string;
     imageUrl?: string;
+    image_url?: string;
     orders?: number;
   } | null;
   onSave: (data: any) => void;
+}
+
+interface Provider {
+  id: string;
+  name: string;
 }
 
 const categories = [
@@ -71,12 +82,7 @@ const categories = [
   { id: "tiktok", name: "TikTok" },
   { id: "linkedin", name: "LinkedIn" },
   { id: "telegram", name: "Telegram" },
-];
-
-const providers = [
-  { id: "provider-a", name: "Provider A" },
-  { id: "provider-b", name: "Provider B" },
-  { id: "provider-c", name: "Provider C" },
+  { id: "other", name: "Other" },
 ];
 
 export const ServiceEditDialog = ({
@@ -85,25 +91,27 @@ export const ServiceEditDialog = ({
   service,
   onSave,
 }: ServiceEditDialogProps) => {
+  const { panel } = usePanel();
   const [activeTab, setActiveTab] = useState("general");
+  const [saving, setSaving] = useState(false);
+  const [providers, setProviders] = useState<Provider[]>([]);
+  const [loadingProviders, setLoadingProviders] = useState(false);
   
   // Form state
   const [formData, setFormData] = useState({
-    name: service?.name || "",
-    description: service?.description || "",
-    category: service?.category || "",
-    provider: service?.provider || "",
-    minQty: service?.minQty || 100,
-    maxQty: service?.maxQty || 10000,
-    imageUrl: service?.imageUrl || "",
-    seoTitle: "",
-    seoDescription: "",
+    name: "",
+    description: "",
+    category: "",
+    provider_id: "",
+    min_quantity: 100,
+    max_quantity: 10000,
+    image_url: "",
   });
 
   // Price state
   const [markupPercent, setMarkupPercent] = useState(25);
   const [useFixedPrice, setUseFixedPrice] = useState(false);
-  const [fixedPrice, setFixedPrice] = useState(service?.price || 0);
+  const [fixedPrice, setFixedPrice] = useState(0);
 
   // Options state
   const [options, setOptions] = useState({
@@ -115,21 +123,92 @@ export const ServiceEditDialog = ({
     additionalOptions: false,
   });
 
-  const providerPrice = service?.originalPrice || 2.00;
+  // Load providers from database
+  useEffect(() => {
+    if (open && panel?.id) {
+      fetchProviders();
+    }
+  }, [open, panel?.id]);
+
+  // Initialize form when service changes
+  useEffect(() => {
+    if (service) {
+      setFormData({
+        name: service.name || "",
+        description: service.description || "",
+        category: service.category || "",
+        provider_id: service.provider_id || "",
+        min_quantity: service.min_quantity || service.minQty || 100,
+        max_quantity: service.max_quantity || service.maxQty || 10000,
+        image_url: service.image_url || service.imageUrl || "",
+      });
+      setFixedPrice(service.price || 0);
+    }
+  }, [service]);
+
+  const fetchProviders = async () => {
+    if (!panel?.id) return;
+    setLoadingProviders(true);
+    
+    try {
+      const { data, error } = await supabase
+        .from('providers')
+        .select('id, name')
+        .eq('panel_id', panel.id)
+        .eq('is_active', true);
+
+      if (error) throw error;
+      setProviders(data || []);
+    } catch (error) {
+      console.error('Error fetching providers:', error);
+    } finally {
+      setLoadingProviders(false);
+    }
+  };
+
+  const providerPrice = service?.originalPrice || service?.price || 2.00;
   const calculatedPrice = useFixedPrice 
     ? fixedPrice 
     : providerPrice * (1 + markupPercent / 100);
   const profit = calculatedPrice - providerPrice;
-  const profitPercent = ((profit / providerPrice) * 100).toFixed(1);
+  const profitPercent = providerPrice > 0 ? ((profit / providerPrice) * 100).toFixed(1) : "0";
 
-  const handleSave = () => {
-    onSave({
-      ...formData,
-      price: calculatedPrice,
-      options,
-    });
-    toast({ title: "Service Updated", description: "Changes have been saved successfully." });
-    onOpenChange(false);
+  const handleSave = async () => {
+    if (!service?.id || !panel?.id) return;
+    
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('services')
+        .update({
+          name: formData.name,
+          description: formData.description,
+          category: formData.category as any,
+          provider_id: formData.provider_id || null,
+          min_quantity: formData.min_quantity,
+          max_quantity: formData.max_quantity,
+          price: calculatedPrice,
+          image_url: formData.image_url || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', service.id);
+
+      if (error) throw error;
+
+      onSave({
+        ...formData,
+        price: calculatedPrice,
+        options,
+      });
+      
+      toast({ title: "Service Updated", description: "Changes have been saved to database." });
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error saving service:', error);
+      toast({ variant: "destructive", title: "Error", description: "Failed to save changes" });
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (!service) return null;
@@ -199,11 +278,20 @@ export const ServiceEditDialog = ({
 
                 <div className="space-y-2">
                   <Label>Provider</Label>
-                  <Select value={formData.provider} onValueChange={(v) => setFormData({...formData, provider: v})}>
+                  <Select 
+                    value={formData.provider_id} 
+                    onValueChange={(v) => setFormData({...formData, provider_id: v})}
+                    disabled={loadingProviders}
+                  >
                     <SelectTrigger className="bg-background/50">
-                      <SelectValue placeholder="Select provider" />
+                      {loadingProviders ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <SelectValue placeholder="Select provider" />
+                      )}
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="">No Provider</SelectItem>
                       {providers.map(p => (
                         <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                       ))}
@@ -215,8 +303,8 @@ export const ServiceEditDialog = ({
                   <Label>Min Quantity</Label>
                   <Input 
                     type="number"
-                    value={formData.minQty}
-                    onChange={(e) => setFormData({...formData, minQty: parseInt(e.target.value)})}
+                    value={formData.min_quantity}
+                    onChange={(e) => setFormData({...formData, min_quantity: parseInt(e.target.value) || 0})}
                     className="bg-background/50"
                   />
                 </div>
@@ -225,8 +313,8 @@ export const ServiceEditDialog = ({
                   <Label>Max Quantity</Label>
                   <Input 
                     type="number"
-                    value={formData.maxQty}
-                    onChange={(e) => setFormData({...formData, maxQty: parseInt(e.target.value)})}
+                    value={formData.max_quantity}
+                    onChange={(e) => setFormData({...formData, max_quantity: parseInt(e.target.value) || 0})}
                     className="bg-background/50"
                   />
                 </div>
@@ -247,8 +335,8 @@ export const ServiceEditDialog = ({
                     Image URL (optional)
                   </Label>
                   <Input 
-                    value={formData.imageUrl}
-                    onChange={(e) => setFormData({...formData, imageUrl: e.target.value})}
+                    value={formData.image_url}
+                    onChange={(e) => setFormData({...formData, image_url: e.target.value})}
                     placeholder="https://..."
                     className="bg-background/50"
                   />
@@ -301,7 +389,7 @@ export const ServiceEditDialog = ({
                       <p className="text-2xl font-bold">${providerPrice.toFixed(2)}</p>
                     </div>
                     <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20">
-                      From {service.provider}
+                      {providers.find(p => p.id === formData.provider_id)?.name || 'Manual'}
                     </Badge>
                   </div>
                 </CardContent>
@@ -349,7 +437,7 @@ export const ServiceEditDialog = ({
                     <Input 
                       type="number"
                       value={fixedPrice}
-                      onChange={(e) => setFixedPrice(parseFloat(e.target.value))}
+                      onChange={(e) => setFixedPrice(parseFloat(e.target.value) || 0)}
                       step="0.01"
                       className="bg-background/50"
                     />
@@ -425,37 +513,11 @@ export const ServiceEditDialog = ({
 
             {/* SEO Tab */}
             <TabsContent value="seo" className="m-0 space-y-4">
-              <div className="space-y-2">
-                <Label>SEO Title</Label>
-                <Input 
-                  value={formData.seoTitle}
-                  onChange={(e) => setFormData({...formData, seoTitle: e.target.value})}
-                  placeholder="e.g., Buy Instagram Followers - Fast & Reliable"
-                  className="bg-background/50"
-                />
-                <p className="text-xs text-muted-foreground">{formData.seoTitle.length}/60 characters</p>
-              </div>
-
-              <div className="space-y-2">
-                <Label>SEO Description</Label>
-                <Textarea 
-                  value={formData.seoDescription}
-                  onChange={(e) => setFormData({...formData, seoDescription: e.target.value})}
-                  placeholder="Describe your service for search engines..."
-                  className="bg-background/50 min-h-[100px]"
-                />
-                <p className="text-xs text-muted-foreground">{formData.seoDescription.length}/160 characters</p>
-              </div>
-
-              <Card className="bg-muted/50 border-border/50">
-                <CardContent className="p-4">
-                  <p className="text-xs text-muted-foreground mb-1">Preview</p>
-                  <p className="text-primary font-medium text-sm">
-                    {formData.seoTitle || formData.name || "Service Title"}
-                  </p>
-                  <p className="text-xs text-muted-foreground line-clamp-2">
-                    {formData.seoDescription || formData.description || "Service description will appear here..."}
-                  </p>
+              <Card className="bg-muted/30">
+                <CardContent className="p-6 text-center">
+                  <Search className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
+                  <p className="text-muted-foreground">SEO settings coming soon</p>
+                  <p className="text-sm text-muted-foreground">Meta title, description, and keywords for your service page</p>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -463,8 +525,11 @@ export const ServiceEditDialog = ({
         </Tabs>
 
         <DialogFooter className="pt-4 border-t border-border/50">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSave} className="bg-gradient-to-r from-primary to-primary/80">
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+            Cancel
+          </Button>
+          <Button onClick={handleSave} disabled={saving} className="bg-gradient-to-r from-primary to-primary/80">
+            {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
             Save Changes
           </Button>
         </DialogFooter>
