@@ -178,16 +178,83 @@ const PanelOverview = () => {
     if (!panelData?.id) return;
     setRefreshing(true);
     
-    const { data } = await supabase
-      .from('orders')
-      .select('id, order_number, status, price, created_at, target_url')
-      .eq('panel_id', panelData.id)
-      .order('created_at', { ascending: false })
-      .limit(5);
-    
-    setLiveOrders((data || []) as LiveOrder[]);
-    setLastRefresh(new Date());
-    setRefreshing(false);
+    try {
+      // Fetch latest orders
+      const { data: ordersData } = await supabase
+        .from('orders')
+        .select('id, order_number, status, price, created_at, target_url')
+        .eq('panel_id', panelData.id)
+        .order('created_at', { ascending: false })
+        .limit(5);
+      
+      setLiveOrders((ordersData || []) as LiveOrder[]);
+
+      // Check domain configuration status
+      const { data: domains } = await supabase
+        .from('panel_domains')
+        .select('*')
+        .eq('panel_id', panelData.id);
+
+      // Check services count
+      const { data: services } = await supabase
+        .from('services')
+        .select('id')
+        .eq('panel_id', panelData.id)
+        .eq('is_active', true);
+
+      // Verify pending domains via DNS lookup
+      const pendingDomains = domains?.filter(d => d.verification_status === 'pending') || [];
+      for (const domain of pendingDomains) {
+        try {
+          const { data: dnsData } = await supabase.functions.invoke('dns-lookup', {
+            body: { domain: domain.domain, recordType: 'A' }
+          });
+
+          if (dnsData?.results?.some((r: any) => r.status === 'resolved' && r.value === '185.158.133.1')) {
+            await supabase.from('panel_domains')
+              .update({ verification_status: 'verified', verified_at: new Date().toISOString(), dns_configured: true })
+              .eq('id', domain.id);
+          }
+        } catch (e) {
+          console.log('DNS check skipped:', e);
+        }
+      }
+
+      // Update panel status to 'active' if all checks pass
+      const hasSubdomain = !!panelData.subdomain;
+      const hasServices = (services?.length || 0) > 0;
+      
+      if (hasSubdomain && hasServices && panelData.status !== 'active') {
+        await supabase.from('panels')
+          .update({ status: 'active' })
+          .eq('id', panelData.id);
+        
+        // Refetch panel data to update UI
+        const { data: updatedPanel } = await supabase
+          .from('panels')
+          .select('*, panel_settings(*)')
+          .eq('id', panelData.id)
+          .single();
+        
+        if (updatedPanel) {
+          setPanelData(updatedPanel);
+        }
+      }
+
+      setLastRefresh(new Date());
+    } catch (error) {
+      console.error('Refresh error:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const handleViewPanel = () => {
+    if (!panelData) return;
+    const url = panelData?.custom_domain 
+      ? `https://${panelData.custom_domain}`
+      : `https://${panelData.subdomain}.smmpilot.online`;
+    window.open(url, '_blank');
   };
 
   const getStatusIcon = (status: string) => {
@@ -337,17 +404,31 @@ const PanelOverview = () => {
                       panelData.status === 'active' ? 'pill-success' : 'pill-warning'
                     )}
                   >
-                    {panelData.status}
+                    {panelData.status === 'active' ? (
+                      <><CheckCircle className="w-3 h-3 mr-1" /> Active</>
+                    ) : (
+                      <><Clock className="w-3 h-3 mr-1" /> {panelData.status}</>
+                    )}
                   </Badge>
                 </div>
               )}
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" className="gap-2">
-                <RefreshCw className="w-4 h-4" />
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="gap-2"
+                onClick={handleManualRefresh}
+                disabled={refreshing}
+              >
+                <RefreshCw className={cn("w-4 h-4", refreshing && "animate-spin")} />
                 Refresh
               </Button>
-              <Button size="sm" className="gap-2 bg-primary hover:bg-primary/90">
+              <Button 
+                size="sm" 
+                className="gap-2 bg-primary hover:bg-primary/90"
+                onClick={handleViewPanel}
+              >
                 <Eye className="w-4 h-4" />
                 View Panel
               </Button>

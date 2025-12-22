@@ -567,32 +567,34 @@ const DomainSettings = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="bg-card/50 border border-border/50 p-1">
-          <TabsTrigger value="domains" className="gap-2">
-            <Globe className="w-4 h-4" />
-            Domains
-          </TabsTrigger>
-          <TabsTrigger value="dns" className="gap-2">
-            <Network className="w-4 h-4" />
-            DNS Records
-          </TabsTrigger>
-          <TabsTrigger value="subdomains" className="gap-2">
-            <Server className="w-4 h-4" />
-            Subdomains
-          </TabsTrigger>
-          <TabsTrigger value="ssl" className="gap-2">
-            <Shield className="w-4 h-4" />
-            SSL/Security
-          </TabsTrigger>
-          <TabsTrigger value="cdn" className="gap-2">
-            <CloudCog className="w-4 h-4" />
-            CDN
-          </TabsTrigger>
-          <TabsTrigger value="email" className="gap-2">
-            <Mail className="w-4 h-4" />
-            Email
-          </TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
+          <TabsList className="bg-card/50 border border-border/50 p-1 min-w-max">
+            <TabsTrigger value="domains" className="gap-2">
+              <Globe className="w-4 h-4" />
+              Domains
+            </TabsTrigger>
+            <TabsTrigger value="dns" className="gap-2">
+              <Network className="w-4 h-4" />
+              DNS Records
+            </TabsTrigger>
+            <TabsTrigger value="subdomains" className="gap-2">
+              <Server className="w-4 h-4" />
+              Subdomains
+            </TabsTrigger>
+            <TabsTrigger value="ssl" className="gap-2">
+              <Shield className="w-4 h-4" />
+              SSL/Security
+            </TabsTrigger>
+            <TabsTrigger value="cdn" className="gap-2">
+              <CloudCog className="w-4 h-4" />
+              CDN
+            </TabsTrigger>
+            <TabsTrigger value="email" className="gap-2">
+              <Mail className="w-4 h-4" />
+              Email
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* Subdomain Preview & Go-Live Checklist */}
         <TabsContent value="domains" className="space-y-4">
