@@ -220,15 +220,15 @@ const PanelOverview = () => {
         }
       }
 
-      // Update panel status to 'active' if all checks pass
+      // Update panel status to 'active' when a subdomain exists.
+      // (Custom domains still rely on DNS verification, but subdomains should be live immediately.)
       const hasSubdomain = !!panelData.subdomain;
-      const hasServices = (services?.length || 0) > 0;
       
-      if (hasSubdomain && hasServices && panelData.status !== 'active') {
+      if (hasSubdomain && panelData.status !== 'active') {
         await supabase.from('panels')
-          .update({ status: 'active' })
+          .update({ status: 'active', is_approved: true })
           .eq('id', panelData.id);
-        
+
         // Refetch panel data to update UI
         const { data: updatedPanel } = await supabase
           .from('panels')

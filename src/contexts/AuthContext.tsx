@@ -57,7 +57,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           {
             name: panelName,
             owner_id: ownerId,
-            status: 'pending' as const,
+            // Make subdomains live immediately; custom domains still require DNS verification.
+            status: 'active' as const,
+            is_approved: true,
             theme_type: 'dark_gradient' as const,
             subdomain: panelName.toLowerCase().replace(/[^a-zA-Z0-9]/g, '').substring(0, 20) || 'panel',
           }
@@ -67,7 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       toast({
         title: "Panel Created",
-        description: "Your panel has been created and is pending approval."
+        description: "Your subdomain is live now. Configure services to start selling."
       });
     } catch (error) {
       console.error('Error creating panel:', error);
