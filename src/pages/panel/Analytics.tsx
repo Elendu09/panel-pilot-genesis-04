@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { 
   BarChart, 
   Bar, 
@@ -34,12 +36,15 @@ import {
   Wallet,
   CheckCircle,
   XCircle,
-  Loader2
+  Loader2,
+  CalendarIcon
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePanel } from "@/hooks/usePanel";
 import { supabase } from "@/integrations/supabase/client";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 // Animated counter component
 const AnimatedCounter = ({ value, prefix = "", suffix = "" }: { value: number; prefix?: string; suffix?: string }) => {
@@ -82,6 +87,11 @@ const Analytics = () => {
   const [analyticsTab, setAnalyticsTab] = useState("overview");
   const [loading, setLoading] = useState(true);
   
+  // Custom date range state
+  const [customStartDate, setCustomStartDate] = useState<Date | undefined>(undefined);
+  const [customEndDate, setCustomEndDate] = useState<Date | undefined>(undefined);
+  const [showCustomPicker, setShowCustomPicker] = useState(false);
+  
   // Real data from Supabase
   const [orderTrends, setOrderTrends] = useState<any[]>([]);
   const [revenueData, setRevenueData] = useState<any[]>([]);
@@ -98,16 +108,24 @@ const Analytics = () => {
     if (panel?.id) {
       fetchAnalytics();
     }
-  }, [panel?.id, dateRange]);
+  }, [panel?.id, dateRange, customStartDate, customEndDate]);
 
   const fetchAnalytics = async () => {
     if (!panel?.id) return;
     setLoading(true);
 
     try {
-      const daysAgo = dateRange === "7d" ? 7 : dateRange === "30d" ? 30 : dateRange === "90d" ? 90 : 365;
-      const startDate = new Date();
-      startDate.setDate(startDate.getDate() - daysAgo);
+      let startDate: Date;
+      let endDate: Date = new Date();
+      
+      if (dateRange === "custom" && customStartDate && customEndDate) {
+        startDate = customStartDate;
+        endDate = customEndDate;
+      } else {
+        const daysAgo = dateRange === "7d" ? 7 : dateRange === "30d" ? 30 : dateRange === "90d" ? 90 : 365;
+        startDate = new Date();
+        startDate.setDate(startDate.getDate() - daysAgo);
+      }
 
       // Fetch orders
       const { data: orders } = await supabase
@@ -203,7 +221,15 @@ const Analytics = () => {
     { value: "30d", label: "30 Days" },
     { value: "90d", label: "90 Days" },
     { value: "1y", label: "1 Year" },
+    { value: "custom", label: "Custom" },
   ];
+  
+  const handleCustomDateSelect = () => {
+    if (customStartDate && customEndDate) {
+      setDateRange("custom");
+      setShowCustomPicker(false);
+    }
+  };
 
   const statsConfig = [
     {
@@ -266,17 +292,72 @@ const Analytics = () => {
         </div>
         
         {/* Date Range Selector */}
-        <div className="flex items-center gap-2 bg-background/60 backdrop-blur-sm border border-border/50 rounded-lg p-1">
+        <div className="flex items-center gap-2 bg-background/60 backdrop-blur-sm border border-border/50 rounded-lg p-1 flex-wrap">
           {dateRanges.map((range) => (
-            <Button
-              key={range.value}
-              variant={dateRange === range.value ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setDateRange(range.value)}
-              className={dateRange === range.value ? "bg-primary shadow-sm" : ""}
-            >
-              {range.label}
-            </Button>
+            range.value === "custom" ? (
+              <Popover key={range.value} open={showCustomPicker} onOpenChange={setShowCustomPicker}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={dateRange === "custom" ? "default" : "ghost"}
+                    size="sm"
+                    className={cn(dateRange === "custom" ? "bg-primary shadow-sm" : "")}
+                  >
+                    <CalendarIcon className="w-4 h-4 mr-1" />
+                    {dateRange === "custom" && customStartDate && customEndDate
+                      ? `${format(customStartDate, "MMM d")} - ${format(customEndDate, "MMM d")}`
+                      : "Custom"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-4 pointer-events-auto" align="end">
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm font-medium mb-2">Start Date</p>
+                        <Calendar
+                          mode="single"
+                          selected={customStartDate}
+                          onSelect={setCustomStartDate}
+                          disabled={(date) => date > new Date()}
+                          className="rounded-md border pointer-events-auto"
+                        />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium mb-2">End Date</p>
+                        <Calendar
+                          mode="single"
+                          selected={customEndDate}
+                          onSelect={setCustomEndDate}
+                          disabled={(date) => date > new Date() || (customStartDate && date < customStartDate)}
+                          className="rounded-md border pointer-events-auto"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button variant="outline" size="sm" onClick={() => setShowCustomPicker(false)}>
+                        Cancel
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        onClick={handleCustomDateSelect}
+                        disabled={!customStartDate || !customEndDate}
+                      >
+                        Apply
+                      </Button>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            ) : (
+              <Button
+                key={range.value}
+                variant={dateRange === range.value ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setDateRange(range.value)}
+                className={dateRange === range.value ? "bg-primary shadow-sm" : ""}
+              >
+                {range.label}
+              </Button>
+            )
           ))}
         </div>
       </div>

@@ -57,6 +57,13 @@ interface TenantDetectionResult {
   error: string | null;
   isTenantDomain: boolean;
   isPlatformDomain: boolean;
+  debugInfo?: {
+    hostname: string;
+    detectedSubdomain: string | null;
+    isSubdomainOfPlatform: boolean;
+    isPlatformMatch: boolean;
+    searchAttempts: string[];
+  };
 }
 
 export function useTenant(): TenantDetectionResult {
@@ -65,45 +72,65 @@ export function useTenant(): TenantDetectionResult {
   const [error, setError] = useState<string | null>(null);
   const [isTenantDomain, setIsTenantDomain] = useState(false);
   const [isPlatformDomain, setIsPlatformDomain] = useState(true);
+  const [debugInfo, setDebugInfo] = useState<TenantDetectionResult['debugInfo']>();
 
   useEffect(() => {
     const detectTenant = async () => {
+      const searchAttempts: string[] = [];
+      
       try {
         setLoading(true);
         setError(null);
 
         const hostname = window.location.hostname;
         
+        console.log('[useTenant] Starting detection for hostname:', hostname);
+        
         // Platform domains (admin/management interface)
-        // The main platform domain is smmpilot.online (without subdomain)
         const platformDomains = [
           'localhost',
           'lovable.app',
-          'smmpilot.online', // Main platform domain
+          'smmpilot.online',
         ];
 
-        // Check if this is a platform domain (exact match or lovable.app subdomain for preview)
-        const isPlatform = platformDomains.some(domain => 
+        // Check if this is a platform domain
+        const isPlatformMatch = platformDomains.some(domain => 
           hostname === domain || 
-          hostname.endsWith('.lovable.app') || // Preview domains
-          (domain === 'smmpilot.online' && hostname === 'smmpilot.online') ||
-          (domain === 'smmpilot.online' && hostname === 'www.smmpilot.online')
+          hostname.endsWith('.lovable.app') ||
+          hostname === 'smmpilot.online' ||
+          hostname === 'www.smmpilot.online'
         );
 
-        // Check if it's a subdomain of smmpilot.online (tenant domain)
+        // Check if it's a subdomain of smmpilot.online
         const isSubdomainOfPlatform = hostname.endsWith('.smmpilot.online') && 
           hostname !== 'smmpilot.online' && 
           hostname !== 'www.smmpilot.online';
 
-        if (isPlatform && !isSubdomainOfPlatform) {
+        console.log('[useTenant] Detection results:', {
+          isPlatformMatch,
+          isSubdomainOfPlatform,
+          hostname
+        });
+
+        // If it's a platform domain and NOT a subdomain, show the main app
+        if (isPlatformMatch && !isSubdomainOfPlatform) {
+          console.log('[useTenant] Detected as platform domain');
           setIsPlatformDomain(true);
           setIsTenantDomain(false);
           setPanel(null);
+          setDebugInfo({
+            hostname,
+            detectedSubdomain: null,
+            isSubdomainOfPlatform,
+            isPlatformMatch,
+            searchAttempts
+          });
           setLoading(false);
           return;
         }
 
         // This is a tenant domain - try to find the panel
+        console.log('[useTenant] Detected as tenant domain, searching for panel...');
         setIsPlatformDomain(false);
         setIsTenantDomain(true);
 
@@ -111,14 +138,12 @@ export function useTenant(): TenantDetectionResult {
         
         // Extract subdomain from hostname
         if (isSubdomainOfPlatform) {
-          // For *.smmpilot.online, extract the subdomain
           subdomain = hostname.replace('.smmpilot.online', '');
-        } else {
-          // For custom domains, we'll try to match by custom_domain first
-          subdomain = null;
+          console.log('[useTenant] Extracted subdomain:', subdomain);
         }
 
         // First, try to find by custom domain
+        searchAttempts.push(`custom_domain=${hostname}`);
         let { data: panelData, error: panelError } = await supabase
           .from('panels')
           .select(`
@@ -143,11 +168,14 @@ export function useTenant(): TenantDetectionResult {
             )
           `)
           .or(`custom_domain.eq.${hostname}`)
-          .in('status', ['active', 'pending']) // Allow pending panels to load immediately
+          .in('status', ['active', 'pending'])
           .maybeSingle();
+
+        console.log('[useTenant] Custom domain search result:', { panelData, panelError });
 
         // If not found by custom domain, try by subdomain
         if (!panelData && subdomain) {
+          searchAttempts.push(`subdomain=${subdomain}`);
           const { data: subdomainPanel, error: subdomainError } = await supabase
             .from('panels')
             .select(`
@@ -172,16 +200,20 @@ export function useTenant(): TenantDetectionResult {
               )
             `)
             .eq('subdomain', subdomain)
-            .in('status', ['active', 'pending']) // Allow pending panels to load immediately
+            .in('status', ['active', 'pending'])
             .maybeSingle();
 
+          console.log('[useTenant] Subdomain search result:', { subdomainPanel, subdomainError });
           panelData = subdomainPanel;
           panelError = subdomainError;
         }
 
-        // Also try just the subdomain from hostname if not found
+        // Also try just the first part of hostname as subdomain
         if (!panelData) {
           const extractedSubdomain = hostname.split('.')[0];
+          searchAttempts.push(`extracted_subdomain=${extractedSubdomain}`);
+          
+          console.log('[useTenant] Trying extracted subdomain:', extractedSubdomain);
           
           const { data: fallbackPanel, error: fallbackError } = await supabase
             .from('panels')
@@ -210,15 +242,26 @@ export function useTenant(): TenantDetectionResult {
             .in('status', ['active', 'pending'])
             .maybeSingle();
 
+          console.log('[useTenant] Fallback search result:', { fallbackPanel, fallbackError });
           panelData = fallbackPanel;
           panelError = fallbackError;
         }
 
+        setDebugInfo({
+          hostname,
+          detectedSubdomain: subdomain,
+          isSubdomainOfPlatform,
+          isPlatformMatch,
+          searchAttempts
+        });
+
         if (panelError && panelError.code !== 'PGRST116') {
+          console.error('[useTenant] Database error:', panelError);
           throw panelError;
         }
 
         if (panelData) {
+          console.log('[useTenant] Panel found:', panelData.name, panelData.status);
           const settings = panelData.panel_settings;
           const branding = panelData.custom_branding;
           setPanel({
@@ -227,11 +270,12 @@ export function useTenant(): TenantDetectionResult {
             settings: Array.isArray(settings) ? settings[0] : settings || {}
           });
         } else {
-          setError('Panel not found or inactive');
+          console.warn('[useTenant] No panel found for:', { hostname, subdomain, searchAttempts });
+          setError(`Panel not found. Searched: ${searchAttempts.join(', ')}`);
         }
 
       } catch (err) {
-        console.error('Tenant detection error:', err);
+        console.error('[useTenant] Detection error:', err);
         setError(err instanceof Error ? err.message : 'Failed to detect tenant');
       } finally {
         setLoading(false);
@@ -246,7 +290,8 @@ export function useTenant(): TenantDetectionResult {
     loading,
     error,
     isTenantDomain,
-    isPlatformDomain
+    isPlatformDomain,
+    debugInfo
   };
 }
 
