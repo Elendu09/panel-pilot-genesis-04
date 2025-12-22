@@ -140,9 +140,12 @@ const OrdersManagement = () => {
         buyer: Array.isArray(order.buyer) ? order.buyer[0] : order.buyer
       }));
       setOrders(transformedOrders);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching orders:', error);
-      toast({ variant: 'destructive', title: 'Error', description: 'Failed to load orders' });
+      // Only show error toast for actual database errors, not for "no data" cases
+      if (error?.code !== 'PGRST116' && error?.message !== 'No rows found') {
+        toast({ variant: 'destructive', title: 'Error', description: 'Failed to load orders' });
+      }
     } finally {
       setLoading(false);
     }
