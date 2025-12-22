@@ -15,6 +15,7 @@ import { motion } from "framer-motion";
 import AdminViewToggle from "@/components/admin/AdminViewToggle";
 import KanbanColumn from "@/components/admin/KanbanColumn";
 import KanbanCard from "@/components/admin/KanbanCard";
+import DNSConfigGuide from "@/components/admin/DNSConfigGuide";
 import { 
   Monitor, 
   CheckCircle, 
@@ -32,7 +33,9 @@ import {
   Save,
   Package,
   Users,
-  CreditCard
+  CreditCard,
+  Server,
+  ExternalLink
 } from "lucide-react";
 
 interface Panel {
@@ -63,6 +66,7 @@ const PanelManagement = () => {
   const [selectedPanel, setSelectedPanel] = useState<Panel | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("panels");
   const [view, setView] = useState<'table' | 'kanban'>(() => {
     return (localStorage.getItem('panelManagementView') as 'table' | 'kanban') || 'table';
   });
@@ -330,8 +334,42 @@ const PanelManagement = () => {
           <h1 className="text-2xl md:text-3xl font-bold">Panel Management</h1>
           <p className="text-sm text-muted-foreground">Monitor and manage all SMM panels on the platform</p>
         </div>
-        <AdminViewToggle view={view} onViewChange={setView} />
+        <div className="flex items-center gap-2">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="hidden sm:block">
+            <TabsList className="bg-muted/50">
+              <TabsTrigger value="panels" className="gap-2">
+                <Monitor className="w-4 h-4" />
+                Panels
+              </TabsTrigger>
+              <TabsTrigger value="dns" className="gap-2">
+                <Server className="w-4 h-4" />
+                DNS Setup
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+          {activeTab === "panels" && <AdminViewToggle view={view} onViewChange={setView} />}
+        </div>
       </motion.div>
+
+      {/* Mobile Tab Selector */}
+      <div className="sm:hidden">
+        <Select value={activeTab} onValueChange={setActiveTab}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="panels">Panels</SelectItem>
+            <SelectItem value="dns">DNS Setup</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {activeTab === "dns" ? (
+        <motion.div variants={itemVariants}>
+          <DNSConfigGuide />
+        </motion.div>
+      ) : (
+        <>
 
       {/* Stats Cards */}
       <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
@@ -608,6 +646,8 @@ const PanelManagement = () => {
             </CardContent>
           </Card>
         </motion.div>
+      )}
+      </>
       )}
 
       {/* Edit Panel Dialog */}

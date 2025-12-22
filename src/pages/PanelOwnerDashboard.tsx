@@ -24,6 +24,7 @@ import {
   CreditCard,
   Shield
 } from "lucide-react";
+import { usePendingOrders } from "@/hooks/use-pending-orders";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -64,11 +65,12 @@ const PanelOwnerDashboard = () => {
   const canonicalUrl = typeof window !== 'undefined' ? `${window.location.origin}${location.pathname}` : '';
   const { profile, signOut } = useAuth();
   const { isOpen: tourOpen, completeTour, restartTour } = useOnboardingTour();
+  const { pendingCount } = usePendingOrders();
 
   const mainNavigation = [
     { name: 'Dashboard', href: '/panel', icon: LayoutDashboard },
     { name: 'Services', href: '/panel/services', icon: Package },
-    { name: 'Orders', href: '/panel/orders', icon: ShoppingCart, badge: 3 },
+    { name: 'Orders', href: '/panel/orders', icon: ShoppingCart, badge: pendingCount > 0 ? pendingCount : undefined },
     { name: 'Customers', href: '/panel/customers', icon: Users },
     { name: 'Analytics', href: '/panel/analytics', icon: BarChart3 },
   ];
@@ -91,7 +93,7 @@ const PanelOwnerDashboard = () => {
   const bottomNavItems = [
     { name: 'Home', href: '/panel', icon: LayoutDashboard },
     { name: 'Services', href: '/panel/services', icon: Package },
-    { name: 'Orders', href: '/panel/orders', icon: ShoppingCart, badge: 3 },
+    { name: 'Orders', href: '/panel/orders', icon: ShoppingCart, badge: pendingCount > 0 ? pendingCount : undefined },
     { name: 'Analytics', href: '/panel/analytics', icon: BarChart3 },
     { name: 'More', href: '/panel/more', icon: Settings },
   ];
