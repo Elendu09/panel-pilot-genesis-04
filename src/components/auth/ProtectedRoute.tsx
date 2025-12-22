@@ -13,9 +13,8 @@ export function ProtectedRoute({
   requiredRole, 
   redirectTo = '/auth' 
 }: ProtectedRouteProps) {
-  // TODO: TEMPORARY - Remove this bypass before production!
-  // Bypassing auth for development purposes
-  const DEV_BYPASS_AUTH = true;
+  // Production mode - auth checks enabled
+  const DEV_BYPASS_AUTH = false;
   
   const { user, profile, loading } = useAuth();
   const location = useLocation();
