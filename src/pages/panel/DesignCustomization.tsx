@@ -8,9 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ImageUpload } from "@/components/panel/ImageUpload";
 import { 
   Palette, 
-  Upload, 
   Eye, 
   Sparkles, 
   Monitor, 
@@ -752,46 +752,52 @@ const DesignCustomization = () => {
                   <CardTitle className="text-lg">Logo & Favicon</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Logo</Label>
-                      <div className="border-2 border-dashed border-border/50 rounded-xl p-6 text-center hover:border-primary/50 transition-colors cursor-pointer">
-                        {customization.logoUrl ? (
-                          <img src={customization.logoUrl} alt="Logo" className="max-h-16 mx-auto" />
-                        ) : (
-                          <div className="space-y-2">
-                            <Upload className="w-8 h-8 mx-auto text-muted-foreground" />
-                            <p className="text-xs text-muted-foreground">Click to upload</p>
-                          </div>
-                        )}
-                      </div>
-                      <Input
-                        placeholder="Or paste logo URL"
-                        value={customization.logoUrl}
-                        onChange={(e) => setCustomization({...customization, logoUrl: e.target.value})}
-                        className="bg-background/50"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Favicon</Label>
-                      <div className="border-2 border-dashed border-border/50 rounded-xl p-6 text-center hover:border-primary/50 transition-colors cursor-pointer">
-                        {customization.faviconUrl ? (
-                          <img src={customization.faviconUrl} alt="Favicon" className="w-8 h-8 mx-auto" />
-                        ) : (
-                          <div className="space-y-2">
-                            <Upload className="w-8 h-8 mx-auto text-muted-foreground" />
-                            <p className="text-xs text-muted-foreground">32x32 or 64x64</p>
-                          </div>
-                        )}
-                      </div>
-                      <Input
-                        placeholder="Or paste favicon URL"
-                        value={customization.faviconUrl}
-                        onChange={(e) => setCustomization({...customization, faviconUrl: e.target.value})}
-                        className="bg-background/50"
-                      />
-                    </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {panelId && (
+                      <>
+                        <ImageUpload
+                          label="Logo"
+                          value={customization.logoUrl}
+                          onChange={(url) => setCustomization({...customization, logoUrl: url})}
+                          panelId={panelId}
+                          folder="logos"
+                          placeholder="Upload your panel logo"
+                          aspectRatio="wide"
+                          maxSizeMB={2}
+                        />
+                        <ImageUpload
+                          label="Favicon"
+                          value={customization.faviconUrl}
+                          onChange={(url) => setCustomization({...customization, faviconUrl: url})}
+                          panelId={panelId}
+                          folder="favicon"
+                          placeholder="32x32 or 64x64 icon"
+                          aspectRatio="square"
+                          maxSizeMB={1}
+                        />
+                      </>
+                    )}
                   </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card/50 border-border/50">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg">Hero Image</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {panelId && (
+                    <ImageUpload
+                      label="Hero Background Image"
+                      value={customization.heroImage}
+                      onChange={(url) => setCustomization({...customization, heroImage: url})}
+                      panelId={panelId}
+                      folder="hero"
+                      placeholder="Upload a hero banner image (1920x1080 recommended)"
+                      aspectRatio="wide"
+                      maxSizeMB={5}
+                    />
+                  )}
                 </CardContent>
               </Card>
 
