@@ -18,11 +18,14 @@ import {
   Server,
   Megaphone,
   Database,
-  Download
+  Download,
+  Globe,
+  Activity
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { BottomNav } from "@/components/ui/bottom-nav";
+import { Separator } from "@/components/ui/separator";
 import PanelManagement from "./admin/PanelManagement";
 import UserManagement from "./admin/UserManagement";
 import PlatformSettings from "./admin/PlatformSettings";
@@ -40,6 +43,7 @@ import ProviderManagement from "./admin/ProviderManagement";
 import AnnouncementsManagement from "./admin/AnnouncementsManagement";
 import ReportsExport from "./admin/ReportsExport";
 import BackupManagement from "./admin/BackupManagement";
+import DomainManagement from "./admin/DomainManagement";
 import { Helmet } from "react-helmet-async";
 
 const SuperAdminDashboard = () => {
@@ -47,21 +51,54 @@ const SuperAdminDashboard = () => {
   const location = useLocation();
   const canonicalUrl = typeof window !== 'undefined' ? `${window.location.origin}${location.pathname}` : '';
 
-  const navigation = [
-    { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
-    { name: 'Panels', href: '/admin/panels', icon: BarChart3 },
-    { name: 'Users', href: '/admin/users', icon: Users },
-    { name: 'Providers', href: '/admin/providers', icon: Server },
-    { name: 'Subscriptions', href: '/admin/subscriptions', icon: Crown },
-    { name: 'Revenue', href: '/admin/revenue', icon: DollarSign },
-    { name: 'Tickets', href: '/admin/tickets', icon: MessageSquare },
-    { name: 'Announcements', href: '/admin/announcements', icon: Megaphone },
-    { name: 'Webhooks', href: '/admin/webhooks', icon: Webhook },
-    { name: 'Reports', href: '/admin/reports', icon: Download },
-    { name: 'Backups', href: '/admin/backups', icon: Database },
-    { name: 'Logs', href: '/admin/logs', icon: FileText },
-    { name: 'Settings', href: '/admin/settings', icon: Settings },
+  // Grouped navigation for better organization
+  const navigationGroups = [
+    {
+      label: 'Overview',
+      items: [
+        { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
+        { name: 'System Health', href: '/admin/system', icon: Activity },
+      ]
+    },
+    {
+      label: 'Management',
+      items: [
+        { name: 'Panels', href: '/admin/panels', icon: BarChart3 },
+        { name: 'Users', href: '/admin/users', icon: Users },
+        { name: 'Domains', href: '/admin/domains', icon: Globe },
+        { name: 'Providers', href: '/admin/providers', icon: Server },
+      ]
+    },
+    {
+      label: 'Finance',
+      items: [
+        { name: 'Revenue', href: '/admin/revenue', icon: DollarSign },
+        { name: 'Subscriptions', href: '/admin/subscriptions', icon: Crown },
+        { name: 'Payments', href: '/admin/payments', icon: CreditCard },
+      ]
+    },
+    {
+      label: 'Communication',
+      items: [
+        { name: 'Tickets', href: '/admin/tickets', icon: MessageSquare },
+        { name: 'Announcements', href: '/admin/announcements', icon: Megaphone },
+      ]
+    },
+    {
+      label: 'System',
+      items: [
+        { name: 'Webhooks', href: '/admin/webhooks', icon: Webhook },
+        { name: 'Reports', href: '/admin/reports', icon: Download },
+        { name: 'Backups', href: '/admin/backups', icon: Database },
+        { name: 'Logs', href: '/admin/logs', icon: FileText },
+        { name: 'Security', href: '/admin/security', icon: Shield },
+        { name: 'Settings', href: '/admin/settings', icon: Settings },
+      ]
+    }
   ];
+
+  // Flat navigation for legacy compatibility
+  const navigation = navigationGroups.flatMap(g => g.items);
 
   const bottomNavItems = [
     { name: 'Home', href: '/admin', icon: LayoutDashboard },
@@ -108,22 +145,49 @@ const SuperAdminDashboard = () => {
           </div>
         </div>
 
-        <nav className={`px-3 space-y-2 ${sidebarOpen ? '' : 'pt-4'}`}>
-          {navigation.map((item) => (
-            <Link
-              key={item.name}
-              to={item.href}
-              title={item.name}
-              className={`group flex items-center rounded-lg transition-colors ${
-                isActive(item.href)
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-accent'
-              } ${sidebarOpen ? 'justify-start px-3 py-2 gap-3' : 'justify-center px-0 py-3'}`}
-            >
-              <item.icon className={`${sidebarOpen ? 'w-5 h-5' : 'w-7 h-7'} shrink-0`} />
-              {sidebarOpen && <span className="text-sm font-medium">{item.name}</span>}
-            </Link>
-          ))}
+        <nav className={`px-3 space-y-1 overflow-y-auto max-h-[calc(100vh-180px)] ${sidebarOpen ? '' : 'pt-4'}`}>
+          {sidebarOpen ? (
+            // Grouped navigation when sidebar is open
+            navigationGroups.map((group, groupIndex) => (
+              <div key={group.label} className="mb-4">
+                <p className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  {group.label}
+                </p>
+                {group.items.map((item) => (
+                  <Link
+                    key={item.name}
+                    to={item.href}
+                    title={item.name}
+                    className={`group flex items-center rounded-lg transition-colors justify-start px-3 py-2 gap-3 ${
+                      isActive(item.href)
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                    }`}
+                  >
+                    <item.icon className="w-5 h-5 shrink-0" />
+                    <span className="text-sm font-medium">{item.name}</span>
+                  </Link>
+                ))}
+                {groupIndex < navigationGroups.length - 1 && <Separator className="my-2" />}
+              </div>
+            ))
+          ) : (
+            // Flat icons when collapsed
+            navigation.map((item) => (
+              <Link
+                key={item.name}
+                to={item.href}
+                title={item.name}
+                className={`group flex items-center rounded-lg transition-colors justify-center px-0 py-3 ${
+                  isActive(item.href)
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                }`}
+              >
+                <item.icon className="w-7 h-7 shrink-0" />
+              </Link>
+            ))
+          )}
         </nav>
 
         <div className="absolute bottom-4 left-3 right-3">
@@ -143,6 +207,7 @@ const SuperAdminDashboard = () => {
           <Route index element={<AdminOverview />} />
           <Route path="panels" element={<PanelManagement />} />
           <Route path="users" element={<UserManagement />} />
+          <Route path="domains" element={<DomainManagement />} />
           <Route path="subscriptions" element={<SubscriptionManagement />} />
           <Route path="revenue" element={<RevenueAnalytics />} />
           <Route path="tickets" element={<SupportTickets />} />
