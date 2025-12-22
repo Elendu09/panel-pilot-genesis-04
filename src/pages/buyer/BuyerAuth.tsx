@@ -9,6 +9,7 @@ import { useBuyerAuth } from '@/contexts/BuyerAuthContext';
 import { useTenant } from '@/hooks/useTenant';
 import { Loader2, Mail, Lock, User, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
+import EmailVerificationKanban from '@/components/auth/EmailVerificationKanban';
 
 const BuyerAuth = () => {
   const navigate = useNavigate();
@@ -19,6 +20,8 @@ const BuyerAuth = () => {
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [registerForm, setRegisterForm] = useState({ email: '', password: '', fullName: '', confirmPassword: '' });
   const [error, setError] = useState('');
+  const [showVerification, setShowVerification] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState('');
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,7 +67,9 @@ const BuyerAuth = () => {
     if (error) {
       setError(error.message);
     } else {
-      navigate('/dashboard');
+      // Show verification UI instead of redirecting
+      setRegisteredEmail(registerForm.email);
+      setShowVerification(true);
     }
     setLoading(false);
   };
@@ -74,6 +79,24 @@ const BuyerAuth = () => {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-primary/5 to-secondary/10">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
+    );
+  }
+
+  // Show verification UI after successful sign-up
+  if (showVerification) {
+    return (
+      <EmailVerificationKanban 
+        email={registeredEmail} 
+        onBack={() => {
+          setShowVerification(false);
+          setRegisterForm({ email: '', password: '', fullName: '', confirmPassword: '' });
+        }}
+        panelBranding={{
+          name: panel?.name,
+          logo_url: panel?.logo_url || undefined,
+          primary_color: panel?.primary_color || undefined
+        }}
+      />
     );
   }
 
