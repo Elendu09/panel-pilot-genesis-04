@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
-export type NotificationType = "order" | "payment" | "system" | "provider";
+export type NotificationType = "order" | "payment" | "system" | "provider" | "info" | "warning" | "error";
 
 export interface Notification {
   id: string;
@@ -10,143 +12,212 @@ export interface Notification {
   timestamp: Date;
   read: boolean;
   actionUrl?: string;
-  icon?: string;
 }
 
-const NOTIFICATIONS_KEY = "panel_notifications";
-const READ_NOTIFICATIONS_KEY = "panel_notifications_read";
+const mapDbTypeToNotificationType = (dbType: string | null): NotificationType => {
+  switch (dbType) {
+    case 'order': return 'order';
+    case 'payment': return 'payment';
+    case 'system': return 'system';
+    case 'provider': return 'provider';
+    case 'warning': return 'warning';
+    case 'error': return 'error';
+    default: return 'info';
+  }
+};
 
-// Simulated notifications for demo
-const demoNotifications: Notification[] = [
-  {
-    id: "1",
-    type: "order",
-    title: "New Order Received",
-    message: "Order #12345 for Instagram Followers has been placed",
-    timestamp: new Date(Date.now() - 5 * 60 * 1000),
-    read: false,
-    actionUrl: "/panel/orders",
-  },
-  {
-    id: "2",
-    type: "payment",
-    title: "Payment Received",
-    message: "You received $50.00 via PayPal from john@example.com",
-    timestamp: new Date(Date.now() - 30 * 60 * 1000),
-    read: false,
-    actionUrl: "/panel/analytics",
-  },
-  {
-    id: "3",
-    type: "system",
-    title: "Domain Verified",
-    message: "Your custom domain example.com has been verified successfully",
-    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-    read: true,
-    actionUrl: "/panel/domain",
-  },
-  {
-    id: "4",
-    type: "provider",
-    title: "Provider Sync Complete",
-    message: "SMMWorld services have been synced. 150 new services available.",
-    timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000),
-    read: true,
-    actionUrl: "/panel/providers",
-  },
-  {
-    id: "5",
-    type: "order",
-    title: "Order Completed",
-    message: "Order #12340 has been completed successfully",
-    timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000),
-    read: true,
-    actionUrl: "/panel/orders",
-  },
-  {
-    id: "6",
-    type: "system",
-    title: "API Rate Limit Warning",
-    message: "You've used 80% of your API rate limit this hour",
-    timestamp: new Date(Date.now() - 12 * 60 * 60 * 1000),
-    read: true,
-    actionUrl: "/panel/api",
-  },
-];
+const getActionUrlFromType = (type: string | null, title: string): string | undefined => {
+  const lowTitle = title.toLowerCase();
+  
+  if (type === 'order' || lowTitle.includes('order')) return '/panel/orders';
+  if (type === 'payment' || lowTitle.includes('payment') || lowTitle.includes('deposit')) return '/panel/billing';
+  if (type === 'provider' || lowTitle.includes('provider') || lowTitle.includes('sync')) return '/panel/providers';
+  if (lowTitle.includes('domain') || lowTitle.includes('dns') || lowTitle.includes('ssl')) return '/panel/domain';
+  if (lowTitle.includes('service')) return '/panel/services';
+  if (lowTitle.includes('api')) return '/panel/api';
+  if (lowTitle.includes('customer') || lowTitle.includes('user')) return '/panel/customers';
+  
+  return undefined;
+};
 
 export const useNotifications = () => {
+  const { profile } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load notifications on mount
-  useEffect(() => {
-    const loadNotifications = () => {
-      try {
-        const readIds = JSON.parse(localStorage.getItem(READ_NOTIFICATIONS_KEY) || "[]");
-        const notifs = demoNotifications.map(n => ({
-          ...n,
-          read: readIds.includes(n.id)
-        }));
-        setNotifications(notifs);
-      } catch {
-        setNotifications(demoNotifications);
-      }
+  // Fetch notifications from database
+  const fetchNotifications = useCallback(async () => {
+    if (!profile?.id) {
+      setNotifications([]);
       setIsLoading(false);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('panel_notifications')
+        .select('*')
+        .eq('user_id', profile.id)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+
+      const mappedNotifications: Notification[] = (data || []).map(n => ({
+        id: n.id,
+        type: mapDbTypeToNotificationType(n.type),
+        title: n.title,
+        message: n.message,
+        timestamp: new Date(n.created_at),
+        read: n.is_read || false,
+        actionUrl: getActionUrlFromType(n.type, n.title),
+      }));
+
+      setNotifications(mappedNotifications);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [profile?.id]);
+
+  // Set up realtime subscription
+  useEffect(() => {
+    if (!profile?.id) {
+      setIsLoading(false);
+      return;
+    }
+
+    fetchNotifications();
+
+    // Subscribe to realtime changes
+    const channel = supabase
+      .channel('notifications-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'panel_notifications',
+          filter: `user_id=eq.${profile.id}`,
+        },
+        (payload) => {
+          const newNotif = payload.new as any;
+          const notification: Notification = {
+            id: newNotif.id,
+            type: mapDbTypeToNotificationType(newNotif.type),
+            title: newNotif.title,
+            message: newNotif.message,
+            timestamp: new Date(newNotif.created_at),
+            read: newNotif.is_read || false,
+            actionUrl: getActionUrlFromType(newNotif.type, newNotif.title),
+          };
+          setNotifications(prev => [notification, ...prev]);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'panel_notifications',
+          filter: `user_id=eq.${profile.id}`,
+        },
+        (payload) => {
+          const updated = payload.new as any;
+          setNotifications(prev => 
+            prev.map(n => n.id === updated.id ? { ...n, read: updated.is_read || false } : n)
+          );
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'panel_notifications',
+          filter: `user_id=eq.${profile.id}`,
+        },
+        (payload) => {
+          const deleted = payload.old as any;
+          setNotifications(prev => prev.filter(n => n.id !== deleted.id));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
     };
-
-    loadNotifications();
-
-    // Simulate real-time updates
-    const interval = setInterval(() => {
-      const randomNotif = Math.random();
-      if (randomNotif > 0.95) {
-        const newNotification: Notification = {
-          id: Date.now().toString(),
-          type: ["order", "payment", "system", "provider"][Math.floor(Math.random() * 4)] as NotificationType,
-          title: ["New Order", "Payment Received", "System Update", "Provider Alert"][Math.floor(Math.random() * 4)],
-          message: "This is a real-time notification update",
-          timestamp: new Date(),
-          read: false,
-        };
-        setNotifications(prev => [newNotification, ...prev]);
-      }
-    }, 30000);
-
-    return () => clearInterval(interval);
-  }, []);
+  }, [profile?.id, fetchNotifications]);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  const markAsRead = useCallback((id: string) => {
+  const markAsRead = useCallback(async (id: string) => {
+    // Optimistic update
     setNotifications(prev => 
       prev.map(n => n.id === id ? { ...n, read: true } : n)
     );
-    const readIds = JSON.parse(localStorage.getItem(READ_NOTIFICATIONS_KEY) || "[]");
-    if (!readIds.includes(id)) {
-      localStorage.setItem(READ_NOTIFICATIONS_KEY, JSON.stringify([...readIds, id]));
+
+    try {
+      await supabase
+        .from('panel_notifications')
+        .update({ is_read: true })
+        .eq('id', id);
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
     }
   }, []);
 
-  const markAllAsRead = useCallback(() => {
+  const markAllAsRead = useCallback(async () => {
+    if (!profile?.id) return;
+
+    // Optimistic update
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-    const allIds = notifications.map(n => n.id);
-    localStorage.setItem(READ_NOTIFICATIONS_KEY, JSON.stringify(allIds));
-  }, [notifications]);
 
-  const clearAll = useCallback(() => {
+    try {
+      await supabase
+        .from('panel_notifications')
+        .update({ is_read: true })
+        .eq('user_id', profile.id)
+        .eq('is_read', false);
+    } catch (error) {
+      console.error('Error marking all as read:', error);
+    }
+  }, [profile?.id]);
+
+  const clearAll = useCallback(async () => {
+    if (!profile?.id) return;
+
+    // Optimistic update
     setNotifications([]);
-    localStorage.removeItem(READ_NOTIFICATIONS_KEY);
-  }, []);
 
-  const addNotification = useCallback((notification: Omit<Notification, "id" | "timestamp" | "read">) => {
-    const newNotif: Notification = {
-      ...notification,
-      id: Date.now().toString(),
-      timestamp: new Date(),
-      read: false,
-    };
-    setNotifications(prev => [newNotif, ...prev]);
-  }, []);
+    try {
+      await supabase
+        .from('panel_notifications')
+        .delete()
+        .eq('user_id', profile.id);
+    } catch (error) {
+      console.error('Error clearing notifications:', error);
+    }
+  }, [profile?.id]);
+
+  const addNotification = useCallback(async (notification: Omit<Notification, "id" | "timestamp" | "read">) => {
+    if (!profile?.id) return;
+
+    try {
+      await supabase
+        .from('panel_notifications')
+        .insert({
+          user_id: profile.id,
+          title: notification.title,
+          message: notification.message,
+          type: notification.type,
+          is_read: false,
+        });
+    } catch (error) {
+      console.error('Error adding notification:', error);
+    }
+  }, [profile?.id]);
 
   const getByType = useCallback((type: NotificationType) => {
     return notifications.filter(n => n.type === type);
@@ -161,6 +232,7 @@ export const useNotifications = () => {
     clearAll,
     addNotification,
     getByType,
+    refetch: fetchNotifications,
   };
 };
 

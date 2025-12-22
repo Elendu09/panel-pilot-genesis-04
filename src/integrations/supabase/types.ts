@@ -942,6 +942,54 @@ export type Database = {
           },
         ]
       }
+      platform_providers: {
+        Row: {
+          api_endpoint: string
+          api_key: string
+          balance: number | null
+          commission_percentage: number | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          last_sync_at: string | null
+          logo_url: string | null
+          name: string
+          sync_status: string | null
+          updated_at: string
+        }
+        Insert: {
+          api_endpoint: string
+          api_key: string
+          balance?: number | null
+          commission_percentage?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_sync_at?: string | null
+          logo_url?: string | null
+          name: string
+          sync_status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          api_endpoint?: string
+          api_key?: string
+          balance?: number | null
+          commission_percentage?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_sync_at?: string | null
+          logo_url?: string | null
+          name?: string
+          sync_status?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       platform_settings: {
         Row: {
           category: string

@@ -61,6 +61,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { usePanel } from "@/hooks/usePanel";
+import { usePendingOrders } from "@/hooks/use-pending-orders";
 
 interface Order {
   id: string;
@@ -95,6 +96,7 @@ const kanbanColumns = [
 
 const OrdersManagement = () => {
   const { panel, loading: panelLoading } = usePanel();
+  const { pendingCount: pendingOrders } = usePendingOrders();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -161,7 +163,7 @@ const OrdersManagement = () => {
   });
 
   const todayOrders = orders.length;
-  const pendingOrders = orders.filter(o => o.status === "pending").length;
+  const pendingOrdersLocal = orders.filter(o => o.status === "pending").length;
   const inProgressOrders = orders.filter(o => o.status === "in_progress").length;
   const todayRevenue = orders.reduce((acc, o) => acc + (o.price || 0), 0);
 
@@ -441,16 +443,23 @@ const OrdersManagement = () => {
 
   return (
     <div className="space-y-6 overflow-x-hidden">
-      {/* Header */}
+      {/* Header with Real-time Badge */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         className="flex flex-col md:flex-row md:items-center justify-between gap-4"
       >
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">
-            Orders Management
-          </h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">
+              Orders Management
+            </h1>
+            {pendingOrders > 0 && (
+              <Badge className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20 animate-pulse">
+                {pendingOrders} Pending
+              </Badge>
+            )}
+          </div>
           <p className="text-muted-foreground">Track and manage customer orders in real-time</p>
         </div>
         <div className="flex flex-wrap gap-2">

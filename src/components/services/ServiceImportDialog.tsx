@@ -8,7 +8,8 @@ import {
   Percent,
   Info,
   TrendingUp,
-  AlertCircle
+  AlertCircle,
+  Server
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,6 +43,7 @@ import { toast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { MarkupEducation } from "./MarkupEducation";
+import { supabase } from "@/integrations/supabase/client";
 
 interface FetchedService {
   id: number;
@@ -56,6 +58,9 @@ interface FetchedService {
 interface Provider {
   id: string;
   name: string;
+  api_endpoint?: string;
+  api_key?: string;
+  is_platform_provider?: boolean;
 }
 
 interface ServiceImportDialogProps {
@@ -65,20 +70,6 @@ interface ServiceImportDialogProps {
   getCategoryIcon: (category: string) => React.ComponentType<{ className?: string }>;
   onImport: (services: FetchedService[], markups: Record<number, number>) => void;
 }
-
-// Mock fetched services
-const mockFetchedServices: FetchedService[] = [
-  { id: 101, name: "Instagram Followers - Premium", category: "instagram", price: 2.50, minQty: 100, maxQty: 50000, description: "High quality followers with profile pictures" },
-  { id: 102, name: "Instagram Followers - Regular", category: "instagram", price: 1.80, minQty: 100, maxQty: 100000, description: "Standard quality followers" },
-  { id: 103, name: "Instagram Likes - Real", category: "instagram", price: 1.20, minQty: 50, maxQty: 10000, description: "Real and active users" },
-  { id: 104, name: "Instagram Views - Story", category: "instagram", price: 0.50, minQty: 100, maxQty: 50000, description: "Story views from real accounts" },
-  { id: 105, name: "YouTube Views - High Retention", category: "youtube", price: 3.00, minQty: 500, maxQty: 100000, description: "80%+ watch time retention" },
-  { id: 106, name: "YouTube Subscribers", category: "youtube", price: 5.00, minQty: 100, maxQty: 10000, description: "Real subscribers with notifications" },
-  { id: 107, name: "TikTok Followers", category: "tiktok", price: 2.00, minQty: 100, maxQty: 50000, description: "Active TikTok followers" },
-  { id: 108, name: "TikTok Likes - Fast", category: "tiktok", price: 0.80, minQty: 100, maxQty: 100000, description: "Fast delivery within 1 hour" },
-  { id: 109, name: "Twitter Followers - USA", category: "twitter", price: 4.00, minQty: 100, maxQty: 20000, description: "USA-based followers" },
-  { id: 110, name: "Facebook Page Likes", category: "facebook", price: 2.50, minQty: 100, maxQty: 50000, description: "Worldwide page likes" },
-];
 
 export const ServiceImportDialog = ({
   open,
@@ -107,13 +98,72 @@ export const ServiceImportDialog = ({
       toast({ title: "Please select a provider", variant: "destructive" });
       return;
     }
+    
     setIsFetching(true);
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setFetchedServices(mockFetchedServices);
-    setSelectedServices([]);
-    setServiceMarkups({});
-    setStep("services");
-    setIsFetching(false);
+    
+    try {
+      const provider = providers.find(p => p.id === selectedProvider);
+      
+      if (!provider?.api_endpoint || !provider?.api_key) {
+        toast({ variant: "destructive", title: "Provider missing API credentials" });
+        return;
+      }
+
+      // Call the provider-services edge function to fetch real services
+      const { data, error } = await supabase.functions.invoke('provider-services', {
+        body: { 
+          api_endpoint: provider.api_endpoint, 
+          api_key: provider.api_key 
+        }
+      });
+
+      if (error) throw error;
+
+      if (!data?.services || data.services.length === 0) {
+        toast({ title: "No services found from this provider" });
+        setFetchedServices([]);
+      } else {
+        // Map the API response to our format
+        const mappedServices: FetchedService[] = data.services.map((s: any, index: number) => ({
+          id: s.service || s.id || index + 1,
+          name: s.name || `Service ${s.service || s.id}`,
+          category: mapCategory(s.category || 'other'),
+          price: parseFloat(s.rate || s.price || 0) / 1000, // Usually rates are per 1000
+          minQty: parseInt(s.min || s.min_quantity || 100),
+          maxQty: parseInt(s.max || s.max_quantity || 10000),
+          description: s.description || s.name || '',
+        }));
+        
+        setFetchedServices(mappedServices);
+        toast({ title: `${mappedServices.length} services loaded` });
+      }
+      
+      setSelectedServices([]);
+      setServiceMarkups({});
+      setStep("services");
+    } catch (error: any) {
+      console.error('Error fetching services:', error);
+      toast({ 
+        variant: "destructive", 
+        title: "Failed to fetch services", 
+        description: error.message || "Check provider API credentials" 
+      });
+    } finally {
+      setIsFetching(false);
+    }
+  };
+
+  // Helper to map provider categories to our enum
+  const mapCategory = (category: string): string => {
+    const lower = category.toLowerCase();
+    if (lower.includes('instagram') || lower.includes('ig')) return 'instagram';
+    if (lower.includes('facebook') || lower.includes('fb')) return 'facebook';
+    if (lower.includes('twitter') || lower.includes('x')) return 'twitter';
+    if (lower.includes('youtube') || lower.includes('yt')) return 'youtube';
+    if (lower.includes('tiktok') || lower.includes('tik')) return 'tiktok';
+    if (lower.includes('linkedin')) return 'linkedin';
+    if (lower.includes('telegram')) return 'telegram';
+    return 'other';
   };
 
   const toggleService = (id: number) => {

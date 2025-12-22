@@ -26,6 +26,9 @@ const typeIcons: Record<NotificationType, React.ElementType> = {
   payment: CreditCard,
   system: Settings,
   provider: Plug,
+  info: Settings,
+  warning: Settings,
+  error: Settings,
 };
 
 const typeColors: Record<NotificationType, string> = {
@@ -33,6 +36,9 @@ const typeColors: Record<NotificationType, string> = {
   payment: "bg-green-500/10 text-green-500",
   system: "bg-orange-500/10 text-orange-500",
   provider: "bg-purple-500/10 text-purple-500",
+  info: "bg-blue-500/10 text-blue-500",
+  warning: "bg-yellow-500/10 text-yellow-500",
+  error: "bg-red-500/10 text-red-500",
 };
 
 const formatTime = (date: Date) => {
