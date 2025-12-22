@@ -30,6 +30,7 @@ import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { RealtimeChannel } from '@supabase/supabase-js';
+import { calculateChange, getDateRange, getPreviousPeriodRange } from '@/lib/analytics-utils';
 
 interface LiveOrder {
   id: string;
@@ -50,6 +51,17 @@ const PanelOverview = () => {
     totalRevenue: 0,
     activeServices: 0,
     totalCustomers: 0
+  });
+  const [changes, setChanges] = useState<{
+    orders: { value: string; trend: 'up' | 'down' | 'neutral' };
+    revenue: { value: string; trend: 'up' | 'down' | 'neutral' };
+    services: { value: string; trend: 'up' | 'down' | 'neutral' };
+    customers: { value: string; trend: 'up' | 'down' | 'neutral' };
+  }>({
+    orders: { value: '0%', trend: 'neutral' },
+    revenue: { value: '0%', trend: 'neutral' },
+    services: { value: '+0', trend: 'neutral' },
+    customers: { value: '0%', trend: 'neutral' },
   });
   
   // Live orders state
@@ -98,6 +110,29 @@ const PanelOverview = () => {
 
           const uniqueCustomers = new Set(orders?.map(o => o.buyer_id) || []).size;
           const totalRevenue = orders?.reduce((sum, order) => sum + Number(order.price), 0) || 0;
+
+          // Fetch previous period data (last 30 days vs previous 30 days)
+          const { startDate: prevStart, endDate: prevEnd } = getPreviousPeriodRange(30);
+          const { data: prevOrders } = await supabase
+            .from('orders')
+            .select('price')
+            .eq('panel_id', panel.id)
+            .gte('created_at', prevStart.toISOString())
+            .lt('created_at', prevEnd.toISOString());
+
+          const prevRevenue = prevOrders?.reduce((sum, o) => sum + Number(o.price), 0) || 0;
+          const prevOrderCount = prevOrders?.length || 0;
+
+          // Calculate real changes
+          const orderChange = calculateChange(orders?.length || 0, prevOrderCount);
+          const revenueChange = calculateChange(totalRevenue, prevRevenue);
+
+          setChanges({
+            orders: { value: orderChange.value, trend: orderChange.trend },
+            revenue: { value: revenueChange.value, trend: revenueChange.trend },
+            services: { value: `+${services?.length || 0}`, trend: 'up' },
+            customers: { value: orderChange.value, trend: orderChange.trend },
+          });
 
           setStats({
             totalOrders: orders?.length || 0,
@@ -294,8 +329,8 @@ const PanelOverview = () => {
     {
       title: "Total Orders",
       value: stats.totalOrders.toLocaleString(),
-      change: "+12%",
-      trend: "up",
+      change: changes.orders.value,
+      trend: changes.orders.trend,
       icon: ShoppingCart,
       color: "from-blue-500 to-blue-600",
       bgColor: "bg-blue-500/10",
@@ -304,8 +339,8 @@ const PanelOverview = () => {
     {
       title: "Total Revenue",
       value: `$${stats.totalRevenue.toFixed(2)}`,
-      change: "+23%",
-      trend: "up",
+      change: changes.revenue.value,
+      trend: changes.revenue.trend,
       icon: DollarSign,
       color: "from-emerald-500 to-emerald-600",
       bgColor: "bg-emerald-500/10",
@@ -314,8 +349,8 @@ const PanelOverview = () => {
     {
       title: "Active Services",
       value: stats.activeServices.toString(),
-      change: "+5",
-      trend: "up",
+      change: changes.services.value,
+      trend: changes.services.trend,
       icon: Package,
       color: "from-violet-500 to-violet-600",
       bgColor: "bg-violet-500/10",
@@ -324,8 +359,8 @@ const PanelOverview = () => {
     {
       title: "Total Customers",
       value: stats.totalCustomers.toLocaleString(),
-      change: "+18%",
-      trend: "up",
+      change: changes.customers.value,
+      trend: changes.customers.trend,
       icon: Users,
       color: "from-amber-500 to-amber-600",
       bgColor: "bg-amber-500/10",

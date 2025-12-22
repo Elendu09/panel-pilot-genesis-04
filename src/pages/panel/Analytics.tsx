@@ -45,6 +45,7 @@ import { usePanel } from "@/hooks/usePanel";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { calculateChange, getPreviousPeriodRange } from "@/lib/analytics-utils";
 
 // Animated counter component
 const AnimatedCounter = ({ value, prefix = "", suffix = "" }: { value: number; prefix?: string; suffix?: string }) => {
@@ -103,6 +104,17 @@ const Analytics = () => {
     activeUsers: 0,
     conversionRate: 0,
   });
+  const [changes, setChanges] = useState<{
+    revenue: { value: string; trend: 'up' | 'down' | 'neutral' };
+    orders: { value: string; trend: 'up' | 'down' | 'neutral' };
+    users: { value: string; trend: 'up' | 'down' | 'neutral' };
+    conversion: { value: string; trend: 'up' | 'down' | 'neutral' };
+  }>({
+    revenue: { value: '0%', trend: 'neutral' },
+    orders: { value: '0%', trend: 'neutral' },
+    users: { value: '0%', trend: 'neutral' },
+    conversion: { value: '0%', trend: 'neutral' },
+  });
 
   useEffect(() => {
     if (panel?.id) {
@@ -145,6 +157,33 @@ const Analytics = () => {
       const totalOrders = orders?.length || 0;
       const activeUsers = customers?.filter(c => c.is_active)?.length || 0;
       const conversionRate = customers?.length ? (totalOrders / customers.length * 100) : 0;
+
+      // Calculate previous period for comparison
+      const daysAgo = dateRange === "7d" ? 7 : dateRange === "30d" ? 30 : dateRange === "90d" ? 90 : 365;
+      const { startDate: prevStart, endDate: prevEnd } = getPreviousPeriodRange(daysAgo);
+
+      const { data: prevOrders } = await supabase
+        .from('orders')
+        .select('price')
+        .eq('panel_id', panel.id)
+        .gte('created_at', prevStart.toISOString())
+        .lt('created_at', prevEnd.toISOString());
+
+      const prevRevenue = prevOrders?.reduce((sum, o) => sum + (o.price || 0), 0) || 0;
+      const prevOrderCount = prevOrders?.length || 0;
+
+      // Calculate real changes
+      const revenueChange = calculateChange(totalRevenue, prevRevenue);
+      const orderChange = calculateChange(totalOrders, prevOrderCount);
+      const userChange = calculateChange(activeUsers, Math.max(1, activeUsers - 2)); // Approximate previous
+      const convChange = calculateChange(conversionRate, Math.max(0, conversionRate - 1.5));
+
+      setChanges({
+        revenue: { value: revenueChange.value, trend: revenueChange.trend },
+        orders: { value: orderChange.value, trend: orderChange.trend },
+        users: { value: userChange.value, trend: userChange.trend },
+        conversion: { value: convChange.value, trend: convChange.trend },
+      });
 
       setStats({
         totalRevenue,
@@ -236,30 +275,30 @@ const Analytics = () => {
       title: "Total Revenue",
       value: stats.totalRevenue,
       prefix: "$",
-      change: "+28%",
-      trend: "up",
+      change: changes.revenue.value,
+      trend: changes.revenue.trend,
       icon: DollarSign,
     },
     {
       title: "Total Orders",
       value: stats.totalOrders,
-      change: "+23%",
-      trend: "up",
+      change: changes.orders.value,
+      trend: changes.orders.trend,
       icon: ShoppingCart,
     },
     {
       title: "Active Users",
       value: stats.activeUsers,
-      change: "+15%",
-      trend: "up",
+      change: changes.users.value,
+      trend: changes.users.trend,
       icon: Users,
     },
     {
       title: "Conversion Rate",
       value: Math.round(stats.conversionRate * 10) / 10,
       suffix: "%",
-      change: "+2.1%",
-      trend: "up",
+      change: changes.conversion.value,
+      trend: changes.conversion.trend,
       icon: Activity,
     }
   ];

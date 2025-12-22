@@ -70,6 +70,7 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { usePanel } from "@/hooks/usePanel";
+import { calculateChange, getPreviousPeriodRange } from "@/lib/analytics-utils";
 
 // Import components
 import { ExportDialog } from "@/components/customers/ExportDialog";
@@ -127,6 +128,17 @@ const CustomerManagement = () => {
   const [statusFilter, setStatusFilter] = useState<"all" | "online" | "banned">("all");
   const [selectedCustomers, setSelectedCustomers] = useState<string[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [statsChanges, setStatsChanges] = useState<{
+    total: { value: string; trend: 'up' | 'down' | 'neutral' };
+    online: { value: string; trend: 'up' | 'down' | 'neutral' };
+    active: { value: string; trend: 'up' | 'down' | 'neutral' };
+    vip: { value: string; trend: 'up' | 'down' | 'neutral' };
+  }>({
+    total: { value: '+0', trend: 'neutral' },
+    online: { value: '0', trend: 'neutral' },
+    active: { value: '+0%', trend: 'neutral' },
+    vip: { value: '+0', trend: 'neutral' },
+  });
 
   useEffect(() => {
     if (panel?.id) {
@@ -165,6 +177,28 @@ const CustomerManagement = () => {
         customDiscount: c.custom_discount || 0,
       }));
 
+      // Calculate changes - count customers added in last 30 days vs previous 30 days
+      const { startDate: prevStart, endDate: prevEnd } = getPreviousPeriodRange(30);
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const recentCustomers = formattedCustomers.filter(c => 
+        new Date(c.joinedAt) >= thirtyDaysAgo
+      ).length;
+      
+      const prevCustomers = (data || []).filter(c => 
+        new Date(c.created_at) >= prevStart && new Date(c.created_at) < prevEnd
+      ).length;
+
+      const customerChange = calculateChange(recentCustomers, prevCustomers);
+      
+      setStatsChanges({
+        total: { value: `+${recentCustomers}`, trend: recentCustomers > 0 ? 'up' : 'neutral' },
+        online: { value: `${formattedCustomers.filter(c => c.isOnline).length}`, trend: 'neutral' },
+        active: { value: customerChange.value, trend: customerChange.trend },
+        vip: { value: `+${formattedCustomers.filter(c => c.segment === 'vip').length}`, trend: 'up' },
+      });
+
       setCustomers(formattedCustomers);
     } catch (error) {
       console.error('Error fetching customers:', error);
@@ -177,11 +211,11 @@ const CustomerManagement = () => {
   const onlineCount = customers.filter(c => c.isOnline).length;
   const bannedCount = customers.filter(c => c.status === "suspended").length;
 
-  const stats = [
-    { title: "Total Customers", value: customers.length, change: "+156", trend: "up", icon: Users },
-    { title: "Online Now", value: onlineCount, change: `${onlineCount}`, trend: "up", icon: Circle },
-    { title: "Active Users", value: customers.filter(c => c.status === "active").length, change: "+12%", trend: "up", icon: UserCheck },
-    { title: "VIP Members", value: customers.filter(c => c.segment === "vip").length, change: "+5", trend: "up", icon: Crown },
+  const statsArr = [
+    { title: "Total Customers", value: customers.length, change: statsChanges.total.value, trend: statsChanges.total.trend, icon: Users },
+    { title: "Online Now", value: onlineCount, change: statsChanges.online.value, trend: "neutral", icon: Circle },
+    { title: "Active Users", value: customers.filter(c => c.status === "active").length, change: statsChanges.active.value, trend: statsChanges.active.trend, icon: UserCheck },
+    { title: "VIP Members", value: customers.filter(c => c.segment === "vip").length, change: statsChanges.vip.value, trend: statsChanges.vip.trend, icon: Crown },
   ];
 
   const filteredCustomers = useMemo(() => {
@@ -512,7 +546,7 @@ const CustomerManagement = () => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-        {stats.map((stat, index) => (
+        {statsArr.map((stat, index) => (
           <motion.div key={index} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1 }}>
             <Card className="bg-card/60 backdrop-blur-xl border-border/50 hover:border-primary/30 transition-all">
               <CardContent className="p-4 md:p-6">
