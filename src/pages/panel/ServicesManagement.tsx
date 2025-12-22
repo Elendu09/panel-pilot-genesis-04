@@ -32,7 +32,8 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
-  Settings2
+  Settings2,
+  Palette
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -73,6 +74,7 @@ import { exportToCSV, exportToPDF, serviceColumns } from "@/lib/export-utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
 import { usePanel } from "@/hooks/usePanel";
+import { SOCIAL_ICONS_MAP } from "@/components/icons/SocialIcons";
 
 // DnD Kit
 import {
@@ -121,9 +123,11 @@ const ServicesManagement = () => {
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isBulkDialogOpen, setIsBulkDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isBulkIconDialogOpen, setIsBulkIconDialogOpen] = useState(false);
   const [bulkAction, setBulkAction] = useState("");
   const [sortOption, setSortOption] = useState<SortOption>("default");
   const [bulkMarkup, setBulkMarkup] = useState(25);
+  const [selectedBulkIcon, setSelectedBulkIcon] = useState<string>("");
   
   // New service form
   const [newService, setNewService] = useState({
@@ -360,6 +364,33 @@ const ServicesManagement = () => {
     }
     setSelectedServices([]);
     setIsBulkDialogOpen(false);
+  };
+
+  // Bulk icon assignment
+  const executeBulkIconAssignment = async () => {
+    if (!selectedBulkIcon) {
+      toast({ title: "Please select an icon", variant: "destructive" });
+      return;
+    }
+    
+    try {
+      await supabase
+        .from('services')
+        .update({ image_url: `icon:${selectedBulkIcon}` })
+        .in('id', selectedServices);
+      
+      setServices(prev => prev.map(s => 
+        selectedServices.includes(s.id) ? { ...s, imageUrl: `icon:${selectedBulkIcon}` } : s
+      ));
+      
+      toast({ title: `Icon applied to ${selectedServices.length} services` });
+      setSelectedServices([]);
+      setIsBulkIconDialogOpen(false);
+      setSelectedBulkIcon("");
+    } catch (error) {
+      console.error('Bulk icon error:', error);
+      toast({ title: 'Failed to assign icons', variant: 'destructive' });
+    }
   };
 
   // Delete service
@@ -685,6 +716,9 @@ const ServicesManagement = () => {
               <Button size="sm" variant="outline" onClick={() => handleBulkAction("export-csv")}>
                 <Download className="w-3 h-3 mr-1" /> Export
               </Button>
+              <Button size="sm" variant="outline" onClick={() => setIsBulkIconDialogOpen(true)}>
+                <Palette className="w-3 h-3 mr-1" /> Set Icon
+              </Button>
             </div>
           </motion.div>
         )}
@@ -867,6 +901,76 @@ const ServicesManagement = () => {
           onSave={handleSaveEdit}
         />
       )}
+
+      {/* Bulk Icon Assignment Dialog */}
+      <Dialog open={isBulkIconDialogOpen} onOpenChange={setIsBulkIconDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Palette className="w-5 h-5 text-primary" />
+              Assign Icon to {selectedServices.length} Services
+            </DialogTitle>
+            <DialogDescription>
+              Select an icon to apply to all selected services
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid grid-cols-6 gap-2 p-3 bg-muted/30 rounded-lg border border-border/50 max-h-[300px] overflow-y-auto">
+            {Object.entries(SOCIAL_ICONS_MAP).map(([key, { icon: IconComponent, label, bgColor }]) => {
+              const isSelected = selectedBulkIcon === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setSelectedBulkIcon(key)}
+                  className={cn(
+                    "flex flex-col items-center gap-1 p-2 rounded-lg transition-all hover:scale-105",
+                    isSelected 
+                      ? "ring-2 ring-primary bg-primary/10" 
+                      : "hover:bg-muted/50"
+                  )}
+                  title={label}
+                >
+                  <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center", bgColor)}>
+                    <IconComponent className="text-white" size={16} />
+                  </div>
+                  <span className="text-[10px] text-muted-foreground truncate w-full text-center">
+                    {label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {selectedBulkIcon && (
+            <div className="flex items-center gap-2 p-2 bg-primary/10 rounded-lg">
+              <span className="text-sm">Selected:</span>
+              {(() => {
+                const iconData = SOCIAL_ICONS_MAP[selectedBulkIcon];
+                if (iconData) {
+                  const IconComponent = iconData.icon;
+                  return (
+                    <div className={cn("w-6 h-6 rounded flex items-center justify-center", iconData.bgColor)}>
+                      <IconComponent className="text-white" size={14} />
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+              <span className="text-sm font-medium">{SOCIAL_ICONS_MAP[selectedBulkIcon]?.label}</span>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setIsBulkIconDialogOpen(false); setSelectedBulkIcon(""); }}>
+              Cancel
+            </Button>
+            <Button onClick={executeBulkIconAssignment} disabled={!selectedBulkIcon}>
+              Apply to {selectedServices.length} Services
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

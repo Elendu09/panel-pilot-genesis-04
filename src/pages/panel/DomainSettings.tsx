@@ -129,6 +129,11 @@ const DomainSettings = () => {
     latency?: number;
   }>>([]);
   const [autoRefreshPropagation, setAutoRefreshPropagation] = useState(false);
+  
+  // Real-time verification state
+  const [autoVerifyEnabled, setAutoVerifyEnabled] = useState(true);
+  const [lastVerifyTime, setLastVerifyTime] = useState<Date | null>(null);
+  const [verifyingDomains, setVerifyingDomains] = useState<Set<string>>(new Set());
 
   const mxRecords = [
     { id: "1", priority: 10, host: "mail.yourdomain.com", value: "mx1.mailprovider.com", status: "verified" as const },
@@ -227,6 +232,116 @@ const DomainSettings = () => {
       ]);
     }
   }, [loading]);
+
+  // Real-time domain verification - 30 second polling
+  useEffect(() => {
+    if (!autoVerifyEnabled || !panel?.id || domains.length === 0) return;
+
+    const verifyDomains = async () => {
+      const pendingDomains = domains.filter(d => d.verification_status === 'pending');
+      if (pendingDomains.length === 0) return;
+
+      setLastVerifyTime(new Date());
+      
+      for (const domain of pendingDomains) {
+        setVerifyingDomains(prev => new Set(prev).add(domain.id));
+        
+        try {
+          // Try DNS lookup
+          const { data, error } = await supabase.functions.invoke("dns-lookup", {
+            body: { domain: domain.domain, recordType: "A" },
+          });
+
+          if (!error && data?.results) {
+            const hasCorrectRecord = data.results.some(
+              (r: any) => r.status === 'resolved' && r.value === '185.158.133.1'
+            );
+
+            if (hasCorrectRecord) {
+              // Update domain status to verified
+              await supabase
+                .from('panel_domains')
+                .update({ 
+                  verification_status: 'verified', 
+                  verified_at: new Date().toISOString(),
+                  dns_configured: true 
+                })
+                .eq('id', domain.id);
+
+              toast({ 
+                title: "Domain Verified!", 
+                description: `${domain.domain} is now active and pointing to your panel.` 
+              });
+              
+              refetchDomains();
+            }
+          }
+        } catch (error) {
+          console.error('Verification error:', error);
+        } finally {
+          setVerifyingDomains(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(domain.id);
+            return newSet;
+          });
+        }
+      }
+    };
+
+    // Initial check
+    verifyDomains();
+
+    // Set up 30-second interval
+    const interval = setInterval(verifyDomains, 30000);
+
+    return () => clearInterval(interval);
+  }, [autoVerifyEnabled, panel?.id, domains]);
+
+  // Manual verification for a single domain
+  const verifyDomainManually = async (domainId: string, domainName: string) => {
+    setVerifyingDomains(prev => new Set(prev).add(domainId));
+    
+    try {
+      const { data, error } = await supabase.functions.invoke("dns-lookup", {
+        body: { domain: domainName, recordType: "A" },
+      });
+
+      if (error) throw error;
+
+      const hasCorrectRecord = data?.results?.some(
+        (r: any) => r.status === 'resolved' && r.value === '185.158.133.1'
+      );
+
+      if (hasCorrectRecord) {
+        await supabase
+          .from('panel_domains')
+          .update({ 
+            verification_status: 'verified', 
+            verified_at: new Date().toISOString(),
+            dns_configured: true 
+          })
+          .eq('id', domainId);
+
+        toast({ title: "Domain Verified!", description: `${domainName} is now active.` });
+        refetchDomains();
+      } else {
+        toast({ 
+          variant: "destructive", 
+          title: "Not Yet Verified", 
+          description: "DNS records not detected. Please check your DNS configuration." 
+        });
+      }
+    } catch (error) {
+      console.error('Manual verification error:', error);
+      toast({ variant: "destructive", title: "Verification Failed" });
+    } finally {
+      setVerifyingDomains(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(domainId);
+        return newSet;
+      });
+    }
+  };
 
   const refetchDomains = async () => {
     if (!panel?.id) return;
@@ -670,19 +785,62 @@ const DomainSettings = () => {
 
           {/* Connected Domains */}
           {domains.length > 0 ? (
-            <div className="grid gap-4">
+            <div className="space-y-3">
+              {/* Auto-verification status bar */}
+              <Card className="bg-muted/30 border-border/50">
+                <CardContent className="p-3 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={cn(
+                      "w-2 h-2 rounded-full",
+                      autoVerifyEnabled ? "bg-green-500 animate-pulse" : "bg-muted-foreground"
+                    )} />
+                    <span className="text-sm">
+                      Auto-verification: {autoVerifyEnabled ? "Active (every 30s)" : "Disabled"}
+                    </span>
+                    {lastVerifyTime && (
+                      <span className="text-xs text-muted-foreground">
+                        Last check: {lastVerifyTime.toLocaleTimeString()}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Switch 
+                      checked={autoVerifyEnabled} 
+                      onCheckedChange={setAutoVerifyEnabled}
+                    />
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => panel?.subdomain && window.open(`https://${panel.subdomain}.smmpilot.online`, '_blank')}
+                    >
+                      <ExternalLink className="w-3 h-3 mr-1" />
+                      View Panel
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
               {domains.map((domain) => (
                 <Card key={domain.id} className="bg-card/50 border-border/50">
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
-                        <div className="p-3 rounded-xl bg-primary/10">
-                          <Globe className="w-6 h-6 text-primary" />
+                        <div className={cn(
+                          "p-3 rounded-xl",
+                          domain.verification_status === 'verified' ? "bg-green-500/10" : "bg-yellow-500/10"
+                        )}>
+                          <Globe className={cn(
+                            "w-6 h-6",
+                            domain.verification_status === 'verified' ? "text-green-500" : "text-yellow-500"
+                          )} />
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
                             <h3 className="font-semibold">{domain.domain}</h3>
                             {domain.is_primary && <Badge>Primary</Badge>}
+                            {verifyingDomains.has(domain.id) && (
+                              <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                            )}
                           </div>
                           <div className="flex items-center gap-3 mt-1">
                             <Badge variant="outline" className={getStatusColor(domain.verification_status || "pending")}>
@@ -694,6 +852,21 @@ const DomainSettings = () => {
                         </div>
                       </div>
                       <div className="flex gap-2">
+                        {domain.verification_status !== 'verified' && (
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => verifyDomainManually(domain.id, domain.domain)}
+                            disabled={verifyingDomains.has(domain.id)}
+                          >
+                            {verifyingDomains.has(domain.id) ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <RefreshCw className="w-4 h-4" />
+                            )}
+                            <span className="ml-1">Verify</span>
+                          </Button>
+                        )}
                         <Button variant="outline" size="sm" onClick={() => window.open(`https://${domain.domain}`, "_blank")}>
                           <ExternalLink className="w-4 h-4" />
                         </Button>

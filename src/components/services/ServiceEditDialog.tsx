@@ -266,7 +266,20 @@ export const ServiceEditDialog = ({
 
                 <div className="space-y-2">
                   <Label>Category</Label>
-                  <Select value={formData.category} onValueChange={(v) => setFormData({...formData, category: v})}>
+                  <Select 
+                    value={formData.category} 
+                    onValueChange={(v) => {
+                      setFormData({...formData, category: v});
+                      // Auto-suggest matching icon when category changes
+                      if (SOCIAL_ICONS_MAP[v] && (!formData.image_url || formData.image_url.startsWith('icon:'))) {
+                        setFormData(prev => ({...prev, category: v, image_url: `icon:${v}`}));
+                        toast({ 
+                          title: "Icon auto-selected", 
+                          description: `${SOCIAL_ICONS_MAP[v]?.label} icon has been suggested based on category` 
+                        });
+                      }
+                    }}
+                  >
                     <SelectTrigger className="bg-background/50">
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
