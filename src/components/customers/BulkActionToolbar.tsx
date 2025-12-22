@@ -6,7 +6,9 @@ import {
   Download, 
   UserX, 
   UserCheck,
-  X
+  X,
+  Wallet,
+  Edit
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -18,6 +20,8 @@ interface BulkActionToolbarProps {
   onSuspend: () => void;
   onActivate: () => void;
   onClearSelection: () => void;
+  onAdjustBalance?: () => void;
+  onBulkEdit?: () => void;
 }
 
 export const BulkActionToolbar = ({
@@ -28,6 +32,8 @@ export const BulkActionToolbar = ({
   onSuspend,
   onActivate,
   onClearSelection,
+  onAdjustBalance,
+  onBulkEdit,
 }: BulkActionToolbarProps) => {
   return (
     <AnimatePresence>
@@ -44,6 +50,20 @@ export const BulkActionToolbar = ({
             </Badge>
             
             <div className="w-px h-6 bg-border mx-1" />
+            
+            {onBulkEdit && (
+              <Button variant="ghost" size="sm" onClick={onBulkEdit} className="gap-2">
+                <Edit className="w-4 h-4" />
+                <span className="hidden sm:inline">Edit</span>
+              </Button>
+            )}
+            
+            {onAdjustBalance && (
+              <Button variant="ghost" size="sm" onClick={onAdjustBalance} className="gap-2">
+                <Wallet className="w-4 h-4" />
+                <span className="hidden sm:inline">Balance</span>
+              </Button>
+            )}
             
             <Button variant="ghost" size="sm" onClick={onSendEmail} className="gap-2">
               <Mail className="w-4 h-4" />
