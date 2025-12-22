@@ -333,18 +333,18 @@ const PanelOverview = () => {
     },
   ];
 
+  // Dynamic storefront URL
+  const storefrontUrl = panelData?.custom_domain 
+    ? `https://${panelData.custom_domain}`
+    : panelData?.subdomain 
+      ? `https://${panelData.subdomain}.smmpilot.online`
+      : '/';
+
   const quickActions = [
     { title: "Add New Service", description: "Create a new SMM service", icon: Plus, href: "/panel/services", color: "text-blue-500" },
     { title: "View Analytics", description: "Check your performance", icon: BarChart3, href: "/panel/analytics", color: "text-emerald-500" },
     { title: "Manage Providers", description: "Configure API providers", icon: Activity, href: "/panel/providers", color: "text-violet-500" },
-    { title: "Open Storefront", description: "View your public panel", icon: ExternalLink, href: "/", color: "text-amber-500" },
-  ];
-
-  const recentOrders = [
-    { id: "ORD-001", service: "Instagram Followers", customer: "john@example.com", amount: "$12.50", status: "completed" },
-    { id: "ORD-002", service: "YouTube Views", customer: "sarah@example.com", amount: "$8.00", status: "in_progress" },
-    { id: "ORD-003", service: "TikTok Likes", customer: "mike@example.com", amount: "$5.50", status: "pending" },
-    { id: "ORD-004", service: "Twitter Followers", customer: "emma@example.com", amount: "$15.00", status: "completed" },
+    { title: "Open Storefront", description: "View your public panel", icon: ExternalLink, href: storefrontUrl, color: "text-amber-500", external: true },
   ];
 
   if (loading) {
@@ -488,21 +488,40 @@ const PanelOverview = () => {
               <CardDescription>Common tasks and shortcuts</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
-              {quickActions.map((action, index) => (
-                <Link
-                  key={action.title}
-                  to={action.href}
-                  className="flex items-center gap-3 p-3 rounded-xl hover:bg-accent/50 transition-all duration-200 group"
-                >
-                  <div className={cn("p-2 rounded-lg bg-accent", action.color)}>
-                    <action.icon className="w-4 h-4" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium group-hover:text-primary transition-colors">{action.title}</p>
-                    <p className="text-xs text-muted-foreground">{action.description}</p>
-                  </div>
-                  <ArrowUpRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                </Link>
+              {quickActions.map((action) => (
+                action.external ? (
+                  <a
+                    key={action.title}
+                    href={action.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 p-3 rounded-xl hover:bg-accent/50 transition-all duration-200 group"
+                  >
+                    <div className={cn("p-2 rounded-lg bg-accent", action.color)}>
+                      <action.icon className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium group-hover:text-primary transition-colors">{action.title}</p>
+                      <p className="text-xs text-muted-foreground">{action.description}</p>
+                    </div>
+                    <ArrowUpRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </a>
+                ) : (
+                  <Link
+                    key={action.title}
+                    to={action.href}
+                    className="flex items-center gap-3 p-3 rounded-xl hover:bg-accent/50 transition-all duration-200 group"
+                  >
+                    <div className={cn("p-2 rounded-lg bg-accent", action.color)}>
+                      <action.icon className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium group-hover:text-primary transition-colors">{action.title}</p>
+                      <p className="text-xs text-muted-foreground">{action.description}</p>
+                    </div>
+                    <ArrowUpRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </Link>
+                )
               ))}
             </CardContent>
           </Card>
@@ -635,7 +654,7 @@ const PanelOverview = () => {
           </Card>
         </motion.div>
 
-        {/* Recent Orders */}
+        {/* Recent Orders - Using Real Data */}
         <motion.div variants={itemVariants} className="lg:col-span-2">
           <Card className="glass-card h-full">
             <CardHeader className="pb-3 flex flex-row items-center justify-between">
@@ -649,36 +668,43 @@ const PanelOverview = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {recentOrders.map((order, index) => (
-                  <div 
-                    key={order.id}
-                    className="flex items-center justify-between p-3 rounded-xl hover:bg-accent/30 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <Package className="w-5 h-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">{order.service}</p>
-                        <p className="text-xs text-muted-foreground">{order.customer}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm font-semibold">{order.amount}</span>
-                      <Badge 
-                        variant="outline" 
-                        className={cn(
-                          "text-xs",
-                          order.status === 'completed' && "pill-success",
-                          order.status === 'in_progress' && "pill-info",
-                          order.status === 'pending' && "pill-warning"
-                        )}
-                      >
-                        {order.status.replace('_', ' ')}
-                      </Badge>
-                    </div>
+                {liveOrders.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Package className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                    <p className="text-sm">No orders yet</p>
+                    <p className="text-xs">Orders will appear here when customers place them</p>
                   </div>
-                ))}
+                ) : (
+                  liveOrders.slice(0, 5).map((order) => {
+                    const StatusIcon = getStatusIcon(order.status);
+                    return (
+                      <div 
+                        key={order.id}
+                        className="flex items-center justify-between p-3 rounded-xl hover:bg-accent/30 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <Package className="w-5 h-5 text-primary" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">{order.service?.name || 'Service'}</p>
+                            <p className="text-xs text-muted-foreground">{order.order_number}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm font-semibold">${Number(order.price).toFixed(2)}</span>
+                          <Badge 
+                            variant="outline" 
+                            className={cn("text-xs gap-1", getStatusColor(order.status))}
+                          >
+                            <StatusIcon className={cn("w-3 h-3", order.status === 'in_progress' && "animate-spin")} />
+                            {order.status.replace('_', ' ')}
+                          </Badge>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </CardContent>
           </Card>

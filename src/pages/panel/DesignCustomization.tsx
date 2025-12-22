@@ -28,7 +28,15 @@ import {
   Wand2,
   Type,
   PaintBucket,
-  AlertCircle
+  AlertCircle,
+  Zap,
+  Shield,
+  Clock,
+  TrendingUp,
+  MessageCircle,
+  HelpCircle,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
@@ -68,6 +76,30 @@ const DesignCustomization = () => {
     showFeatures: true,
     showStats: true,
     showTestimonials: true,
+    showFaqs: true,
+    // Editable content
+    heroTitle: "Grow Your Social Media Presence",
+    heroSubtitle: "The #1 SMM Panel for Instagram, TikTok, YouTube and more. Start growing today!",
+    heroCta: "Get Started",
+    features: [
+      { icon: "Zap", title: "Lightning Fast", description: "Orders start within seconds" },
+      { icon: "Shield", title: "100% Safe", description: "Secure payment & delivery" },
+      { icon: "Clock", title: "24/7 Support", description: "We're always here to help" },
+      { icon: "TrendingUp", title: "Real Results", description: "Genuine engagement growth" },
+    ],
+    stats: [
+      { value: "10K+", label: "Happy Customers" },
+      { value: "50K+", label: "Orders Completed" },
+      { value: "99.9%", label: "Uptime" },
+    ],
+    faqs: [
+      { question: "How fast are orders delivered?", answer: "Most orders start within 0-15 minutes and complete within 24 hours depending on the service." },
+      { question: "Is it safe for my account?", answer: "Yes! We use safe delivery methods that comply with platform guidelines to protect your account." },
+      { question: "What payment methods do you accept?", answer: "We accept all major payment methods including PayPal, credit cards, and cryptocurrency." },
+      { question: "Can I get a refund?", answer: "Yes, we offer refunds for undelivered orders. Contact our support team for assistance." },
+    ],
+    footerAbout: "Your trusted SMM partner since 2020. We help businesses and influencers grow their social media presence.",
+    footerContact: "support@example.com",
   });
 
   const themes = [
@@ -275,6 +307,10 @@ const DesignCustomization = () => {
                 <PaintBucket className="w-4 h-4" />
                 Colors
               </TabsTrigger>
+              <TabsTrigger value="content" className="gap-2">
+                <Type className="w-4 h-4" />
+                Content
+              </TabsTrigger>
               <TabsTrigger value="branding" className="gap-2">
                 <Image className="w-4 h-4" />
                 Branding
@@ -459,7 +495,160 @@ const DesignCustomization = () => {
               </Card>
             </TabsContent>
 
-            {/* Branding Tab */}
+            {/* Content Tab - Edit homepage text */}
+            <TabsContent value="content" className="m-0 space-y-4">
+              <Card className="bg-card/50 border-border/50">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Type className="w-5 h-5" />
+                    Hero Section
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Hero Title</Label>
+                    <Input
+                      value={customization.heroTitle}
+                      onChange={(e) => setCustomization({...customization, heroTitle: e.target.value})}
+                      placeholder="Main headline for your homepage"
+                      className="bg-background/50"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Hero Subtitle</Label>
+                    <Textarea
+                      value={customization.heroSubtitle}
+                      onChange={(e) => setCustomization({...customization, heroSubtitle: e.target.value})}
+                      placeholder="Supporting text under the headline"
+                      className="bg-background/50"
+                      rows={2}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>CTA Button Text</Label>
+                    <Input
+                      value={customization.heroCta}
+                      onChange={(e) => setCustomization({...customization, heroCta: e.target.value})}
+                      placeholder="Get Started"
+                      className="bg-background/50"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card/50 border-border/50">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Zap className="w-5 h-5" />
+                    Features Section
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {customization.features.map((feature, index) => (
+                    <div key={index} className="p-3 rounded-lg bg-background/50 space-y-2">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Badge variant="outline" className="text-xs">Feature {index + 1}</Badge>
+                      </div>
+                      <Input
+                        value={feature.title}
+                        onChange={(e) => {
+                          const newFeatures = [...customization.features];
+                          newFeatures[index].title = e.target.value;
+                          setCustomization({...customization, features: newFeatures});
+                        }}
+                        placeholder="Feature title"
+                        className="bg-background/80"
+                      />
+                      <Input
+                        value={feature.description}
+                        onChange={(e) => {
+                          const newFeatures = [...customization.features];
+                          newFeatures[index].description = e.target.value;
+                          setCustomization({...customization, features: newFeatures});
+                        }}
+                        placeholder="Feature description"
+                        className="bg-background/80"
+                      />
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card/50 border-border/50">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <HelpCircle className="w-5 h-5" />
+                    FAQs Section
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {customization.faqs.map((faq, index) => (
+                    <div key={index} className="p-3 rounded-lg bg-background/50 space-y-2">
+                      <Input
+                        value={faq.question}
+                        onChange={(e) => {
+                          const newFaqs = [...customization.faqs];
+                          newFaqs[index].question = e.target.value;
+                          setCustomization({...customization, faqs: newFaqs});
+                        }}
+                        placeholder="Question"
+                        className="bg-background/80 font-medium"
+                      />
+                      <Textarea
+                        value={faq.answer}
+                        onChange={(e) => {
+                          const newFaqs = [...customization.faqs];
+                          newFaqs[index].answer = e.target.value;
+                          setCustomization({...customization, faqs: newFaqs});
+                        }}
+                        placeholder="Answer"
+                        className="bg-background/80"
+                        rows={2}
+                      />
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card/50 border-border/50">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <MessageCircle className="w-5 h-5" />
+                    Footer Content
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>About Text</Label>
+                    <Textarea
+                      value={customization.footerAbout}
+                      onChange={(e) => setCustomization({...customization, footerAbout: e.target.value})}
+                      placeholder="Short description about your company"
+                      className="bg-background/50"
+                      rows={2}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Contact Email</Label>
+                    <Input
+                      value={customization.footerContact}
+                      onChange={(e) => setCustomization({...customization, footerContact: e.target.value})}
+                      placeholder="support@example.com"
+                      className="bg-background/50"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Copyright Text</Label>
+                    <Input
+                      value={customization.footerText}
+                      onChange={(e) => setCustomization({...customization, footerText: e.target.value})}
+                      placeholder="© 2024 Company Name"
+                      className="bg-background/50"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
             <TabsContent value="branding" className="m-0 space-y-4">
               <Card className="bg-card/50 border-border/50">
                 <CardHeader className="pb-2">
@@ -600,6 +789,7 @@ const DesignCustomization = () => {
                     { key: "showHero", label: "Hero Section", desc: "Main banner with CTA" },
                     { key: "showFeatures", label: "Features Section", desc: "Highlight your services" },
                     { key: "showStats", label: "Stats Section", desc: "Show key metrics" },
+                    { key: "showFaqs", label: "FAQs Section", desc: "Common questions" },
                     { key: "showTestimonials", label: "Testimonials", desc: "Customer reviews" },
                   ].map(({ key, label, desc }) => (
                     <div key={key} className="flex items-center justify-between p-3 rounded-lg bg-background/30">
@@ -710,17 +900,17 @@ const DesignCustomization = () => {
               minHeight: "400px",
             }}
           >
-            {/* Mock Storefront Preview */}
+            {/* Full Storefront Preview */}
             <div 
-              className="min-h-[400px]"
+              className="min-h-[400px] overflow-y-auto"
               style={{ 
                 backgroundColor: customization.backgroundColor,
                 borderRadius: `${customization.borderRadius}px`,
               }}
             >
-              {/* Mock Header */}
+              {/* Header */}
               <div 
-                className="p-4 flex items-center justify-between"
+                className="p-4 flex items-center justify-between sticky top-0 z-10"
                 style={{ backgroundColor: customization.surfaceColor }}
               >
                 <div className="flex items-center gap-2">
@@ -728,9 +918,11 @@ const DesignCustomization = () => {
                     <img src={customization.logoUrl} alt="Logo" className="h-6" />
                   ) : (
                     <div 
-                      className="w-8 h-8 rounded-lg"
+                      className="w-8 h-8 rounded-lg flex items-center justify-center"
                       style={{ backgroundColor: customization.primaryColor }}
-                    />
+                    >
+                      <Zap className="w-4 h-4 text-white" />
+                    </div>
                   )}
                   <span 
                     className="font-bold text-sm"
@@ -741,7 +933,7 @@ const DesignCustomization = () => {
                 </div>
                 <div className="flex gap-2">
                   <div 
-                    className="px-3 py-1.5 rounded text-xs font-medium"
+                    className="px-3 py-1.5 rounded text-xs font-medium cursor-pointer hover:opacity-90 transition-opacity"
                     style={{ 
                       backgroundColor: customization.primaryColor,
                       color: "#fff",
@@ -753,74 +945,88 @@ const DesignCustomization = () => {
                 </div>
               </div>
 
-              {/* Mock Hero */}
+              {/* Hero Section */}
               {customization.showHero && (
-                <div className="p-6 text-center">
+                <div className="px-6 py-10 text-center">
                   <h1 
-                    className="text-xl font-bold mb-2"
+                    className="text-2xl font-bold mb-3"
                     style={{ color: customization.textColor }}
                   >
-                    {customization.companyName}
+                    {customization.heroTitle}
                   </h1>
                   <p 
-                    className="text-sm mb-4"
+                    className="text-sm mb-6 max-w-md mx-auto"
                     style={{ color: customization.mutedColor }}
                   >
-                    {customization.tagline}
+                    {customization.heroSubtitle}
                   </p>
                   <div 
-                    className="inline-block px-4 py-2 rounded text-sm font-medium"
+                    className="inline-block px-6 py-3 rounded text-sm font-semibold cursor-pointer hover:opacity-90 transition-opacity"
                     style={{ 
                       backgroundColor: customization.primaryColor,
                       color: "#fff",
                       borderRadius: `${customization.borderRadius}px`,
                     }}
                   >
-                    Get Started
+                    {customization.heroCta}
                   </div>
                 </div>
               )}
 
-              {/* Mock Features */}
+              {/* Features Section */}
               {customization.showFeatures && (
-                <div className="p-4 grid grid-cols-2 gap-2">
-                  {[1, 2, 3, 4].map((i) => (
-                    <div 
-                      key={i}
-                      className="p-3 rounded-lg"
-                      style={{ 
-                        backgroundColor: customization.surfaceColor,
-                        borderRadius: `${customization.borderRadius}px`,
-                      }}
-                    >
-                      <div 
-                        className="w-6 h-6 rounded mb-2"
-                        style={{ backgroundColor: customization.secondaryColor }}
-                      />
-                      <div 
-                        className="h-2 w-16 rounded mb-1"
-                        style={{ backgroundColor: customization.textColor, opacity: 0.8 }}
-                      />
-                      <div 
-                        className="h-2 w-12 rounded"
-                        style={{ backgroundColor: customization.mutedColor }}
-                      />
-                    </div>
-                  ))}
+                <div className="p-4">
+                  <h2 
+                    className="text-center text-lg font-bold mb-4"
+                    style={{ color: customization.textColor }}
+                  >
+                    Why Choose Us?
+                  </h2>
+                  <div className="grid grid-cols-2 gap-3">
+                    {customization.features.map((feature, i) => {
+                      const iconMap: Record<string, any> = { Zap, Shield, Clock, TrendingUp };
+                      const IconComponent = iconMap[feature.icon] || Zap;
+                      return (
+                        <div 
+                          key={i}
+                          className="p-3 rounded-lg"
+                          style={{ 
+                            backgroundColor: customization.surfaceColor,
+                            borderRadius: `${customization.borderRadius}px`,
+                          }}
+                        >
+                          <div 
+                            className="w-8 h-8 rounded-lg mb-2 flex items-center justify-center"
+                            style={{ backgroundColor: `${customization.secondaryColor}30` }}
+                          >
+                            <IconComponent className="w-4 h-4" style={{ color: customization.secondaryColor }} />
+                          </div>
+                          <h3 
+                            className="font-semibold text-sm mb-1"
+                            style={{ color: customization.textColor }}
+                          >
+                            {feature.title}
+                          </h3>
+                          <p 
+                            className="text-xs"
+                            style={{ color: customization.mutedColor }}
+                          >
+                            {feature.description}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
 
-              {/* Mock Stats */}
+              {/* Stats Section */}
               {customization.showStats && (
-                <div className="p-4 flex justify-around">
-                  {[
-                    { value: "10K+", label: "Users" },
-                    { value: "50K+", label: "Orders" },
-                    { value: "99%", label: "Uptime" },
-                  ].map((stat) => (
-                    <div key={stat.label} className="text-center">
+                <div className="p-6 flex justify-around" style={{ backgroundColor: `${customization.primaryColor}15` }}>
+                  {customization.stats.map((stat, i) => (
+                    <div key={i} className="text-center">
                       <div 
-                        className="text-lg font-bold"
+                        className="text-2xl font-bold"
                         style={{ color: customization.primaryColor }}
                       >
                         {stat.value}
@@ -836,17 +1042,92 @@ const DesignCustomization = () => {
                 </div>
               )}
 
-              {/* Mock Footer */}
+              {/* FAQs Section */}
+              {customization.showFaqs && (
+                <div className="p-4">
+                  <h2 
+                    className="text-center text-lg font-bold mb-4"
+                    style={{ color: customization.textColor }}
+                  >
+                    Frequently Asked Questions
+                  </h2>
+                  <div className="space-y-2">
+                    {customization.faqs.slice(0, 3).map((faq, i) => (
+                      <div 
+                        key={i}
+                        className="p-3 rounded-lg"
+                        style={{ 
+                          backgroundColor: customization.surfaceColor,
+                          borderRadius: `${customization.borderRadius}px`,
+                        }}
+                      >
+                        <div className="flex items-center justify-between">
+                          <h3 
+                            className="font-medium text-sm"
+                            style={{ color: customization.textColor }}
+                          >
+                            {faq.question}
+                          </h3>
+                          <ChevronDown className="w-4 h-4" style={{ color: customization.mutedColor }} />
+                        </div>
+                        <p 
+                          className="text-xs mt-2"
+                          style={{ color: customization.mutedColor }}
+                        >
+                          {faq.answer}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Footer */}
               <div 
-                className="p-3 text-center mt-4"
+                className="p-4 mt-4"
                 style={{ backgroundColor: customization.surfaceColor }}
               >
-                <p 
-                  className="text-xs"
-                  style={{ color: customization.mutedColor }}
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <h4 
+                      className="font-semibold text-xs mb-2"
+                      style={{ color: customization.textColor }}
+                    >
+                      About
+                    </h4>
+                    <p 
+                      className="text-xs line-clamp-3"
+                      style={{ color: customization.mutedColor }}
+                    >
+                      {customization.footerAbout}
+                    </p>
+                  </div>
+                  <div>
+                    <h4 
+                      className="font-semibold text-xs mb-2"
+                      style={{ color: customization.textColor }}
+                    >
+                      Contact
+                    </h4>
+                    <p 
+                      className="text-xs"
+                      style={{ color: customization.mutedColor }}
+                    >
+                      {customization.footerContact}
+                    </p>
+                  </div>
+                </div>
+                <div 
+                  className="text-center pt-3 border-t"
+                  style={{ borderColor: `${customization.mutedColor}30` }}
                 >
-                  {customization.footerText}
-                </p>
+                  <p 
+                    className="text-xs"
+                    style={{ color: customization.mutedColor }}
+                  >
+                    {customization.footerText}
+                  </p>
+                </div>
               </div>
             </div>
           </motion.div>
