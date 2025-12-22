@@ -343,46 +343,46 @@ const DomainSettings = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 overflow-x-hidden">
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
         <h1 className="text-2xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">
           Domain Settings
         </h1>
-        <p className="text-muted-foreground">Manage your panel's domains and DNS configuration</p>
+        <p className="text-muted-foreground text-sm md:text-base">Manage your panel's domains and DNS configuration</p>
       </motion.div>
 
       {/* Default Subdomain Card */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
         <Card className="glass-card border-primary/20">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base md:text-lg">
               <Globe className="w-5 h-5 text-primary" />
               Your Panel Subdomain
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <code className="text-lg font-mono bg-muted px-3 py-2 rounded-lg">
+            <div className="flex flex-col gap-4">
+              <div className="flex-1 overflow-x-auto">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <code className="text-sm md:text-lg font-mono bg-muted px-2 md:px-3 py-1 md:py-2 rounded-lg whitespace-nowrap">
                     {panel?.subdomain}.smmpilot.online
                   </code>
-                  <Badge className="bg-green-500/10 text-green-500 border-green-500/20">
+                  <Badge className="bg-green-500/10 text-green-500 border-green-500/20 whitespace-nowrap">
                     <CheckCircle className="w-3 h-3 mr-1" /> Live
                   </Badge>
                 </div>
-                <p className="text-sm text-muted-foreground mt-2">
+                <p className="text-xs md:text-sm text-muted-foreground mt-2">
                   This is your default panel URL. It's always active and requires no DNS configuration.
                 </p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <Button variant="outline" size="sm" onClick={() => copyToClipboard(`https://${panel?.subdomain}.smmpilot.online`)}>
-                  <Copy className="w-4 h-4 mr-2" /> Copy URL
+                  <Copy className="w-4 h-4 mr-1 md:mr-2" /> <span className="hidden sm:inline">Copy URL</span><span className="sm:hidden">Copy</span>
                 </Button>
                 <Button variant="outline" size="sm" asChild>
                   <a href={`https://${panel?.subdomain}.smmpilot.online`} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="w-4 h-4 mr-2" /> Visit
+                    <ExternalLink className="w-4 h-4 mr-1 md:mr-2" /> Visit
                   </a>
                 </Button>
               </div>
@@ -392,11 +392,13 @@ const DomainSettings = () => {
       </motion.div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="glass-card p-1">
-          <TabsTrigger value="domains"><Globe className="w-4 h-4 mr-2" /> Custom Domains</TabsTrigger>
-          <TabsTrigger value="dns"><Network className="w-4 h-4 mr-2" /> DNS Checker</TabsTrigger>
-          <TabsTrigger value="ssl"><Shield className="w-4 h-4 mr-2" /> SSL & Security</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+          <TabsList className="glass-card p-1 min-w-max">
+            <TabsTrigger value="domains" className="text-xs md:text-sm"><Globe className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" /> <span className="hidden sm:inline">Custom</span> Domains</TabsTrigger>
+            <TabsTrigger value="dns" className="text-xs md:text-sm"><Network className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" /> DNS <span className="hidden sm:inline">Checker</span></TabsTrigger>
+            <TabsTrigger value="ssl" className="text-xs md:text-sm"><Shield className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" /> SSL</TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* Custom Domains Tab */}
         <TabsContent value="domains" className="space-y-6">
