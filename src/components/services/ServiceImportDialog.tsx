@@ -87,11 +87,50 @@ export const ServiceImportDialog = ({
   const [serviceMarkups, setServiceMarkups] = useState<Record<number, number>>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [showEducation, setShowEducation] = useState(true);
+  
+  // Provider balance state
+  const [providerBalance, setProviderBalance] = useState<number | null>(null);
+  const [isCheckingBalance, setIsCheckingBalance] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   const filteredServices = fetchedServices.filter(service =>
     service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     service.category.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // Check provider balance when provider is selected
+  const checkProviderBalance = async (providerId: string) => {
+    const provider = providers.find(p => p.id === providerId);
+    if (!provider?.api_endpoint || !provider?.api_key) {
+      setProviderBalance(null);
+      return;
+    }
+
+    setIsCheckingBalance(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('provider-balance', {
+        body: { 
+          api_endpoint: provider.api_endpoint, 
+          api_key: provider.api_key 
+        }
+      });
+
+      if (error) throw error;
+      setProviderBalance(data?.balance ?? null);
+    } catch (error) {
+      console.error('Error checking balance:', error);
+      setProviderBalance(null);
+    } finally {
+      setIsCheckingBalance(false);
+    }
+  };
+
+  // Check balance when provider changes
+  const handleProviderChange = (providerId: string) => {
+    setSelectedProvider(providerId);
+    setFetchError(null);
+    checkProviderBalance(providerId);
+  };
 
   const handleFetchServices = async () => {
     if (!selectedProvider) {
@@ -100,11 +139,13 @@ export const ServiceImportDialog = ({
     }
     
     setIsFetching(true);
+    setFetchError(null);
     
     try {
       const provider = providers.find(p => p.id === selectedProvider);
       
       if (!provider?.api_endpoint || !provider?.api_key) {
+        setFetchError("Provider missing API credentials. Please update the provider settings first.");
         toast({ variant: "destructive", title: "Provider missing API credentials" });
         return;
       }
@@ -112,31 +153,37 @@ export const ServiceImportDialog = ({
       // Call the provider-services edge function to fetch real services
       const { data, error } = await supabase.functions.invoke('provider-services', {
         body: { 
-          api_endpoint: provider.api_endpoint, 
-          api_key: provider.api_key 
+          apiEndpoint: provider.api_endpoint, 
+          apiKey: provider.api_key 
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        const errorMsg = error.message || 'Unknown error';
+        setFetchError(`API Error: ${errorMsg}`);
+        throw new Error(errorMsg);
+      }
 
       if (!data?.services || data.services.length === 0) {
-        toast({ title: "No services found from this provider" });
+        setFetchError("No services returned from provider. Check API credentials or provider status.");
+        toast({ title: "No services found from this provider", variant: "destructive" });
         setFetchedServices([]);
-      } else {
-        // Map the API response to our format
-        const mappedServices: FetchedService[] = data.services.map((s: any, index: number) => ({
-          id: s.service || s.id || index + 1,
-          name: s.name || `Service ${s.service || s.id}`,
-          category: mapCategory(s.category || 'other'),
-          price: parseFloat(s.rate || s.price || 0) / 1000, // Usually rates are per 1000
-          minQty: parseInt(s.min || s.min_quantity || 100),
-          maxQty: parseInt(s.max || s.max_quantity || 10000),
-          description: s.description || s.name || '',
-        }));
-        
-        setFetchedServices(mappedServices);
-        toast({ title: `${mappedServices.length} services loaded` });
+        return;
       }
+      
+      // Map the API response to our format
+      const mappedServices: FetchedService[] = data.services.map((s: any, index: number) => ({
+        id: s.service || s.id || index + 1,
+        name: s.name || `Service ${s.service || s.id}`,
+        category: mapCategory(s.category || 'other'),
+        price: parseFloat(s.rate || s.price || 0) / 1000,
+        minQty: parseInt(s.min || s.min_quantity || 100),
+        maxQty: parseInt(s.max || s.max_quantity || 10000),
+        description: s.description || s.name || '',
+      }));
+      
+      setFetchedServices(mappedServices);
+      toast({ title: `${mappedServices.length} services loaded successfully!` });
       
       setSelectedServices([]);
       setServiceMarkups({});
@@ -200,6 +247,15 @@ export const ServiceImportDialog = ({
     setSelectedServices([]);
     setServiceMarkups({});
     setSearchQuery("");
+    setProviderBalance(null);
+    setFetchError(null);
+  };
+    setSelectedProvider("");
+    setGlobalMarkup(25);
+    setFetchedServices([]);
+    setSelectedServices([]);
+    setServiceMarkups({});
+    setSearchQuery("");
   };
 
   return (
@@ -225,7 +281,7 @@ export const ServiceImportDialog = ({
             {/* Provider Selection */}
             <div className="space-y-2">
               <Label>Select Provider</Label>
-              <Select value={selectedProvider} onValueChange={setSelectedProvider}>
+              <Select value={selectedProvider} onValueChange={handleProviderChange}>
                 <SelectTrigger className="bg-background/50">
                   <SelectValue placeholder="Choose a provider" />
                 </SelectTrigger>
@@ -236,6 +292,45 @@ export const ServiceImportDialog = ({
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Provider Balance Display */}
+            {selectedProvider && (
+              <div className="p-3 rounded-lg bg-muted/50 border border-border/50">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Server className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">Provider Status</span>
+                  </div>
+                  {isCheckingBalance ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : providerBalance !== null ? (
+                    <Badge className="bg-green-500/10 text-green-500 border-green-500/20">
+                      Balance: ${providerBalance.toFixed(2)}
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-amber-500 border-amber-500/30">
+                      Unable to check balance
+                    </Badge>
+                  )}
+                </div>
+                {providerBalance !== null && providerBalance < 10 && (
+                  <div className="flex items-start gap-2 mt-2 text-xs text-amber-500">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>Low balance! You may need to add funds to this provider.</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Error Display */}
+            {fetchError && (
+              <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30">
+                <div className="flex items-start gap-2 text-sm text-red-500">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>{fetchError}</span>
+                </div>
+              </div>
+            )}
 
             {/* Markup Education Section */}
             <div className="space-y-3">
