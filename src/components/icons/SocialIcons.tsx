@@ -238,3 +238,87 @@ export const SnapchatIcon = ({ className = "", size = 24 }: SocialIconProps) => 
     <path d="M12.206.793c.99 0 4.347.276 5.93 3.821.529 1.193.403 3.219.299 4.847l-.003.06c-.012.18-.022.345-.03.51.075.045.203.09.401.09.3-.016.659-.12 1.033-.301.165-.088.344-.104.464-.104.182 0 .359.029.509.09.45.149.734.479.734.838.015.449-.39.839-1.213 1.168-.089.029-.209.075-.344.119-.45.135-1.139.36-1.333.81-.09.224-.061.524.12.868l.015.015c.06.136 1.526 3.475 4.791 4.014.255.044.435.27.42.509 0 .075-.015.149-.045.225-.24.569-1.273.988-3.146 1.271-.059.091-.12.375-.164.57-.029.179-.074.36-.134.553-.076.271-.27.405-.555.405h-.03c-.135 0-.313-.031-.538-.074-.36-.075-.765-.135-1.273-.135-.3 0-.599.015-.913.074-.6.104-1.123.464-1.723.884-.853.599-1.826 1.288-3.294 1.288-.06 0-.119-.015-.18-.015h-.149c-1.468 0-2.427-.675-3.279-1.288-.599-.42-1.107-.779-1.707-.884-.314-.045-.629-.074-.928-.074-.54 0-.958.089-1.272.149-.211.043-.391.074-.54.074-.374 0-.523-.224-.583-.42-.061-.192-.09-.389-.135-.567-.046-.181-.105-.494-.166-.57-1.918-.222-2.95-.642-3.189-1.226-.031-.063-.052-.15-.055-.225-.015-.243.165-.465.42-.509 3.264-.54 4.73-3.879 4.791-4.02l.016-.029c.18-.345.224-.645.119-.869-.195-.434-.884-.658-1.332-.809-.121-.029-.24-.074-.346-.119-1.107-.435-1.257-.93-1.197-1.273.09-.479.674-.793 1.168-.793.146 0 .27.029.383.074.42.194.789.3 1.104.3.234 0 .384-.06.465-.105l-.046-.569c-.098-1.626-.225-3.651.307-4.837C7.392 1.077 10.739.807 11.727.807l.419-.015h.06z"/>
   </svg>
 );
+
+// Reddit Icon
+export const RedditIcon = ({ className = "", size = 24 }: SocialIconProps) => (
+  <svg 
+    viewBox="0 0 24 24" 
+    width={size} 
+    height={size} 
+    className={className}
+    fill="currentColor"
+  >
+    <path d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 0 1 4.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 0 1 .14-.197.35.35 0 0 1 .238-.042l2.906.617a1.214 1.214 0 0 1 1.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 0 0-.231.094.33.33 0 0 0 0 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 0 0 .029-.463.33.33 0 0 0-.464 0c-.547.533-1.684.73-2.512.73-.828 0-1.979-.196-2.512-.73a.326.326 0 0 0-.232-.095z"/>
+  </svg>
+);
+
+// WhatsApp Icon
+export const WhatsAppIcon = ({ className = "", size = 24 }: SocialIconProps) => (
+  <svg 
+    viewBox="0 0 24 24" 
+    width={size} 
+    height={size} 
+    className={className}
+    fill="currentColor"
+  >
+    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+  </svg>
+);
+
+// Clubhouse Icon
+export const ClubhouseIcon = ({ className = "", size = 24 }: SocialIconProps) => (
+  <svg 
+    viewBox="0 0 24 24" 
+    width={size} 
+    height={size} 
+    className={className}
+    fill="currentColor"
+  >
+    <path d="M11.777 0c-.746 0-1.503.101-2.24.302a8.823 8.823 0 00-4.56 2.963A8.758 8.758 0 003 8.82v6.36c0 4.867 3.963 8.82 8.847 8.82h2.306c4.884 0 8.847-3.953 8.847-8.82v-2.57a8.722 8.722 0 00-2.036-5.612 8.81 8.81 0 00-5.004-3.124A8.99 8.99 0 0014.153.06 8.916 8.916 0 0011.777 0zM9.5 6.5a2 2 0 110 4 2 2 0 010-4zm5 0a2 2 0 110 4 2 2 0 010-4z"/>
+  </svg>
+);
+
+// BeReal Icon
+export const BeRealIcon = ({ className = "", size = 24 }: SocialIconProps) => (
+  <svg 
+    viewBox="0 0 24 24" 
+    width={size} 
+    height={size} 
+    className={className}
+    fill="currentColor"
+  >
+    <path d="M10.27 2.25h3.46c2.893 0 4.34 0 5.457.562a5.17 5.17 0 012.26 2.26c.563 1.117.563 2.564.563 5.457v2.941c0 2.893 0 4.34-.562 5.457a5.17 5.17 0 01-2.26 2.26c-1.118.563-2.565.563-5.458.563H10.27c-2.893 0-4.34 0-5.457-.562a5.17 5.17 0 01-2.26-2.26c-.563-1.118-.563-2.565-.563-5.458v-2.94c0-2.893 0-4.34.562-5.457a5.17 5.17 0 012.26-2.26C5.93 2.25 7.377 2.25 10.27 2.25zm1.73 4a5.75 5.75 0 100 11.5 5.75 5.75 0 000-11.5zM8.5 12a3.5 3.5 0 117 0 3.5 3.5 0 01-7 0z"/>
+  </svg>
+);
+
+// Social Icons Map for easy selection
+export const SOCIAL_ICONS_MAP: Record<string, { 
+  icon: React.ComponentType<SocialIconProps>;
+  label: string;
+  color: string;
+  bgColor: string;
+}> = {
+  instagram: { icon: InstagramIcon, label: "Instagram", color: "#E4405F", bgColor: "bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400" },
+  facebook: { icon: FacebookIcon, label: "Facebook", color: "#1877F2", bgColor: "bg-blue-600" },
+  twitter: { icon: TwitterIcon, label: "Twitter/X", color: "#000000", bgColor: "bg-black" },
+  youtube: { icon: YouTubeIcon, label: "YouTube", color: "#FF0000", bgColor: "bg-red-600" },
+  tiktok: { icon: TikTokIcon, label: "TikTok", color: "#000000", bgColor: "bg-black" },
+  telegram: { icon: TelegramIcon, label: "Telegram", color: "#26A5E4", bgColor: "bg-sky-500" },
+  linkedin: { icon: LinkedInIcon, label: "LinkedIn", color: "#0A66C2", bgColor: "bg-blue-700" },
+  discord: { icon: DiscordIcon, label: "Discord", color: "#5865F2", bgColor: "bg-indigo-500" },
+  twitch: { icon: TwitchIcon, label: "Twitch", color: "#9146FF", bgColor: "bg-purple-600" },
+  spotify: { icon: SpotifyIcon, label: "Spotify", color: "#1DB954", bgColor: "bg-green-500" },
+  pinterest: { icon: PinterestIcon, label: "Pinterest", color: "#BD081C", bgColor: "bg-red-700" },
+  snapchat: { icon: SnapchatIcon, label: "Snapchat", color: "#FFFC00", bgColor: "bg-yellow-400" },
+  threads: { icon: ThreadsIcon, label: "Threads", color: "#000000", bgColor: "bg-black" },
+  vk: { icon: VKIcon, label: "VKontakte", color: "#0077FF", bgColor: "bg-blue-500" },
+  reddit: { icon: RedditIcon, label: "Reddit", color: "#FF4500", bgColor: "bg-orange-600" },
+  whatsapp: { icon: WhatsAppIcon, label: "WhatsApp", color: "#25D366", bgColor: "bg-green-500" },
+  clubhouse: { icon: ClubhouseIcon, label: "Clubhouse", color: "#F1EFE3", bgColor: "bg-amber-100" },
+  bereal: { icon: BeRealIcon, label: "BeReal", color: "#000000", bgColor: "bg-black" },
+  heart: { icon: HeartIcon, label: "Likes", color: "#E11D48", bgColor: "bg-rose-500" },
+  views: { icon: ViewsIcon, label: "Views", color: "#3B82F6", bgColor: "bg-blue-500" },
+  subscribers: { icon: SubscribersIcon, label: "Subscribers", color: "#8B5CF6", bgColor: "bg-violet-500" },
+  vote: { icon: VoteIcon, label: "Votes", color: "#F59E0B", bgColor: "bg-amber-500" },
+  other: { icon: VoteIcon, label: "Other", color: "#6B7280", bgColor: "bg-gray-500" },
+};

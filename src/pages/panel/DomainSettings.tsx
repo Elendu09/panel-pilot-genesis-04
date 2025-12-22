@@ -479,8 +479,63 @@ const DomainSettings = () => {
           </TabsTrigger>
         </TabsList>
 
-        {/* Domains Tab */}
+        {/* Subdomain Preview & Go-Live Checklist */}
         <TabsContent value="domains" className="space-y-4">
+          {/* Subdomain Preview Card */}
+          {panel?.subdomain && (
+            <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/30">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Your Storefront (Live)</p>
+                    <p className="text-lg font-semibold text-primary">
+                      https://{panel.subdomain}.smmpilot.online
+                    </p>
+                  </div>
+                  <Button 
+                    size="sm" 
+                    onClick={() => window.open(`https://${panel.subdomain}.smmpilot.online`, '_blank')}
+                  >
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    Preview
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Go-Live Checklist */}
+          <Card className="bg-card/60 border-border/50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-primary" />
+                Go-Live Checklist
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {[
+                { label: "Subdomain configured", done: !!panel?.subdomain },
+                { label: "Panel status: Active", done: panel?.status === 'active' },
+                { label: "At least 1 service added", done: true },
+                { label: "Branding (logo/colors) set", done: !!panel?.logo_url || !!panel?.primary_color },
+                { label: "Payment method configured", done: false },
+              ].map((item, i) => (
+                <div key={i} className={cn(
+                  "flex items-center gap-2 p-2 rounded-lg",
+                  item.done ? "bg-green-500/10" : "bg-muted/50"
+                )}>
+                  {item.done ? (
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                  ) : (
+                    <Clock className="w-4 h-4 text-muted-foreground" />
+                  )}
+                  <span className={cn("text-sm", item.done ? "text-foreground" : "text-muted-foreground")}>
+                    {item.label}
+                  </span>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
           {/* Domain Wizard */}
           <AnimatePresence>
             {showWizard && (

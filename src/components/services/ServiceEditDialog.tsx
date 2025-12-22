@@ -27,6 +27,7 @@ import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { usePanel } from "@/hooks/usePanel";
+import { SOCIAL_ICONS_MAP } from "@/components/icons/SocialIcons";
 import {
   Settings,
   DollarSign,
@@ -43,7 +44,8 @@ import {
   ShoppingCart,
   Image,
   Sparkles,
-  Loader2
+  Loader2,
+  Link2
 } from "lucide-react";
 
 interface ServiceEditDialogProps {
@@ -329,17 +331,101 @@ export const ServiceEditDialog = ({
                   />
                 </div>
 
-                <div className="col-span-2 space-y-2">
+                <div className="col-span-2 space-y-3">
                   <Label className="flex items-center gap-2">
                     <Image className="w-4 h-4" />
-                    Image URL (optional)
+                    Service Icon
                   </Label>
-                  <Input 
-                    value={formData.image_url}
-                    onChange={(e) => setFormData({...formData, image_url: e.target.value})}
-                    placeholder="https://..."
-                    className="bg-background/50"
-                  />
+                  
+                  {/* Icon Type Toggle */}
+                  <div className="flex items-center gap-3 mb-3">
+                    <Button
+                      type="button"
+                      variant={!formData.image_url?.startsWith('icon:') && formData.image_url ? "outline" : "default"}
+                      size="sm"
+                      onClick={() => setFormData({...formData, image_url: "icon:instagram"})}
+                      className="flex-1"
+                    >
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      Icon Library
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={formData.image_url && !formData.image_url.startsWith('icon:') ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setFormData({...formData, image_url: ""})}
+                      className="flex-1"
+                    >
+                      <Link2 className="w-4 h-4 mr-2" />
+                      Custom URL
+                    </Button>
+                  </div>
+
+                  {/* Icon Grid Selector */}
+                  {(!formData.image_url || formData.image_url.startsWith('icon:')) ? (
+                    <div className="grid grid-cols-6 gap-2 p-3 bg-muted/30 rounded-lg border border-border/50 max-h-[200px] overflow-y-auto">
+                      {Object.entries(SOCIAL_ICONS_MAP).map(([key, { icon: IconComponent, label, bgColor }]) => {
+                        const isSelected = formData.image_url === `icon:${key}`;
+                        return (
+                          <button
+                            key={key}
+                            type="button"
+                            onClick={() => setFormData({...formData, image_url: `icon:${key}`})}
+                            className={cn(
+                              "flex flex-col items-center gap-1 p-2 rounded-lg transition-all hover:scale-105",
+                              isSelected 
+                                ? "ring-2 ring-primary bg-primary/10" 
+                                : "hover:bg-muted/50"
+                            )}
+                            title={label}
+                          >
+                            <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center", bgColor)}>
+                              <IconComponent className="text-white" size={16} />
+                            </div>
+                            <span className="text-[10px] text-muted-foreground truncate w-full text-center">
+                              {label}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <Input 
+                      value={formData.image_url}
+                      onChange={(e) => setFormData({...formData, image_url: e.target.value})}
+                      placeholder="https://example.com/image.png"
+                      className="bg-background/50"
+                    />
+                  )}
+                  
+                  {/* Preview */}
+                  {formData.image_url && (
+                    <div className="flex items-center gap-2 p-2 bg-muted/20 rounded-lg">
+                      <span className="text-xs text-muted-foreground">Preview:</span>
+                      {formData.image_url.startsWith('icon:') ? (
+                        (() => {
+                          const iconKey = formData.image_url.replace('icon:', '');
+                          const iconData = SOCIAL_ICONS_MAP[iconKey];
+                          if (iconData) {
+                            const IconComponent = iconData.icon;
+                            return (
+                              <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center", iconData.bgColor)}>
+                                <IconComponent className="text-white" size={16} />
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()
+                      ) : (
+                        <img 
+                          src={formData.image_url} 
+                          alt="Preview" 
+                          className="w-8 h-8 rounded-lg object-cover"
+                          onError={(e) => e.currentTarget.style.display = 'none'}
+                        />
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
