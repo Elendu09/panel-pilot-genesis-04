@@ -16,6 +16,8 @@ import BuyerServices from './buyer/BuyerServices';
 import BuyerOrders from './buyer/BuyerOrders';
 import BuyerProfile from './buyer/BuyerProfile';
 import BuyerAuth from './buyer/BuyerAuth';
+import BuyerDeposit from './buyer/BuyerDeposit';
+import BuyerSupport from './buyer/BuyerSupport';
 
 const queryClient = new QueryClient();
 
@@ -85,12 +87,12 @@ const TenantRouter = () => {
                     } />
                     <Route path="/deposit" element={
                       <BuyerProtectedRoute>
-                        <BuyerDashboard />
+                        <BuyerDeposit />
                       </BuyerProtectedRoute>
                     } />
                     <Route path="/support" element={
                       <BuyerProtectedRoute>
-                        <BuyerDashboard />
+                        <BuyerSupport />
                       </BuyerProtectedRoute>
                     } />
                     
