@@ -207,10 +207,26 @@ const DesignCustomization = () => {
     });
   };
 
+  const generatePreviewUrl = () => {
+    const previewId = crypto.randomUUID().slice(0, 12);
+    const previewData = {
+      ...customization,
+      expiresAt: Date.now() + 30 * 60 * 1000 // 30 min expiry
+    };
+    
+    // Store preview data in localStorage
+    localStorage.setItem(`preview_${previewId}`, JSON.stringify(previewData));
+    
+    // Generate URL using main domain
+    return `/preview/${previewId}`;
+  };
+
   const handlePreviewNewTab = () => {
+    const previewUrl = generatePreviewUrl();
+    window.open(previewUrl, '_blank');
     toast({
       title: "Preview opened",
-      description: "Opening preview in new tab...",
+      description: "Preview link is valid for 30 minutes.",
     });
   };
 
@@ -249,28 +265,30 @@ const DesignCustomization = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
-          <TabsList className="bg-card/50 backdrop-blur-sm border border-border/50 p-1 mb-4">
-            <TabsTrigger value="themes" className="gap-2">
-              <Palette className="w-4 h-4" />
-              Themes
-            </TabsTrigger>
-            <TabsTrigger value="colors" className="gap-2">
-              <PaintBucket className="w-4 h-4" />
-              Colors
-            </TabsTrigger>
-            <TabsTrigger value="branding" className="gap-2">
-              <Image className="w-4 h-4" />
-              Branding
-            </TabsTrigger>
-            <TabsTrigger value="layout" className="gap-2">
-              <Layout className="w-4 h-4" />
-              Layout
-            </TabsTrigger>
-            <TabsTrigger value="code" className="gap-2">
-              <Code className="w-4 h-4" />
-              Code
-            </TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
+            <TabsList className="bg-card/50 backdrop-blur-sm border border-border/50 p-1 mb-4 min-w-max">
+              <TabsTrigger value="themes" className="gap-2">
+                <Palette className="w-4 h-4" />
+                Themes
+              </TabsTrigger>
+              <TabsTrigger value="colors" className="gap-2">
+                <PaintBucket className="w-4 h-4" />
+                Colors
+              </TabsTrigger>
+              <TabsTrigger value="branding" className="gap-2">
+                <Image className="w-4 h-4" />
+                Branding
+              </TabsTrigger>
+              <TabsTrigger value="layout" className="gap-2">
+                <Layout className="w-4 h-4" />
+                Layout
+              </TabsTrigger>
+              <TabsTrigger value="code" className="gap-2">
+                <Code className="w-4 h-4" />
+                Code
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           <div className="flex-1 overflow-y-auto pr-2 space-y-4">
             {/* Themes Tab */}

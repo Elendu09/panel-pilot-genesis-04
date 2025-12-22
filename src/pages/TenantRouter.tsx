@@ -108,8 +108,11 @@ const TenantRouter = () => {
     );
   }
 
-  // If this is a tenant domain but no panel found, redirect to auth or show error
+  // If this is a tenant domain but no panel found, show subdomain claim CTA
   if (isTenantDomain && !panel) {
+    const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
+    const requestedSubdomain = hostname.split('.')[0];
+    
     return (
       <QueryClientProvider client={queryClient}>
         <HelmetProvider>
@@ -119,19 +122,39 @@ const TenantRouter = () => {
               <Sonner />
               <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-primary/5 to-secondary/10">
                 <div className="text-center max-w-md p-8">
-                  <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-destructive/10 flex items-center justify-center">
-                    <span className="text-3xl">🔍</span>
+                  {/* Subdomain Badge */}
+                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium mb-6">
+                    <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                    {requestedSubdomain}.smmpilot.online
                   </div>
-                  <h1 className="text-2xl font-bold mb-4">Panel Not Found</h1>
-                  <p className="text-muted-foreground mb-6">
-                    {error || 'This panel is not available or has been deactivated.'}
+                  
+                  <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                    <span className="text-4xl">🎉</span>
+                  </div>
+                  
+                  <h1 className="text-3xl font-bold mb-3">This Panel is Available!</h1>
+                  <p className="text-muted-foreground mb-8">
+                    Want to claim <span className="font-semibold text-foreground">{requestedSubdomain}</span> as your SMM panel subdomain? Start building your panel today!
                   </p>
-                  <a 
-                    href="https://smmpilot.online" 
-                    className="text-primary hover:underline"
-                  >
-                    Visit SMMPilot.online →
-                  </a>
+                  
+                  <div className="space-y-3">
+                    <a 
+                      href={`https://smmpilot.online/auth?subdomain=${requestedSubdomain}`}
+                      className="flex items-center justify-center gap-2 w-full px-6 py-3 bg-gradient-to-r from-primary to-primary/80 text-primary-foreground font-medium rounded-xl hover:opacity-90 transition-opacity"
+                    >
+                      Claim This Subdomain
+                    </a>
+                    <a 
+                      href="https://smmpilot.online"
+                      className="flex items-center justify-center gap-2 w-full px-6 py-3 border border-border/50 text-foreground font-medium rounded-xl hover:bg-accent/50 transition-colors"
+                    >
+                      Learn More About SMMPilot
+                    </a>
+                  </div>
+                  
+                  <p className="text-xs text-muted-foreground mt-8">
+                    Already have a panel? This subdomain might be inactive or the owner hasn't completed setup.
+                  </p>
                 </div>
               </div>
             </TooltipProvider>

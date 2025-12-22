@@ -21,6 +21,7 @@ import Pricing from "./pages/Pricing";
 import Documentation from "./pages/Documentation";
 import Contact from "./pages/Contact";
 import Storefront from "./pages/Storefront";
+import StorefrontPreview from "./pages/StorefrontPreview";
 import { ThemeOne } from "./components/themes/ThemeOne";
 import { ThemeTwo } from "./components/themes/ThemeTwo";
 import { ThemeThree } from "./components/themes/ThemeThree";
@@ -83,6 +84,9 @@ const App = () => (
                 
                 {/* Public storefront route */}
                 <Route path="/store" element={<Storefront />} />
+                
+                {/* Design Preview Route */}
+                <Route path="/preview/:previewId" element={<StorefrontPreview />} />
                 
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
