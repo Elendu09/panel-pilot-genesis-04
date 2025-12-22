@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { 
@@ -24,6 +23,8 @@ import { Helmet } from "react-helmet-async";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { motion } from 'framer-motion';
+import KanbanColumn from "@/components/admin/KanbanColumn";
+import KanbanCard from "@/components/admin/KanbanCard";
 
 interface AdminWebhook {
   id: string;
@@ -85,13 +86,7 @@ const WebhookManagement = () => {
 
   const openCreateDialog = () => {
     setEditingWebhook(null);
-    setFormData({
-      name: '',
-      url: '',
-      secret: '',
-      events: [],
-      is_active: true
-    });
+    setFormData({ name: '', url: '', secret: '', events: [], is_active: true });
     setDialogOpen(true);
   };
 
@@ -121,7 +116,7 @@ const WebhookManagement = () => {
           })
           .eq('id', editingWebhook.id);
 
-        toast({ title: "Webhook Updated", description: "Webhook configuration saved successfully" });
+        toast({ title: "Webhook Updated" });
       } else {
         await supabase
           .from('admin_webhooks')
@@ -133,7 +128,7 @@ const WebhookManagement = () => {
             is_active: formData.is_active
           });
 
-        toast({ title: "Webhook Created", description: "New webhook has been added" });
+        toast({ title: "Webhook Created" });
       }
       setDialogOpen(false);
       fetchWebhooks();
@@ -146,7 +141,7 @@ const WebhookManagement = () => {
   const handleDelete = async (id: string) => {
     try {
       await supabase.from('admin_webhooks').delete().eq('id', id);
-      toast({ title: "Webhook Deleted", description: "Webhook has been removed" });
+      toast({ title: "Webhook Deleted" });
       fetchWebhooks();
     } catch (error) {
       console.error('Error deleting webhook:', error);
@@ -166,6 +161,33 @@ const WebhookManagement = () => {
   const testWebhook = async (webhook: AdminWebhook) => {
     toast({ title: "Test Sent", description: "A test payload has been sent to the webhook" });
   };
+
+  const kanbanColumns = [
+    { 
+      title: 'Active', 
+      filter: (w: AdminWebhook) => w.is_active && w.failure_count === 0, 
+      icon: CheckCircle, 
+      color: 'from-emerald-500 to-emerald-600',
+      bg: 'bg-emerald-500/10',
+      textColor: 'text-emerald-500'
+    },
+    { 
+      title: 'With Issues', 
+      filter: (w: AdminWebhook) => w.is_active && w.failure_count > 0, 
+      icon: AlertTriangle, 
+      color: 'from-amber-500 to-amber-600',
+      bg: 'bg-amber-500/10',
+      textColor: 'text-amber-500'
+    },
+    { 
+      title: 'Inactive', 
+      filter: (w: AdminWebhook) => !w.is_active, 
+      icon: XCircle, 
+      color: 'from-slate-500 to-slate-600',
+      bg: 'bg-slate-500/10',
+      textColor: 'text-slate-500'
+    }
+  ];
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -194,10 +216,16 @@ const WebhookManagement = () => {
           <h1 className="text-2xl md:text-3xl font-bold">Webhook Management</h1>
           <p className="text-muted-foreground">Configure platform webhooks for external integrations</p>
         </div>
-        <Button onClick={openCreateDialog} className="gap-2">
-          <Plus className="w-4 h-4" />
-          Add Webhook
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={fetchWebhooks} className="gap-2">
+            <RefreshCw className="w-4 h-4" />
+            Refresh
+          </Button>
+          <Button onClick={openCreateDialog} className="gap-2">
+            <Plus className="w-4 h-4" />
+            Add Webhook
+          </Button>
+        </div>
       </motion.div>
 
       {/* Stats */}
@@ -219,8 +247,8 @@ const WebhookManagement = () => {
               <CheckCircle className="w-5 h-5 text-emerald-500" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{webhooks.filter(w => w.is_active).length}</p>
-              <p className="text-xs text-muted-foreground">Active</p>
+              <p className="text-2xl font-bold">{webhooks.filter(w => w.is_active && w.failure_count === 0).length}</p>
+              <p className="text-xs text-muted-foreground">Healthy</p>
             </div>
           </CardContent>
         </Card>
@@ -248,120 +276,94 @@ const WebhookManagement = () => {
         </Card>
       </motion.div>
 
-      {/* Webhooks Table */}
-      <motion.div variants={itemVariants}>
-        <Card className="glass-card">
-          <CardHeader>
-            <CardTitle>Configured Webhooks</CardTitle>
-            <CardDescription>Manage your platform webhook endpoints</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="text-center py-8">
-                <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-muted-foreground" />
-                <p className="text-muted-foreground">Loading webhooks...</p>
-              </div>
-            ) : webhooks.length === 0 ? (
-              <div className="text-center py-12">
-                <Webhook className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-lg font-semibold mb-2">No webhooks configured</h3>
-                <p className="text-muted-foreground mb-4">Create a webhook to start receiving event notifications</p>
-                <Button onClick={openCreateDialog}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add First Webhook
-                </Button>
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>URL</TableHead>
-                    <TableHead>Events</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Last Triggered</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {webhooks.map((webhook) => (
-                    <TableRow key={webhook.id}>
-                      <TableCell className="font-medium">{webhook.name}</TableCell>
-                      <TableCell>
-                        <span className="text-xs font-mono truncate max-w-[200px] block">
-                          {webhook.url}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {webhook.events.slice(0, 2).map(event => (
-                            <Badge key={event} variant="outline" className="text-xs">
-                              {event}
-                            </Badge>
-                          ))}
-                          {webhook.events.length > 2 && (
-                            <Badge variant="outline" className="text-xs">
-                              +{webhook.events.length - 2}
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={webhook.is_active ? 'bg-emerald-500/20 text-emerald-500' : 'bg-gray-500/20 text-gray-500'}>
-                          {webhook.is_active ? 'Active' : 'Inactive'}
+      {/* Kanban Board */}
+      <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {kanbanColumns.map((column) => {
+          const columnWebhooks = webhooks.filter(column.filter);
+          
+          return (
+            <KanbanColumn
+              key={column.title}
+              title={column.title}
+              count={columnWebhooks.length}
+              icon={column.icon}
+              color={column.color}
+              bgColor={column.bg}
+              textColor={column.textColor}
+              emptyMessage={`No ${column.title.toLowerCase()} webhooks`}
+              loading={loading}
+            >
+              {columnWebhooks.map((webhook) => (
+                <KanbanCard
+                  key={webhook.id}
+                  onClick={() => openEditDialog(webhook)}
+                  variant={webhook.failure_count > 0 ? 'warning' : webhook.is_active ? 'success' : 'default'}
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="font-semibold line-clamp-1">{webhook.name}</p>
+                      {webhook.failure_count > 0 && (
+                        <Badge variant="outline" className="bg-red-500/10 text-red-500 text-xs">
+                          {webhook.failure_count} fails
                         </Badge>
-                        {webhook.failure_count > 0 && (
-                          <Badge className="ml-1 bg-red-500/20 text-red-500">
-                            {webhook.failure_count} failures
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {webhook.last_triggered_at ? (
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <Clock className="w-3 h-3" />
-                            {new Date(webhook.last_triggered_at).toLocaleString()}
-                          </div>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">Never</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => testWebhook(webhook)}
-                            title="Test Webhook"
-                          >
-                            <Send className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openEditDialog(webhook)}
-                            title="Edit"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-red-500 hover:text-red-600"
-                            onClick={() => handleDelete(webhook.id)}
-                            title="Delete"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
+                      )}
+                    </div>
+                    
+                    <p className="text-xs text-muted-foreground font-mono truncate">
+                      {webhook.url}
+                    </p>
+
+                    <div className="flex flex-wrap gap-1">
+                      {webhook.events.slice(0, 2).map(event => (
+                        <Badge key={event} variant="outline" className="text-[10px]">
+                          {event.split('.')[1]}
+                        </Badge>
+                      ))}
+                      {webhook.events.length > 2 && (
+                        <Badge variant="outline" className="text-[10px]">
+                          +{webhook.events.length - 2}
+                        </Badge>
+                      )}
+                    </div>
+
+                    {webhook.last_triggered_at && (
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <Clock className="w-3 h-3" />
+                        {new Date(webhook.last_triggered_at).toLocaleDateString()}
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-2 pt-2 border-t border-border opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1 h-8 text-xs"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          testWebhook(webhook);
+                        }}
+                      >
+                        <Send className="w-3 h-3 mr-1" />
+                        Test
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 w-8 p-0 text-red-500"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(webhook.id);
+                        }}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </div>
+                </KanbanCard>
+              ))}
+            </KanbanColumn>
+          );
+        })}
       </motion.div>
 
       {/* Create/Edit Dialog */}

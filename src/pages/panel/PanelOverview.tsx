@@ -31,6 +31,7 @@ import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { calculateChange, getDateRange, getPreviousPeriodRange } from '@/lib/analytics-utils';
+import SubdomainPreview from '@/components/panel/SubdomainPreview';
 
 interface LiveOrder {
   id: string;
@@ -747,6 +748,21 @@ const PanelOverview = () => {
       </div>
 
       {/* Panel Status & Provider Status */}
+      {/* Subdomain Preview Section */}
+      {panelData?.subdomain && (
+        <motion.div variants={itemVariants}>
+          <SubdomainPreview
+            subdomain={panelData.subdomain}
+            panelName={panelData.name || 'Your Panel'}
+            primaryColor={panelData.primary_color}
+            secondaryColor={panelData.secondary_color}
+            status={panelData.status === 'active' ? 'active' : 'pending'}
+            onRefresh={handleManualRefresh}
+          />
+        </motion.div>
+      )}
+
+      {/* Panel Status & Performance Grid */}
       <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="glass-card">
           <CardHeader>
@@ -796,28 +812,39 @@ const PanelOverview = () => {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-muted-foreground">Order Completion Rate</span>
-                  <span className="text-sm font-semibold">87%</span>
+                  <span className="text-sm font-semibold">
+                    {stats.totalOrders > 0 ? Math.round((liveOrders.filter(o => o.status === 'completed').length / Math.max(liveOrders.length, 1)) * 100) : 0}%
+                  </span>
                 </div>
                 <div className="h-2 bg-accent rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-primary to-primary/70 rounded-full" style={{ width: '87%' }} />
+                  <div 
+                    className="h-full bg-gradient-to-r from-primary to-primary/70 rounded-full transition-all" 
+                    style={{ width: `${stats.totalOrders > 0 ? Math.round((liveOrders.filter(o => o.status === 'completed').length / Math.max(liveOrders.length, 1)) * 100) : 0}%` }} 
+                  />
                 </div>
               </div>
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-muted-foreground">Customer Satisfaction</span>
-                  <span className="text-sm font-semibold">94%</span>
+                  <span className="text-sm text-muted-foreground">Active Services</span>
+                  <span className="text-sm font-semibold">{stats.activeServices}</span>
                 </div>
                 <div className="h-2 bg-accent rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full" style={{ width: '94%' }} />
+                  <div 
+                    className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full transition-all" 
+                    style={{ width: `${Math.min(stats.activeServices * 5, 100)}%` }} 
+                  />
                 </div>
               </div>
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-muted-foreground">Provider Uptime</span>
-                  <span className="text-sm font-semibold">99.2%</span>
+                  <span className="text-sm text-muted-foreground">Total Customers</span>
+                  <span className="text-sm font-semibold">{stats.totalCustomers}</span>
                 </div>
                 <div className="h-2 bg-accent rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-violet-500 to-violet-400 rounded-full" style={{ width: '99.2%' }} />
+                  <div 
+                    className="h-full bg-gradient-to-r from-violet-500 to-violet-400 rounded-full transition-all" 
+                    style={{ width: `${Math.min(stats.totalCustomers * 2, 100)}%` }} 
+                  />
                 </div>
               </div>
             </div>
