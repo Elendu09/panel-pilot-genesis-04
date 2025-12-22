@@ -1475,6 +1475,16 @@ export type Database = {
     }
     Functions: {
       approve_panel: { Args: { panel_id: string }; Returns: boolean }
+      create_panel_notification: {
+        Args: {
+          p_message: string
+          p_panel_id: string
+          p_title: string
+          p_type?: string
+          p_user_id: string
+        }
+        Returns: string
+      }
       generate_order_number: { Args: never; Returns: string }
       generate_panel_api_key: { Args: never; Returns: string }
       generate_subdomain: { Args: { panel_name: string }; Returns: string }
