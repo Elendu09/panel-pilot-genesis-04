@@ -82,6 +82,8 @@ import { ReferralSection } from "@/components/customers/ReferralSection";
 import { BulkActionToolbar } from "@/components/customers/BulkActionToolbar";
 import { BulkEmailDialog } from "@/components/customers/BulkEmailDialog";
 import { BulkDiscountDialog } from "@/components/customers/BulkDiscountDialog";
+import { BulkBalanceDialog } from "@/components/customers/BulkBalanceDialog";
+import { BulkEditDialog } from "@/components/customers/BulkEditDialog";
 
 interface Customer {
   id: string;
@@ -115,6 +117,8 @@ const CustomerManagement = () => {
   const [showPricingDialog, setShowPricingDialog] = useState(false);
   const [showBulkEmailDialog, setShowBulkEmailDialog] = useState(false);
   const [showBulkDiscountDialog, setShowBulkDiscountDialog] = useState(false);
+  const [showBulkBalanceDialog, setShowBulkBalanceDialog] = useState(false);
+  const [showBulkEditDialog, setShowBulkEditDialog] = useState(false);
   const [balanceAction, setBalanceAction] = useState<"add" | "subtract">("add");
   const [balanceAmount, setBalanceAmount] = useState("");
   const [balanceReason, setBalanceReason] = useState("");
@@ -282,6 +286,40 @@ const CustomerManagement = () => {
     } catch (error) {
       console.error('Error activating customers:', error);
       toast({ variant: 'destructive', title: 'Error', description: 'Failed to activate customers' });
+    }
+  };
+
+  const handleBulkBalance = async (action: "add" | "subtract", amount: number, reason: string) => {
+    try {
+      for (const customerId of selectedCustomers) {
+        const customer = customers.find(c => c.id === customerId);
+        if (!customer) continue;
+
+        const newBalance = action === "add" 
+          ? customer.balance + amount 
+          : Math.max(0, customer.balance - amount);
+
+        await supabase
+          .from('client_users')
+          .update({ balance: newBalance })
+          .eq('id', customerId);
+      }
+
+      setCustomers(prev => prev.map(c => 
+        selectedCustomers.includes(c.id) 
+          ? { ...c, balance: action === "add" ? c.balance + amount : Math.max(0, c.balance - amount) } 
+          : c
+      ));
+
+      const actionText = action === "add" ? "added to" : "deducted from";
+      toast({ 
+        title: "Balances Updated", 
+        description: `$${amount.toFixed(2)} ${actionText} ${selectedCustomers.length} customers` 
+      });
+      setSelectedCustomers([]);
+    } catch (error) {
+      console.error('Error adjusting balances:', error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to adjust balances' });
     }
   };
 
@@ -541,6 +579,8 @@ const CustomerManagement = () => {
               onSuspend={handleBulkSuspend}
               onActivate={handleBulkActivate}
               onClearSelection={() => setSelectedCustomers([])}
+              onAdjustBalance={() => setShowBulkBalanceDialog(true)}
+              onBulkEdit={() => setShowBulkEditDialog(true)}
             />
           )}
 
@@ -724,6 +764,23 @@ const CustomerManagement = () => {
         onOpenChange={setShowBulkDiscountDialog}
         selectedCount={selectedCustomers.length}
         onApply={handleBulkDiscount}
+      />
+
+      <BulkBalanceDialog
+        open={showBulkBalanceDialog}
+        onOpenChange={setShowBulkBalanceDialog}
+        selectedCount={selectedCustomers.length}
+        onApply={handleBulkBalance}
+      />
+
+      <BulkEditDialog
+        open={showBulkEditDialog}
+        onOpenChange={setShowBulkEditDialog}
+        selectedCount={selectedCustomers.length}
+        onApplyDiscount={handleBulkDiscount}
+        onActivate={handleBulkActivate}
+        onSuspend={handleBulkSuspend}
+        onAdjustBalance={handleBulkBalance}
       />
 
       {/* Balance Adjustment Modal */}
