@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Key, Copy, RefreshCw, Eye, EyeOff, Code, Send, CheckCircle, XCircle, Clock,
   BarChart3, Webhook, FileText, ChevronDown, ChevronRight, Zap, Shield, Activity,
-  Terminal, BookOpen, Play, AlertCircle, RotateCcw, ExternalLink
+  Terminal, BookOpen, Play, AlertCircle, RotateCcw, ExternalLink, Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,10 +15,12 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useWebhooks, WebhookEventType } from "@/hooks/use-webhooks";
+import { usePanel } from "@/hooks/usePanel";
+import { supabase } from "@/integrations/supabase/client";
 
 // Webhook event definitions
 const webhookEvents = {
@@ -48,10 +50,28 @@ const webhookEvents = {
   }
 };
 
+interface ApiKey {
+  id: string;
+  api_key: string;
+  is_active: boolean;
+  created_at: string;
+  last_used_at: string | null;
+}
+
+interface ApiLog {
+  id: string;
+  endpoint: string;
+  method: string;
+  status_code: number | null;
+  response_time_ms: number | null;
+  created_at: string;
+}
+
 const APIManagement = () => {
+  const { panel, loading: panelLoading } = usePanel();
   const [showApiKey, setShowApiKey] = useState(false);
   const [isRegenerateOpen, setIsRegenerateOpen] = useState(false);
-  const [webhookUrl, setWebhookUrl] = useState("https://your-domain.com/webhook");
+  const [webhookUrl, setWebhookUrl] = useState("");
   const [webhookEnabled, setWebhookEnabled] = useState(true);
   const [expandedEndpoint, setExpandedEndpoint] = useState<string | null>("services");
   const [selectedLanguage, setSelectedLanguage] = useState("curl");
@@ -60,11 +80,137 @@ const APIManagement = () => {
   ]);
   const [autoRefreshLogs, setAutoRefreshLogs] = useState(false);
 
+  // Real data state
+  const [apiKey, setApiKey] = useState<ApiKey | null>(null);
+  const [apiLogs, setApiLogs] = useState<ApiLog[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [regenerating, setRegenerating] = useState(false);
+
   const { sending, deliveries, testWebhook: sendTestWebhook } = useWebhooks();
 
-  const apiKey = "sk_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
-  const maskedKey = "sk_live_xxxx...xxxx";
-  const apiBaseUrl = "https://api.yourpanel.com";
+  // Compute real API base URL from panel's domain
+  const apiBaseUrl = panel?.custom_domain 
+    ? `https://${panel.custom_domain}` 
+    : panel?.subdomain 
+      ? `https://${panel.subdomain}.smmpilot.online`
+      : "https://yourpanel.smmpilot.online";
+
+  // Fetch API key and logs
+  useEffect(() => {
+    if (panel?.id) {
+      fetchApiKey();
+      fetchApiLogs();
+    }
+  }, [panel?.id]);
+
+  const fetchApiKey = async () => {
+    if (!panel?.id) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('panel_api_keys')
+        .select('*')
+        .eq('panel_id', panel.id)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (error && error.code !== 'PGRST116') throw error;
+
+      if (data) {
+        setApiKey(data);
+      } else {
+        // Generate first API key for panel
+        await generateApiKey();
+      }
+    } catch (error) {
+      console.error('Error fetching API key:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchApiLogs = async () => {
+    if (!panel?.id) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('api_logs')
+        .select('*')
+        .eq('panel_id', panel.id)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+      setApiLogs(data || []);
+    } catch (error) {
+      console.error('Error fetching API logs:', error);
+    }
+  };
+
+  const generateApiKey = async () => {
+    if (!panel?.id) return;
+    
+    try {
+      // Generate a secure API key
+      const newKey = 'sk_live_' + crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '').substring(0, 16);
+      
+      const { data, error } = await supabase
+        .from('panel_api_keys')
+        .insert({
+          panel_id: panel.id,
+          api_key: newKey,
+          is_active: true
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      setApiKey(data);
+      return data;
+    } catch (error) {
+      console.error('Error generating API key:', error);
+      throw error;
+    }
+  };
+
+  const regenerateKey = async () => {
+    if (!panel?.id || !apiKey) return;
+    
+    setRegenerating(true);
+    try {
+      // Deactivate old key
+      await supabase
+        .from('panel_api_keys')
+        .update({ is_active: false })
+        .eq('id', apiKey.id);
+
+      // Generate new key
+      await generateApiKey();
+      
+      toast({ title: "API key regenerated successfully" });
+      setIsRegenerateOpen(false);
+    } catch (error) {
+      console.error('Error regenerating key:', error);
+      toast({ variant: "destructive", title: "Failed to regenerate API key" });
+    } finally {
+      setRegenerating(false);
+    }
+  };
+
+  // Calculate real stats from logs
+  const todayLogs = apiLogs.filter(log => {
+    const today = new Date().toDateString();
+    return new Date(log.created_at).toDateString() === today;
+  });
+  
+  const successfulLogs = apiLogs.filter(log => log.status_code && log.status_code >= 200 && log.status_code < 400);
+  const successRate = apiLogs.length > 0 ? ((successfulLogs.length / apiLogs.length) * 100).toFixed(1) : "0";
+  const avgResponseTime = apiLogs.length > 0 
+    ? Math.round(apiLogs.reduce((acc, log) => acc + (log.response_time_ms || 0), 0) / apiLogs.length)
+    : 0;
+
+  const displayKey = apiKey?.api_key || "";
+  const maskedKey = displayKey ? displayKey.substring(0, 12) + "..." + displayKey.slice(-4) : "No API key";
 
   const endpoints = [
     {
@@ -169,22 +315,9 @@ axios.post(apiUrl, data)
     .catch(error => console.error(error));`,
   };
 
-  const apiLogs = [
-    { id: 1, endpoint: "/api/v2 (add)", method: "POST", status: 200, time: "45ms", date: "2024-01-15 14:30:22" },
-    { id: 2, endpoint: "/api/v2 (services)", method: "POST", status: 200, time: "23ms", date: "2024-01-15 14:29:15" },
-    { id: 3, endpoint: "/api/v2 (status)", method: "POST", status: 200, time: "18ms", date: "2024-01-15 14:28:45" },
-    { id: 4, endpoint: "/api/v2 (add)", method: "POST", status: 400, time: "12ms", date: "2024-01-15 14:27:30" },
-    { id: 5, endpoint: "/api/v2 (balance)", method: "POST", status: 200, time: "15ms", date: "2024-01-15 14:25:10" },
-  ];
-
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toast({ title: "Copied to clipboard" });
-  };
-
-  const regenerateKey = () => {
-    toast({ title: "API key regenerated successfully" });
-    setIsRegenerateOpen(false);
   };
 
   const handleTestWebhook = async () => {
@@ -210,6 +343,18 @@ axios.post(apiUrl, data)
     });
   };
 
+  if (panelLoading || loading) {
+    return (
+      <div className="space-y-6 animate-pulse">
+        <div className="h-8 bg-muted rounded w-1/4"></div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map(i => <div key={i} className="h-24 bg-muted rounded-xl"></div>)}
+        </div>
+        <div className="h-64 bg-muted rounded-xl"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -220,13 +365,13 @@ axios.post(apiUrl, data)
         <p className="text-muted-foreground">Manage API keys, view documentation, and monitor usage</p>
       </motion.div>
 
-      {/* Stats */}
+      {/* Real Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: "API Calls Today", value: "1,234", icon: Activity, color: "text-primary" },
-          { label: "Success Rate", value: "99.2%", icon: CheckCircle, color: "text-green-500" },
-          { label: "Avg Response", value: "45ms", icon: Zap, color: "text-blue-500" },
-          { label: "Rate Limit", value: "85%", icon: Shield, color: "text-yellow-500" },
+          { label: "API Calls Today", value: todayLogs.length.toLocaleString(), icon: Activity, color: "text-primary" },
+          { label: "Success Rate", value: `${successRate}%`, icon: CheckCircle, color: "text-green-500" },
+          { label: "Avg Response", value: `${avgResponseTime}ms`, icon: Zap, color: "text-blue-500" },
+          { label: "Total Calls", value: apiLogs.length.toLocaleString(), icon: BarChart3, color: "text-yellow-500" },
         ].map((stat, index) => (
           <motion.div key={stat.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1 }}>
             <Card className="glass-card-hover">
@@ -268,11 +413,26 @@ axios.post(apiUrl, data)
               <CardContent className="space-y-4">
                 <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
                   <div className="flex-1 relative">
-                    <Input value={showApiKey ? apiKey : maskedKey} readOnly className="pr-20 bg-background/50 font-mono" />
-                    <Button variant="ghost" size="icon" className="absolute right-10 top-1/2 -translate-y-1/2" onClick={() => setShowApiKey(!showApiKey)}>
+                    <Input 
+                      value={showApiKey ? displayKey : maskedKey} 
+                      readOnly 
+                      className="pr-20 bg-background/50 font-mono" 
+                    />
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="absolute right-10 top-1/2 -translate-y-1/2" 
+                      onClick={() => setShowApiKey(!showApiKey)}
+                    >
                       {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </Button>
-                    <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2" onClick={() => copyToClipboard(apiKey)}>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="absolute right-1 top-1/2 -translate-y-1/2" 
+                      onClick={() => copyToClipboard(displayKey)}
+                      disabled={!displayKey}
+                    >
                       <Copy className="w-4 h-4" />
                     </Button>
                   </div>
@@ -281,14 +441,37 @@ axios.post(apiUrl, data)
                     Regenerate
                   </Button>
                 </div>
-                <div className="glass-card p-4 rounded-xl space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Rate Limit Usage</span>
-                    <span className="text-sm font-medium">8,500 / 10,000 requests</span>
+
+                {/* API Base URL */}
+                <div className="glass-card p-4 rounded-xl space-y-2">
+                  <Label className="text-sm text-muted-foreground">API Base URL</Label>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 bg-muted px-3 py-2 rounded text-sm font-mono">{apiBaseUrl}/api/v2</code>
+                    <Button variant="ghost" size="icon" onClick={() => copyToClipboard(`${apiBaseUrl}/api/v2`)}>
+                      <Copy className="w-4 h-4" />
+                    </Button>
                   </div>
-                  <Progress value={85} className="h-2" />
-                  <p className="text-xs text-muted-foreground">Resets in 4 hours</p>
                 </div>
+
+                {/* Key Info */}
+                {apiKey && (
+                  <div className="glass-card p-4 rounded-xl space-y-2">
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground">Created</span>
+                      <span>{new Date(apiKey.created_at).toLocaleDateString()}</span>
+                    </div>
+                    {apiKey.last_used_at && (
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-muted-foreground">Last Used</span>
+                        <span>{new Date(apiKey.last_used_at).toLocaleString()}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground">Status</span>
+                      <Badge variant="outline" className="bg-green-500/10 text-green-500">Active</Badge>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </motion.div>
@@ -397,232 +580,148 @@ axios.post(apiUrl, data)
           </motion.div>
         </TabsContent>
 
-        {/* Webhooks Tab - Enhanced */}
+        {/* Webhooks Tab */}
         <TabsContent value="webhooks" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Webhook Configuration */}
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-              <Card className="glass-card">
+            <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
+              <Card className="glass-card h-full">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Webhook className="w-5 h-5 text-primary" />
                     Webhook Configuration
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Enable Webhooks</p>
-                      <p className="text-sm text-muted-foreground">Receive real-time event notifications</p>
-                    </div>
-                    <Switch checked={webhookEnabled} onCheckedChange={setWebhookEnabled} />
-                  </div>
-                  
+                <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <Label>Webhook URL</Label>
-                    <div className="flex flex-col md:flex-row gap-2">
-                      <Input 
-                        value={webhookUrl} 
-                        onChange={(e) => setWebhookUrl(e.target.value)} 
-                        placeholder="https://your-domain.com/webhook" 
-                        className="flex-1 bg-background/50" 
-                      />
-                      <Button onClick={handleTestWebhook} disabled={sending} className="gap-2">
-                        {sending ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                        Test
-                      </Button>
-                    </div>
+                    <Input
+                      placeholder="https://your-domain.com/webhook"
+                      value={webhookUrl}
+                      onChange={(e) => setWebhookUrl(e.target.value)}
+                    />
                   </div>
-
-                  {/* Event Type Selection */}
-                  <div className="space-y-4">
-                    <Label>Event Types</Label>
-                    {Object.entries(webhookEvents).map(([category, { label, events }]) => (
-                      <div key={category} className="space-y-2">
-                        <p className="text-sm font-medium text-muted-foreground">{label}</p>
-                        <div className="grid gap-2">
-                          {events.map((event) => (
-                            <div 
-                              key={event.id} 
-                              className="glass-card p-3 rounded-lg flex items-start gap-3 hover:bg-accent/30 transition-colors"
-                            >
-                              <Checkbox 
-                                id={event.id}
-                                checked={selectedEvents.includes(event.id)}
-                                onCheckedChange={() => toggleEvent(event.id)}
-                              />
-                              <div className="flex-1">
-                                <label htmlFor={event.id} className="text-sm font-medium cursor-pointer">
-                                  {event.name}
-                                </label>
-                                <p className="text-xs text-muted-foreground">{event.description}</p>
-                              </div>
-                              <Badge variant="outline" className="font-mono text-xs shrink-0">
-                                {event.id}
-                              </Badge>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
+                  <div className="flex items-center justify-between">
+                    <Label>Enable Webhooks</Label>
+                    <Switch checked={webhookEnabled} onCheckedChange={setWebhookEnabled} />
                   </div>
-
-                  <Button onClick={saveWebhookConfig} className="w-full bg-gradient-to-r from-primary to-primary/80">
-                    Save Configuration
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button onClick={saveWebhookConfig} className="flex-1">Save Configuration</Button>
+                    <Button variant="outline" onClick={handleTestWebhook} disabled={sending}>
+                      {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             </motion.div>
 
-            {/* Delivery Logs */}
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-              <Card className="glass-card">
+            {/* Event Selection */}
+            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
+              <Card className="glass-card h-full">
                 <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2">
-                      <Activity className="w-5 h-5 text-primary" />
-                      Delivery Logs
-                    </CardTitle>
-                    <div className="flex items-center gap-2">
-                      <Label htmlFor="auto-refresh" className="text-sm text-muted-foreground">Auto-refresh</Label>
-                      <Switch 
-                        id="auto-refresh"
-                        checked={autoRefreshLogs}
-                        onCheckedChange={setAutoRefreshLogs}
-                      />
-                    </div>
-                  </div>
+                  <CardTitle>Event Subscriptions</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-3 max-h-[500px] overflow-y-auto">
-                    {deliveries.length === 0 ? (
-                      <div className="text-center py-8">
-                        <Webhook className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                        <p className="text-muted-foreground">No webhook deliveries yet</p>
-                        <p className="text-sm text-muted-foreground">Test your webhook to see delivery logs</p>
-                      </div>
-                    ) : (
-                      deliveries.map((delivery) => (
-                        <div 
-                          key={delivery.id}
-                          className="glass-card p-3 rounded-lg space-y-2"
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <Badge 
-                                variant="outline" 
-                                className={cn(
-                                  "font-mono text-xs",
-                                  delivery.status === "success" && "bg-green-500/10 text-green-500 border-green-500/20",
-                                  delivery.status === "failed" && "bg-destructive/10 text-destructive border-destructive/20",
-                                  delivery.status === "pending" && "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
-                                )}
-                              >
-                                {delivery.status === "success" && <CheckCircle className="w-3 h-3 mr-1" />}
-                                {delivery.status === "failed" && <XCircle className="w-3 h-3 mr-1" />}
-                                {delivery.status === "pending" && <Clock className="w-3 h-3 mr-1" />}
-                                {delivery.statusCode || delivery.status.toUpperCase()}
-                              </Badge>
-                              <span className="text-sm font-mono">{delivery.event}</span>
+                <CardContent className="space-y-4">
+                  {Object.entries(webhookEvents).map(([category, { label, events }]) => (
+                    <div key={category} className="space-y-2">
+                      <h4 className="text-sm font-medium text-muted-foreground">{label}</h4>
+                      <div className="space-y-1">
+                        {events.map((event) => (
+                          <div key={event.id} className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted/50">
+                            <Checkbox
+                              checked={selectedEvents.includes(event.id)}
+                              onCheckedChange={() => toggleEvent(event.id)}
+                            />
+                            <div className="flex-1">
+                              <span className="text-sm">{event.name}</span>
+                              <p className="text-xs text-muted-foreground">{event.description}</p>
                             </div>
-                            <span className="text-xs text-muted-foreground">
-                              {new Date(delivery.createdAt).toLocaleTimeString()}
-                            </span>
                           </div>
-                          <p className="text-xs text-muted-foreground truncate font-mono">{delivery.url}</p>
-                          {delivery.retries > 0 && (
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <RotateCcw className="w-3 h-3" />
-                              {delivery.retries} retries
-                            </div>
-                          )}
-                          {delivery.response && (
-                            <pre className="text-xs bg-muted/50 p-2 rounded overflow-x-auto max-h-20">
-                              {delivery.response.substring(0, 200)}...
-                            </pre>
-                          )}
-                        </div>
-                      ))
-                    )}
-                  </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
                 </CardContent>
               </Card>
             </motion.div>
           </div>
         </TabsContent>
 
-        {/* Logs Tab */}
-        <TabsContent value="logs">
+        {/* Logs Tab - Real Data */}
+        <TabsContent value="logs" className="space-y-4">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-            <Card className="glass-card overflow-hidden">
+            <Card className="glass-card">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="w-5 h-5 text-primary" />
-                  Recent API Calls
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <BarChart3 className="w-5 h-5 text-primary" />
+                    API Call Logs
+                  </CardTitle>
+                  <div className="flex items-center gap-2">
+                    <Label className="text-sm text-muted-foreground">Auto Refresh</Label>
+                    <Switch checked={autoRefreshLogs} onCheckedChange={setAutoRefreshLogs} />
+                    <Button variant="outline" size="sm" onClick={fetchApiLogs}>
+                      <RefreshCw className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-border/50">
-                        <th className="text-left p-3 text-sm font-medium text-muted-foreground">Endpoint</th>
-                        <th className="text-left p-3 text-sm font-medium text-muted-foreground">Method</th>
-                        <th className="text-left p-3 text-sm font-medium text-muted-foreground">Status</th>
-                        <th className="text-left p-3 text-sm font-medium text-muted-foreground">Time</th>
-                        <th className="text-left p-3 text-sm font-medium text-muted-foreground">Date</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {apiLogs.map((log) => (
-                        <tr key={log.id} className="border-b border-border/30 hover:bg-accent/30 transition-colors">
-                          <td className="p-3 font-mono text-sm">{log.endpoint}</td>
-                          <td className="p-3">
-                            <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20">
-                              {log.method}
-                            </Badge>
-                          </td>
-                          <td className="p-3">
-                            <Badge 
-                              variant="outline" 
-                              className={cn(
-                                log.status === 200 
-                                  ? "bg-green-500/10 text-green-500 border-green-500/20" 
-                                  : "bg-destructive/10 text-destructive border-destructive/20"
-                              )}
-                            >
-                              {log.status}
-                            </Badge>
-                          </td>
-                          <td className="p-3 text-sm text-muted-foreground">{log.time}</td>
-                          <td className="p-3 text-sm text-muted-foreground">{log.date}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                {apiLogs.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Activity className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
+                    <h3 className="text-lg font-medium mb-2">No API calls yet</h3>
+                    <p className="text-muted-foreground text-sm">
+                      API calls made using your API key will appear here
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {apiLogs.map((log) => (
+                      <div key={log.id} className="flex items-center justify-between p-3 glass-card rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <Badge variant="outline" className={cn(
+                            log.method === "GET" ? "bg-green-500/10 text-green-500" : "bg-blue-500/10 text-blue-500"
+                          )}>{log.method}</Badge>
+                          <code className="text-sm font-mono">{log.endpoint}</code>
+                        </div>
+                        <div className="flex items-center gap-4 text-sm">
+                          <Badge variant="outline" className={cn(
+                            log.status_code && log.status_code < 400 
+                              ? "bg-green-500/10 text-green-500" 
+                              : "bg-red-500/10 text-red-500"
+                          )}>{log.status_code || 'N/A'}</Badge>
+                          <span className="text-muted-foreground">{log.response_time_ms}ms</span>
+                          <span className="text-muted-foreground">{new Date(log.created_at).toLocaleString()}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </motion.div>
         </TabsContent>
       </Tabs>
 
-      {/* Regenerate Key Dialog */}
+      {/* Regenerate Dialog */}
       <Dialog open={isRegenerateOpen} onOpenChange={setIsRegenerateOpen}>
-        <DialogContent className="glass-card">
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle>Regenerate API Key</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-yellow-500" />
+              Regenerate API Key
+            </DialogTitle>
             <DialogDescription>
-              This will invalidate your current API key. All applications using the current key will need to be updated.
+              This will invalidate your current API key. All applications using the old key will need to be updated.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex items-center gap-2 p-4 bg-destructive/10 rounded-lg">
-            <AlertCircle className="w-5 h-5 text-destructive" />
-            <p className="text-sm text-destructive">This action cannot be undone</p>
-          </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsRegenerateOpen(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={regenerateKey}>Regenerate Key</Button>
+            <Button variant="destructive" onClick={regenerateKey} disabled={regenerating}>
+              {regenerating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              Regenerate Key
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

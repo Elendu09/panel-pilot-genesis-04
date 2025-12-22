@@ -59,6 +59,47 @@ export type Database = {
         }
         Relationships: []
       }
+      api_logs: {
+        Row: {
+          created_at: string
+          endpoint: string
+          id: string
+          ip_address: unknown
+          method: string
+          panel_id: string | null
+          response_time_ms: number | null
+          status_code: number | null
+        }
+        Insert: {
+          created_at?: string
+          endpoint: string
+          id?: string
+          ip_address?: unknown
+          method: string
+          panel_id?: string | null
+          response_time_ms?: number | null
+          status_code?: number | null
+        }
+        Update: {
+          created_at?: string
+          endpoint?: string
+          id?: string
+          ip_address?: unknown
+          method?: string
+          panel_id?: string | null
+          response_time_ms?: number | null
+          status_code?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_logs_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string
@@ -468,6 +509,44 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "panel_analytics_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      panel_api_keys: {
+        Row: {
+          api_key: string
+          created_at: string
+          id: string
+          is_active: boolean | null
+          last_used_at: string | null
+          panel_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          api_key: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          last_used_at?: string | null
+          panel_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          api_key?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          last_used_at?: string | null
+          panel_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "panel_api_keys_panel_id_fkey"
             columns: ["panel_id"]
             isOneToOne: false
             referencedRelation: "panels"
@@ -1349,6 +1428,7 @@ export type Database = {
     Functions: {
       approve_panel: { Args: { panel_id: string }; Returns: boolean }
       generate_order_number: { Args: never; Returns: string }
+      generate_panel_api_key: { Args: never; Returns: string }
       generate_subdomain: { Args: { panel_name: string }; Returns: string }
       get_masked_provider_credentials: {
         Args: { provider_id: string }
