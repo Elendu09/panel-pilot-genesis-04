@@ -10,6 +10,7 @@ import { PasswordInput } from '@/components/auth/PasswordInput';
 import { Helmet } from 'react-helmet-async';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import EmailVerificationKanban from '@/components/auth/EmailVerificationKanban';
 
 const Auth = () => {
   const [email, setEmail] = useState('');
@@ -18,6 +19,8 @@ const Auth = () => {
   const [resetEmail, setResetEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [showVerification, setShowVerification] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState('');
   
   const { signIn, signUp, user, profile } = useAuth();
   const navigate = useNavigate();
@@ -63,10 +66,8 @@ const Auth = () => {
     const { error } = await signUp(email, password, fullName);
     
     if (!error) {
-      toast({
-        title: "Account Created",
-        description: "Please check your email to verify your account."
-      });
+      setRegisteredEmail(email);
+      setShowVerification(true);
     }
     
     setLoading(false);
@@ -105,6 +106,21 @@ const Auth = () => {
       setLoading(false);
     }
   };
+
+  // Show verification UI after successful sign-up
+  if (showVerification) {
+    return (
+      <EmailVerificationKanban 
+        email={registeredEmail} 
+        onBack={() => {
+          setShowVerification(false);
+          setEmail('');
+          setPassword('');
+          setFullName('');
+        }} 
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-secondary/10 flex items-center justify-center p-4">
