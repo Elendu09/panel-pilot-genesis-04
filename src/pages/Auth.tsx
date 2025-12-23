@@ -12,6 +12,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import EmailVerificationKanban from '@/components/auth/EmailVerificationKanban';
 
+const LAST_PANEL_ROUTE_KEY = 'smmpilot_last_panel_route';
+
 const Auth = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -27,21 +29,58 @@ const Auth = () => {
   const location = useLocation();
   const { toast } = useToast();
 
-  const from = location.state?.from?.pathname || '/';
+  // Get the intended destination from state or localStorage
+  const getRedirectPath = () => {
+    // First check location state (from ProtectedRoute redirects)
+    if (location.state?.from?.pathname) {
+      return location.state.from.pathname;
+    }
+    // Then check localStorage for last visited panel route
+    const lastRoute = localStorage.getItem(LAST_PANEL_ROUTE_KEY);
+    if (lastRoute) {
+      return lastRoute;
+    }
+    return null;
+  };
 
   useEffect(() => {
-    if (user) {
-      // Check user role and redirect accordingly
-      if (user && profile) {
-        if (profile.role === 'admin') {
-          navigate('/admin', { replace: true });
-        } else {
-          // Check if user has completed onboarding
-          navigate('/panel/onboarding', { replace: true });
-        }
+    if (user && profile) {
+      const intendedPath = getRedirectPath();
+      
+      if (profile.role === 'admin') {
+        navigate(intendedPath?.startsWith('/admin') ? intendedPath : '/admin', { replace: true });
+      } else {
+        // For panel owners, check onboarding status
+        checkOnboardingAndRedirect(intendedPath);
       }
     }
-  }, [user, profile, navigate]);
+  }, [user, profile]);
+
+  const checkOnboardingAndRedirect = async (intendedPath: string | null) => {
+    if (!profile?.id) return;
+
+    try {
+      // Check if user has completed onboarding
+      const { data: panels } = await supabase
+        .from('panels')
+        .select('onboarding_completed')
+        .eq('owner_id', profile.id)
+        .limit(1);
+
+      const hasCompletedOnboarding = panels && panels.length > 0 && panels[0].onboarding_completed;
+
+      if (!hasCompletedOnboarding) {
+        navigate('/panel/onboarding', { replace: true });
+      } else if (intendedPath?.startsWith('/panel')) {
+        navigate(intendedPath, { replace: true });
+      } else {
+        navigate('/panel', { replace: true });
+      }
+    } catch (error) {
+      console.error('Error checking onboarding:', error);
+      navigate('/panel', { replace: true });
+    }
+  };
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();

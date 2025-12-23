@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { 
   User, 
   Mail, 
@@ -14,32 +15,86 @@ import {
   Gift,
   Users,
   DollarSign,
-  Calendar
+  Calendar,
+  Loader2
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "@/hooks/use-toast";
 import BuyerLayout from "./BuyerLayout";
+import { useBuyerAuth } from "@/contexts/BuyerAuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const BuyerProfile = () => {
+  const { buyer, loading: authLoading } = useBuyerAuth();
   const [isEditing, setIsEditing] = useState(false);
-  
-  // Mock user data
-  const user = {
-    name: "John Doe",
-    email: "john@example.com",
-    username: "john_doe",
-    balance: 125.50,
-    totalSpent: 487.25,
-    totalOrders: 45,
-    joinedAt: "2024-01-15",
-    referralCode: "JOHN2024",
-    referralCount: 3,
-    referralEarnings: 15.00,
+  const [loading, setLoading] = useState(true);
+  const [profileData, setProfileData] = useState({
+    name: "",
+    email: "",
+    username: "",
+    balance: 0,
+    totalSpent: 0,
+    totalOrders: 0,
+    joinedAt: "",
+    referralCode: "",
+    referralCount: 0,
+    referralEarnings: 0,
+  });
+
+  useEffect(() => {
+    if (buyer) {
+      fetchProfileData();
+    }
+  }, [buyer]);
+
+  const fetchProfileData = async () => {
+    if (!buyer?.id) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      // Fetch order count and total spent
+      const { data: orders } = await supabase
+        .from('orders')
+        .select('id, price')
+        .eq('buyer_id', buyer.id);
+
+      const totalOrders = orders?.length || 0;
+      const totalSpent = orders?.reduce((sum, o) => sum + (o.price || 0), 0) || 0;
+
+      // Fetch referral data if available
+      const { data: referrals } = await supabase
+        .from('referral_rewards')
+        .select('reward_amount')
+        .eq('referrer_id', buyer.id);
+
+      const referralEarnings = referrals?.reduce((sum, r) => sum + (r.reward_amount || 0), 0) || 0;
+
+      setProfileData({
+        name: buyer.full_name || "User",
+        email: buyer.email || "",
+        username: buyer.username || buyer.email?.split('@')[0] || "user",
+        balance: buyer.balance || 0,
+        totalSpent: totalSpent,
+        totalOrders,
+        joinedAt: buyer.created_at || new Date().toISOString(),
+        referralCode: buyer.referral_code || "",
+        referralCount: buyer.referral_count || 0,
+        referralEarnings,
+      });
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const copyReferralCode = () => {
-    navigator.clipboard.writeText(user.referralCode);
-    toast({ title: "Copied!", description: "Referral code copied to clipboard" });
+    if (profileData.referralCode) {
+      navigator.clipboard.writeText(profileData.referralCode);
+      toast({ title: "Copied!", description: "Referral code copied to clipboard" });
+    }
   };
 
   const containerVariants = {
@@ -51,6 +106,21 @@ const BuyerProfile = () => {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0 }
   };
+
+  if (authLoading || loading) {
+    return (
+      <BuyerLayout>
+        <div className="space-y-6 max-w-4xl mx-auto">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-48 w-full rounded-xl" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Skeleton className="h-64 w-full rounded-xl" />
+            <Skeleton className="h-64 w-full rounded-xl" />
+          </div>
+        </div>
+      </BuyerLayout>
+    );
+  }
 
   return (
     <BuyerLayout>
@@ -73,15 +143,15 @@ const BuyerProfile = () => {
               <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
                 <Avatar className="w-20 h-20 border-4 border-primary/20">
                   <AvatarFallback className="bg-primary/10 text-primary text-2xl font-bold">
-                    {user.name.charAt(0)}
+                    {profileData.name.charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 
                 <div className="flex-1">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                      <h2 className="text-2xl font-bold">{user.name}</h2>
-                      <p className="text-muted-foreground">@{user.username}</p>
+                      <h2 className="text-2xl font-bold">{profileData.name}</h2>
+                      <p className="text-muted-foreground">@{profileData.username}</p>
                     </div>
                     <Button variant="outline" onClick={() => setIsEditing(!isEditing)}>
                       {isEditing ? 'Cancel' : 'Edit Profile'}
@@ -90,19 +160,19 @@ const BuyerProfile = () => {
                   
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
                     <div className="text-center p-3 rounded-xl bg-muted/30">
-                      <p className="text-2xl font-bold">${user.balance.toFixed(2)}</p>
+                      <p className="text-2xl font-bold">${profileData.balance.toFixed(2)}</p>
                       <p className="text-xs text-muted-foreground">Balance</p>
                     </div>
                     <div className="text-center p-3 rounded-xl bg-muted/30">
-                      <p className="text-2xl font-bold">${user.totalSpent.toFixed(2)}</p>
+                      <p className="text-2xl font-bold">${profileData.totalSpent.toFixed(2)}</p>
                       <p className="text-xs text-muted-foreground">Total Spent</p>
                     </div>
                     <div className="text-center p-3 rounded-xl bg-muted/30">
-                      <p className="text-2xl font-bold">{user.totalOrders}</p>
+                      <p className="text-2xl font-bold">{profileData.totalOrders}</p>
                       <p className="text-xs text-muted-foreground">Orders</p>
                     </div>
                     <div className="text-center p-3 rounded-xl bg-muted/30">
-                      <p className="text-2xl font-bold">{user.referralCount}</p>
+                      <p className="text-2xl font-bold">{profileData.referralCount}</p>
                       <p className="text-xs text-muted-foreground">Referrals</p>
                     </div>
                   </div>
@@ -126,7 +196,7 @@ const BuyerProfile = () => {
                 <div className="space-y-2">
                   <Label>Full Name</Label>
                   <Input 
-                    value={user.name} 
+                    value={profileData.name} 
                     readOnly={!isEditing}
                     className="bg-background/50"
                   />
@@ -134,7 +204,7 @@ const BuyerProfile = () => {
                 <div className="space-y-2">
                   <Label>Email</Label>
                   <Input 
-                    value={user.email} 
+                    value={profileData.email} 
                     readOnly
                     className="bg-background/50"
                   />
@@ -142,7 +212,7 @@ const BuyerProfile = () => {
                 <div className="space-y-2">
                   <Label>Username</Label>
                   <Input 
-                    value={user.username} 
+                    value={profileData.username} 
                     readOnly
                     className="bg-background/50"
                   />
@@ -151,7 +221,7 @@ const BuyerProfile = () => {
                   <Label>Member Since</Label>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Calendar className="w-4 h-4" />
-                    {new Date(user.joinedAt).toLocaleDateString()}
+                    {new Date(profileData.joinedAt).toLocaleDateString()}
                   </div>
                 </div>
                 {isEditing && (
@@ -171,35 +241,41 @@ const BuyerProfile = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="glass-card p-4 bg-gradient-to-br from-primary/10 to-primary/5">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium">Your Referral Code</span>
-                    <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-                      5% Bonus
-                    </Badge>
+                {profileData.referralCode ? (
+                  <div className="glass-card p-4 bg-gradient-to-br from-primary/10 to-primary/5">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium">Your Referral Code</span>
+                      <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                        5% Bonus
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 p-3 bg-background/50 rounded-lg font-mono text-lg">
+                        {profileData.referralCode}
+                      </code>
+                      <Button size="icon" variant="outline" onClick={copyReferralCode}>
+                        <Copy className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <code className="flex-1 p-3 bg-background/50 rounded-lg font-mono text-lg">
-                      {user.referralCode}
-                    </code>
-                    <Button size="icon" variant="outline" onClick={copyReferralCode}>
-                      <Copy className="w-4 h-4" />
-                    </Button>
+                ) : (
+                  <div className="text-center py-4 text-muted-foreground">
+                    No referral code available
                   </div>
-                </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center p-4 rounded-xl bg-muted/30">
                     <div className="flex items-center justify-center gap-2 mb-1">
                       <Users className="w-4 h-4 text-primary" />
-                      <span className="text-2xl font-bold">{user.referralCount}</span>
+                      <span className="text-2xl font-bold">{profileData.referralCount}</span>
                     </div>
                     <p className="text-xs text-muted-foreground">Friends Referred</p>
                   </div>
                   <div className="text-center p-4 rounded-xl bg-muted/30">
                     <div className="flex items-center justify-center gap-2 mb-1">
                       <DollarSign className="w-4 h-4 text-emerald-500" />
-                      <span className="text-2xl font-bold">${user.referralEarnings.toFixed(2)}</span>
+                      <span className="text-2xl font-bold">${profileData.referralEarnings.toFixed(2)}</span>
                     </div>
                     <p className="text-xs text-muted-foreground">Total Earned</p>
                   </div>
@@ -231,7 +307,7 @@ const BuyerProfile = () => {
                   </div>
                   <div>
                     <p className="font-medium">Password</p>
-                    <p className="text-sm text-muted-foreground">Last changed 30 days ago</p>
+                    <p className="text-sm text-muted-foreground">Change your account password</p>
                   </div>
                 </div>
                 <Button variant="outline">Change Password</Button>

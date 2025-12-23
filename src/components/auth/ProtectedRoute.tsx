@@ -1,6 +1,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate, useLocation } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
+import { useEffect } from 'react';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -8,21 +9,22 @@ interface ProtectedRouteProps {
   redirectTo?: string;
 }
 
+const LAST_PANEL_ROUTE_KEY = 'smmpilot_last_panel_route';
+
 export function ProtectedRoute({ 
   children, 
   requiredRole, 
   redirectTo = '/auth' 
 }: ProtectedRouteProps) {
-  // Production mode - auth checks enabled
-  const DEV_BYPASS_AUTH = false;
-  
   const { user, profile, loading } = useAuth();
   const location = useLocation();
 
-  // Skip all auth checks if bypass is enabled
-  if (DEV_BYPASS_AUTH) {
-    return <>{children}</>;
-  }
+  // Save current panel route for restoration after login
+  useEffect(() => {
+    if (user && location.pathname.startsWith('/panel')) {
+      localStorage.setItem(LAST_PANEL_ROUTE_KEY, location.pathname);
+    }
+  }, [user, location.pathname]);
 
   if (loading) {
     return (
@@ -42,14 +44,6 @@ export function ProtectedRoute({
       case 'admin':
         return <Navigate to="/admin" replace />;
       case 'panel_owner':
-        // Check if panel owner has completed onboarding
-        if (location.pathname.startsWith('/panel') && !location.pathname.includes('/onboarding')) {
-          // Check if they have a panel with completed onboarding
-          const hasCompletedOnboarding = profile?.panels?.some((panel: any) => panel.onboarding_completed);
-          if (!hasCompletedOnboarding) {
-            return <Navigate to="/panel/onboarding" replace />;
-          }
-        }
         return <Navigate to="/panel" replace />;
       default:
         return <Navigate to="/" replace />;
