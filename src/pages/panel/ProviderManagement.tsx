@@ -37,6 +37,7 @@ import {
   AlertTriangle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ImportProgressStepper, ImportStep } from "@/components/panel/ImportProgressStepper";
 
 interface Provider {
   id: string;
@@ -78,11 +79,14 @@ const ProviderManagement = () => {
   const [testingConnection, setTestingConnection] = useState<string | null>(null);
   const [importingServices, setImportingServices] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
+  const [importStep, setImportStep] = useState<ImportStep>("connecting");
+  const [importedCount, setImportedCount] = useState(0);
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [editingProvider, setEditingProvider] = useState<Provider | null>(null);
   const [markupPercent, setMarkupPercent] = useState(25);
   const [importResult, setImportResult] = useState<any>(null);
+  const [importError, setImportError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     api_endpoint: "",
@@ -269,15 +273,24 @@ const ProviderManagement = () => {
     }
   };
 
-  // Real service import
+  // Real service import with kanban stepper
   const handleImportServices = async () => {
     if (!selectedProvider || !panel?.id) return;
     
     setImportingServices(true);
-    setImportProgress(10);
+    setImportProgress(5);
+    setImportStep("connecting");
     setImportResult(null);
+    setImportError(null);
+    setImportedCount(0);
     
     try {
+      // Step 1: Connecting
+      setImportProgress(15);
+      await new Promise(r => setTimeout(r, 500));
+      
+      // Step 2: Fetching
+      setImportStep("fetching");
       setImportProgress(30);
       
       const { data, error } = await supabase.functions.invoke('sync-provider-services', {
@@ -289,14 +302,22 @@ const ProviderManagement = () => {
         }
       });
 
-      setImportProgress(90);
-
       if (error) throw new Error(error.message);
 
+      // Step 3: Processing
+      setImportStep("processing");
+      setImportProgress(70);
+      
+      const summary = data.summary || { totalNew: 0, totalUpdated: 0 };
+      setImportedCount(summary.totalNew + summary.totalUpdated);
+      
+      await new Promise(r => setTimeout(r, 500));
+      
+      // Step 4: Complete
+      setImportStep("complete");
       setImportProgress(100);
       setImportResult(data);
       
-      const summary = data.summary || { totalNew: 0, totalUpdated: 0 };
       toast({ 
         title: "Services Imported", 
         description: `${summary.totalNew} new services added, ${summary.totalUpdated} updated` 
@@ -305,11 +326,15 @@ const ProviderManagement = () => {
       setTimeout(() => {
         setImportDialogOpen(false);
         setImportProgress(0);
+        setImportStep("connecting");
         setImportResult(null);
-      }, 2000);
+        setImportedCount(0);
+      }, 2500);
 
     } catch (error: any) {
       console.error('Import error:', error);
+      setImportStep("error");
+      setImportError(error.message || "Import failed");
       toast({ variant: "destructive", title: "Import Failed", description: error.message });
     } finally {
       setImportingServices(false);
@@ -443,40 +468,43 @@ const ProviderManagement = () => {
                   <motion.div key={provider.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}>
                     <Card className={cn("glass-card-hover transition-all", !provider.is_active && "opacity-60", isLowBalance && "border-yellow-500/50")}>
                       <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-4">
-                            <div className={cn("p-3 rounded-xl", provider.is_active ? "bg-primary/10" : "bg-muted")}>
-                              <Server className={cn("w-6 h-6", provider.is_active ? "text-primary" : "text-muted-foreground")} />
+                        {/* Mobile-first responsive layout */}
+                        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                          {/* Provider Info */}
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className={cn("p-2.5 md:p-3 rounded-xl shrink-0", provider.is_active ? "bg-primary/10" : "bg-muted")}>
+                              <Server className={cn("w-5 h-5 md:w-6 md:h-6", provider.is_active ? "text-primary" : "text-muted-foreground")} />
                             </div>
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <h3 className="font-semibold">{provider.name}</h3>
-                                <Badge variant={provider.is_active ? "default" : "secondary"}>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h3 className="font-semibold truncate">{provider.name}</h3>
+                                <Badge variant={provider.is_active ? "default" : "secondary"} className="shrink-0">
                                   {provider.is_active ? "Active" : "Inactive"}
                                 </Badge>
                                 {isLowBalance && (
-                                  <Badge variant="outline" className="text-yellow-500 border-yellow-500/50">
-                                    <AlertTriangle className="w-3 h-3 mr-1" /> Low Balance
+                                  <Badge variant="outline" className="text-yellow-500 border-yellow-500/50 shrink-0">
+                                    <AlertTriangle className="w-3 h-3 mr-1" /> Low
                                   </Badge>
                                 )}
                               </div>
-                              <p className="text-sm text-muted-foreground">{provider.api_endpoint}</p>
+                              <p className="text-sm text-muted-foreground truncate">{provider.api_endpoint}</p>
                             </div>
                           </div>
                           
-                          <div className="flex items-center gap-4">
+                          {/* Balance & Actions - stacks on mobile */}
+                          <div className="flex items-center justify-between gap-3 md:gap-4 border-t md:border-t-0 pt-3 md:pt-0">
                             {/* Balance Display */}
-                            <div className="text-right">
+                            <div className="text-left md:text-right min-w-[80px]">
                               {balanceState.loading ? (
                                 <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
                               ) : balanceState.error ? (
                                 <div className="flex items-center gap-1 text-destructive">
                                   <XCircle className="w-4 h-4" />
-                                  <span className="text-sm">Error</span>
+                                  <span className="text-xs">Error</span>
                                 </div>
                               ) : (
                                 <>
-                                  <p className={cn("text-xl font-bold", isLowBalance ? "text-yellow-500" : "text-green-500")}>
+                                  <p className={cn("text-lg md:text-xl font-bold", isLowBalance ? "text-yellow-500" : "text-green-500")}>
                                     ${balanceState.balance?.toFixed(2) || '0.00'}
                                   </p>
                                   <p className="text-xs text-muted-foreground">Balance</p>
@@ -486,20 +514,21 @@ const ProviderManagement = () => {
 
                             <Switch checked={provider.is_active} onCheckedChange={() => toggleProviderStatus(provider)} />
                             
-                            <div className="flex gap-1">
-                              <Button size="icon" variant="ghost" onClick={() => fetchProviderBalance(provider)} disabled={balanceState.loading}>
+                            {/* Action buttons - horizontal scroll on very small screens */}
+                            <div className="flex gap-1 overflow-x-auto">
+                              <Button size="icon" variant="ghost" className="shrink-0 h-8 w-8 md:h-9 md:w-9" onClick={() => fetchProviderBalance(provider)} disabled={balanceState.loading}>
                                 <RefreshCw className={cn("w-4 h-4", balanceState.loading && "animate-spin")} />
                               </Button>
-                              <Button size="icon" variant="ghost" onClick={() => testConnection(provider)} disabled={testingConnection === provider.id}>
+                              <Button size="icon" variant="ghost" className="shrink-0 h-8 w-8 md:h-9 md:w-9" onClick={() => testConnection(provider)} disabled={testingConnection === provider.id}>
                                 {testingConnection === provider.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
                               </Button>
-                              <Button size="icon" variant="ghost" onClick={() => openImportDialog(provider)}>
+                              <Button size="icon" variant="ghost" className="shrink-0 h-8 w-8 md:h-9 md:w-9" onClick={() => openImportDialog(provider)}>
                                 <Download className="w-4 h-4" />
                               </Button>
-                              <Button size="icon" variant="ghost" onClick={() => openEditDialog(provider)}>
+                              <Button size="icon" variant="ghost" className="shrink-0 h-8 w-8 md:h-9 md:w-9" onClick={() => openEditDialog(provider)}>
                                 <Edit className="w-4 h-4" />
                               </Button>
-                              <Button size="icon" variant="ghost" className="text-destructive" onClick={() => deleteProvider(provider.id)}>
+                              <Button size="icon" variant="ghost" className="shrink-0 h-8 w-8 md:h-9 md:w-9 text-destructive" onClick={() => deleteProvider(provider.id)}>
                                 <Trash2 className="w-4 h-4" />
                               </Button>
                             </div>
@@ -582,60 +611,74 @@ const ProviderManagement = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Import Services Dialog */}
-      <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
-        <DialogContent className="glass-card">
+      {/* Import Services Dialog with Kanban Stepper */}
+      <Dialog open={importDialogOpen} onOpenChange={(open) => {
+        if (!importingServices) {
+          setImportDialogOpen(open);
+          if (!open) {
+            setImportProgress(0);
+            setImportStep("connecting");
+            setImportResult(null);
+            setImportError(null);
+          }
+        }
+      }}>
+        <DialogContent className="glass-card max-w-lg">
           <DialogHeader>
-            <DialogTitle>Import Services</DialogTitle>
-            <DialogDescription>Import services from {selectedProvider?.name} to your panel</DialogDescription>
+            <DialogTitle>Import All Services</DialogTitle>
+            <DialogDescription>
+              Import all services from <span className="font-semibold text-primary">{selectedProvider?.name}</span> to your panel
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-6 py-4">
-            <div className="space-y-3">
-              <Label>Markup Percentage</Label>
-              <div className="flex items-center gap-4">
-                <Slider
-                  value={[markupPercent]}
-                  onValueChange={([value]) => setMarkupPercent(value)}
-                  min={0}
-                  max={100}
-                  step={5}
-                  className="flex-1"
-                />
-                <span className="text-xl font-bold text-primary w-16">{markupPercent}%</span>
-              </div>
-              <p className="text-xs text-muted-foreground">Your services will be priced {markupPercent}% higher than the provider's prices</p>
-            </div>
-
-            {importingServices && (
-              <div className="space-y-2">
-                <Progress value={importProgress} className="h-2" />
-                <p className="text-sm text-center text-muted-foreground">
-                  {importProgress < 30 ? "Connecting to provider..." : 
-                   importProgress < 90 ? "Importing services..." : "Finishing up..."}
-                </p>
+            {!importingServices && !importResult && (
+              <div className="space-y-3">
+                <Label>Markup Percentage</Label>
+                <div className="flex items-center gap-4">
+                  <Slider
+                    value={[markupPercent]}
+                    onValueChange={([value]) => setMarkupPercent(value)}
+                    min={0}
+                    max={100}
+                    step={5}
+                    className="flex-1"
+                  />
+                  <span className="text-xl font-bold text-primary w-16">{markupPercent}%</span>
+                </div>
+                <p className="text-xs text-muted-foreground">Your services will be priced {markupPercent}% higher than the provider's prices</p>
+                
+                {/* Info card */}
+                <Card className="bg-muted/30 border-border/50">
+                  <CardContent className="p-3 flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                    <p className="text-xs text-muted-foreground">
+                      This will import <strong>ALL</strong> services from the provider. For selective import, use the Services page → Import button.
+                    </p>
+                  </CardContent>
+                </Card>
               </div>
             )}
 
-            {importResult && (
-              <Card className="bg-green-500/10 border-green-500/20">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2 text-green-500 mb-2">
-                    <CheckCircle className="w-5 h-5" />
-                    <span className="font-semibold">Import Complete!</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {importResult.summary?.totalNew || 0} new services added, {importResult.summary?.totalUpdated || 0} updated
-                  </p>
-                </CardContent>
-              </Card>
+            {/* Kanban Progress Stepper */}
+            {(importingServices || importResult) && (
+              <ImportProgressStepper
+                currentStep={importStep}
+                progress={importProgress}
+                servicesCount={importedCount}
+                error={importError || undefined}
+              />
             )}
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setImportDialogOpen(false)} disabled={importingServices}>Cancel</Button>
-            <Button onClick={handleImportServices} disabled={importingServices}>
-              {importingServices ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
-              Import Services
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setImportDialogOpen(false)} disabled={importingServices}>
+              {importResult ? "Close" : "Cancel"}
             </Button>
+            {!importResult && (
+              <Button onClick={handleImportServices} disabled={importingServices} className="bg-gradient-to-r from-primary to-primary/80">
+                {importingServices ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+                Import All Services
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

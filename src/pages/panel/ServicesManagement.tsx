@@ -33,7 +33,10 @@ import {
   ArrowUp,
   ArrowDown,
   Settings2,
-  Palette
+  Palette,
+  ChevronLeft,
+  ChevronRight,
+  Sparkles
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -75,6 +78,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
 import { usePanel } from "@/hooks/usePanel";
 import { SOCIAL_ICONS_MAP } from "@/components/icons/SocialIcons";
+import { detectPlatform, getServiceIcon, autoAssignIconsAndCategories } from "@/lib/service-icon-detection";
 
 // DnD Kit
 import {
@@ -111,10 +115,13 @@ const categories = [
 
 type SortOption = "default" | "price-high" | "price-low" | "orders-high" | "orders-low" | "name";
 
+const ITEMS_PER_PAGE = 50;
+
 const ServicesManagement = () => {
   const isMobile = useIsMobile();
   const { panel, loading: panelLoading } = usePanel();
   const [services, setServices] = useState<ServiceItem[]>([]);
+  const [providers, setProviders] = useState<Array<{ id: string; name: string; api_endpoint?: string; api_key?: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -124,10 +131,12 @@ const ServicesManagement = () => {
   const [isBulkDialogOpen, setIsBulkDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isBulkIconDialogOpen, setIsBulkIconDialogOpen] = useState(false);
+  const [isAutoFixingIcons, setIsAutoFixingIcons] = useState(false);
   const [bulkAction, setBulkAction] = useState("");
   const [sortOption, setSortOption] = useState<SortOption>("default");
   const [bulkMarkup, setBulkMarkup] = useState(25);
   const [selectedBulkIcon, setSelectedBulkIcon] = useState<string>("");
+  const [currentPage, setCurrentPage] = useState(1);
   
   // New service form
   const [newService, setNewService] = useState({
@@ -143,11 +152,22 @@ const ServicesManagement = () => {
   // Edit service state
   const [editingService, setEditingService] = useState<ServiceItem | null>(null);
 
-  // Fetch services from Supabase
+  // Fetch services and providers from Supabase
   useEffect(() => {
     if (!panel?.id) return;
     fetchServices();
+    fetchProviders();
   }, [panel?.id]);
+
+  const fetchProviders = async () => {
+    if (!panel?.id) return;
+    const { data } = await supabase
+      .from('providers')
+      .select('id, name, api_endpoint, api_key')
+      .eq('panel_id', panel.id)
+      .eq('is_active', true);
+    setProviders(data || []);
+  };
 
   const fetchServices = async () => {
     if (!panel?.id) return;
@@ -883,12 +903,12 @@ const ServicesManagement = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Import Dialog */}
+      {/* Import Dialog - Connected to Real Providers */}
       <ServiceImportDialog
         open={isImportDialogOpen}
         onOpenChange={setIsImportDialogOpen}
         onImport={handleImport}
-        providers={[{ id: 'direct', name: 'Direct' }]}
+        providers={providers.length > 0 ? providers : [{ id: 'direct', name: 'Direct (No providers configured)' }]}
         getCategoryIcon={getCategoryIcon}
       />
 
