@@ -10,9 +10,11 @@ interface BuyerUser {
   balance: number;
   total_spent: number;
   referral_code: string | null;
+  referral_count: number;
   custom_discount: number;
   is_active: boolean;
   panel_id: string;
+  created_at: string;
 }
 
 interface BuyerAuthContextType {
