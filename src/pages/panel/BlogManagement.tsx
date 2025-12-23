@@ -1,7 +1,7 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { 
   FileText, Plus, Search, Edit, Trash2, Eye, Calendar, Tag, MoreVertical, Image as ImageIcon,
-  Clock, CheckCircle, Globe, TrendingUp, Users, Upload, X, Monitor, Tablet, Smartphone
+  Clock, CheckCircle, Globe, TrendingUp, Users, Upload, X, Monitor, Tablet, Smartphone, Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,27 +13,37 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { usePanel } from "@/hooks/usePanel";
 
-const mockPosts = [
-  { id: 1, title: "How to Grow Your Instagram Following in 2024", excerpt: "Learn the best strategies to increase your Instagram followers organically and with smart marketing techniques.", content: "", category: "Instagram", status: "published", author: "Admin", views: 1234, publishedAt: "2024-01-15", thumbnail: "https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?w=400" },
-  { id: 2, title: "SMM Panel vs Manual Marketing: Which is Better?", excerpt: "A comprehensive comparison between using SMM panels and traditional marketing methods for social media growth.", content: "", category: "Marketing", status: "published", author: "Admin", views: 856, publishedAt: "2024-01-10", thumbnail: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400" },
-  { id: 3, title: "TikTok Marketing Strategies for Businesses", excerpt: "Discover how businesses can leverage TikTok for brand awareness and customer engagement.", content: "", category: "TikTok", status: "draft", author: "Admin", views: 0, publishedAt: null, thumbnail: "https://images.unsplash.com/photo-1596558450268-9c27524ba856?w=400" },
-  { id: 4, title: "YouTube SEO: Ranking Your Videos Higher", excerpt: "Master the art of YouTube SEO to get more views and subscribers on your channel.", content: "", category: "YouTube", status: "draft", author: "Admin", views: 0, publishedAt: null, thumbnail: "https://images.unsplash.com/photo-1611162618071-b39a2ec055fb?w=400" },
-];
+interface BlogPost {
+  id: string;
+  title: string;
+  excerpt: string | null;
+  content: string | null;
+  slug: string;
+  status: string | null;
+  published_at: string | null;
+  featured_image_url: string | null;
+  created_at: string;
+}
 
 const categories = ["All", "Instagram", "TikTok", "YouTube", "Marketing", "Tips"];
 
 const BlogManagement = () => {
-  const [posts, setPosts] = useState(mockPosts);
+  const { panel } = usePanel();
+  const [posts, setPosts] = useState<BlogPost[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "tablet" | "mobile">("desktop");
-  const [editingPost, setEditingPost] = useState<typeof mockPosts[0] | null>(null);
+  const [editingPost, setEditingPost] = useState<BlogPost | null>(null);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -41,15 +51,39 @@ const BlogManagement = () => {
     title: "", excerpt: "", content: "", category: "", seoTitle: "", seoDescription: "", status: "draft", thumbnail: ""
   });
 
+  useEffect(() => {
+    if (panel?.id) {
+      fetchPosts();
+    }
+  }, [panel?.id]);
+
+  const fetchPosts = async () => {
+    if (!panel?.id) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('blog_posts')
+        .select('*')
+        .eq('panel_id', panel.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setPosts(data || []);
+    } catch (error) {
+      console.error('Error fetching posts:', error);
+      toast({ variant: "destructive", title: "Failed to load posts" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const filteredPosts = posts.filter(post => {
     const matchesSearch = post.title.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === "All" || post.category === selectedCategory;
-    return matchesSearch && matchesCategory;
+    return matchesSearch;
   });
 
   const publishedPosts = posts.filter(p => p.status === "published").length;
   const draftPosts = posts.filter(p => p.status === "draft").length;
-  const totalViews = posts.reduce((acc, p) => acc + p.views, 0);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -84,13 +118,19 @@ const BlogManagement = () => {
     if (file) handleImageUpload(file);
   };
 
-  const openEditor = (post?: typeof mockPosts[0]) => {
+  const openEditor = (post?: BlogPost) => {
     if (post) {
       setEditingPost(post);
-      setUploadedImage(post.thumbnail);
+      setUploadedImage(post.featured_image_url);
       setNewPost({
-        title: post.title, excerpt: post.excerpt, content: post.content, category: post.category,
-        seoTitle: post.title, seoDescription: post.excerpt, status: post.status, thumbnail: post.thumbnail
+        title: post.title, 
+        excerpt: post.excerpt || "", 
+        content: post.content || "", 
+        category: "",
+        seoTitle: post.title, 
+        seoDescription: post.excerpt || "", 
+        status: post.status || "draft", 
+        thumbnail: post.featured_image_url || ""
       });
     } else {
       setEditingPost(null);
@@ -100,40 +140,107 @@ const BlogManagement = () => {
     setIsEditorOpen(true);
   };
 
-  const savePost = () => {
-    if (editingPost) {
-      setPosts(prev => prev.map(p => p.id === editingPost.id 
-        ? { ...p, ...newPost, thumbnail: uploadedImage || p.thumbnail, publishedAt: newPost.status === "published" ? new Date().toISOString().split('T')[0] : p.publishedAt }
-        : p
-      ));
-      toast({ title: "Post updated successfully" });
-    } else {
-      const post = {
-        id: Date.now(), ...newPost, author: "Admin", views: 0,
-        publishedAt: newPost.status === "published" ? new Date().toISOString().split('T')[0] : null,
-        thumbnail: uploadedImage || "https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=400"
-      };
-      setPosts(prev => [post, ...prev]);
-      toast({ title: "Post created successfully" });
+  const savePost = async () => {
+    if (!panel?.id) return;
+
+    try {
+      const slug = newPost.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      
+      if (editingPost) {
+        const { error } = await supabase
+          .from('blog_posts')
+          .update({
+            title: newPost.title,
+            excerpt: newPost.excerpt,
+            content: newPost.content,
+            status: newPost.status,
+            featured_image_url: uploadedImage,
+            seo_title: newPost.seoTitle,
+            seo_description: newPost.seoDescription,
+            published_at: newPost.status === "published" ? new Date().toISOString() : null
+          })
+          .eq('id', editingPost.id);
+
+        if (error) throw error;
+        toast({ title: "Post updated successfully" });
+      } else {
+        const { error } = await supabase
+          .from('blog_posts')
+          .insert({
+            panel_id: panel.id,
+            title: newPost.title,
+            slug,
+            excerpt: newPost.excerpt,
+            content: newPost.content,
+            status: newPost.status,
+            featured_image_url: uploadedImage,
+            seo_title: newPost.seoTitle,
+            seo_description: newPost.seoDescription,
+            published_at: newPost.status === "published" ? new Date().toISOString() : null
+          });
+
+        if (error) throw error;
+        toast({ title: "Post created successfully" });
+      }
+      
+      setIsEditorOpen(false);
+      fetchPosts();
+    } catch (error) {
+      console.error('Error saving post:', error);
+      toast({ variant: "destructive", title: "Failed to save post" });
     }
-    setIsEditorOpen(false);
   };
 
-  const deletePost = (id: number) => {
-    setPosts(prev => prev.filter(p => p.id !== id));
-    toast({ title: "Post deleted" });
+  const deletePost = async (id: string) => {
+    try {
+      const { error } = await supabase.from('blog_posts').delete().eq('id', id);
+      if (error) throw error;
+      setPosts(prev => prev.filter(p => p.id !== id));
+      toast({ title: "Post deleted" });
+    } catch (error) {
+      console.error('Error deleting post:', error);
+      toast({ variant: "destructive", title: "Failed to delete post" });
+    }
   };
 
-  const togglePublish = (id: number) => {
-    setPosts(prev => prev.map(p => 
-      p.id === id 
-        ? { ...p, status: p.status === "published" ? "draft" : "published", publishedAt: p.status === "draft" ? new Date().toISOString().split('T')[0] : null }
-        : p
-    ));
-    toast({ title: "Post status updated" });
+  const togglePublish = async (id: string) => {
+    const post = posts.find(p => p.id === id);
+    if (!post) return;
+
+    try {
+      const newStatus = post.status === "published" ? "draft" : "published";
+      const { error } = await supabase
+        .from('blog_posts')
+        .update({ 
+          status: newStatus,
+          published_at: newStatus === "published" ? new Date().toISOString() : null
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+      fetchPosts();
+      toast({ title: "Post status updated" });
+    } catch (error) {
+      console.error('Error updating status:', error);
+      toast({ variant: "destructive", title: "Failed to update status" });
+    }
   };
 
   const previewWidth = previewDevice === "desktop" ? "100%" : previewDevice === "tablet" ? "768px" : "375px";
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-10 w-64" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-24 rounded-xl" />)}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[1, 2, 3].map(i => <Skeleton key={i} className="h-64 rounded-xl" />)}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -155,7 +262,7 @@ const BlogManagement = () => {
           { label: "Total Posts", value: posts.length, icon: FileText, color: "text-primary" },
           { label: "Published", value: publishedPosts, icon: Globe, color: "text-green-500" },
           { label: "Drafts", value: draftPosts, icon: Clock, color: "text-yellow-500" },
-          { label: "Total Views", value: totalViews.toLocaleString(), icon: TrendingUp, color: "text-blue-500" },
+          { label: "Total Views", value: 0, icon: TrendingUp, color: "text-blue-500" },
         ].map((stat, index) => (
           <motion.div key={stat.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1 }}>
             <Card className="glass-card-hover">
@@ -181,71 +288,78 @@ const BlogManagement = () => {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input placeholder="Search posts..." className="pl-9 bg-card/50 backdrop-blur-sm border-border/50" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
         </div>
-        <div className="flex gap-2 flex-wrap">
-          {categories.map((cat) => (
-            <button key={cat} onClick={() => setSelectedCategory(cat)}
-              className={cn("px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200",
-                selectedCategory === cat ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "glass-card hover:bg-accent/50 text-muted-foreground hover:text-foreground"
-              )}>
-              {cat}
-            </button>
-          ))}
-        </div>
       </motion.div>
 
       {/* Posts Grid */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <AnimatePresence>
-          {filteredPosts.map((post, index) => (
-            <motion.div key={post.id} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ delay: index * 0.05 }}>
-              <Card className="glass-card-hover overflow-hidden group">
-                <div className="relative aspect-video overflow-hidden">
-                  <img src={post.thumbnail} alt={post.title} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
-                  <Badge variant="outline" className={cn("absolute top-3 right-3", post.status === "published" ? "bg-green-500/10 text-green-500 border-green-500/20" : "bg-yellow-500/10 text-yellow-500 border-yellow-500/20")}>
-                    {post.status === "published" ? <Globe className="w-3 h-3 mr-1" /> : <Clock className="w-3 h-3 mr-1" />}
-                    {post.status}
-                  </Badge>
-                  <Button variant="secondary" size="sm" className="absolute bottom-3 left-3 gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => { setEditingPost(post); setIsPreviewOpen(true); }}>
-                    <Eye className="w-3 h-3" /> Preview
-                  </Button>
-                </div>
-                <CardContent className="p-4 space-y-3">
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20"><Tag className="w-3 h-3 mr-1" />{post.category}</Badge>
-                    {post.publishedAt && <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{post.publishedAt}</span>}
+      {posts.length === 0 ? (
+        <Card className="glass-card">
+          <CardContent className="py-12 text-center">
+            <FileText className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+            <h3 className="text-lg font-semibold mb-2">No blog posts yet</h3>
+            <p className="text-muted-foreground mb-4">Create your first blog post to engage your audience</p>
+            <Button onClick={() => openEditor()} className="gap-2">
+              <Plus className="w-4 h-4" /> Create Post
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <AnimatePresence>
+            {filteredPosts.map((post, index) => (
+              <motion.div key={post.id} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ delay: index * 0.05 }}>
+                <Card className="glass-card-hover overflow-hidden group">
+                  <div className="relative aspect-video overflow-hidden bg-muted">
+                    {post.featured_image_url ? (
+                      <img src={post.featured_image_url} alt={post.title} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <ImageIcon className="w-12 h-12 text-muted-foreground/50" />
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
+                    <Badge variant="outline" className={cn("absolute top-3 right-3", post.status === "published" ? "bg-green-500/10 text-green-500 border-green-500/20" : "bg-yellow-500/10 text-yellow-500 border-yellow-500/20")}>
+                      {post.status === "published" ? <Globe className="w-3 h-3 mr-1" /> : <Clock className="w-3 h-3 mr-1" />}
+                      {post.status}
+                    </Badge>
+                    <Button variant="secondary" size="sm" className="absolute bottom-3 left-3 gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => { setEditingPost(post); setIsPreviewOpen(true); }}>
+                      <Eye className="w-3 h-3" /> Preview
+                    </Button>
                   </div>
-                  <h3 className="font-semibold line-clamp-2 group-hover:text-primary transition-colors">{post.title}</h3>
-                  <p className="text-sm text-muted-foreground line-clamp-2">{post.excerpt}</p>
-                  <div className="flex items-center justify-between pt-2">
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1"><Eye className="w-3 h-3" />{post.views.toLocaleString()}</span>
-                      <span className="flex items-center gap-1"><Users className="w-3 h-3" />{post.author}</span>
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      {post.published_at && <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{new Date(post.published_at).toLocaleDateString()}</span>}
                     </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="w-4 h-4" /></Button></DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="glass-card">
-                        <DropdownMenuItem onClick={() => openEditor(post)}><Edit className="w-4 h-4 mr-2" /> Edit</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => togglePublish(post.id)}>
-                          {post.status === "published" ? <><Clock className="w-4 h-4 mr-2" /> Unpublish</> : <><CheckCircle className="w-4 h-4 mr-2" /> Publish</>}
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => deletePost(post.id)} className="text-destructive focus:text-destructive"><Trash2 className="w-4 h-4 mr-2" /> Delete</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </motion.div>
+                    <h3 className="font-semibold line-clamp-2 group-hover:text-primary transition-colors">{post.title}</h3>
+                    <p className="text-sm text-muted-foreground line-clamp-2">{post.excerpt}</p>
+                    <div className="flex items-center justify-between pt-2">
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1"><Eye className="w-3 h-3" />0</span>
+                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="w-4 h-4" /></Button></DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="glass-card">
+                          <DropdownMenuItem onClick={() => openEditor(post)}><Edit className="w-4 h-4 mr-2" /> Edit</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => togglePublish(post.id)}>
+                            {post.status === "published" ? <><Clock className="w-4 h-4 mr-2" /> Unpublish</> : <><CheckCircle className="w-4 h-4 mr-2" /> Publish</>}
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => deletePost(post.id)} className="text-destructive focus:text-destructive"><Trash2 className="w-4 h-4 mr-2" /> Delete</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </motion.div>
+      )}
 
-      {filteredPosts.length === 0 && (
+      {filteredPosts.length === 0 && posts.length > 0 && (
         <div className="text-center py-12">
           <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
           <h3 className="font-medium text-lg">No posts found</h3>
-          <p className="text-muted-foreground text-sm">Try adjusting your search or create a new post</p>
+          <p className="text-muted-foreground text-sm">Try adjusting your search</p>
         </div>
       )}
 
@@ -276,24 +390,15 @@ const BlogManagement = () => {
                 <Label>Content</Label>
                 <Textarea value={newPost.content} onChange={(e) => setNewPost(prev => ({ ...prev, content: e.target.value }))} placeholder="Write your post content here..." className="bg-background/50 min-h-[200px]" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Category</Label>
-                  <Select value={newPost.category} onValueChange={(value) => setNewPost(prev => ({ ...prev, category: value }))}>
-                    <SelectTrigger className="bg-background/50"><SelectValue placeholder="Select category" /></SelectTrigger>
-                    <SelectContent>{categories.filter(c => c !== "All").map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Status</Label>
-                  <Select value={newPost.status} onValueChange={(value) => setNewPost(prev => ({ ...prev, status: value }))}>
-                    <SelectTrigger className="bg-background/50"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="draft">Draft</SelectItem>
-                      <SelectItem value="published">Published</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <Select value={newPost.status} onValueChange={(value) => setNewPost(prev => ({ ...prev, status: value }))}>
+                  <SelectTrigger className="bg-background/50"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="draft">Draft</SelectItem>
+                    <SelectItem value="published">Published</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </TabsContent>
 
@@ -314,16 +419,16 @@ const BlogManagement = () => {
                   {uploadedImage ? (
                     <div className="relative inline-block">
                       <img src={uploadedImage} alt="Preview" className="max-h-48 rounded-lg mx-auto" />
-                      <Button variant="destructive" size="icon" className="absolute -top-2 -right-2 h-6 w-6" onClick={(e) => { e.stopPropagation(); setUploadedImage(null); }}>
+                      <Button size="icon" variant="destructive" className="absolute -top-2 -right-2 h-6 w-6" onClick={(e) => { e.stopPropagation(); setUploadedImage(null); }}>
                         <X className="w-3 h-3" />
                       </Button>
                     </div>
                   ) : (
-                    <div className="space-y-2">
-                      <Upload className="w-10 h-10 mx-auto text-muted-foreground" />
-                      <p className="text-sm text-muted-foreground">Drag and drop an image, or click to select</p>
-                      <p className="text-xs text-muted-foreground">PNG, JPG, GIF up to 10MB</p>
-                    </div>
+                    <>
+                      <Upload className="w-10 h-10 mx-auto mb-3 text-muted-foreground" />
+                      <p className="text-sm font-medium">Drag & drop or click to upload</p>
+                      <p className="text-xs text-muted-foreground mt-1">Recommended: 1200x630px</p>
+                    </>
                   )}
                 </div>
               </div>
@@ -333,57 +438,56 @@ const BlogManagement = () => {
               <div className="space-y-2">
                 <Label>SEO Title</Label>
                 <Input value={newPost.seoTitle} onChange={(e) => setNewPost(prev => ({ ...prev, seoTitle: e.target.value }))} placeholder="SEO optimized title..." className="bg-background/50" />
-                <p className="text-xs text-muted-foreground">{newPost.seoTitle.length}/60 characters</p>
               </div>
               <div className="space-y-2">
                 <Label>Meta Description</Label>
-                <Textarea value={newPost.seoDescription} onChange={(e) => setNewPost(prev => ({ ...prev, seoDescription: e.target.value }))} placeholder="Meta description for search engines..." className="bg-background/50" rows={3} />
-                <p className="text-xs text-muted-foreground">{newPost.seoDescription.length}/160 characters</p>
+                <Textarea value={newPost.seoDescription} onChange={(e) => setNewPost(prev => ({ ...prev, seoDescription: e.target.value }))} placeholder="Brief description for search engines..." className="bg-background/50" rows={3} />
               </div>
-              <Card className="glass-card p-4">
-                <p className="text-xs text-muted-foreground mb-2">Search Preview</p>
-                <div className="space-y-1">
-                  <p className="text-blue-500 text-sm font-medium truncate">{newPost.seoTitle || newPost.title || "Post Title"}</p>
-                  <p className="text-xs text-green-600">https://yourpanel.com/blog/{(newPost.title || "post-title").toLowerCase().replace(/\s+/g, '-')}</p>
-                  <p className="text-xs text-muted-foreground line-clamp-2">{newPost.seoDescription || newPost.excerpt || "Post description..."}</p>
-                </div>
-              </Card>
             </TabsContent>
           </Tabs>
 
           <div className="flex justify-end gap-3 mt-6">
             <Button variant="outline" onClick={() => setIsEditorOpen(false)}>Cancel</Button>
-            <Button onClick={savePost} className="gap-2 bg-gradient-to-r from-primary to-primary/80">{editingPost ? "Update" : "Create"} Post</Button>
+            <Button onClick={savePost} className="gap-2">
+              {editingPost ? "Update Post" : "Create Post"}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
 
       {/* Preview Dialog */}
       <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-        <DialogContent className="max-w-5xl glass-card border-border/50 max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-6xl glass-card border-border/50 max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Post Preview</DialogTitle>
-            <div className="flex gap-2 mt-2">
-              <Button variant={previewDevice === "desktop" ? "default" : "outline"} size="sm" onClick={() => setPreviewDevice("desktop")}><Monitor className="w-4 h-4" /></Button>
-              <Button variant={previewDevice === "tablet" ? "default" : "outline"} size="sm" onClick={() => setPreviewDevice("tablet")}><Tablet className="w-4 h-4" /></Button>
-              <Button variant={previewDevice === "mobile" ? "default" : "outline"} size="sm" onClick={() => setPreviewDevice("mobile")}><Smartphone className="w-4 h-4" /></Button>
-            </div>
+            <DialogTitle className="flex items-center justify-between">
+              <span>Post Preview</span>
+              <div className="flex gap-1">
+                {[
+                  { device: "desktop" as const, icon: Monitor },
+                  { device: "tablet" as const, icon: Tablet },
+                  { device: "mobile" as const, icon: Smartphone },
+                ].map(({ device, icon: Icon }) => (
+                  <Button key={device} variant={previewDevice === device ? "default" : "outline"} size="icon" className="h-8 w-8" onClick={() => setPreviewDevice(device)}>
+                    <Icon className="w-4 h-4" />
+                  </Button>
+                ))}
+              </div>
+            </DialogTitle>
           </DialogHeader>
-          <div className="flex justify-center mt-4">
-            <div className="border border-border rounded-xl overflow-hidden bg-background" style={{ width: previewWidth, maxWidth: "100%" }}>
+          <div className="flex justify-center bg-muted/30 rounded-xl p-4 overflow-x-auto">
+            <div style={{ width: previewWidth, maxWidth: "100%" }} className="bg-background rounded-lg shadow-lg overflow-hidden transition-all duration-300">
               {editingPost && (
                 <article className="p-6">
-                  <img src={editingPost.thumbnail} alt={editingPost.title} className="w-full aspect-video object-cover rounded-lg mb-6" />
-                  <Badge className="mb-4">{editingPost.category}</Badge>
-                  <h1 className="text-2xl font-bold mb-4">{editingPost.title}</h1>
+                  {editingPost.featured_image_url && (
+                    <img src={editingPost.featured_image_url} alt={editingPost.title} className="w-full rounded-lg mb-6 aspect-video object-cover" />
+                  )}
+                  <h1 className="text-2xl md:text-3xl font-bold mb-4">{editingPost.title}</h1>
                   <div className="flex items-center gap-4 text-sm text-muted-foreground mb-6">
-                    <span>{editingPost.author}</span>
-                    <span>{editingPost.publishedAt}</span>
-                    <span>{editingPost.views} views</span>
+                    {editingPost.published_at && <span className="flex items-center gap-1"><Calendar className="w-4 h-4" />{new Date(editingPost.published_at).toLocaleDateString()}</span>}
                   </div>
-                  <p className="text-muted-foreground leading-relaxed">{editingPost.excerpt}</p>
-                  <div className="mt-6 prose prose-invert max-w-none">
-                    {editingPost.content || "Content will appear here..."}
+                  <div className="prose prose-sm max-w-none">
+                    <p className="text-muted-foreground">{editingPost.excerpt}</p>
+                    <div className="mt-4 whitespace-pre-wrap">{editingPost.content}</div>
                   </div>
                 </article>
               )}
