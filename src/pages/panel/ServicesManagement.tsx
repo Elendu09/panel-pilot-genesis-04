@@ -151,6 +151,23 @@ const ServicesManagement = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [debouncedSearch, setDebouncedSearch] = useState("");
   
+  // Select All on All Pages
+  const [selectAllPages, setSelectAllPages] = useState(false);
+  const [allFilteredIds, setAllFilteredIds] = useState<string[]>([]);
+  const [isLoadingAllIds, setIsLoadingAllIds] = useState(false);
+  
+  // Auto-Fix Preview
+  const [isAutoFixPreviewOpen, setIsAutoFixPreviewOpen] = useState(false);
+  const [autoFixPreviewData, setAutoFixPreviewData] = useState<Array<{
+    id: string;
+    name: string;
+    currentCategory: string;
+    newCategory: string;
+    currentIcon: string;
+    newIcon: string;
+    willChange: boolean;
+  }>>([]);
+  
   // New service form
   const [newService, setNewService] = useState({
     name: '',
@@ -162,8 +179,8 @@ const ServicesManagement = () => {
     imageUrl: '',
   });
   
-  // Edit service state
-  const [editingService, setEditingService] = useState<ServiceItem | null>(null);
+  // Edit service state - using a more flexible type for ServiceEditDialog compatibility
+  const [editingService, setEditingService] = useState<any>(null);
 
   // Debounce search query
   useEffect(() => {
@@ -393,8 +410,52 @@ const ServicesManagement = () => {
   const selectAll = () => {
     if (selectedServices.length === services.length && services.length > 0) {
       setSelectedServices([]);
+      setSelectAllPages(false);
     } else {
       setSelectedServices(services.map(s => s.id));
+    }
+  };
+
+  // Fetch all filtered service IDs for "Select All on All Pages"
+  const fetchAllFilteredIds = async () => {
+    if (!panel?.id) return;
+    
+    setIsLoadingAllIds(true);
+    try {
+      let query = supabase
+        .from('services')
+        .select('id')
+        .eq('panel_id', panel.id);
+
+      if (selectedCategory !== 'all') {
+        query = query.eq('category', selectedCategory as any);
+      }
+
+      if (debouncedSearch) {
+        query = query.ilike('name', `%${debouncedSearch}%`);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      const ids = (data || []).map(s => s.id);
+      setAllFilteredIds(ids);
+      setSelectedServices(ids);
+      setSelectAllPages(true);
+      toast({ title: `Selected all ${ids.length} services matching filters` });
+    } catch (error) {
+      console.error('Error fetching all IDs:', error);
+      toast({ title: 'Failed to select all', variant: 'destructive' });
+    } finally {
+      setIsLoadingAllIds(false);
+    }
+  };
+
+  // Clear Select All on All Pages when filters change
+  const clearSelectAllPages = () => {
+    if (selectAllPages) {
+      setSelectAllPages(false);
+      setSelectedServices([]);
     }
   };
 
@@ -503,52 +564,89 @@ const ServicesManagement = () => {
       toast({ title: 'Failed to change category', variant: 'destructive' });
     }
   };
-  // Auto-fix icons for all services
-  const handleAutoFixIcons = async () => {
-    if (services.length === 0) {
-      toast({ title: "No services to fix", variant: "destructive" });
+  // Generate Auto-Fix Preview
+  const generateAutoFixPreview = async () => {
+    if (!panel?.id) return;
+    
+    setIsAutoFixingIcons(true);
+    
+    try {
+      // Fetch ALL services for preview (not just current page)
+      const { data: allServices, error } = await supabase
+        .from('services')
+        .select('id, name, category, image_url')
+        .eq('panel_id', panel.id);
+
+      if (error) throw error;
+
+      const previewData = (allServices || []).map((service) => {
+        const detectedCategory = detectPlatform(service.name);
+        const newIcon = `icon:${detectedCategory}`;
+        const currentIcon = service.image_url || '';
+        const willChange = service.category !== detectedCategory || currentIcon !== newIcon;
+        
+        return {
+          id: service.id,
+          name: service.name,
+          currentCategory: service.category,
+          newCategory: detectedCategory,
+          currentIcon: currentIcon,
+          newIcon: newIcon,
+          willChange,
+        };
+      });
+
+      setAutoFixPreviewData(previewData);
+      setIsAutoFixPreviewOpen(true);
+    } catch (error) {
+      console.error('Error generating preview:', error);
+      toast({ title: 'Failed to generate preview', variant: 'destructive' });
+    } finally {
+      setIsAutoFixingIcons(false);
+    }
+  };
+
+  // Apply Auto-Fix from Preview
+  const applyAutoFix = async () => {
+    const changesToApply = autoFixPreviewData.filter(p => p.willChange);
+    
+    if (changesToApply.length === 0) {
+      toast({ title: "No changes to apply" });
+      setIsAutoFixPreviewOpen(false);
       return;
     }
 
     setIsAutoFixingIcons(true);
     
     try {
-      const updates = services.map((service) => {
-        const detectedCategory = detectPlatform(service.name);
-        const iconUrl = `icon:${detectedCategory}`;
-        return {
-          id: service.id,
-          category: detectedCategory,
-          image_url: iconUrl,
-        };
-      });
-
       // Batch update in chunks of 100
       const chunkSize = 100;
-      for (let i = 0; i < updates.length; i += chunkSize) {
-        const chunk = updates.slice(i, i + chunkSize);
+      for (let i = 0; i < changesToApply.length; i += chunkSize) {
+        const chunk = changesToApply.slice(i, i + chunkSize);
         await Promise.all(
           chunk.map((update) =>
             supabase
               .from('services')
-              .update({ category: update.category as any, image_url: update.image_url })
+              .update({ category: update.newCategory as any, image_url: update.newIcon })
               .eq('id', update.id)
           )
         );
       }
 
-      // Update local state
+      // Update local state for current page
       setServices((prev) =>
         prev.map((s) => {
-          const update = updates.find((u) => u.id === s.id);
+          const update = changesToApply.find((u) => u.id === s.id);
           if (update) {
-            return { ...s, category: update.category, imageUrl: update.image_url };
+            return { ...s, category: update.newCategory, imageUrl: update.newIcon };
           }
           return s;
         })
       );
 
-      toast({ title: `Auto-fixed icons for ${services.length} services` });
+      toast({ title: `Auto-fixed icons for ${changesToApply.length} services` });
+      setIsAutoFixPreviewOpen(false);
+      fetchCategoryCounts();
     } catch (error) {
       console.error('Auto-fix error:', error);
       toast({ title: 'Failed to auto-fix icons', variant: 'destructive' });
@@ -605,9 +703,27 @@ const ServicesManagement = () => {
     }
   };
 
-  // Edit service
+  // Edit service - map ServiceItem properties to ServiceEditDialog format
   const openEditDialog = (service: ServiceItem) => {
-    setEditingService(service);
+    // Map properties to match ServiceEditDialog expectations
+    const dialogService = {
+      id: service.id,
+      name: service.name,
+      category: service.category,
+      provider: service.provider,
+      provider_id: service.providerId,
+      price: service.price,
+      originalPrice: service.originalPrice,
+      minQty: service.minQty,
+      min_quantity: service.minQty,
+      maxQty: service.maxQty,
+      max_quantity: service.maxQty,
+      description: service.description || '',
+      imageUrl: service.imageUrl,
+      image_url: service.imageUrl,
+      orders: service.orders,
+    };
+    setEditingService(dialogService);
     setIsEditDialogOpen(true);
   };
 
@@ -720,8 +836,8 @@ const ServicesManagement = () => {
             variant="outline" 
             size="sm" 
             className="glass-card border-border/50"
-            onClick={handleAutoFixIcons}
-            disabled={isAutoFixingIcons || services.length === 0}
+            onClick={generateAutoFixPreview}
+            disabled={isAutoFixingIcons}
           >
             {isAutoFixingIcons ? (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -879,28 +995,61 @@ const ServicesManagement = () => {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="glass-card p-3 flex flex-wrap items-center justify-between gap-3"
+            className="glass-card p-3 space-y-2"
           >
-            <span className="text-sm font-medium">{selectedServices.length} selected</span>
-            <div className="flex flex-wrap gap-2">
-              <Button size="sm" variant="outline" onClick={() => handleBulkAction("enable")}>
-                <Power className="w-3 h-3 mr-1" /> Enable
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => handleBulkAction("disable")}>
-                <Power className="w-3 h-3 mr-1" /> Disable
-              </Button>
-              <Button size="sm" variant="destructive" onClick={() => handleBulkAction("delete")}>
-                <Trash2 className="w-3 h-3 mr-1" /> Delete
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => handleBulkAction("export-csv")}>
-                <Download className="w-3 h-3 mr-1" /> Export
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => setIsBulkIconDialogOpen(true)}>
-                <Palette className="w-3 h-3 mr-1" /> Set Icon
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => setIsBulkCategoryDialogOpen(true)}>
-                <Layers className="w-3 h-3 mr-1" /> Change Category
-              </Button>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">
+                  {selectAllPages ? `All ${selectedServices.length} services selected` : `${selectedServices.length} selected on this page`}
+                </span>
+                {!selectAllPages && totalCount > services.length && (
+                  <Button 
+                    size="sm" 
+                    variant="link" 
+                    className="text-primary h-auto p-0"
+                    onClick={fetchAllFilteredIds}
+                    disabled={isLoadingAllIds}
+                  >
+                    {isLoadingAllIds ? (
+                      <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                    ) : null}
+                    Select all {totalCount} matching services
+                  </Button>
+                )}
+                {selectAllPages && (
+                  <Button 
+                    size="sm" 
+                    variant="link" 
+                    className="text-muted-foreground h-auto p-0"
+                    onClick={() => {
+                      setSelectAllPages(false);
+                      setSelectedServices(services.map(s => s.id));
+                    }}
+                  >
+                    Clear selection
+                  </Button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" variant="outline" onClick={() => handleBulkAction("enable")}>
+                  <Power className="w-3 h-3 mr-1" /> Enable
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => handleBulkAction("disable")}>
+                  <Power className="w-3 h-3 mr-1" /> Disable
+                </Button>
+                <Button size="sm" variant="destructive" onClick={() => handleBulkAction("delete")}>
+                  <Trash2 className="w-3 h-3 mr-1" /> Delete
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => handleBulkAction("export-csv")}>
+                  <Download className="w-3 h-3 mr-1" /> Export
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setIsBulkIconDialogOpen(true)}>
+                  <Palette className="w-3 h-3 mr-1" /> Set Icon
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setIsBulkCategoryDialogOpen(true)}>
+                  <Layers className="w-3 h-3 mr-1" /> Change Category
+                </Button>
+              </div>
             </div>
           </motion.div>
         )}
@@ -1325,6 +1474,102 @@ const ServicesManagement = () => {
             </Button>
             <Button onClick={executeBulkCategoryAssignment} disabled={!selectedBulkCategory}>
               Move {selectedServices.length} Services
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Auto-Fix Icons Preview Dialog */}
+      <Dialog open={isAutoFixPreviewOpen} onOpenChange={setIsAutoFixPreviewOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-primary" />
+              Auto-Fix Icons Preview
+            </DialogTitle>
+            <DialogDescription>
+              Review the changes before applying. Only services with detected changes are shown.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {/* Summary Stats */}
+          <div className="grid grid-cols-3 gap-3 py-2">
+            <div className="p-3 rounded-lg bg-muted/50 text-center">
+              <p className="text-2xl font-bold">{autoFixPreviewData.length}</p>
+              <p className="text-xs text-muted-foreground">Total Services</p>
+            </div>
+            <div className="p-3 rounded-lg bg-emerald-500/10 text-center">
+              <p className="text-2xl font-bold text-emerald-500">{autoFixPreviewData.filter(p => p.willChange).length}</p>
+              <p className="text-xs text-muted-foreground">Will Change</p>
+            </div>
+            <div className="p-3 rounded-lg bg-muted/50 text-center">
+              <p className="text-2xl font-bold">{autoFixPreviewData.filter(p => !p.willChange).length}</p>
+              <p className="text-xs text-muted-foreground">Already Correct</p>
+            </div>
+          </div>
+
+          {/* Category Breakdown */}
+          <div className="flex flex-wrap gap-2 py-2 border-t border-b border-border/50">
+            {(() => {
+              const categoryChanges: Record<string, number> = {};
+              autoFixPreviewData.filter(p => p.willChange).forEach(p => {
+                categoryChanges[p.newCategory] = (categoryChanges[p.newCategory] || 0) + 1;
+              });
+              return Object.entries(categoryChanges).map(([cat, count]) => (
+                <Badge key={cat} variant="secondary" className="capitalize">
+                  {cat}: {count}
+                </Badge>
+              ));
+            })()}
+          </div>
+
+          {/* Changes List */}
+          <div className="flex-1 overflow-y-auto space-y-2 min-h-[200px] max-h-[300px]">
+            {autoFixPreviewData.filter(p => p.willChange).length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Package className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                <p>All services already have correct icons!</p>
+              </div>
+            ) : (
+              autoFixPreviewData.filter(p => p.willChange).slice(0, 100).map((item) => (
+                <div key={item.id} className="flex items-center gap-3 p-2 rounded-lg bg-muted/30 text-sm">
+                  <div className="flex-1 min-w-0">
+                    <p className="truncate font-medium">{item.name}</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Badge variant="outline" className="capitalize text-xs">
+                      {item.currentCategory}
+                    </Badge>
+                    <span className="text-muted-foreground">→</span>
+                    <Badge className="capitalize text-xs bg-primary/20 text-primary border-primary/30">
+                      {item.newCategory}
+                    </Badge>
+                  </div>
+                </div>
+              ))
+            )}
+            {autoFixPreviewData.filter(p => p.willChange).length > 100 && (
+              <p className="text-center text-sm text-muted-foreground py-2">
+                ... and {autoFixPreviewData.filter(p => p.willChange).length - 100} more
+              </p>
+            )}
+          </div>
+
+          <DialogFooter className="pt-4 border-t border-border/50">
+            <Button variant="outline" onClick={() => setIsAutoFixPreviewOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={applyAutoFix} 
+              disabled={isAutoFixingIcons || autoFixPreviewData.filter(p => p.willChange).length === 0}
+              className="bg-gradient-to-r from-primary to-primary/80"
+            >
+              {isAutoFixingIcons ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Sparkles className="w-4 h-4 mr-2" />
+              )}
+              Apply {autoFixPreviewData.filter(p => p.willChange).length} Changes
             </Button>
           </DialogFooter>
         </DialogContent>
