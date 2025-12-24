@@ -254,8 +254,8 @@ export const ServiceImportDialog = ({
   return (
     <Dialog open={open} onOpenChange={(open) => !open && reset()}>
       <DialogContent className={cn(
-        "glass-card border-border/50",
-        step === "services" && "max-w-4xl"
+        "glass-card border-border/50 w-[95vw] max-w-[95vw] sm:w-full",
+        step === "select" ? "sm:max-w-lg" : "sm:max-w-2xl lg:max-w-4xl xl:max-w-5xl"
       )}>
         <DialogHeader>
           <DialogTitle>
@@ -426,10 +426,34 @@ export const ServiceImportDialog = ({
             </DialogFooter>
           </div>
         ) : (
-          <div className="space-y-4 py-4">
+        <div className="space-y-4 py-4">
+            {/* Step Indicator */}
+            <div className="flex items-center justify-center gap-2 pb-2">
+              <div className="flex items-center gap-1">
+                <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium">
+                  1
+                </div>
+                <span className="text-xs text-muted-foreground hidden sm:inline">Select</span>
+              </div>
+              <div className="w-8 h-px bg-border" />
+              <div className="flex items-center gap-1">
+                <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium">
+                  2
+                </div>
+                <span className="text-xs text-muted-foreground hidden sm:inline">Configure</span>
+              </div>
+              <div className="w-8 h-px bg-border" />
+              <div className="flex items-center gap-1">
+                <div className="w-8 h-8 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-sm font-medium">
+                  3
+                </div>
+                <span className="text-xs text-muted-foreground hidden sm:inline">Import</span>
+              </div>
+            </div>
+
             {/* Search and Controls */}
-            <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-              <div className="relative flex-1 w-full sm:max-w-xs">
+            <div className="flex flex-col gap-3">
+              <div className="relative w-full">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   placeholder="Search services..."
@@ -438,7 +462,7 @@ export const ServiceImportDialog = ({
                   className="pl-9 bg-background/50"
                 />
               </div>
-              <div className="flex items-center gap-3 w-full sm:w-auto">
+              <div className="flex flex-wrap items-center gap-2">
                 <Button variant="outline" size="sm" onClick={selectAll} className="flex-1 sm:flex-none">
                   {selectedServices.length === filteredServices.length ? (
                     <><Square className="w-4 h-4 mr-2" /> Deselect All</>
@@ -478,85 +502,95 @@ export const ServiceImportDialog = ({
               </div>
             </div>
 
-            {/* Services List */}
-            <ScrollArea className="h-[350px] sm:h-[400px] rounded-lg border border-border/50">
-              <div className="space-y-2 p-2">
-                {filteredServices.map((service) => {
-                  const isSelected = selectedServices.includes(service.id);
-                  const finalPrice = getServiceFinalPrice(service);
-                  const markup = serviceMarkups[service.id] ?? globalMarkup;
-                  const CategoryIcon = getCategoryIcon(service.category);
-                  
-                  return (
-                    <motion.div
-                      key={service.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className={cn(
-                        "p-3 sm:p-4 rounded-lg border transition-all cursor-pointer",
-                        isSelected 
-                          ? "border-primary bg-primary/5" 
-                          : "border-border/30 hover:border-border/60 bg-background/30"
-                      )}
-                      onClick={() => toggleService(service.id)}
-                    >
-                      <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
-                        <div className="flex items-start gap-3 flex-1 min-w-0">
+            {/* Services List - Kanban Style Cards with Scroll */}
+            <ScrollArea className="h-[40vh] sm:h-[50vh] max-h-[400px] rounded-lg border border-border/50">
+              <div className="p-2 sm:p-3">
+                {/* Mobile: Vertical cards, Desktop: Horizontal scroll kanban */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {filteredServices.map((service) => {
+                    const isSelected = selectedServices.includes(service.id);
+                    const finalPrice = getServiceFinalPrice(service);
+                    const markup = serviceMarkups[service.id] ?? globalMarkup;
+                    const CategoryIcon = getCategoryIcon(service.category);
+                    
+                    return (
+                      <motion.div
+                        key={service.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className={cn(
+                          "p-3 rounded-xl border transition-all cursor-pointer",
+                          isSelected 
+                            ? "border-primary bg-primary/5 shadow-sm shadow-primary/10" 
+                            : "border-border/30 hover:border-border/60 bg-background/30"
+                        )}
+                        onClick={() => toggleService(service.id)}
+                      >
+                        {/* Card Header */}
+                        <div className="flex items-start gap-2 mb-2">
                           <Checkbox
                             checked={isSelected}
                             onCheckedChange={() => toggleService(service.id)}
-                            className="mt-1"
+                            className="mt-0.5 shrink-0"
                           />
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1 flex-wrap">
-                              <CategoryIcon className="w-4 h-4 text-primary shrink-0" />
-                              <span className="font-medium truncate text-sm">{service.name}</span>
-                              <Badge variant="outline" className="text-xs capitalize shrink-0">
+                            <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                              <CategoryIcon className="w-3.5 h-3.5 text-primary shrink-0" />
+                              <Badge variant="outline" className="text-[10px] capitalize px-1.5 py-0">
                                 {service.category}
                               </Badge>
                             </div>
-                            <p className="text-xs text-muted-foreground mb-2 line-clamp-2">{service.description}</p>
-                            <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                              <span>Min: {service.minQty.toLocaleString()}</span>
-                              <span>Max: {service.maxQty.toLocaleString()}</span>
+                            <p className="font-medium text-sm leading-tight line-clamp-2">{service.name}</p>
+                          </div>
+                        </div>
+
+                        {/* Service Details */}
+                        <div className="space-y-2 pl-6">
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <span>Min: {service.minQty.toLocaleString()}</span>
+                            <span>•</span>
+                            <span>Max: {service.maxQty.toLocaleString()}</span>
+                          </div>
+                          
+                          {/* Pricing Row */}
+                          <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/30">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs text-muted-foreground line-through">
+                                ${service.price.toFixed(2)}
+                              </span>
+                              <span className="text-sm font-semibold text-primary">
+                                ${finalPrice.toFixed(2)}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                              <Input
+                                type="number"
+                                placeholder={`${globalMarkup}%`}
+                                value={serviceMarkups[service.id] ?? ""}
+                                onChange={(e) => setServiceMarkups(prev => ({
+                                  ...prev,
+                                  [service.id]: e.target.value ? Number(e.target.value) : globalMarkup
+                                }))}
+                                className="w-12 h-6 text-[10px] bg-background/50 px-1 text-center"
+                              />
+                              <span className="text-[10px] text-muted-foreground">%</span>
                             </div>
                           </div>
+                          
+                          {/* Profit Badge */}
+                          <Badge variant="outline" className={cn(
+                            "text-[10px] w-full justify-center",
+                            markup >= 25 ? "text-emerald-500 border-emerald-500/30" : 
+                            markup >= 10 ? "text-amber-500 border-amber-500/30" : 
+                            "text-red-500 border-red-500/30"
+                          )}>
+                            Profit: +${(service.price * markup / 100).toFixed(2)}
+                          </Badge>
                         </div>
-                        
-                        {/* Pricing */}
-                        <div className="text-left sm:text-right space-y-1 pl-7 sm:pl-0">
-                          <div className="flex items-center gap-2 sm:justify-end">
-                            <span className="text-sm text-muted-foreground line-through">
-                              ${service.price.toFixed(2)}
-                            </span>
-                            <span className="text-sm font-semibold text-primary">
-                              ${finalPrice.toFixed(2)}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                            <Input
-                              type="number"
-                              placeholder={`${globalMarkup}%`}
-                              value={serviceMarkups[service.id] ?? ""}
-                              onChange={(e) => setServiceMarkups(prev => ({
-                                ...prev,
-                                [service.id]: e.target.value ? Number(e.target.value) : globalMarkup
-                              }))}
-                              className="w-16 h-7 text-xs bg-background/50"
-                            />
-                            <span className="text-xs text-muted-foreground">%</span>
-                            <Badge variant="outline" className={cn(
-                              "text-xs ml-1",
-                              markup >= 25 ? "text-emerald-500" : markup >= 10 ? "text-amber-500" : "text-red-500"
-                            )}>
-                              +${(service.price * markup / 100).toFixed(2)}
-                            </Badge>
-                          </div>
-                        </div>
-                      </div>
-                    </motion.div>
-                  );
-                })}
+                      </motion.div>
+                    );
+                  })}
+                </div>
               </div>
             </ScrollArea>
 
