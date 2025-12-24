@@ -31,6 +31,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 import { OnboardingTour } from "@/components/onboarding/OnboardingTour";
 import { useOnboardingTour } from "@/contexts/OnboardingTourContext";
+import { PanelSearchCommand, usePanelSearch } from "@/components/panel/PanelSearchCommand";
 import ProviderManagement from "./panel/ProviderManagement";
 import GeneralSettings from "./panel/GeneralSettings";
 import DesignCustomization from "./panel/DesignCustomization";
@@ -64,6 +65,7 @@ const PanelOwnerDashboard = () => {
   const { isOpen: tourOpen, completeTour, restartTour } = useOnboardingTour();
   const { pendingCount } = usePendingOrders();
   const { panel } = usePanel();
+  const { open: searchOpen, setOpen: setSearchOpen } = usePanelSearch();
 
   // Fetch real sidebar stats
   useEffect(() => {
@@ -248,13 +250,15 @@ const PanelOwnerDashboard = () => {
                 exit={{ opacity: 0, height: 0 }}
                 className="mt-4"
               >
-                <div className="relative">
+                <button
+                  onClick={() => setSearchOpen(true)}
+                  className="w-full relative flex items-center"
+                >
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search... ⌘K"
-                    className="pl-9 bg-sidebar-accent/50 border-sidebar-border/50 h-9 text-sm"
-                  />
-                </div>
+                  <div className="w-full pl-9 pr-3 py-2 bg-sidebar-accent/50 border border-sidebar-border/50 rounded-md text-sm text-muted-foreground text-left hover:bg-sidebar-accent/70 transition-colors">
+                    Search... <kbd className="ml-auto pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">⌘K</kbd>
+                  </div>
+                </button>
               </motion.div>
             )}
           </AnimatePresence>
@@ -421,6 +425,9 @@ const PanelOwnerDashboard = () => {
 
       {/* Onboarding Tour */}
       <OnboardingTour isOpen={tourOpen} onComplete={completeTour} />
+
+      {/* Panel Search Command */}
+      <PanelSearchCommand open={searchOpen} onOpenChange={setSearchOpen} />
     </div>
   );
 };

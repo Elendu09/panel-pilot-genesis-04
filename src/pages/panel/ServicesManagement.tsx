@@ -626,6 +626,10 @@ const ServicesManagement = () => {
       setSelectAllPages(false);
     } else {
       setSelectedServices(services.map(s => s.id));
+      // If there are more services on other pages, don't auto-select all pages
+      if (services.length === totalCount) {
+        setSelectAllPages(true);
+      }
     }
   };
 
@@ -1445,66 +1449,63 @@ const ServicesManagement = () => {
         />
       )}
 
-      {/* Bulk Action Bar */}
+      {/* Bulk Action Bar - Fixed Position on Mobile */}
       <AnimatePresence>
         {selectedServices.length > 0 && (
           <motion.div
-            initial={{ opacity: 0, y: -10 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="glass-card p-3 space-y-2"
+            exit={{ opacity: 0, y: 20 }}
+            className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-50 glass-card px-4 md:px-6 py-3 md:py-4 rounded-2xl shadow-2xl border border-primary/20 max-w-[95vw] md:max-w-none"
           >
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">
-                  {selectAllPages ? `All ${selectedServices.length} services selected` : `${selectedServices.length} selected on this page`}
-                </span>
+            <div className="flex flex-col sm:flex-row items-center gap-3">
+              <div className="flex items-center gap-2 flex-wrap justify-center">
+                <Badge variant="default" className="text-sm font-bold bg-primary/20 text-primary border-primary/30">
+                  {selectAllPages ? totalCount : selectedServices.length} selected
+                </Badge>
+                {selectAllPages && (
+                  <Badge variant="outline" className="text-xs bg-emerald-500/10 text-emerald-500 border-emerald-500/30">All pages</Badge>
+                )}
                 {!selectAllPages && totalCount > services.length && (
                   <Button 
                     size="sm" 
                     variant="link" 
-                    className="text-primary h-auto p-0"
+                    className="text-xs h-auto p-0 text-primary underline-offset-2"
                     onClick={fetchAllFilteredIds}
                     disabled={isLoadingAllIds}
                   >
-                    {isLoadingAllIds ? (
-                      <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                    ) : null}
-                    Select all {totalCount} matching services
+                    {isLoadingAllIds ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
+                    Select all {totalCount}
                   </Button>
                 )}
-                {selectAllPages && (
-                  <Button 
-                    size="sm" 
-                    variant="link" 
-                    className="text-muted-foreground h-auto p-0"
-                    onClick={() => {
-                      setSelectAllPages(false);
-                      setSelectedServices(services.map(s => s.id));
-                    }}
-                  >
-                    Clear selection
-                  </Button>
-                )}
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  className="text-xs h-6 px-2 text-muted-foreground"
+                  onClick={() => { setSelectedServices([]); setSelectAllPages(false); }}
+                >
+                  Clear
+                </Button>
               </div>
-              <div className="flex flex-wrap gap-2">
-                <Button size="sm" variant="outline" onClick={() => handleBulkAction("enable")}>
+              <div className="hidden sm:block h-6 w-px bg-border" />
+              <div className="flex flex-wrap items-center justify-center gap-1.5 md:gap-2">
+                <Button size="sm" variant="default" onClick={() => handleBulkAction("enable")} className="h-8 text-xs">
                   <Power className="w-3 h-3 mr-1" /> Enable
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => handleBulkAction("disable")}>
+                <Button size="sm" variant="secondary" onClick={() => handleBulkAction("disable")} className="h-8 text-xs">
                   <Power className="w-3 h-3 mr-1" /> Disable
                 </Button>
-                <Button size="sm" variant="destructive" onClick={() => handleBulkAction("delete")}>
+                <Button size="sm" variant="destructive" onClick={() => handleBulkAction("delete")} className="h-8 text-xs">
                   <Trash2 className="w-3 h-3 mr-1" /> Delete
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => handleBulkAction("export-csv")}>
+                <Button size="sm" variant="outline" onClick={() => handleBulkAction("export-csv")} className="h-8 text-xs hidden md:flex">
                   <Download className="w-3 h-3 mr-1" /> Export
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => setIsBulkIconDialogOpen(true)}>
-                  <Palette className="w-3 h-3 mr-1" /> Set Icon
+                <Button size="sm" variant="outline" onClick={() => setIsBulkIconDialogOpen(true)} className="h-8 text-xs hidden md:flex">
+                  <Palette className="w-3 h-3 mr-1" /> Icon
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => setIsBulkCategoryDialogOpen(true)}>
-                  <Layers className="w-3 h-3 mr-1" /> Change Category
+                <Button size="sm" variant="outline" onClick={() => setIsBulkCategoryDialogOpen(true)} className="h-8 text-xs hidden md:flex">
+                  <Layers className="w-3 h-3 mr-1" /> Category
                 </Button>
               </div>
             </div>
@@ -1868,10 +1869,13 @@ const ServicesManagement = () => {
       />
 
       {/* Edit Sheet */}
-      {editingService && (
+      {editingService && editingService.id && (
         <ServiceEditSheet
           open={isEditDialogOpen}
-          onOpenChange={setIsEditDialogOpen}
+          onOpenChange={(open) => {
+            setIsEditDialogOpen(open);
+            if (!open) setEditingService(null);
+          }}
           service={editingService}
           onSave={handleSaveEdit}
         />
