@@ -288,6 +288,50 @@ export type Database = {
           },
         ]
       }
+      canned_responses: {
+        Row: {
+          category: string | null
+          content: string
+          created_at: string
+          id: string
+          panel_id: string | null
+          shortcut: string | null
+          title: string
+          updated_at: string
+          usage_count: number | null
+        }
+        Insert: {
+          category?: string | null
+          content: string
+          created_at?: string
+          id?: string
+          panel_id?: string | null
+          shortcut?: string | null
+          title: string
+          updated_at?: string
+          usage_count?: number | null
+        }
+        Update: {
+          category?: string | null
+          content?: string
+          created_at?: string
+          id?: string
+          panel_id?: string | null
+          shortcut?: string | null
+          title?: string
+          updated_at?: string
+          usage_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "canned_responses_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_messages: {
         Row: {
           content: string
@@ -795,12 +839,17 @@ export type Database = {
           contact_info: Json | null
           created_at: string | null
           custom_css: string | null
+          floating_chat_custom_label: string | null
+          floating_chat_custom_url: string | null
+          floating_chat_discord: string | null
           floating_chat_enabled: boolean | null
           floating_chat_message: string | null
+          floating_chat_messenger: string | null
           floating_chat_position: string | null
           floating_chat_telegram: string | null
           floating_chat_whatsapp: string | null
           id: string
+          live_chat_enabled: boolean | null
           low_balance_alert_enabled: boolean | null
           low_balance_threshold: number | null
           maintenance_message: string | null
@@ -816,12 +865,17 @@ export type Database = {
           contact_info?: Json | null
           created_at?: string | null
           custom_css?: string | null
+          floating_chat_custom_label?: string | null
+          floating_chat_custom_url?: string | null
+          floating_chat_discord?: string | null
           floating_chat_enabled?: boolean | null
           floating_chat_message?: string | null
+          floating_chat_messenger?: string | null
           floating_chat_position?: string | null
           floating_chat_telegram?: string | null
           floating_chat_whatsapp?: string | null
           id?: string
+          live_chat_enabled?: boolean | null
           low_balance_alert_enabled?: boolean | null
           low_balance_threshold?: number | null
           maintenance_message?: string | null
@@ -837,12 +891,17 @@ export type Database = {
           contact_info?: Json | null
           created_at?: string | null
           custom_css?: string | null
+          floating_chat_custom_label?: string | null
+          floating_chat_custom_url?: string | null
+          floating_chat_discord?: string | null
           floating_chat_enabled?: boolean | null
           floating_chat_message?: string | null
+          floating_chat_messenger?: string | null
           floating_chat_position?: string | null
           floating_chat_telegram?: string | null
           floating_chat_whatsapp?: string | null
           id?: string
+          live_chat_enabled?: boolean | null
           low_balance_alert_enabled?: boolean | null
           low_balance_threshold?: number | null
           maintenance_message?: string | null

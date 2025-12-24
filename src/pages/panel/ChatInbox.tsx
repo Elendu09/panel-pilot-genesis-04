@@ -1,14 +1,17 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   MessageCircle, 
   Send, 
   Search, 
-  User, 
   Clock, 
   CheckCheck,
   Loader2,
   Archive,
-  MoreVertical
+  MoreVertical,
+  Zap,
+  Plus,
+  Settings,
+  Trash2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,12 +20,28 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -52,6 +71,15 @@ interface ChatMessage {
   created_at: string;
 }
 
+interface CannedResponse {
+  id: string;
+  title: string;
+  content: string;
+  shortcut: string | null;
+  category: string;
+  usage_count?: number;
+}
+
 const ChatInbox = () => {
   const { profile } = useAuth();
   const [sessions, setSessions] = useState<ChatSession[]>([]);
@@ -63,8 +91,14 @@ const ChatInbox = () => {
   const [filter, setFilter] = useState<'active' | 'archived'>('active');
   const [searchQuery, setSearchQuery] = useState('');
   const [panelId, setPanelId] = useState<string | null>(null);
+  const [cannedResponses, setCannedResponses] = useState<CannedResponse[]>([]);
+  const [cannedDialogOpen, setCannedDialogOpen] = useState(false);
+  const [editingCanned, setEditingCanned] = useState<CannedResponse | null>(null);
+  const [cannedForm, setCannedForm] = useState({ title: '', content: '', shortcut: '', category: 'general' });
+  const [visitorTyping, setVisitorTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Get panel ID
   useEffect(() => {
@@ -84,6 +118,25 @@ const ChatInbox = () => {
 
     fetchPanelId();
   }, [profile?.id]);
+
+  // Fetch canned responses
+  useEffect(() => {
+    if (!panelId) return;
+
+    const fetchCannedResponses = async () => {
+      const { data } = await supabase
+        .from('canned_responses')
+        .select('*')
+        .eq('panel_id', panelId)
+        .order('usage_count', { ascending: false });
+
+      if (data) {
+        setCannedResponses(data);
+      }
+    };
+
+    fetchCannedResponses();
+  }, [panelId]);
 
   // Fetch chat sessions
   useEffect(() => {
@@ -204,7 +257,7 @@ const ChatInbox = () => {
           const newMsg = payload.new as ChatMessage;
           setMessages(prev => {
             if (prev.some(m => m.id === newMsg.id)) return prev;
-            return [...prev, newMsg];
+            return [...prev, { ...newMsg, sender_type: newMsg.sender_type as SenderType }];
           });
 
           // Mark as read if from visitor
@@ -218,8 +271,28 @@ const ChatInbox = () => {
       )
       .subscribe();
 
+    // Typing indicator subscription
+    const typingChannel = supabase
+      .channel(`typing-${selectedSession.id}`)
+      .on('broadcast', { event: 'typing' }, (payload) => {
+        if (payload.payload.sender_type === 'visitor') {
+          setVisitorTyping(true);
+          if (typingTimeoutRef.current) {
+            clearTimeout(typingTimeoutRef.current);
+          }
+          typingTimeoutRef.current = setTimeout(() => {
+            setVisitorTyping(false);
+          }, 3000);
+        }
+      })
+      .subscribe();
+
     return () => {
       supabase.removeChannel(channel);
+      supabase.removeChannel(typingChannel);
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
     };
   }, [selectedSession]);
 
@@ -228,12 +301,23 @@ const ChatInbox = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const sendMessage = async () => {
-    if (!newMessage.trim() || !selectedSession) return;
+  // Broadcast typing status
+  const broadcastTyping = useCallback(() => {
+    if (!selectedSession) return;
+    
+    supabase.channel(`typing-${selectedSession.id}`).send({
+      type: 'broadcast',
+      event: 'typing',
+      payload: { sender_type: 'owner' }
+    });
+  }, [selectedSession]);
+
+  const sendMessage = async (content?: string) => {
+    const messageContent = content || newMessage.trim();
+    if (!messageContent || !selectedSession) return;
 
     setSending(true);
-    const content = newMessage.trim();
-    setNewMessage('');
+    if (!content) setNewMessage('');
 
     try {
       const { error } = await supabase
@@ -241,7 +325,7 @@ const ChatInbox = () => {
         .insert({
           session_id: selectedSession.id,
           sender_type: 'owner',
-          content
+          content: messageContent
         });
 
       if (error) throw error;
@@ -256,9 +340,77 @@ const ChatInbox = () => {
     } catch (error) {
       console.error('Error sending message:', error);
       toast({ variant: 'destructive', title: 'Failed to send message' });
-      setNewMessage(content);
+      if (!content) setNewMessage(messageContent);
     } finally {
       setSending(false);
+    }
+  };
+
+  const useCannedResponse = async (response: CannedResponse) => {
+    setNewMessage(response.content);
+    inputRef.current?.focus();
+
+    // Increment usage count
+    await supabase
+      .from('canned_responses')
+      .update({ usage_count: (response.usage_count || 0) + 1 })
+      .eq('id', response.id);
+  };
+
+  const saveCannedResponse = async () => {
+    if (!panelId || !cannedForm.title || !cannedForm.content) {
+      toast({ variant: 'destructive', title: 'Please fill in title and content' });
+      return;
+    }
+
+    try {
+      if (editingCanned) {
+        await supabase
+          .from('canned_responses')
+          .update({
+            title: cannedForm.title,
+            content: cannedForm.content,
+            shortcut: cannedForm.shortcut || null,
+            category: cannedForm.category
+          })
+          .eq('id', editingCanned.id);
+      } else {
+        await supabase
+          .from('canned_responses')
+          .insert({
+            panel_id: panelId,
+            title: cannedForm.title,
+            content: cannedForm.content,
+            shortcut: cannedForm.shortcut || null,
+            category: cannedForm.category
+          });
+      }
+
+      // Refresh canned responses
+      const { data } = await supabase
+        .from('canned_responses')
+        .select('*')
+        .eq('panel_id', panelId)
+        .order('usage_count', { ascending: false });
+
+      if (data) setCannedResponses(data);
+
+      toast({ title: editingCanned ? 'Response updated' : 'Response created' });
+      setCannedDialogOpen(false);
+      setEditingCanned(null);
+      setCannedForm({ title: '', content: '', shortcut: '', category: 'general' });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Failed to save response' });
+    }
+  };
+
+  const deleteCannedResponse = async (id: string) => {
+    try {
+      await supabase.from('canned_responses').delete().eq('id', id);
+      setCannedResponses(prev => prev.filter(r => r.id !== id));
+      toast({ title: 'Response deleted' });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Failed to delete response' });
     }
   };
 
@@ -286,6 +438,21 @@ const ChatInbox = () => {
     }
   };
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setNewMessage(e.target.value);
+    broadcastTyping();
+
+    // Check for shortcut trigger
+    const value = e.target.value;
+    if (value.startsWith('/')) {
+      const shortcut = value.slice(1).toLowerCase();
+      const match = cannedResponses.find(r => r.shortcut?.toLowerCase() === shortcut);
+      if (match && value === `/${shortcut}`) {
+        setNewMessage(match.content);
+      }
+    }
+  };
+
   const filteredSessions = sessions.filter(s => 
     (s.visitor_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
      s.visitor_email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -308,10 +475,24 @@ const ChatInbox = () => {
       {/* Sessions List */}
       <Card className="w-96 flex flex-col">
         <div className="p-4 border-b">
-          <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
-            <MessageCircle className="w-5 h-5" />
-            Live Chat Inbox
-          </h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <MessageCircle className="w-5 h-5" />
+              Live Chat Inbox
+            </h2>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                setCannedDialogOpen(true);
+                setEditingCanned(null);
+                setCannedForm({ title: '', content: '', shortcut: '', category: 'general' });
+              }}
+              title="Manage Quick Replies"
+            >
+              <Settings className="w-4 h-4" />
+            </Button>
+          </div>
           
           <div className="relative mb-3">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -370,7 +551,7 @@ const ChatInbox = () => {
                       {session.last_message}
                     </p>
                   </div>
-                  {session.unread_count > 0 && (
+                  {(session.unread_count || 0) > 0 && (
                     <Badge className="shrink-0">{session.unread_count}</Badge>
                   )}
                 </div>
@@ -449,7 +630,7 @@ const ChatInbox = () => {
                         ? "bg-primary text-primary-foreground rounded-br-sm"
                         : "bg-muted rounded-bl-sm"
                     )}>
-                      <p className="text-sm">{msg.content}</p>
+                      <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
                       <div className={cn(
                         "flex items-center gap-1 mt-1",
                         msg.sender_type === 'owner' ? "justify-end" : ""
@@ -470,24 +651,88 @@ const ChatInbox = () => {
                     </div>
                   </div>
                 ))}
+                
+                {/* Typing indicator */}
+                {visitorTyping && (
+                  <div className="flex items-center gap-2">
+                    <Avatar className="w-8 h-8">
+                      <AvatarFallback className="bg-muted">
+                        {selectedSession.visitor_name?.[0] || 'V'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="bg-muted rounded-2xl rounded-bl-sm px-4 py-3">
+                      <div className="flex gap-1">
+                        <span className="w-2 h-2 rounded-full bg-muted-foreground/50 animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <span className="w-2 h-2 rounded-full bg-muted-foreground/50 animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <span className="w-2 h-2 rounded-full bg-muted-foreground/50 animate-bounce" style={{ animationDelay: '300ms' }} />
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div ref={messagesEndRef} />
               </div>
             </ScrollArea>
 
             {/* Input */}
             <div className="p-4 border-t">
-              <div className="flex items-center gap-2">
-                <Input
+              {/* Quick Replies */}
+              {cannedResponses.length > 0 && (
+                <div className="mb-3 flex flex-wrap gap-2">
+                  {cannedResponses.slice(0, 5).map((response) => (
+                    <Button
+                      key={response.id}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => useCannedResponse(response)}
+                      className="text-xs"
+                    >
+                      <Zap className="w-3 h-3 mr-1" />
+                      {response.title}
+                    </Button>
+                  ))}
+                  {cannedResponses.length > 5 && (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm" className="text-xs">
+                          +{cannedResponses.length - 5} more
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-64 p-2">
+                        <ScrollArea className="max-h-48">
+                          <div className="space-y-1">
+                            {cannedResponses.slice(5).map((response) => (
+                              <Button
+                                key={response.id}
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => useCannedResponse(response)}
+                                className="w-full justify-start text-xs"
+                              >
+                                <Zap className="w-3 h-3 mr-2" />
+                                {response.title}
+                              </Button>
+                            ))}
+                          </div>
+                        </ScrollArea>
+                      </PopoverContent>
+                    </Popover>
+                  )}
+                </div>
+              )}
+              
+              <div className="flex items-end gap-2">
+                <Textarea
                   ref={inputRef}
                   value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
+                  onChange={handleInputChange}
                   onKeyDown={handleKeyPress}
-                  placeholder="Type a reply..."
-                  className="flex-1"
+                  placeholder="Type a reply... (/ for shortcuts)"
+                  className="flex-1 min-h-[44px] max-h-32 resize-none"
                   disabled={sending}
+                  rows={1}
                 />
                 <Button
-                  onClick={sendMessage}
+                  onClick={() => sendMessage()}
                   disabled={!newMessage.trim() || sending}
                 >
                   {sending ? (
@@ -514,6 +759,130 @@ const ChatInbox = () => {
           </CardContent>
         )}
       </Card>
+
+      {/* Canned Responses Dialog */}
+      <Dialog open={cannedDialogOpen} onOpenChange={setCannedDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {editingCanned ? 'Edit Quick Reply' : 'Quick Replies'}
+            </DialogTitle>
+            <DialogDescription>
+              Create and manage quick reply templates for faster responses.
+            </DialogDescription>
+          </DialogHeader>
+
+          {editingCanned || cannedResponses.length === 0 ? (
+            <div className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Title</Label>
+                  <Input
+                    value={cannedForm.title}
+                    onChange={(e) => setCannedForm(prev => ({ ...prev, title: e.target.value }))}
+                    placeholder="e.g., Greeting"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Shortcut (optional)</Label>
+                  <Input
+                    value={cannedForm.shortcut}
+                    onChange={(e) => setCannedForm(prev => ({ ...prev, shortcut: e.target.value }))}
+                    placeholder="e.g., greet (type /greet to use)"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Content</Label>
+                <Textarea
+                  value={cannedForm.content}
+                  onChange={(e) => setCannedForm(prev => ({ ...prev, content: e.target.value }))}
+                  placeholder="Enter your quick reply message..."
+                  rows={4}
+                />
+              </div>
+              <DialogFooter>
+                {editingCanned && (
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setEditingCanned(null);
+                      setCannedForm({ title: '', content: '', shortcut: '', category: 'general' });
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                )}
+                <Button onClick={saveCannedResponse}>
+                  {editingCanned ? 'Update' : 'Create'} Quick Reply
+                </Button>
+              </DialogFooter>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex justify-end">
+                <Button
+                  onClick={() => {
+                    setEditingCanned({} as CannedResponse);
+                    setCannedForm({ title: '', content: '', shortcut: '', category: 'general' });
+                  }}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  New Quick Reply
+                </Button>
+              </div>
+              <ScrollArea className="max-h-96">
+                <div className="space-y-2">
+                  {cannedResponses.map((response) => (
+                    <div
+                      key={response.id}
+                      className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{response.title}</span>
+                          {response.shortcut && (
+                            <Badge variant="outline" className="text-xs">
+                              /{response.shortcut}
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground truncate">
+                          {response.content}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1 ml-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setEditingCanned(response);
+                            setCannedForm({
+                              title: response.title,
+                              content: response.content,
+                              shortcut: response.shortcut || '',
+                              category: response.category
+                            });
+                          }}
+                        >
+                          <Settings className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => deleteCannedResponse(response.id)}
+                        >
+                          <Trash2 className="w-4 h-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
