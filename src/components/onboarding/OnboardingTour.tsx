@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { 
   X, 
   ChevronRight, 
@@ -20,7 +21,9 @@ import {
   Sparkles,
   MousePointer2,
   Hand,
-  Check
+  Check,
+  Menu,
+  Home
 } from "lucide-react";
 
 interface TourStep {
@@ -30,8 +33,12 @@ interface TourStep {
   icon: React.ComponentType<{ className?: string }>;
   target: string | null;
   selector?: string;
+  mobileSelector?: string;
   position?: "top" | "bottom" | "left" | "right" | "center";
+  mobilePosition?: "top" | "bottom" | "center";
   action?: string;
+  mobileOnly?: boolean;
+  desktopOnly?: boolean;
 }
 
 const tourSteps: TourStep[] = [
@@ -42,6 +49,7 @@ const tourSteps: TourStep[] = [
     icon: Sparkles,
     target: null,
     position: "center",
+    mobilePosition: "center",
   },
   {
     id: "sidebar",
@@ -51,7 +59,19 @@ const tourSteps: TourStep[] = [
     target: "sidebar",
     selector: "[data-tour='sidebar']",
     position: "right",
+    desktopOnly: true,
     action: "Click menu items to navigate",
+  },
+  {
+    id: "mobile-nav",
+    title: "Bottom Navigation",
+    description: "Use the bottom navigation bar to quickly access key features of your panel on mobile.",
+    icon: Menu,
+    target: "mobile-nav",
+    mobileSelector: "[data-tour='mobile-home']",
+    mobilePosition: "top",
+    mobileOnly: true,
+    action: "Tap icons to navigate",
   },
   {
     id: "dashboard",
@@ -60,7 +80,9 @@ const tourSteps: TourStep[] = [
     icon: LayoutDashboard,
     target: "overview",
     selector: "[data-tour='dashboard-stats']",
+    mobileSelector: "[data-tour='mobile-home']",
     position: "bottom",
+    mobilePosition: "top",
     action: "View your key metrics here",
   },
   {
@@ -69,8 +91,10 @@ const tourSteps: TourStep[] = [
     description: "Add and manage SMM services. Set prices, categories, and import services from providers.",
     icon: Package,
     target: "services",
-    selector: "[data-tour='services-menu']",
+    selector: "[data-tour='services']",
+    mobileSelector: "[data-tour='mobile-services']",
     position: "right",
+    mobilePosition: "top",
     action: "Click to manage services",
   },
   {
@@ -79,8 +103,10 @@ const tourSteps: TourStep[] = [
     description: "View and manage customer orders. Track status, process refunds, and monitor delivery progress.",
     icon: ShoppingCart,
     target: "orders",
-    selector: "[data-tour='orders-menu']",
+    selector: "[data-tour='orders']",
+    mobileSelector: "[data-tour='mobile-orders']",
     position: "right",
+    mobilePosition: "top",
     action: "Click to view orders",
   },
   {
@@ -89,8 +115,9 @@ const tourSteps: TourStep[] = [
     description: "Connect to SMM providers, sync services, and manage API connections for automated order processing.",
     icon: Users,
     target: "providers",
-    selector: "[data-tour='providers-menu']",
+    selector: "[data-tour='providers']",
     position: "right",
+    mobilePosition: "center",
     action: "Click to add providers",
   },
   {
@@ -99,8 +126,10 @@ const tourSteps: TourStep[] = [
     description: "Detailed analytics showing revenue, orders, and customer activity trends over time.",
     icon: BarChart3,
     target: "analytics",
-    selector: "[data-tour='analytics-menu']",
+    selector: "[data-tour='analytics']",
+    mobileSelector: "[data-tour='mobile-analytics']",
     position: "right",
+    mobilePosition: "top",
     action: "Click for insights",
   },
   {
@@ -109,8 +138,9 @@ const tourSteps: TourStep[] = [
     description: "Configure payment gateways to accept payments from customers worldwide.",
     icon: CreditCard,
     target: "payment-methods",
-    selector: "[data-tour='payments-menu']",
+    selector: "[data-tour='payments']",
     position: "right",
+    mobilePosition: "center",
     action: "Click to configure",
   },
   {
@@ -119,9 +149,21 @@ const tourSteps: TourStep[] = [
     description: "Customize your panel's appearance with themes, colors, and branding options.",
     icon: Palette,
     target: "design",
-    selector: "[data-tour='design-menu']",
+    selector: "[data-tour='design']",
     position: "right",
+    mobilePosition: "center",
     action: "Click to customize",
+  },
+  {
+    id: "more-menu",
+    title: "More Options",
+    description: "Access additional settings like API management, domain configuration, and more from the menu.",
+    icon: Menu,
+    target: "more",
+    mobileSelector: "[data-tour='mobile-more']",
+    mobilePosition: "top",
+    mobileOnly: true,
+    action: "Tap for more options",
   },
   {
     id: "api",
@@ -129,8 +171,10 @@ const tourSteps: TourStep[] = [
     description: "Generate API keys for customers to integrate with their own systems.",
     icon: Code,
     target: "api",
-    selector: "[data-tour='api-menu']",
+    selector: "[data-tour='api']",
     position: "right",
+    mobilePosition: "center",
+    desktopOnly: true,
     action: "Click to manage API",
   },
   {
@@ -139,8 +183,10 @@ const tourSteps: TourStep[] = [
     description: "Connect your custom domain and configure SSL for a professional appearance.",
     icon: Globe,
     target: "domains",
-    selector: "[data-tour='domain-menu']",
+    selector: "[data-tour='domain']",
     position: "right",
+    mobilePosition: "center",
+    desktopOnly: true,
     action: "Click to set up domain",
   },
   {
@@ -150,6 +196,7 @@ const tourSteps: TourStep[] = [
     icon: Sparkles,
     target: null,
     position: "center",
+    mobilePosition: "center",
   },
 ];
 
@@ -268,21 +315,44 @@ const SpotlightOverlay = ({ targetRect }: { targetRect: DOMRect | null }) => {
 };
 
 export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
+  const isMobile = useIsMobile();
   const [currentStep, setCurrentStep] = useState(0);
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
   const [clickPosition, setClickPosition] = useState<{ x: number; y: number } | null>(null);
   
-  const step = tourSteps[currentStep];
-  const progress = ((currentStep + 1) / tourSteps.length) * 100;
+  // Filter steps based on device
+  const filteredSteps = tourSteps.filter(step => {
+    if (isMobile && step.desktopOnly) return false;
+    if (!isMobile && step.mobileOnly) return false;
+    return true;
+  });
+  
+  const step = filteredSteps[currentStep];
+  const progress = ((currentStep + 1) / filteredSteps.length) * 100;
+
+  // Get the appropriate selector based on device
+  const getSelector = useCallback(() => {
+    if (!step) return null;
+    if (isMobile && step.mobileSelector) return step.mobileSelector;
+    return step.selector || null;
+  }, [step, isMobile]);
+
+  // Get the appropriate position based on device
+  const getPosition = useCallback(() => {
+    if (!step) return "center";
+    if (isMobile && step.mobilePosition) return step.mobilePosition;
+    return step.position || "center";
+  }, [step, isMobile]);
 
   // Find and highlight target element
   const updateTargetRect = useCallback(() => {
-    if (step.selector) {
-      const element = document.querySelector(step.selector);
+    const selector = getSelector();
+    if (selector) {
+      const element = document.querySelector(selector);
       if (element) {
         const rect = element.getBoundingClientRect();
         setTargetRect(rect);
-        // Position click indicator at center-right of element
+        // Position click indicator at center of element
         setClickPosition({
           x: rect.left + rect.width / 2,
           y: rect.top + rect.height / 2
@@ -292,23 +362,30 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
     }
     setTargetRect(null);
     setClickPosition(null);
-  }, [step.selector]);
+  }, [getSelector]);
 
   useEffect(() => {
     if (isOpen) {
-      updateTargetRect();
+      // Small delay to ensure DOM is ready
+      const timeout = setTimeout(updateTargetRect, 100);
       // Update on scroll/resize
       window.addEventListener('resize', updateTargetRect);
       window.addEventListener('scroll', updateTargetRect);
       return () => {
+        clearTimeout(timeout);
         window.removeEventListener('resize', updateTargetRect);
         window.removeEventListener('scroll', updateTargetRect);
       };
     }
   }, [isOpen, currentStep, updateTargetRect]);
 
+  // Reset step when switching device modes
+  useEffect(() => {
+    setCurrentStep(0);
+  }, [isMobile]);
+
   const handleNext = () => {
-    if (currentStep < tourSteps.length - 1) {
+    if (currentStep < filteredSteps.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
       onComplete();
@@ -325,9 +402,39 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
     onComplete();
   };
 
-  // Calculate card position based on target
+  const handleStepClick = (index: number) => {
+    if (index < filteredSteps.length) {
+      setCurrentStep(index);
+    }
+  };
+
+  // Calculate card position based on target and device
   const getCardPosition = () => {
-    if (!targetRect || step.position === "center") {
+    const position = getPosition();
+    
+    // Mobile: always position card in safe area
+    if (isMobile) {
+      if (position === "top" && targetRect) {
+        // Card above the bottom nav but below target
+        return {
+          position: "fixed" as const,
+          bottom: window.innerHeight - targetRect.top + 16,
+          left: 16,
+          right: 16,
+        };
+      }
+      // Default mobile position - center or top area
+      return {
+        position: "fixed" as const,
+        top: position === "center" ? "50%" : 80,
+        left: 16,
+        right: 16,
+        transform: position === "center" ? "translateY(-50%)" : undefined,
+      };
+    }
+
+    // Desktop positioning
+    if (!targetRect || position === "center") {
       return { 
         position: "fixed" as const,
         top: "50%",
@@ -340,7 +447,7 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
     const cardHeight = 450;
     const padding = 20;
 
-    switch (step.position) {
+    switch (position) {
       case "right":
         return {
           position: "fixed" as const,
@@ -375,7 +482,7 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
     }
   };
 
-  if (!isOpen) return null;
+  if (!isOpen || !step) return null;
 
   return (
     <AnimatePresence mode="wait">
@@ -418,20 +525,25 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: -20 }}
           transition={{ duration: 0.3 }}
-          className="z-[101] w-full max-w-md mx-4"
+          className={`z-[101] ${isMobile ? 'w-auto' : 'w-full max-w-md mx-4'}`}
           style={getCardPosition()}
         >
-          <Card className="bg-card/95 backdrop-blur-xl border-primary/30 p-6 space-y-5 shadow-2xl">
+          <Card className={`bg-card/95 backdrop-blur-xl border-primary/30 shadow-2xl ${isMobile ? 'p-4 space-y-3' : 'p-6 space-y-5'}`}>
             {/* Header with close */}
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="px-2 py-1 text-xs font-medium bg-primary/10 text-primary rounded-full">
-                  Step {currentStep + 1} of {tourSteps.length}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className={`px-2 py-1 text-xs font-medium bg-primary/10 text-primary rounded-full ${isMobile ? 'text-[10px]' : ''}`}>
+                  Step {currentStep + 1} of {filteredSteps.length}
                 </span>
-                {step.action && (
+                {step.action && !isMobile && (
                   <span className="px-2 py-1 text-xs font-medium bg-accent/10 text-accent-foreground rounded-full flex items-center gap-1">
                     <MousePointer2 className="w-3 h-3" />
                     Interactive
+                  </span>
+                )}
+                {isMobile && (
+                  <span className="px-2 py-0.5 text-[10px] font-medium bg-secondary/50 text-secondary-foreground rounded-full">
+                    Mobile
                   </span>
                 )}
               </div>
@@ -454,19 +566,19 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
                 initial={{ scale: 0, rotate: -180 }}
                 animate={{ scale: 1, rotate: 0 }}
                 transition={{ delay: 0.2, type: "spring", stiffness: 200, damping: 15 }}
-                className="p-5 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20"
+                className={`rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 ${isMobile ? 'p-3' : 'p-5'}`}
               >
-                <step.icon className="w-10 h-10 text-primary" />
+                <step.icon className={`text-primary ${isMobile ? 'w-8 h-8' : 'w-10 h-10'}`} />
               </motion.div>
             </div>
 
             {/* Content */}
-            <div className="text-center space-y-2">
+            <div className="text-center space-y-1.5">
               <motion.h2
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="text-xl font-bold"
+                className={`font-bold ${isMobile ? 'text-lg' : 'text-xl'}`}
               >
                 {step.title}
               </motion.h2>
@@ -474,7 +586,7 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="text-sm text-muted-foreground leading-relaxed"
+                className={`text-muted-foreground leading-relaxed ${isMobile ? 'text-xs' : 'text-sm'}`}
               >
                 {step.description}
               </motion.p>
@@ -496,103 +608,127 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
             </div>
 
             {/* Enhanced Step Progress Indicator */}
-            <div className="space-y-3">
+            <div className={`${isMobile ? 'space-y-2' : 'space-y-3'}`}>
               {/* Step counter text */}
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>{currentStep + 1} of {tourSteps.length} steps</span>
-                <span>{tourSteps.length - currentStep - 1} remaining</span>
+              <div className={`flex items-center justify-between text-muted-foreground ${isMobile ? 'text-[10px]' : 'text-xs'}`}>
+                <span>{currentStep + 1} of {filteredSteps.length} steps</span>
+                <span>{filteredSteps.length - currentStep - 1} remaining</span>
               </div>
               
-              {/* Visual step indicators */}
-              <div className="flex items-center justify-center gap-1">
-                {tourSteps.map((s, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setCurrentStep(index)}
-                    className="group relative flex items-center"
-                    title={s.title}
-                  >
-                    {/* Connector line */}
-                    {index > 0 && (
-                      <div className={`absolute right-full w-1 h-0.5 ${
-                        index <= currentStep ? "bg-primary" : "bg-muted"
-                      }`} />
-                    )}
-                    
-                    {/* Step dot/icon */}
+              {/* Visual step indicators - simplified on mobile */}
+              {isMobile ? (
+                // Simplified progress bar for mobile
+                <div className="flex items-center gap-1">
+                  {filteredSteps.map((_, index) => (
                     <motion.div
+                      key={index}
                       initial={false}
                       animate={{
-                        scale: index === currentStep ? 1 : 0.8,
-                        backgroundColor: index < currentStep 
+                        backgroundColor: index <= currentStep 
                           ? "hsl(var(--primary))" 
-                          : index === currentStep 
-                            ? "hsl(var(--primary))"
-                            : "hsl(var(--muted))"
+                          : "hsl(var(--muted))"
                       }}
-                      className={`relative flex items-center justify-center rounded-full transition-all duration-300 ${
-                        index === currentStep 
-                          ? "w-6 h-6 ring-2 ring-primary/30 ring-offset-2 ring-offset-background" 
-                          : "w-4 h-4 hover:scale-110"
+                      className={`h-1 flex-1 rounded-full transition-colors ${
+                        index === currentStep ? "bg-primary" : ""
                       }`}
+                      onClick={() => handleStepClick(index)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                // Full step indicators for desktop
+                <div className="flex items-center justify-center gap-1">
+                  {filteredSteps.map((s, index) => (
+                    <button
+                      key={index}
+                      onClick={() => handleStepClick(index)}
+                      className="group relative flex items-center"
+                      title={s.title}
                     >
-                      {index < currentStep ? (
-                        <Check className="w-2.5 h-2.5 text-primary-foreground" />
-                      ) : index === currentStep ? (
-                        <motion.div 
-                          className="w-2 h-2 bg-primary-foreground rounded-full"
-                          animate={{ scale: [1, 1.2, 1] }}
-                          transition={{ duration: 1.5, repeat: Infinity }}
-                        />
-                      ) : null}
-                    </motion.div>
-                    
-                    {/* Tooltip on hover */}
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                      <div className="px-2 py-1 text-[10px] font-medium bg-popover border border-border rounded shadow-lg whitespace-nowrap">
-                        {s.title.replace(/[🎉✨]/g, '').trim()}
+                      {/* Connector line */}
+                      {index > 0 && (
+                        <div className={`absolute right-full w-1 h-0.5 ${
+                          index <= currentStep ? "bg-primary" : "bg-muted"
+                        }`} />
+                      )}
+                      
+                      {/* Step dot/icon */}
+                      <motion.div
+                        initial={false}
+                        animate={{
+                          scale: index === currentStep ? 1 : 0.8,
+                          backgroundColor: index < currentStep 
+                            ? "hsl(var(--primary))" 
+                            : index === currentStep 
+                              ? "hsl(var(--primary))"
+                              : "hsl(var(--muted))"
+                        }}
+                        className={`relative flex items-center justify-center rounded-full transition-all duration-300 ${
+                          index === currentStep 
+                            ? "w-6 h-6 ring-2 ring-primary/30 ring-offset-2 ring-offset-background" 
+                            : "w-4 h-4 hover:scale-110"
+                        }`}
+                      >
+                        {index < currentStep ? (
+                          <Check className="w-2.5 h-2.5 text-primary-foreground" />
+                        ) : index === currentStep ? (
+                          <motion.div 
+                            className="w-2 h-2 bg-primary-foreground rounded-full"
+                            animate={{ scale: [1, 1.2, 1] }}
+                            transition={{ duration: 1.5, repeat: Infinity }}
+                          />
+                        ) : null}
+                      </motion.div>
+                      
+                      {/* Tooltip on hover */}
+                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                        <div className="px-2 py-1 text-[10px] font-medium bg-popover border border-border rounded shadow-lg whitespace-nowrap">
+                          {s.title.replace(/[🎉✨]/g, '').trim()}
+                        </div>
                       </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Navigation */}
-            <div className="flex gap-3">
+            <div className={`flex ${isMobile ? 'gap-2' : 'gap-3'}`}>
               {currentStep > 0 && (
                 <Button
                   variant="outline"
                   onClick={handlePrev}
-                  className="flex-1 gap-2"
+                  className={`flex-1 gap-1 ${isMobile ? 'text-sm py-2' : 'gap-2'}`}
+                  size={isMobile ? "sm" : "default"}
                 >
-                  <ChevronLeft className="w-4 h-4" />
-                  Back
+                  <ChevronLeft className={isMobile ? "w-3 h-3" : "w-4 h-4"} />
+                  {isMobile ? "" : "Back"}
                 </Button>
               )}
               <Button
                 onClick={handleNext}
-                className="flex-1 gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+                className={`flex-1 gap-1 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 ${isMobile ? 'text-sm py-2' : 'gap-2'}`}
+                size={isMobile ? "sm" : "default"}
               >
-                {currentStep === tourSteps.length - 1 ? (
+                {currentStep === filteredSteps.length - 1 ? (
                   <>
-                    <Sparkles className="w-4 h-4" />
-                    Get Started
+                    <Sparkles className={isMobile ? "w-3 h-3" : "w-4 h-4"} />
+                    {isMobile ? "Start" : "Get Started"}
                   </>
                 ) : (
                   <>
                     Next
-                    <ChevronRight className="w-4 h-4" />
+                    <ChevronRight className={isMobile ? "w-3 h-3" : "w-4 h-4"} />
                   </>
                 )}
               </Button>
             </div>
 
             {/* Skip link */}
-            {currentStep < tourSteps.length - 1 && (
+            {currentStep < filteredSteps.length - 1 && (
               <button
                 onClick={handleSkip}
-                className="w-full text-center text-xs text-muted-foreground hover:text-foreground transition-colors"
+                className={`w-full text-center text-muted-foreground hover:text-foreground transition-colors ${isMobile ? 'text-[10px]' : 'text-xs'}`}
               >
                 Skip tour
               </button>
