@@ -115,7 +115,7 @@ const categories = [
 
 type SortOption = "default" | "price-high" | "price-low" | "orders-high" | "orders-low" | "name";
 
-const ITEMS_PER_PAGE = 50;
+const ITEMS_PER_PAGE_OPTIONS = [25, 50, 100, 200];
 
 const ServicesManagement = () => {
   const isMobile = useIsMobile();
@@ -137,6 +137,7 @@ const ServicesManagement = () => {
   const [bulkMarkup, setBulkMarkup] = useState(25);
   const [selectedBulkIcon, setSelectedBulkIcon] = useState<string>("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(50);
   
   // New service form
   const [newService, setNewService] = useState({
@@ -251,6 +252,18 @@ const ServicesManagement = () => {
 
     return result;
   }, [services, selectedCategory, searchQuery, sortOption]);
+
+  // Pagination
+  const totalPages = Math.ceil(filteredServices.length / itemsPerPage);
+  const paginatedServices = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredServices.slice(start, start + itemsPerPage);
+  }, [filteredServices, currentPage, itemsPerPage]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategory, searchQuery, sortOption, itemsPerPage]);
 
   // Stats
   const totalServices = services.length;
@@ -413,6 +426,60 @@ const ServicesManagement = () => {
     }
   };
 
+  // Auto-fix icons for all services
+  const handleAutoFixIcons = async () => {
+    if (services.length === 0) {
+      toast({ title: "No services to fix", variant: "destructive" });
+      return;
+    }
+
+    setIsAutoFixingIcons(true);
+    
+    try {
+      const updates = services.map((service) => {
+        const detectedCategory = detectPlatform(service.name);
+        const iconUrl = `icon:${detectedCategory}`;
+        return {
+          id: service.id,
+          category: detectedCategory,
+          image_url: iconUrl,
+        };
+      });
+
+      // Batch update in chunks of 100
+      const chunkSize = 100;
+      for (let i = 0; i < updates.length; i += chunkSize) {
+        const chunk = updates.slice(i, i + chunkSize);
+        await Promise.all(
+          chunk.map((update) =>
+            supabase
+              .from('services')
+              .update({ category: update.category as any, image_url: update.image_url })
+              .eq('id', update.id)
+          )
+        );
+      }
+
+      // Update local state
+      setServices((prev) =>
+        prev.map((s) => {
+          const update = updates.find((u) => u.id === s.id);
+          if (update) {
+            return { ...s, category: update.category, imageUrl: update.image_url };
+          }
+          return s;
+        })
+      );
+
+      toast({ title: `Auto-fixed icons for ${services.length} services` });
+    } catch (error) {
+      console.error('Auto-fix error:', error);
+      toast({ title: 'Failed to auto-fix icons', variant: 'destructive' });
+    } finally {
+      setIsAutoFixingIcons(false);
+    }
+  };
+
   // Delete service
   const deleteService = async (id: string) => {
     try {
@@ -570,6 +637,21 @@ const ServicesManagement = () => {
           >
             <Upload className="w-4 h-4 mr-2" />
             Import
+          </Button>
+
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="glass-card border-border/50"
+            onClick={handleAutoFixIcons}
+            disabled={isAutoFixingIcons || services.length === 0}
+          >
+            {isAutoFixingIcons ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Sparkles className="w-4 h-4 mr-2" />
+            )}
+            Auto-Fix Icons
           </Button>
 
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
@@ -830,57 +912,163 @@ const ServicesManagement = () => {
               </CardContent>
             </Card>
           ) : (
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
-            >
-              <SortableContext
-                items={filteredServices.map(s => s.id)}
-                strategy={verticalListSortingStrategy}
+            <>
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
               >
-                <Card className="glass-card overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b border-border/50 bg-muted/30">
-                          <th className="text-left p-4 w-8">
-                            <button onClick={selectAll}>
-                              {selectedServices.length === filteredServices.length ? (
-                                <CheckSquare className="w-4 h-4" />
-                              ) : (
-                                <Square className="w-4 h-4" />
-                              )}
-                            </button>
-                          </th>
-                          <th className="text-left p-4">Service</th>
-                          <th className="text-left p-4 hidden md:table-cell">Category</th>
-                          <th className="text-left p-4 hidden lg:table-cell">Qty Range</th>
-                          <th className="text-left p-4">Price</th>
-                          <th className="text-left p-4">Status</th>
-                          <th className="text-left p-4"></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredServices.map((service) => (
-                          <DraggableServiceItem
-                            key={service.id}
-                            service={service}
-                            isSelected={selectedServices.includes(service.id)}
-                            onToggleSelect={() => toggleSelection(service.id)}
-                            onToggleStatus={() => toggleServiceStatus(service.id)}
-                            onEdit={() => openEditDialog(service)}
-                            onDelete={() => deleteService(service.id)}
-                            onView={() => openEditDialog(service)}
-                            getCategoryIcon={getCategoryIcon}
-                          />
+                <SortableContext
+                  items={paginatedServices.map(s => s.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <Card className="glass-card overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-border/50 bg-muted/30">
+                            <th className="text-left p-4 w-8">
+                              <button onClick={selectAll}>
+                                {selectedServices.length === paginatedServices.length && paginatedServices.length > 0 ? (
+                                  <CheckSquare className="w-4 h-4" />
+                                ) : (
+                                  <Square className="w-4 h-4" />
+                                )}
+                              </button>
+                            </th>
+                            <th className="text-left p-4">Service</th>
+                            <th className="text-left p-4 hidden md:table-cell">Category</th>
+                            <th className="text-left p-4 hidden lg:table-cell">Qty Range</th>
+                            <th className="text-left p-4">Price</th>
+                            <th className="text-left p-4">Status</th>
+                            <th className="text-left p-4"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {paginatedServices.map((service) => (
+                            <DraggableServiceItem
+                              key={service.id}
+                              service={service}
+                              isSelected={selectedServices.includes(service.id)}
+                              onToggleSelect={() => toggleSelection(service.id)}
+                              onToggleStatus={() => toggleServiceStatus(service.id)}
+                              onEdit={() => openEditDialog(service)}
+                              onDelete={() => deleteService(service.id)}
+                              onView={() => openEditDialog(service)}
+                              getCategoryIcon={getCategoryIcon}
+                            />
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </Card>
+                </SortableContext>
+              </DndContext>
+
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span>Showing {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, filteredServices.length)} of {filteredServices.length}</span>
+                    <Select value={itemsPerPage.toString()} onValueChange={(v) => setItemsPerPage(parseInt(v))}>
+                      <SelectTrigger className="w-20 h-8 bg-card/50">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ITEMS_PER_PAGE_OPTIONS.map(opt => (
+                          <SelectItem key={opt} value={opt.toString()}>{opt}</SelectItem>
                         ))}
-                      </tbody>
-                    </table>
+                      </SelectContent>
+                    </Select>
+                    <span>per page</span>
                   </div>
-                </Card>
-              </SortableContext>
-            </DndContext>
+
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(1)}
+                      disabled={currentPage === 1}
+                      className="hidden sm:flex"
+                    >
+                      First
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </Button>
+
+                    {/* Page numbers */}
+                    <div className="flex items-center gap-1">
+                      {(() => {
+                        const pages: (number | string)[] = [];
+                        const showPages = 5;
+                        let start = Math.max(1, currentPage - Math.floor(showPages / 2));
+                        let end = Math.min(totalPages, start + showPages - 1);
+                        
+                        if (end - start + 1 < showPages) {
+                          start = Math.max(1, end - showPages + 1);
+                        }
+
+                        if (start > 1) {
+                          pages.push(1);
+                          if (start > 2) pages.push('...');
+                        }
+
+                        for (let i = start; i <= end; i++) {
+                          pages.push(i);
+                        }
+
+                        if (end < totalPages) {
+                          if (end < totalPages - 1) pages.push('...');
+                          pages.push(totalPages);
+                        }
+
+                        return pages.map((page, idx) => (
+                          typeof page === 'number' ? (
+                            <Button
+                              key={idx}
+                              variant={currentPage === page ? "default" : "outline"}
+                              size="sm"
+                              className={cn("h-8 w-8", currentPage === page && "bg-primary")}
+                              onClick={() => setCurrentPage(page)}
+                            >
+                              {page}
+                            </Button>
+                          ) : (
+                            <span key={idx} className="px-1 text-muted-foreground">...</span>
+                          )
+                        ));
+                      })()}
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(totalPages)}
+                      disabled={currentPage === totalPages}
+                      className="hidden sm:flex"
+                    >
+                      Last
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
