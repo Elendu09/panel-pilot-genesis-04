@@ -17,6 +17,7 @@ import {
 import { cn } from "@/lib/utils";
 import { UndoOperation } from "@/hooks/use-undo-history";
 import { formatDistanceToNow } from "date-fns";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface FloatingUndoButtonProps {
   undoStack: UndoOperation[];
@@ -26,35 +27,23 @@ interface FloatingUndoButtonProps {
 
 const getOperationIcon = (type: UndoOperation['type']) => {
   switch (type) {
-    case 'status':
-      return Power;
-    case 'delete':
-      return Trash2;
-    case 'icon':
-      return Palette;
-    case 'category':
-      return Layers;
-    case 'markup':
-      return Sparkles;
-    default:
-      return RotateCcw;
+    case 'status': return Power;
+    case 'delete': return Trash2;
+    case 'icon': return Palette;
+    case 'category': return Layers;
+    case 'markup': return Sparkles;
+    default: return RotateCcw;
   }
 };
 
 const getOperationColor = (type: UndoOperation['type']) => {
   switch (type) {
-    case 'status':
-      return 'text-green-500 bg-green-500/10';
-    case 'delete':
-      return 'text-red-500 bg-red-500/10';
-    case 'icon':
-      return 'text-purple-500 bg-purple-500/10';
-    case 'category':
-      return 'text-blue-500 bg-blue-500/10';
-    case 'markup':
-      return 'text-amber-500 bg-amber-500/10';
-    default:
-      return 'text-primary bg-primary/10';
+    case 'status': return 'text-green-500 bg-green-500/10';
+    case 'delete': return 'text-red-500 bg-red-500/10';
+    case 'icon': return 'text-purple-500 bg-purple-500/10';
+    case 'category': return 'text-blue-500 bg-blue-500/10';
+    case 'markup': return 'text-amber-500 bg-amber-500/10';
+    default: return 'text-primary bg-primary/10';
   }
 };
 
@@ -65,6 +54,7 @@ export const FloatingUndoButton = ({
 }: FloatingUndoButtonProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [undoingId, setUndoingId] = useState<string | null>(null);
+  const isMobile = useIsMobile();
 
   const visibleOperations = undoStack.slice(0, maxVisible);
   const hasOperations = undoStack.length > 0;
@@ -82,7 +72,6 @@ export const FloatingUndoButton = ({
 
   return (
     <>
-      {/* Backdrop when expanded */}
       <AnimatePresence>
         {isExpanded && (
           <motion.div
@@ -95,8 +84,10 @@ export const FloatingUndoButton = ({
         )}
       </AnimatePresence>
 
-      {/* Floating Button & Panel */}
-      <div className="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-50">
+      <div className={cn(
+        "fixed z-50",
+        isMobile ? "bottom-24 right-4" : "bottom-6 right-6"
+      )}>
         <AnimatePresence mode="wait">
           {isExpanded ? (
             <motion.div
@@ -106,7 +97,10 @@ export const FloatingUndoButton = ({
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               transition={{ type: "spring", stiffness: 400, damping: 25 }}
             >
-              <Card className="w-80 sm:w-96 shadow-2xl border-border/50 bg-card/95 backdrop-blur-lg">
+              <Card className={cn(
+                "shadow-2xl border-border/50 bg-card/95 backdrop-blur-lg",
+                isMobile ? "w-[calc(100vw-2rem)] max-h-[50vh]" : "w-96"
+              )}>
                 <CardHeader className="pb-3 flex flex-row items-center justify-between">
                   <CardTitle className="text-base flex items-center gap-2">
                     <RotateCcw className="w-4 h-4" />
@@ -122,7 +116,7 @@ export const FloatingUndoButton = ({
                   </Button>
                 </CardHeader>
                 <CardContent className="pb-4">
-                  <ScrollArea className="max-h-80">
+                  <ScrollArea className={isMobile ? "max-h-[30vh]" : "max-h-80"}>
                     <div className="space-y-2">
                       {visibleOperations.map((operation) => {
                         const Icon = getOperationIcon(operation.type);
@@ -191,10 +185,10 @@ export const FloatingUndoButton = ({
             >
               <Button
                 size="lg"
-                className="h-14 w-14 rounded-full shadow-lg shadow-primary/25 relative"
+                className="h-12 w-12 md:h-14 md:w-14 rounded-full shadow-lg shadow-primary/25 relative"
                 onClick={() => setIsExpanded(true)}
               >
-                <RotateCcw className="w-5 h-5" />
+                <RotateCcw className="w-4 h-4 md:w-5 md:h-5" />
                 <Badge 
                   className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs"
                   variant="destructive"
