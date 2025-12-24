@@ -23,10 +23,17 @@ const queryClient = new QueryClient();
 
 /**
  * TenantRouter determines if we should show the storefront/buyer dashboard or the main app
- * based on the current domain and tenant detection
+ * based on the current domain and tenant detection.
+ * 
+ * DOMAIN ROUTING LOGIC:
+ * 1. Platform domains (smmpilot.online, www.smmpilot.online) → Main App
+ * 2. Development/preview domains (*.lovableproject.com, localhost) → Main App
+ * 3. Tenant subdomains (*.smmpilot.online) → Buyer Dashboard
+ * 4. Custom domains (verified in panel_domains) → Buyer Dashboard
+ * 5. External hosting domains (*.netlify.app, etc.) → Buyer Dashboard (if configured)
  */
 const TenantRouter = () => {
-  const { panel, loading, error, isTenantDomain, isPlatformDomain, debugInfo } = useTenant();
+  const { panel, loading, error, isTenantDomain, isPlatformDomain, domainConfig, debugInfo } = useTenant();
 
   if (loading) {
     const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
@@ -36,6 +43,11 @@ const TenantRouter = () => {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
           <p className="text-muted-foreground mb-2">Connecting to panel...</p>
           <p className="text-xs text-muted-foreground/60 font-mono">{hostname}</p>
+          {domainConfig && (
+            <p className="text-xs text-muted-foreground/40 mt-1">
+              Type: {domainConfig.type}
+            </p>
+          )}
         </div>
       </div>
     );

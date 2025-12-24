@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-
+import { analyzeDomain, type TenantDomainConfig } from '@/lib/tenant-domain-config';
 interface DesignCustomization {
   primaryColor?: string;
   secondaryColor?: string;
@@ -67,6 +67,7 @@ interface TenantDetectionResult {
   error: string | null;
   isTenantDomain: boolean;
   isPlatformDomain: boolean;
+  domainConfig: TenantDomainConfig | null;
   debugInfo?: {
     hostname: string;
     detectedSubdomain: string | null;
@@ -78,38 +79,9 @@ interface TenantDetectionResult {
   };
 }
 
-// Known external hosting patterns - panels can be hosted on these platforms
-const EXTERNAL_HOSTING_PATTERNS = [
-  /\.netlify\.app$/,
-  /\.vercel\.app$/,
-  /\.pages\.dev$/,  // Cloudflare Pages
-  /\.onrender\.com$/,
-  /\.railway\.app$/,
-  /\.fly\.dev$/,
-  /\.herokuapp\.com$/,
-];
-
-// Development/preview domains - these should show the platform app
-const DEV_PREVIEW_PATTERNS = [
-  /lovableproject\.com$/,      // All Lovable preview domains (including subdomains)
-  /\.lovable\.app$/,           // Lovable staging domains
-  /lovable\.app$/,             // Lovable staging root
-  /^localhost$/,
-  /^127\.0\.0\.1$/,
-  /\.local$/,
-];
-
-function isExternalHostingDomain(hostname: string): boolean {
-  return EXTERNAL_HOSTING_PATTERNS.some(pattern => pattern.test(hostname));
-}
-
-function isDevPreviewDomain(hostname: string): boolean {
-  // Direct check for lovableproject.com domains (covers all variations)
-  if (hostname.includes('lovableproject.com') || hostname.includes('lovable.app')) {
-    return true;
-  }
-  return DEV_PREVIEW_PATTERNS.some(pattern => pattern.test(hostname));
-}
+// Cache for tenant data to avoid refetching on navigation
+const tenantCache = new Map<string, { panel: TenantPanel | null; timestamp: number }>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 export function useTenant(): TenantDetectionResult {
   const [panel, setPanel] = useState<TenantPanel | null>(null);
@@ -117,6 +89,7 @@ export function useTenant(): TenantDetectionResult {
   const [error, setError] = useState<string | null>(null);
   const [isTenantDomain, setIsTenantDomain] = useState(false);
   const [isPlatformDomain, setIsPlatformDomain] = useState(true);
+  const [domainConfig, setDomainConfig] = useState<TenantDomainConfig | null>(null);
   const [debugInfo, setDebugInfo] = useState<TenantDetectionResult['debugInfo']>();
 
   useEffect(() => {
@@ -128,13 +101,28 @@ export function useTenant(): TenantDetectionResult {
         setError(null);
 
         const hostname = window.location.hostname.toLowerCase();
-        const isExternalHosting = isExternalHostingDomain(hostname);
-        const isDevPreview = isDevPreviewDomain(hostname);
+        
+        // Use centralized domain analysis
+        const config = analyzeDomain(hostname);
+        setDomainConfig(config);
+        
+        const isExternalHosting = config.type === 'external';
+        const isDevPreview = config.type === 'development';
         
         console.log('[useTenant] ===== TENANT DETECTION START =====');
         console.log('[useTenant] Hostname:', hostname);
-        console.log('[useTenant] Is external hosting:', isExternalHosting);
-        console.log('[useTenant] Is dev preview:', isDevPreview);
+        console.log('[useTenant] Domain config:', config);
+        
+        // Check cache first
+        const cached = tenantCache.get(hostname);
+        if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+          console.log('[useTenant] Using cached tenant data');
+          setPanel(cached.panel);
+          setIsPlatformDomain(config.type === 'platform' || config.type === 'development');
+          setIsTenantDomain(config.type === 'subdomain' || config.type === 'custom' || config.type === 'external');
+          setLoading(false);
+          return;
+        }
         
         // Development/preview domains should always show platform app
         if (isDevPreview) {
@@ -467,13 +455,19 @@ export function useTenant(): TenantDetectionResult {
             ...(typeof settings === 'object' ? settings : {})
           };
 
-          setPanel({
+          const resolvedPanel = {
             ...panelData,
             custom_branding: branding && typeof branding === 'object' ? branding as DesignCustomization : undefined,
             settings: mergedSettings
-          });
+          };
+
+          // Cache the result
+          tenantCache.set(hostname, { panel: resolvedPanel, timestamp: Date.now() });
+          
+          setPanel(resolvedPanel);
         } else {
           console.warn('[useTenant] No panel found for:', { hostname, subdomain, searchAttempts });
+          tenantCache.set(hostname, { panel: null, timestamp: Date.now() });
           setError(`Panel not found. Searched: ${searchAttempts.join(', ')}`);
         }
 
@@ -494,6 +488,7 @@ export function useTenant(): TenantDetectionResult {
     error,
     isTenantDomain,
     isPlatformDomain,
+    domainConfig,
     debugInfo
   };
 }
