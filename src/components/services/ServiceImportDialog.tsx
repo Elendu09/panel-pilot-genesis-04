@@ -87,16 +87,24 @@ export const ServiceImportDialog = ({
   const [serviceMarkups, setServiceMarkups] = useState<Record<number, number>>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [showEducation, setShowEducation] = useState(true);
+  const [hideAlreadyImported, setHideAlreadyImported] = useState(true);
+  const [existingServiceIds, setExistingServiceIds] = useState<Set<number>>(new Set());
   
   // Provider balance state
   const [providerBalance, setProviderBalance] = useState<number | null>(null);
   const [isCheckingBalance, setIsCheckingBalance] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
-  const filteredServices = fetchedServices.filter(service =>
-    service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    service.category.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filter services - optionally hide already imported
+  const filteredServices = fetchedServices.filter(service => {
+    const matchesSearch = service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      service.category.toLowerCase().includes(searchQuery.toLowerCase());
+    const isAlreadyImported = existingServiceIds.has(service.id);
+    return matchesSearch && (!hideAlreadyImported || !isAlreadyImported);
+  });
+
+  const alreadyImportedCount = fetchedServices.filter(s => existingServiceIds.has(s.id)).length;
+  const newServicesCount = fetchedServices.length - alreadyImportedCount;
 
   // Check provider balance when provider is selected
   const checkProviderBalance = async (providerId: string) => {
@@ -182,8 +190,27 @@ export const ServiceImportDialog = ({
         description: s.description || s.name || '',
       }));
       
+      // Check which services are already imported by matching provider_id
+      const providerIds = mappedServices.map(s => String(s.id));
+      const { data: existingServices } = await supabase
+        .from('services')
+        .select('provider_id')
+        .in('provider_id', providerIds);
+      
+      const existingIds = new Set<number>(
+        (existingServices || [])
+          .map(s => parseInt(s.provider_id || '0'))
+          .filter(id => id > 0)
+      );
+      setExistingServiceIds(existingIds);
+      
       setFetchedServices(mappedServices);
-      toast({ title: `${mappedServices.length} services loaded successfully!` });
+      
+      const importedCount = mappedServices.filter(s => existingIds.has(s.id)).length;
+      toast({ 
+        title: `${mappedServices.length} services loaded!`,
+        description: importedCount > 0 ? `${importedCount} already imported` : undefined
+      });
       
       setSelectedServices([]);
       setServiceMarkups({});
@@ -249,6 +276,8 @@ export const ServiceImportDialog = ({
     setSearchQuery("");
     setProviderBalance(null);
     setFetchError(null);
+    setExistingServiceIds(new Set());
+    setHideAlreadyImported(true);
   };
 
   return (
@@ -264,7 +293,7 @@ export const ServiceImportDialog = ({
           <DialogDescription>
             {step === "select" 
               ? "Fetch and import services from your connected API providers"
-              : `${fetchedServices.length} services found. Select which ones to import.`
+              : `${fetchedServices.length} services found. ${alreadyImportedCount > 0 ? `${alreadyImportedCount} already imported.` : ''} Select which ones to import.`
             }
           </DialogDescription>
         </DialogHeader>
@@ -473,6 +502,16 @@ export const ServiceImportDialog = ({
                 <Badge variant="secondary" className="px-3 py-1 whitespace-nowrap">
                   {selectedServices.length} selected
                 </Badge>
+                {alreadyImportedCount > 0 && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => setHideAlreadyImported(!hideAlreadyImported)}
+                    className="text-xs"
+                  >
+                    {hideAlreadyImported ? `Show ${alreadyImportedCount} imported` : 'Hide imported'}
+                  </Button>
+                )}
               </div>
             </div>
 
@@ -519,13 +558,19 @@ export const ServiceImportDialog = ({
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         className={cn(
-                          "p-3 rounded-xl border transition-all cursor-pointer",
+                          "p-3 rounded-xl border transition-all cursor-pointer relative",
+                          existingServiceIds.has(service.id) && "opacity-60",
                           isSelected 
                             ? "border-primary bg-primary/5 shadow-sm shadow-primary/10" 
                             : "border-border/30 hover:border-border/60 bg-background/30"
                         )}
                         onClick={() => toggleService(service.id)}
                       >
+                        {existingServiceIds.has(service.id) && (
+                          <Badge className="absolute -top-2 -right-2 text-[9px] bg-amber-500/80">
+                            Already Imported
+                          </Badge>
+                        )}
                         {/* Card Header */}
                         <div className="flex items-start gap-2 mb-2">
                           <Checkbox
