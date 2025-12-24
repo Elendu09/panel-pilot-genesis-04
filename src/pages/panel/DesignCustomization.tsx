@@ -43,7 +43,12 @@ import {
   Globe,
   CheckCircle,
   Accessibility,
-  Share2
+  Share2,
+  Instagram,
+  Facebook,
+  Twitter,
+  Youtube,
+  Hash
 } from "lucide-react";
 import { LiveStorefrontPreview } from "@/components/design/LiveStorefrontPreview";
 import { useToast } from "@/hooks/use-toast";
@@ -875,12 +880,12 @@ const DesignCustomization = () => {
                 <CardContent>
                   <SocialIconSelector
                     platforms={[
-                      { id: 'instagram', name: 'Instagram', icon: 'Instagram', bgColor: '#E4405F', enabled: true },
-                      { id: 'facebook', name: 'Facebook', icon: 'Facebook', bgColor: '#1877F2', enabled: true },
-                      { id: 'twitter', name: 'Twitter/X', icon: 'Twitter', bgColor: '#1DA1F2', enabled: true },
-                      { id: 'youtube', name: 'YouTube', icon: 'Youtube', bgColor: '#FF0000', enabled: true },
-                      { id: 'tiktok', name: 'TikTok', icon: 'Music', bgColor: '#000000', enabled: false },
-                      { id: 'telegram', name: 'Telegram', icon: 'Send', bgColor: '#0088CC', enabled: false },
+                      { id: 'instagram', name: 'Instagram', icon: Instagram, color: 'text-pink-500', bgColor: 'bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400', enabled: true },
+                      { id: 'facebook', name: 'Facebook', icon: Facebook, color: 'text-blue-600', bgColor: 'bg-blue-600', enabled: true },
+                      { id: 'twitter', name: 'Twitter/X', icon: Twitter, color: 'text-sky-500', bgColor: 'bg-slate-900', enabled: true },
+                      { id: 'youtube', name: 'YouTube', icon: Youtube, color: 'text-red-500', bgColor: 'bg-red-500', enabled: true },
+                      { id: 'tiktok', name: 'TikTok', icon: Hash, color: 'text-foreground', bgColor: 'bg-gradient-to-br from-cyan-400 via-slate-900 to-pink-500', enabled: false },
+                      { id: 'telegram', name: 'Telegram', icon: MessageCircle, color: 'text-sky-400', bgColor: 'bg-sky-500', enabled: false },
                     ]}
                     onChange={(platforms) => {
                       setCustomization(prev => ({ ...prev, socialPlatforms: platforms } as any));
