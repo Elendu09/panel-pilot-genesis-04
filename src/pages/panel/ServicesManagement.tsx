@@ -999,11 +999,34 @@ const ServicesManagement = () => {
         animate={{ opacity: 1, y: 0 }}
         className="flex flex-col gap-4"
       >
-        <div>
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">
-            Services Management
-          </h1>
-          <p className="text-sm text-muted-foreground">Manage your SMM services, pricing, and providers</p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div>
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">
+              Services Management
+            </h1>
+            <p className="text-sm text-muted-foreground">Manage your SMM services, pricing, and providers</p>
+          </div>
+          
+          {/* Service Limit Counter */}
+          <div className={cn(
+            "flex items-center gap-2 px-3 py-2 rounded-lg border",
+            isAtLimit ? "bg-destructive/10 border-destructive/50 text-destructive" :
+            isNearLimit ? "bg-amber-500/10 border-amber-500/50 text-amber-600 dark:text-amber-400" :
+            "bg-muted/50 border-border/50"
+          )}>
+            <Package className="w-4 h-4" />
+            <span className="text-sm font-medium">
+              {totalCount.toLocaleString()} / {SERVICE_LIMIT.toLocaleString()}
+            </span>
+            {isAtLimit && (
+              <Badge variant="destructive" className="text-xs">Limit Reached</Badge>
+            )}
+            {isNearLimit && !isAtLimit && (
+              <Badge variant="outline" className="text-xs border-amber-500/50 text-amber-600 dark:text-amber-400">
+                Near Limit
+              </Badge>
+            )}
+          </div>
         </div>
         <div className="flex flex-wrap gap-2 items-center">
           <Button 
@@ -1040,6 +1063,26 @@ const ServicesManagement = () => {
             )}
             Auto-Fix Icons
           </Button>
+
+          {/* View Mode Toggle */}
+          <div className="flex items-center gap-1 p-1 rounded-lg bg-muted/50 border border-border/50">
+            <Button
+              variant={viewMode === "list" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-7 px-2"
+              onClick={() => setViewMode("list")}
+            >
+              <List className="w-4 h-4" />
+            </Button>
+            <Button
+              variant={viewMode === "kanban" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-7 px-2"
+              onClick={() => setViewMode("kanban")}
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </Button>
+          </div>
 
           {/* Drag & Drop Toggle */}
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/50 border border-border/50">
@@ -1361,7 +1404,28 @@ const ServicesManagement = () => {
             </Card>
           ) : (
             <>
-              {isDragEnabled ? (
+              {viewMode === "kanban" ? (
+                /* Kanban Card View */
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {services.map((service) => (
+                    <ServiceKanbanCard
+                      key={service.id}
+                      service={service}
+                      providerName={getProviderName(service.providerId)}
+                      isSelected={selectedServices.includes(service.id)}
+                      onToggleSelect={() => toggleSelection(service.id)}
+                      onToggleStatus={() => toggleServiceStatus(service.id)}
+                      onEdit={() => openEditDialog(service)}
+                      onDelete={() => deleteService(service.id)}
+                      onView={() => {
+                        setViewingService(service);
+                        setIsViewDialogOpen(true);
+                      }}
+                      showDragHandle={false}
+                    />
+                  ))}
+                </div>
+              ) : isDragEnabled ? (
                 <DndContext
                   sensors={sensors}
                   collisionDetection={closestCenter}
