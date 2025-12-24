@@ -498,6 +498,21 @@
     animation: gradientShift 3s ease infinite;
   }
 
+  /* Shimmer Button Animation */
+  .shimmer-button {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  @keyframes shimmer-slide {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+  
+  .animate-shimmer-slide {
+    animation: shimmer-slide 2s infinite;
+  }
+
   /* Keyframes */
   @keyframes float {
     0%, 100% { transform: translateY(0px); }
