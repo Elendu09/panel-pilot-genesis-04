@@ -103,12 +103,14 @@ import {
 import { DraggableServiceItem, ServiceItem } from "@/components/services/DraggableServiceItem";
 import { ServiceImportDialog } from "@/components/services/ServiceImportDialog";
 import { ServiceEditDialog } from "@/components/services/ServiceEditDialog";
+import { ServiceViewDialog } from "@/components/services/ServiceViewDialog";
 import { MobileServiceView } from "@/components/services/MobileServiceView";
 import { FloatingUndoButton } from "@/components/services/FloatingUndoButton";
 import { useUndoHistory } from "@/hooks/use-undo-history";
 import { ServiceTips } from "@/components/services/ServiceTips";
 import { SmartCategorizeDialog } from "@/components/services/SmartCategorizeDialog";
 import { ServiceAnalytics } from "@/components/services/ServiceAnalytics";
+
 
 const categories = [
   { id: "all", name: "All Services", icon: Layers },
@@ -161,6 +163,8 @@ const ServicesManagement = () => {
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isBulkDialogOpen, setIsBulkDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [viewingService, setViewingService] = useState<ServiceItem | null>(null);
   const [isBulkIconDialogOpen, setIsBulkIconDialogOpen] = useState(false);
   const [isBulkCategoryDialogOpen, setIsBulkCategoryDialogOpen] = useState(false);
   const [isAutoFixingIcons, setIsAutoFixingIcons] = useState(false);
@@ -1375,7 +1379,10 @@ const ServicesManagement = () => {
                                 onToggleStatus={() => toggleServiceStatus(service.id)}
                                 onEdit={() => openEditDialog(service)}
                                 onDelete={() => deleteService(service.id)}
-                                onView={() => openEditDialog(service)}
+                                onView={() => {
+                                  setViewingService(service);
+                                  setIsViewDialogOpen(true);
+                                }}
                                 getCategoryIcon={getCategoryIcon}
                                 showDragHandle={isDragEnabled}
                               />
@@ -1419,7 +1426,10 @@ const ServicesManagement = () => {
                             onToggleStatus={() => toggleServiceStatus(service.id)}
                             onEdit={() => openEditDialog(service)}
                             onDelete={() => deleteService(service.id)}
-                            onView={() => openEditDialog(service)}
+                            onView={() => {
+                              setViewingService(service);
+                              setIsViewDialogOpen(true);
+                            }}
                             getCategoryIcon={getCategoryIcon}
                             showDragHandle={false}
                           />
@@ -1830,6 +1840,30 @@ const ServicesManagement = () => {
         onApply={() => {
           fetchServices();
           fetchCategoryCounts();
+        }}
+      />
+
+      {/* Service View Dialog */}
+      <ServiceViewDialog
+        service={viewingService}
+        open={isViewDialogOpen}
+        onOpenChange={setIsViewDialogOpen}
+        onEdit={() => {
+          setIsViewDialogOpen(false);
+          if (viewingService) openEditDialog(viewingService);
+        }}
+        onToggleStatus={() => {
+          if (viewingService) toggleServiceStatus(viewingService.id);
+          setIsViewDialogOpen(false);
+        }}
+        onDuplicate={() => {
+          // Duplicate logic
+          if (viewingService) {
+            const newService = { ...viewingService, id: '', name: `${viewingService.name} (Copy)` };
+            setEditingService(newService);
+            setIsViewDialogOpen(false);
+            setIsEditDialogOpen(true);
+          }
         }}
       />
     </div>
