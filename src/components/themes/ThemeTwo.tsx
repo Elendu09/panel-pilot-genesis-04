@@ -32,8 +32,15 @@ export const ThemeTwo = ({ panel, services = [], customization = {} }: ThemeTwoP
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   
+  // Dynamic customization values
   const panelName = customization.companyName || panel?.name || 'SMM Panel';
   const primaryColor = customization.primaryColor || panel?.primary_color || '#6366F1';
+  const secondaryColor = customization.secondaryColor || '#A855F7';
+  const backgroundColor = customization.backgroundColor || '#0c0c1d';
+  const surfaceColor = customization.surfaceColor || '#1a1a2e';
+  const textColor = customization.textColor || '#FFFFFF';
+  const fontFamily = customization.fontFamily || 'Inter, system-ui, sans-serif';
+  const borderRadius = customization.borderRadius || '12';
   const heroTitle = customization.heroTitle || 'Professional Social Media Marketing Solutions';
   const heroSubtitle = customization.heroSubtitle || 'Elevate your brand with our premium social media marketing services. Trusted by 50,000+ businesses worldwide.';
   const socialPlatforms = customization.socialPlatforms || [];
@@ -93,9 +100,16 @@ export const ThemeTwo = ({ panel, services = [], customization = {} }: ThemeTwoP
   ];
 
   return (
-    <div className="min-h-screen bg-[#0c0c1d] text-white">
+    <div 
+      className="min-h-screen text-white"
+      style={{ 
+        backgroundColor, 
+        fontFamily,
+        color: textColor,
+      }}
+    >
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-[#0c0c1d]/80 backdrop-blur-xl border-b border-white/10">
+      <header className="sticky top-0 z-50 backdrop-blur-xl border-b border-white/10" style={{ backgroundColor: `${backgroundColor}CC` }}>
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {(customization.logoUrl || panel?.logo_url) && (

@@ -55,7 +55,7 @@ export const Navigation = () => {
           </div>
 
           <div className="hidden md:flex items-center space-x-3">
-            {!isHomepage && <ThemeToggle />}
+            <ThemeToggle />
             {user ? (
               <div className="flex items-center space-x-3">
                 <span className="text-sm text-muted-foreground truncate max-w-[150px]">
@@ -110,7 +110,7 @@ export const Navigation = () => {
                 Contact
               </Link>
               <div className="flex flex-col space-y-2 pt-4">
-                {!isHomepage && <ThemeToggle />}
+                <ThemeToggle />
                 {user ? (
                   <div className="space-y-2">
                     <div className="px-4 py-2 text-sm text-muted-foreground border-b">

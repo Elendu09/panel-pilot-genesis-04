@@ -49,8 +49,15 @@ export const ThemeFour = ({ panel, services = [], customization = {} }: ThemeFou
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   
+  // Dynamic customization values
   const panelName = customization.companyName || panel?.name || 'Grace Cometh Panel';
   const primaryColor = customization.primaryColor || panel?.primary_color || '#6B4226';
+  const secondaryColor = customization.secondaryColor || '#F59E0B';
+  const backgroundColor = customization.backgroundColor || '#5D3A1A';
+  const surfaceColor = customization.surfaceColor || '#4A2E15';
+  const textColor = customization.textColor || '#FFFFFF';
+  const fontFamily = customization.fontFamily || 'Inter, system-ui, sans-serif';
+  const borderRadius = customization.borderRadius || '12';
   const heroTitle = customization.heroTitle || 'Where Growth Meet Grace';
   const heroSubtitle = customization.heroSubtitle || 'Unlock effortless social media success with our panel. We\'re the simplest and fastest way to boost your online presence across Instagram, Facebook, TikTok, YouTube and more.';
   const socialPlatforms = customization.socialPlatforms || [];
@@ -108,7 +115,17 @@ export const ThemeFour = ({ panel, services = [], customization = {} }: ThemeFou
   }));
 
   return (
-    <div className="min-h-screen bg-[#5D3A1A] text-white overflow-hidden">
+    <div 
+      className="min-h-screen text-white overflow-hidden"
+      style={{ 
+        backgroundColor, 
+        fontFamily,
+        color: textColor,
+        ['--theme-primary' as any]: primaryColor,
+        ['--theme-secondary' as any]: secondaryColor,
+        ['--theme-radius' as any]: `${borderRadius}px`,
+      }}
+    >
       {/* Particle Background */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         {particles.map((particle, i) => (
@@ -117,13 +134,21 @@ export const ThemeFour = ({ panel, services = [], customization = {} }: ThemeFou
       </div>
 
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-[#5D3A1A]/90 backdrop-blur-xl border-b border-white/10">
+      <header 
+        className="sticky top-0 z-50 backdrop-blur-xl border-b border-white/10"
+        style={{ backgroundColor: `${backgroundColor}E6` }}
+      >
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {(customization.logoUrl || panel?.logo_url) && (
-              <img src={customization.logoUrl || panel?.logo_url} alt={panelName} className="h-10 w-10 rounded-lg object-cover" />
+              <img 
+                src={customization.logoUrl || panel?.logo_url} 
+                alt={panelName} 
+                className="h-10 w-10 object-cover" 
+                style={{ borderRadius: `${borderRadius}px` }}
+              />
             )}
-            <h1 className="text-xl font-bold text-white">{panelName}</h1>
+            <h1 className="text-xl font-bold" style={{ color: textColor }}>{panelName}</h1>
           </div>
           <div className="flex items-center gap-4">
             <LowVisionToggle accessibilitySettings={accessibilitySettings} panelId={panel?.id} variant="dark" />
@@ -132,7 +157,11 @@ export const ThemeFour = ({ panel, services = [], customization = {} }: ThemeFou
               <a href="#features" className="text-sm text-white/80 hover:text-white transition-colors">Features</a>
               <a href="#how-it-works" className="text-sm text-white/80 hover:text-white transition-colors">How It Works</a>
             </nav>
-            <Button className="bg-white text-[#5D3A1A] hover:bg-white/90" asChild>
+            <Button 
+              className="text-white hover:opacity-90" 
+              style={{ backgroundColor: primaryColor, borderRadius: `${borderRadius}px` }}
+              asChild
+            >
               <Link to="/login">Sign in</Link>
             </Button>
           </div>
@@ -195,7 +224,7 @@ export const ThemeFour = ({ panel, services = [], customization = {} }: ThemeFou
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-20 bg-[#4A2E15]">
+      <section id="features" className="py-20" style={{ backgroundColor: surfaceColor }}>
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-white mb-4">Why Choose Us?</h2>
@@ -204,11 +233,14 @@ export const ThemeFour = ({ panel, services = [], customization = {} }: ThemeFou
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {features.map((feature, index) => (
               <motion.div key={index} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1 }} viewport={{ once: true }}>
-                <Card className="p-6 bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-all h-full">
-                  <div className="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center mb-4">
-                    <feature.icon className="w-6 h-6 text-amber-400" />
+                <Card 
+                  className="p-6 bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-all h-full"
+                  style={{ borderRadius: `${borderRadius}px` }}
+                >
+                  <div className="w-12 h-12 flex items-center justify-center mb-4" style={{ backgroundColor: `${secondaryColor}33`, borderRadius: `${borderRadius}px` }}>
+                    <feature.icon className="w-6 h-6" style={{ color: secondaryColor }} />
                   </div>
-                  <h3 className="text-xl font-bold text-white mb-2">{feature.title}</h3>
+                  <h3 className="text-xl font-bold mb-2" style={{ color: textColor }}>{feature.title}</h3>
                   <p className="text-white/60">{feature.description}</p>
                 </Card>
               </motion.div>
@@ -222,11 +254,11 @@ export const ThemeFour = ({ panel, services = [], customization = {} }: ThemeFou
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold mb-4">
-              <span className="text-white">Who Can </span>
-              <span className="text-amber-300">Benefit</span>
-              <span className="text-white"> From</span>
+              <span style={{ color: textColor }}>Who Can </span>
+              <span style={{ color: secondaryColor }}>Benefit</span>
+              <span style={{ color: textColor }}> From</span>
               <br />
-              <span className="text-white">{panelName}?</span>
+              <span style={{ color: textColor }}>{panelName}?</span>
             </h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -246,7 +278,7 @@ export const ThemeFour = ({ panel, services = [], customization = {} }: ThemeFou
       </section>
 
       {/* Services Section */}
-      <section id="services" className="py-20 bg-[#4A2E15]">
+      <section id="services" className="py-20" style={{ backgroundColor: surfaceColor }}>
         <div className="container mx-auto px-4">
           <div className="text-center mb-10">
             <h2 className="text-4xl font-bold text-white mb-4">Our Services</h2>
@@ -268,14 +300,21 @@ export const ThemeFour = ({ panel, services = [], customization = {} }: ThemeFou
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {filteredServices.slice(0, 8).map((service, index) => (
                 <motion.div key={service.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }} viewport={{ once: true }}>
-                  <Card className="p-6 bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-all h-full">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center mb-4 text-xl">
+                  <Card 
+                    className="p-6 bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-all h-full"
+                    style={{ borderRadius: `${borderRadius}px` }}
+                  >
+                    <div className="w-12 h-12 flex items-center justify-center mb-4 text-xl" style={{ background: `linear-gradient(135deg, ${secondaryColor}, ${primaryColor})`, borderRadius: `${borderRadius}px` }}>
                       {service.image_url?.startsWith('icon:') ? service.image_url.replace('icon:', '') : '📦'}
                     </div>
-                    <h3 className="text-lg font-bold text-white mb-2 line-clamp-2">{service.name}</h3>
+                    <h3 className="text-lg font-bold mb-2 line-clamp-2" style={{ color: textColor }}>{service.name}</h3>
                     <p className="text-white/60 text-sm mb-3 line-clamp-2">{service.description}</p>
-                    <div className="text-amber-400 font-semibold mb-4">${service.price}/1K</div>
-                    <Button className="w-full bg-amber-500 hover:bg-amber-600 text-white" asChild>
+                    <div className="font-semibold mb-4" style={{ color: secondaryColor }}>${service.price}/1K</div>
+                    <Button 
+                      className="w-full text-white" 
+                      style={{ backgroundColor: secondaryColor, borderRadius: `${borderRadius}px` }}
+                      asChild
+                    >
                       <Link to={`/order?service=${service.id}`}>Order Now</Link>
                     </Button>
                   </Card>

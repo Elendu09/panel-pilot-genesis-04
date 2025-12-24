@@ -34,8 +34,15 @@ export const ThemeOne = ({ panel, services = [], customization = {} }: ThemeOneP
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   
+  // Dynamic customization values
   const panelName = customization.companyName || panel?.name || 'SMM Panel';
   const primaryColor = customization.primaryColor || panel?.primary_color || '#8B5CF6';
+  const secondaryColor = customization.secondaryColor || '#EC4899';
+  const backgroundColor = customization.backgroundColor || '#0a0a1a';
+  const surfaceColor = customization.surfaceColor || '#1a1a2e';
+  const textColor = customization.textColor || '#FFFFFF';
+  const fontFamily = customization.fontFamily || 'Inter, system-ui, sans-serif';
+  const borderRadius = customization.borderRadius || '12';
   const heroTitle = customization.heroTitle || 'Grow Your Social Media';
   const heroSubtitle = customization.heroSubtitle || 'The #1 SMM Panel for Instagram, TikTok, YouTube and Telegram. Get real followers, likes, and views with instant delivery.';
   const socialPlatforms = customization.socialPlatforms || [];
@@ -85,9 +92,16 @@ export const ThemeOne = ({ panel, services = [], customization = {} }: ThemeOneP
   ];
 
   return (
-    <div className="min-h-screen bg-[#0a0a1a] text-white overflow-hidden">
+    <div 
+      className="min-h-screen text-white overflow-hidden"
+      style={{ 
+        backgroundColor, 
+        fontFamily,
+        color: textColor,
+      }}
+    >
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-[#0a0a1a]/80 backdrop-blur-xl border-b border-white/10">
+      <header className="sticky top-0 z-50 backdrop-blur-xl border-b border-white/10" style={{ backgroundColor: `${backgroundColor}CC` }}>
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {(customization.logoUrl || panel?.logo_url) && (
