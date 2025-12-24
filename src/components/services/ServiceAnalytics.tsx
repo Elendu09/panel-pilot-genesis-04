@@ -55,8 +55,8 @@ interface CategoryStats {
   color: string;
 }
 
-const SERVICE_LIMIT = 2500;
-const WARNING_THRESHOLD = 2000;
+const SERVICE_LIMIT = 5500;
+const WARNING_THRESHOLD = 5000;
 
 const CATEGORY_COLORS: Record<string, string> = {
   instagram: "#E4405F",

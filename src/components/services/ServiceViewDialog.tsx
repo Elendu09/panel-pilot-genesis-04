@@ -129,7 +129,8 @@ export const ServiceViewDialog = ({
     ? ((service.price - service.originalPrice) / service.originalPrice * 100).toFixed(0)
     : null;
 
-  const displayProvider = providerInfo?.name || service.provider || 'Direct';
+  // Only show as Direct if there truly is no provider ID
+  const displayProvider = providerInfo?.name || (service.providerId && service.providerId !== 'Direct' ? 'Loading...' : (service.provider && service.provider !== 'Unknown' ? service.provider : 'Direct'));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -249,6 +250,12 @@ export const ServiceViewDialog = ({
             <div className="flex items-center gap-1 mt-2 text-xs text-amber-600 dark:text-amber-400">
               <AlertCircle className="w-3 h-3" />
               <span>No provider linked - manual fulfillment required</span>
+            </div>
+          )}
+          {service.providerId && !providerInfo && !loadingProvider && (
+            <div className="flex items-center gap-1 mt-2 text-xs text-amber-600 dark:text-amber-400">
+              <AlertCircle className="w-3 h-3" />
+              <span>Provider not found - may have been deleted or deactivated</span>
             </div>
           )}
         </div>
