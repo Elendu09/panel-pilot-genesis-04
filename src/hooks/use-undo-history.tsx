@@ -16,6 +16,7 @@ interface UseUndoHistoryReturn {
   canUndo: boolean;
   pushUndo: (operation: Omit<UndoOperation, 'id' | 'timestamp'>) => void;
   undo: () => Promise<boolean>;
+  undoOperation: (operation: UndoOperation) => Promise<boolean>;
   clearHistory: () => void;
 }
 
@@ -35,24 +36,7 @@ export function useUndoHistory(onUndoComplete?: () => void): UseUndoHistoryRetur
       const newStack = [newOperation, ...prev];
       return newStack.slice(0, MAX_UNDO_STACK);
     });
-
-    // Show undo toast
-    toast({
-      title: operation.description,
-      description: 'Click to undo this action',
-      action: (
-        <button
-          onClick={async () => {
-            await performUndo(newOperation);
-            onUndoComplete?.();
-          }}
-          className="px-3 py-1 text-xs font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
-        >
-          Undo
-        </button>
-      ),
-    });
-  }, [onUndoComplete]);
+  }, []);
 
   const performUndo = async (operation: UndoOperation): Promise<boolean> => {
     try {
@@ -116,6 +100,20 @@ export function useUndoHistory(onUndoComplete?: () => void): UseUndoHistoryRetur
           break;
         }
 
+        case 'markup': {
+          // Restore previous prices
+          await Promise.all(
+            Object.entries(operation.previousState).map(([id, prevState]) =>
+              supabase
+                .from('services')
+                .update({ price: (prevState as { price: number }).price })
+                .eq('id', id)
+            )
+          );
+          toast({ title: 'Price changes reverted' });
+          break;
+        }
+
         default:
           toast({ title: 'Unknown operation type', variant: 'destructive' });
           return false;
@@ -145,6 +143,14 @@ export function useUndoHistory(onUndoComplete?: () => void): UseUndoHistoryRetur
     return success;
   }, [undoStack, onUndoComplete]);
 
+  const undoOperation = useCallback(async (operation: UndoOperation): Promise<boolean> => {
+    const success = await performUndo(operation);
+    if (success) {
+      onUndoComplete?.();
+    }
+    return success;
+  }, [onUndoComplete]);
+
   const clearHistory = useCallback(() => {
     setUndoStack([]);
   }, []);
@@ -154,6 +160,7 @@ export function useUndoHistory(onUndoComplete?: () => void): UseUndoHistoryRetur
     canUndo: undoStack.length > 0,
     pushUndo,
     undo,
+    undoOperation,
     clearHistory,
   };
 }
