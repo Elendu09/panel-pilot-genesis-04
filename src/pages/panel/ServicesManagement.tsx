@@ -1599,9 +1599,9 @@ const ServicesManagement = () => {
         getCategoryIcon={getCategoryIcon}
       />
 
-      {/* Edit Dialog */}
+      {/* Edit Sheet */}
       {editingService && (
-        <ServiceEditDialog
+        <ServiceEditSheet
           open={isEditDialogOpen}
           onOpenChange={setIsEditDialogOpen}
           service={editingService}
