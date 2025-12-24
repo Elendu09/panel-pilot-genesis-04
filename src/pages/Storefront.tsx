@@ -1,13 +1,13 @@
-import { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useTenant, useTenantServices } from '@/hooks/useTenant';
 import { ThemeOne } from '@/components/themes/ThemeOne';
 import { ThemeTwo } from '@/components/themes/ThemeTwo';
 import { ThemeThree } from '@/components/themes/ThemeThree';
+import { ThemeFour } from '@/components/themes/ThemeFour';
 
 const Storefront = () => {
   const { panel, loading: tenantLoading, error: tenantError } = useTenant();
-  const { services, loading: servicesLoading } = useTenantServices(panel?.id);
+  const { services } = useTenantServices(panel?.id);
 
   const design = panel?.custom_branding || {};
   const themeType = panel?.theme_type || 'dark_gradient';
@@ -53,6 +53,8 @@ const Storefront = () => {
         return <ThemeTwo {...themeProps} />;
       case 'vibrant':
         return <ThemeThree {...themeProps} />;
+      case 'grace':
+        return <ThemeFour {...themeProps} />;
       default:
         return <ThemeOne {...themeProps} />;
     }

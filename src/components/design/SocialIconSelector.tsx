@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { 
@@ -14,19 +13,30 @@ import {
   MessageCircle,
   Music,
   Hash,
-  Globe,
-  GripVertical,
   Eye,
   EyeOff,
-  Search
+  Search,
+  type LucideIcon
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { motion, Reorder } from "framer-motion";
+import { motion } from "framer-motion";
 
-interface SocialPlatform {
+// Icon mapping for serialization
+const ICON_MAP: Record<string, LucideIcon> = {
+  instagram: Instagram,
+  youtube: Youtube,
+  twitter: Twitter,
+  facebook: Facebook,
+  tiktok: Hash,
+  linkedin: Linkedin,
+  telegram: MessageCircle,
+  spotify: Music,
+};
+
+export interface SocialPlatform {
   id: string;
   name: string;
-  icon: any;
+  icon?: string; // Store icon ID as string for serialization
   color: string;
   bgColor: string;
   enabled: boolean;
@@ -39,16 +49,21 @@ interface SocialIconSelectorProps {
   showUrls?: boolean;
 }
 
-const defaultPlatforms: SocialPlatform[] = [
-  { id: 'instagram', name: 'Instagram', icon: Instagram, color: 'text-pink-500', bgColor: 'bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400', enabled: true },
-  { id: 'youtube', name: 'YouTube', icon: Youtube, color: 'text-red-500', bgColor: 'bg-red-500', enabled: true },
-  { id: 'twitter', name: 'Twitter/X', icon: Twitter, color: 'text-sky-500', bgColor: 'bg-slate-900', enabled: true },
-  { id: 'facebook', name: 'Facebook', icon: Facebook, color: 'text-blue-600', bgColor: 'bg-blue-600', enabled: true },
-  { id: 'tiktok', name: 'TikTok', icon: Hash, color: 'text-foreground', bgColor: 'bg-gradient-to-br from-cyan-400 via-slate-900 to-pink-500', enabled: true },
-  { id: 'linkedin', name: 'LinkedIn', icon: Linkedin, color: 'text-blue-700', bgColor: 'bg-blue-700', enabled: false },
-  { id: 'telegram', name: 'Telegram', icon: MessageCircle, color: 'text-sky-400', bgColor: 'bg-sky-500', enabled: false },
-  { id: 'spotify', name: 'Spotify', icon: Music, color: 'text-green-500', bgColor: 'bg-green-500', enabled: false },
+export const defaultPlatforms: SocialPlatform[] = [
+  { id: 'instagram', name: 'Instagram', icon: 'instagram', color: 'text-pink-500', bgColor: 'bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400', enabled: true },
+  { id: 'youtube', name: 'YouTube', icon: 'youtube', color: 'text-red-500', bgColor: 'bg-red-500', enabled: true },
+  { id: 'twitter', name: 'Twitter/X', icon: 'twitter', color: 'text-sky-500', bgColor: 'bg-slate-900', enabled: true },
+  { id: 'facebook', name: 'Facebook', icon: 'facebook', color: 'text-blue-600', bgColor: 'bg-blue-600', enabled: true },
+  { id: 'tiktok', name: 'TikTok', icon: 'tiktok', color: 'text-foreground', bgColor: 'bg-gradient-to-br from-cyan-400 via-slate-900 to-pink-500', enabled: true },
+  { id: 'linkedin', name: 'LinkedIn', icon: 'linkedin', color: 'text-blue-700', bgColor: 'bg-blue-700', enabled: false },
+  { id: 'telegram', name: 'Telegram', icon: 'telegram', color: 'text-sky-400', bgColor: 'bg-sky-500', enabled: false },
+  { id: 'spotify', name: 'Spotify', icon: 'spotify', color: 'text-green-500', bgColor: 'bg-green-500', enabled: false },
 ];
+
+// Helper to get icon component from ID
+export const getIconComponent = (iconId: string): LucideIcon => {
+  return ICON_MAP[iconId] || MessageCircle;
+};
 
 export const SocialIconSelector = ({
   platforms = defaultPlatforms,
@@ -57,25 +72,34 @@ export const SocialIconSelector = ({
 }: SocialIconSelectorProps) => {
   const [searchTerm, setSearchTerm] = useState("");
 
-  const filteredPlatforms = platforms.filter(p => 
+  // Merge incoming platforms with defaults to ensure we have icon info
+  const mergedPlatforms = defaultPlatforms.map(defaultP => {
+    const existing = platforms.find(p => p.id === defaultP.id);
+    if (existing) {
+      return { ...defaultP, ...existing, icon: defaultP.icon };
+    }
+    return defaultP;
+  });
+
+  const filteredPlatforms = mergedPlatforms.filter(p => 
     p.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const togglePlatform = (id: string) => {
-    const updated = platforms.map(p => 
+    const updated = mergedPlatforms.map(p => 
       p.id === id ? { ...p, enabled: !p.enabled } : p
     );
     onChange(updated);
   };
 
   const updateUrl = (id: string, url: string) => {
-    const updated = platforms.map(p => 
+    const updated = mergedPlatforms.map(p => 
       p.id === id ? { ...p, url } : p
     );
     onChange(updated);
   };
 
-  const enabledPlatforms = platforms.filter(p => p.enabled);
+  const enabledPlatforms = mergedPlatforms.filter(p => p.enabled);
 
   return (
     <div className="space-y-4">
@@ -86,7 +110,7 @@ export const SocialIconSelector = ({
           <div className="flex items-center justify-center gap-3 py-4 bg-background/50 rounded-lg">
             {enabledPlatforms.length > 0 ? (
               enabledPlatforms.map((platform) => {
-                const Icon = platform.icon;
+                const Icon = getIconComponent(platform.id);
                 return (
                   <motion.div
                     key={platform.id}
@@ -125,7 +149,7 @@ export const SocialIconSelector = ({
       {/* Platform List */}
       <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
         {filteredPlatforms.map((platform) => {
-          const Icon = platform.icon;
+          const Icon = getIconComponent(platform.id);
           return (
             <Card 
               key={platform.id}
@@ -188,14 +212,14 @@ export const SocialIconSelector = ({
         <Button 
           variant="outline" 
           size="sm"
-          onClick={() => onChange(platforms.map(p => ({ ...p, enabled: true })))}
+          onClick={() => onChange(mergedPlatforms.map(p => ({ ...p, enabled: true })))}
         >
           Enable All
         </Button>
         <Button 
           variant="outline" 
           size="sm"
-          onClick={() => onChange(platforms.map(p => ({ ...p, enabled: false })))}
+          onClick={() => onChange(mergedPlatforms.map(p => ({ ...p, enabled: false })))}
         >
           Disable All
         </Button>

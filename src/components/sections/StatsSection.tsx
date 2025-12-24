@@ -1,30 +1,33 @@
-import { Users, ShoppingBag, Globe, Star } from "lucide-react";
+import { Users, ShoppingBag, Globe, Zap } from "lucide-react";
 import { motion } from "framer-motion";
+import { usePlatformStats } from "@/hooks/useServiceStats";
 
 export const StatsSection = () => {
+  const { totalPanels, totalOrders, totalServices, loading } = usePlatformStats();
+
   const stats = [
     {
       icon: Users,
-      value: "305k",
+      value: loading ? "..." : totalPanels > 1000 ? `${Math.floor(totalPanels / 1000)}k+` : `${totalPanels}+`,
       label: "Panels created",
       gradient: "from-blue-500 to-cyan-500"
     },
     {
       icon: ShoppingBag,
-      value: "159M",
+      value: loading ? "..." : totalOrders > 1000000 ? `${Math.floor(totalOrders / 1000000)}M+` : totalOrders > 1000 ? `${Math.floor(totalOrders / 1000)}k+` : `${totalOrders}+`,
       label: "Orders completed",
       gradient: "from-green-500 to-emerald-500"
+    },
+    {
+      icon: Zap,
+      value: loading ? "..." : totalServices > 1000 ? `${(totalServices / 1000).toFixed(1)}k+` : `${totalServices}+`,
+      label: "Services available",
+      gradient: "from-purple-500 to-pink-500"
     },
     {
       icon: Globe,
       value: "200+",
       label: "Payment systems",
-      gradient: "from-purple-500 to-pink-500"
-    },
-    {
-      icon: Star,
-      value: "20+",
-      label: "Language localizations",
       gradient: "from-amber-500 to-orange-500"
     }
   ];

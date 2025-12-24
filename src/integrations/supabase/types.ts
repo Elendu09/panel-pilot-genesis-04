@@ -872,6 +872,7 @@ export type Database = {
           id: string
           is_approved: boolean | null
           logo_url: string | null
+          max_services: number | null
           monthly_revenue: number | null
           name: string
           onboarding_completed: boolean | null
@@ -902,6 +903,7 @@ export type Database = {
           id?: string
           is_approved?: boolean | null
           logo_url?: string | null
+          max_services?: number | null
           monthly_revenue?: number | null
           name: string
           onboarding_completed?: boolean | null
@@ -932,6 +934,7 @@ export type Database = {
           id?: string
           is_approved?: boolean | null
           logo_url?: string | null
+          max_services?: number | null
           monthly_revenue?: number | null
           name?: string
           onboarding_completed?: boolean | null
