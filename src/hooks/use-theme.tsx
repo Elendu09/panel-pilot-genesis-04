@@ -71,21 +71,14 @@ export function ThemeProvider({
     fetchThemeFromSupabase()
   }, [userId, storageKey])
 
-  // Apply theme to DOM
+  // Apply theme to DOM - respect user preference on all pages
   useEffect(() => {
     const root = window.document.documentElement
-    const path = window.location.pathname
 
     root.style.setProperty("--theme-transition", "background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease")
     root.classList.add("theme-transition")
 
     root.classList.remove("light", "dark")
-
-    // Force dark ONLY on homepage
-    if (path === "/") {
-      root.classList.add("dark")
-      return
-    }
 
     if (theme === "system") {
       const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches

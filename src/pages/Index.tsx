@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { Helmet } from "react-helmet-async";
 import { Navigation } from "@/components/layout/Navigation";
 import { HeroSection } from "@/components/sections/HeroSection";
@@ -12,17 +11,8 @@ import { Footer } from "@/components/layout/Footer";
 const Index = () => {
   const canonicalUrl = typeof window !== 'undefined' ? window.location.origin : '';
   
-  // Force dark mode on homepage only (without changing saved preference)
-  useEffect(() => {
-    const root = document.documentElement;
-    // Only enforce dark here; do not "restore" on unmount to avoid overriding dashboard toggles.
-    root.classList.remove('light');
-    root.classList.add('dark');
-    // No cleanup: the ThemeProvider will handle other routes correctly.
-  }, []);
-  
   return (
-    <div className="min-h-screen bg-background dark">
+    <div className="min-h-screen bg-background">
       <Helmet>
         <title>SMMPilot - Professional SMM Panel Platform</title>
         <meta 

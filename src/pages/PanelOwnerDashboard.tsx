@@ -4,10 +4,7 @@ import {
   LayoutDashboard, 
   Settings, 
   Package,
-  Menu,
-  X,
   LogOut,
-  MessageSquare,
   Globe,
   BarChart3,
   Users,
@@ -44,7 +41,6 @@ import PanelOverview from "./panel/PanelOverview";
 import DomainSettings from "./panel/DomainSettings";
 import ServicesManagement from "./panel/ServicesManagement";
 import OrdersManagement from "./panel/OrdersManagement";
-import UserManagement from "./panel/UserManagement";
 import APIManagement from "./panel/APIManagement";
 import BlogManagement from "./panel/BlogManagement";
 import CustomerManagement from "./panel/CustomerManagement";
@@ -53,17 +49,14 @@ import SecuritySettings from "./panel/SecuritySettings";
 import MoreMenu from "./panel/MoreMenu";
 import Billing from "./panel/Billing";
 import Integrations from "./panel/Integrations";
-import ChatInbox from "./panel/ChatInbox";
 import { Helmet } from "react-helmet-async";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
-import { LowBalanceAlert } from "@/components/panel/LowBalanceAlert";
 import { supabase } from "@/integrations/supabase/client";
 import { usePanel } from "@/hooks/usePanel";
 
 const PanelOwnerDashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [searchOpen, setSearchOpen] = useState(false);
   const [sidebarStats, setSidebarStats] = useState({ todayRevenue: 0, activeOrders: 0 });
   const location = useLocation();
   const canonicalUrl = typeof window !== 'undefined' ? `${window.location.origin}${location.pathname}` : '';
@@ -132,7 +125,6 @@ const PanelOwnerDashboard = () => {
   ];
 
   const supportNavigation = [
-    { name: 'Live Chat', href: '/panel/chat', icon: MessageSquare },
     { name: 'Support', href: '/panel/support', icon: HelpCircle },
   ];
 
@@ -203,9 +195,6 @@ const PanelOwnerDashboard = () => {
         <meta name="robots" content="noindex,nofollow" />
         <link rel="canonical" href={canonicalUrl} />
       </Helmet>
-
-      {/* Low Balance Alert - Only show when balance is actually low */}
-      {/* Removed for now - will be data-driven in future */}
 
       {/* Glassmorphic Sidebar */}
       <aside className={cn(
@@ -421,7 +410,6 @@ const PanelOwnerDashboard = () => {
             <Route path="security" element={<SecuritySettings />} />
             <Route path="billing" element={<Billing />} />
             <Route path="integrations" element={<Integrations />} />
-            <Route path="chat" element={<ChatInbox />} />
             <Route path="more" element={<MoreMenu />} />
           </Routes>
         </div>
