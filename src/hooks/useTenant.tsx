@@ -27,6 +27,15 @@ interface DesignCustomization {
   footerText?: string;
   footerAbout?: string;
   footerContact?: string;
+  socialPlatforms?: any[];
+  accessibilitySettings?: {
+    highContrast?: boolean;
+    largeText?: boolean;
+    reduceMotion?: boolean;
+    fontSize?: number;
+    enhancedFocus?: boolean;
+    screenReaderOptimized?: boolean;
+  };
 }
 
 interface TenantPanel {
@@ -142,8 +151,8 @@ export function useTenant(): TenantDetectionResult {
           console.log('[useTenant] Extracted subdomain:', subdomain);
         }
 
-        // First, try to find by custom domain
-        searchAttempts.push(`custom_domain=${hostname}`);
+        // First, try to find by custom domain in panels table
+        searchAttempts.push(`panels.custom_domain=${hostname}`);
         let { data: panelData, error: panelError } = await supabase
           .from('panels')
           .select(`
@@ -171,7 +180,63 @@ export function useTenant(): TenantDetectionResult {
           .in('status', ['active', 'pending'])
           .maybeSingle();
 
-        console.log('[useTenant] Custom domain search result:', { panelData, panelError });
+        console.log('[useTenant] Custom domain (panels) search result:', { panelData, panelError });
+
+        // 🔴 CRITICAL FIX: If not found in panels.custom_domain, check panel_domains table
+        if (!panelData) {
+          searchAttempts.push(`panel_domains.domain=${hostname}`);
+          console.log('[useTenant] Searching in panel_domains table for:', hostname);
+          
+          const { data: domainData, error: domainError } = await supabase
+            .from('panel_domains')
+            .select(`
+              panel_id,
+              domain,
+              verification_status,
+              ssl_status
+            `)
+            .eq('domain', hostname)
+            .eq('verification_status', 'verified')
+            .maybeSingle();
+
+          console.log('[useTenant] Panel domains search result:', { domainData, domainError });
+
+          if (domainData?.panel_id) {
+            // Found in panel_domains, now fetch the panel
+            const { data: linkedPanel, error: linkedError } = await supabase
+              .from('panels')
+              .select(`
+                id,
+                name,
+                subdomain,
+                custom_domain,
+                theme_type,
+                primary_color,
+                secondary_color,
+                logo_url,
+                status,
+                custom_branding,
+                panel_settings (
+                  seo_title,
+                  seo_description,
+                  seo_keywords,
+                  maintenance_mode,
+                  maintenance_message,
+                  contact_info,
+                  social_links
+                )
+              `)
+              .eq('id', domainData.panel_id)
+              .in('status', ['active', 'pending'])
+              .maybeSingle();
+
+            console.log('[useTenant] Linked panel result:', { linkedPanel, linkedError });
+            
+            if (linkedPanel) {
+              panelData = linkedPanel;
+            }
+          }
+        }
 
         // If not found by custom domain, try by subdomain
         if (!panelData && subdomain) {
@@ -310,6 +375,7 @@ export function useTenantServices(panelId?: string) {
           .select('*')
           .eq('panel_id', panelId)
           .eq('is_active', true)
+          .order('display_order', { ascending: true })
           .order('name');
 
         if (error) throw error;
