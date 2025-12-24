@@ -9,6 +9,7 @@ interface BottomNavItem {
   href: string;
   icon: LucideIcon;
   badge?: number;
+  tourId?: string;
 }
 
 interface FabMenuItem {
@@ -132,6 +133,7 @@ export const BottomNav = ({ items, className, showFab = false, fabItems }: Botto
               <Link
                 key={item.name}
                 to={item.href}
+                data-tour={item.tourId}
                 className={cn(
                   "flex flex-col items-center justify-center flex-1 relative",
                   "transition-colors duration-200",

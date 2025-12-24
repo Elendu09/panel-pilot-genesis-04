@@ -19,7 +19,8 @@ import {
   Globe,
   Sparkles,
   MousePointer2,
-  Hand
+  Hand,
+  Check
 } from "lucide-react";
 
 interface TourStep {
@@ -494,21 +495,67 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
               )}
             </div>
 
-            {/* Step indicators */}
-            <div className="flex justify-center gap-1.5 py-2">
-              {tourSteps.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => setCurrentStep(index)}
-                  className={`h-2 rounded-full transition-all duration-300 ${
-                    index === currentStep 
-                      ? "w-8 bg-primary" 
-                      : index < currentStep
-                        ? "w-2 bg-primary/50 hover:bg-primary/70"
-                        : "w-2 bg-muted hover:bg-muted-foreground/30"
-                  }`}
-                />
-              ))}
+            {/* Enhanced Step Progress Indicator */}
+            <div className="space-y-3">
+              {/* Step counter text */}
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>{currentStep + 1} of {tourSteps.length} steps</span>
+                <span>{tourSteps.length - currentStep - 1} remaining</span>
+              </div>
+              
+              {/* Visual step indicators */}
+              <div className="flex items-center justify-center gap-1">
+                {tourSteps.map((s, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setCurrentStep(index)}
+                    className="group relative flex items-center"
+                    title={s.title}
+                  >
+                    {/* Connector line */}
+                    {index > 0 && (
+                      <div className={`absolute right-full w-1 h-0.5 ${
+                        index <= currentStep ? "bg-primary" : "bg-muted"
+                      }`} />
+                    )}
+                    
+                    {/* Step dot/icon */}
+                    <motion.div
+                      initial={false}
+                      animate={{
+                        scale: index === currentStep ? 1 : 0.8,
+                        backgroundColor: index < currentStep 
+                          ? "hsl(var(--primary))" 
+                          : index === currentStep 
+                            ? "hsl(var(--primary))"
+                            : "hsl(var(--muted))"
+                      }}
+                      className={`relative flex items-center justify-center rounded-full transition-all duration-300 ${
+                        index === currentStep 
+                          ? "w-6 h-6 ring-2 ring-primary/30 ring-offset-2 ring-offset-background" 
+                          : "w-4 h-4 hover:scale-110"
+                      }`}
+                    >
+                      {index < currentStep ? (
+                        <Check className="w-2.5 h-2.5 text-primary-foreground" />
+                      ) : index === currentStep ? (
+                        <motion.div 
+                          className="w-2 h-2 bg-primary-foreground rounded-full"
+                          animate={{ scale: [1, 1.2, 1] }}
+                          transition={{ duration: 1.5, repeat: Infinity }}
+                        />
+                      ) : null}
+                    </motion.div>
+                    
+                    {/* Tooltip on hover */}
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                      <div className="px-2 py-1 text-[10px] font-medium bg-popover border border-border rounded shadow-lg whitespace-nowrap">
+                        {s.title.replace(/[🎉✨]/g, '').trim()}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Navigation */}
