@@ -62,3 +62,6 @@ verify_jwt = false
 
 [functions.auto-verify-domains]
 verify_jwt = false
+
+[functions.generate-service-description]
+verify_jwt = false

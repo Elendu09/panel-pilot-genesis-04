@@ -107,6 +107,7 @@ export const ServiceEditDialog = ({
   const { panel } = usePanel();
   const [activeTab, setActiveTab] = useState("general");
   const [saving, setSaving] = useState(false);
+  const [generatingDescription, setGeneratingDescription] = useState(false);
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loadingProviders, setLoadingProviders] = useState(false);
   
@@ -229,6 +230,41 @@ export const ServiceEditDialog = ({
       toast({ variant: "destructive", title: "Error", description: "Failed to save changes" });
     } finally {
       setSaving(false);
+    }
+  };
+
+  // AI Description Generator
+  const generateAIDescription = async () => {
+    if (!formData.name) {
+      toast({ title: "Enter a service name first", variant: "destructive" });
+      return;
+    }
+    
+    setGeneratingDescription(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-service-description', {
+        body: {
+          serviceName: formData.name,
+          category: formData.category,
+          serviceType: formData.serviceType,
+        }
+      });
+
+      if (error) throw error;
+      
+      if (data?.description) {
+        setFormData(prev => ({ ...prev, description: data.description }));
+        toast({ title: "Description generated!" });
+      }
+    } catch (error: any) {
+      console.error('Error generating description:', error);
+      toast({ 
+        variant: "destructive", 
+        title: "Failed to generate", 
+        description: error.message || "Try again later" 
+      });
+    } finally {
+      setGeneratingDescription(false);
     }
   };
 
@@ -402,7 +438,24 @@ export const ServiceEditDialog = ({
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Description</Label>
+                  <div className="flex items-center justify-between">
+                    <Label>Description</Label>
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={generateAIDescription}
+                      disabled={generatingDescription}
+                      className="text-xs gap-1 h-7"
+                    >
+                      {generatingDescription ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : (
+                        <Sparkles className="w-3 h-3" />
+                      )}
+                      AI Generate
+                    </Button>
+                  </div>
                   <Textarea value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} placeholder="Describe your service..." className="bg-background/50 min-h-[60px]" />
                 </div>
               </div>

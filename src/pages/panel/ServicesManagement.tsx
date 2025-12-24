@@ -37,7 +37,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Sparkles,
-  Hand
+  Hand,
+  Wand2,
+  Copy
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -104,6 +106,9 @@ import { ServiceEditDialog } from "@/components/services/ServiceEditDialog";
 import { MobileServiceView } from "@/components/services/MobileServiceView";
 import { FloatingUndoButton } from "@/components/services/FloatingUndoButton";
 import { useUndoHistory } from "@/hooks/use-undo-history";
+import { ServiceTips } from "@/components/services/ServiceTips";
+import { SmartCategorizeDialog } from "@/components/services/SmartCategorizeDialog";
+import { ServiceAnalytics } from "@/components/services/ServiceAnalytics";
 
 const categories = [
   { id: "all", name: "All Services", icon: Layers },
@@ -185,6 +190,17 @@ const ServicesManagement = () => {
     newIcon: string;
     willChange: boolean;
   }>>([]);
+  
+  // Smart Categorize Dialog
+  const [isSmartCategorizeOpen, setIsSmartCategorizeOpen] = useState(false);
+  
+  // Service Tips dismissible state
+  const [showTips, setShowTips] = useState(() => {
+    return localStorage.getItem('services-tips-dismissed') !== 'true';
+  });
+  
+  // Analytics panel
+  const [showAnalytics, setShowAnalytics] = useState(false);
   
   // New service form
   const [newService, setNewService] = useState({
@@ -836,6 +852,37 @@ const ServicesManagement = () => {
     setIsEditDialogOpen(true);
   };
 
+  // Duplicate service handler
+  const handleDuplicateService = async (service: ServiceItem) => {
+    if (!panel?.id) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('services')
+        .insert({
+          panel_id: panel.id,
+          name: `${service.name} (Copy)`,
+          description: service.description || '',
+          category: service.category as any,
+          price: service.price,
+          min_quantity: service.minQty,
+          max_quantity: service.maxQty,
+          image_url: service.imageUrl || null,
+          is_active: true,
+          display_order: services.length + 1,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      toast({ title: "Service duplicated", description: "A copy has been created" });
+      fetchServices();
+    } catch (error) {
+      console.error('Error duplicating service:', error);
+      toast({ title: 'Failed to duplicate', variant: 'destructive' });
+    }
+  };
+
   const handleSaveEdit = async (updatedService: any) => {
     if (!editingService) return;
     
@@ -939,6 +986,16 @@ const ServicesManagement = () => {
           >
             <Upload className="w-4 h-4 mr-2" />
             Import
+          </Button>
+
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="glass-card border-border/50"
+            onClick={() => setIsSmartCategorizeOpen(true)}
+          >
+            <Wand2 className="w-4 h-4 mr-2" />
+            Smart Categorize
           </Button>
 
           <Button 
@@ -1107,6 +1164,20 @@ const ServicesManagement = () => {
           </motion.div>
         ))}
       </div>
+
+      {/* Service Tips */}
+      {showTips && (
+        <ServiceTips 
+          variant="panel-owner" 
+          onDismiss={() => {
+            setShowTips(false);
+            localStorage.setItem('services-tips-dismissed', 'true');
+          }}
+        />
+      )}
+
+      {/* Service Analytics */}
+      <ServiceAnalytics isOpen={showAnalytics} onToggle={() => setShowAnalytics(!showAnalytics)} />
 
       {/* Bulk Action Bar */}
       <AnimatePresence>
@@ -1744,6 +1815,22 @@ const ServicesManagement = () => {
         undoStack={undoStack}
         onUndo={undoOperation}
         maxVisible={5}
+      />
+
+      {/* Smart Categorize Dialog */}
+      <SmartCategorizeDialog
+        open={isSmartCategorizeOpen}
+        onOpenChange={setIsSmartCategorizeOpen}
+        services={services.map(s => ({
+          id: s.id,
+          name: s.name,
+          category: s.category,
+          imageUrl: s.imageUrl,
+        }))}
+        onApply={() => {
+          fetchServices();
+          fetchCategoryCounts();
+        }}
       />
     </div>
   );
