@@ -96,7 +96,7 @@ export const ServiceTips = ({
   dismissible = true,
   onDismiss 
 }: ServiceTipsProps) => {
-  const [isExpanded, setIsExpanded] = useState(!compact);
+  const [isExpanded, setIsExpanded] = useState(false); // Closed by default
   const [isDismissed, setIsDismissed] = useState(false);
   
   const tips = variant === "panel-owner" ? panelOwnerTips : buyerTips;
