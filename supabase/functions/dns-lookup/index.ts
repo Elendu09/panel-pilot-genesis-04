@@ -113,6 +113,7 @@ serve(async (req) => {
             latency: result.latency,
             allAnswers: result.answers.map((a: any) => ({
               type: a.type,
+              typeName: getTypeName(a.type),
               data: a.data,
               ttl: a.TTL,
             })),
@@ -131,6 +132,31 @@ serve(async (req) => {
       })
     );
 
+    // Also query CNAME if A record lookup was requested (helps debug)
+    let cnameResults: any[] = [];
+    if (recordType === "A") {
+      const cnameQueries = await Promise.allSettled(
+        [DNS_SERVERS[0], DNS_SERVERS[1]].map(async (server) => {
+          try {
+            const queryFn = server.type === "google" ? queryGoogleDNS : queryCloudflare;
+            const result = await queryFn(domain, "CNAME");
+            return {
+              serverId: server.id,
+              answers: result.answers.map((a: any) => ({
+                type: "CNAME",
+                data: a.data,
+              })),
+            };
+          } catch {
+            return { serverId: server.id, answers: [] };
+          }
+        })
+      );
+      cnameResults = cnameQueries
+        .filter(r => r.status === "fulfilled")
+        .map(r => (r as PromiseFulfilledResult<any>).value);
+    }
+
     const processedResults = results.map((result, index) => {
       if (result.status === "fulfilled") {
         return result.value;
@@ -148,12 +174,29 @@ serve(async (req) => {
     const resolvedCount = processedResults.filter((r) => r.status === "resolved").length;
     const propagationPercentage = Math.round((resolvedCount / processedResults.length) * 100);
 
+    // Extract unique values found
+    const uniqueARecords = [...new Set(
+      processedResults
+        .filter(r => r.status === "resolved" && r.value)
+        .map(r => r.value)
+    )];
+
+    const uniqueCnameRecords = [...new Set(
+      cnameResults
+        .flatMap(r => r.answers)
+        .filter((a: any) => a.type === "CNAME")
+        .map((a: any) => a.data)
+    )];
+
     return new Response(
       JSON.stringify({
         success: true,
         domain,
         recordType,
         results: processedResults,
+        cnameResults,
+        uniqueARecords,
+        uniqueCnameRecords,
         propagationPercentage,
         fullyPropagated: propagationPercentage === 100,
         checkedAt: new Date().toISOString(),
@@ -177,3 +220,16 @@ serve(async (req) => {
     );
   }
 });
+
+function getTypeName(typeNum: number): string {
+  const typeNames: Record<number, string> = {
+    1: 'A',
+    5: 'CNAME',
+    15: 'MX',
+    16: 'TXT',
+    28: 'AAAA',
+    2: 'NS',
+    33: 'SRV',
+  };
+  return typeNames[typeNum] || `TYPE${typeNum}`;
+}

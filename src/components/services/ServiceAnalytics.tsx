@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { usePanel } from "@/hooks/usePanel";
@@ -34,6 +35,7 @@ import {
   RefreshCw,
   ChevronUp,
   ChevronDown,
+  AlertTriangle,
 } from "lucide-react";
 
 interface ServiceStats {
@@ -52,6 +54,9 @@ interface CategoryStats {
   orders: number;
   color: string;
 }
+
+const SERVICE_LIMIT = 2500;
+const WARNING_THRESHOLD = 2000;
 
 const CATEGORY_COLORS: Record<string, string> = {
   instagram: "#E4405F",
@@ -74,6 +79,7 @@ export const ServiceAnalytics = ({ isOpen, onToggle }: ServiceAnalyticsProps) =>
   const { panel } = usePanel();
   const [loading, setLoading] = useState(true);
   const [services, setServices] = useState<ServiceStats[]>([]);
+  const [totalServiceCount, setTotalServiceCount] = useState(0);
   const [categoryStats, setCategoryStats] = useState<CategoryStats[]>([]);
   const [orderTrends, setOrderTrends] = useState<{ date: string; orders: number; revenue: number }[]>([]);
 
@@ -89,10 +95,12 @@ export const ServiceAnalytics = ({ isOpen, onToggle }: ServiceAnalyticsProps) =>
 
     try {
       // Fetch services
-      const { data: servicesData } = await supabase
+      const { data: servicesData, count } = await supabase
         .from("services")
-        .select("id, name, category, price")
+        .select("id, name, category, price", { count: 'exact' })
         .eq("panel_id", panel.id);
+
+      setTotalServiceCount(count || 0);
 
       // Fetch orders for these services
       const { data: ordersData } = await supabase
@@ -178,6 +186,10 @@ export const ServiceAnalytics = ({ isOpen, onToggle }: ServiceAnalyticsProps) =>
   const totalRevenue = services.reduce((sum, s) => sum + s.revenue, 0);
   const totalOrders = services.reduce((sum, s) => sum + s.orders, 0);
   const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+  
+  const usagePercentage = (totalServiceCount / SERVICE_LIMIT) * 100;
+  const isAtLimit = totalServiceCount >= SERVICE_LIMIT;
+  const isNearLimit = totalServiceCount >= WARNING_THRESHOLD;
 
   if (!isOpen) {
     return (
@@ -226,6 +238,49 @@ export const ServiceAnalytics = ({ isOpen, onToggle }: ServiceAnalyticsProps) =>
           </div>
         ) : (
           <>
+            {/* Service Limit Counter */}
+            <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Package className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">Service Usage</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={cn(
+                    "text-sm font-bold",
+                    isAtLimit ? "text-destructive" : isNearLimit ? "text-amber-500" : "text-foreground"
+                  )}>
+                    {totalServiceCount.toLocaleString()} / {SERVICE_LIMIT.toLocaleString()}
+                  </span>
+                  {isAtLimit ? (
+                    <Badge variant="destructive" className="text-xs font-bold">
+                      MAX
+                    </Badge>
+                  ) : isNearLimit ? (
+                    <Badge className="bg-amber-500/10 text-amber-500 border-amber-500/20 text-xs">
+                      <AlertTriangle className="w-3 h-3 mr-1" />
+                      Near Limit
+                    </Badge>
+                  ) : null}
+                </div>
+              </div>
+              <Progress 
+                value={Math.min(usagePercentage, 100)} 
+                className={cn(
+                  "h-2",
+                  isAtLimit ? "[&>div]:bg-destructive" : isNearLimit ? "[&>div]:bg-amber-500" : ""
+                )}
+              />
+              <p className="text-xs text-muted-foreground mt-2">
+                {isAtLimit 
+                  ? "You've reached the maximum service limit. Delete unused services to add new ones."
+                  : isNearLimit 
+                    ? `Only ${SERVICE_LIMIT - totalServiceCount} services remaining.`
+                    : `${SERVICE_LIMIT - totalServiceCount} services available.`
+                }
+              </p>
+            </div>
+
             {/* Summary Stats */}
             <div className="grid grid-cols-3 gap-3">
               <div className="p-3 rounded-lg bg-gradient-to-br from-green-500/10 to-green-500/5 border border-green-500/20">
