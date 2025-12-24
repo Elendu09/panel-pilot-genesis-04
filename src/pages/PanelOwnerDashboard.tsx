@@ -53,6 +53,7 @@ import SecuritySettings from "./panel/SecuritySettings";
 import MoreMenu from "./panel/MoreMenu";
 import Billing from "./panel/Billing";
 import Integrations from "./panel/Integrations";
+import ChatInbox from "./panel/ChatInbox";
 import { Helmet } from "react-helmet-async";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -131,7 +132,8 @@ const PanelOwnerDashboard = () => {
   ];
 
   const supportNavigation = [
-    { name: 'Support', href: '/panel/support', icon: MessageSquare },
+    { name: 'Live Chat', href: '/panel/chat', icon: MessageSquare },
+    { name: 'Support', href: '/panel/support', icon: HelpCircle },
   ];
 
   const bottomNavItems = [
@@ -419,6 +421,7 @@ const PanelOwnerDashboard = () => {
             <Route path="security" element={<SecuritySettings />} />
             <Route path="billing" element={<Billing />} />
             <Route path="integrations" element={<Integrations />} />
+            <Route path="chat" element={<ChatInbox />} />
             <Route path="more" element={<MoreMenu />} />
           </Routes>
         </div>

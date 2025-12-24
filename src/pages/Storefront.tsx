@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useTenant, useTenantServices } from '@/hooks/useTenant';
 import { ThemeOne } from '@/components/themes/ThemeOne';
@@ -5,10 +6,32 @@ import { ThemeTwo } from '@/components/themes/ThemeTwo';
 import { ThemeThree } from '@/components/themes/ThemeThree';
 import { ThemeFour } from '@/components/themes/ThemeFour';
 import { FloatingChatWidget } from '@/components/storefront/FloatingChatWidget';
+import { LiveChatWidget } from '@/components/support/LiveChatWidget';
+import { supabase } from '@/integrations/supabase/client';
 
 const Storefront = () => {
   const { panel, loading: tenantLoading, error: tenantError } = useTenant();
   const { services } = useTenantServices(panel?.id);
+  const [liveChatEnabled, setLiveChatEnabled] = useState(false);
+
+  // Check if live chat is enabled for this panel
+  useEffect(() => {
+    const checkLiveChat = async () => {
+      if (!panel?.id) return;
+      
+      const { data } = await supabase
+        .from('panel_settings')
+        .select('floating_chat_enabled')
+        .eq('panel_id', panel.id)
+        .single();
+      
+      // If floating chat is NOT enabled (for WhatsApp/Telegram), enable live chat
+      // This is a simple heuristic - in production you might have a separate setting
+      setLiveChatEnabled(true); // Always enable live chat for now
+    };
+
+    checkLiveChat();
+  }, [panel?.id]);
 
   const design = panel?.custom_branding || {};
   const themeType = panel?.theme_type || 'dark_gradient';
@@ -85,8 +108,15 @@ const Storefront = () => {
         {panel.logo_url && <meta property="og:image" content={panel.logo_url} />}
       </Helmet>
       {renderTheme()}
-      {/* Floating Chat Widget */}
+      {/* Floating Chat Widget (WhatsApp/Telegram) */}
       <FloatingChatWidget panelId={panel?.id} />
+      {/* Live Chat Widget */}
+      {liveChatEnabled && panel?.id && (
+        <LiveChatWidget 
+          panelId={panel.id} 
+          panelName={panel.name}
+        />
+      )}
     </>
   );
 };
