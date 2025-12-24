@@ -4,6 +4,7 @@ import { ThemeOne } from '@/components/themes/ThemeOne';
 import { ThemeTwo } from '@/components/themes/ThemeTwo';
 import { ThemeThree } from '@/components/themes/ThemeThree';
 import { ThemeFour } from '@/components/themes/ThemeFour';
+import { FloatingChatWidget } from '@/components/storefront/FloatingChatWidget';
 
 const Storefront = () => {
   const { panel, loading: tenantLoading, error: tenantError } = useTenant();
@@ -11,6 +12,8 @@ const Storefront = () => {
 
   const design = panel?.custom_branding || {};
   const themeType = panel?.theme_type || 'dark_gradient';
+  const customBranding = panel?.custom_branding as any;
+  const selectedTheme = customBranding?.selectedTheme || themeType;
 
   if (tenantLoading) {
     return (
@@ -38,7 +41,7 @@ const Storefront = () => {
 
   const canonicalUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
-  // Render appropriate theme based on panel.theme_type
+  // Render appropriate theme based on panel.theme_type or custom_branding.selectedTheme
   const renderTheme = () => {
     const themeProps = {
       panel,
@@ -46,14 +49,22 @@ const Storefront = () => {
       customization: design
     };
 
-    switch (themeType) {
+    switch (selectedTheme) {
       case 'dark_gradient':
+      case 'ocean_blue':
+      case 'forest_green':
         return <ThemeOne {...themeProps} />;
       case 'professional':
+      case 'light_minimal':
+      case 'corporate':
         return <ThemeTwo {...themeProps} />;
       case 'vibrant':
+      case 'neon_glow':
+      case 'sunset_orange':
+      case 'royal_purple':
         return <ThemeThree {...themeProps} />;
       case 'grace':
+      case 'grace_cometh':
         return <ThemeFour {...themeProps} />;
       default:
         return <ThemeOne {...themeProps} />;
@@ -63,17 +74,19 @@ const Storefront = () => {
   return (
     <>
       <Helmet>
-        <title>{panel.settings?.seo_title || `${panel.name} - SMM Panel`}</title>
-        <meta name="description" content={panel.settings?.seo_description || `Professional social media marketing services from ${panel.name}`} />
-        <meta name="keywords" content={panel.settings?.seo_keywords || 'social media marketing, instagram followers, youtube views'} />
+        <title>{(panel.settings as any)?.seo_title || `${panel.name} - SMM Panel`}</title>
+        <meta name="description" content={(panel.settings as any)?.seo_description || `Professional social media marketing services from ${panel.name}`} />
+        <meta name="keywords" content={(panel.settings as any)?.seo_keywords || 'social media marketing, instagram followers, youtube views'} />
         <link rel="canonical" href={canonicalUrl} />
-        <meta property="og:title" content={panel.settings?.seo_title || `${panel.name} - SMM Panel`} />
-        <meta property="og:description" content={panel.settings?.seo_description || `Professional social media marketing services`} />
+        <meta property="og:title" content={(panel.settings as any)?.seo_title || `${panel.name} - SMM Panel`} />
+        <meta property="og:description" content={(panel.settings as any)?.seo_description || `Professional social media marketing services`} />
         <meta property="og:type" content="website" />
         <meta property="og:url" content={canonicalUrl} />
         {panel.logo_url && <meta property="og:image" content={panel.logo_url} />}
       </Helmet>
       {renderTheme()}
+      {/* Floating Chat Widget */}
+      <FloatingChatWidget panelId={panel?.id} />
     </>
   );
 };

@@ -716,6 +716,11 @@ export type Database = {
           contact_info: Json | null
           created_at: string | null
           custom_css: string | null
+          floating_chat_enabled: boolean | null
+          floating_chat_message: string | null
+          floating_chat_position: string | null
+          floating_chat_telegram: string | null
+          floating_chat_whatsapp: string | null
           id: string
           low_balance_alert_enabled: boolean | null
           low_balance_threshold: number | null
@@ -732,6 +737,11 @@ export type Database = {
           contact_info?: Json | null
           created_at?: string | null
           custom_css?: string | null
+          floating_chat_enabled?: boolean | null
+          floating_chat_message?: string | null
+          floating_chat_position?: string | null
+          floating_chat_telegram?: string | null
+          floating_chat_whatsapp?: string | null
           id?: string
           low_balance_alert_enabled?: boolean | null
           low_balance_threshold?: number | null
@@ -748,6 +758,11 @@ export type Database = {
           contact_info?: Json | null
           created_at?: string | null
           custom_css?: string | null
+          floating_chat_enabled?: boolean | null
+          floating_chat_message?: string | null
+          floating_chat_position?: string | null
+          floating_chat_telegram?: string | null
+          floating_chat_whatsapp?: string | null
           id?: string
           low_balance_alert_enabled?: boolean | null
           low_balance_threshold?: number | null

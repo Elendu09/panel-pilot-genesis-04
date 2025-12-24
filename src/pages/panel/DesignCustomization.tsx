@@ -177,6 +177,13 @@ const DesignCustomization = () => {
       preview: "bg-gradient-to-br from-slate-50 to-blue-50 border border-slate-200",
       description: "Professional business look"
     },
+    {
+      id: "grace_cometh",
+      name: "Grace Cometh",
+      colors: { primary: "#8B6914", secondary: "#D4A84B", bg: "#0A0A0A", surface: "#1A1410" },
+      preview: "bg-gradient-to-br from-amber-950 via-slate-950 to-yellow-950",
+      description: "Warm golden tones with elegant dark base"
+    },
   ];
 
   // Load customization from database on mount
