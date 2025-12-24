@@ -30,6 +30,7 @@ export interface ServiceItem {
   providerId: string;
   imageUrl?: string;
   displayOrder: number;
+  description?: string;
 }
 
 interface DraggableServiceItemProps {
