@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { 
   CheckCircle, 
   XCircle, 
@@ -11,11 +12,19 @@ import {
   Shield, 
   Server,
   AlertTriangle,
-  RefreshCw
+  RefreshCw,
+  Info
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { 
+  HOSTING_PROVIDERS, 
+  type HostingProvider,
+  getExpectedTargetForProvider,
+  validateDnsForProvider
+} from "@/lib/hosting-config";
+import { HostingProviderSelector } from "./HostingProviderSelector";
 
 interface DiagnosticResult {
   domain: string;
@@ -23,6 +32,8 @@ interface DiagnosticResult {
   httpsOk: boolean;
   httpOk: boolean;
   aRecords: string[];
+  cnameRecords: string[];
+  dnsMatchType: string;
   checkedAt: string;
   durationMs: number;
 }
@@ -30,22 +41,31 @@ interface DiagnosticResult {
 interface DomainDiagnosticsProps {
   panelSubdomain?: string;
   customDomains?: Array<{ domain: string; verification_status: string }>;
+  hostingProvider?: HostingProvider;
 }
 
-export const DomainDiagnostics = ({ panelSubdomain, customDomains = [] }: DomainDiagnosticsProps) => {
+export const DomainDiagnostics = ({ 
+  panelSubdomain, 
+  customDomains = [],
+  hostingProvider: initialProvider = 'lovable'
+}: DomainDiagnosticsProps) => {
   const [results, setResults] = useState<Record<string, DiagnosticResult>>({});
   const [loading, setLoading] = useState<Record<string, boolean>>({});
   const [customDomain, setCustomDomain] = useState("");
   const [isCheckingCustom, setIsCheckingCustom] = useState(false);
-
-  const LOVABLE_IP = "185.158.133.1";
+  const [hostingProvider, setHostingProvider] = useState<HostingProvider>(initialProvider);
+  const [customTarget, setCustomTarget] = useState("");
 
   const checkDomain = async (domain: string) => {
     setLoading(prev => ({ ...prev, [domain]: true }));
     
     try {
       const { data, error } = await supabase.functions.invoke("domain-health-check", {
-        body: { domain }
+        body: { 
+          domain,
+          hostingProvider,
+          expectedTarget: hostingProvider === 'custom' ? customTarget : undefined
+        }
       });
 
       if (error) throw error;
@@ -58,6 +78,8 @@ export const DomainDiagnostics = ({ panelSubdomain, customDomains = [] }: Domain
           httpsOk: data.https_ok,
           httpOk: data.http_ok,
           aRecords: data.a_records || [],
+          cnameRecords: data.cname_records || [],
+          dnsMatchType: data.dns_match_type || 'none',
           checkedAt: data.checked_at,
           durationMs: data.duration_ms
         }
@@ -72,6 +94,8 @@ export const DomainDiagnostics = ({ panelSubdomain, customDomains = [] }: Domain
           httpsOk: false,
           httpOk: false,
           aRecords: [],
+          cnameRecords: [],
+          dnsMatchType: 'none',
           checkedAt: new Date().toISOString(),
           durationMs: 0
         }
@@ -105,10 +129,20 @@ export const DomainDiagnostics = ({ panelSubdomain, customDomains = [] }: Domain
       : <XCircle className="w-4 h-4 text-red-500" />;
   };
 
+  const getExpectedTargets = () => {
+    if (hostingProvider === 'custom' && customTarget) {
+      return [customTarget];
+    }
+    return getExpectedTargetForProvider(hostingProvider);
+  };
+
   const allDomains = [
     panelSubdomain ? { domain: `${panelSubdomain}.smmpilot.online`, type: 'subdomain' } : null,
     ...customDomains.map(d => ({ domain: d.domain, type: 'custom' }))
   ].filter(Boolean) as Array<{ domain: string; type: string }>;
+
+  const providerConfig = HOSTING_PROVIDERS[hostingProvider];
+  const expectedTargets = getExpectedTargets();
 
   return (
     <Card className="glass-card">
@@ -119,6 +153,36 @@ export const DomainDiagnostics = ({ panelSubdomain, customDomains = [] }: Domain
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Hosting Provider Selection */}
+        <div className="space-y-3">
+          <Label className="text-sm font-medium">Select Your Hosting Provider</Label>
+          <p className="text-xs text-muted-foreground mb-2">
+            Choose where your site is hosted to check correct DNS targets
+          </p>
+          <HostingProviderSelector
+            selected={hostingProvider}
+            onSelect={setHostingProvider}
+            customTarget={customTarget}
+            onCustomTargetChange={setCustomTarget}
+          />
+        </div>
+
+        {/* Expected DNS Target Info */}
+        <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
+          <div className="flex items-start gap-2">
+            <Info className="w-4 h-4 text-primary mt-0.5" />
+            <div className="text-sm">
+              <p className="font-medium text-primary">Expected DNS Configuration</p>
+              <p className="text-muted-foreground mt-1">
+                {providerConfig.dnsType === 'A' ? 'A Record' : 'CNAME Record'} should point to:{' '}
+                <code className="bg-muted px-1.5 py-0.5 rounded text-xs">
+                  {expectedTargets[0] || 'Not configured'}
+                </code>
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* Check All Button */}
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
@@ -135,6 +199,16 @@ export const DomainDiagnostics = ({ panelSubdomain, customDomains = [] }: Domain
           {allDomains.map(({ domain, type }) => {
             const result = results[domain];
             const isLoading = loading[domain];
+
+            // Validate against selected hosting provider
+            const validation = result 
+              ? validateDnsForProvider(
+                  hostingProvider, 
+                  result.aRecords, 
+                  result.cnameRecords,
+                  hostingProvider === 'custom' ? customTarget : undefined
+                )
+              : null;
 
             return (
               <motion.div
@@ -160,7 +234,9 @@ export const DomainDiagnostics = ({ panelSubdomain, customDomains = [] }: Domain
                           <div>
                             <p className="text-xs font-medium">DNS</p>
                             <p className="text-xs text-muted-foreground">
-                              {result.dnsOk ? `Points to ${LOVABLE_IP}` : 'Not configured'}
+                              {result.dnsOk 
+                                ? `${result.dnsMatchType} match` 
+                                : 'Not configured'}
                             </p>
                           </div>
                         </div>
@@ -185,27 +261,34 @@ export const DomainDiagnostics = ({ panelSubdomain, customDomains = [] }: Domain
                       </div>
                     )}
 
-                    {result && result.aRecords.length > 0 && (
-                      <div className="mt-2 text-xs text-muted-foreground">
-                        A Records: {result.aRecords.join(', ')}
-                        {!result.aRecords.includes(LOVABLE_IP) && (
-                          <span className="text-amber-500 ml-2">
-                            (Should be {LOVABLE_IP})
-                          </span>
+                    {result && (result.aRecords.length > 0 || result.cnameRecords.length > 0) && (
+                      <div className="mt-2 text-xs text-muted-foreground space-y-1">
+                        {result.aRecords.length > 0 && (
+                          <div>A Records: {result.aRecords.join(', ')}</div>
+                        )}
+                        {result.cnameRecords.length > 0 && (
+                          <div>CNAME Records: {result.cnameRecords.join(', ')}</div>
                         )}
                       </div>
                     )}
 
-                    {result && !result.dnsOk && (
+                    {result && validation && !validation.valid && (
                       <div className="mt-3 p-2 rounded bg-amber-500/10 border border-amber-500/20">
                         <div className="flex items-start gap-2">
                           <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5" />
                           <div className="text-xs">
-                            <p className="font-medium text-amber-500">DNS Not Configured</p>
-                            <p className="text-muted-foreground mt-1">
-                              Add an A record pointing to <code className="bg-muted px-1 rounded">{LOVABLE_IP}</code>
-                            </p>
+                            <p className="font-medium text-amber-500">DNS Configuration Issue</p>
+                            <p className="text-muted-foreground mt-1">{validation.message}</p>
                           </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {result && validation?.valid && (
+                      <div className="mt-3 p-2 rounded bg-green-500/10 border border-green-500/20">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle className="w-4 h-4 text-green-500" />
+                          <p className="text-xs text-green-500 font-medium">{validation.message}</p>
                         </div>
                       </div>
                     )}
@@ -271,10 +354,15 @@ export const DomainDiagnostics = ({ panelSubdomain, customDomains = [] }: Domain
                   <span className="text-sm">HTTP: {results[customDomain].httpOk ? 'OK' : 'Failed'}</span>
                 </div>
               </div>
-              {results[customDomain].aRecords.length > 0 && (
-                <p className="text-xs text-muted-foreground mt-2">
-                  A Records: {results[customDomain].aRecords.join(', ')}
-                </p>
+              {(results[customDomain].aRecords.length > 0 || results[customDomain].cnameRecords.length > 0) && (
+                <div className="text-xs text-muted-foreground mt-2 space-y-1">
+                  {results[customDomain].aRecords.length > 0 && (
+                    <p>A Records: {results[customDomain].aRecords.join(', ')}</p>
+                  )}
+                  {results[customDomain].cnameRecords.length > 0 && (
+                    <p>CNAME Records: {results[customDomain].cnameRecords.join(', ')}</p>
+                  )}
+                </div>
               )}
             </motion.div>
           )}
@@ -283,9 +371,9 @@ export const DomainDiagnostics = ({ panelSubdomain, customDomains = [] }: Domain
         {/* Help Text */}
         <div className="p-3 rounded-lg bg-muted/50 border border-border/50">
           <p className="text-xs text-muted-foreground">
-            <strong>Required DNS Setup:</strong> All domains must have an A record pointing to{' '}
-            <code className="bg-background px-1 rounded">{LOVABLE_IP}</code>. 
-            For subdomains like <code>yourpanel.smmpilot.online</code>, you need a wildcard DNS record.
+            <strong>Hosting Provider:</strong> {providerConfig.name}<br />
+            <strong>DNS Type:</strong> {providerConfig.dnsType} Record<br />
+            <strong>Target:</strong> {expectedTargets[0] || 'Configure custom target above'}
           </p>
         </div>
       </CardContent>
