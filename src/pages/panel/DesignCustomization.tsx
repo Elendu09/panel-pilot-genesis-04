@@ -9,6 +9,9 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ImageUpload } from "@/components/panel/ImageUpload";
+import { ThemePreviewCard } from "@/components/design/ThemePreviewCard";
+import { SocialIconSelector } from "@/components/design/SocialIconSelector";
+import { AccessibilitySettings } from "@/components/design/AccessibilitySettings";
 import { 
   Palette, 
   Eye, 
@@ -38,7 +41,9 @@ import {
   ChevronDown,
   ChevronUp,
   Globe,
-  CheckCircle
+  CheckCircle,
+  Accessibility,
+  Share2
 } from "lucide-react";
 import { LiveStorefrontPreview } from "@/components/design/LiveStorefrontPreview";
 import { useToast } from "@/hooks/use-toast";
