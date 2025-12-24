@@ -5,9 +5,7 @@ import {
   X, 
   Send, 
   Minimize2, 
-  Loader2,
-  Paperclip,
-  Smile
+  Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,96 +18,104 @@ import { toast } from '@/hooks/use-toast';
 
 interface ChatMessage {
   id: string;
-  sender: 'buyer' | 'support';
+  sender_type: 'visitor' | 'owner';
   content: string;
-  timestamp: string;
+  created_at: string;
+  session_id?: string;
+  is_read?: boolean;
 }
 
 interface LiveChatWidgetProps {
   panelId: string;
-  buyerId: string;
-  buyerName?: string;
+  visitorName?: string;
+  visitorEmail?: string;
   panelName?: string;
 }
 
-export const LiveChatWidget = ({ panelId, buyerId, buyerName, panelName }: LiveChatWidgetProps) => {
+// Generate a unique visitor ID
+const getVisitorId = () => {
+  let visitorId = localStorage.getItem('chat_visitor_id');
+  if (!visitorId) {
+    visitorId = `visitor_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+    localStorage.setItem('chat_visitor_id', visitorId);
+  }
+  return visitorId;
+};
+
+export const LiveChatWidget = ({ panelId, visitorName, visitorEmail, panelName }: LiveChatWidgetProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
-  const [typing, setTyping] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [chatSessionId, setChatSessionId] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [visitorId] = useState(getVisitorId);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Create or get chat session
   useEffect(() => {
-    if (!panelId || !buyerId) return;
+    if (!panelId) return;
     
     const initChat = async () => {
-      // Check for existing open chat session
+      // Check for existing active session
       const { data: existingSession } = await supabase
-        .from('support_tickets')
-        .select('*')
+        .from('chat_sessions')
+        .select('id')
         .eq('panel_id', panelId)
-        .eq('user_id', buyerId)
-        .eq('ticket_type', 'live_chat')
-        .in('status', ['open', 'in_progress'])
+        .eq('visitor_id', visitorId)
+        .eq('status', 'active')
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
 
       if (existingSession) {
-        setChatSessionId(existingSession.id);
-        const chatMessages = Array.isArray(existingSession.messages) 
-          ? existingSession.messages.map((msg: any, idx: number) => ({
-              id: `msg-${idx}`,
-              sender: msg.sender,
-              content: msg.content,
-              timestamp: msg.timestamp
-            }))
-          : [];
-        setMessages(chatMessages);
+        setSessionId(existingSession.id);
+        // Load messages
+        const { data: msgs } = await supabase
+          .from('chat_messages')
+          .select('*')
+          .eq('session_id', existingSession.id)
+          .order('created_at', { ascending: true });
+        
+        if (msgs) {
+          setMessages(msgs.map(m => ({
+            ...m,
+            sender_type: m.sender_type as 'visitor' | 'owner'
+          })));
+        }
       }
     };
 
     initChat();
-  }, [panelId, buyerId]);
+  }, [panelId, visitorId]);
 
   // Real-time subscription for new messages
   useEffect(() => {
-    if (!chatSessionId) return;
+    if (!sessionId) return;
 
     const channel = supabase
-      .channel(`chat-${chatSessionId}`)
+      .channel(`chat-messages-${sessionId}`)
       .on(
         'postgres_changes',
         {
-          event: 'UPDATE',
+          event: 'INSERT',
           schema: 'public',
-          table: 'support_tickets',
-          filter: `id=eq.${chatSessionId}`
+          table: 'chat_messages',
+          filter: `session_id=eq.${sessionId}`
         },
         (payload) => {
-          const updatedMessages = payload.new.messages as any[];
-          if (updatedMessages && Array.isArray(updatedMessages)) {
-            const formattedMessages = updatedMessages.map((msg, idx) => ({
-              id: `msg-${idx}`,
-              sender: msg.sender as 'buyer' | 'support',
-              content: msg.content,
-              timestamp: msg.timestamp
-            }));
-            setMessages(formattedMessages);
-            
-            // Count unread if widget is closed or minimized
-            if (!isOpen || isMinimized) {
-              const lastSupportMsg = formattedMessages.filter(m => m.sender === 'support').pop();
-              if (lastSupportMsg) {
-                setUnreadCount(prev => prev + 1);
-              }
-            }
+          const newMsg = payload.new as ChatMessage;
+          setMessages(prev => {
+            // Avoid duplicates
+            if (prev.some(m => m.id === newMsg.id)) return prev;
+            return [...prev, newMsg];
+          });
+          
+          // Count unread if widget is closed or minimized and message is from owner
+          if ((!isOpen || isMinimized) && newMsg.sender_type === 'owner') {
+            setUnreadCount(prev => prev + 1);
           }
         }
       )
@@ -118,7 +124,7 @@ export const LiveChatWidget = ({ panelId, buyerId, buyerName, panelName }: LiveC
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [chatSessionId, isOpen, isMinimized]);
+  }, [sessionId, isOpen, isMinimized]);
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -132,27 +138,25 @@ export const LiveChatWidget = ({ panelId, buyerId, buyerName, panelName }: LiveC
     }
   }, [isOpen, isMinimized]);
 
-  const startNewChat = async () => {
+  const startNewSession = async () => {
     try {
       const { data, error } = await supabase
-        .from('support_tickets')
+        .from('chat_sessions')
         .insert({
           panel_id: panelId,
-          user_id: buyerId,
-          subject: 'Live Chat Support',
-          ticket_type: 'live_chat',
-          status: 'open',
-          priority: 'medium',
-          messages: []
+          visitor_id: visitorId,
+          visitor_name: visitorName || 'Visitor',
+          visitor_email: visitorEmail,
+          status: 'active'
         })
         .select()
         .single();
 
       if (error) throw error;
-      setChatSessionId(data.id);
+      setSessionId(data.id);
       return data.id;
     } catch (error) {
-      console.error('Error starting chat:', error);
+      console.error('Error starting chat session:', error);
       toast({ variant: 'destructive', title: 'Failed to start chat' });
       return null;
     }
@@ -163,39 +167,48 @@ export const LiveChatWidget = ({ panelId, buyerId, buyerName, panelName }: LiveC
 
     setSending(true);
     try {
-      let sessionId = chatSessionId;
-      if (!sessionId) {
-        sessionId = await startNewChat();
-        if (!sessionId) return;
+      let currentSessionId = sessionId;
+      if (!currentSessionId) {
+        currentSessionId = await startNewSession();
+        if (!currentSessionId) return;
       }
 
-      const newMsg: ChatMessage = {
-        id: `msg-${Date.now()}`,
-        sender: 'buyer',
-        content: newMessage.trim(),
-        timestamp: new Date().toISOString()
-      };
-
-      const updatedMessages = [...messages, newMsg];
-      setMessages(updatedMessages);
+      const messageContent = newMessage.trim();
       setNewMessage('');
 
+      // Optimistic update
+      const optimisticMsg: ChatMessage = {
+        id: `temp-${Date.now()}`,
+        sender_type: 'visitor',
+        content: messageContent,
+        created_at: new Date().toISOString()
+      };
+      setMessages(prev => [...prev, optimisticMsg]);
+
       // Save to database
-      const { error } = await supabase
-        .from('support_tickets')
-        .update({
-          messages: updatedMessages.map(m => ({
-            sender: m.sender,
-            content: m.content,
-            timestamp: m.timestamp
-          })),
-          updated_at: new Date().toISOString()
+      const { data, error } = await supabase
+        .from('chat_messages')
+        .insert({
+          session_id: currentSessionId,
+          sender_type: 'visitor',
+          content: messageContent
         })
-        .eq('id', sessionId);
+        .select()
+        .single();
 
       if (error) throw error;
 
-      // Focus input
+      // Replace optimistic message with real one
+      setMessages(prev => prev.map(m => 
+        m.id === optimisticMsg.id ? { ...data, sender_type: data.sender_type as 'visitor' | 'owner' } : m
+      ));
+
+      // Update session last_message_at
+      await supabase
+        .from('chat_sessions')
+        .update({ last_message_at: new Date().toISOString() })
+        .eq('id', currentSessionId);
+
       inputRef.current?.focus();
     } catch (error) {
       console.error('Error sending message:', error);
@@ -318,49 +331,34 @@ export const LiveChatWidget = ({ panelId, buyerId, buyerName, panelName }: LiveC
                       animate={{ opacity: 1, y: 0 }}
                       className={cn(
                         "flex gap-2",
-                        msg.sender === 'buyer' ? "flex-row-reverse" : ""
+                        msg.sender_type === 'visitor' ? "flex-row-reverse" : ""
                       )}
                     >
                       <Avatar className="w-8 h-8 shrink-0">
                         <AvatarFallback className={cn(
-                          msg.sender === 'buyer' 
+                          msg.sender_type === 'visitor' 
                             ? "bg-primary text-primary-foreground" 
                             : "bg-muted"
                         )}>
-                          {msg.sender === 'buyer' ? (buyerName?.[0] || 'Y') : 'S'}
+                          {msg.sender_type === 'visitor' ? (visitorName?.[0] || 'V') : 'S'}
                         </AvatarFallback>
                       </Avatar>
                       <div className={cn(
                         "max-w-[75%] rounded-2xl px-4 py-2",
-                        msg.sender === 'buyer'
+                        msg.sender_type === 'visitor'
                           ? "bg-primary text-primary-foreground rounded-br-sm"
                           : "bg-muted rounded-bl-sm"
                       )}>
                         <p className="text-sm">{msg.content}</p>
                         <p className={cn(
                           "text-[10px] mt-1",
-                          msg.sender === 'buyer' ? "text-white/60" : "text-muted-foreground"
+                          msg.sender_type === 'visitor' ? "text-white/60" : "text-muted-foreground"
                         )}>
-                          {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </p>
                       </div>
                     </motion.div>
                   ))
-                )}
-                
-                {typing && (
-                  <div className="flex items-center gap-2">
-                    <Avatar className="w-8 h-8">
-                      <AvatarFallback className="bg-muted">S</AvatarFallback>
-                    </Avatar>
-                    <div className="bg-muted rounded-2xl rounded-bl-sm px-4 py-3">
-                      <div className="flex gap-1">
-                        <span className="w-2 h-2 rounded-full bg-muted-foreground/50 animate-bounce" style={{ animationDelay: '0ms' }} />
-                        <span className="w-2 h-2 rounded-full bg-muted-foreground/50 animate-bounce" style={{ animationDelay: '150ms' }} />
-                        <span className="w-2 h-2 rounded-full bg-muted-foreground/50 animate-bounce" style={{ animationDelay: '300ms' }} />
-                      </div>
-                    </div>
-                  </div>
                 )}
                 <div ref={messagesEndRef} />
               </div>

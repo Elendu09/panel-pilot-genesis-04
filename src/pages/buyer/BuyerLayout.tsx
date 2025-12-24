@@ -213,11 +213,11 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
       </nav>
 
       {/* Live Chat Widget */}
-      {panel?.id && buyer?.id && (
+      {panel?.id && (
         <LiveChatWidget 
           panelId={panel.id} 
-          buyerId={buyer.id}
-          buyerName={buyer.full_name || buyer.email?.split('@')[0]}
+          visitorName={buyer?.full_name || buyer?.email?.split('@')[0]}
+          visitorEmail={buyer?.email}
           panelName={panel.name}
         />
       )}
