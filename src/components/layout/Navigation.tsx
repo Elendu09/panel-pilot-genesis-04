@@ -54,22 +54,22 @@ export const Navigation = () => {
             </Link>
           </div>
 
-          <div className="hidden md:flex items-center space-x-4">
+          <div className="hidden md:flex items-center space-x-3">
             {!isHomepage && <ThemeToggle />}
             {user ? (
-              <div className="flex items-center space-x-4">
-                <span className="text-sm text-muted-foreground">
-                  Welcome, {profile?.full_name || user.email}
+              <div className="flex items-center space-x-3">
+                <span className="text-sm text-muted-foreground truncate max-w-[150px]">
+                  {profile?.full_name || user.email?.split('@')[0]}
                 </span>
-                <Button asChild variant="outline">
+                <Button asChild variant="outline" size="sm">
                   <Link to={getDashboardPath()}>Dashboard</Link>
                 </Button>
-                <Button asChild variant="outline">
+                <Button asChild variant="outline" size="sm">
                   <Link to="/services">Services</Link>
                 </Button>
-                <Button variant="ghost" onClick={signOut}>
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Sign Out
+                <Button variant="destructive" size="sm" onClick={signOut}>
+                  <LogOut className="h-4 w-4 mr-1" />
+                  Logout
                 </Button>
               </div>
             ) : (
