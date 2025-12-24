@@ -255,21 +255,21 @@ const SubscriptionManagement = () => {
                       key={sub.id}
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      className="glass-card-hover p-4 space-y-3 cursor-pointer group"
+                      className="glass-card-hover p-3 md:p-4 space-y-3 cursor-pointer group"
                     >
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <p className="font-medium group-hover:text-primary transition-colors">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="font-medium group-hover:text-primary transition-colors text-sm md:text-base truncate">
                             {sub.panel?.name || 'Unknown Panel'}
                           </p>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-xs text-muted-foreground truncate">
                             {sub.panel?.owner?.email}
                           </p>
                         </div>
                         <Badge className={cn(
-                          "text-xs",
+                          "text-xs shrink-0",
                           sub.status === 'active' && "bg-emerald-500/20 text-emerald-500",
-                          sub.status === 'expired' && "bg-red-500/20 text-red-500"
+                          sub.status === 'expired' && "bg-destructive/20 text-destructive"
                         )}>
                           {sub.status}
                         </Badge>
@@ -287,7 +287,15 @@ const SubscriptionManagement = () => {
                       </div>
                       
                       <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button size="sm" variant="outline" className="w-full text-xs gap-1">
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="w-full text-xs gap-1"
+                          onClick={() => {
+                            // Navigate to panel management with this subscription
+                            window.location.href = `/admin/panels?subscription=${sub.id}`;
+                          }}
+                        >
                           View Details <ArrowUpRight className="w-3 h-3" />
                         </Button>
                       </div>

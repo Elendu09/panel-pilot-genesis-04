@@ -283,16 +283,16 @@ const AdminOverview = () => {
                         key={panel.id}
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="glass-card-hover p-4 space-y-3 cursor-pointer group"
+                        className="glass-card-hover p-3 md:p-4 space-y-3 cursor-pointer group"
                       >
                         <div className="flex items-start justify-between">
-                          <div>
-                            <p className="font-medium group-hover:text-primary transition-colors">
+                          <div className="min-w-0">
+                            <p className="font-medium group-hover:text-primary transition-colors text-sm md:text-base truncate">
                               {panel.name}
                             </p>
                             <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
                               <Globe className="w-3 h-3" />
-                              {panel.subdomain}.smmpilot.online
+                              <span className="truncate">{panel.subdomain}.smmpilot.online</span>
                             </div>
                           </div>
                         </div>
@@ -309,8 +309,15 @@ const AdminOverview = () => {
                         </div>
                         
                         <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button size="sm" variant="outline" className="w-full text-xs gap-1">
-                            Manage <ArrowUpRight className="w-3 h-3" />
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="w-full text-xs gap-1"
+                            asChild
+                          >
+                            <Link to={`/admin/panels?id=${panel.id}`}>
+                              Manage <ArrowUpRight className="w-3 h-3" />
+                            </Link>
                           </Button>
                         </div>
                       </motion.div>

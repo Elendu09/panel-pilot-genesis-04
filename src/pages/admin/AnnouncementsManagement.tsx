@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,13 +16,14 @@ import {
   Plus,
   Calendar,
   Users,
-  Eye,
   Trash2,
-  Send
+  Send,
+  Loader2
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import KanbanColumn from "@/components/admin/KanbanColumn";
 import KanbanCard from "@/components/admin/KanbanCard";
 
@@ -34,37 +35,14 @@ interface Announcement {
   target: 'all' | 'panel_owners' | 'specific';
   created_at: string;
   published_at?: string;
+  created_by?: string;
 }
 
 const AnnouncementsManagement = () => {
   const { toast } = useToast();
-  const [announcements, setAnnouncements] = useState<Announcement[]>([
-    {
-      id: '1',
-      title: 'Platform Maintenance Scheduled',
-      content: 'We will be performing maintenance on March 15th from 2-4 AM UTC.',
-      status: 'active',
-      target: 'all',
-      created_at: new Date().toISOString(),
-      published_at: new Date().toISOString()
-    },
-    {
-      id: '2',
-      title: 'New Instagram Services Available',
-      content: 'Check out our new Instagram reels services with faster delivery!',
-      status: 'draft',
-      target: 'panel_owners',
-      created_at: new Date().toISOString()
-    },
-    {
-      id: '3',
-      title: 'Black Friday Sale',
-      content: '50% off all services this weekend!',
-      status: 'archived',
-      target: 'all',
-      created_at: new Date(Date.now() - 86400000 * 30).toISOString()
-    }
-  ]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
@@ -73,6 +51,43 @@ const AnnouncementsManagement = () => {
     content: '',
     target: 'all' as 'all' | 'panel_owners' | 'specific'
   });
+
+  useEffect(() => {
+    fetchAnnouncements();
+    
+    // Subscribe to realtime updates
+    const channel = supabase
+      .channel('announcements-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'announcements' },
+        () => {
+          fetchAnnouncements();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const fetchAnnouncements = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('announcements')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setAnnouncements((data || []) as Announcement[]);
+    } catch (error) {
+      console.error('Error fetching announcements:', error);
+      toast({ title: "Error loading announcements", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const kanbanColumns = [
     { 
@@ -131,48 +146,102 @@ const AnnouncementsManagement = () => {
     setDialogOpen(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.title || !form.content) return;
 
-    if (editingAnnouncement) {
-      setAnnouncements(prev => prev.map(a => 
-        a.id === editingAnnouncement.id 
-          ? { ...a, ...form }
-          : a
-      ));
-      toast({ title: "Announcement Updated" });
-    } else {
-      const newAnnouncement: Announcement = {
-        id: crypto.randomUUID(),
-        ...form,
-        status: 'draft',
-        created_at: new Date().toISOString()
-      };
-      setAnnouncements(prev => [newAnnouncement, ...prev]);
-      toast({ title: "Announcement Created" });
+    setSaving(true);
+    try {
+      if (editingAnnouncement) {
+        const { error } = await supabase
+          .from('announcements')
+          .update({
+            title: form.title,
+            content: form.content,
+            target: form.target
+          })
+          .eq('id', editingAnnouncement.id);
+
+        if (error) throw error;
+        toast({ title: "Announcement Updated" });
+      } else {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
+          .single();
+
+        const { error } = await supabase
+          .from('announcements')
+          .insert({
+            title: form.title,
+            content: form.content,
+            target: form.target,
+            status: 'draft',
+            created_by: profile?.id
+          });
+
+        if (error) throw error;
+        toast({ title: "Announcement Created" });
+      }
+      setDialogOpen(false);
+      fetchAnnouncements();
+    } catch (error) {
+      console.error('Error saving announcement:', error);
+      toast({ title: "Error saving announcement", variant: "destructive" });
+    } finally {
+      setSaving(false);
     }
-    setDialogOpen(false);
   };
 
-  const publishAnnouncement = (id: string) => {
-    setAnnouncements(prev => prev.map(a => 
-      a.id === id 
-        ? { ...a, status: 'active' as const, published_at: new Date().toISOString() }
-        : a
-    ));
-    toast({ title: "Announcement Published" });
+  const publishAnnouncement = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('announcements')
+        .update({ 
+          status: 'active', 
+          published_at: new Date().toISOString() 
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+      toast({ title: "Announcement Published" });
+      fetchAnnouncements();
+    } catch (error) {
+      console.error('Error publishing announcement:', error);
+      toast({ title: "Error publishing announcement", variant: "destructive" });
+    }
   };
 
-  const archiveAnnouncement = (id: string) => {
-    setAnnouncements(prev => prev.map(a => 
-      a.id === id ? { ...a, status: 'archived' as const } : a
-    ));
-    toast({ title: "Announcement Archived" });
+  const archiveAnnouncement = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('announcements')
+        .update({ status: 'archived' })
+        .eq('id', id);
+
+      if (error) throw error;
+      toast({ title: "Announcement Archived" });
+      fetchAnnouncements();
+    } catch (error) {
+      console.error('Error archiving announcement:', error);
+      toast({ title: "Error archiving announcement", variant: "destructive" });
+    }
   };
 
-  const deleteAnnouncement = (id: string) => {
-    setAnnouncements(prev => prev.filter(a => a.id !== id));
-    toast({ title: "Announcement Deleted" });
+  const deleteAnnouncement = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('announcements')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      toast({ title: "Announcement Deleted" });
+      fetchAnnouncements();
+    } catch (error) {
+      console.error('Error deleting announcement:', error);
+      toast({ title: "Error deleting announcement", variant: "destructive" });
+    }
   };
 
   const filteredAnnouncements = announcements.filter(a =>
@@ -194,7 +263,7 @@ const AnnouncementsManagement = () => {
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="space-y-6"
+      className="space-y-4 md:space-y-6"
     >
       <Helmet>
         <title>Announcements - Admin</title>
@@ -202,38 +271,38 @@ const AnnouncementsManagement = () => {
       </Helmet>
 
       {/* Header */}
-      <motion.div variants={itemVariants} className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <motion.div variants={itemVariants} className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold">Announcements</h1>
-          <p className="text-muted-foreground">Create and manage platform-wide announcements</p>
+          <h1 className="text-xl md:text-2xl lg:text-3xl font-bold">Announcements</h1>
+          <p className="text-sm text-muted-foreground">Create and manage platform-wide announcements</p>
         </div>
-        <Button onClick={openCreateDialog} className="gap-2">
+        <Button onClick={openCreateDialog} className="gap-2 w-full sm:w-auto">
           <Plus className="w-4 h-4" />
           New Announcement
         </Button>
       </motion.div>
 
       {/* Stats */}
-      <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         <Card className="glass-card-hover">
-          <CardContent className="p-4 flex items-center gap-3">
+          <CardContent className="p-3 md:p-4 flex items-center gap-3">
             <div className="p-2 rounded-lg bg-primary/10">
-              <Megaphone className="w-5 h-5 text-primary" />
+              <Megaphone className="w-4 h-4 md:w-5 md:h-5 text-primary" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{announcements.length}</p>
+              <p className="text-xl md:text-2xl font-bold">{announcements.length}</p>
               <p className="text-xs text-muted-foreground">Total</p>
             </div>
           </CardContent>
         </Card>
         {kanbanColumns.map(col => (
           <Card key={col.status} className="glass-card-hover">
-            <CardContent className="p-4 flex items-center gap-3">
+            <CardContent className="p-3 md:p-4 flex items-center gap-3">
               <div className={`p-2 rounded-lg ${col.bg}`}>
-                <col.icon className={`w-5 h-5 ${col.textColor}`} />
+                <col.icon className={`w-4 h-4 md:w-5 md:h-5 ${col.textColor}`} />
               </div>
               <div>
-                <p className="text-2xl font-bold">
+                <p className="text-xl md:text-2xl font-bold">
                   {announcements.filter(a => a.status === col.status).length}
                 </p>
                 <p className="text-xs text-muted-foreground">{col.title}</p>
@@ -257,7 +326,7 @@ const AnnouncementsManagement = () => {
       </motion.div>
 
       {/* Kanban Board */}
-      <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         {kanbanColumns.map((column) => {
           const columnItems = filteredAnnouncements.filter(a => a.status === column.status);
           
@@ -271,6 +340,7 @@ const AnnouncementsManagement = () => {
               bgColor={column.bg}
               textColor={column.textColor}
               emptyMessage={`No ${column.title.toLowerCase()} announcements`}
+              loading={loading}
             >
               {columnItems.map((announcement) => {
                 const targetInfo = getTargetBadge(announcement.target);
@@ -281,14 +351,14 @@ const AnnouncementsManagement = () => {
                   >
                     <div className="space-y-3">
                       <div className="flex items-start justify-between gap-2">
-                        <p className="font-semibold line-clamp-2">{announcement.title}</p>
-                        <Badge variant="outline" className={targetInfo.color}>
+                        <p className="font-semibold line-clamp-2 text-sm md:text-base">{announcement.title}</p>
+                        <Badge variant="outline" className={`${targetInfo.color} text-xs shrink-0`}>
                           <Users className="w-3 h-3 mr-1" />
-                          {targetInfo.label}
+                          <span className="hidden sm:inline">{targetInfo.label}</span>
                         </Badge>
                       </div>
 
-                      <p className="text-sm text-muted-foreground line-clamp-2">
+                      <p className="text-xs md:text-sm text-muted-foreground line-clamp-2">
                         {announcement.content}
                       </p>
 
@@ -328,7 +398,7 @@ const AnnouncementsManagement = () => {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-8 w-8 p-0 text-red-500"
+                          className="h-8 w-8 p-0 text-destructive"
                           onClick={(e) => {
                             e.stopPropagation();
                             deleteAnnouncement(announcement.id);
@@ -348,7 +418,7 @@ const AnnouncementsManagement = () => {
 
       {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-lg mx-4 sm:mx-auto max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingAnnouncement ? 'Edit Announcement' : 'New Announcement'}
@@ -389,11 +459,12 @@ const AnnouncementsManagement = () => {
               </Select>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setDialogOpen(false)} className="w-full sm:w-auto">
               Cancel
             </Button>
-            <Button onClick={handleSave}>
+            <Button onClick={handleSave} disabled={saving} className="w-full sm:w-auto">
+              {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               {editingAnnouncement ? 'Save Changes' : 'Create Draft'}
             </Button>
           </DialogFooter>
