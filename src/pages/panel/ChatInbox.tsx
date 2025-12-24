@@ -80,7 +80,11 @@ interface CannedResponse {
   usage_count?: number;
 }
 
-const ChatInbox = () => {
+interface ChatInboxProps {
+  embedded?: boolean;
+}
+
+const ChatInbox = ({ embedded = false }: ChatInboxProps) => {
   const { profile } = useAuth();
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [selectedSession, setSelectedSession] = useState<ChatSession | null>(null);
