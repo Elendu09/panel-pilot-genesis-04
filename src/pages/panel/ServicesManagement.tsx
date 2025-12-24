@@ -100,6 +100,8 @@ import {
 import { DraggableServiceItem, ServiceItem } from "@/components/services/DraggableServiceItem";
 import { ServiceImportDialog } from "@/components/services/ServiceImportDialog";
 import { ServiceEditDialog } from "@/components/services/ServiceEditDialog";
+import { MobileServiceView } from "@/components/services/MobileServiceView";
+import { useUndoHistory } from "@/hooks/use-undo-history";
 
 const categories = [
   { id: "all", name: "All Services", icon: Layers },
@@ -129,6 +131,9 @@ const ServicesManagement = () => {
   const isMobile = useIsMobile();
   const { panel, loading: panelLoading } = usePanel();
   const [services, setServices] = useState<ServiceItem[]>([]);
+  
+  // Undo history for bulk operations
+  const { pushUndo } = useUndoHistory(() => fetchServices());
   const [providers, setProviders] = useState<Array<{ id: string; name: string; api_endpoint?: string; api_key?: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("all");
