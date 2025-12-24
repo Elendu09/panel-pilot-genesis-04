@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   MessageCircle, 
@@ -51,8 +51,10 @@ export const LiveChatWidget = ({ panelId, visitorName, visitorEmail, panelName }
   const [unreadCount, setUnreadCount] = useState(0);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [visitorId] = useState(getVisitorId);
+  const [ownerTyping, setOwnerTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Create or get chat session
   useEffect(() => {
@@ -110,7 +112,7 @@ export const LiveChatWidget = ({ panelId, visitorName, visitorEmail, panelName }
           setMessages(prev => {
             // Avoid duplicates
             if (prev.some(m => m.id === newMsg.id)) return prev;
-            return [...prev, newMsg];
+            return [...prev, { ...newMsg, sender_type: newMsg.sender_type as 'visitor' | 'owner' }];
           });
           
           // Count unread if widget is closed or minimized and message is from owner
@@ -125,6 +127,45 @@ export const LiveChatWidget = ({ panelId, visitorName, visitorEmail, panelName }
       supabase.removeChannel(channel);
     };
   }, [sessionId, isOpen, isMinimized]);
+
+  // Typing indicator subscription
+  useEffect(() => {
+    if (!sessionId) return;
+
+    const channel = supabase
+      .channel(`typing-${sessionId}`)
+      .on('broadcast', { event: 'typing' }, (payload) => {
+        if (payload.payload.sender_type === 'owner') {
+          setOwnerTyping(true);
+          // Clear typing after 3 seconds
+          if (typingTimeoutRef.current) {
+            clearTimeout(typingTimeoutRef.current);
+          }
+          typingTimeoutRef.current = setTimeout(() => {
+            setOwnerTyping(false);
+          }, 3000);
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, [sessionId]);
+
+  // Broadcast typing status
+  const broadcastTyping = useCallback(() => {
+    if (!sessionId) return;
+    
+    supabase.channel(`typing-${sessionId}`).send({
+      type: 'broadcast',
+      event: 'typing',
+      payload: { sender_type: 'visitor' }
+    });
+  }, [sessionId]);
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -223,6 +264,11 @@ export const LiveChatWidget = ({ panelId, visitorName, visitorEmail, panelName }
       e.preventDefault();
       sendMessage();
     }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNewMessage(e.target.value);
+    broadcastTyping();
   };
 
   const toggleChat = () => {
@@ -360,6 +406,22 @@ export const LiveChatWidget = ({ panelId, visitorName, visitorEmail, panelName }
                     </motion.div>
                   ))
                 )}
+                
+                {/* Typing indicator */}
+                {ownerTyping && (
+                  <div className="flex items-center gap-2">
+                    <Avatar className="w-8 h-8">
+                      <AvatarFallback className="bg-muted">S</AvatarFallback>
+                    </Avatar>
+                    <div className="bg-muted rounded-2xl rounded-bl-sm px-4 py-3">
+                      <div className="flex gap-1">
+                        <span className="w-2 h-2 rounded-full bg-muted-foreground/50 animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <span className="w-2 h-2 rounded-full bg-muted-foreground/50 animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <span className="w-2 h-2 rounded-full bg-muted-foreground/50 animate-bounce" style={{ animationDelay: '300ms' }} />
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div ref={messagesEndRef} />
               </div>
             </ScrollArea>
@@ -370,7 +432,7 @@ export const LiveChatWidget = ({ panelId, visitorName, visitorEmail, panelName }
                 <Input
                   ref={inputRef}
                   value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
+                  onChange={handleInputChange}
                   onKeyDown={handleKeyPress}
                   placeholder="Type a message..."
                   className="flex-1 bg-muted/50 border-0"

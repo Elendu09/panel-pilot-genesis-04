@@ -1,12 +1,16 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, X, Send } from "lucide-react";
+import { MessageCircle, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface FloatingChatWidgetProps {
   panelId?: string;
   whatsappNumber?: string;
   telegramUsername?: string;
+  messengerUsername?: string;
+  discordInvite?: string;
+  customUrl?: string;
+  customLabel?: string;
   position?: 'bottom-right' | 'bottom-left';
   message?: string;
 }
@@ -25,10 +29,35 @@ const TelegramIcon = () => (
   </svg>
 );
 
+// Facebook Messenger SVG Icon
+const MessengerIcon = () => (
+  <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current">
+    <path d="M12 0C5.373 0 0 4.974 0 11.111c0 3.498 1.744 6.614 4.469 8.654V24l4.088-2.242c1.092.301 2.246.464 3.443.464 6.627 0 12-4.974 12-11.111S18.627 0 12 0zm1.191 14.963l-3.055-3.26-5.963 3.26L10.732 8l3.131 3.259L19.752 8l-6.561 6.963z"/>
+  </svg>
+);
+
+// Discord SVG Icon
+const DiscordIcon = () => (
+  <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current">
+    <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
+  </svg>
+);
+
+// Custom Chat Icon
+const CustomChatIcon = () => (
+  <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current">
+    <path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.37 5.07L2 22l4.93-1.37C8.42 21.5 10.15 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm0 18c-1.7 0-3.29-.46-4.66-1.25l-.33-.19-3.43.95.97-3.42-.2-.34C3.46 14.29 3 12.7 3 11c0-4.97 4.03-9 9-9s9 4.03 9 9-4.03 9-9 9z"/>
+  </svg>
+);
+
 export const FloatingChatWidget = ({
   panelId,
   whatsappNumber,
   telegramUsername,
+  messengerUsername,
+  discordInvite,
+  customUrl,
+  customLabel,
   position = 'bottom-right',
   message = 'Need help? Chat with us!'
 }: FloatingChatWidgetProps) => {
@@ -37,6 +66,10 @@ export const FloatingChatWidget = ({
     enabled: false,
     whatsapp: whatsappNumber || '',
     telegram: telegramUsername || '',
+    messenger: messengerUsername || '',
+    discord: discordInvite || '',
+    customUrl: customUrl || '',
+    customLabel: customLabel || 'Live Chat',
     position: position,
     message: message
   });
@@ -47,7 +80,7 @@ export const FloatingChatWidget = ({
       const fetchSettings = async () => {
         const { data } = await supabase
           .from('panel_settings')
-          .select('floating_chat_enabled, floating_chat_whatsapp, floating_chat_telegram, floating_chat_position, floating_chat_message')
+          .select('floating_chat_enabled, floating_chat_whatsapp, floating_chat_telegram, floating_chat_messenger, floating_chat_discord, floating_chat_custom_url, floating_chat_custom_label, floating_chat_position, floating_chat_message')
           .eq('panel_id', panelId)
           .single();
 
@@ -56,6 +89,10 @@ export const FloatingChatWidget = ({
             enabled: data.floating_chat_enabled || false,
             whatsapp: data.floating_chat_whatsapp || '',
             telegram: data.floating_chat_telegram || '',
+            messenger: data.floating_chat_messenger || '',
+            discord: data.floating_chat_discord || '',
+            customUrl: data.floating_chat_custom_url || '',
+            customLabel: data.floating_chat_custom_label || 'Live Chat',
             position: (data.floating_chat_position as 'bottom-right' | 'bottom-left') || 'bottom-right',
             message: data.floating_chat_message || 'Need help? Chat with us!'
           });
@@ -65,17 +102,24 @@ export const FloatingChatWidget = ({
     } else {
       // Use props directly
       setSettings({
-        enabled: !!(whatsappNumber || telegramUsername),
+        enabled: !!(whatsappNumber || telegramUsername || messengerUsername || discordInvite || customUrl),
         whatsapp: whatsappNumber || '',
         telegram: telegramUsername || '',
+        messenger: messengerUsername || '',
+        discord: discordInvite || '',
+        customUrl: customUrl || '',
+        customLabel: customLabel || 'Live Chat',
         position: position,
         message: message
       });
     }
-  }, [panelId, whatsappNumber, telegramUsername, position, message]);
+  }, [panelId, whatsappNumber, telegramUsername, messengerUsername, discordInvite, customUrl, customLabel, position, message]);
 
+  // Check if any chat option is available
+  const hasAnyChatOption = settings.whatsapp || settings.telegram || settings.messenger || settings.discord || settings.customUrl;
+  
   // Don't render if no chat options available
-  if (!settings.enabled && !settings.whatsapp && !settings.telegram) {
+  if (!settings.enabled && !hasAnyChatOption) {
     return null;
   }
 
@@ -93,8 +137,39 @@ export const FloatingChatWidget = ({
     window.open(`https://t.me/${username}`, '_blank');
   };
 
+  const handleMessenger = () => {
+    const username = settings.messenger.replace('@', '');
+    window.open(`https://m.me/${username}`, '_blank');
+  };
+
+  const handleDiscord = () => {
+    window.open(settings.discord, '_blank');
+  };
+
+  const handleCustom = () => {
+    window.open(settings.customUrl, '_blank');
+  };
+
+  // Get primary icon for button
+  const getPrimaryIcon = () => {
+    if (settings.whatsapp) return <WhatsAppIcon />;
+    if (settings.telegram) return <TelegramIcon />;
+    if (settings.messenger) return <MessengerIcon />;
+    if (settings.discord) return <DiscordIcon />;
+    return <MessageCircle className="w-6 h-6" />;
+  };
+
+  // Get primary color for button
+  const getPrimaryColor = () => {
+    if (settings.whatsapp) return 'bg-green-500 hover:bg-green-600';
+    if (settings.telegram) return 'bg-sky-500 hover:bg-sky-600';
+    if (settings.messenger) return 'bg-blue-500 hover:bg-blue-600';
+    if (settings.discord) return 'bg-indigo-500 hover:bg-indigo-600';
+    return 'bg-primary hover:bg-primary/90';
+  };
+
   return (
-    <div className={`fixed bottom-4 sm:bottom-6 ${positionClasses} z-50`}>
+    <div className={`fixed bottom-20 sm:bottom-6 ${positionClasses} z-40`}>
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -121,7 +196,7 @@ export const FloatingChatWidget = ({
             </div>
 
             {/* Chat options */}
-            <div className="p-4 space-y-3">
+            <div className="p-4 space-y-3 max-h-80 overflow-y-auto">
               {settings.whatsapp && (
                 <motion.button
                   whileHover={{ scale: 1.02 }}
@@ -151,22 +226,63 @@ export const FloatingChatWidget = ({
                   </div>
                 </motion.button>
               )}
+
+              {settings.messenger && (
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleMessenger}
+                  className="w-full flex items-center gap-3 p-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl transition-colors"
+                >
+                  <MessengerIcon />
+                  <div className="text-left">
+                    <p className="font-semibold">Messenger</p>
+                    <p className="text-xs text-white/80">Chat on Facebook</p>
+                  </div>
+                </motion.button>
+              )}
+
+              {settings.discord && (
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleDiscord}
+                  className="w-full flex items-center gap-3 p-3 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl transition-colors"
+                >
+                  <DiscordIcon />
+                  <div className="text-left">
+                    <p className="font-semibold">Discord</p>
+                    <p className="text-xs text-white/80">Join our server</p>
+                  </div>
+                </motion.button>
+              )}
+
+              {settings.customUrl && (
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleCustom}
+                  className="w-full flex items-center gap-3 p-3 bg-gradient-to-r from-primary to-primary/80 text-white rounded-xl transition-colors"
+                >
+                  <CustomChatIcon />
+                  <div className="text-left">
+                    <p className="font-semibold">{settings.customLabel}</p>
+                    <p className="text-xs text-white/80">Start conversation</p>
+                  </div>
+                </motion.button>
+              )}
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Floating button - shows based on primary channel */}
+      {/* Floating button */}
       <motion.button
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
         onClick={() => setIsOpen(!isOpen)}
         className={`w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-white transition-all ${
-          isOpen 
-            ? 'bg-slate-600' 
-            : settings.whatsapp 
-              ? 'bg-green-500 hover:bg-green-600' 
-              : 'bg-sky-500 hover:bg-sky-600'
+          isOpen ? 'bg-slate-600' : getPrimaryColor()
         }`}
       >
         <AnimatePresence mode="wait">
@@ -186,7 +302,7 @@ export const FloatingChatWidget = ({
               animate={{ rotate: 0, opacity: 1 }}
               exit={{ rotate: -90, opacity: 0 }}
             >
-              {settings.whatsapp ? <WhatsAppIcon /> : <TelegramIcon />}
+              {getPrimaryIcon()}
             </motion.div>
           )}
         </AnimatePresence>
