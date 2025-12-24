@@ -258,26 +258,63 @@ const ServicesManagement = () => {
   const [isQuickEditOpen, setIsQuickEditOpen] = useState(false);
 
   // Handle URL params for direct service editing (?edit=serviceId or ?view=serviceId)
+  // Directly fetch service by ID from Supabase instead of relying on local array
   useEffect(() => {
     const editId = searchParams.get('edit');
     const viewId = searchParams.get('view');
     
-    if ((editId || viewId) && services.length > 0) {
+    if ((editId || viewId) && panel?.id && providers.length >= 0) {
       const targetId = editId || viewId;
-      const targetService = services.find(s => s.id === targetId);
       
-      if (targetService) {
-        if (editId) {
-          openEditDialog(targetService);
-        } else if (viewId) {
-          setViewingService(targetService);
-          setIsViewDialogOpen(true);
+      const fetchAndOpenService = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('services')
+            .select('*')
+            .eq('id', targetId)
+            .single();
+            
+          if (error || !data) {
+            console.error('Service not found for URL param:', targetId);
+            return;
+          }
+          
+          // Map to ServiceItem format
+          const serviceItem: ServiceItem = {
+            id: data.id,
+            displayId: 0,
+            name: data.name,
+            category: data.category,
+            provider: getProviderName(data.provider_id || ''),
+            minQty: data.min_quantity || 100,
+            maxQty: data.max_quantity || 10000,
+            price: Number(data.price),
+            originalPrice: Number(data.price) * 0.8,
+            status: data.is_active ?? true,
+            orders: 0,
+            providerId: data.provider_id || '',
+            displayOrder: data.display_order || 0,
+            description: data.description,
+            imageUrl: data.image_url,
+          };
+          
+          if (editId) {
+            openEditDialog(serviceItem);
+          } else if (viewId) {
+            setViewingService(serviceItem);
+            setIsViewDialogOpen(true);
+          }
+        } catch (err) {
+          console.error('Error fetching service by ID:', err);
         }
+        
         // Clear the URL param after handling
         setSearchParams({}, { replace: true });
-      }
+      };
+      
+      fetchAndOpenService();
     }
-  }, [services, searchParams]);
+  }, [searchParams, panel?.id, providers]);
 
   // Quick edit handler - fetch service by ID and open edit dialog
   const handleQuickEdit = async () => {
@@ -432,7 +469,7 @@ const ServicesManagement = () => {
       setServices(mappedServices);
     } catch (error) {
       console.error('Error fetching services:', error);
-      toast({ title: 'Error loading services', variant: 'destructive' });
+      // Silently handle - empty state will show instead of toast
     } finally {
       setLoading(false);
     }

@@ -144,10 +144,7 @@ const OrdersManagement = () => {
       setOrders(transformedOrders);
     } catch (error: any) {
       console.error('Error fetching orders:', error);
-      // Only show error toast for actual database errors, not for "no data" cases
-      if (error?.code !== 'PGRST116' && error?.message !== 'No rows found') {
-        toast({ variant: 'destructive', title: 'Error', description: 'Failed to load orders' });
-      }
+      // Silently handle - empty state will show instead of toast
     } finally {
       setLoading(false);
     }

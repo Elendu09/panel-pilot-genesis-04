@@ -32,8 +32,15 @@ export const ThemeThree = ({ panel, services = [], customization = {} }: ThemeTh
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   
+  // Dynamic customization values
   const panelName = customization.companyName || panel?.name || 'SMM Panel';
   const primaryColor = customization.primaryColor || panel?.primary_color || '#F97316';
+  const secondaryColor = customization.secondaryColor || '#F59E0B';
+  const backgroundColor = customization.backgroundColor || '#FFF7ED';
+  const surfaceColor = customization.surfaceColor || '#FFFFFF';
+  const textColor = customization.textColor || '#1F2937';
+  const fontFamily = customization.fontFamily || 'Inter, system-ui, sans-serif';
+  const borderRadius = customization.borderRadius || '12';
   const heroTitle = customization.heroTitle || 'The Best Prices In Social Networks';
   const heroSubtitle = customization.heroSubtitle || 'Get instant followers, likes, and views at the lowest prices. Join over 100,000 satisfied customers.';
   const socialPlatforms = customization.socialPlatforms || [];
@@ -90,26 +97,37 @@ export const ThemeThree = ({ panel, services = [], customization = {} }: ThemeTh
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 text-gray-900 overflow-hidden">
+    <div 
+      className="min-h-screen overflow-hidden"
+      style={{ 
+        background: `linear-gradient(135deg, ${backgroundColor}, ${surfaceColor})`,
+        fontFamily,
+        color: textColor,
+      }}
+    >
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-orange-200/50 shadow-sm">
+      <header className="sticky top-0 z-50 backdrop-blur-xl border-b shadow-sm" style={{ backgroundColor: `${surfaceColor}CC`, borderColor: `${primaryColor}20` }}>
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {(customization.logoUrl || panel?.logo_url) && (
               <img src={customization.logoUrl || panel?.logo_url} alt={panelName} className="h-10 w-10 rounded-lg object-cover" />
             )}
             <div>
-              <h1 className="text-xl font-bold text-gray-900">{panelName}</h1>
+              <h1 className="text-xl font-bold" style={{ color: textColor }}>{panelName}</h1>
               <p className="text-gray-500 text-sm hidden sm:block">{customization.tagline || 'Best Prices Guaranteed'}</p>
             </div>
           </div>
           <div className="flex items-center gap-4">
             <LowVisionToggle accessibilitySettings={accessibilitySettings} panelId={panel?.id} variant="light" />
             <nav className="hidden md:flex items-center gap-6">
-              <a href="#services" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">Services</a>
-              <a href="#features" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">Features</a>
+              <a href="#services" className="text-sm opacity-80 hover:opacity-100 transition-colors" style={{ color: textColor }}>Services</a>
+              <a href="#features" className="text-sm opacity-80 hover:opacity-100 transition-colors" style={{ color: textColor }}>Features</a>
             </nav>
-            <Button className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white" asChild>
+            <Button 
+              className="text-white hover:opacity-90" 
+              style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`, borderRadius: `${borderRadius}px` }}
+              asChild
+            >
               <Link to="/login">Login</Link>
             </Button>
           </div>
