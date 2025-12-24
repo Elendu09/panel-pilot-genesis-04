@@ -33,7 +33,7 @@ import { BottomNav } from "@/components/ui/bottom-nav";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 import { OnboardingTour } from "@/components/onboarding/OnboardingTour";
-import { useOnboardingTour } from "@/hooks/use-onboarding-tour";
+import { useOnboardingTour } from "@/contexts/OnboardingTourContext";
 import ProviderManagement from "./panel/ProviderManagement";
 import GeneralSettings from "./panel/GeneralSettings";
 import DesignCustomization from "./panel/DesignCustomization";

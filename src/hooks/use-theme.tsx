@@ -1,4 +1,5 @@
-import { createContext, useContext, useEffect, useState } from "react"
+import { createContext, useContext, useEffect, useState, useCallback } from "react"
+import { supabase } from "@/integrations/supabase/client"
 
 type Theme = "dark" | "light" | "system"
 
@@ -26,19 +27,58 @@ export function ThemeProvider({
   storageKey = "smm-panel-theme",
   ...props
 }: ThemeProviderProps) {
-  const [theme, setTheme] = useState<Theme>(
+  const [theme, setThemeState] = useState<Theme>(
     () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
   )
+  const [userId, setUserId] = useState<string | null>(null)
 
+  // Listen for auth changes
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUserId(session?.user?.id || null)
+    })
+
+    // Check current session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUserId(session?.user?.id || null)
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
+
+  // Fetch theme from Supabase when user logs in
+  useEffect(() => {
+    if (!userId) return
+
+    const fetchThemeFromSupabase = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('theme_preference')
+          .eq('user_id', userId)
+          .single()
+
+        if (!error && data?.theme_preference) {
+          const dbTheme = data.theme_preference as Theme
+          setThemeState(dbTheme)
+          localStorage.setItem(storageKey, dbTheme)
+        }
+      } catch (error) {
+        console.error('Error fetching theme preference:', error)
+      }
+    }
+
+    fetchThemeFromSupabase()
+  }, [userId, storageKey])
+
+  // Apply theme to DOM
   useEffect(() => {
     const root = window.document.documentElement
     const path = window.location.pathname
 
-    // Add transition class for smooth theme changes
     root.style.setProperty("--theme-transition", "background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease")
     root.classList.add("theme-transition")
 
-    // Always start from a clean state
     root.classList.remove("light", "dark")
 
     // Force dark ONLY on homepage
@@ -73,12 +113,27 @@ export function ThemeProvider({
     return () => mediaQuery.removeEventListener("change", handleChange)
   }, [theme])
 
+  const setTheme = useCallback(async (t: Theme) => {
+    // Update local state and storage immediately
+    localStorage.setItem(storageKey, t)
+    setThemeState(t)
+
+    // Persist to Supabase if user is logged in
+    if (userId) {
+      try {
+        await supabase
+          .from('profiles')
+          .update({ theme_preference: t })
+          .eq('user_id', userId)
+      } catch (error) {
+        console.error('Error saving theme preference:', error)
+      }
+    }
+  }, [storageKey, userId])
+
   const value = {
     theme,
-    setTheme: (t: Theme) => {
-      localStorage.setItem(storageKey, t)
-      setTheme(t)
-    },
+    setTheme,
   }
 
   return (

@@ -296,7 +296,7 @@ export const ServiceEditDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col p-0">
+      <DialogContent className="max-w-2xl max-h-[85vh] sm:max-h-[90vh] overflow-hidden flex flex-col p-0 mx-2 sm:mx-auto">
         {/* Enhanced Header */}
         <DialogHeader className="p-4 pb-3 border-b border-border/50 bg-muted/30">
           <div className="flex items-center justify-between">
@@ -345,7 +345,7 @@ export const ServiceEditDialog = ({
             </TabsTrigger>
           </TabsList>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-4 overscroll-contain">
             {/* General Tab */}
             <TabsContent value="general" className="m-0 space-y-4">
               {/* Provider & Service ID Row */}

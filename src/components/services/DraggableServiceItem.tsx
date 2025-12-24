@@ -14,6 +14,49 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
+import { getIconByKey } from "@/components/icons/SocialIcons";
+
+// Helper to render service icon (handles icon: prefix)
+const ServiceIcon = ({ imageUrl, category, size = "small" }: { imageUrl?: string; category: string; size?: "small" | "medium" }) => {
+  const sizeClasses = size === "small" ? "w-5 h-5" : "w-8 h-8";
+  const iconSize = size === "small" ? 14 : 20;
+  
+  // Check if it's an icon reference
+  if (imageUrl?.startsWith('icon:')) {
+    const iconKey = imageUrl.replace('icon:', '');
+    const iconData = getIconByKey(iconKey);
+    const IconComponent = iconData.icon;
+    return (
+      <div className={cn(sizeClasses, "rounded flex items-center justify-center", iconData.bgColor)}>
+        <IconComponent className="text-white" size={iconSize} />
+      </div>
+    );
+  }
+  
+  // It's a URL - try to load the image
+  if (imageUrl && !imageUrl.startsWith('icon:')) {
+    return (
+      <img 
+        src={imageUrl} 
+        alt="" 
+        className={cn(sizeClasses, "rounded object-cover")}
+        onError={(e) => {
+          // On error, hide the image and show fallback
+          e.currentTarget.style.display = 'none';
+        }}
+      />
+    );
+  }
+  
+  // Fallback to category icon
+  const categoryData = getIconByKey(category);
+  const CategoryIcon = categoryData.icon;
+  return (
+    <div className={cn(sizeClasses, "rounded flex items-center justify-center", categoryData.bgColor)}>
+      <CategoryIcon className="text-white" size={iconSize} />
+    </div>
+  );
+};
 
 export interface ServiceItem {
   id: string;
@@ -115,11 +158,7 @@ export const DraggableServiceItem = ({
         {/* Service Info */}
         <div className="flex items-start gap-3">
           <div className="p-2 rounded-lg bg-primary/10">
-            {service.imageUrl ? (
-              <img src={service.imageUrl} alt="" className="w-8 h-8 rounded object-cover" />
-            ) : (
-              <CategoryIcon className="w-5 h-5 text-primary" />
-            )}
+            <ServiceIcon imageUrl={service.imageUrl} category={service.category} size="medium" />
           </div>
           <div className="flex-1 min-w-0">
             <h4 className="font-medium text-sm truncate">{service.name}</h4>
@@ -206,11 +245,7 @@ export const DraggableServiceItem = ({
       <td className="py-3 px-2">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-primary/10 shrink-0">
-            {service.imageUrl ? (
-              <img src={service.imageUrl} alt="" className="w-5 h-5 rounded object-cover" />
-            ) : (
-              <CategoryIcon className="w-4 h-4 text-primary" />
-            )}
+            <ServiceIcon imageUrl={service.imageUrl} category={service.category} size="small" />
           </div>
           <div className="min-w-0">
             <p className="font-medium text-sm truncate max-w-[200px]">{service.name}</p>

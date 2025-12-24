@@ -210,7 +210,7 @@ export const CustomerEditDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="glass-card max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="glass-card max-w-lg max-h-[85vh] sm:max-h-[90vh] overflow-hidden flex flex-col mx-2 sm:mx-auto">
         <DialogHeader>
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-xl bg-primary/10">

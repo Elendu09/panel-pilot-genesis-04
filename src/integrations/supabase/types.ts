@@ -1083,6 +1083,7 @@ export type Database = {
           onboarding_completed_at: string | null
           onboarding_step: number | null
           role: Database["public"]["Enums"]["user_role"]
+          theme_preference: string | null
           total_spent: number | null
           updated_at: string
           user_id: string
@@ -1099,6 +1100,7 @@ export type Database = {
           onboarding_completed_at?: string | null
           onboarding_step?: number | null
           role?: Database["public"]["Enums"]["user_role"]
+          theme_preference?: string | null
           total_spent?: number | null
           updated_at?: string
           user_id: string
@@ -1115,6 +1117,7 @@ export type Database = {
           onboarding_completed_at?: string | null
           onboarding_step?: number | null
           role?: Database["public"]["Enums"]["user_role"]
+          theme_preference?: string | null
           total_spent?: number | null
           updated_at?: string
           user_id?: string
