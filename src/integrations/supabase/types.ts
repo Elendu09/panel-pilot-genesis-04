@@ -606,10 +606,14 @@ export type Database = {
           created_at: string
           dns_configured: boolean | null
           domain: string
+          expected_target: string | null
+          hosting_provider: string | null
           id: string
           is_primary: boolean | null
           panel_id: string | null
           ssl_status: string | null
+          txt_verification_record: string | null
+          txt_verified_at: string | null
           updated_at: string
           verification_status: string | null
           verification_token: string | null
@@ -619,10 +623,14 @@ export type Database = {
           created_at?: string
           dns_configured?: boolean | null
           domain: string
+          expected_target?: string | null
+          hosting_provider?: string | null
           id?: string
           is_primary?: boolean | null
           panel_id?: string | null
           ssl_status?: string | null
+          txt_verification_record?: string | null
+          txt_verified_at?: string | null
           updated_at?: string
           verification_status?: string | null
           verification_token?: string | null
@@ -632,10 +640,14 @@ export type Database = {
           created_at?: string
           dns_configured?: boolean | null
           domain?: string
+          expected_target?: string | null
+          hosting_provider?: string | null
           id?: string
           is_primary?: boolean | null
           panel_id?: string | null
           ssl_status?: string | null
+          txt_verification_record?: string | null
+          txt_verified_at?: string | null
           updated_at?: string
           verification_status?: string | null
           verification_token?: string | null
@@ -856,6 +868,7 @@ export type Database = {
           domain_verification_status: string | null
           domain_verification_token: string | null
           features: Json | null
+          hosting_provider: string | null
           id: string
           is_approved: boolean | null
           logo_url: string | null
@@ -885,6 +898,7 @@ export type Database = {
           domain_verification_status?: string | null
           domain_verification_token?: string | null
           features?: Json | null
+          hosting_provider?: string | null
           id?: string
           is_approved?: boolean | null
           logo_url?: string | null
@@ -914,6 +928,7 @@ export type Database = {
           domain_verification_status?: string | null
           domain_verification_token?: string | null
           features?: Json | null
+          hosting_provider?: string | null
           id?: string
           is_approved?: boolean | null
           logo_url?: string | null

@@ -46,6 +46,10 @@ interface PanelDomain {
   dns_configured: boolean;
   verified_at: string | null;
   created_at: string;
+  hosting_provider?: string;
+  expected_target?: string;
+  txt_verification_record?: string;
+  txt_verified_at?: string | null;
 }
 
 const DomainSettings = () => {
@@ -71,6 +75,9 @@ const DomainSettings = () => {
   const [propagationDomain, setPropagationDomain] = useState("");
   const [isCheckingPropagation, setIsCheckingPropagation] = useState(false);
   const [propagationResults, setPropagationResults] = useState<any[]>([]);
+  
+  // TXT Verification state
+  const [verifyingTxt, setVerifyingTxt] = useState<Set<string>>(new Set());
 
   const LOVABLE_IP = "185.158.133.1";
 
@@ -232,6 +239,44 @@ const DomainSettings = () => {
       toast({ variant: "destructive", title: "Failed to check DNS propagation" });
     } finally {
       setIsCheckingPropagation(false);
+    }
+  };
+
+  // TXT Record Verification
+  const verifyDomainWithTxt = async (domainId: string, domainName: string) => {
+    if (!panel?.id) return;
+    
+    setVerifyingTxt(prev => new Set(prev).add(domainId));
+    
+    try {
+      const { data, error } = await supabase.functions.invoke("verify-domain-txt", {
+        body: { domain: domainName, panel_id: panel.id },
+      });
+
+      if (error) throw error;
+
+      if (data?.verified) {
+        toast({
+          title: "TXT Verification Successful!",
+          description: `Domain ownership for ${domainName} has been verified.`,
+        });
+        await fetchData();
+      } else {
+        toast({
+          variant: "destructive",
+          title: "TXT Record Not Found",
+          description: data?.message || `Add a TXT record for _smmpilot.${domainName}`,
+        });
+      }
+    } catch (error) {
+      console.error("TXT verification error:", error);
+      toast({ variant: "destructive", title: "TXT Verification Failed" });
+    } finally {
+      setVerifyingTxt(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(domainId);
+        return newSet;
+      });
     }
   };
 
@@ -484,12 +529,55 @@ const DomainSettings = () => {
 
                       {/* DNS Instructions for pending domains */}
                       {domain.verification_status === 'pending' && (
-                        <Alert className="mt-4">
-                          <Info className="w-4 h-4" />
-                          <AlertDescription>
-                            <strong>DNS Configuration Required:</strong> Add an A record pointing to <code className="bg-muted px-1 rounded">{LOVABLE_IP}</code>
-                          </AlertDescription>
-                        </Alert>
+                        <div className="mt-4 space-y-3">
+                          <Alert>
+                            <Info className="w-4 h-4" />
+                            <AlertDescription>
+                              <strong>Option 1 - DNS A Record:</strong> Add an A record pointing to <code className="bg-muted px-1 rounded">{LOVABLE_IP}</code>
+                            </AlertDescription>
+                          </Alert>
+                          <Alert>
+                            <Info className="w-4 h-4" />
+                            <AlertDescription className="space-y-2">
+                              <div><strong>Option 2 - TXT Verification:</strong> Add a TXT record to prove domain ownership</div>
+                              <div className="flex flex-wrap items-center gap-2 mt-2">
+                                <Badge variant="outline">TXT</Badge>
+                                <code className="text-xs bg-muted px-2 py-1 rounded">_smmpilot.{domain.domain}</code>
+                                <ArrowRight className="w-3 h-3" />
+                                <code className="text-xs bg-muted px-2 py-1 rounded break-all">smmpilot-verify={panel?.id}</code>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="h-6"
+                                  onClick={() => copyToClipboard(`smmpilot-verify=${panel?.id}`)}
+                                >
+                                  <Copy className="w-3 h-3" />
+                                </Button>
+                              </div>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="mt-2"
+                                onClick={() => verifyDomainWithTxt(domain.id, domain.domain)}
+                                disabled={verifyingTxt.has(domain.id)}
+                              >
+                                {verifyingTxt.has(domain.id) ? (
+                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                ) : (
+                                  <Check className="w-4 h-4 mr-2" />
+                                )}
+                                Verify TXT Record
+                              </Button>
+                            </AlertDescription>
+                          </Alert>
+                        </div>
+                      )}
+                      
+                      {/* Show TXT verified badge if applicable */}
+                      {domain.txt_verified_at && (
+                        <Badge className="mt-2 bg-blue-500/10 text-blue-500 border-blue-500/20">
+                          <Check className="w-3 h-3 mr-1" /> TXT Verified
+                        </Badge>
                       )}
                     </CardContent>
                   </Card>
@@ -508,9 +596,13 @@ const DomainSettings = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                To connect a custom domain, add these DNS records at your domain registrar:
+                To connect a custom domain, you have two options:
               </p>
+              
+              {/* Option 1: DNS A Records */}
               <div className="space-y-2">
+                <h4 className="font-medium text-sm">Option 1: DNS A Records (Recommended)</h4>
+                <p className="text-xs text-muted-foreground">Point your domain directly to our servers</p>
                 <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                   <div className="flex items-center gap-4">
                     <Badge variant="outline">A</Badge>
@@ -534,6 +626,29 @@ const DomainSettings = () => {
                   </Button>
                 </div>
               </div>
+              
+              {/* Option 2: TXT Verification */}
+              <div className="space-y-2 pt-4 border-t">
+                <h4 className="font-medium text-sm">Option 2: TXT Record Verification</h4>
+                <p className="text-xs text-muted-foreground">Prove domain ownership without changing DNS pointing (for external hosting)</p>
+                <div className="flex flex-col gap-2 p-3 bg-muted/50 rounded-lg">
+                  <div className="flex items-center gap-4 flex-wrap">
+                    <Badge variant="outline">TXT</Badge>
+                    <code className="text-sm">_smmpilot</code>
+                    <ArrowRight className="w-4 h-4 text-muted-foreground" />
+                    <code className="text-sm break-all">smmpilot-verify={panel?.id || 'your-panel-id'}</code>
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="w-fit"
+                    onClick={() => copyToClipboard(`smmpilot-verify=${panel?.id}`)}
+                  >
+                    <Copy className="w-4 h-4 mr-2" /> Copy TXT Value
+                  </Button>
+                </div>
+              </div>
+              
               <p className="text-xs text-muted-foreground">
                 DNS changes can take up to 48 hours to propagate. We'll automatically verify your domain once the records are detected.
               </p>
