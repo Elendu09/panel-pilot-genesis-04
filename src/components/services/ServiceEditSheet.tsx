@@ -236,7 +236,9 @@ export const ServiceEditSheet = ({
     );
   };
 
-  if (!service) return null;
+  if (!service || !service.id) {
+    return null;
+  }
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>

@@ -332,7 +332,7 @@ const ServicesManagement = () => {
         displayId: from + index + 1,
         name: s.name,
         category: s.category,
-        provider: s.provider_id || 'Direct',
+        provider: getProviderName(s.provider_id || ''),  // Pass provider NAME not ID
         minQty: s.min_quantity || 100,
         maxQty: s.max_quantity || 10000,
         price: Number(s.price),
@@ -858,6 +858,12 @@ const ServicesManagement = () => {
 
   // Edit service - map ServiceItem properties to ServiceEditDialog format
   const openEditDialog = (service: ServiceItem) => {
+    // Validate service exists before opening dialog
+    if (!service || !service.id) {
+      toast({ title: "Error loading service", variant: "destructive" });
+      return;
+    }
+    
     // Map properties to match ServiceEditDialog expectations
     const dialogService = {
       id: service.id,
