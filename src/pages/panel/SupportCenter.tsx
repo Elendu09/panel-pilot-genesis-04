@@ -20,13 +20,15 @@ import {
   Users,
   HeadphonesIcon,
   Inbox,
-  Book
+  Book,
+  MessagesSquare
 } from "lucide-react";
 import { KnowledgeBase } from "@/components/support/KnowledgeBase";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTenant } from "@/hooks/useTenant";
+import ChatInbox from "./ChatInbox";
 
 interface TicketMessage {
   id: string;
@@ -56,7 +58,7 @@ const SupportCenter = () => {
   const { profile } = useAuth();
   const { panel } = useTenant();
   
-  const [activeTab, setActiveTab] = useState("customer");
+  const [activeTab, setActiveTab] = useState("knowledge");
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -442,15 +444,19 @@ const SupportCenter = () => {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">Support Center</h1>
-          <p className="text-muted-foreground">Manage customer tickets and platform support</p>
+          <p className="text-muted-foreground">Manage customer tickets, live chat, and platform support</p>
         </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={(val) => { setActiveTab(val); setSelectedTicket(null); }}>
-        <TabsList className="grid w-full max-w-lg grid-cols-3">
+        <TabsList className="grid w-full max-w-2xl grid-cols-4">
           <TabsTrigger value="knowledge" className="gap-2 text-xs sm:text-sm">
             <Book className="w-4 h-4 hidden sm:block" />
             Knowledge Base
+          </TabsTrigger>
+          <TabsTrigger value="livechat" className="gap-2 text-xs sm:text-sm">
+            <MessagesSquare className="w-4 h-4 hidden sm:block" />
+            Live Chat
           </TabsTrigger>
           <TabsTrigger value="customer" className="gap-2 text-xs sm:text-sm">
             <Users className="w-4 h-4 hidden sm:block" />
@@ -466,6 +472,10 @@ const SupportCenter = () => {
           <KnowledgeBase />
         </TabsContent>
 
+        <TabsContent value="livechat" className="mt-6">
+          <ChatInbox embedded />
+        </TabsContent>
+
         <TabsContent value="customer" className="mt-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-1">
@@ -479,11 +489,8 @@ const SupportCenter = () => {
 
         <TabsContent value="platform" className="mt-6">
           <div className="mb-4">
-            <Button 
-              onClick={() => setNewTicketDialogOpen(true)}
-              className="bg-gradient-primary hover:shadow-glow"
-            >
-              <Plus className="w-4 h-4 mr-2" />
+            <Button onClick={() => setNewTicketDialogOpen(true)} className="gap-2">
+              <Plus className="w-4 h-4" />
               New Platform Ticket
             </Button>
           </div>
@@ -500,14 +507,11 @@ const SupportCenter = () => {
 
       {/* New Platform Ticket Dialog */}
       <Dialog open={newTicketDialogOpen} onOpenChange={setNewTicketDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <HeadphonesIcon className="w-5 h-5" />
-              Contact Platform Support
-            </DialogTitle>
+            <DialogTitle>Contact Platform Support</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 mt-4">
+          <div className="space-y-4">
             <div className="space-y-2">
               <Label>Category</Label>
               <Select value={newTicketCategory} onValueChange={setNewTicketCategory}>
@@ -515,13 +519,14 @@ const SupportCenter = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="technical">Technical Issue</SelectItem>
                   <SelectItem value="billing">Billing</SelectItem>
-                  <SelectItem value="technical">Technical</SelectItem>
-                  <SelectItem value="feature_request">Feature Request</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
+                  <SelectItem value="feature">Feature Request</SelectItem>
+                  <SelectItem value="general">General Question</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+            
             <div className="space-y-2">
               <Label>Priority</Label>
               <Select value={newTicketPriority} onValueChange={setNewTicketPriority}>
@@ -535,32 +540,33 @@ const SupportCenter = () => {
                 </SelectContent>
               </Select>
             </div>
+            
             <div className="space-y-2">
               <Label>Subject</Label>
               <Input
-                placeholder="Brief description of your issue"
                 value={newTicketSubject}
                 onChange={(e) => setNewTicketSubject(e.target.value)}
+                placeholder="Brief description of your issue"
               />
             </div>
+            
             <div className="space-y-2">
               <Label>Message</Label>
               <Textarea
-                placeholder="Describe your issue in detail..."
                 value={newTicketMessage}
                 onChange={(e) => setNewTicketMessage(e.target.value)}
-                rows={5}
+                placeholder="Describe your issue in detail..."
+                rows={4}
               />
             </div>
           </div>
-          <DialogFooter className="mt-4">
+          <DialogFooter>
             <Button variant="outline" onClick={() => setNewTicketDialogOpen(false)}>
               Cancel
             </Button>
             <Button 
               onClick={handleCreatePlatformTicket}
               disabled={submittingTicket || !newTicketSubject.trim() || !newTicketMessage.trim()}
-              className="bg-gradient-primary"
             >
               {submittingTicket ? "Submitting..." : "Submit Ticket"}
             </Button>

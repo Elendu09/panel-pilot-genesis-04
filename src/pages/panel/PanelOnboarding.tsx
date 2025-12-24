@@ -15,7 +15,6 @@ import { useToast } from '@/hooks/use-toast';
 import { 
   CheckCircle, 
   Globe, 
-  Upload, 
   Palette, 
   Search, 
   Settings, 
@@ -29,7 +28,9 @@ import { cn } from '@/lib/utils';
 
 const PanelOnboarding = () => {
   const [currentStep, setCurrentStep] = useState(0);
+  const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
+  const [checkingPanel, setCheckingPanel] = useState(true);
   const { user, profile } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -64,21 +65,33 @@ const PanelOnboarding = () => {
   const progress = ((currentStep + 1) / steps.length) * 100;
 
   useEffect(() => {
-    if (!user || !profile || profile.role !== 'panel_owner') {
-      navigate('/auth');
-      return;
-    }
-    
     const checkExistingPanel = async () => {
-      const { data: existingPanel } = await supabase
-        .from('panels')
-        .select('*')
-        .eq('owner_id', profile.id)
-        .eq('onboarding_completed', true)
-        .maybeSingle();
-        
-      if (existingPanel) {
-        navigate('/panel');
+      if (!user || !profile) {
+        setCheckingPanel(false);
+        return;
+      }
+      
+      if (profile.role !== 'panel_owner') {
+        navigate('/auth');
+        return;
+      }
+      
+      try {
+        const { data: existingPanel } = await supabase
+          .from('panels')
+          .select('*')
+          .eq('owner_id', profile.id)
+          .eq('onboarding_completed', true)
+          .maybeSingle();
+          
+        if (existingPanel) {
+          navigate('/panel');
+          return;
+        }
+      } catch (error) {
+        console.error('Error checking panel:', error);
+      } finally {
+        setCheckingPanel(false);
       }
     };
     
@@ -104,7 +117,7 @@ const PanelOnboarding = () => {
 
     setCheckingSubdomain(true);
     try {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('panels')
         .select('subdomain')
         .eq('subdomain', subdomainToCheck)
@@ -133,6 +146,12 @@ const PanelOnboarding = () => {
     }
   };
 
+  const markStepComplete = (step: number) => {
+    if (!completedSteps.includes(step)) {
+      setCompletedSteps(prev => [...prev, step]);
+    }
+  };
+
   const handleNext = () => {
     if (currentStep === 0 && !panelName.trim()) {
       toast({ variant: "destructive", title: "Panel name required" });
@@ -143,6 +162,9 @@ const PanelOnboarding = () => {
       toast({ variant: "destructive", title: "Please choose an available subdomain" });
       return;
     }
+    
+    // Mark current step as completed
+    markStepComplete(currentStep);
     
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
@@ -161,6 +183,9 @@ const PanelOnboarding = () => {
       return;
     }
 
+    // Mark final step as complete
+    markStepComplete(currentStep);
+
     setLoading(true);
     try {
       const finalSubdomain = domainType === 'subdomain' 
@@ -174,7 +199,6 @@ const PanelOnboarding = () => {
             name: panelName,
             description: description || null,
             owner_id: profile?.id,
-            // Make subdomains live immediately; custom domains still require DNS verification.
             status: 'active',
             is_approved: true,
             theme_type: 'dark_gradient',
@@ -212,6 +236,7 @@ const PanelOnboarding = () => {
         description: "Your subdomain is live now. If you added a custom domain, complete DNS setup to go live."
       });
 
+      // Navigate to panel - the onboarding tour will show automatically
       navigate('/panel');
     } catch (error: any) {
       console.error('Error creating panel:', error);
@@ -230,6 +255,18 @@ const PanelOnboarding = () => {
     center: { opacity: 1, x: 0 },
     exit: { opacity: 0, x: -20 }
   };
+
+  // Show loading while checking for existing panel
+  if (checkingPanel) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-secondary/10 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary mb-4" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   const renderStepContent = () => {
     switch (currentStep) {
@@ -494,7 +531,7 @@ const PanelOnboarding = () => {
             {steps.map((step, index) => {
               const Icon = step.icon;
               const isActive = index === currentStep;
-              const isCompleted = index < currentStep;
+              const isCompleted = completedSteps.includes(index);
               
               return (
                 <motion.div
@@ -509,7 +546,7 @@ const PanelOnboarding = () => {
                     isCompleted && "bg-emerald-500/5 border-emerald-500/20",
                     !isActive && !isCompleted && "opacity-60 hover:opacity-80"
                   )}
-                  onClick={() => index <= currentStep && setCurrentStep(index)}
+                  onClick={() => (isCompleted || index <= currentStep) && setCurrentStep(index)}
                   >
                     <CardContent className="p-4">
                       <div className="flex items-center gap-3">
@@ -546,12 +583,12 @@ const PanelOnboarding = () => {
             {steps.map((step, index) => {
               const Icon = step.icon;
               const isActive = index === currentStep;
-              const isCompleted = index < currentStep;
+              const isCompleted = completedSteps.includes(index);
               
               return (
                 <button
                   key={step.id}
-                  onClick={() => index <= currentStep && setCurrentStep(index)}
+                  onClick={() => (isCompleted || index <= currentStep) && setCurrentStep(index)}
                   className={cn(
                     "flex-1 p-3 rounded-xl transition-all",
                     isActive && "bg-primary text-primary-foreground",
