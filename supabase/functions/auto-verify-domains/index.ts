@@ -6,7 +6,10 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Known hosting provider targets
 const LOVABLE_IP = "185.158.133.1";
+const NETLIFY_IPS = ["75.2.60.5"];
+const VERCEL_IPS = ["76.76.21.21"];
 
 interface DNSAnswer {
   name: string;
@@ -20,24 +23,72 @@ interface GoogleDNSResponse {
   Answer?: DNSAnswer[];
 }
 
-async function checkDNS(domain: string): Promise<boolean> {
+async function checkDNS(domain: string, expectedTargets: string[], expectedCnames: string[]): Promise<{ verified: boolean; matchType: string }> {
   try {
-    const response = await fetch(
+    // Check A records
+    const aResponse = await fetch(
       `https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=A`,
       { headers: { Accept: "application/dns-json" } }
     );
     
-    if (!response.ok) return false;
-    
-    const data: GoogleDNSResponse = await response.json();
-    
-    if (data.Status === 0 && data.Answer) {
-      return data.Answer.some((answer) => answer.data === LOVABLE_IP);
+    if (aResponse.ok) {
+      const aData: GoogleDNSResponse = await aResponse.json();
+      if (aData.Status === 0 && aData.Answer) {
+        const aRecords = aData.Answer.map(a => a.data);
+        if (expectedTargets.some(t => aRecords.includes(t))) {
+          return { verified: true, matchType: 'A' };
+        }
+      }
     }
-    return false;
+
+    // Check CNAME records
+    if (expectedCnames.length > 0) {
+      const cnameResponse = await fetch(
+        `https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=CNAME`,
+        { headers: { Accept: "application/dns-json" } }
+      );
+      
+      if (cnameResponse.ok) {
+        const cnameData: GoogleDNSResponse = await cnameResponse.json();
+        if (cnameData.Status === 0 && cnameData.Answer) {
+          const cnameRecords = cnameData.Answer.map(a => a.data.toLowerCase());
+          const hasMatch = cnameRecords.some(r => 
+            expectedCnames.some(e => r.includes(e.toLowerCase()))
+          );
+          if (hasMatch) {
+            return { verified: true, matchType: 'CNAME' };
+          }
+        }
+      }
+    }
+
+    return { verified: false, matchType: 'none' };
   } catch (error) {
     console.error(`DNS check failed for ${domain}:`, error);
-    return false;
+    return { verified: false, matchType: 'error' };
+  }
+}
+
+function getExpectedTargets(hostingProvider: string, customTarget?: string): { targets: string[]; cnames: string[] } {
+  switch (hostingProvider) {
+    case 'lovable':
+      return { targets: [LOVABLE_IP], cnames: [] };
+    case 'netlify':
+      return { targets: NETLIFY_IPS, cnames: ['netlify'] };
+    case 'vercel':
+      return { targets: VERCEL_IPS, cnames: ['vercel'] };
+    case 'cloudflare_pages':
+      return { targets: [], cnames: ['pages.dev'] };
+    case 'custom':
+      if (customTarget) {
+        const isIp = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(customTarget);
+        return isIp 
+          ? { targets: [customTarget], cnames: [] }
+          : { targets: [], cnames: [customTarget] };
+      }
+      return { targets: [LOVABLE_IP], cnames: [] };
+    default:
+      return { targets: [LOVABLE_IP], cnames: [] };
   }
 }
 
@@ -54,10 +105,20 @@ serve(async (req) => {
 
     console.log("Starting auto-verification of pending domains...");
 
-    // Fetch all pending domains
+    // Fetch all pending domains with panel info for hosting provider
     const { data: pendingDomains, error: fetchError } = await supabase
       .from("panel_domains")
-      .select("id, domain, panel_id, verification_status")
+      .select(`
+        id, 
+        domain, 
+        panel_id, 
+        verification_status,
+        expected_target,
+        panels!inner(
+          id,
+          settings
+        )
+      `)
       .eq("verification_status", "pending");
 
     if (fetchError) {
@@ -66,15 +127,21 @@ serve(async (req) => {
 
     console.log(`Found ${pendingDomains?.length || 0} pending domains`);
 
-    const results: { domain: string; verified: boolean }[] = [];
+    const results: { domain: string; verified: boolean; matchType?: string }[] = [];
 
     for (const domainRecord of pendingDomains || []) {
       console.log(`Checking DNS for: ${domainRecord.domain}`);
       
-      const isVerified = await checkDNS(domainRecord.domain);
+      // Get hosting provider from panel settings
+      const panelSettings = domainRecord.panels?.settings as Record<string, any> | null;
+      const hostingProvider = panelSettings?.hosting_provider || 'lovable';
+      const customTarget = domainRecord.expected_target || panelSettings?.custom_dns_target;
       
-      if (isVerified) {
-        console.log(`✅ ${domainRecord.domain} verified!`);
+      const { targets, cnames } = getExpectedTargets(hostingProvider, customTarget);
+      const { verified, matchType } = await checkDNS(domainRecord.domain, targets, cnames);
+      
+      if (verified) {
+        console.log(`✅ ${domainRecord.domain} verified via ${matchType}!`);
         
         // Update domain record
         const { error: updateError } = await supabase
@@ -105,13 +172,13 @@ serve(async (req) => {
         console.log(`⏳ ${domainRecord.domain} not yet configured`);
       }
 
-      results.push({ domain: domainRecord.domain, verified: isVerified });
+      results.push({ domain: domainRecord.domain, verified, matchType });
     }
 
     // Also check panels with custom_domain set but not verified
     const { data: panelsWithCustomDomain } = await supabase
       .from("panels")
-      .select("id, custom_domain, domain_verification_status")
+      .select("id, custom_domain, domain_verification_status, settings")
       .not("custom_domain", "is", null)
       .neq("domain_verification_status", "verified");
 
@@ -119,10 +186,16 @@ serve(async (req) => {
       if (!panel.custom_domain) continue;
       
       console.log(`Checking panel custom domain: ${panel.custom_domain}`);
-      const isVerified = await checkDNS(panel.custom_domain);
       
-      if (isVerified) {
-        console.log(`✅ Panel domain ${panel.custom_domain} verified!`);
+      const panelSettings = panel.settings as Record<string, any> | null;
+      const hostingProvider = panelSettings?.hosting_provider || 'lovable';
+      const customTarget = panelSettings?.custom_dns_target;
+      
+      const { targets, cnames } = getExpectedTargets(hostingProvider, customTarget);
+      const { verified, matchType } = await checkDNS(panel.custom_domain, targets, cnames);
+      
+      if (verified) {
+        console.log(`✅ Panel domain ${panel.custom_domain} verified via ${matchType}!`);
         await supabase
           .from("panels")
           .update({
@@ -131,7 +204,7 @@ serve(async (req) => {
           })
           .eq("id", panel.id);
         
-        results.push({ domain: panel.custom_domain, verified: true });
+        results.push({ domain: panel.custom_domain, verified: true, matchType });
       }
     }
 
