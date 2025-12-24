@@ -102,7 +102,7 @@ import {
 
 import { DraggableServiceItem, ServiceItem } from "@/components/services/DraggableServiceItem";
 import { ServiceImportDialog } from "@/components/services/ServiceImportDialog";
-import { ServiceEditDialog } from "@/components/services/ServiceEditDialog";
+import { ServiceEditSheet } from "@/components/services/ServiceEditSheet";
 import { ServiceViewDialog } from "@/components/services/ServiceViewDialog";
 import { MobileServiceView } from "@/components/services/MobileServiceView";
 import { FloatingUndoButton } from "@/components/services/FloatingUndoButton";
@@ -110,6 +110,8 @@ import { useUndoHistory } from "@/hooks/use-undo-history";
 import { ServiceTips } from "@/components/services/ServiceTips";
 import { SmartCategorizeDialog } from "@/components/services/SmartCategorizeDialog";
 import { ServiceAnalytics } from "@/components/services/ServiceAnalytics";
+import { ServiceKanbanCard } from "@/components/services/ServiceKanbanCard";
+import { LayoutGrid, List } from "lucide-react";
 
 
 const categories = [
@@ -205,6 +207,28 @@ const ServicesManagement = () => {
   
   // Analytics panel
   const [showAnalytics, setShowAnalytics] = useState(false);
+  
+  // View mode: list or kanban
+  const [viewMode, setViewMode] = useState<"list" | "kanban">(() => {
+    return (localStorage.getItem('services-view-mode') as "list" | "kanban") || "list";
+  });
+  
+  // Service limit
+  const SERVICE_LIMIT = 2500;
+  const isNearLimit = totalCount >= 2000;
+  const isAtLimit = totalCount >= SERVICE_LIMIT;
+
+  // Provider name lookup
+  const getProviderName = (providerId: string) => {
+    if (!providerId || providerId === 'Direct') return 'Direct';
+    const provider = providers.find(p => p.id === providerId);
+    return provider?.name || 'Unknown';
+  };
+
+  // Persist view mode
+  useEffect(() => {
+    localStorage.setItem('services-view-mode', viewMode);
+  }, [viewMode]);
   
   // New service form
   const [newService, setNewService] = useState({
