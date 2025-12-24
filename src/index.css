@@ -600,10 +600,41 @@
     to { background-position: 200% center; }
   }
 
-  @keyframes gradientShift {
+@keyframes gradientShift {
     0% { background-position: 0% 50%; }
     50% { background-position: 100% 50%; }
     100% { background-position: 0% 50%; }
+  }
+
+  /* Rainbow Border Animation */
+  @keyframes rainbow-gradient {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  .animate-rainbow-border {
+    position: relative;
+    background: linear-gradient(
+      90deg,
+      hsl(0 100% 60%),
+      hsl(30 100% 60%),
+      hsl(60 100% 50%),
+      hsl(120 100% 40%),
+      hsl(200 100% 50%),
+      hsl(270 100% 60%),
+      hsl(330 100% 60%),
+      hsl(0 100% 60%)
+    );
+    background-size: 300% 300%;
+    animation: rainbow-gradient 4s linear infinite;
+    padding: 3px;
+    border-radius: 0.75rem;
+  }
+
+  .animate-rainbow-border > * {
+    position: relative;
+    z-index: 1;
   }
 }
 
