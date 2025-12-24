@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
 import { ImageUpload } from "@/components/panel/ImageUpload";
 import { ThemePreviewCard } from "@/components/design/ThemePreviewCard";
 import { SocialIconSelector } from "@/components/design/SocialIconSelector";
@@ -78,7 +79,8 @@ const DesignCustomization = () => {
     surfaceColor: "#1E293B",
     textColor: "#F8FAFC",
     mutedColor: "#94A3B8",
-    borderRadius: "8",
+    borderRadius: "12",
+    fontFamily: "Inter, system-ui, sans-serif",
     logoUrl: "",
     faviconUrl: "",
     heroImage: "",
@@ -601,20 +603,66 @@ const DesignCustomization = () => {
                     ))}
                   </div>
 
+                  {/* Font Family Selector */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Font Family</Label>
+                    <Select
+                      value={customization.fontFamily}
+                      onValueChange={(value) => setCustomization({...customization, fontFamily: value})}
+                    >
+                      <SelectTrigger className="bg-background/50">
+                        <SelectValue placeholder="Select font" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Inter, system-ui, sans-serif">Inter</SelectItem>
+                        <SelectItem value="Poppins, sans-serif">Poppins</SelectItem>
+                        <SelectItem value="Roboto, sans-serif">Roboto</SelectItem>
+                        <SelectItem value="'Space Grotesk', sans-serif">Space Grotesk</SelectItem>
+                        <SelectItem value="Montserrat, sans-serif">Montserrat</SelectItem>
+                        <SelectItem value="'Open Sans', sans-serif">Open Sans</SelectItem>
+                        <SelectItem value="Nunito, sans-serif">Nunito</SelectItem>
+                        <SelectItem value="Raleway, sans-serif">Raleway</SelectItem>
+                        <SelectItem value="'Playfair Display', serif">Playfair Display</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">Choose a Google Font for your storefront</p>
+                  </div>
+
+                  {/* Border Radius Slider */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm font-medium">Border Radius</Label>
+                      <Badge variant="outline" className="font-mono">{customization.borderRadius}px</Badge>
+                    </div>
+                    <Slider
+                      value={[parseInt(customization.borderRadius)]}
+                      onValueChange={(v) => setCustomization({...customization, borderRadius: v[0].toString()})}
+                      min={0}
+                      max={24}
+                      step={2}
+                      className="w-full"
+                    />
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>Square (0px)</span>
+                      <span>Rounded (12px)</span>
+                      <span>Pill (24px)</span>
+                    </div>
+                  </div>
+
                   {/* Color Preview */}
-                  <div className="p-4 rounded-xl border border-border/50" style={{ backgroundColor: customization.backgroundColor }}>
-                    <div className="flex gap-2 mb-3">
-                      <div className="px-4 py-2 rounded-lg text-sm font-medium" style={{ backgroundColor: customization.primaryColor, color: "#fff" }}>
+                  <div className="p-4 border border-border/50" style={{ backgroundColor: customization.backgroundColor, borderRadius: `${customization.borderRadius}px`, fontFamily: customization.fontFamily }}>
+                    <div className="flex gap-2 mb-3 flex-wrap">
+                      <div className="px-4 py-2 text-sm font-medium" style={{ backgroundColor: customization.primaryColor, color: "#fff", borderRadius: `${customization.borderRadius}px` }}>
                         Primary
                       </div>
-                      <div className="px-4 py-2 rounded-lg text-sm font-medium" style={{ backgroundColor: customization.secondaryColor, color: "#fff" }}>
+                      <div className="px-4 py-2 text-sm font-medium" style={{ backgroundColor: customization.secondaryColor, color: "#fff", borderRadius: `${customization.borderRadius}px` }}>
                         Secondary
                       </div>
-                      <div className="px-4 py-2 rounded-lg text-sm font-medium" style={{ backgroundColor: customization.accentColor, color: "#fff" }}>
+                      <div className="px-4 py-2 text-sm font-medium" style={{ backgroundColor: customization.accentColor, color: "#fff", borderRadius: `${customization.borderRadius}px` }}>
                         Accent
                       </div>
                     </div>
-                    <div className="p-3 rounded-lg" style={{ backgroundColor: customization.surfaceColor }}>
+                    <div className="p-3" style={{ backgroundColor: customization.surfaceColor, borderRadius: `${customization.borderRadius}px` }}>
                       <p style={{ color: customization.textColor }} className="text-sm">Sample text on surface</p>
                       <p style={{ color: customization.mutedColor }} className="text-xs">Muted text example</p>
                     </div>

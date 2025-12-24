@@ -91,6 +91,17 @@ export const ThemeOne = ({ panel, services = [], customization = {} }: ThemeOneP
     { icon: Headphones, title: "24/7 Support", description: "Always here to help" },
   ];
 
+  // Create CSS variables for dynamic theming
+  const themeStyles = {
+    '--theme-primary': primaryColor,
+    '--theme-secondary': secondaryColor,
+    '--theme-bg': backgroundColor,
+    '--theme-surface': surfaceColor,
+    '--theme-text': textColor,
+    '--theme-radius': `${borderRadius}px`,
+    '--theme-font': fontFamily,
+  } as React.CSSProperties;
+
   return (
     <div 
       className="min-h-screen text-white overflow-hidden"
@@ -98,6 +109,7 @@ export const ThemeOne = ({ panel, services = [], customization = {} }: ThemeOneP
         backgroundColor, 
         fontFamily,
         color: textColor,
+        ...themeStyles,
       }}
     >
       {/* Header */}
@@ -105,21 +117,21 @@ export const ThemeOne = ({ panel, services = [], customization = {} }: ThemeOneP
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {(customization.logoUrl || panel?.logo_url) && (
-              <img src={customization.logoUrl || panel?.logo_url} alt={panelName} className="h-10 w-10 rounded-lg object-cover" />
+              <img src={customization.logoUrl || panel?.logo_url} alt={panelName} className="h-10 w-10 object-cover" style={{ borderRadius: `${borderRadius}px` }} />
             )}
             <div>
-              <h1 className="text-xl font-bold text-white">{panelName}</h1>
-              <p className="text-gray-400 text-sm hidden sm:block">{customization.tagline || 'Premium SMM Services'}</p>
+              <h1 className="text-xl font-bold" style={{ color: textColor }}>{panelName}</h1>
+              <p className="text-sm hidden sm:block" style={{ color: `${textColor}99` }}>{customization.tagline || 'Premium SMM Services'}</p>
             </div>
           </div>
           <div className="flex items-center gap-4">
             <LowVisionToggle accessibilitySettings={accessibilitySettings} panelId={panel?.id} variant="dark" />
             <nav className="hidden md:flex items-center gap-6">
-              <a href="#services" className="text-sm text-gray-300 hover:text-white transition-colors">Services</a>
-              <a href="#features" className="text-sm text-gray-300 hover:text-white transition-colors">Features</a>
-              <a href="#faq" className="text-sm text-gray-300 hover:text-white transition-colors">FAQ</a>
+              <a href="#services" className="text-sm transition-colors" style={{ color: `${textColor}CC` }}>Services</a>
+              <a href="#features" className="text-sm transition-colors" style={{ color: `${textColor}CC` }}>Features</a>
+              <a href="#faq" className="text-sm transition-colors" style={{ color: `${textColor}CC` }}>FAQ</a>
             </nav>
-            <ShiningButton gradient="rainbow" size="sm" asChild>
+            <ShiningButton gradient="rainbow" size="sm" asChild style={{ borderRadius: `${borderRadius}px` }}>
               <Link to="/login">Login</Link>
             </ShiningButton>
           </div>
@@ -163,24 +175,24 @@ export const ThemeOne = ({ panel, services = [], customization = {} }: ThemeOneP
             </motion.p>
             
             <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-              <ShiningButton gradient="rainbow" size="lg" className="text-lg px-10 py-6 shadow-2xl shadow-pink-500/25" asChild>
+              <ShiningButton gradient="rainbow" size="lg" className="text-lg px-10 py-6 shadow-2xl" style={{ borderRadius: `${borderRadius}px`, boxShadow: `0 25px 50px -12px ${primaryColor}40` }} asChild>
                 <Link to="/services">⚡ Fast Order <ArrowRight className="ml-2 w-5 h-5" /></Link>
               </ShiningButton>
-              <Button asChild variant="outline" size="lg" className="text-lg px-10 py-6 border-white/30 text-white hover:bg-white/10 backdrop-blur-sm">
+              <Button asChild variant="outline" size="lg" className="text-lg px-10 py-6 border-white/30 text-white hover:bg-white/10 backdrop-blur-sm" style={{ borderRadius: `${borderRadius}px` }}>
                 <Link to="/register"><PlayCircle className="mr-2" /> Create Account</Link>
               </Button>
             </motion.div>
             
             <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {stats.map((stat, index) => (
-                <Card key={index} className="p-5 bg-white/5 backdrop-blur-md border border-white/10 hover:border-purple-500/50 transition-all group hover:bg-white/10">
+                <Card key={index} className="p-5 bg-white/5 backdrop-blur-md border border-white/10 hover:border-white/30 transition-all group hover:bg-white/10" style={{ borderRadius: `${borderRadius}px` }}>
                   <div className="flex items-center justify-center mb-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <div className="w-10 h-10 flex items-center justify-center group-hover:scale-110 transition-transform" style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`, borderRadius: `${borderRadius}px` }}>
                       <stat.icon className="h-5 w-5 text-white" />
                     </div>
                   </div>
-                  <div className="text-2xl font-bold text-white mb-1">{stat.value}</div>
-                  <div className="text-sm text-gray-400">{stat.label}</div>
+                  <div className="text-2xl font-bold mb-1" style={{ color: textColor }}>{stat.value}</div>
+                  <div className="text-sm" style={{ color: `${textColor}99` }}>{stat.label}</div>
                 </Card>
               ))}
             </motion.div>
@@ -189,17 +201,17 @@ export const ThemeOne = ({ panel, services = [], customization = {} }: ThemeOneP
       </section>
 
       {/* Benefits Section */}
-      <section className="py-16 bg-gradient-to-b from-transparent to-purple-900/20">
+      <section className="py-16" style={{ background: `linear-gradient(180deg, transparent, ${primaryColor}20)` }}>
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {benefits.map((benefit, index) => (
-              <div key={index} className="flex items-center gap-3 p-4 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10">
-                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500/30 to-pink-500/30 flex items-center justify-center">
-                  <benefit.icon className="w-5 h-5 text-purple-400" />
+              <div key={index} className="flex items-center gap-3 p-4 backdrop-blur-sm border border-white/10" style={{ backgroundColor: `${surfaceColor}80`, borderRadius: `${borderRadius}px` }}>
+                <div className="w-10 h-10 flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${primaryColor}50, ${secondaryColor}50)`, borderRadius: `${borderRadius}px` }}>
+                  <benefit.icon className="w-5 h-5" style={{ color: primaryColor }} />
                 </div>
                 <div>
-                  <div className="font-semibold text-white text-sm">{benefit.title}</div>
-                  <div className="text-xs text-gray-400">{benefit.description}</div>
+                  <div className="font-semibold text-sm" style={{ color: textColor }}>{benefit.title}</div>
+                  <div className="text-xs" style={{ color: `${textColor}80` }}>{benefit.description}</div>
                 </div>
               </div>
             ))}
@@ -211,9 +223,9 @@ export const ThemeOne = ({ panel, services = [], customization = {} }: ThemeOneP
       <section id="services" className="py-20">
         <div className="container mx-auto px-4">
           <div className="text-center mb-10">
-            <Badge variant="secondary" className="mb-4 px-4 py-1 bg-purple-500/20 text-purple-300 border-purple-500/30">Our Services</Badge>
-            <h2 className="text-4xl font-bold text-white mb-4">Popular Services</h2>
-            <p className="text-xl text-gray-400 max-w-2xl mx-auto">Choose from our wide range of social media marketing services</p>
+            <Badge variant="secondary" className="mb-4 px-4 py-1 border-0" style={{ backgroundColor: `${primaryColor}30`, color: primaryColor }}>Our Services</Badge>
+            <h2 className="text-4xl font-bold mb-4" style={{ color: textColor }}>Popular Services</h2>
+            <p className="text-xl max-w-2xl mx-auto" style={{ color: `${textColor}99` }}>Choose from our wide range of social media marketing services</p>
           </div>
 
           {/* Kanban Categories */}
@@ -223,18 +235,20 @@ export const ThemeOne = ({ panel, services = [], customization = {} }: ThemeOneP
               selectedCategory={selectedCategory} 
               onSelectCategory={setSelectedCategory}
               variant="dark"
+              primaryColor={primaryColor}
             />
           </div>
 
           {/* Search */}
           <div className="max-w-md mx-auto mb-8">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: `${textColor}60` }} />
               <Input
                 placeholder="Search services..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-gray-500"
+                className="pl-10 border-white/10 placeholder:text-gray-500"
+                style={{ backgroundColor: `${surfaceColor}80`, color: textColor, borderRadius: `${borderRadius}px` }}
               />
             </div>
           </div>
@@ -244,17 +258,17 @@ export const ThemeOne = ({ panel, services = [], customization = {} }: ThemeOneP
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {filteredServices.slice(0, 8).map((service, index) => (
                 <motion.div key={service.id || index} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }} viewport={{ once: true }}>
-                  <Card className="p-6 bg-white/5 backdrop-blur-md border border-white/10 hover:border-purple-500/50 transition-all group hover:bg-white/10 h-full">
+                  <Card className="p-6 bg-white/5 backdrop-blur-md border border-white/10 hover:border-white/30 transition-all group hover:bg-white/10 h-full" style={{ borderRadius: `${borderRadius}px` }}>
                     <div className="text-center">
-                      <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-3xl shadow-lg group-hover:scale-110 transition-transform">
+                      <div className="w-16 h-16 mx-auto mb-4 flex items-center justify-center text-3xl shadow-lg group-hover:scale-110 transition-transform" style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`, borderRadius: `${borderRadius}px` }}>
                         {service.image_url?.startsWith('icon:') ? service.image_url.replace('icon:', '') : '📦'}
                       </div>
-                      <h3 className="text-lg font-bold text-white mb-2 line-clamp-2">{service.name}</h3>
-                      <p className="text-sm text-gray-400 mb-4 line-clamp-2">{service.description || 'High quality service'}</p>
-                      <div className="text-lg font-semibold bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent mb-4">
+                      <h3 className="text-lg font-bold mb-2 line-clamp-2" style={{ color: textColor }}>{service.name}</h3>
+                      <p className="text-sm mb-4 line-clamp-2" style={{ color: `${textColor}80` }}>{service.description || 'High quality service'}</p>
+                      <div className="text-lg font-semibold mb-4" style={{ background: `linear-gradient(90deg, ${primaryColor}, ${secondaryColor})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                         ${service.price}/1K
                       </div>
-                      <ShiningButton gradient="primary" className="w-full" asChild>
+                      <ShiningButton gradient="primary" className="w-full" style={{ borderRadius: `${borderRadius}px` }} asChild>
                         <Link to={`/order?service=${service.id}`}>Order Now</Link>
                       </ShiningButton>
                     </div>
@@ -266,21 +280,21 @@ export const ThemeOne = ({ panel, services = [], customization = {} }: ThemeOneP
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {defaultServices.map((service, index) => (
                 <motion.div key={index} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1 }} viewport={{ once: true }}>
-                  <Card className="p-6 bg-white/5 backdrop-blur-md border border-white/10 hover:border-purple-500/50 transition-all group hover:bg-white/10 h-full">
+                  <Card className="p-6 bg-white/5 backdrop-blur-md border border-white/10 hover:border-white/30 transition-all group hover:bg-white/10 h-full" style={{ borderRadius: `${borderRadius}px` }}>
                     <div className="text-center">
-                      <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br ${service.gradient} flex items-center justify-center text-3xl shadow-lg group-hover:scale-110 transition-transform`}>
+                      <div className={`w-16 h-16 mx-auto mb-4 bg-gradient-to-br ${service.gradient} flex items-center justify-center text-3xl shadow-lg group-hover:scale-110 transition-transform`} style={{ borderRadius: `${borderRadius}px` }}>
                         {service.icon}
                       </div>
-                      <h3 className="text-xl font-bold text-white mb-3">{service.category}</h3>
+                      <h3 className="text-xl font-bold mb-3" style={{ color: textColor }}>{service.category}</h3>
                       <div className="space-y-2 mb-4">
                         {service.services.map((item, i) => (
-                          <div key={i} className="flex items-center justify-center gap-2 text-sm text-gray-400">
-                            <CheckCircle className="w-3 h-3 text-green-400" />{item}
+                          <div key={i} className="flex items-center justify-center gap-2 text-sm" style={{ color: `${textColor}80` }}>
+                            <CheckCircle className="w-3 h-3" style={{ color: '#22c55e' }} />{item}
                           </div>
                         ))}
                       </div>
-                      <div className="text-lg font-semibold bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent mb-4">{service.price}</div>
-                      <ShiningButton gradient="primary" className="w-full" asChild>
+                      <div className="text-lg font-semibold mb-4" style={{ background: `linear-gradient(90deg, ${primaryColor}, ${secondaryColor})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{service.price}</div>
+                      <ShiningButton gradient="primary" className="w-full" style={{ borderRadius: `${borderRadius}px` }} asChild>
                         <Link to="/services">Order Now</Link>
                       </ShiningButton>
                     </div>
@@ -289,29 +303,29 @@ export const ThemeOne = ({ panel, services = [], customization = {} }: ThemeOneP
               ))}
             </div>
           ) : (
-            <div className="text-center py-12 text-gray-400">No services found matching your criteria.</div>
+            <div className="text-center py-12" style={{ color: `${textColor}80` }}>No services found matching your criteria.</div>
           )}
         </div>
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-20 bg-gradient-to-b from-purple-900/20 to-transparent">
+      <section id="features" className="py-20" style={{ background: `linear-gradient(180deg, ${primaryColor}20, transparent)` }}>
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <Card className="p-8 bg-gradient-to-br from-purple-500/20 to-transparent border border-purple-500/30 backdrop-blur-md hover:scale-[1.02] transition-transform">
-              <Zap className="h-12 w-12 text-purple-400 mb-4" />
-              <h3 className="text-2xl font-bold text-white mb-4">Lightning Fast</h3>
-              <p className="text-gray-400">Get your orders processed and delivered within minutes. Our automated system ensures rapid delivery.</p>
+            <Card className="p-8 backdrop-blur-md border hover:scale-[1.02] transition-transform" style={{ background: `linear-gradient(135deg, ${primaryColor}30, transparent)`, borderColor: `${primaryColor}50`, borderRadius: `${borderRadius}px` }}>
+              <Zap className="h-12 w-12 mb-4" style={{ color: primaryColor }} />
+              <h3 className="text-2xl font-bold mb-4" style={{ color: textColor }}>Lightning Fast</h3>
+              <p style={{ color: `${textColor}80` }}>Get your orders processed and delivered within minutes. Our automated system ensures rapid delivery.</p>
             </Card>
-            <Card className="p-8 bg-gradient-to-br from-pink-500/20 to-transparent border border-pink-500/30 backdrop-blur-md hover:scale-[1.02] transition-transform">
-              <Shield className="h-12 w-12 text-pink-400 mb-4" />
-              <h3 className="text-2xl font-bold text-white mb-4">100% Secure</h3>
-              <p className="text-gray-400">Your account safety is our priority. We use the safest methods and never ask for your passwords.</p>
+            <Card className="p-8 backdrop-blur-md border hover:scale-[1.02] transition-transform" style={{ background: `linear-gradient(135deg, ${secondaryColor}30, transparent)`, borderColor: `${secondaryColor}50`, borderRadius: `${borderRadius}px` }}>
+              <Shield className="h-12 w-12 mb-4" style={{ color: secondaryColor }} />
+              <h3 className="text-2xl font-bold mb-4" style={{ color: textColor }}>100% Secure</h3>
+              <p style={{ color: `${textColor}80` }}>Your account safety is our priority. We use the safest methods and never ask for your passwords.</p>
             </Card>
-            <Card className="p-8 bg-gradient-to-br from-cyan-500/20 to-transparent border border-cyan-500/30 backdrop-blur-md hover:scale-[1.02] transition-transform">
-              <Users className="h-12 w-12 text-cyan-400 mb-4" />
-              <h3 className="text-2xl font-bold text-white mb-4">24/7 Support</h3>
-              <p className="text-gray-400">Our dedicated support team is available round the clock to help you with any questions or issues.</p>
+            <Card className="p-8 backdrop-blur-md border hover:scale-[1.02] transition-transform" style={{ background: `linear-gradient(135deg, ${primaryColor}30, transparent)`, borderColor: `${primaryColor}50`, borderRadius: `${borderRadius}px` }}>
+              <Users className="h-12 w-12 mb-4" style={{ color: primaryColor }} />
+              <h3 className="text-2xl font-bold mb-4" style={{ color: textColor }}>24/7 Support</h3>
+              <p style={{ color: `${textColor}80` }}>Our dedicated support team is available round the clock to help you with any questions or issues.</p>
             </Card>
           </div>
         </div>
