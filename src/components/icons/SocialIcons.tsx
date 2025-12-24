@@ -1,4 +1,14 @@
 import React from 'react';
+import { 
+  Globe, 
+  Music, 
+  Radio, 
+  Headphones,
+  MessageSquare,
+  Bookmark,
+  Camera,
+  type LucideIcon
+} from 'lucide-react';
 
 interface SocialIconProps {
   className?: string;
@@ -291,13 +301,69 @@ export const BeRealIcon = ({ className = "", size = 24 }: SocialIconProps) => (
   </svg>
 );
 
-// Social Icons Map for easy selection
+// Quora Icon
+export const QuoraIcon = ({ className = "", size = 24 }: SocialIconProps) => (
+  <svg 
+    viewBox="0 0 24 24" 
+    width={size} 
+    height={size} 
+    className={className}
+    fill="currentColor"
+  >
+    <path d="M12.738 18.675c-.925-1.792-1.925-3.625-3.692-3.625-.525 0-1.05.15-1.417.492l-.842-1.65c.8-.75 2.017-1.15 3.317-1.15 2.458 0 3.908 1.308 4.958 3.05.375-.975.575-2.2.575-3.717 0-4.767-1.95-7.85-5.633-7.85-3.692 0-5.625 3.083-5.625 7.833 0 4.767 1.942 7.842 5.633 7.842.9 0 1.717-.167 2.442-.475l.284-.75zM18.808 17.4h-1.367c-.242 0-.433.042-.567.125-.133.083-.242.225-.325.425-.667 1.55-1.525 2.567-2.575 3.05l.142.292c.4.208.967.417 1.708.625.742.208 1.408.308 2.008.308 1.6 0 2.908-.533 3.925-1.6 1.017-1.067 1.525-2.467 1.525-4.2 0-1.767-.517-3.2-1.55-4.3-1.033-1.1-2.35-1.65-3.95-1.65-.5 0-.983.083-1.45.25-.467.167-.858.392-1.175.675-.317.283-.558.567-.725.85-.167.283-.25.525-.25.725 0 .133.042.267.125.4.083.133.225.2.425.2h1.35c.233 0 .417-.042.55-.125.133-.083.225-.225.275-.425.333-.833.892-1.25 1.675-1.25.667 0 1.175.275 1.525.825.35.55.525 1.275.525 2.175 0 .833-.175 1.508-.525 2.025-.35.517-.842.775-1.475.775-.467 0-.858-.117-1.175-.35-.317-.233-.558-.517-.725-.85z"/>
+  </svg>
+);
+
+// SoundCloud Icon
+export const SoundCloudIcon = ({ className = "", size = 24 }: SocialIconProps) => (
+  <svg 
+    viewBox="0 0 24 24" 
+    width={size} 
+    height={size} 
+    className={className}
+    fill="currentColor"
+  >
+    <path d="M1.175 12.225c-.051 0-.094.046-.101.1l-.233 2.154.233 2.105c.007.058.05.098.101.098.05 0 .09-.04.099-.098l.255-2.105-.27-2.154c-.009-.06-.052-.1-.084-.1zm-.899.828c-.06 0-.091.037-.104.094L0 14.479l.165 1.308c.014.057.045.094.09.094s.089-.037.099-.094l.204-1.308-.204-1.332c-.01-.057-.054-.094-.078-.094zm1.83-1.229c-.061 0-.12.045-.12.104l-.21 2.563.225 2.458c0 .06.045.104.106.104.061 0 .12-.044.12-.104l.24-2.458-.24-2.563c0-.061-.06-.104-.12-.104zm.945-.089c-.075 0-.135.06-.15.135l-.193 2.64.21 2.544c.016.077.075.138.149.138.075 0 .135-.061.15-.138l.24-2.544-.24-2.64c-.015-.075-.075-.135-.165-.135zm1.155.36c-.005-.09-.075-.149-.159-.149-.09 0-.158.06-.164.149l-.217 2.43.2 2.563c.005.09.074.149.163.149.09 0 .164-.06.165-.149l.24-2.563-.227-2.43zm.809-1.709c-.101 0-.18.09-.18.181l-.21 3.957.227 2.563c.005.09.09.18.18.18.091 0 .181-.09.181-.18l.24-2.563-.24-3.957c0-.09-.09-.181-.198-.181zm.9-.451c-.11 0-.209.09-.209.199l-.195 4.408.209 2.533c.005.11.105.209.209.209.104 0 .194-.1.194-.209l.24-2.533-.24-4.408c0-.11-.09-.199-.209-.199zm1.061.209c-.12 0-.225.105-.225.225l-.195 4.2.225 2.535c0 .12.105.225.225.225.119 0 .224-.105.224-.225l.24-2.535-.24-4.2c0-.12-.105-.225-.225-.225zm.946-.451c-.135 0-.24.119-.255.254l-.18 4.432.195 2.504c.015.135.12.254.254.254.12 0 .255-.119.255-.254l.24-2.504-.24-4.432c0-.135-.12-.254-.27-.254zm1.065.03c-.149 0-.27.12-.27.27l-.18 4.35.18 2.503c.016.15.135.271.285.271.135 0 .255-.12.27-.271l.21-2.503-.21-4.35c-.015-.15-.135-.27-.285-.27zm1.096-.091c-.165 0-.285.135-.285.285l-.165 4.441.165 2.478c.015.149.135.285.285.285.149 0 .271-.136.285-.285l.195-2.478-.195-4.441c-.014-.15-.135-.285-.285-.285zm1.11-.405c-.165 0-.301.135-.301.3l-.18 4.846.18 2.45c.016.164.151.299.316.299s.3-.135.316-.299l.195-2.45-.21-4.846c-.015-.165-.15-.3-.315-.3zm2.168.375c-.03-.015-.06-.03-.105-.03h-.001c-.03 0-.059.015-.089.015-.165 0-.3.135-.314.315l-.18 4.501.18 2.419c.016.18.15.315.315.315.181 0 .315-.135.33-.315l.18-2.419-.18-4.501c-.016-.15-.12-.27-.271-.3zm2.102-.54c-.165 0-.315.15-.315.33l-.165 5.016.165 2.389c0 .18.15.33.315.33.165 0 .316-.15.33-.33l.18-2.389-.18-5.016c-.015-.18-.165-.33-.33-.33zm2.27 0c-.18 0-.33.15-.345.346l-.149 5.031.164 2.37c.016.18.166.345.346.345.18 0 .33-.165.345-.345l.18-2.37-.18-5.031c-.015-.196-.165-.346-.36-.346zm2.299-.27c-.18 0-.359.165-.359.375l-.15 5.271.15 2.34c.015.195.18.36.359.36.18 0 .346-.165.375-.36l.165-2.34-.165-5.271c-.016-.21-.18-.375-.375-.375zm2.28-.18c-.195 0-.36.18-.375.39l-.135 5.466.149 2.31c.016.195.181.375.391.375.195 0 .375-.18.375-.375l.165-2.31-.165-5.466c-.029-.21-.194-.39-.404-.39zm2.296-.12c-.21 0-.391.18-.406.405l-.135 5.595.149 2.28c.016.21.197.39.406.39.21 0 .39-.18.406-.39l.164-2.28-.164-5.595c-.016-.225-.196-.405-.42-.405zm2.296-.12c-.225 0-.405.195-.42.42l-.121 5.73.136 2.265c.014.21.194.405.42.405.224 0 .404-.195.42-.405l.15-2.265-.15-5.73c-.016-.225-.196-.42-.435-.42zm2.283-.09c-.239 0-.434.21-.449.449l-.12 5.835.135 2.235c.015.225.21.434.449.434.24 0 .436-.21.451-.434l.135-2.235-.15-5.835c-.015-.24-.21-.449-.45-.449zM24 11.22c-.24 0-.45.21-.465.449l-.12 3.195.12 2.19c.015.24.225.45.465.45.255 0 .45-.21.465-.45l.135-2.19-.135-3.195c-.015-.24-.21-.449-.465-.449z"/>
+  </svg>
+);
+
+// Tumblr Icon  
+export const TumblrIcon = ({ className = "", size = 24 }: SocialIconProps) => (
+  <svg 
+    viewBox="0 0 24 24" 
+    width={size} 
+    height={size} 
+    className={className}
+    fill="currentColor"
+  >
+    <path d="M14.563 24c-5.093 0-7.031-3.756-7.031-6.411V9.747H5.116V6.648c3.63-1.313 4.512-4.596 4.71-6.469C9.84.051 9.941 0 9.999 0h3.517v6.114h4.801v3.633h-4.82v7.47c.016 1.001.375 2.371 2.207 2.371h.09c.631-.02 1.486-.205 1.936-.419l1.156 3.425c-.436.636-2.4 1.374-4.156 1.404h-.166z"/>
+  </svg>
+);
+
+// Create wrapper components for Lucide icons to match SocialIconProps interface
+const createLucideWrapper = (LucideIcon: LucideIcon) => {
+  return ({ className = "", size = 24 }: SocialIconProps) => (
+    <LucideIcon className={className} size={size} />
+  );
+};
+
+// Wrapper components for Lucide icons
+const GlobeWrapper = createLucideWrapper(Globe);
+const MusicWrapper = createLucideWrapper(Music);
+const RadioWrapper = createLucideWrapper(Radio);
+const HeadphonesWrapper = createLucideWrapper(Headphones);
+const MessageSquareWrapper = createLucideWrapper(MessageSquare);
+const BookmarkWrapper = createLucideWrapper(Bookmark);
+const CameraWrapper = createLucideWrapper(Camera);
+
+// Extended Social Icons Map with all platforms
 export const SOCIAL_ICONS_MAP: Record<string, { 
   icon: React.ComponentType<SocialIconProps>;
   label: string;
   color: string;
   bgColor: string;
 }> = {
+  // Major Platforms
   instagram: { icon: InstagramIcon, label: "Instagram", color: "#E4405F", bgColor: "bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400" },
   facebook: { icon: FacebookIcon, label: "Facebook", color: "#1877F2", bgColor: "bg-blue-600" },
   twitter: { icon: TwitterIcon, label: "Twitter/X", color: "#000000", bgColor: "bg-black" },
@@ -305,20 +371,56 @@ export const SOCIAL_ICONS_MAP: Record<string, {
   tiktok: { icon: TikTokIcon, label: "TikTok", color: "#000000", bgColor: "bg-black" },
   telegram: { icon: TelegramIcon, label: "Telegram", color: "#26A5E4", bgColor: "bg-sky-500" },
   linkedin: { icon: LinkedInIcon, label: "LinkedIn", color: "#0A66C2", bgColor: "bg-blue-700" },
+  
+  // Social & Messaging
   discord: { icon: DiscordIcon, label: "Discord", color: "#5865F2", bgColor: "bg-indigo-500" },
-  twitch: { icon: TwitchIcon, label: "Twitch", color: "#9146FF", bgColor: "bg-purple-600" },
-  spotify: { icon: SpotifyIcon, label: "Spotify", color: "#1DB954", bgColor: "bg-green-500" },
-  pinterest: { icon: PinterestIcon, label: "Pinterest", color: "#BD081C", bgColor: "bg-red-700" },
+  whatsapp: { icon: WhatsAppIcon, label: "WhatsApp", color: "#25D366", bgColor: "bg-green-500" },
   snapchat: { icon: SnapchatIcon, label: "Snapchat", color: "#FFFC00", bgColor: "bg-yellow-400" },
   threads: { icon: ThreadsIcon, label: "Threads", color: "#000000", bgColor: "bg-black" },
-  vk: { icon: VKIcon, label: "VKontakte", color: "#0077FF", bgColor: "bg-blue-500" },
   reddit: { icon: RedditIcon, label: "Reddit", color: "#FF4500", bgColor: "bg-orange-600" },
-  whatsapp: { icon: WhatsAppIcon, label: "WhatsApp", color: "#25D366", bgColor: "bg-green-500" },
+  pinterest: { icon: PinterestIcon, label: "Pinterest", color: "#BD081C", bgColor: "bg-red-700" },
+  tumblr: { icon: TumblrIcon, label: "Tumblr", color: "#36465D", bgColor: "bg-slate-700" },
+  quora: { icon: QuoraIcon, label: "Quora", color: "#B92B27", bgColor: "bg-red-700" },
   clubhouse: { icon: ClubhouseIcon, label: "Clubhouse", color: "#F1EFE3", bgColor: "bg-amber-100" },
   bereal: { icon: BeRealIcon, label: "BeReal", color: "#000000", bgColor: "bg-black" },
+  vk: { icon: VKIcon, label: "VKontakte", color: "#0077FF", bgColor: "bg-blue-500" },
+  
+  // Streaming & Entertainment
+  twitch: { icon: TwitchIcon, label: "Twitch", color: "#9146FF", bgColor: "bg-purple-600" },
+  spotify: { icon: SpotifyIcon, label: "Spotify", color: "#1DB954", bgColor: "bg-green-500" },
+  soundcloud: { icon: SoundCloudIcon, label: "SoundCloud", color: "#FF5500", bgColor: "bg-orange-500" },
+  
+  // Music Platforms (using Lucide wrappers)
+  audiomack: { icon: HeadphonesWrapper, label: "Audiomack", color: "#FFA200", bgColor: "bg-orange-400" },
+  deezer: { icon: MusicWrapper, label: "Deezer", color: "#00C7F2", bgColor: "bg-cyan-500" },
+  tidal: { icon: RadioWrapper, label: "Tidal", color: "#000000", bgColor: "bg-black" },
+  napster: { icon: MusicWrapper, label: "Napster", color: "#000000", bgColor: "bg-gray-900" },
+  shazam: { icon: MusicWrapper, label: "Shazam", color: "#0088FF", bgColor: "bg-blue-500" },
+  reverbnation: { icon: MusicWrapper, label: "ReverbNation", color: "#E43526", bgColor: "bg-red-600" },
+  mixcloud: { icon: RadioWrapper, label: "Mixcloud", color: "#5000FF", bgColor: "bg-violet-600" },
+  
+  // Video Platforms
+  likee: { icon: CameraWrapper, label: "Likee", color: "#00D5D1", bgColor: "bg-teal-500" },
+  kwai: { icon: CameraWrapper, label: "Kwai", color: "#FF7F00", bgColor: "bg-orange-500" },
+  trovo: { icon: CameraWrapper, label: "Trovo", color: "#1FC7B4", bgColor: "bg-emerald-500" },
+  
+  // Engagement Types
   heart: { icon: HeartIcon, label: "Likes", color: "#E11D48", bgColor: "bg-rose-500" },
   views: { icon: ViewsIcon, label: "Views", color: "#3B82F6", bgColor: "bg-blue-500" },
   subscribers: { icon: SubscribersIcon, label: "Subscribers", color: "#8B5CF6", bgColor: "bg-violet-500" },
   vote: { icon: VoteIcon, label: "Votes", color: "#F59E0B", bgColor: "bg-amber-500" },
-  other: { icon: VoteIcon, label: "Other", color: "#6B7280", bgColor: "bg-gray-500" },
+  comments: { icon: MessageSquareWrapper, label: "Comments", color: "#10B981", bgColor: "bg-emerald-500" },
+  saves: { icon: BookmarkWrapper, label: "Saves", color: "#6366F1", bgColor: "bg-indigo-500" },
+  
+  // Fallback
+  other: { icon: GlobeWrapper, label: "Other", color: "#6B7280", bgColor: "bg-gray-500" },
 };
+
+// Helper function to get icon by key with fallback
+export const getIconByKey = (key: string) => {
+  const lowerKey = key.toLowerCase();
+  return SOCIAL_ICONS_MAP[lowerKey] || SOCIAL_ICONS_MAP.other;
+};
+
+// Export individual types for use
+export type { SocialIconProps };

@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -23,11 +22,13 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { usePanel } from "@/hooks/usePanel";
-import { SOCIAL_ICONS_MAP } from "@/components/icons/SocialIcons";
+import { SOCIAL_ICONS_MAP, getIconByKey } from "@/components/icons/SocialIcons";
+import { ServiceSEOTab } from "@/components/services/ServiceSEOTab";
 import {
   Settings,
   DollarSign,
@@ -42,10 +43,12 @@ import {
   Info,
   TrendingUp,
   ShoppingCart,
-  Image,
   Sparkles,
   Loader2,
-  Link2
+  ArrowLeft,
+  Trash2,
+  Copy,
+  Hash
 } from "lucide-react";
 
 interface ServiceEditDialogProps {
@@ -77,14 +80,22 @@ interface Provider {
 }
 
 const categories = [
-  { id: "instagram", name: "Instagram" },
-  { id: "facebook", name: "Facebook" },
-  { id: "twitter", name: "Twitter" },
-  { id: "youtube", name: "YouTube" },
-  { id: "tiktok", name: "TikTok" },
-  { id: "linkedin", name: "LinkedIn" },
-  { id: "telegram", name: "Telegram" },
-  { id: "other", name: "Other" },
+  { id: "instagram", name: "Instagram", icon: "📸" },
+  { id: "facebook", name: "Facebook", icon: "👤" },
+  { id: "twitter", name: "Twitter/X", icon: "🐦" },
+  { id: "youtube", name: "YouTube", icon: "🎬" },
+  { id: "tiktok", name: "TikTok", icon: "🎵" },
+  { id: "linkedin", name: "LinkedIn", icon: "💼" },
+  { id: "telegram", name: "Telegram", icon: "✈️" },
+  { id: "spotify", name: "Spotify", icon: "🎧" },
+  { id: "discord", name: "Discord", icon: "🎮" },
+  { id: "twitch", name: "Twitch", icon: "📺" },
+  { id: "other", name: "Other", icon: "🌐" },
+];
+
+const serviceTypes = [
+  "Followers", "Likes", "Views", "Comments", "Shares", 
+  "Subscribers", "Members", "Plays", "Saves", "Other"
 ];
 
 export const ServiceEditDialog = ({
@@ -104,6 +115,7 @@ export const ServiceEditDialog = ({
     name: "",
     description: "",
     category: "",
+    serviceType: "Followers",
     provider_id: "",
     min_quantity: 100,
     max_quantity: 10000,
@@ -122,43 +134,57 @@ export const ServiceEditDialog = ({
     refillEnabled: true,
     overflowEnabled: false,
     oneOrderPerHand: false,
-    additionalOptions: false,
   });
 
-  // Load providers from database
+  // SEO state
+  const [seoData, setSeoData] = useState({
+    indexStatus: "index" as "index" | "noindex",
+    slug: "",
+    canonicalUrl: "",
+    metaTitle: "",
+    metaDescription: "",
+    metaKeywords: "",
+    customHtmlEnabled: false,
+    customHtml: "",
+    internalLinkingEnabled: true,
+  });
+
   useEffect(() => {
     if (open && panel?.id) {
       fetchProviders();
     }
   }, [open, panel?.id]);
 
-  // Initialize form when service changes
   useEffect(() => {
     if (service) {
       setFormData({
         name: service.name || "",
         description: service.description || "",
         category: service.category || "",
+        serviceType: "Followers",
         provider_id: service.provider_id || "",
         min_quantity: service.min_quantity || service.minQty || 100,
         max_quantity: service.max_quantity || service.maxQty || 10000,
         image_url: service.image_url || service.imageUrl || "",
       });
       setFixedPrice(service.price || 0);
+      setSeoData(prev => ({
+        ...prev,
+        slug: service.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || "",
+        metaTitle: service.name || "",
+      }));
     }
   }, [service]);
 
   const fetchProviders = async () => {
     if (!panel?.id) return;
     setLoadingProviders(true);
-    
     try {
       const { data, error } = await supabase
         .from('providers')
         .select('id, name')
         .eq('panel_id', panel.id)
         .eq('is_active', true);
-
       if (error) throw error;
       setProviders(data || []);
     } catch (error) {
@@ -177,7 +203,6 @@ export const ServiceEditDialog = ({
 
   const handleSave = async () => {
     if (!service?.id || !panel?.id) return;
-    
     setSaving(true);
     try {
       const { error } = await supabase
@@ -196,14 +221,8 @@ export const ServiceEditDialog = ({
         .eq('id', service.id);
 
       if (error) throw error;
-
-      onSave({
-        ...formData,
-        price: calculatedPrice,
-        options,
-      });
-      
-      toast({ title: "Service Updated", description: "Changes have been saved to database." });
+      onSave({ ...formData, price: calculatedPrice, options, seoData });
+      toast({ title: "Service Updated", description: "Changes saved successfully." });
       onOpenChange(false);
     } catch (error) {
       console.error('Error saving service:', error);
@@ -213,25 +232,65 @@ export const ServiceEditDialog = ({
     }
   };
 
+  const getCategoryIcon = () => {
+    const cat = categories.find(c => c.id === formData.category);
+    return cat?.icon || "🌐";
+  };
+
+  const renderIconPreview = () => {
+    if (!formData.image_url) return null;
+    
+    if (formData.image_url.startsWith('icon:')) {
+      const iconKey = formData.image_url.replace('icon:', '');
+      const iconData = getIconByKey(iconKey);
+      const IconComponent = iconData.icon;
+      return (
+        <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", iconData.bgColor)}>
+          <IconComponent className="text-white" size={20} />
+        </div>
+      );
+    }
+    return (
+      <img src={formData.image_url} alt="Preview" className="w-10 h-10 rounded-xl object-cover" 
+        onError={(e) => e.currentTarget.style.display = 'none'} />
+    );
+  };
+
   if (!service) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="glass-card max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader className="pb-4 border-b border-border/50">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-primary/10">
-              <Settings className="w-5 h-5 text-primary" />
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col p-0">
+        {/* Enhanced Header */}
+        <DialogHeader className="p-4 pb-3 border-b border-border/50 bg-muted/30">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onOpenChange(false)}>
+                <ArrowLeft className="w-4 h-4" />
+              </Button>
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">{getCategoryIcon()}</span>
+                {renderIconPreview()}
+              </div>
+              <div>
+                <DialogTitle className="text-base">{formData.name || "Edit Service"}</DialogTitle>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <Badge variant="outline" className="text-[10px]">
+                    <Hash className="w-2.5 h-2.5 mr-0.5" />
+                    {service.id.slice(0, 8)}
+                  </Badge>
+                </div>
+              </div>
             </div>
-            <div>
-              <DialogTitle>Edit Service</DialogTitle>
-              <DialogDescription>Configure service settings, pricing, and options</DialogDescription>
-            </div>
+            <Button variant="ghost" size="sm" onClick={() => setActiveTab("seo")} className="text-xs gap-1.5">
+              <Search className="w-3.5 h-3.5" />
+              SEO
+            </Button>
           </div>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden flex flex-col">
-          <TabsList className="grid grid-cols-4 bg-muted/50">
+          <TabsList className="grid grid-cols-4 mx-4 mt-3 bg-muted/50">
             <TabsTrigger value="general" className="text-xs gap-1.5">
               <Settings className="w-3.5 h-3.5" />
               General
@@ -250,227 +309,124 @@ export const ServiceEditDialog = ({
             </TabsTrigger>
           </TabsList>
 
-          <div className="flex-1 overflow-y-auto py-4 space-y-4">
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {/* General Tab */}
             <TabsContent value="general" className="m-0 space-y-4">
+              {/* Provider & Service ID Row */}
               <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2 space-y-2">
-                  <Label>Service Name</Label>
-                  <Input 
-                    value={formData.name}
-                    onChange={(e) => setFormData({...formData, name: e.target.value})}
-                    placeholder="e.g., Instagram Followers - Premium"
-                    className="bg-background/50"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Category</Label>
-                  <Select 
-                    value={formData.category} 
-                    onValueChange={(v) => {
-                      setFormData({...formData, category: v});
-                      // Auto-suggest matching icon when category changes
-                      if (SOCIAL_ICONS_MAP[v] && (!formData.image_url || formData.image_url.startsWith('icon:'))) {
-                        setFormData(prev => ({...prev, category: v, image_url: `icon:${v}`}));
-                        toast({ 
-                          title: "Icon auto-selected", 
-                          description: `${SOCIAL_ICONS_MAP[v]?.label} icon has been suggested based on category` 
-                        });
-                      }
-                    }}
-                  >
-                    <SelectTrigger className="bg-background/50">
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map(c => (
-                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
                 <div className="space-y-2">
                   <Label>Provider</Label>
-                  <Select 
-                    value={formData.provider_id} 
-                    onValueChange={(v) => setFormData({...formData, provider_id: v})}
-                    disabled={loadingProviders}
-                  >
+                  <Select value={formData.provider_id} onValueChange={(v) => setFormData({...formData, provider_id: v})} disabled={loadingProviders}>
                     <SelectTrigger className="bg-background/50">
-                      {loadingProviders ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <SelectValue placeholder="Select provider" />
-                      )}
+                      {loadingProviders ? <Loader2 className="w-4 h-4 animate-spin" /> : <SelectValue placeholder="Select provider" />}
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="">No Provider</SelectItem>
-                      {providers.map(p => (
-                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                      ))}
+                      {providers.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
-
                 <div className="space-y-2">
-                  <Label>Min Quantity</Label>
-                  <Input 
-                    type="number"
-                    value={formData.min_quantity}
-                    onChange={(e) => setFormData({...formData, min_quantity: parseInt(e.target.value) || 0})}
-                    className="bg-background/50"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Max Quantity</Label>
-                  <Input 
-                    type="number"
-                    value={formData.max_quantity}
-                    onChange={(e) => setFormData({...formData, max_quantity: parseInt(e.target.value) || 0})}
-                    className="bg-background/50"
-                  />
-                </div>
-
-                <div className="col-span-2 space-y-2">
-                  <Label>Description</Label>
-                  <Textarea 
-                    value={formData.description}
-                    onChange={(e) => setFormData({...formData, description: e.target.value})}
-                    placeholder="Describe your service..."
-                    className="bg-background/50 min-h-[80px]"
-                  />
-                </div>
-
-                <div className="col-span-2 space-y-3">
-                  <Label className="flex items-center gap-2">
-                    <Image className="w-4 h-4" />
-                    Service Icon
-                  </Label>
-                  
-                  {/* Icon Type Toggle */}
-                  <div className="flex items-center gap-3 mb-3">
-                    <Button
-                      type="button"
-                      variant={!formData.image_url?.startsWith('icon:') && formData.image_url ? "outline" : "default"}
-                      size="sm"
-                      onClick={() => setFormData({...formData, image_url: "icon:instagram"})}
-                      className="flex-1"
-                    >
-                      <Sparkles className="w-4 h-4 mr-2" />
-                      Icon Library
-                    </Button>
-                    <Button
-                      type="button"
-                      variant={formData.image_url && !formData.image_url.startsWith('icon:') ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setFormData({...formData, image_url: ""})}
-                      className="flex-1"
-                    >
-                      <Link2 className="w-4 h-4 mr-2" />
-                      Custom URL
+                  <Label>Service ID</Label>
+                  <div className="flex gap-2">
+                    <Input value={service.id.slice(0, 12) + "..."} disabled className="bg-muted/50 font-mono text-xs" />
+                    <Button variant="outline" size="icon" onClick={() => { navigator.clipboard.writeText(service.id); toast({ title: "Copied!" }); }}>
+                      <Copy className="w-4 h-4" />
                     </Button>
                   </div>
-
-                  {/* Icon Grid Selector */}
-                  {(!formData.image_url || formData.image_url.startsWith('icon:')) ? (
-                    <div className="grid grid-cols-6 gap-2 p-3 bg-muted/30 rounded-lg border border-border/50 max-h-[200px] overflow-y-auto">
-                      {Object.entries(SOCIAL_ICONS_MAP).map(([key, { icon: IconComponent, label, bgColor }]) => {
-                        const isSelected = formData.image_url === `icon:${key}`;
-                        return (
-                          <button
-                            key={key}
-                            type="button"
-                            onClick={() => setFormData({...formData, image_url: `icon:${key}`})}
-                            className={cn(
-                              "flex flex-col items-center gap-1 p-2 rounded-lg transition-all hover:scale-105",
-                              isSelected 
-                                ? "ring-2 ring-primary bg-primary/10" 
-                                : "hover:bg-muted/50"
-                            )}
-                            title={label}
-                          >
-                            <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center", bgColor)}>
-                              <IconComponent className="text-white" size={16} />
-                            </div>
-                            <span className="text-[10px] text-muted-foreground truncate w-full text-center">
-                              {label}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <Input 
-                      value={formData.image_url}
-                      onChange={(e) => setFormData({...formData, image_url: e.target.value})}
-                      placeholder="https://example.com/image.png"
-                      className="bg-background/50"
-                    />
-                  )}
-                  
-                  {/* Preview */}
-                  {formData.image_url && (
-                    <div className="flex items-center gap-2 p-2 bg-muted/20 rounded-lg">
-                      <span className="text-xs text-muted-foreground">Preview:</span>
-                      {formData.image_url.startsWith('icon:') ? (
-                        (() => {
-                          const iconKey = formData.image_url.replace('icon:', '');
-                          const iconData = SOCIAL_ICONS_MAP[iconKey];
-                          if (iconData) {
-                            const IconComponent = iconData.icon;
-                            return (
-                              <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center", iconData.bgColor)}>
-                                <IconComponent className="text-white" size={16} />
-                              </div>
-                            );
-                          }
-                          return null;
-                        })()
-                      ) : (
-                        <img 
-                          src={formData.image_url} 
-                          alt="Preview" 
-                          className="w-8 h-8 rounded-lg object-cover"
-                          onError={(e) => e.currentTarget.style.display = 'none'}
-                        />
-                      )}
-                    </div>
-                  )}
                 </div>
               </div>
 
-              {/* Service Options */}
+              <Separator className="my-4" />
+              
+              {/* Description Section */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-sm flex items-center gap-2">
+                  <Settings className="w-4 h-4" />
+                  Description
+                </h3>
+                
+                {/* Icon Selector */}
+                <div className="space-y-2">
+                  <Label>Service Icon</Label>
+                  <div className="grid grid-cols-8 gap-2 p-2 bg-muted/30 rounded-lg border max-h-[120px] overflow-y-auto">
+                    {Object.entries(SOCIAL_ICONS_MAP).slice(0, 24).map(([key, { icon: IconComponent, label, bgColor }]) => (
+                      <button key={key} type="button"
+                        onClick={() => setFormData({...formData, image_url: `icon:${key}`})}
+                        className={cn("p-1.5 rounded-lg transition-all hover:scale-105",
+                          formData.image_url === `icon:${key}` ? "ring-2 ring-primary bg-primary/10" : "hover:bg-muted/50"
+                        )} title={label}>
+                        <div className={cn("w-7 h-7 rounded-md flex items-center justify-center", bgColor)}>
+                          <IconComponent className="text-white" size={14} />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Service Name</Label>
+                  <Input value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} placeholder="e.g., Instagram Followers - Premium" className="bg-background/50" />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Service Type</Label>
+                    <Select value={formData.serviceType} onValueChange={(v) => setFormData({...formData, serviceType: v})}>
+                      <SelectTrigger className="bg-background/50"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {serviceTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Category</Label>
+                    <Select value={formData.category} onValueChange={(v) => setFormData({...formData, category: v, image_url: `icon:${v}`})}>
+                      <SelectTrigger className="bg-background/50"><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent>
+                        {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.icon} {c.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Min Quantity</Label>
+                    <Input type="number" value={formData.min_quantity} onChange={(e) => setFormData({...formData, min_quantity: parseInt(e.target.value) || 0})} className="bg-background/50" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Max Quantity</Label>
+                    <Input type="number" value={formData.max_quantity} onChange={(e) => setFormData({...formData, max_quantity: parseInt(e.target.value) || 0})} className="bg-background/50" />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Description</Label>
+                  <Textarea value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} placeholder="Describe your service..." className="bg-background/50 min-h-[60px]" />
+                </div>
+              </div>
+
+              <Separator className="my-4" />
+
+              {/* Options Section */}
               <div className="space-y-3">
-                <Label className="text-base font-semibold">Service Options</Label>
-                <div className="grid grid-cols-2 gap-3">
+                <h3 className="font-semibold text-sm">Options</h3>
+                <div className="grid grid-cols-2 gap-2">
                   {[
-                    { key: "minMaxParsed", label: "Min/Max parsed from provider", icon: ArrowDownUp },
-                    { key: "cancelEnabled", label: "Cancel button enabled", icon: XCircle },
+                    { key: "minMaxParsed", label: "Min/Max from provider", icon: ArrowDownUp },
+                    { key: "cancelEnabled", label: "Cancel enabled", icon: XCircle },
                     { key: "refillEnabled", label: "Refill support", icon: RefreshCw },
-                    { key: "overflowEnabled", label: "Overflow handling", icon: TrendingUp },
+                    { key: "overflowEnabled", label: "Overflow", icon: TrendingUp },
                     { key: "oneOrderPerHand", label: "1 order in 1 hand", icon: Hand },
-                    { key: "additionalOptions", label: "Additional options", icon: Sparkles },
                   ].map((opt) => (
-                    <div 
-                      key={opt.key}
-                      className={cn(
-                        "flex items-center justify-between p-3 rounded-lg border transition-colors",
-                        options[opt.key as keyof typeof options] 
-                          ? "bg-primary/5 border-primary/30" 
-                          : "bg-muted/50 border-border/50"
-                      )}
-                    >
+                    <div key={opt.key} className={cn("flex items-center justify-between p-2 rounded-lg border text-sm",
+                      options[opt.key as keyof typeof options] ? "bg-primary/5 border-primary/30" : "bg-muted/30 border-border/50")}>
                       <div className="flex items-center gap-2">
-                        <opt.icon className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm">{opt.label}</span>
+                        <opt.icon className="w-3.5 h-3.5 text-muted-foreground" />
+                        <span className="text-xs">{opt.label}</span>
                       </div>
-                      <Switch 
-                        checked={options[opt.key as keyof typeof options]}
-                        onCheckedChange={(checked) => setOptions({...options, [opt.key]: checked})}
-                      />
+                      <Switch checked={options[opt.key as keyof typeof options]} onCheckedChange={(checked) => setOptions({...options, [opt.key]: checked})} />
                     </div>
                   ))}
                 </div>
@@ -479,158 +435,91 @@ export const ServiceEditDialog = ({
 
             {/* Pricing Tab */}
             <TabsContent value="pricing" className="m-0 space-y-4">
-              {/* Provider Price Display */}
-              <Card className="bg-muted/50 border-border/50">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Provider Price (per 1000)</p>
-                      <p className="text-2xl font-bold">${providerPrice.toFixed(2)}</p>
-                    </div>
-                    <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20">
-                      {providers.find(p => p.id === formData.provider_id)?.name || 'Manual'}
-                    </Badge>
-                  </div>
-                </CardContent>
-              </Card>
+              <Card className="bg-muted/50"><CardContent className="p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Provider Price (per 1000)</p>
+                  <p className="text-2xl font-bold">${providerPrice.toFixed(2)}</p>
+                </div>
+                <Badge variant="outline" className="bg-blue-500/10 text-blue-500">{providers.find(p => p.id === formData.provider_id)?.name || 'Manual'}</Badge>
+              </CardContent></Card>
 
-              {/* Markup Slider */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <Label className="text-base font-semibold flex items-center gap-2">
-                    <Percent className="w-4 h-4" />
-                    Your Extra Price (Markup)
-                  </Label>
+                  <Label className="flex items-center gap-2"><Percent className="w-4 h-4" />Your Extra Price</Label>
                   <div className="flex items-center gap-2">
-                    <Switch 
-                      checked={useFixedPrice}
-                      onCheckedChange={setUseFixedPrice}
-                    />
-                    <span className="text-sm text-muted-foreground">Use Fixed Price</span>
+                    <Switch checked={useFixedPrice} onCheckedChange={setUseFixedPrice} />
+                    <span className="text-sm text-muted-foreground">Fixed</span>
                   </div>
                 </div>
-
                 {!useFixedPrice ? (
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-4">
-                      <Slider
-                        value={[markupPercent]}
-                        onValueChange={([value]) => setMarkupPercent(value)}
-                        min={0}
-                        max={100}
-                        step={1}
-                        className="flex-1"
-                      />
-                      <div className="w-20 text-center">
-                        <span className="text-2xl font-bold text-primary">{markupPercent}%</span>
-                      </div>
-                    </div>
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Info className="w-3 h-3" />
-                      Your price will automatically update when the provider changes their price
-                    </p>
+                  <div className="flex items-center gap-4">
+                    <Slider value={[markupPercent]} onValueChange={([v]) => setMarkupPercent(v)} min={0} max={100} className="flex-1" />
+                    <span className="text-2xl font-bold text-primary w-16 text-center">{markupPercent}%</span>
                   </div>
                 ) : (
-                  <div className="space-y-2">
-                    <Label>Fixed Price (per 1000)</Label>
-                    <Input 
-                      type="number"
-                      value={fixedPrice}
-                      onChange={(e) => setFixedPrice(parseFloat(e.target.value) || 0)}
-                      step="0.01"
-                      className="bg-background/50"
-                    />
-                  </div>
+                  <Input type="number" value={fixedPrice} onChange={(e) => setFixedPrice(parseFloat(e.target.value) || 0)} step="0.01" className="bg-background/50" />
                 )}
+                <p className="text-xs text-muted-foreground flex items-center gap-1"><Info className="w-3 h-3" />Price auto-updates with provider</p>
               </div>
 
-              {/* Your Price Preview */}
-              <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/30">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Your Price on Panel (per 1000)</p>
-                      <p className="text-3xl font-bold text-primary">${calculatedPrice.toFixed(2)}</p>
-                    </div>
-                    <div className="text-right">
-                      <Badge className="bg-green-500/10 text-green-500 border-green-500/20 mb-1">
-                        +${profit.toFixed(2)} profit
-                      </Badge>
-                      <p className="text-xs text-muted-foreground">{profitPercent}% margin</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/30"><CardContent className="p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Your Price (per 1000)</p>
+                  <p className="text-3xl font-bold text-primary">${calculatedPrice.toFixed(2)}</p>
+                </div>
+                <div className="text-right">
+                  <Badge className="bg-green-500/10 text-green-500 mb-1">+${profit.toFixed(2)}</Badge>
+                  <p className="text-xs text-muted-foreground">{profitPercent}% margin</p>
+                </div>
+              </CardContent></Card>
 
-              {/* Stats Preview */}
               <div className="grid grid-cols-3 gap-3">
-                <Card className="bg-muted/50">
-                  <CardContent className="p-3 text-center">
-                    <ShoppingCart className="w-4 h-4 mx-auto text-muted-foreground mb-1" />
-                    <p className="text-lg font-bold">{service.orders || 0}</p>
-                    <p className="text-xs text-muted-foreground">Total Orders</p>
-                  </CardContent>
-                </Card>
-                <Card className="bg-muted/50">
-                  <CardContent className="p-3 text-center">
-                    <DollarSign className="w-4 h-4 mx-auto text-muted-foreground mb-1" />
-                    <p className="text-lg font-bold">${((service.orders || 0) * profit).toFixed(0)}</p>
-                    <p className="text-xs text-muted-foreground">Est. Profit</p>
-                  </CardContent>
-                </Card>
-                <Card className="bg-muted/50">
-                  <CardContent className="p-3 text-center">
-                    <BarChart3 className="w-4 h-4 mx-auto text-muted-foreground mb-1" />
-                    <p className="text-lg font-bold">{profitPercent}%</p>
-                    <p className="text-xs text-muted-foreground">Margin</p>
-                  </CardContent>
-                </Card>
+                <Card className="bg-muted/50"><CardContent className="p-3 text-center">
+                  <ShoppingCart className="w-4 h-4 mx-auto text-muted-foreground mb-1" />
+                  <p className="text-lg font-bold">{service.orders || 0}</p>
+                  <p className="text-xs text-muted-foreground">Orders</p>
+                </CardContent></Card>
+                <Card className="bg-muted/50"><CardContent className="p-3 text-center">
+                  <DollarSign className="w-4 h-4 mx-auto text-muted-foreground mb-1" />
+                  <p className="text-lg font-bold">${((service.orders || 0) * profit).toFixed(0)}</p>
+                  <p className="text-xs text-muted-foreground">Est. Profit</p>
+                </CardContent></Card>
+                <Card className="bg-muted/50"><CardContent className="p-3 text-center">
+                  <BarChart3 className="w-4 h-4 mx-auto text-muted-foreground mb-1" />
+                  <p className="text-lg font-bold">{profitPercent}%</p>
+                  <p className="text-xs text-muted-foreground">Margin</p>
+                </CardContent></Card>
               </div>
             </TabsContent>
 
             {/* Custom Prices Tab */}
             <TabsContent value="custom-prices" className="m-0 space-y-4">
               <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-semibold">Custom Prices per Customer</h3>
-                  <p className="text-sm text-muted-foreground">Set individual pricing for specific customers</p>
-                </div>
-                <Button size="sm" variant="outline">
-                  <Users className="w-4 h-4 mr-2" />
-                  Add Customer
-                </Button>
+                <div><h3 className="font-semibold">Custom Prices</h3><p className="text-sm text-muted-foreground">Set individual pricing for customers</p></div>
+                <Button size="sm" variant="outline"><Users className="w-4 h-4 mr-2" />Add Customer</Button>
               </div>
-
-              <Card className="bg-muted/30 border-dashed">
-                <CardContent className="p-8 text-center">
-                  <Users className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
-                  <p className="text-muted-foreground">No custom prices set</p>
-                  <p className="text-sm text-muted-foreground">Click "Add Customer" to set individual pricing</p>
-                </CardContent>
-              </Card>
+              <Card className="bg-muted/30 border-dashed"><CardContent className="p-8 text-center">
+                <Users className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
+                <p className="text-muted-foreground">No custom prices set</p>
+              </CardContent></Card>
             </TabsContent>
 
             {/* SEO Tab */}
-            <TabsContent value="seo" className="m-0 space-y-4">
-              <Card className="bg-muted/30">
-                <CardContent className="p-6 text-center">
-                  <Search className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
-                  <p className="text-muted-foreground">SEO settings coming soon</p>
-                  <p className="text-sm text-muted-foreground">Meta title, description, and keywords for your service page</p>
-                </CardContent>
-              </Card>
+            <TabsContent value="seo" className="m-0">
+              <ServiceSEOTab serviceName={formData.name} seoData={seoData} onUpdate={(data) => setSeoData(prev => ({ ...prev, ...data }))} />
             </TabsContent>
           </div>
         </Tabs>
 
-        <DialogFooter className="pt-4 border-t border-border/50">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
-            Cancel
-          </Button>
-          <Button onClick={handleSave} disabled={saving} className="bg-gradient-to-r from-primary to-primary/80">
-            {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-            Save Changes
-          </Button>
+        <DialogFooter className="p-4 border-t border-border/50 flex-row justify-between">
+          <Button variant="destructive" size="sm" className="gap-2"><Trash2 className="w-4 h-4" />Remove</Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
+            <Button onClick={handleSave} disabled={saving} className="bg-gradient-to-r from-green-600 to-green-500 gap-2">
+              {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+              <Sparkles className="w-4 h-4" />Save
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
