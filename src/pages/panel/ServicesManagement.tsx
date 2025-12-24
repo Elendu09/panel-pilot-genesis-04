@@ -36,7 +36,8 @@ import {
   Palette,
   ChevronLeft,
   ChevronRight,
-  Sparkles
+  Sparkles,
+  Hand
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -101,6 +102,7 @@ import { DraggableServiceItem, ServiceItem } from "@/components/services/Draggab
 import { ServiceImportDialog } from "@/components/services/ServiceImportDialog";
 import { ServiceEditDialog } from "@/components/services/ServiceEditDialog";
 import { MobileServiceView } from "@/components/services/MobileServiceView";
+import { FloatingUndoButton } from "@/components/services/FloatingUndoButton";
 import { useUndoHistory } from "@/hooks/use-undo-history";
 
 const categories = [
@@ -133,7 +135,18 @@ const ServicesManagement = () => {
   const [services, setServices] = useState<ServiceItem[]>([]);
   
   // Undo history for bulk operations
-  const { pushUndo } = useUndoHistory(() => fetchServices());
+  const { pushUndo, undoStack, undoOperation } = useUndoHistory(() => fetchServices());
+  
+  // Drag and drop toggle
+  const [isDragEnabled, setIsDragEnabled] = useState(() => {
+    const saved = localStorage.getItem('services-dnd-enabled');
+    return saved !== null ? saved === 'true' : !isMobile;
+  });
+  
+  // Persist drag preference
+  useEffect(() => {
+    localStorage.setItem('services-dnd-enabled', String(isDragEnabled));
+  }, [isDragEnabled]);
   const [providers, setProviders] = useState<Array<{ id: string; name: string; api_endpoint?: string; api_key?: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -476,26 +489,76 @@ const ServicesManagement = () => {
 
   const executeBulkAction = async () => {
     try {
+      // Capture previous state for undo
+      const affectedServices = services.filter(s => selectedServices.includes(s.id));
+      
       switch (bulkAction) {
-        case "enable":
+        case "enable": {
+          // Store previous status for undo
+          const previousState = affectedServices.reduce((acc, s) => ({
+            ...acc,
+            [s.id]: { status: s.status }
+          }), {});
+          
           await supabase.from('services').update({ is_active: true }).in('id', selectedServices);
           setServices(prev => prev.map(s => 
             selectedServices.includes(s.id) ? { ...s, status: true } : s
           ));
+          
+          pushUndo({
+            type: 'status',
+            affectedIds: selectedServices,
+            previousState,
+            description: `Enabled ${selectedServices.length} services`,
+          });
           toast({ title: `${selectedServices.length} services enabled` });
           break;
-        case "disable":
+        }
+        case "disable": {
+          // Store previous status for undo
+          const previousState = affectedServices.reduce((acc, s) => ({
+            ...acc,
+            [s.id]: { status: s.status }
+          }), {});
+          
           await supabase.from('services').update({ is_active: false }).in('id', selectedServices);
           setServices(prev => prev.map(s => 
             selectedServices.includes(s.id) ? { ...s, status: false } : s
           ));
+          
+          pushUndo({
+            type: 'status',
+            affectedIds: selectedServices,
+            previousState,
+            description: `Disabled ${selectedServices.length} services`,
+          });
           toast({ title: `${selectedServices.length} services disabled` });
           break;
-        case "delete":
+        }
+        case "delete": {
+          // Fetch full service data for restoration
+          const { data: fullServices } = await supabase
+            .from('services')
+            .select('*')
+            .in('id', selectedServices);
+          
+          const previousState = (fullServices || []).reduce((acc, s) => ({
+            ...acc,
+            [s.id]: s
+          }), {});
+          
           await supabase.from('services').delete().in('id', selectedServices);
           setServices(prev => prev.filter(s => !selectedServices.includes(s.id)));
+          
+          pushUndo({
+            type: 'delete',
+            affectedIds: selectedServices,
+            previousState,
+            description: `Deleted ${selectedServices.length} services`,
+          });
           toast({ title: `${selectedServices.length} services deleted` });
           break;
+        }
         case "export-csv":
           const exportData = services.filter(s => selectedServices.includes(s.id));
           exportToCSV(exportData, serviceColumns, `services-export-${Date.now()}`);
@@ -518,6 +581,13 @@ const ServicesManagement = () => {
     }
     
     try {
+      // Store previous icons for undo
+      const affectedServices = services.filter(s => selectedServices.includes(s.id));
+      const previousState = affectedServices.reduce((acc, s) => ({
+        ...acc,
+        [s.id]: { image_url: s.imageUrl || '' }
+      }), {});
+      
       await supabase
         .from('services')
         .update({ image_url: `icon:${selectedBulkIcon}` })
@@ -526,6 +596,13 @@ const ServicesManagement = () => {
       setServices(prev => prev.map(s => 
         selectedServices.includes(s.id) ? { ...s, imageUrl: `icon:${selectedBulkIcon}` } : s
       ));
+      
+      pushUndo({
+        type: 'icon',
+        affectedIds: selectedServices,
+        previousState,
+        description: `Set icon for ${selectedServices.length} services`,
+      });
       
       toast({ title: `Icon applied to ${selectedServices.length} services` });
       setSelectedServices([]);
@@ -545,6 +622,13 @@ const ServicesManagement = () => {
     }
     
     try {
+      // Store previous categories for undo
+      const affectedServices = services.filter(s => selectedServices.includes(s.id));
+      const previousState = affectedServices.reduce((acc, s) => ({
+        ...acc,
+        [s.id]: { category: s.category, image_url: s.imageUrl || '' }
+      }), {});
+      
       await supabase
         .from('services')
         .update({ 
@@ -558,6 +642,13 @@ const ServicesManagement = () => {
           ? { ...s, category: selectedBulkCategory, imageUrl: `icon:${selectedBulkCategory}` } 
           : s
       ));
+      
+      pushUndo({
+        type: 'category',
+        affectedIds: selectedServices,
+        previousState,
+        description: `Changed category for ${selectedServices.length} services`,
+      });
       
       toast({ title: `Category changed for ${selectedServices.length} services` });
       setSelectedServices([]);
@@ -624,6 +715,12 @@ const ServicesManagement = () => {
     setIsAutoFixingIcons(true);
     
     try {
+      // Store previous state for undo
+      const previousState = changesToApply.reduce((acc, item) => ({
+        ...acc,
+        [item.id]: { category: item.currentCategory, image_url: item.currentIcon }
+      }), {});
+      
       // Batch update in chunks of 100
       const chunkSize = 100;
       for (let i = 0; i < changesToApply.length; i += chunkSize) {
@@ -648,6 +745,13 @@ const ServicesManagement = () => {
           return s;
         })
       );
+
+      pushUndo({
+        type: 'category',
+        affectedIds: changesToApply.map(c => c.id),
+        previousState,
+        description: `Auto-fixed ${changesToApply.length} services`,
+      });
 
       toast({ title: `Auto-fixed icons for ${changesToApply.length} services` });
       setIsAutoFixPreviewOpen(false);
@@ -826,7 +930,7 @@ const ServicesManagement = () => {
           </h1>
           <p className="text-sm text-muted-foreground">Manage your SMM services, pricing, and providers</p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 items-center">
           <Button 
             variant="outline" 
             size="sm" 
@@ -851,6 +955,17 @@ const ServicesManagement = () => {
             )}
             Auto-Fix Icons
           </Button>
+
+          {/* Drag & Drop Toggle */}
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/50 border border-border/50">
+            <Hand className="w-4 h-4 text-muted-foreground" />
+            <span className="text-xs text-muted-foreground hidden sm:inline">Drag & Drop</span>
+            <Switch 
+              checked={isDragEnabled}
+              onCheckedChange={setIsDragEnabled}
+              className="scale-90"
+            />
+          </div>
 
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
@@ -1147,57 +1262,102 @@ const ServicesManagement = () => {
             </Card>
           ) : (
             <>
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleDragEnd}
-              >
-                <SortableContext
-                  items={services.map(s => s.id)}
-                  strategy={verticalListSortingStrategy}
+              {isDragEnabled ? (
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
                 >
-                  <Card className="glass-card overflow-hidden">
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="border-b border-border/50 bg-muted/30">
-                            <th className="text-left p-4 w-8">
-                              <button onClick={selectAll}>
-                                {selectedServices.length === services.length && services.length > 0 ? (
-                                  <CheckSquare className="w-4 h-4" />
-                                ) : (
-                                  <Square className="w-4 h-4" />
-                                )}
-                              </button>
-                            </th>
-                            <th className="text-left p-4">Service</th>
-                            <th className="text-left p-4 hidden md:table-cell">Category</th>
-                            <th className="text-left p-4 hidden lg:table-cell">Qty Range</th>
-                            <th className="text-left p-4">Price</th>
-                            <th className="text-left p-4">Status</th>
-                            <th className="text-left p-4"></th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {services.map((service) => (
-                            <DraggableServiceItem
-                              key={service.id}
-                              service={service}
-                              isSelected={selectedServices.includes(service.id)}
-                              onToggleSelect={() => toggleSelection(service.id)}
-                              onToggleStatus={() => toggleServiceStatus(service.id)}
-                              onEdit={() => openEditDialog(service)}
-                              onDelete={() => deleteService(service.id)}
-                              onView={() => openEditDialog(service)}
-                              getCategoryIcon={getCategoryIcon}
-                            />
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </Card>
-                </SortableContext>
-              </DndContext>
+                  <SortableContext
+                    items={services.map(s => s.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <Card className="glass-card overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead>
+                            <tr className="border-b border-border/50 bg-muted/30">
+                              <th className="text-left p-4 w-8">
+                                <button onClick={selectAll}>
+                                  {selectedServices.length === services.length && services.length > 0 ? (
+                                    <CheckSquare className="w-4 h-4" />
+                                  ) : (
+                                    <Square className="w-4 h-4" />
+                                  )}
+                                </button>
+                              </th>
+                              <th className="text-left p-4">Service</th>
+                              <th className="text-left p-4 hidden md:table-cell">Category</th>
+                              <th className="text-left p-4 hidden lg:table-cell">Qty Range</th>
+                              <th className="text-left p-4">Price</th>
+                              <th className="text-left p-4">Status</th>
+                              <th className="text-left p-4"></th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {services.map((service) => (
+                              <DraggableServiceItem
+                                key={service.id}
+                                service={service}
+                                isSelected={selectedServices.includes(service.id)}
+                                onToggleSelect={() => toggleSelection(service.id)}
+                                onToggleStatus={() => toggleServiceStatus(service.id)}
+                                onEdit={() => openEditDialog(service)}
+                                onDelete={() => deleteService(service.id)}
+                                onView={() => openEditDialog(service)}
+                                getCategoryIcon={getCategoryIcon}
+                                showDragHandle={isDragEnabled}
+                              />
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </Card>
+                  </SortableContext>
+                </DndContext>
+              ) : (
+                <Card className="glass-card overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-border/50 bg-muted/30">
+                          <th className="text-left p-4 w-8">
+                            <button onClick={selectAll}>
+                              {selectedServices.length === services.length && services.length > 0 ? (
+                                <CheckSquare className="w-4 h-4" />
+                              ) : (
+                                <Square className="w-4 h-4" />
+                              )}
+                            </button>
+                          </th>
+                          <th className="text-left p-4">Service</th>
+                          <th className="text-left p-4 hidden md:table-cell">Category</th>
+                          <th className="text-left p-4 hidden lg:table-cell">Qty Range</th>
+                          <th className="text-left p-4">Price</th>
+                          <th className="text-left p-4">Status</th>
+                          <th className="text-left p-4"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {services.map((service) => (
+                          <DraggableServiceItem
+                            key={service.id}
+                            service={service}
+                            isSelected={selectedServices.includes(service.id)}
+                            onToggleSelect={() => toggleSelection(service.id)}
+                            onToggleStatus={() => toggleServiceStatus(service.id)}
+                            onEdit={() => openEditDialog(service)}
+                            onDelete={() => deleteService(service.id)}
+                            onView={() => openEditDialog(service)}
+                            getCategoryIcon={getCategoryIcon}
+                            showDragHandle={false}
+                          />
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </Card>
+              )}
 
               {/* Pagination Controls */}
               {totalPages > 1 && (
@@ -1579,6 +1739,12 @@ const ServicesManagement = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Floating Undo Button */}
+      <FloatingUndoButton 
+        undoStack={undoStack}
+        onUndo={undoOperation}
+        maxVisible={5}
+      />
     </div>
   );
 };

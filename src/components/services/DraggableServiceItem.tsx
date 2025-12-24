@@ -43,6 +43,7 @@ interface DraggableServiceItemProps {
   onView: (service: ServiceItem) => void;
   getCategoryIcon: (category: string) => React.ComponentType<{ className?: string }>;
   isMobile?: boolean;
+  showDragHandle?: boolean;
 }
 
 export const DraggableServiceItem = ({
@@ -55,6 +56,7 @@ export const DraggableServiceItem = ({
   onView,
   getCategoryIcon,
   isMobile = false,
+  showDragHandle = true,
 }: DraggableServiceItemProps) => {
   const {
     attributes,
@@ -177,13 +179,15 @@ export const DraggableServiceItem = ({
       {/* Drag Handle & Selection */}
       <td className="py-3 px-2">
         <div className="flex items-center gap-2">
-          <button
-            {...attributes}
-            {...listeners}
-            className="touch-none p-1 rounded hover:bg-accent cursor-grab active:cursor-grabbing"
-          >
-            <GripVertical className="w-4 h-4 text-muted-foreground" />
-          </button>
+          {showDragHandle && (
+            <button
+              {...attributes}
+              {...listeners}
+              className="touch-none p-1 rounded hover:bg-accent cursor-grab active:cursor-grabbing"
+            >
+              <GripVertical className="w-4 h-4 text-muted-foreground" />
+            </button>
+          )}
           <Checkbox
             checked={isSelected}
             onCheckedChange={() => onToggleSelect(service.id)}
