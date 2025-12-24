@@ -257,16 +257,20 @@ const ServicesManagement = () => {
   const [quickEditServiceId, setQuickEditServiceId] = useState("");
   const [isQuickEditOpen, setIsQuickEditOpen] = useState(false);
 
+  // URL param loading state
+  const [urlParamLoading, setUrlParamLoading] = useState(false);
+
   // Handle URL params for direct service editing (?edit=serviceId or ?view=serviceId)
   // Directly fetch service by ID from Supabase instead of relying on local array
   useEffect(() => {
     const editId = searchParams.get('edit');
     const viewId = searchParams.get('view');
     
-    if ((editId || viewId) && panel?.id && providers.length >= 0) {
+    if ((editId || viewId) && panel?.id) {
       const targetId = editId || viewId;
       
       const fetchAndOpenService = async () => {
+        setUrlParamLoading(true);
         try {
           const { data, error } = await supabase
             .from('services')
@@ -276,6 +280,9 @@ const ServicesManagement = () => {
             
           if (error || !data) {
             console.error('Service not found for URL param:', targetId);
+            toast({ title: "Service not found", description: "The requested service could not be found.", variant: "destructive" });
+            setUrlParamLoading(false);
+            setSearchParams({}, { replace: true });
             return;
           }
           
@@ -299,22 +306,43 @@ const ServicesManagement = () => {
           };
           
           if (editId) {
-            openEditDialog(serviceItem);
+            // Directly set the editing service and open dialog
+            const dialogService = {
+              id: serviceItem.id,
+              name: serviceItem.name,
+              category: serviceItem.category,
+              provider: serviceItem.provider,
+              provider_id: serviceItem.providerId,
+              price: serviceItem.price,
+              originalPrice: serviceItem.originalPrice,
+              minQty: serviceItem.minQty,
+              min_quantity: serviceItem.minQty,
+              maxQty: serviceItem.maxQty,
+              max_quantity: serviceItem.maxQty,
+              description: serviceItem.description || '',
+              imageUrl: serviceItem.imageUrl,
+              image_url: serviceItem.imageUrl,
+              orders: serviceItem.orders,
+            };
+            setEditingService(dialogService);
+            setIsEditDialogOpen(true);
           } else if (viewId) {
             setViewingService(serviceItem);
             setIsViewDialogOpen(true);
           }
         } catch (err) {
           console.error('Error fetching service by ID:', err);
+          toast({ title: "Error loading service", variant: "destructive" });
+        } finally {
+          setUrlParamLoading(false);
+          // Clear the URL param after handling
+          setSearchParams({}, { replace: true });
         }
-        
-        // Clear the URL param after handling
-        setSearchParams({}, { replace: true });
       };
       
       fetchAndOpenService();
     }
-  }, [searchParams, panel?.id, providers]);
+  }, [searchParams, panel?.id]);
 
   // Quick edit handler - fetch service by ID and open edit dialog
   const handleQuickEdit = async () => {
@@ -1109,13 +1137,19 @@ const ServicesManagement = () => {
     }
   };
 
-  if (loading || panelLoading) {
+  if (loading || panelLoading || urlParamLoading) {
     return (
       <div className="space-y-6 animate-pulse">
         <div className="h-8 bg-muted rounded w-1/4"></div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map(i => <div key={i} className="h-24 bg-muted rounded-xl"></div>)}
         </div>
+        {urlParamLoading && (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-6 h-6 animate-spin mr-2" />
+            <span className="text-muted-foreground">Loading service...</span>
+          </div>
+        )}
       </div>
     );
   }
