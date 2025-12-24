@@ -129,11 +129,11 @@ const PanelOwnerDashboard = () => {
   ];
 
   const bottomNavItems = [
-    { name: 'Home', href: '/panel', icon: LayoutDashboard },
-    { name: 'Services', href: '/panel/services', icon: Package },
-    { name: 'Orders', href: '/panel/orders', icon: ShoppingCart, badge: pendingCount > 0 ? pendingCount : undefined },
-    { name: 'Analytics', href: '/panel/analytics', icon: BarChart3 },
-    { name: 'More', href: '/panel/more', icon: Settings },
+    { name: 'Home', href: '/panel', icon: LayoutDashboard, tourId: 'mobile-home' },
+    { name: 'Services', href: '/panel/services', icon: Package, tourId: 'mobile-services' },
+    { name: 'Orders', href: '/panel/orders', icon: ShoppingCart, badge: pendingCount > 0 ? pendingCount : undefined, tourId: 'mobile-orders' },
+    { name: 'Analytics', href: '/panel/analytics', icon: BarChart3, tourId: 'mobile-analytics' },
+    { name: 'More', href: '/panel/more', icon: Settings, tourId: 'mobile-more' },
   ];
 
   const isActive = (path: string) => location.pathname === path;
