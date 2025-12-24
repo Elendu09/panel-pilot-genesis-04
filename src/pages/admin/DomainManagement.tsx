@@ -13,13 +13,19 @@ import {
   Shield,
   ExternalLink,
   Loader2,
-  AlertTriangle
+  AlertTriangle,
+  Server
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
+import { 
+  HOSTING_PROVIDERS, 
+  getExpectedTargetForProvider,
+  type HostingProvider 
+} from "@/lib/hosting-config";
 
 interface DomainRecord {
   id: string;
@@ -35,6 +41,9 @@ interface DomainRecord {
     name: string;
     subdomain: string;
     status: string;
+    settings?: {
+      hosting_provider?: string;
+    };
   };
 }
 
@@ -46,6 +55,9 @@ interface PanelWithDomain {
   status: string;
   ssl_status: string;
   domain_verification_status: string;
+  settings?: {
+    hosting_provider?: string;
+  };
   created_at: string;
 }
 
@@ -69,7 +81,7 @@ const DomainManagement = () => {
         .from('panel_domains')
         .select(`
           *,
-          panel:panels(name, subdomain, status)
+          panel:panels(name, subdomain, status, settings)
         `)
         .order('created_at', { ascending: false });
 
@@ -79,7 +91,7 @@ const DomainManagement = () => {
       // Also fetch all panels to show subdomains
       const { data: panelData, error: panelError } = await supabase
         .from('panels')
-        .select('id, name, subdomain, custom_domain, status, ssl_status, domain_verification_status, created_at')
+        .select('id, name, subdomain, custom_domain, status, ssl_status, domain_verification_status, settings, created_at')
         .order('created_at', { ascending: false });
 
       if (panelError) throw panelError;
@@ -100,16 +112,21 @@ const DomainManagement = () => {
   const verifyDomain = async (domain: DomainRecord) => {
     setVerifying(domain.id);
     try {
-      // Call dns-lookup edge function
-      const { data, error } = await supabase.functions.invoke('dns-lookup', {
-        body: { domain: domain.domain, recordType: 'A' }
+      // Get hosting provider from panel settings
+      const hostingProvider = (domain.panel?.settings?.hosting_provider as HostingProvider) || 'lovable';
+      const expectedTargets = getExpectedTargetForProvider(hostingProvider);
+
+      // Call domain-health-check edge function with provider info
+      const { data, error } = await supabase.functions.invoke('domain-health-check', {
+        body: { 
+          domain: domain.domain, 
+          hostingProvider 
+        }
       });
 
       if (error) throw error;
 
-      const isVerified = data?.results?.some((r: any) => 
-        r.status === 'resolved' && r.value === '185.158.133.1'
-      );
+      const isVerified = data?.dns_ok === true;
 
       if (isVerified) {
         // Update domain record
@@ -117,18 +134,18 @@ const DomainManagement = () => {
           verification_status: 'verified',
           dns_configured: true,
           verified_at: new Date().toISOString(),
-          ssl_status: 'active'
+          ssl_status: data?.https_ok ? 'active' : 'pending'
         }).eq('id', domain.id);
 
         toast({
           title: "Domain Verified!",
-          description: `${domain.domain} is now active with SSL.`
+          description: `${domain.domain} is now verified. SSL: ${data?.https_ok ? 'Active' : 'Pending'}`
         });
       } else {
         toast({
           variant: "destructive",
           title: "DNS Not Configured",
-          description: "A record not pointing to 185.158.133.1 yet."
+          description: `Expected: ${expectedTargets.join(' or ')}. Found: ${data?.a_records?.join(', ') || 'none'}`
         });
       }
 
@@ -150,6 +167,19 @@ const DomainManagement = () => {
     for (const domain of pendingDomains) {
       await verifyDomain(domain);
     }
+  };
+
+  const getHostingProviderBadge = (provider?: string) => {
+    const providerKey = (provider || 'lovable') as HostingProvider;
+    const config = HOSTING_PROVIDERS[providerKey];
+    if (!config) return null;
+    
+    return (
+      <Badge variant="outline" className="text-xs">
+        <Server className="w-3 h-3 mr-1" />
+        {config.name}
+      </Badge>
+    );
   };
 
   const getStatusBadge = (status: string) => {
@@ -267,9 +297,10 @@ const DomainManagement = () => {
                       <Globe className="w-5 h-5 text-primary" />
                     </div>
                     <div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <p className="font-medium">{domain.domain}</p>
                         {domain.is_primary && <Badge variant="outline" className="text-xs">Primary</Badge>}
+                        {getHostingProviderBadge(domain.panel?.settings?.hosting_provider)}
                       </div>
                       <p className="text-xs text-muted-foreground">
                         Panel: {domain.panel?.name || 'Unknown'} ({domain.panel?.subdomain}.smmpilot.online)
@@ -341,7 +372,10 @@ const DomainManagement = () => {
                       )}
                     </div>
                     <div>
-                      <p className="font-medium">{panel.name}</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-medium">{panel.name}</p>
+                        {getHostingProviderBadge(panel.settings?.hosting_provider)}
+                      </div>
                       <p className="text-sm text-primary">{panel.subdomain}.smmpilot.online</p>
                       {panel.custom_domain && (
                         <p className="text-xs text-muted-foreground">+ {panel.custom_domain}</p>
@@ -374,12 +408,20 @@ const DomainManagement = () => {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
-            <h4 className="font-medium mb-2">For Custom Domains:</h4>
+            <h4 className="font-medium mb-2">For Custom Domains (Lovable Hosting):</h4>
             <ul className="text-sm text-muted-foreground space-y-1">
               <li>• Add A record: <code className="px-2 py-0.5 bg-muted rounded">@ → 185.158.133.1</code></li>
               <li>• Add A record: <code className="px-2 py-0.5 bg-muted rounded">www → 185.158.133.1</code></li>
               <li>• Wait 24-72 hours for propagation</li>
               <li>• SSL is auto-provisioned after verification</li>
+            </ul>
+          </div>
+          <div className="p-4 rounded-xl bg-violet-500/5 border border-violet-500/20">
+            <h4 className="font-medium mb-2 text-violet-500">For External Hosting (Netlify, Vercel, etc.):</h4>
+            <ul className="text-sm text-muted-foreground space-y-1">
+              <li>• Configure DNS according to your hosting provider</li>
+              <li>• Add the domain to your panel's hosting dashboard</li>
+              <li>• Update the panel's hosting_provider setting</li>
             </ul>
           </div>
           <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20">

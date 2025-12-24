@@ -12,24 +12,30 @@ import {
   AlertCircle,
   ArrowRight,
   Info,
-  HelpCircle,
   Globe,
   Server,
   Cloud
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { HostingProviderSelector } from "./HostingProviderSelector";
+import { DnsRecordsDisplay } from "./DnsRecordsDisplay";
+import { 
+  HOSTING_PROVIDERS, 
+  type HostingProvider,
+  getDnsRecordsForProvider
+} from "@/lib/hosting-config";
 
 interface DomainConfigWizardProps {
   domain?: string;
   onComplete?: () => void;
 }
 
-const LOVABLE_IP = "185.158.133.1";
-
 export const DomainConfigWizard = ({ domain, onComplete }: DomainConfigWizardProps) => {
   const { toast } = useToast();
   const [selectedRegistrar, setSelectedRegistrar] = useState<string>("namecheap");
+  const [hostingProvider, setHostingProvider] = useState<HostingProvider>("lovable");
+  const [customTarget, setCustomTarget] = useState("");
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -40,26 +46,85 @@ export const DomainConfigWizard = ({ domain, onComplete }: DomainConfigWizardPro
     { id: "namecheap", name: "Namecheap", icon: "🟠" },
     { id: "godaddy", name: "GoDaddy", icon: "🟢" },
     { id: "cloudflare", name: "Cloudflare", icon: "🟡" },
+    { id: "route53", name: "AWS Route53", icon: "🟤" },
+    { id: "other", name: "Other", icon: "⚪" },
   ];
 
-  const dnsRecords = [
-    { type: "A", host: "@", value: LOVABLE_IP, description: "Root domain (yourdomain.com)" },
-    { type: "A", host: "*", value: LOVABLE_IP, description: "Wildcard for subdomains (*.yourdomain.com)" },
-    { type: "A", host: "www", value: LOVABLE_IP, description: "WWW subdomain (www.yourdomain.com)" },
-  ];
+  const providerConfig = HOSTING_PROVIDERS[hostingProvider];
+  const displayDomain = domain || "yourdomain.com";
 
   return (
     <div className="space-y-6">
+      {/* Automatic Subdomain Info */}
+      <Alert className="bg-emerald-500/10 border-emerald-500/20">
+        <CheckCircle className="w-4 h-4 text-emerald-500" />
+        <AlertDescription className="text-emerald-600 dark:text-emerald-400">
+          <strong>Your Panel Subdomain Works Automatically!</strong><br />
+          <span className="text-sm">
+            Subdomains like <code className="bg-muted px-1 rounded">yourpanel.smmpilot.online</code> require 
+            no DNS configuration. They work instantly via our wildcard DNS setup.
+          </span>
+        </AlertDescription>
+      </Alert>
+
+      {/* Hosting Provider Selector */}
+      <Card className="glass-card border-primary/20">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Server className="w-5 h-5 text-primary" />
+            Step 1: Select Your Hosting Provider
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground mb-4">
+            Choose where your custom domain will be hosted. This determines the correct DNS records.
+          </p>
+          <HostingProviderSelector
+            selected={hostingProvider}
+            onSelect={setHostingProvider}
+            customTarget={customTarget}
+            onCustomTargetChange={setCustomTarget}
+          />
+        </CardContent>
+      </Card>
+
+      {/* DNS Records Required */}
+      <Card className="glass-card">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Globe className="w-5 h-5 text-primary" />
+            Step 2: Required DNS Records for {providerConfig.name}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <DnsRecordsDisplay 
+            provider={hostingProvider}
+            domain={displayDomain}
+            customTarget={customTarget}
+          />
+          
+          {hostingProvider !== 'lovable' && (
+            <Alert className="bg-amber-500/10 border-amber-500/20">
+              <AlertCircle className="w-4 h-4 text-amber-500" />
+              <AlertDescription className="text-amber-600 dark:text-amber-400">
+                <strong>External Hosting:</strong> Since you're using {providerConfig.name}, make sure your 
+                domain is properly configured in their dashboard as well.
+              </AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Registrar Selector */}
       <Card className="glass-card border-primary/20">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-lg">
             <Globe className="w-5 h-5 text-primary" />
-            Select Your Domain Registrar
+            Step 3: Select Your Domain Registrar
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             {registrars.map((registrar) => (
               <Button
                 key={registrar.id}
@@ -71,53 +136,19 @@ export const DomainConfigWizard = ({ domain, onComplete }: DomainConfigWizardPro
                 onClick={() => setSelectedRegistrar(registrar.id)}
               >
                 <span className="text-2xl">{registrar.icon}</span>
-                <span className="font-medium">{registrar.name}</span>
+                <span className="font-medium text-xs">{registrar.name}</span>
               </Button>
             ))}
           </div>
         </CardContent>
       </Card>
 
-      {/* DNS Records Required */}
-      <Card className="glass-card">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Server className="w-5 h-5 text-primary" />
-            Required DNS Records
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {dnsRecords.map((record, index) => (
-            <div 
-              key={index}
-              className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border border-border/50"
-            >
-              <div className="flex items-center gap-4 flex-wrap">
-                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-                  {record.type}
-                </Badge>
-                <code className="text-sm font-mono bg-background px-2 py-1 rounded">{record.host}</code>
-                <ArrowRight className="w-4 h-4 text-muted-foreground" />
-                <code className="text-sm font-mono bg-background px-2 py-1 rounded">{record.value}</code>
-              </div>
-              <Button variant="ghost" size="sm" onClick={() => copyToClipboard(record.value)}>
-                <Copy className="w-4 h-4" />
-              </Button>
-            </div>
-          ))}
-          <p className="text-xs text-muted-foreground">
-            {domain && <><strong>For domain:</strong> {domain}<br /></>}
-            The wildcard (*) record is critical for subdomains like istock.smmpilot.online to work.
-          </p>
-        </CardContent>
-      </Card>
-
       {/* Step-by-Step Guide per Registrar */}
       <Tabs value={selectedRegistrar} onValueChange={setSelectedRegistrar}>
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-5">
           {registrars.map((registrar) => (
-            <TabsTrigger key={registrar.id} value={registrar.id} className="gap-2">
-              <span>{registrar.icon}</span> {registrar.name}
+            <TabsTrigger key={registrar.id} value={registrar.id} className="gap-1 text-xs">
+              <span>{registrar.icon}</span> <span className="hidden md:inline">{registrar.name}</span>
             </TabsTrigger>
           ))}
         </TabsList>
@@ -137,7 +168,7 @@ export const DomainConfigWizard = ({ domain, onComplete }: DomainConfigWizardPro
                   <div>
                     <h4 className="font-medium">Log into Namecheap</h4>
                     <p className="text-sm text-muted-foreground">
-                      Go to <a href="https://www.namecheap.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">namecheap.com</a> and sign in to your account.
+                      Go to <a href="https://www.namecheap.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">namecheap.com</a> and sign in.
                     </p>
                   </div>
                 </div>
@@ -145,9 +176,9 @@ export const DomainConfigWizard = ({ domain, onComplete }: DomainConfigWizardPro
                 <div className="flex gap-4">
                   <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">2</div>
                   <div>
-                    <h4 className="font-medium">Go to Domain List</h4>
+                    <h4 className="font-medium">Go to Domain List → Manage → Advanced DNS</h4>
                     <p className="text-sm text-muted-foreground">
-                      Click on <strong>"Domain List"</strong> in the left sidebar, then click <strong>"Manage"</strong> next to your domain.
+                      Find your domain and click <strong>"Advanced DNS"</strong> tab.
                     </p>
                   </div>
                 </div>
@@ -155,50 +186,16 @@ export const DomainConfigWizard = ({ domain, onComplete }: DomainConfigWizardPro
                 <div className="flex gap-4">
                   <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">3</div>
                   <div>
-                    <h4 className="font-medium">Open Advanced DNS</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Click on the <strong>"Advanced DNS"</strong> tab at the top of the page.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">4</div>
-                  <div>
-                    <h4 className="font-medium">Remove Existing A Records</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Delete any existing A records for <code className="bg-muted px-1 rounded">@</code>, <code className="bg-muted px-1 rounded">*</code>, or <code className="bg-muted px-1 rounded">www</code> that point to different IP addresses.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">5</div>
-                  <div>
-                    <h4 className="font-medium">Add New A Records</h4>
+                    <h4 className="font-medium">Add DNS Records</h4>
                     <p className="text-sm text-muted-foreground mb-2">
-                      Click <strong>"Add New Record"</strong> and add these three records:
+                      Add the records shown above. For {providerConfig.dnsType} records:
                     </p>
-                    <div className="bg-muted/50 p-3 rounded-lg space-y-2 text-sm font-mono">
-                      <div className="flex justify-between">
-                        <span>Type: A | Host: @ | Value: {LOVABLE_IP} | TTL: Automatic</span>
-                        <Button variant="ghost" size="sm" className="h-6" onClick={() => copyToClipboard(LOVABLE_IP)}>
-                          <Copy className="w-3 h-3" />
-                        </Button>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Type: A | Host: * | Value: {LOVABLE_IP} | TTL: Automatic</span>
-                        <Button variant="ghost" size="sm" className="h-6" onClick={() => copyToClipboard(LOVABLE_IP)}>
-                          <Copy className="w-3 h-3" />
-                        </Button>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Type: A | Host: www | Value: {LOVABLE_IP} | TTL: Automatic</span>
-                        <Button variant="ghost" size="sm" className="h-6" onClick={() => copyToClipboard(LOVABLE_IP)}>
-                          <Copy className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    </div>
+                    <ul className="text-sm text-muted-foreground list-disc list-inside space-y-1">
+                      <li>Host: Enter <code className="bg-muted px-1 rounded">@</code> for root domain</li>
+                      <li>Host: Enter <code className="bg-muted px-1 rounded">www</code> for www subdomain</li>
+                      <li>For subdomains like <code className="bg-muted px-1 rounded">soc</code>, enter just <code className="bg-muted px-1 rounded">soc</code> (NOT soc.yourdomain.com)</li>
+                      <li>TTL: Set to "Automatic" or "1 Hour"</li>
+                    </ul>
                   </div>
                 </div>
 
@@ -207,25 +204,26 @@ export const DomainConfigWizard = ({ domain, onComplete }: DomainConfigWizardPro
                     <CheckCircle className="w-4 h-4 text-green-500" />
                   </div>
                   <div>
-                    <h4 className="font-medium">Save Changes</h4>
+                    <h4 className="font-medium">Save & Wait</h4>
                     <p className="text-sm text-muted-foreground">
-                      Click the green checkmark to save each record. DNS propagation takes 15-60 minutes.
+                      DNS propagation takes 15-60 minutes. We'll auto-verify once detected.
                     </p>
                   </div>
                 </div>
               </div>
 
-              <Alert className="bg-amber-500/10 border-amber-500/20">
-                <AlertCircle className="w-4 h-4 text-amber-500" />
-                <AlertDescription className="text-amber-500">
-                  <strong>Important:</strong> If you're using Namecheap's PremiumDNS or a third-party DNS service, you'll need to configure the records there instead.
+              <Alert className="bg-blue-500/10 border-blue-500/20">
+                <Info className="w-4 h-4 text-blue-500" />
+                <AlertDescription className="text-blue-600 dark:text-blue-400">
+                  <strong>CNAME at Root Domain:</strong> Namecheap doesn't support CNAME at <code>@</code>. 
+                  Use an <strong>ALIAS record</strong> or A record for the root domain instead.
                 </AlertDescription>
               </Alert>
 
               <Button variant="outline" className="w-full" asChild>
                 <a href="https://www.namecheap.com/support/knowledgebase/article.aspx/319/2237/how-can-i-set-up-an-a-address-record-for-my-domain/" target="_blank" rel="noopener noreferrer">
                   <ExternalLink className="w-4 h-4 mr-2" />
-                  Namecheap A Record Guide
+                  Namecheap DNS Guide
                 </a>
               </Button>
             </CardContent>
@@ -247,7 +245,7 @@ export const DomainConfigWizard = ({ domain, onComplete }: DomainConfigWizardPro
                   <div>
                     <h4 className="font-medium">Log into GoDaddy</h4>
                     <p className="text-sm text-muted-foreground">
-                      Go to <a href="https://www.godaddy.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">godaddy.com</a> and sign in to your account.
+                      Go to <a href="https://www.godaddy.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">godaddy.com</a> → My Products → Manage DNS
                     </p>
                   </div>
                 </div>
@@ -255,35 +253,10 @@ export const DomainConfigWizard = ({ domain, onComplete }: DomainConfigWizardPro
                 <div className="flex gap-4">
                   <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">2</div>
                   <div>
-                    <h4 className="font-medium">Go to My Products</h4>
+                    <h4 className="font-medium">Add DNS Records</h4>
                     <p className="text-sm text-muted-foreground">
-                      Click your name in the top right, then select <strong>"My Products"</strong>.
+                      Click "Add" and create the records shown above. Use TTL of "1 Hour".
                     </p>
-                  </div>
-                </div>
-
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">3</div>
-                  <div>
-                    <h4 className="font-medium">Open DNS Management</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Find your domain, click the three dots menu, and select <strong>"Manage DNS"</strong>.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">4</div>
-                  <div>
-                    <h4 className="font-medium">Add A Records</h4>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Click <strong>"Add"</strong> and create these records:
-                    </p>
-                    <div className="bg-muted/50 p-3 rounded-lg space-y-2 text-sm">
-                      <p>• Type: A | Name: @ | Points to: {LOVABLE_IP} | TTL: 1 Hour</p>
-                      <p>• Type: A | Name: * | Points to: {LOVABLE_IP} | TTL: 1 Hour</p>
-                      <p>• Type: A | Name: www | Points to: {LOVABLE_IP} | TTL: 1 Hour</p>
-                    </div>
                   </div>
                 </div>
 
@@ -293,9 +266,7 @@ export const DomainConfigWizard = ({ domain, onComplete }: DomainConfigWizardPro
                   </div>
                   <div>
                     <h4 className="font-medium">Save Each Record</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Click <strong>"Save"</strong> after adding each record.
-                    </p>
+                    <p className="text-sm text-muted-foreground">Click "Save" after adding each record.</p>
                   </div>
                 </div>
               </div>
@@ -303,7 +274,7 @@ export const DomainConfigWizard = ({ domain, onComplete }: DomainConfigWizardPro
               <Button variant="outline" className="w-full" asChild>
                 <a href="https://www.godaddy.com/help/add-an-a-record-19238" target="_blank" rel="noopener noreferrer">
                   <ExternalLink className="w-4 h-4 mr-2" />
-                  GoDaddy A Record Guide
+                  GoDaddy DNS Guide
                 </a>
               </Button>
             </CardContent>
@@ -321,8 +292,9 @@ export const DomainConfigWizard = ({ domain, onComplete }: DomainConfigWizardPro
             <CardContent className="space-y-4">
               <Alert className="bg-amber-500/10 border-amber-500/20">
                 <Cloud className="w-4 h-4 text-amber-500" />
-                <AlertDescription className="text-amber-500">
-                  <strong>Important:</strong> Set Proxy Status to <strong>"DNS only"</strong> (gray cloud) for wildcard records. Cloudflare's free plan doesn't proxy wildcards.
+                <AlertDescription className="text-amber-600 dark:text-amber-400">
+                  <strong>Important:</strong> Set Proxy Status to <strong>"DNS only"</strong> (gray cloud icon). 
+                  Orange cloud (Proxied) can interfere with SSL provisioning.
                 </AlertDescription>
               </Alert>
 
@@ -342,23 +314,8 @@ export const DomainConfigWizard = ({ domain, onComplete }: DomainConfigWizardPro
                   <div>
                     <h4 className="font-medium">Go to DNS Settings</h4>
                     <p className="text-sm text-muted-foreground">
-                      Click <strong>"DNS"</strong> in the left sidebar.
+                      Click "DNS" in the sidebar, then "Add record".
                     </p>
-                  </div>
-                </div>
-
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">3</div>
-                  <div>
-                    <h4 className="font-medium">Add A Records</h4>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Click <strong>"Add record"</strong> and create these:
-                    </p>
-                    <div className="bg-muted/50 p-3 rounded-lg space-y-2 text-sm">
-                      <p>• Type: A | Name: @ | IPv4: {LOVABLE_IP} | Proxy: DNS only</p>
-                      <p>• Type: A | Name: * | IPv4: {LOVABLE_IP} | Proxy: DNS only (required)</p>
-                      <p>• Type: A | Name: www | IPv4: {LOVABLE_IP} | Proxy: DNS only</p>
-                    </div>
                   </div>
                 </div>
 
@@ -367,21 +324,9 @@ export const DomainConfigWizard = ({ domain, onComplete }: DomainConfigWizardPro
                     <AlertCircle className="w-4 h-4 text-amber-500" />
                   </div>
                   <div>
-                    <h4 className="font-medium">Disable Proxy for Wildcards</h4>
+                    <h4 className="font-medium">Disable Proxy (Important!)</h4>
                     <p className="text-sm text-muted-foreground">
-                      Click the orange cloud icon to turn it gray (DNS only) for the wildcard (*) record.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-500/10 flex items-center justify-center">
-                    <CheckCircle className="w-4 h-4 text-green-500" />
-                  </div>
-                  <div>
-                    <h4 className="font-medium">Save Records</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Click <strong>"Save"</strong> for each record. Cloudflare DNS propagates very quickly.
+                      Click the orange cloud icon to change it to gray (DNS only).
                     </p>
                   </div>
                 </div>
@@ -396,67 +341,118 @@ export const DomainConfigWizard = ({ domain, onComplete }: DomainConfigWizardPro
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* AWS Route53 Guide */}
+        <TabsContent value="route53" className="space-y-4 mt-4">
+          <Card className="glass-card">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                🟤 AWS Route53 DNS Configuration
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-4">
+                <div className="flex gap-4">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">1</div>
+                  <div>
+                    <h4 className="font-medium">Open Route53 Console</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Go to AWS Console → Route53 → Hosted Zones → Select your domain.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex gap-4">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">2</div>
+                  <div>
+                    <h4 className="font-medium">Create Record</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Click "Create record" and add the DNS records shown above.
+                      For root domain, use <strong>ALIAS</strong> if pointing to another AWS resource.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <Button variant="outline" className="w-full" asChild>
+                <a href="https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/resource-record-sets-creating.html" target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  AWS Route53 Guide
+                </a>
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Other Registrar Guide */}
+        <TabsContent value="other" className="space-y-4 mt-4">
+          <Card className="glass-card">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                ⚪ Generic DNS Configuration
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                For any domain registrar, follow these general steps:
+              </p>
+              <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
+                <li>Log into your domain registrar's control panel</li>
+                <li>Find DNS Management, DNS Settings, or Zone Editor</li>
+                <li>Add the DNS records shown above</li>
+                <li>For subdomains like <code className="bg-muted px-1 rounded">soc</code>, enter only <code className="bg-muted px-1 rounded">soc</code> as the host</li>
+                <li>Save changes and wait 15-60 minutes for propagation</li>
+              </ol>
+
+              <Alert>
+                <Info className="w-4 h-4" />
+                <AlertDescription>
+                  <strong>Tip:</strong> Use <a href="https://dnschecker.org" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">dnschecker.org</a> to verify your DNS records are propagating correctly.
+                </AlertDescription>
+              </Alert>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
 
       {/* Troubleshooting */}
       <Card className="glass-card">
         <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <HelpCircle className="w-5 h-5 text-primary" />
-            Troubleshooting
-          </CardTitle>
+          <CardTitle className="text-base">Troubleshooting</CardTitle>
         </CardHeader>
         <CardContent>
-          <Accordion type="single" collapsible className="w-full">
+          <Accordion type="single" collapsible>
             <AccordionItem value="propagation">
-              <AccordionTrigger className="text-sm">DNS changes not taking effect?</AccordionTrigger>
+              <AccordionTrigger className="text-sm">DNS changes not showing up?</AccordionTrigger>
               <AccordionContent className="text-sm text-muted-foreground">
-                DNS propagation can take 15 minutes to 48 hours. Try:
-                <ul className="list-disc ml-4 mt-2 space-y-1">
-                  <li>Clear your browser cache and DNS cache</li>
-                  <li>Use <a href="https://dnschecker.org" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">dnschecker.org</a> to verify global propagation</li>
-                  <li>Try accessing from a different device or network</li>
-                  <li>Wait at least 30 minutes before checking again</li>
-                </ul>
+                DNS propagation can take 15 minutes to 48 hours. Use 
+                <a href="https://dnschecker.org" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline ml-1">dnschecker.org</a> 
+                to check global propagation status.
               </AccordionContent>
             </AccordionItem>
-
+            <AccordionItem value="cname-root">
+              <AccordionTrigger className="text-sm">Can't add CNAME at root domain (@)?</AccordionTrigger>
+              <AccordionContent className="text-sm text-muted-foreground">
+                Most registrars don't allow CNAME at the root domain. Use an A record pointing to the IP address, 
+                or use ALIAS/ANAME if your registrar supports it (Cloudflare, Route53, DNSimple).
+              </AccordionContent>
+            </AccordionItem>
             <AccordionItem value="ssl">
               <AccordionTrigger className="text-sm">SSL certificate not working?</AccordionTrigger>
               <AccordionContent className="text-sm text-muted-foreground">
-                SSL provisioning happens after DNS verification:
-                <ul className="list-disc ml-4 mt-2 space-y-1">
-                  <li>Ensure DNS is correctly pointing to {LOVABLE_IP}</li>
-                  <li>Wait 5-10 minutes after DNS verification for SSL to provision</li>
+                <ul className="list-disc list-inside space-y-1">
+                  <li>Ensure DNS is pointing correctly first</li>
+                  <li>If using Cloudflare, disable proxy (use "DNS only")</li>
                   <li>Check for CAA records that might block Let's Encrypt</li>
-                  <li>If using Cloudflare, ensure SSL mode is set to "Full" or disable proxy</li>
+                  <li>Wait 10-15 minutes after DNS verification for SSL provisioning</li>
                 </ul>
               </AccordionContent>
             </AccordionItem>
-
-            <AccordionItem value="wildcard">
-              <AccordionTrigger className="text-sm">Subdomains not working?</AccordionTrigger>
+            <AccordionItem value="subdomain">
+              <AccordionTrigger className="text-sm">How do I add a subdomain like soc.mydomain.com?</AccordionTrigger>
               <AccordionContent className="text-sm text-muted-foreground">
-                For subdomains like istock.smmpilot.online to work:
-                <ul className="list-disc ml-4 mt-2 space-y-1">
-                  <li>The wildcard (*) A record must be added pointing to {LOVABLE_IP}</li>
-                  <li>On Cloudflare, wildcard records must have proxy disabled (gray cloud)</li>
-                  <li>Some registrars don't support wildcard records on their free DNS</li>
-                  <li>Check that no specific subdomain record is overriding the wildcard</li>
-                </ul>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem value="conflict">
-              <AccordionTrigger className="text-sm">Conflicting DNS records?</AccordionTrigger>
-              <AccordionContent className="text-sm text-muted-foreground">
-                Remove any conflicting records:
-                <ul className="list-disc ml-4 mt-2 space-y-1">
-                  <li>Delete old A records pointing to different IPs</li>
-                  <li>Remove CNAME records for @ or * if they exist</li>
-                  <li>Ensure only one A record exists per hostname</li>
-                  <li>Check for parking page or redirect records from your registrar</li>
-                </ul>
+                Add a new DNS record with Host/Name set to just <code className="bg-muted px-1 rounded">soc</code> 
+                (not the full domain). Your registrar will automatically append your domain.
               </AccordionContent>
             </AccordionItem>
           </Accordion>

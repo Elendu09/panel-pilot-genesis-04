@@ -57,6 +57,7 @@ interface TenantPanel {
     maintenance_message?: string;
     contact_info?: any;
     social_links?: any;
+    hosting_provider?: string;
   };
 }
 
@@ -71,8 +72,24 @@ interface TenantDetectionResult {
     detectedSubdomain: string | null;
     isSubdomainOfPlatform: boolean;
     isPlatformMatch: boolean;
+    isExternalHosting: boolean;
     searchAttempts: string[];
   };
+}
+
+// Known external hosting patterns
+const EXTERNAL_HOSTING_PATTERNS = [
+  /\.netlify\.app$/,
+  /\.vercel\.app$/,
+  /\.pages\.dev$/,  // Cloudflare Pages
+  /\.onrender\.com$/,
+  /\.railway\.app$/,
+  /\.fly\.dev$/,
+  /\.herokuapp\.com$/,
+];
+
+function isExternalHostingDomain(hostname: string): boolean {
+  return EXTERNAL_HOSTING_PATTERNS.some(pattern => pattern.test(hostname));
 }
 
 export function useTenant(): TenantDetectionResult {
@@ -92,8 +109,10 @@ export function useTenant(): TenantDetectionResult {
         setError(null);
 
         const hostname = window.location.hostname;
+        const isExternalHosting = isExternalHostingDomain(hostname);
         
         console.log('[useTenant] Starting detection for hostname:', hostname);
+        console.log('[useTenant] Is external hosting:', isExternalHosting);
         
         // Platform domains (admin/management interface)
         const platformDomains = [
@@ -118,6 +137,7 @@ export function useTenant(): TenantDetectionResult {
         console.log('[useTenant] Detection results:', {
           isPlatformMatch,
           isSubdomainOfPlatform,
+          isExternalHosting,
           hostname
         });
 
@@ -132,6 +152,7 @@ export function useTenant(): TenantDetectionResult {
             detectedSubdomain: null,
             isSubdomainOfPlatform,
             isPlatformMatch,
+            isExternalHosting,
             searchAttempts
           });
           setLoading(false);
@@ -148,7 +169,17 @@ export function useTenant(): TenantDetectionResult {
         // Extract subdomain from hostname
         if (isSubdomainOfPlatform) {
           subdomain = hostname.replace('.smmpilot.online', '');
-          console.log('[useTenant] Extracted subdomain:', subdomain);
+          console.log('[useTenant] Extracted subdomain from smmpilot.online:', subdomain);
+        }
+
+        // For external hosting domains, extract the subdomain part
+        // e.g., "mysite.netlify.app" -> "mysite"
+        if (isExternalHosting) {
+          const parts = hostname.split('.');
+          if (parts.length >= 3) {
+            subdomain = parts[0];
+            console.log('[useTenant] Extracted subdomain from external host:', subdomain);
+          }
         }
 
         // First, try to find by custom domain in panels table
@@ -166,6 +197,7 @@ export function useTenant(): TenantDetectionResult {
             logo_url,
             status,
             custom_branding,
+            settings,
             panel_settings (
               seo_title,
               seo_description,
@@ -182,7 +214,7 @@ export function useTenant(): TenantDetectionResult {
 
         console.log('[useTenant] Custom domain (panels) search result:', { panelData, panelError });
 
-        // 🔴 CRITICAL FIX: If not found in panels.custom_domain, check panel_domains table
+        // If not found in panels.custom_domain, check panel_domains table
         if (!panelData) {
           searchAttempts.push(`panel_domains.domain=${hostname}`);
           console.log('[useTenant] Searching in panel_domains table for:', hostname);
@@ -216,6 +248,7 @@ export function useTenant(): TenantDetectionResult {
                 logo_url,
                 status,
                 custom_branding,
+                settings,
                 panel_settings (
                   seo_title,
                   seo_description,
@@ -254,6 +287,7 @@ export function useTenant(): TenantDetectionResult {
               logo_url,
               status,
               custom_branding,
+              settings,
               panel_settings (
                 seo_title,
                 seo_description,
@@ -276,40 +310,45 @@ export function useTenant(): TenantDetectionResult {
         // Also try just the first part of hostname as subdomain
         if (!panelData) {
           const extractedSubdomain = hostname.split('.')[0];
-          searchAttempts.push(`extracted_subdomain=${extractedSubdomain}`);
           
-          console.log('[useTenant] Trying extracted subdomain:', extractedSubdomain);
-          
-          const { data: fallbackPanel, error: fallbackError } = await supabase
-            .from('panels')
-            .select(`
-              id,
-              name,
-              subdomain,
-              custom_domain,
-              theme_type,
-              primary_color,
-              secondary_color,
-              logo_url,
-              status,
-              custom_branding,
-              panel_settings (
-                seo_title,
-                seo_description,
-                seo_keywords,
-                maintenance_mode,
-                maintenance_message,
-                contact_info,
-                social_links
-              )
-            `)
-            .eq('subdomain', extractedSubdomain)
-            .in('status', ['active', 'pending'])
-            .maybeSingle();
+          // Avoid searching for common prefixes
+          if (!['www', 'api', 'admin', 'mail', 'smtp', 'ftp'].includes(extractedSubdomain)) {
+            searchAttempts.push(`extracted_subdomain=${extractedSubdomain}`);
+            
+            console.log('[useTenant] Trying extracted subdomain:', extractedSubdomain);
+            
+            const { data: fallbackPanel, error: fallbackError } = await supabase
+              .from('panels')
+              .select(`
+                id,
+                name,
+                subdomain,
+                custom_domain,
+                theme_type,
+                primary_color,
+                secondary_color,
+                logo_url,
+                status,
+                custom_branding,
+                settings,
+                panel_settings (
+                  seo_title,
+                  seo_description,
+                  seo_keywords,
+                  maintenance_mode,
+                  maintenance_message,
+                  contact_info,
+                  social_links
+                )
+              `)
+              .eq('subdomain', extractedSubdomain)
+              .in('status', ['active', 'pending'])
+              .maybeSingle();
 
-          console.log('[useTenant] Fallback search result:', { fallbackPanel, fallbackError });
-          panelData = fallbackPanel;
-          panelError = fallbackError;
+            console.log('[useTenant] Fallback search result:', { fallbackPanel, fallbackError });
+            panelData = fallbackPanel;
+            panelError = fallbackError;
+          }
         }
 
         setDebugInfo({
@@ -317,6 +356,7 @@ export function useTenant(): TenantDetectionResult {
           detectedSubdomain: subdomain,
           isSubdomainOfPlatform,
           isPlatformMatch,
+          isExternalHosting,
           searchAttempts
         });
 
@@ -327,12 +367,20 @@ export function useTenant(): TenantDetectionResult {
 
         if (panelData) {
           console.log('[useTenant] Panel found:', panelData.name, panelData.status);
-          const settings = panelData.panel_settings;
+          const panelSettings = panelData.panel_settings;
           const branding = panelData.custom_branding;
+          const settings = panelData.settings;
+          
+          // Merge panel_settings with settings from panels table
+          const mergedSettings = {
+            ...(Array.isArray(panelSettings) ? panelSettings[0] : panelSettings || {}),
+            ...(typeof settings === 'object' ? settings : {})
+          };
+
           setPanel({
             ...panelData,
             custom_branding: branding && typeof branding === 'object' ? branding as DesignCustomization : undefined,
-            settings: Array.isArray(settings) ? settings[0] : settings || {}
+            settings: mergedSettings
           });
         } else {
           console.warn('[useTenant] No panel found for:', { hostname, subdomain, searchAttempts });
