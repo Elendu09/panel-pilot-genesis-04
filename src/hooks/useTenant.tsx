@@ -191,6 +191,8 @@ export function useTenant(): TenantDetectionResult {
         setIsTenantDomain(true);
 
         let subdomain: string | null = null;
+        let panelData: any = null;
+        let panelError: any = null;
         
         // Extract subdomain from smmpilot.online subdomains
         if (isSubdomainOfPlatform) {
@@ -208,39 +210,87 @@ export function useTenant(): TenantDetectionResult {
           }
         }
 
-        // First, try to find by custom domain in panels table
-        searchAttempts.push(`panels.custom_domain=${hostname}`);
-        let { data: panelData, error: panelError } = await supabase
-          .from('panels')
-          .select(`
-            id,
-            name,
-            subdomain,
-            custom_domain,
-            theme_type,
-            primary_color,
-            secondary_color,
-            logo_url,
-            status,
-            custom_branding,
-            settings,
-            panel_settings (
-              seo_title,
-              seo_description,
-              seo_keywords,
-              maintenance_mode,
-              maintenance_message,
-              contact_info,
-              social_links
-            )
-          `)
-          .or(`custom_domain.eq.${hostname}`)
-          .in('status', ['active', 'pending'])
-          .maybeSingle();
+        // PRIORITY 1: For smmpilot.online subdomains, search by subdomain FIRST
+        if (isSubdomainOfPlatform && subdomain) {
+          searchAttempts.push(`subdomain=${subdomain} (priority)`);
+          console.log('[useTenant] Priority search: Looking for subdomain:', subdomain);
+          
+          const { data: subdomainPanel, error: subdomainError } = await supabase
+            .from('panels')
+            .select(`
+              id,
+              name,
+              subdomain,
+              custom_domain,
+              theme_type,
+              primary_color,
+              secondary_color,
+              logo_url,
+              status,
+              custom_branding,
+              settings,
+              panel_settings (
+                seo_title,
+                seo_description,
+                seo_keywords,
+                maintenance_mode,
+                maintenance_message,
+                contact_info,
+                social_links
+              )
+            `)
+            .eq('subdomain', subdomain)
+            .in('status', ['active', 'pending'])
+            .maybeSingle();
 
-        console.log('[useTenant] Custom domain (panels) search result:', { panelData, panelError });
+          console.log('[useTenant] Priority subdomain search result:', { subdomainPanel, subdomainError });
+          
+          if (subdomainPanel) {
+            panelData = subdomainPanel;
+            panelError = subdomainError;
+          }
+        }
 
-        // If not found in panels.custom_domain, check panel_domains table
+        // PRIORITY 2: Try custom domain in panels table (for custom domains)
+        if (!panelData) {
+          searchAttempts.push(`panels.custom_domain=${hostname}`);
+          const { data: customDomainPanel, error: customDomainError } = await supabase
+            .from('panels')
+            .select(`
+              id,
+              name,
+              subdomain,
+              custom_domain,
+              theme_type,
+              primary_color,
+              secondary_color,
+              logo_url,
+              status,
+              custom_branding,
+              settings,
+              panel_settings (
+                seo_title,
+                seo_description,
+                seo_keywords,
+                maintenance_mode,
+                maintenance_message,
+                contact_info,
+                social_links
+              )
+            `)
+            .or(`custom_domain.eq.${hostname}`)
+            .in('status', ['active', 'pending'])
+            .maybeSingle();
+
+          console.log('[useTenant] Custom domain (panels) search result:', { customDomainPanel, customDomainError });
+          
+          if (customDomainPanel) {
+            panelData = customDomainPanel;
+            panelError = customDomainError;
+          }
+        }
+
+        // PRIORITY 3: Check panel_domains table
         if (!panelData) {
           searchAttempts.push(`panel_domains.domain=${hostname}`);
           console.log('[useTenant] Searching in panel_domains table for:', hostname);
@@ -297,8 +347,8 @@ export function useTenant(): TenantDetectionResult {
           }
         }
 
-        // If not found by custom domain, try by subdomain
-        if (!panelData && subdomain) {
+        // PRIORITY 4: Fallback subdomain search for non-smmpilot domains
+        if (!panelData && subdomain && !isSubdomainOfPlatform) {
           searchAttempts.push(`subdomain=${subdomain}`);
           const { data: subdomainPanel, error: subdomainError } = await supabase
             .from('panels')

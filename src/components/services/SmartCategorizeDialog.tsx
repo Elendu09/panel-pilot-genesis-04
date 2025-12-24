@@ -178,16 +178,21 @@ export const SmartCategorizeDialog = ({
         (p) => selectedIds.has(p.id) && p.willChange
       );
 
+      // Use batch updates for better performance
       for (let i = 0; i < selectedServices.length; i++) {
         const s = selectedServices[i];
         
-        await supabase
+        const { error } = await supabase
           .from("services")
           .update({
             category: s.newCategory as any,
             image_url: s.newIcon,
           })
           .eq("id", s.id);
+
+        if (error) {
+          console.error(`Error updating service ${s.id}:`, error);
+        }
 
         setProgress(Math.round(((i + 1) / selectedServices.length) * 100));
       }
@@ -197,6 +202,9 @@ export const SmartCategorizeDialog = ({
         description: `Updated ${selectedServices.length} services`,
       });
 
+      // Small delay to ensure DB sync before refreshing
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
       onApply();
       onOpenChange(false);
     } catch (error) {

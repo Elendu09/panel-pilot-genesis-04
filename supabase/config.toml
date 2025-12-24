@@ -71,3 +71,6 @@ verify_jwt = false
 
 [functions.verify-domain-txt]
 verify_jwt = false
+
+[functions.dns-namecheap]
+verify_jwt = false
