@@ -22,12 +22,12 @@ interface ServiceKanbanCardProps {
   service: ServiceItem;
   providerName?: string;
   isSelected: boolean;
-  onToggleSelect: (id: string) => void;
-  onToggleStatus: (id: string) => void;
-  onEdit: (service: ServiceItem) => void;
-  onDelete: (id: string) => void;
-  onView: (service: ServiceItem) => void;
-  onDuplicate?: (service: ServiceItem) => void;
+  onToggleSelect: () => void;
+  onToggleStatus: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+  onView: () => void;
+  onDuplicate?: () => void;
   showDragHandle?: boolean;
 }
 
@@ -122,7 +122,7 @@ export const ServiceKanbanCard = ({
               )}
               <Checkbox
                 checked={isSelected}
-                onCheckedChange={() => onToggleSelect(service.id)}
+                onCheckedChange={() => onToggleSelect()}
               />
               <Badge variant="outline" className="text-xs font-mono">
                 #{service.displayId}
@@ -130,13 +130,13 @@ export const ServiceKanbanCard = ({
             </div>
             <Switch
               checked={service.status}
-              onCheckedChange={() => onToggleStatus(service.id)}
+              onCheckedChange={() => onToggleStatus()}
               className="scale-90"
             />
           </div>
 
           {/* Service Info */}
-          <div className="flex items-start gap-3" onClick={() => onView(service)}>
+          <div className="flex items-start gap-3" onClick={() => onView()}>
             <ServiceIcon imageUrl={service.imageUrl} category={service.category} />
             <div className="flex-1 min-w-0">
               <h4 className="font-medium text-sm line-clamp-2 hover:text-primary transition-colors">
@@ -198,7 +198,7 @@ export const ServiceKanbanCard = ({
               size="sm"
               variant="ghost"
               className="flex-1 h-8"
-              onClick={() => onView(service)}
+              onClick={() => onView()}
             >
               <Eye className="w-3.5 h-3.5 mr-1" />
               View
@@ -207,7 +207,7 @@ export const ServiceKanbanCard = ({
               size="sm"
               variant="ghost"
               className="flex-1 h-8"
-              onClick={() => onEdit(service)}
+              onClick={() => onEdit()}
             >
               <Edit className="w-3.5 h-3.5 mr-1" />
               Edit
@@ -220,14 +220,14 @@ export const ServiceKanbanCard = ({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 {onDuplicate && (
-                  <DropdownMenuItem onClick={() => onDuplicate(service)}>
+                  <DropdownMenuItem onClick={() => onDuplicate()}>
                     <Copy className="w-4 h-4 mr-2" />
                     Duplicate
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  onClick={() => onDelete(service.id)}
+                  onClick={() => onDelete()}
                   className="text-destructive"
                 >
                   <Trash2 className="w-4 h-4 mr-2" />
