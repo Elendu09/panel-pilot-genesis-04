@@ -880,12 +880,12 @@ const DesignCustomization = () => {
                 <CardContent>
                   <SocialIconSelector
                     platforms={[
-                      { id: 'instagram', name: 'Instagram', icon: Instagram, color: 'text-pink-500', bgColor: 'bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400', enabled: true },
-                      { id: 'facebook', name: 'Facebook', icon: Facebook, color: 'text-blue-600', bgColor: 'bg-blue-600', enabled: true },
-                      { id: 'twitter', name: 'Twitter/X', icon: Twitter, color: 'text-sky-500', bgColor: 'bg-slate-900', enabled: true },
-                      { id: 'youtube', name: 'YouTube', icon: Youtube, color: 'text-red-500', bgColor: 'bg-red-500', enabled: true },
-                      { id: 'tiktok', name: 'TikTok', icon: Hash, color: 'text-foreground', bgColor: 'bg-gradient-to-br from-cyan-400 via-slate-900 to-pink-500', enabled: false },
-                      { id: 'telegram', name: 'Telegram', icon: MessageCircle, color: 'text-sky-400', bgColor: 'bg-sky-500', enabled: false },
+                      { id: 'instagram', name: 'Instagram', icon: 'instagram', color: 'text-pink-500', bgColor: 'bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400', enabled: true },
+                      { id: 'facebook', name: 'Facebook', icon: 'facebook', color: 'text-blue-600', bgColor: 'bg-blue-600', enabled: true },
+                      { id: 'twitter', name: 'Twitter/X', icon: 'twitter', color: 'text-sky-500', bgColor: 'bg-slate-900', enabled: true },
+                      { id: 'youtube', name: 'YouTube', icon: 'youtube', color: 'text-red-500', bgColor: 'bg-red-500', enabled: true },
+                      { id: 'tiktok', name: 'TikTok', icon: 'tiktok', color: 'text-foreground', bgColor: 'bg-gradient-to-br from-cyan-400 via-slate-900 to-pink-500', enabled: false },
+                      { id: 'telegram', name: 'Telegram', icon: 'telegram', color: 'text-sky-400', bgColor: 'bg-sky-500', enabled: false },
                     ]}
                     onChange={(platforms) => {
                       setCustomization(prev => ({ ...prev, socialPlatforms: platforms } as any));

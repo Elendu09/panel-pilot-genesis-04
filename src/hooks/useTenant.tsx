@@ -121,11 +121,12 @@ export function useTenant(): TenantDetectionResult {
         setLoading(true);
         setError(null);
 
-        const hostname = window.location.hostname;
+        const hostname = window.location.hostname.toLowerCase();
         const isExternalHosting = isExternalHostingDomain(hostname);
         const isDevPreview = isDevPreviewDomain(hostname);
         
-        console.log('[useTenant] Starting detection for hostname:', hostname);
+        console.log('[useTenant] ===== TENANT DETECTION START =====');
+        console.log('[useTenant] Hostname:', hostname);
         console.log('[useTenant] Is external hosting:', isExternalHosting);
         console.log('[useTenant] Is dev preview:', isDevPreview);
         
@@ -159,7 +160,7 @@ export function useTenant(): TenantDetectionResult {
           hostname !== 'smmpilot.online' && 
           hostname !== 'www.smmpilot.online';
 
-        console.log('[useTenant] Detection results:', {
+        console.log('[useTenant] Domain analysis:', {
           isPlatformRoot,
           isSubdomainOfPlatform,
           isExternalHosting,
@@ -186,7 +187,7 @@ export function useTenant(): TenantDetectionResult {
         }
 
         // This is a tenant domain - try to find the panel
-        console.log('[useTenant] Detected as tenant domain, searching for panel...');
+        console.log('[useTenant] ===== TENANT DOMAIN DETECTED =====');
         setIsPlatformDomain(false);
         setIsTenantDomain(true);
 
@@ -197,53 +198,59 @@ export function useTenant(): TenantDetectionResult {
         // Extract subdomain from smmpilot.online subdomains
         if (isSubdomainOfPlatform) {
           subdomain = hostname.replace('.smmpilot.online', '');
-          console.log('[useTenant] Extracted subdomain from smmpilot.online:', subdomain);
+          console.log('[useTenant] Extracted subdomain:', subdomain);
         }
 
         // For external hosting domains, extract the subdomain part
-        // e.g., "mysite.netlify.app" -> "mysite"
         if (isExternalHosting) {
           const parts = hostname.split('.');
           if (parts.length >= 3) {
             subdomain = parts[0];
-            console.log('[useTenant] Extracted subdomain from external host:', subdomain);
+            console.log('[useTenant] Extracted from external host:', subdomain);
           }
         }
 
-        // PRIORITY 1: For smmpilot.online subdomains, search by subdomain FIRST
-        if (isSubdomainOfPlatform && subdomain) {
-          searchAttempts.push(`subdomain=${subdomain} (priority)`);
-          console.log('[useTenant] Priority search: Looking for subdomain:', subdomain);
+        // PRIORITY 0: Try full hostname as custom_domain first (for any custom domain)
+        if (!isSubdomainOfPlatform) {
+          searchAttempts.push(`custom_domain=${hostname} (priority 0)`);
+          console.log('[useTenant] P0: Searching custom_domain for:', hostname);
+          
+          const { data: customPanel, error: customError } = await supabase
+            .from('panels')
+            .select(`
+              id, name, subdomain, custom_domain, theme_type, primary_color,
+              secondary_color, logo_url, status, custom_branding, settings,
+              panel_settings (seo_title, seo_description, seo_keywords, maintenance_mode, maintenance_message, contact_info, social_links)
+            `)
+            .eq('custom_domain', hostname)
+            .in('status', ['active', 'pending'])
+            .maybeSingle();
+
+          console.log('[useTenant] P0 result:', { found: !!customPanel, error: customError?.message });
+          
+          if (customPanel) {
+            panelData = customPanel;
+            panelError = customError;
+          }
+        }
+
+        // PRIORITY 1: For smmpilot.online subdomains, search by subdomain
+        if (!panelData && isSubdomainOfPlatform && subdomain) {
+          searchAttempts.push(`subdomain=${subdomain} (priority 1)`);
+          console.log('[useTenant] P1: Searching subdomain:', subdomain);
           
           const { data: subdomainPanel, error: subdomainError } = await supabase
             .from('panels')
             .select(`
-              id,
-              name,
-              subdomain,
-              custom_domain,
-              theme_type,
-              primary_color,
-              secondary_color,
-              logo_url,
-              status,
-              custom_branding,
-              settings,
-              panel_settings (
-                seo_title,
-                seo_description,
-                seo_keywords,
-                maintenance_mode,
-                maintenance_message,
-                contact_info,
-                social_links
-              )
+              id, name, subdomain, custom_domain, theme_type, primary_color,
+              secondary_color, logo_url, status, custom_branding, settings,
+              panel_settings (seo_title, seo_description, seo_keywords, maintenance_mode, maintenance_message, contact_info, social_links)
             `)
             .eq('subdomain', subdomain)
             .in('status', ['active', 'pending'])
             .maybeSingle();
 
-          console.log('[useTenant] Priority subdomain search result:', { subdomainPanel, subdomainError });
+          console.log('[useTenant] P1 result:', { found: !!subdomainPanel, error: subdomainError?.message });
           
           if (subdomainPanel) {
             panelData = subdomainPanel;
