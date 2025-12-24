@@ -91,7 +91,9 @@ const EXTERNAL_HOSTING_PATTERNS = [
 
 // Development/preview domains - these should show the platform app
 const DEV_PREVIEW_PATTERNS = [
-  /\.lovableproject\.com$/,  // Lovable preview domains
+  /lovableproject\.com$/,      // All Lovable preview domains (including subdomains)
+  /\.lovable\.app$/,           // Lovable staging domains
+  /lovable\.app$/,             // Lovable staging root
   /^localhost$/,
   /^127\.0\.0\.1$/,
   /\.local$/,
@@ -102,6 +104,10 @@ function isExternalHostingDomain(hostname: string): boolean {
 }
 
 function isDevPreviewDomain(hostname: string): boolean {
+  // Direct check for lovableproject.com domains (covers all variations)
+  if (hostname.includes('lovableproject.com') || hostname.includes('lovable.app')) {
+    return true;
+  }
   return DEV_PREVIEW_PATTERNS.some(pattern => pattern.test(hostname));
 }
 

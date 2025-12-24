@@ -111,7 +111,9 @@ import { ServiceTips } from "@/components/services/ServiceTips";
 import { SmartCategorizeDialog } from "@/components/services/SmartCategorizeDialog";
 import { ServiceAnalytics } from "@/components/services/ServiceAnalytics";
 import { ServiceKanbanCard } from "@/components/services/ServiceKanbanCard";
-import { LayoutGrid, List } from "lucide-react";
+import { ServiceToolsCards } from "@/components/services/ServiceToolsCards";
+import { ServiceHealthCheck } from "@/components/services/ServiceHealthCheck";
+import { LayoutGrid, List, Stethoscope } from "lucide-react";
 
 
 const categories = [
@@ -207,6 +209,10 @@ const ServicesManagement = () => {
   
   // Analytics panel
   const [showAnalytics, setShowAnalytics] = useState(false);
+  
+  // Health Check Dialog
+  const [isHealthCheckOpen, setIsHealthCheckOpen] = useState(false);
+  const [healthIssueCount, setHealthIssueCount] = useState(0);
   
   // View mode: list or kanban
   const [viewMode, setViewMode] = useState<"list" | "kanban">(() => {
@@ -1045,31 +1051,6 @@ const ServicesManagement = () => {
             Import
           </Button>
 
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="glass-card border-border/50"
-            onClick={() => setIsSmartCategorizeOpen(true)}
-          >
-            <Wand2 className="w-4 h-4 mr-2" />
-            Smart Categorize
-          </Button>
-
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="glass-card border-border/50"
-            onClick={generateAutoFixPreview}
-            disabled={isAutoFixingIcons}
-          >
-            {isAutoFixingIcons ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : (
-              <Sparkles className="w-4 h-4 mr-2" />
-            )}
-            Auto-Fix Icons
-          </Button>
-
           {/* View Mode Toggle */}
           <div className="flex items-center gap-1 p-1 rounded-lg bg-muted/50 border border-border/50">
             <Button
@@ -1242,6 +1223,20 @@ const ServicesManagement = () => {
         ))}
       </div>
 
+      {/* Service Tools Cards */}
+      <ServiceToolsCards
+        onAutoFix={generateAutoFixPreview}
+        onSmartCategorize={() => setIsSmartCategorizeOpen(true)}
+        onAutoArrange={() => {
+          setSortOption("name");
+          toast({ title: "Services arranged alphabetically" });
+        }}
+        onHealthCheck={() => setIsHealthCheckOpen(true)}
+        isAutoFixing={isAutoFixingIcons}
+        totalServices={totalCount}
+        healthIssues={healthIssueCount}
+      />
+
       {/* Service Tips */}
       {showTips && (
         <ServiceTips 
@@ -1255,6 +1250,17 @@ const ServicesManagement = () => {
 
       {/* Service Analytics */}
       <ServiceAnalytics isOpen={showAnalytics} onToggle={() => setShowAnalytics(!showAnalytics)} />
+
+      {/* Health Check Dialog */}
+      {panel?.id && (
+        <ServiceHealthCheck
+          open={isHealthCheckOpen}
+          onOpenChange={setIsHealthCheckOpen}
+          panelId={panel.id}
+          onIssuesFound={setHealthIssueCount}
+          onRefresh={fetchServices}
+        />
+      )}
 
       {/* Bulk Action Bar */}
       <AnimatePresence>
