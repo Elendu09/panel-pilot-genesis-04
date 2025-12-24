@@ -106,26 +106,26 @@ const PanelOwnerDashboard = () => {
   }, [panel?.id]);
 
   const mainNavigation = [
-    { name: 'Dashboard', href: '/panel', icon: LayoutDashboard },
-    { name: 'Services', href: '/panel/services', icon: Package },
-    { name: 'Orders', href: '/panel/orders', icon: ShoppingCart, badge: pendingCount > 0 ? pendingCount : undefined },
-    { name: 'Customers', href: '/panel/customers', icon: Users },
-    { name: 'Analytics', href: '/panel/analytics', icon: BarChart3 },
+    { name: 'Dashboard', href: '/panel', icon: LayoutDashboard, tourId: 'overview' },
+    { name: 'Services', href: '/panel/services', icon: Package, tourId: 'services' },
+    { name: 'Orders', href: '/panel/orders', icon: ShoppingCart, badge: pendingCount > 0 ? pendingCount : undefined, tourId: 'orders' },
+    { name: 'Customers', href: '/panel/customers', icon: Users, tourId: 'customers' },
+    { name: 'Analytics', href: '/panel/analytics', icon: BarChart3, tourId: 'analytics' },
   ];
 
   const settingsNavigation = [
-    { name: 'Providers', href: '/panel/providers', icon: Plug },
-    { name: 'Payments', href: '/panel/payments', icon: CreditCard },
-    { name: 'API', href: '/panel/api', icon: Code },
-    { name: 'Blog', href: '/panel/blog', icon: FileText },
-    { name: 'Domain', href: '/panel/domain', icon: Globe },
-    { name: 'Design', href: '/panel/design', icon: Palette },
-    { name: 'Security', href: '/panel/security', icon: Shield },
-    { name: 'Settings', href: '/panel/settings', icon: Settings },
+    { name: 'Providers', href: '/panel/providers', icon: Plug, tourId: 'providers' },
+    { name: 'Payments', href: '/panel/payments', icon: CreditCard, tourId: 'payments' },
+    { name: 'API', href: '/panel/api', icon: Code, tourId: 'api' },
+    { name: 'Blog', href: '/panel/blog', icon: FileText, tourId: 'blog' },
+    { name: 'Domain', href: '/panel/domain', icon: Globe, tourId: 'domain' },
+    { name: 'Design', href: '/panel/design', icon: Palette, tourId: 'design' },
+    { name: 'Security', href: '/panel/security', icon: Shield, tourId: 'security' },
+    { name: 'Settings', href: '/panel/settings', icon: Settings, tourId: 'settings' },
   ];
 
   const supportNavigation = [
-    { name: 'Support', href: '/panel/support', icon: HelpCircle },
+    { name: 'Support', href: '/panel/support', icon: HelpCircle, tourId: 'support' },
   ];
 
   const bottomNavItems = [
@@ -145,6 +145,7 @@ const PanelOwnerDashboard = () => {
   const NavItem = ({ item, collapsed }: { item: typeof mainNavigation[0], collapsed: boolean }) => (
     <Link
       to={item.href}
+      data-tour={item.tourId}
       className={cn(
         "nav-item group relative",
         isActive(item.href) && "active"
