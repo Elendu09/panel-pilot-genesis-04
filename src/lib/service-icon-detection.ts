@@ -33,7 +33,10 @@ export const PLATFORM_KEYWORDS: Record<string, string[]> = {
     "spotify", "spoti",
   ],
   soundcloud: [
-    "soundcloud", "sound cloud",
+    "soundcloud", "sound cloud", "sc ",
+  ],
+  audiomack: [
+    "audiomack", "audio mack", "am ",
   ],
   discord: [
     "discord", "disc",
@@ -58,6 +61,36 @@ export const PLATFORM_KEYWORDS: Record<string, string[]> = {
   ],
   whatsapp: [
     "whatsapp", "whats app", "wa ", " wa",
+  ],
+  deezer: [
+    "deezer",
+  ],
+  shazam: [
+    "shazam",
+  ],
+  reverbnation: [
+    "reverbnation", "reverb nation",
+  ],
+  mixcloud: [
+    "mixcloud", "mix cloud",
+  ],
+  tidal: [
+    "tidal",
+  ],
+  napster: [
+    "napster",
+  ],
+  tumblr: [
+    "tumblr",
+  ],
+  likee: [
+    "likee",
+  ],
+  kwai: [
+    "kwai",
+  ],
+  trovo: [
+    "trovo",
   ],
 };
 

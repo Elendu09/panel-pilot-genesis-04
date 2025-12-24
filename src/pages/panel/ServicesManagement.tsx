@@ -105,11 +105,19 @@ const categories = [
   { id: "all", name: "All Services", icon: Layers },
   { id: "instagram", name: "Instagram", icon: Instagram },
   { id: "facebook", name: "Facebook", icon: Facebook },
-  { id: "twitter", name: "Twitter", icon: Twitter },
+  { id: "twitter", name: "Twitter/X", icon: Twitter },
   { id: "youtube", name: "YouTube", icon: Youtube },
   { id: "tiktok", name: "TikTok", icon: Hash },
   { id: "linkedin", name: "LinkedIn", icon: Linkedin },
   { id: "telegram", name: "Telegram", icon: MessageCircle },
+  { id: "spotify", name: "Spotify", icon: Globe },
+  { id: "soundcloud", name: "SoundCloud", icon: Globe },
+  { id: "audiomack", name: "Audiomack", icon: Globe },
+  { id: "twitch", name: "Twitch", icon: Globe },
+  { id: "discord", name: "Discord", icon: Globe },
+  { id: "pinterest", name: "Pinterest", icon: Globe },
+  { id: "snapchat", name: "Snapchat", icon: Globe },
+  { id: "threads", name: "Threads", icon: Globe },
   { id: "other", name: "Other", icon: Globe },
 ];
 
@@ -131,13 +139,17 @@ const ServicesManagement = () => {
   const [isBulkDialogOpen, setIsBulkDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isBulkIconDialogOpen, setIsBulkIconDialogOpen] = useState(false);
+  const [isBulkCategoryDialogOpen, setIsBulkCategoryDialogOpen] = useState(false);
   const [isAutoFixingIcons, setIsAutoFixingIcons] = useState(false);
   const [bulkAction, setBulkAction] = useState("");
   const [sortOption, setSortOption] = useState<SortOption>("default");
   const [bulkMarkup, setBulkMarkup] = useState(25);
   const [selectedBulkIcon, setSelectedBulkIcon] = useState<string>("");
+  const [selectedBulkCategory, setSelectedBulkCategory] = useState<string>("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(50);
+  const [totalCount, setTotalCount] = useState(0);
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   
   // New service form
   const [newService, setNewService] = useState({
@@ -153,10 +165,29 @@ const ServicesManagement = () => {
   // Edit service state
   const [editingService, setEditingService] = useState<ServiceItem | null>(null);
 
-  // Fetch services and providers from Supabase
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setCurrentPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategory, sortOption, itemsPerPage]);
+
+  // Fetch services with server-side pagination
   useEffect(() => {
     if (!panel?.id) return;
     fetchServices();
+  }, [panel?.id, currentPage, itemsPerPage, selectedCategory, debouncedSearch, sortOption]);
+
+  // Fetch providers
+  useEffect(() => {
+    if (!panel?.id) return;
     fetchProviders();
   }, [panel?.id]);
 
@@ -175,17 +206,51 @@ const ServicesManagement = () => {
     
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      // Build query with server-side filtering
+      let query = supabase
         .from('services')
-        .select('*')
-        .eq('panel_id', panel.id)
-        .order('display_order', { ascending: true });
+        .select('*', { count: 'exact' })
+        .eq('panel_id', panel.id);
+
+      // Category filter (cast to any for dynamic category values)
+      if (selectedCategory !== 'all') {
+        query = query.eq('category', selectedCategory as any);
+      }
+
+      // Search filter
+      if (debouncedSearch) {
+        query = query.ilike('name', `%${debouncedSearch}%`);
+      }
+
+      // Sorting
+      switch (sortOption) {
+        case "price-high":
+          query = query.order('price', { ascending: false });
+          break;
+        case "price-low":
+          query = query.order('price', { ascending: true });
+          break;
+        case "name":
+          query = query.order('name', { ascending: true });
+          break;
+        default:
+          query = query.order('display_order', { ascending: true });
+      }
+
+      // Pagination with range
+      const from = (currentPage - 1) * itemsPerPage;
+      const to = from + itemsPerPage - 1;
+      query = query.range(from, to);
+
+      const { data, error, count } = await query;
 
       if (error) throw error;
 
+      setTotalCount(count || 0);
+
       const mappedServices: ServiceItem[] = (data || []).map((s, index) => ({
         id: s.id,
-        displayId: index + 1,
+        displayId: from + index + 1,
         name: s.name,
         category: s.category,
         provider: s.provider_id || 'Direct',
@@ -194,7 +259,7 @@ const ServicesManagement = () => {
         price: Number(s.price),
         originalPrice: Number(s.price) * 0.8,
         status: s.is_active ?? true,
-        orders: 0, // Would need to aggregate from orders table
+        orders: 0,
         providerId: s.provider_id || '',
         displayOrder: s.display_order || index + 1,
         description: s.description,
@@ -210,6 +275,35 @@ const ServicesManagement = () => {
     }
   };
 
+  // Fetch category counts separately for sidebar
+  const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({ all: 0 });
+  
+  useEffect(() => {
+    if (!panel?.id) return;
+    fetchCategoryCounts();
+  }, [panel?.id]);
+
+  const fetchCategoryCounts = async () => {
+    if (!panel?.id) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('services')
+        .select('category')
+        .eq('panel_id', panel.id);
+
+      if (error) throw error;
+
+      const counts: Record<string, number> = { all: data?.length || 0 };
+      data?.forEach((s) => {
+        counts[s.category] = (counts[s.category] || 0) + 1;
+      });
+      setCategoryCounts(counts);
+    } catch (error) {
+      console.error('Error fetching category counts:', error);
+    }
+  };
+
   // DnD sensors
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -222,63 +316,14 @@ const ServicesManagement = () => {
     })
   );
 
-  // Filter and sort services
-  const filteredServices = useMemo(() => {
-    let result = services.filter(service => {
-      const matchesCategory = selectedCategory === "all" || service.category === selectedCategory;
-      const matchesSearch = service.name.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesCategory && matchesSearch;
-    });
-
-    switch (sortOption) {
-      case "price-high":
-        result = [...result].sort((a, b) => b.price - a.price);
-        break;
-      case "price-low":
-        result = [...result].sort((a, b) => a.price - b.price);
-        break;
-      case "orders-high":
-        result = [...result].sort((a, b) => b.orders - a.orders);
-        break;
-      case "orders-low":
-        result = [...result].sort((a, b) => a.orders - b.orders);
-        break;
-      case "name":
-        result = [...result].sort((a, b) => a.name.localeCompare(b.name));
-        break;
-      default:
-        result = [...result].sort((a, b) => a.displayOrder - b.displayOrder);
-    }
-
-    return result;
-  }, [services, selectedCategory, searchQuery, sortOption]);
-
-  // Pagination
-  const totalPages = Math.ceil(filteredServices.length / itemsPerPage);
-  const paginatedServices = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return filteredServices.slice(start, start + itemsPerPage);
-  }, [filteredServices, currentPage, itemsPerPage]);
-
-  // Reset to page 1 when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [selectedCategory, searchQuery, sortOption, itemsPerPage]);
+  // Pagination (server-side - services are already paginated)
+  const totalPages = Math.ceil(totalCount / itemsPerPage);
 
   // Stats
-  const totalServices = services.length;
-  const activeServices = services.filter(s => s.status).length;
-  const totalOrders = services.reduce((acc, s) => acc + s.orders, 0);
+  const totalServices = totalCount;
+  const activeServices = categoryCounts.all || 0;
+  const totalOrders = 0; // Server-side would need separate query
   const avgPrice = services.length > 0 ? (services.reduce((acc, s) => acc + s.price, 0) / services.length).toFixed(2) : '0.00';
-
-  // Category counts
-  const categoryCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: services.length };
-    services.forEach(s => {
-      counts[s.category] = (counts[s.category] || 0) + 1;
-    });
-    return counts;
-  }, [services]);
 
   // Category icon getter
   const getCategoryIcon = (category: string) => {
@@ -344,12 +389,12 @@ const ServicesManagement = () => {
     );
   };
 
-  // Select all
+  // Select all (current page only for server-side pagination)
   const selectAll = () => {
-    if (selectedServices.length === filteredServices.length) {
+    if (selectedServices.length === services.length && services.length > 0) {
       setSelectedServices([]);
     } else {
-      setSelectedServices(filteredServices.map(s => s.id));
+      setSelectedServices(services.map(s => s.id));
     }
   };
 
@@ -426,6 +471,38 @@ const ServicesManagement = () => {
     }
   };
 
+  // Bulk category assignment
+  const executeBulkCategoryAssignment = async () => {
+    if (!selectedBulkCategory) {
+      toast({ title: "Please select a category", variant: "destructive" });
+      return;
+    }
+    
+    try {
+      await supabase
+        .from('services')
+        .update({ 
+          category: selectedBulkCategory as any,
+          image_url: `icon:${selectedBulkCategory}` 
+        })
+        .in('id', selectedServices);
+      
+      setServices(prev => prev.map(s => 
+        selectedServices.includes(s.id) 
+          ? { ...s, category: selectedBulkCategory, imageUrl: `icon:${selectedBulkCategory}` } 
+          : s
+      ));
+      
+      toast({ title: `Category changed for ${selectedServices.length} services` });
+      setSelectedServices([]);
+      setIsBulkCategoryDialogOpen(false);
+      setSelectedBulkCategory("");
+      fetchCategoryCounts(); // Refresh counts
+    } catch (error) {
+      console.error('Bulk category error:', error);
+      toast({ title: 'Failed to change category', variant: 'destructive' });
+    }
+  };
   // Auto-fix icons for all services
   const handleAutoFixIcons = async () => {
     if (services.length === 0) {
@@ -821,6 +898,9 @@ const ServicesManagement = () => {
               <Button size="sm" variant="outline" onClick={() => setIsBulkIconDialogOpen(true)}>
                 <Palette className="w-3 h-3 mr-1" /> Set Icon
               </Button>
+              <Button size="sm" variant="outline" onClick={() => setIsBulkCategoryDialogOpen(true)}>
+                <Layers className="w-3 h-3 mr-1" /> Change Category
+              </Button>
             </div>
           </motion.div>
         )}
@@ -896,13 +976,13 @@ const ServicesManagement = () => {
           </div>
 
           {/* Services */}
-          {filteredServices.length === 0 ? (
+          {services.length === 0 && !loading ? (
             <Card className="glass-card">
               <CardContent className="p-12 text-center">
                 <Package className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
                 <h3 className="text-lg font-medium mb-2">No services found</h3>
                 <p className="text-muted-foreground mb-4">
-                  {services.length === 0 
+                  {totalCount === 0 
                     ? "Get started by adding your first service" 
                     : "Try adjusting your search or filters"}
                 </p>
@@ -919,7 +999,7 @@ const ServicesManagement = () => {
                 onDragEnd={handleDragEnd}
               >
                 <SortableContext
-                  items={paginatedServices.map(s => s.id)}
+                  items={services.map(s => s.id)}
                   strategy={verticalListSortingStrategy}
                 >
                   <Card className="glass-card overflow-hidden">
@@ -929,7 +1009,7 @@ const ServicesManagement = () => {
                           <tr className="border-b border-border/50 bg-muted/30">
                             <th className="text-left p-4 w-8">
                               <button onClick={selectAll}>
-                                {selectedServices.length === paginatedServices.length && paginatedServices.length > 0 ? (
+                                {selectedServices.length === services.length && services.length > 0 ? (
                                   <CheckSquare className="w-4 h-4" />
                                 ) : (
                                   <Square className="w-4 h-4" />
@@ -945,7 +1025,7 @@ const ServicesManagement = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {paginatedServices.map((service) => (
+                          {services.map((service) => (
                             <DraggableServiceItem
                               key={service.id}
                               service={service}
@@ -969,7 +1049,7 @@ const ServicesManagement = () => {
               {totalPages > 1 && (
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <span>Showing {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, filteredServices.length)} of {filteredServices.length}</span>
+                    <span>Showing {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, totalCount)} of {totalCount}</span>
                     <Select value={itemsPerPage.toString()} onValueChange={(v) => setItemsPerPage(parseInt(v))}>
                       <SelectTrigger className="w-20 h-8 bg-card/50">
                         <SelectValue />
@@ -1175,6 +1255,76 @@ const ServicesManagement = () => {
             </Button>
             <Button onClick={executeBulkIconAssignment} disabled={!selectedBulkIcon}>
               Apply to {selectedServices.length} Services
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Category Assignment Dialog */}
+      <Dialog open={isBulkCategoryDialogOpen} onOpenChange={setIsBulkCategoryDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Layers className="w-5 h-5 text-primary" />
+              Change Category for {selectedServices.length} Services
+            </DialogTitle>
+            <DialogDescription>
+              Select a category to move all selected services
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid grid-cols-2 gap-2 max-h-[400px] overflow-y-auto p-1">
+            {categories.filter(c => c.id !== 'all').map((cat) => {
+              const isSelected = selectedBulkCategory === cat.id;
+              const CatIcon = cat.icon;
+              return (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => setSelectedBulkCategory(cat.id)}
+                  className={cn(
+                    "flex items-center gap-3 p-3 rounded-lg border transition-all text-left",
+                    isSelected 
+                      ? "ring-2 ring-primary bg-primary/10 border-primary" 
+                      : "border-border/50 hover:bg-muted/50"
+                  )}
+                >
+                  <div className="p-2 rounded-lg bg-muted">
+                    <CatIcon className="w-4 h-4" />
+                  </div>
+                  <span className="text-sm font-medium">{cat.name}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {selectedBulkCategory && (
+            <div className="flex items-center gap-2 p-3 bg-primary/10 rounded-lg">
+              <span className="text-sm">Moving to:</span>
+              {(() => {
+                const cat = categories.find(c => c.id === selectedBulkCategory);
+                if (cat) {
+                  const CatIcon = cat.icon;
+                  return (
+                    <>
+                      <div className="p-1.5 rounded bg-muted">
+                        <CatIcon className="w-4 h-4" />
+                      </div>
+                      <span className="text-sm font-medium">{cat.name}</span>
+                    </>
+                  );
+                }
+                return null;
+              })()}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setIsBulkCategoryDialogOpen(false); setSelectedBulkCategory(""); }}>
+              Cancel
+            </Button>
+            <Button onClick={executeBulkCategoryAssignment} disabled={!selectedBulkCategory}>
+              Move {selectedServices.length} Services
             </Button>
           </DialogFooter>
         </DialogContent>
