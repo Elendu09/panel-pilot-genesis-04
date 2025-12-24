@@ -1,4 +1,5 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { 
   Package, 
   Plus, 
@@ -143,6 +144,7 @@ const ITEMS_PER_PAGE_OPTIONS = [25, 50, 100, 200];
 const ServicesManagement = () => {
   const isMobile = useIsMobile();
   const { panel, loading: panelLoading } = usePanel();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [services, setServices] = useState<ServiceItem[]>([]);
   
   // Undo history for bulk operations
@@ -220,8 +222,9 @@ const ServicesManagement = () => {
   });
   
   // Service limit
-  const SERVICE_LIMIT = 2500;
-  const isNearLimit = totalCount >= 2000;
+  const SERVICE_LIMIT = 5500;
+  const WARNING_THRESHOLD = 5000;
+  const isNearLimit = totalCount >= WARNING_THRESHOLD;
   const isAtLimit = totalCount >= SERVICE_LIMIT;
 
   // Provider name lookup
@@ -249,6 +252,79 @@ const ServicesManagement = () => {
   
   // Edit service state - using a more flexible type for ServiceEditDialog compatibility
   const [editingService, setEditingService] = useState<any>(null);
+  
+  // Quick Edit Service ID input
+  const [quickEditServiceId, setQuickEditServiceId] = useState("");
+  const [isQuickEditOpen, setIsQuickEditOpen] = useState(false);
+
+  // Handle URL params for direct service editing (?edit=serviceId or ?view=serviceId)
+  useEffect(() => {
+    const editId = searchParams.get('edit');
+    const viewId = searchParams.get('view');
+    
+    if ((editId || viewId) && services.length > 0) {
+      const targetId = editId || viewId;
+      const targetService = services.find(s => s.id === targetId);
+      
+      if (targetService) {
+        if (editId) {
+          openEditDialog(targetService);
+        } else if (viewId) {
+          setViewingService(targetService);
+          setIsViewDialogOpen(true);
+        }
+        // Clear the URL param after handling
+        setSearchParams({}, { replace: true });
+      }
+    }
+  }, [services, searchParams]);
+
+  // Quick edit handler - fetch service by ID and open edit dialog
+  const handleQuickEdit = async () => {
+    if (!quickEditServiceId.trim()) {
+      toast({ title: "Please enter a service ID", variant: "destructive" });
+      return;
+    }
+    
+    try {
+      const { data, error } = await supabase
+        .from('services')
+        .select('*')
+        .eq('id', quickEditServiceId.trim())
+        .single();
+        
+      if (error || !data) {
+        toast({ title: "Service not found", description: "Check the ID and try again", variant: "destructive" });
+        return;
+      }
+      
+      // Map to ServiceItem format
+      const serviceItem: ServiceItem = {
+        id: data.id,
+        displayId: 0,
+        name: data.name,
+        category: data.category,
+        provider: getProviderName(data.provider_id || ''),
+        minQty: data.min_quantity || 100,
+        maxQty: data.max_quantity || 10000,
+        price: Number(data.price),
+        originalPrice: Number(data.price) * 0.8,
+        status: data.is_active ?? true,
+        orders: 0,
+        providerId: data.provider_id || '',
+        displayOrder: data.display_order || 0,
+        description: data.description,
+        imageUrl: data.image_url,
+      };
+      
+      openEditDialog(serviceItem);
+      setIsQuickEditOpen(false);
+      setQuickEditServiceId("");
+    } catch (error) {
+      console.error('Error fetching service:', error);
+      toast({ title: "Error loading service", variant: "destructive" });
+    }
+  };
 
   // Debounce search query
   useEffect(() => {
@@ -264,13 +340,15 @@ const ServicesManagement = () => {
     setCurrentPage(1);
   }, [selectedCategory, sortOption, itemsPerPage]);
 
-  // Fetch services with server-side pagination
+  // Fetch services with server-side pagination - depends on providers being loaded
   useEffect(() => {
     if (!panel?.id) return;
+    // Wait for providers to be loaded before fetching services
+    // This ensures getProviderName works correctly
     fetchServices();
-  }, [panel?.id, currentPage, itemsPerPage, selectedCategory, debouncedSearch, sortOption]);
+  }, [panel?.id, currentPage, itemsPerPage, selectedCategory, debouncedSearch, sortOption, providers]);
 
-  // Fetch providers
+  // Fetch providers FIRST
   useEffect(() => {
     if (!panel?.id) return;
     fetchProviders();
@@ -372,14 +450,16 @@ const ServicesManagement = () => {
     if (!panel?.id) return;
     
     try {
-      const { data, error } = await supabase
+      // Use count: 'exact' to get accurate total count
+      const { data, error, count } = await supabase
         .from('services')
-        .select('category')
+        .select('category', { count: 'exact' })
         .eq('panel_id', panel.id);
 
       if (error) throw error;
 
-      const counts: Record<string, number> = { all: data?.length || 0 };
+      // Use the exact count from Supabase instead of data.length
+      const counts: Record<string, number> = { all: count || 0 };
       data?.forEach((s) => {
         counts[s.category] = (counts[s.category] || 0) + 1;
       });
@@ -1041,6 +1121,38 @@ const ServicesManagement = () => {
           </div>
         </div>
         <div className="flex flex-wrap gap-2 items-center">
+          {/* Quick Edit by ID */}
+          <Dialog open={isQuickEditOpen} onOpenChange={setIsQuickEditOpen}>
+            <DialogTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="glass-card border-border/50"
+              >
+                <Edit className="w-4 h-4 mr-2" />
+                Quick Edit
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Edit Service by ID</DialogTitle>
+                <DialogDescription>Enter a service ID to directly open its editor</DialogDescription>
+              </DialogHeader>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Enter service ID..."
+                  value={quickEditServiceId}
+                  onChange={(e) => setQuickEditServiceId(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleQuickEdit()}
+                />
+                <Button onClick={handleQuickEdit}>
+                  <Edit className="w-4 h-4 mr-2" />
+                  Edit
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
           <Button 
             variant="outline" 
             size="sm" 
@@ -1402,16 +1514,25 @@ const ServicesManagement = () => {
           {services.length === 0 && !loading ? (
             <Card className="glass-card">
               <CardContent className="p-12 text-center">
-                <Package className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-lg font-medium mb-2">No services found</h3>
-                <p className="text-muted-foreground mb-4">
+                <Package className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+                <h3 className="text-xl font-medium mb-2">
+                  {totalCount === 0 ? "No Services Available" : "No services found"}
+                </h3>
+                <p className="text-muted-foreground mb-6 max-w-md mx-auto">
                   {totalCount === 0 
-                    ? "Get started by adding your first service" 
-                    : "Try adjusting your search or filters"}
+                    ? "Services have not been imported yet. Import services from a provider or add them manually to get started." 
+                    : "Try adjusting your search or category filters to find what you're looking for."}
                 </p>
-                <Button onClick={() => setIsAddDialogOpen(true)}>
-                  <Plus className="w-4 h-4 mr-2" /> Add Service
-                </Button>
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  {totalCount === 0 && (
+                    <Button onClick={() => setIsImportDialogOpen(true)} className="bg-gradient-to-r from-primary to-primary/80">
+                      <Upload className="w-4 h-4 mr-2" /> Import Services
+                    </Button>
+                  )}
+                  <Button variant={totalCount === 0 ? "outline" : "default"} onClick={() => setIsAddDialogOpen(true)}>
+                    <Plus className="w-4 h-4 mr-2" /> Add Service Manually
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ) : (

@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { useTenant } from '@/hooks/useTenant';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { HelmetProvider } from "react-helmet-async";
@@ -163,18 +163,18 @@ const TenantRouter = () => {
                   </div>
                   
                   <div className="space-y-3">
-                    <a 
-                      href={`https://smmpilot.online/auth?subdomain=${requestedSubdomain}`}
+                    <button 
+                      onClick={() => window.location.href = `https://smmpilot.online/auth?subdomain=${requestedSubdomain}`}
                       className="flex items-center justify-center gap-2 w-full px-6 py-3 bg-gradient-to-r from-primary to-primary/80 text-primary-foreground font-medium rounded-xl hover:opacity-90 transition-opacity"
                     >
                       Claim This Subdomain
-                    </a>
-                    <a 
-                      href="https://smmpilot.online"
+                    </button>
+                    <button 
+                      onClick={() => window.location.href = "https://smmpilot.online"}
                       className="flex items-center justify-center gap-2 w-full px-6 py-3 border border-border/50 text-foreground font-medium rounded-xl hover:bg-accent/50 transition-colors"
                     >
                       Go to SMMPilot
-                    </a>
+                    </button>
                   </div>
                 </div>
               </div>

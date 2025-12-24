@@ -660,8 +660,18 @@ const OrdersManagement = () => {
                 <tbody>
                   {filteredOrders.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="p-8 text-center text-muted-foreground">
-                        {loading ? 'Loading orders...' : 'No orders found'}
+                      <td colSpan={8} className="p-12 text-center">
+                        <div className="flex flex-col items-center gap-4">
+                          <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center">
+                            <ShoppingCart className="w-8 h-8 text-muted-foreground/50" />
+                          </div>
+                          <div>
+                            <h3 className="font-medium text-lg mb-1">No Orders Yet</h3>
+                            <p className="text-sm text-muted-foreground">
+                              Orders will appear here once customers place them.
+                            </p>
+                          </div>
+                        </div>
                       </td>
                     </tr>
                   ) : (
