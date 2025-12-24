@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -17,16 +17,40 @@ import {
   Palette,
   CreditCard,
   Globe,
-  Sparkles
+  Sparkles,
+  MousePointer2,
+  Hand
 } from "lucide-react";
 
-const tourSteps = [
+interface TourStep {
+  id: string;
+  title: string;
+  description: string;
+  icon: React.ComponentType<{ className?: string }>;
+  target: string | null;
+  selector?: string;
+  position?: "top" | "bottom" | "left" | "right" | "center";
+  action?: string;
+}
+
+const tourSteps: TourStep[] = [
   {
     id: "welcome",
     title: "Welcome to Your Panel! 🎉",
-    description: "Let's take a quick tour to help you get started with managing your SMM panel.",
+    description: "Let's take a quick tour to help you get started with managing your SMM panel. We'll show you where everything is.",
     icon: Sparkles,
     target: null,
+    position: "center",
+  },
+  {
+    id: "sidebar",
+    title: "Navigation Sidebar",
+    description: "This is your main navigation. Click any menu item to access different sections of your panel.",
+    icon: LayoutDashboard,
+    target: "sidebar",
+    selector: "[data-tour='sidebar']",
+    position: "right",
+    action: "Click menu items to navigate",
   },
   {
     id: "dashboard",
@@ -34,6 +58,9 @@ const tourSteps = [
     description: "Your dashboard shows real-time stats, recent orders, and quick actions. Monitor everything at a glance.",
     icon: LayoutDashboard,
     target: "overview",
+    selector: "[data-tour='dashboard-stats']",
+    position: "bottom",
+    action: "View your key metrics here",
   },
   {
     id: "services",
@@ -41,13 +68,19 @@ const tourSteps = [
     description: "Add and manage SMM services. Set prices, categories, and import services from providers.",
     icon: Package,
     target: "services",
+    selector: "[data-tour='services-menu']",
+    position: "right",
+    action: "Click to manage services",
   },
   {
     id: "orders",
     title: "Orders Management",
-    description: "View and manage customer orders. Track status, process refunds, and monitor delivery.",
+    description: "View and manage customer orders. Track status, process refunds, and monitor delivery progress.",
     icon: ShoppingCart,
     target: "orders",
+    selector: "[data-tour='orders-menu']",
+    position: "right",
+    action: "Click to view orders",
   },
   {
     id: "providers",
@@ -55,13 +88,19 @@ const tourSteps = [
     description: "Connect to SMM providers, sync services, and manage API connections for automated order processing.",
     icon: Users,
     target: "providers",
+    selector: "[data-tour='providers-menu']",
+    position: "right",
+    action: "Click to add providers",
   },
   {
     id: "analytics",
     title: "Analytics & Reports",
-    description: "Detailed analytics showing revenue, orders, and customer activity trends.",
+    description: "Detailed analytics showing revenue, orders, and customer activity trends over time.",
     icon: BarChart3,
     target: "analytics",
+    selector: "[data-tour='analytics-menu']",
+    position: "right",
+    action: "Click for insights",
   },
   {
     id: "payments",
@@ -69,6 +108,9 @@ const tourSteps = [
     description: "Configure payment gateways to accept payments from customers worldwide.",
     icon: CreditCard,
     target: "payment-methods",
+    selector: "[data-tour='payments-menu']",
+    position: "right",
+    action: "Click to configure",
   },
   {
     id: "design",
@@ -76,6 +118,9 @@ const tourSteps = [
     description: "Customize your panel's appearance with themes, colors, and branding options.",
     icon: Palette,
     target: "design",
+    selector: "[data-tour='design-menu']",
+    position: "right",
+    action: "Click to customize",
   },
   {
     id: "api",
@@ -83,6 +128,9 @@ const tourSteps = [
     description: "Generate API keys for customers to integrate with their own systems.",
     icon: Code,
     target: "api",
+    selector: "[data-tour='api-menu']",
+    position: "right",
+    action: "Click to manage API",
   },
   {
     id: "domain",
@@ -90,6 +138,9 @@ const tourSteps = [
     description: "Connect your custom domain and configure SSL for a professional appearance.",
     icon: Globe,
     target: "domains",
+    selector: "[data-tour='domain-menu']",
+    position: "right",
+    action: "Click to set up domain",
   },
   {
     id: "complete",
@@ -97,6 +148,7 @@ const tourSteps = [
     description: "You're ready to start managing your SMM panel. Explore all features and grow your business!",
     icon: Sparkles,
     target: null,
+    position: "center",
   },
 ];
 
@@ -105,10 +157,154 @@ interface OnboardingTourProps {
   isOpen: boolean;
 }
 
+// Animated click indicator component
+const ClickIndicator = ({ position }: { position: { x: number; y: number } }) => (
+  <motion.div
+    className="fixed pointer-events-none z-[102]"
+    style={{ left: position.x, top: position.y }}
+    initial={{ scale: 0, opacity: 0 }}
+    animate={{ 
+      scale: [0, 1.2, 1],
+      opacity: [0, 1, 1]
+    }}
+    transition={{ duration: 0.5, ease: "easeOut" }}
+  >
+    <motion.div
+      animate={{
+        y: [0, -8, 0],
+      }}
+      transition={{
+        duration: 1,
+        repeat: Infinity,
+        ease: "easeInOut"
+      }}
+      className="relative"
+    >
+      <Hand className="w-8 h-8 text-primary drop-shadow-lg transform -rotate-12" />
+      <motion.div
+        className="absolute -inset-2 rounded-full bg-primary/20"
+        animate={{
+          scale: [1, 1.5, 1],
+          opacity: [0.5, 0, 0.5]
+        }}
+        transition={{
+          duration: 1.5,
+          repeat: Infinity,
+          ease: "easeInOut"
+        }}
+      />
+    </motion.div>
+  </motion.div>
+);
+
+// Spotlight overlay component
+const SpotlightOverlay = ({ targetRect }: { targetRect: DOMRect | null }) => {
+  if (!targetRect) return null;
+
+  const padding = 8;
+  const left = targetRect.left - padding;
+  const top = targetRect.top - padding;
+  const width = targetRect.width + padding * 2;
+  const height = targetRect.height + padding * 2;
+
+  return (
+    <>
+      {/* Spotlight cutout using clip-path */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-[99] pointer-events-none"
+        style={{
+          background: 'rgba(0, 0, 0, 0.75)',
+          clipPath: `polygon(
+            0% 0%, 
+            0% 100%, 
+            ${left}px 100%, 
+            ${left}px ${top}px, 
+            ${left + width}px ${top}px, 
+            ${left + width}px ${top + height}px, 
+            ${left}px ${top + height}px, 
+            ${left}px 100%, 
+            100% 100%, 
+            100% 0%
+          )`
+        }}
+      />
+      
+      {/* Highlight border around target */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.9 }}
+        className="fixed z-[100] pointer-events-none rounded-lg"
+        style={{
+          left: left,
+          top: top,
+          width: width,
+          height: height,
+        }}
+      >
+        <div className="absolute inset-0 rounded-lg border-2 border-primary" />
+        <motion.div
+          className="absolute inset-0 rounded-lg border-2 border-primary"
+          animate={{
+            boxShadow: [
+              "0 0 0 0 hsl(var(--primary) / 0.4)",
+              "0 0 0 8px hsl(var(--primary) / 0)",
+              "0 0 0 0 hsl(var(--primary) / 0)"
+            ]
+          }}
+          transition={{
+            duration: 1.5,
+            repeat: Infinity,
+            ease: "easeOut"
+          }}
+        />
+      </motion.div>
+    </>
+  );
+};
+
 export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
   const [currentStep, setCurrentStep] = useState(0);
+  const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
+  const [clickPosition, setClickPosition] = useState<{ x: number; y: number } | null>(null);
+  
   const step = tourSteps[currentStep];
   const progress = ((currentStep + 1) / tourSteps.length) * 100;
+
+  // Find and highlight target element
+  const updateTargetRect = useCallback(() => {
+    if (step.selector) {
+      const element = document.querySelector(step.selector);
+      if (element) {
+        const rect = element.getBoundingClientRect();
+        setTargetRect(rect);
+        // Position click indicator at center-right of element
+        setClickPosition({
+          x: rect.left + rect.width / 2,
+          y: rect.top + rect.height / 2
+        });
+        return;
+      }
+    }
+    setTargetRect(null);
+    setClickPosition(null);
+  }, [step.selector]);
+
+  useEffect(() => {
+    if (isOpen) {
+      updateTargetRect();
+      // Update on scroll/resize
+      window.addEventListener('resize', updateTargetRect);
+      window.addEventListener('scroll', updateTargetRect);
+      return () => {
+        window.removeEventListener('resize', updateTargetRect);
+        window.removeEventListener('scroll', updateTargetRect);
+      };
+    }
+  }, [isOpen, currentStep, updateTargetRect]);
 
   const handleNext = () => {
     if (currentStep < tourSteps.length - 1) {
@@ -128,25 +324,90 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
     onComplete();
   };
 
+  // Calculate card position based on target
+  const getCardPosition = () => {
+    if (!targetRect || step.position === "center") {
+      return { 
+        position: "fixed" as const,
+        top: "50%",
+        left: "50%",
+        transform: "translate(-50%, -50%)"
+      };
+    }
+
+    const cardWidth = 400;
+    const cardHeight = 450;
+    const padding = 20;
+
+    switch (step.position) {
+      case "right":
+        return {
+          position: "fixed" as const,
+          top: Math.max(padding, Math.min(targetRect.top, window.innerHeight - cardHeight - padding)),
+          left: Math.min(targetRect.right + padding, window.innerWidth - cardWidth - padding),
+        };
+      case "left":
+        return {
+          position: "fixed" as const,
+          top: Math.max(padding, Math.min(targetRect.top, window.innerHeight - cardHeight - padding)),
+          right: window.innerWidth - targetRect.left + padding,
+        };
+      case "bottom":
+        return {
+          position: "fixed" as const,
+          top: Math.min(targetRect.bottom + padding, window.innerHeight - cardHeight - padding),
+          left: Math.max(padding, Math.min(targetRect.left, window.innerWidth - cardWidth - padding)),
+        };
+      case "top":
+        return {
+          position: "fixed" as const,
+          bottom: window.innerHeight - targetRect.top + padding,
+          left: Math.max(padding, Math.min(targetRect.left, window.innerWidth - cardWidth - padding)),
+        };
+      default:
+        return {
+          position: "fixed" as const,
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)"
+        };
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[100] flex items-center justify-center"
-      >
-        {/* Backdrop */}
-        <div 
-          className="absolute inset-0 bg-background/80 backdrop-blur-md"
-          onClick={handleSkip}
-        />
+    <AnimatePresence mode="wait">
+      <div className="fixed inset-0 z-[98]">
+        {/* Backdrop for non-targeted steps */}
+        {!targetRect && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-background/80 backdrop-blur-md"
+            onClick={handleSkip}
+          />
+        )}
+
+        {/* Spotlight overlay for targeted steps */}
+        <SpotlightOverlay targetRect={targetRect} />
+
+        {/* Click indicator */}
+        {clickPosition && step.action && (
+          <ClickIndicator position={clickPosition} />
+        )}
         
-        {/* Spotlight effect */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] opacity-20 rounded-full bg-primary blur-3xl" />
+        {/* Ambient glow effect */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <motion.div 
+            className="absolute w-[600px] h-[600px] opacity-20 rounded-full bg-primary blur-3xl"
+            animate={{
+              x: targetRect ? targetRect.left - 300 : "calc(50vw - 300px)",
+              y: targetRect ? targetRect.top - 300 : "calc(50vh - 300px)"
+            }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+          />
         </div>
 
         {/* Tour Card */}
@@ -156,14 +417,23 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: -20 }}
           transition={{ duration: 0.3 }}
-          className="relative z-10 w-full max-w-md mx-4"
+          className="z-[101] w-full max-w-md mx-4"
+          style={getCardPosition()}
         >
-          <Card className="glass-card border-primary/30 p-6 space-y-6">
+          <Card className="bg-card/95 backdrop-blur-xl border-primary/30 p-6 space-y-5 shadow-2xl">
             {/* Header with close */}
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">
-                Step {currentStep + 1} of {tourSteps.length}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-1 text-xs font-medium bg-primary/10 text-primary rounded-full">
+                  Step {currentStep + 1} of {tourSteps.length}
+                </span>
+                {step.action && (
+                  <span className="px-2 py-1 text-xs font-medium bg-accent/10 text-accent-foreground rounded-full flex items-center gap-1">
+                    <MousePointer2 className="w-3 h-3" />
+                    Interactive
+                  </span>
+                )}
+              </div>
               <Button
                 variant="ghost"
                 size="icon"
@@ -180,17 +450,17 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
             {/* Icon */}
             <div className="flex justify-center">
               <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-                className="p-6 rounded-2xl bg-primary/10 border border-primary/20"
+                initial={{ scale: 0, rotate: -180 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ delay: 0.2, type: "spring", stiffness: 200, damping: 15 }}
+                className="p-5 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20"
               >
-                <step.icon className="w-12 h-12 text-primary" />
+                <step.icon className="w-10 h-10 text-primary" />
               </motion.div>
             </div>
 
             {/* Content */}
-            <div className="text-center space-y-3">
+            <div className="text-center space-y-2">
               <motion.h2
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -203,24 +473,39 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="text-muted-foreground"
+                className="text-sm text-muted-foreground leading-relaxed"
               >
                 {step.description}
               </motion.p>
+              
+              {/* Action hint */}
+              {step.action && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="pt-2"
+                >
+                  <span className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-primary/10 text-primary rounded-full">
+                    <Hand className="w-3 h-3" />
+                    {step.action}
+                  </span>
+                </motion.div>
+              )}
             </div>
 
             {/* Step indicators */}
-            <div className="flex justify-center gap-2">
+            <div className="flex justify-center gap-1.5 py-2">
               {tourSteps.map((_, index) => (
                 <button
                   key={index}
                   onClick={() => setCurrentStep(index)}
-                  className={`w-2 h-2 rounded-full transition-all ${
+                  className={`h-2 rounded-full transition-all duration-300 ${
                     index === currentStep 
-                      ? "w-6 bg-primary" 
+                      ? "w-8 bg-primary" 
                       : index < currentStep
-                        ? "bg-primary/50"
-                        : "bg-muted"
+                        ? "w-2 bg-primary/50 hover:bg-primary/70"
+                        : "w-2 bg-muted hover:bg-muted-foreground/30"
                   }`}
                 />
               ))}
@@ -240,10 +525,19 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
               )}
               <Button
                 onClick={handleNext}
-                className="flex-1 gap-2 bg-gradient-to-r from-primary to-primary/80"
+                className="flex-1 gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
               >
-                {currentStep === tourSteps.length - 1 ? "Get Started" : "Next"}
-                {currentStep < tourSteps.length - 1 && <ChevronRight className="w-4 h-4" />}
+                {currentStep === tourSteps.length - 1 ? (
+                  <>
+                    <Sparkles className="w-4 h-4" />
+                    Get Started
+                  </>
+                ) : (
+                  <>
+                    Next
+                    <ChevronRight className="w-4 h-4" />
+                  </>
+                )}
               </Button>
             </div>
 
@@ -251,14 +545,14 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
             {currentStep < tourSteps.length - 1 && (
               <button
                 onClick={handleSkip}
-                className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+                className="w-full text-center text-xs text-muted-foreground hover:text-foreground transition-colors"
               >
                 Skip tour
               </button>
             )}
           </Card>
         </motion.div>
-      </motion.div>
+      </div>
     </AnimatePresence>
   );
 };
