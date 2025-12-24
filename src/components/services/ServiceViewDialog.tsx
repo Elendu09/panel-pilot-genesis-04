@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,10 +13,13 @@ import {
   Package, 
   Clock, 
   TrendingUp,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Server,
+  AlertCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SOCIAL_ICONS_MAP } from "@/components/icons/SocialIcons";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ServiceViewDialogProps {
   service: {
@@ -30,6 +34,7 @@ interface ServiceViewDialogProps {
     status: boolean;
     imageUrl?: string;
     provider?: string;
+    providerId?: string;
     orders?: number;
   } | null;
   open: boolean;
@@ -82,11 +87,49 @@ export const ServiceViewDialog = ({
   onToggleStatus,
   onDuplicate
 }: ServiceViewDialogProps) => {
+  const [providerInfo, setProviderInfo] = useState<{ name: string; balance?: number } | null>(null);
+  const [loadingProvider, setLoadingProvider] = useState(false);
+
+  // Fetch provider info when dialog opens
+  useEffect(() => {
+    if (open && service?.providerId) {
+      fetchProviderInfo(service.providerId);
+    } else {
+      setProviderInfo(null);
+    }
+  }, [open, service?.providerId]);
+
+  const fetchProviderInfo = async (providerId: string) => {
+    if (!providerId || providerId === 'Direct') {
+      setProviderInfo(null);
+      return;
+    }
+    
+    setLoadingProvider(true);
+    try {
+      const { data, error } = await supabase
+        .from('providers')
+        .select('name, balance, is_active')
+        .eq('id', providerId)
+        .maybeSingle();
+
+      if (data) {
+        setProviderInfo({ name: data.name, balance: data.balance });
+      }
+    } catch (error) {
+      console.error('Error fetching provider:', error);
+    } finally {
+      setLoadingProvider(false);
+    }
+  };
+
   if (!service) return null;
 
   const profitMargin = service.originalPrice 
     ? ((service.price - service.originalPrice) / service.originalPrice * 100).toFixed(0)
     : null;
+
+  const displayProvider = providerInfo?.name || service.provider || 'Direct';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -179,14 +222,36 @@ export const ServiceViewDialog = ({
         </div>
 
         {/* Provider Info */}
-        {service.provider && (
-          <div className="mb-4 p-3 rounded-lg bg-muted/30">
-            <div className="flex items-center justify-between">
+        <div className="mb-4 p-3 rounded-lg bg-muted/30 border">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Server className="w-4 h-4 text-muted-foreground" />
               <span className="text-sm text-muted-foreground">Provider</span>
-              <span className="text-sm font-medium">{service.provider}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              {loadingProvider ? (
+                <span className="text-sm text-muted-foreground">Loading...</span>
+              ) : (
+                <>
+                  <Badge variant={displayProvider === 'Direct' ? 'secondary' : 'default'} className="text-xs">
+                    {displayProvider}
+                  </Badge>
+                  {providerInfo?.balance !== undefined && (
+                    <Badge variant="outline" className="text-xs">
+                      Balance: ${providerInfo.balance.toFixed(2)}
+                    </Badge>
+                  )}
+                </>
+              )}
             </div>
           </div>
-        )}
+          {!service.providerId && displayProvider === 'Direct' && (
+            <div className="flex items-center gap-1 mt-2 text-xs text-amber-600 dark:text-amber-400">
+              <AlertCircle className="w-3 h-3" />
+              <span>No provider linked - manual fulfillment required</span>
+            </div>
+          )}
+        </div>
 
         {/* Actions */}
         <div className="flex gap-2 pt-2">
