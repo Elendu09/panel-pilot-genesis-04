@@ -12,7 +12,7 @@ interface ImageUploadProps {
   value: string;
   onChange: (url: string) => void;
   panelId: string;
-  folder: "logos" | "hero" | "favicon";
+  folder: "logos" | "hero" | "favicon" | "og";
   placeholder?: string;
   aspectRatio?: "square" | "wide" | "auto";
   maxSizeMB?: number;

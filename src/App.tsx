@@ -31,6 +31,7 @@ import Privacy from "./pages/Privacy";
 import Tutorial from "./pages/Tutorial";
 import Blog from "./pages/Blog";
 import Auth from "./pages/Auth";
+import SEOSettings from "./pages/panel/SEOSettings";
 
 const queryClient = new QueryClient();
 

@@ -423,6 +423,14 @@ const DesignCustomization = () => {
                 <Image className="w-4 h-4" />
                 Branding
               </TabsTrigger>
+              <TabsTrigger value="social" className="gap-2">
+                <Share2 className="w-4 h-4" />
+                Social
+              </TabsTrigger>
+              <TabsTrigger value="accessibility" className="gap-2">
+                <Accessibility className="w-4 h-4" />
+                A11y
+              </TabsTrigger>
               <TabsTrigger value="layout" className="gap-2">
                 <Layout className="w-4 h-4" />
                 Layout
@@ -851,6 +859,61 @@ const DesignCustomization = () => {
                       className="bg-background/50 w-32"
                     />
                   </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Social Icons Tab */}
+            <TabsContent value="social" className="m-0 space-y-4">
+              <Card className="bg-card/50 border-border/50">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Share2 className="w-5 h-5" />
+                    Social Media Icons
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <SocialIconSelector
+                    platforms={[
+                      { id: 'instagram', name: 'Instagram', icon: 'Instagram', bgColor: '#E4405F', enabled: true },
+                      { id: 'facebook', name: 'Facebook', icon: 'Facebook', bgColor: '#1877F2', enabled: true },
+                      { id: 'twitter', name: 'Twitter/X', icon: 'Twitter', bgColor: '#1DA1F2', enabled: true },
+                      { id: 'youtube', name: 'YouTube', icon: 'Youtube', bgColor: '#FF0000', enabled: true },
+                      { id: 'tiktok', name: 'TikTok', icon: 'Music', bgColor: '#000000', enabled: false },
+                      { id: 'telegram', name: 'Telegram', icon: 'Send', bgColor: '#0088CC', enabled: false },
+                    ]}
+                    onChange={(platforms) => {
+                      setCustomization(prev => ({ ...prev, socialPlatforms: platforms } as any));
+                    }}
+                    showUrls={true}
+                  />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Accessibility Tab */}
+            <TabsContent value="accessibility" className="m-0 space-y-4">
+              <Card className="bg-card/50 border-border/50">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Accessibility className="w-5 h-5" />
+                    Accessibility Settings
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <AccessibilitySettings
+                    settings={{
+                      highContrast: false,
+                      largeText: false,
+                      reduceMotion: false,
+                      fontSize: 16,
+                      focusIndicators: false,
+                      screenReaderOptimized: false
+                    }}
+                    onChange={(settings) => {
+                      setCustomization(prev => ({ ...prev, accessibilitySettings: settings } as any));
+                    }}
+                  />
                 </CardContent>
               </Card>
             </TabsContent>
