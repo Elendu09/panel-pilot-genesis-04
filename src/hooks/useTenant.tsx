@@ -73,11 +73,12 @@ interface TenantDetectionResult {
     isSubdomainOfPlatform: boolean;
     isPlatformMatch: boolean;
     isExternalHosting: boolean;
+    isDevPreview: boolean;
     searchAttempts: string[];
   };
 }
 
-// Known external hosting patterns
+// Known external hosting patterns - panels can be hosted on these platforms
 const EXTERNAL_HOSTING_PATTERNS = [
   /\.netlify\.app$/,
   /\.vercel\.app$/,
@@ -88,8 +89,20 @@ const EXTERNAL_HOSTING_PATTERNS = [
   /\.herokuapp\.com$/,
 ];
 
+// Development/preview domains - these should show the platform app
+const DEV_PREVIEW_PATTERNS = [
+  /\.lovableproject\.com$/,  // Lovable preview domains
+  /^localhost$/,
+  /^127\.0\.0\.1$/,
+  /\.local$/,
+];
+
 function isExternalHostingDomain(hostname: string): boolean {
   return EXTERNAL_HOSTING_PATTERNS.some(pattern => pattern.test(hostname));
+}
+
+function isDevPreviewDomain(hostname: string): boolean {
+  return DEV_PREVIEW_PATTERNS.some(pattern => pattern.test(hostname));
 }
 
 export function useTenant(): TenantDetectionResult {
@@ -110,40 +123,52 @@ export function useTenant(): TenantDetectionResult {
 
         const hostname = window.location.hostname;
         const isExternalHosting = isExternalHostingDomain(hostname);
+        const isDevPreview = isDevPreviewDomain(hostname);
         
         console.log('[useTenant] Starting detection for hostname:', hostname);
         console.log('[useTenant] Is external hosting:', isExternalHosting);
+        console.log('[useTenant] Is dev preview:', isDevPreview);
         
-        // Platform domains (admin/management interface)
-        const platformDomains = [
-          'localhost',
-          'lovable.app',
-          'smmpilot.online',
-        ];
+        // Development/preview domains should always show platform app
+        if (isDevPreview) {
+          console.log('[useTenant] Detected as dev preview domain - showing platform app');
+          setIsPlatformDomain(true);
+          setIsTenantDomain(false);
+          setPanel(null);
+          setDebugInfo({
+            hostname,
+            detectedSubdomain: null,
+            isSubdomainOfPlatform: false,
+            isPlatformMatch: true,
+            isExternalHosting: false,
+            isDevPreview: true,
+            searchAttempts
+          });
+          setLoading(false);
+          return;
+        }
 
-        // Check if this is a platform domain
-        const isPlatformMatch = platformDomains.some(domain => 
-          hostname === domain || 
-          hostname.endsWith('.lovable.app') ||
-          hostname === 'smmpilot.online' ||
-          hostname === 'www.smmpilot.online'
-        );
+        // Platform root domains (main website)
+        const isPlatformRoot = 
+          hostname === 'smmpilot.online' || 
+          hostname === 'www.smmpilot.online';
 
-        // Check if it's a subdomain of smmpilot.online
-        const isSubdomainOfPlatform = hostname.endsWith('.smmpilot.online') && 
+        // Check if it's a subdomain of smmpilot.online (tenant subdomain)
+        const isSubdomainOfPlatform = 
+          hostname.endsWith('.smmpilot.online') && 
           hostname !== 'smmpilot.online' && 
           hostname !== 'www.smmpilot.online';
 
         console.log('[useTenant] Detection results:', {
-          isPlatformMatch,
+          isPlatformRoot,
           isSubdomainOfPlatform,
           isExternalHosting,
           hostname
         });
 
-        // If it's a platform domain and NOT a subdomain, show the main app
-        if (isPlatformMatch && !isSubdomainOfPlatform) {
-          console.log('[useTenant] Detected as platform domain');
+        // If it's the platform root domain, show the main app
+        if (isPlatformRoot) {
+          console.log('[useTenant] Detected as platform root domain');
           setIsPlatformDomain(true);
           setIsTenantDomain(false);
           setPanel(null);
@@ -151,8 +176,9 @@ export function useTenant(): TenantDetectionResult {
             hostname,
             detectedSubdomain: null,
             isSubdomainOfPlatform,
-            isPlatformMatch,
+            isPlatformMatch: true,
             isExternalHosting,
+            isDevPreview: false,
             searchAttempts
           });
           setLoading(false);
@@ -166,7 +192,7 @@ export function useTenant(): TenantDetectionResult {
 
         let subdomain: string | null = null;
         
-        // Extract subdomain from hostname
+        // Extract subdomain from smmpilot.online subdomains
         if (isSubdomainOfPlatform) {
           subdomain = hostname.replace('.smmpilot.online', '');
           console.log('[useTenant] Extracted subdomain from smmpilot.online:', subdomain);
@@ -307,8 +333,8 @@ export function useTenant(): TenantDetectionResult {
           panelError = subdomainError;
         }
 
-        // Also try just the first part of hostname as subdomain
-        if (!panelData) {
+        // Also try just the first part of hostname as subdomain (for custom domains)
+        if (!panelData && !isSubdomainOfPlatform) {
           const extractedSubdomain = hostname.split('.')[0];
           
           // Avoid searching for common prefixes
@@ -355,8 +381,9 @@ export function useTenant(): TenantDetectionResult {
           hostname,
           detectedSubdomain: subdomain,
           isSubdomainOfPlatform,
-          isPlatformMatch,
+          isPlatformMatch: isPlatformRoot,
           isExternalHosting,
+          isDevPreview: false,
           searchAttempts
         });
 

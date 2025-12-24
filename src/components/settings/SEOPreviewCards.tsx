@@ -19,7 +19,7 @@ export const SEOPreviewCards = ({
 }: SEOPreviewCardsProps) => {
   const displayTitle = title || panelName || "Your Panel Title";
   const displayDescription = description || "Your panel description will appear here...";
-  const displayUrl = url || "yourpanel.lovable.app";
+  const displayUrl = url || "yourpanel.smmpilot.online";
 
   return (
     <div className="space-y-4">

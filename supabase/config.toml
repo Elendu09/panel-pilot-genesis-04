@@ -65,3 +65,9 @@ verify_jwt = false
 
 [functions.generate-service-description]
 verify_jwt = false
+
+[functions.domain-health-check]
+verify_jwt = false
+
+[functions.verify-domain-txt]
+verify_jwt = false

@@ -737,7 +737,7 @@ const GeneralSettings = () => {
                     onChange={(e) =>
                       setSettings({ ...settings, canonicalUrl: e.target.value })
                     }
-                    placeholder={`https://${subdomain}.lovable.app`}
+                    placeholder={`https://${subdomain}.smmpilot.online`}
                   />
                 </div>
               </div>
