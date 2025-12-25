@@ -522,9 +522,6 @@ const ProviderManagement = () => {
                               <Button size="icon" variant="ghost" className="shrink-0 h-8 w-8 md:h-9 md:w-9" onClick={() => testConnection(provider)} disabled={testingConnection === provider.id}>
                                 {testingConnection === provider.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
                               </Button>
-                              <Button size="icon" variant="ghost" className="shrink-0 h-8 w-8 md:h-9 md:w-9" onClick={() => openImportDialog(provider)}>
-                                <Download className="w-4 h-4" />
-                              </Button>
                               <Button size="icon" variant="ghost" className="shrink-0 h-8 w-8 md:h-9 md:w-9" onClick={() => openEditDialog(provider)}>
                                 <Edit className="w-4 h-4" />
                               </Button>
