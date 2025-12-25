@@ -8,7 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   Package, 
   Search,
-  ShoppingCart,
+  ShoppingCart as CartIcon,
   Clock,
   Zap,
   Loader2,
@@ -16,7 +16,7 @@ import {
   Check,
   ChevronRight
 } from "lucide-react";
-import { SOCIAL_ICONS_MAP, getIconByKey } from "@/components/icons/SocialIcons";
+import { SOCIAL_ICONS_MAP } from "@/components/icons/SocialIcons";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useTenant, useTenantServices } from "@/hooks/useTenant";
@@ -24,11 +24,13 @@ import { useBuyerAuth } from "@/contexts/BuyerAuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import BuyerLayout from "./BuyerLayout";
+import ShoppingCart from "@/components/buyer/ShoppingCart";
 
 interface CartItem {
   service: any;
   quantity: number;
   targetUrl: string;
+  effectivePrice: number;
 }
 
 const BuyerServices = () => {
@@ -117,6 +119,8 @@ const BuyerServices = () => {
 
   const handleQuickAdd = (service: any) => {
     setQuickAddService(service.id);
+    const effectivePrice = getEffectivePrice(service);
+    
     setTimeout(() => {
       const existing = cart.find(item => item.service.id === service.id);
       if (existing) {
@@ -126,7 +130,12 @@ const BuyerServices = () => {
             : item
         ));
       } else {
-        setCart([...cart, { service, quantity: 1000, targetUrl: '' }]);
+        setCart([...cart, { 
+          service, 
+          quantity: service.min_quantity || 1000, 
+          targetUrl: '',
+          effectivePrice 
+        }]);
       }
       toast({ title: "Added to cart", description: service.name });
       setTimeout(() => setQuickAddService(null), 500);
@@ -245,12 +254,16 @@ const BuyerServices = () => {
             <h1 className="text-2xl md:text-3xl font-bold">Services</h1>
             <p className="text-muted-foreground">Browse and order our SMM services</p>
           </div>
-          {cart.length > 0 && (
-            <Badge variant="secondary" className="gap-1">
-              <ShoppingCart className="w-3 h-3" />
-              {cart.length} items
-            </Badge>
-          )}
+          <div className="flex items-center gap-2">
+            <ShoppingCart
+              cart={cart}
+              setCart={setCart}
+              buyerBalance={buyer?.balance || 0}
+              buyerId={buyer?.id || ''}
+              panelId={panel?.id || ''}
+              onCheckoutComplete={refreshBuyer}
+            />
+          </div>
         </motion.div>
 
         {/* Search Bar */}
@@ -352,6 +365,7 @@ const BuyerServices = () => {
                   const serviceEffectivePrice = getEffectivePrice(service);
                   const hasCustomPrice = customPrices.has(service.id);
                   const isQuickAdding = quickAddService === service.id;
+                  const isInCart = cart.some(item => item.service.id === service.id);
 
                   return (
                     <motion.div
@@ -362,7 +376,8 @@ const BuyerServices = () => {
                       <Card 
                         className={cn(
                           "glass-card-hover cursor-pointer transition-all group",
-                          isSelected && "ring-2 ring-primary"
+                          isSelected && "ring-2 ring-primary",
+                          isInCart && "border-green-500/30"
                         )}
                         onClick={() => setSelectedService(service)}
                       >
@@ -377,7 +392,14 @@ const BuyerServices = () => {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-start justify-between gap-2">
                                 <div className="flex-1 min-w-0">
-                                  <h3 className="font-semibold truncate">{service.name}</h3>
+                                  <div className="flex items-center gap-2">
+                                    <h3 className="font-semibold truncate">{service.name}</h3>
+                                    {isInCart && (
+                                      <Badge variant="secondary" className="text-[10px] bg-green-500/10 text-green-500">
+                                        In Cart
+                                      </Badge>
+                                    )}
+                                  </div>
                                   <p className="text-sm text-muted-foreground line-clamp-2">
                                     {service.description || 'High quality service with fast delivery'}
                                   </p>
@@ -406,9 +428,10 @@ const BuyerServices = () => {
                                 </div>
                                 <Button
                                   size="sm"
-                                  variant="ghost"
+                                  variant={isInCart ? "secondary" : "ghost"}
                                   className={cn(
-                                    "gap-1 opacity-0 group-hover:opacity-100 transition-opacity",
+                                    "gap-1 transition-opacity",
+                                    !isInCart && "opacity-0 group-hover:opacity-100",
                                     isQuickAdding && "opacity-100"
                                   )}
                                   onClick={(e) => {
@@ -426,7 +449,7 @@ const BuyerServices = () => {
                                       >
                                         <Check className="w-4 h-4 text-emerald-500" />
                                       </motion.div>
-                                    ) : (
+                                    ) : isInCart ? (
                                       <motion.div
                                         key="plus"
                                         initial={{ scale: 0 }}
@@ -435,9 +458,18 @@ const BuyerServices = () => {
                                       >
                                         <Plus className="w-4 h-4" />
                                       </motion.div>
+                                    ) : (
+                                      <motion.div
+                                        key="cart"
+                                        initial={{ scale: 0 }}
+                                        animate={{ scale: 1 }}
+                                        exit={{ scale: 0 }}
+                                      >
+                                        <CartIcon className="w-4 h-4" />
+                                      </motion.div>
                                     )}
                                   </AnimatePresence>
-                                  Quick Add
+                                  {isInCart ? 'Add More' : 'Add to Cart'}
                                 </Button>
                               </div>
                             </div>
@@ -457,11 +489,11 @@ const BuyerServices = () => {
               <CardContent className="p-6 space-y-6">
                 <div className="flex items-center gap-3">
                   <div className="p-3 rounded-xl bg-primary/10">
-                    <ShoppingCart className="w-6 h-6 text-primary" />
+                    <Zap className="w-6 h-6 text-primary" />
                   </div>
                   <div>
-                    <h2 className="font-bold text-lg">Place Order</h2>
-                    <p className="text-sm text-muted-foreground">Fill in the details below</p>
+                    <h2 className="font-bold text-lg">Quick Order</h2>
+                    <p className="text-sm text-muted-foreground">Order a single service</p>
                   </div>
                 </div>
 
