@@ -345,10 +345,8 @@ export const ServiceEditSheet = ({
 
               <div className="space-y-2">
                 <Label>Service Icon</Label>
-                <div className="grid grid-cols-8 gap-2 p-3 bg-muted/30 rounded-lg border max-h-32 overflow-y-auto">
-                  {Object.entries(SOCIAL_ICONS_MAP)
-                    .slice(0, 24)
-                    .map(([key, { icon: IconComponent, label, bgColor }]) => (
+                <div className="grid grid-cols-8 gap-2 p-3 bg-muted/30 rounded-lg border max-h-48 overflow-y-auto">
+                  {Object.entries(SOCIAL_ICONS_MAP).map(([key, { icon: IconComponent, label, bgColor }]) => (
                       <button
                         key={key}
                         type="button"

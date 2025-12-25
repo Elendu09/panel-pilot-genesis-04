@@ -235,9 +235,9 @@ const ServicesManagement = () => {
     return (localStorage.getItem('services-view-mode') as "list" | "kanban") || "list";
   });
   
-  // Service limit
-  const SERVICE_LIMIT = 5500;
-  const WARNING_THRESHOLD = 5000;
+  // Service limit - Maximum 10,000 services per panel
+  const SERVICE_LIMIT = 10000;
+  const WARNING_THRESHOLD = 9000;
   const isNearLimit = totalCount >= WARNING_THRESHOLD;
   const isAtLimit = totalCount >= SERVICE_LIMIT;
 
@@ -1268,15 +1268,40 @@ const ServicesManagement = () => {
             </DialogContent>
           </Dialog>
 
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="glass-card border-border/50"
-            onClick={() => setIsImportDialogOpen(true)}
-          >
-            <Upload className="w-4 h-4 mr-2" />
-            Import
-          </Button>
+          {/* Import Dropdown - Choose from Provider or File */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="glass-card border-border/50"
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                Import
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56 bg-popover border border-border shadow-lg z-50">
+              <DropdownMenuItem onClick={() => setIsImportDialogOpen(true)}>
+                <Upload className="w-4 h-4 mr-2" /> Import from File
+              </DropdownMenuItem>
+              {providers.length > 0 && (
+                <>
+                  <DropdownMenuSeparator />
+                  <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                    Import from Provider
+                  </div>
+                  {providers.map(provider => (
+                    <DropdownMenuItem 
+                      key={provider.id} 
+                      onClick={() => setIsImportDialogOpen(true)}
+                    >
+                      <Globe className="w-4 h-4 mr-2" /> {provider.name}
+                    </DropdownMenuItem>
+                  ))}
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {/* View Mode Toggle */}
           <div className="flex items-center gap-1 p-1 rounded-lg bg-muted/50 border border-border/50">
@@ -1394,12 +1419,32 @@ const ServicesManagement = () => {
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
                     <Image className="w-4 h-4" />
-                    Service Image URL (optional)
+                    Service Icon
                   </Label>
+                  <div className="grid grid-cols-8 gap-1.5 p-3 bg-muted/30 rounded-lg border max-h-40 overflow-y-auto">
+                    {Object.entries(SOCIAL_ICONS_MAP).map(([key, { icon: IconComponent, label, bgColor }]) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setNewService(prev => ({ ...prev, imageUrl: `icon:${key}` }))}
+                        className={cn(
+                          "p-1.5 rounded-lg transition-all hover:scale-105",
+                          newService.imageUrl === `icon:${key}`
+                            ? "ring-2 ring-primary bg-primary/10"
+                            : "hover:bg-muted/50"
+                        )}
+                        title={label}
+                      >
+                        <div className={cn("w-6 h-6 rounded-md flex items-center justify-center", bgColor)}>
+                          <IconComponent className="text-white" size={12} />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
                   <Input 
-                    placeholder="https://..." 
-                    className="bg-background/50"
-                    value={newService.imageUrl}
+                    placeholder="Or enter custom image URL..." 
+                    className="bg-background/50 mt-2"
+                    value={newService.imageUrl.startsWith('icon:') ? '' : newService.imageUrl}
                     onChange={(e) => setNewService(prev => ({ ...prev, imageUrl: e.target.value }))}
                   />
                 </div>
@@ -1628,22 +1673,40 @@ const ServicesManagement = () => {
               <CardContent className="p-12 text-center">
                 <Package className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
                 <h3 className="text-xl font-medium mb-2">
-                  {totalCount === 0 ? "No Services Available" : "No services found"}
+                  {totalCount === 0 
+                    ? "No Services Available" 
+                    : selectedCategory !== 'all'
+                      ? `No ${categories.find(c => c.id === selectedCategory)?.name || selectedCategory} services found`
+                      : debouncedSearch 
+                        ? `No services matching "${debouncedSearch}"`
+                        : "No services found"}
                 </h3>
                 <p className="text-muted-foreground mb-6 max-w-md mx-auto">
                   {totalCount === 0 
                     ? "Services have not been imported yet. Import services from a provider or add them manually to get started." 
-                    : "Try adjusting your search or category filters to find what you're looking for."}
+                    : selectedCategory !== 'all'
+                      ? `You don't have any services in the ${categories.find(c => c.id === selectedCategory)?.name || selectedCategory} category yet. Add one or import from a provider.`
+                      : "Try adjusting your search or category filters to find what you're looking for."}
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                  {totalCount === 0 && (
+                  {(totalCount === 0 || selectedCategory !== 'all') && (
                     <Button onClick={() => setIsImportDialogOpen(true)} className="bg-gradient-to-r from-primary to-primary/80">
                       <Upload className="w-4 h-4 mr-2" /> Import Services
                     </Button>
                   )}
-                  <Button variant={totalCount === 0 ? "outline" : "default"} onClick={() => setIsAddDialogOpen(true)}>
+                  <Button variant={totalCount === 0 ? "outline" : "default"} onClick={() => {
+                    if (selectedCategory !== 'all') {
+                      setNewService(prev => ({ ...prev, category: selectedCategory }));
+                    }
+                    setIsAddDialogOpen(true);
+                  }}>
                     <Plus className="w-4 h-4 mr-2" /> Add Service Manually
                   </Button>
+                  {selectedCategory !== 'all' && (
+                    <Button variant="outline" onClick={() => setSelectedCategory('all')}>
+                      View All Services
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -1716,6 +1779,17 @@ const ServicesManagement = () => {
                                   setViewingService(service);
                                   setIsViewDialogOpen(true);
                                 }}
+                                onDuplicate={handleDuplicateService}
+                                onBulkEnable={() => handleBulkAction('enable')}
+                                onBulkDisable={() => handleBulkAction('disable')}
+                                onChangeCategory={() => {
+                                  setSelectedServices([service.id]);
+                                  setIsBulkCategoryDialogOpen(true);
+                                }}
+                                onChangeIcon={() => {
+                                  setSelectedServices([service.id]);
+                                  setIsBulkIconDialogOpen(true);
+                                }}
                                 getCategoryIcon={getCategoryIcon}
                                 showDragHandle={isDragEnabled}
                               />
@@ -1762,6 +1836,17 @@ const ServicesManagement = () => {
                             onView={() => {
                               setViewingService(service);
                               setIsViewDialogOpen(true);
+                            }}
+                            onDuplicate={handleDuplicateService}
+                            onBulkEnable={() => handleBulkAction('enable')}
+                            onBulkDisable={() => handleBulkAction('disable')}
+                            onChangeCategory={() => {
+                              setSelectedServices([service.id]);
+                              setIsBulkCategoryDialogOpen(true);
+                            }}
+                            onChangeIcon={() => {
+                              setSelectedServices([service.id]);
+                              setIsBulkIconDialogOpen(true);
                             }}
                             getCategoryIcon={getCategoryIcon}
                             showDragHandle={false}
