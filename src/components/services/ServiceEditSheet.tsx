@@ -349,9 +349,26 @@ export const ServiceEditSheet = ({
               </div>
 
               <div className="space-y-2">
-                <Label>Service Icon</Label>
-                <div className="grid grid-cols-8 gap-2 p-3 bg-muted/30 rounded-lg border max-h-48 overflow-y-auto">
-                  {Object.entries(SOCIAL_ICONS_MAP).map(([key, { icon: IconComponent, label, bgColor }]) => (
+                <div className="flex items-center justify-between">
+                  <Label>Service Icon</Label>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="edit-custom-url" className="text-xs text-muted-foreground">Custom URL</Label>
+                    <Switch
+                      id="edit-custom-url"
+                      checked={!formData.image_url.startsWith('icon:') && formData.image_url.length > 0}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          handleChange("image_url", "");
+                        } else {
+                          handleChange("image_url", "icon:instagram");
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+                {(!formData.image_url || formData.image_url.startsWith('icon:')) ? (
+                  <div className="grid grid-cols-8 gap-2 p-3 bg-muted/30 rounded-lg border max-h-48 overflow-y-auto">
+                    {Object.entries(SOCIAL_ICONS_MAP).map(([key, { icon: IconComponent, label, bgColor }]) => (
                       <button
                         key={key}
                         type="button"
@@ -374,7 +391,27 @@ export const ServiceEditSheet = ({
                         </div>
                       </button>
                     ))}
-                </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Input
+                      placeholder="Enter custom image URL (https://...)"
+                      value={formData.image_url}
+                      onChange={(e) => handleChange("image_url", e.target.value)}
+                    />
+                    {formData.image_url && (
+                      <div className="flex items-center gap-2 p-2 bg-muted/30 rounded-lg">
+                        <img
+                          src={formData.image_url}
+                          alt="Preview"
+                          className="w-10 h-10 rounded-md object-cover"
+                          onError={(e) => (e.currentTarget.style.display = 'none')}
+                        />
+                        <span className="text-xs text-muted-foreground">Image preview</span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">

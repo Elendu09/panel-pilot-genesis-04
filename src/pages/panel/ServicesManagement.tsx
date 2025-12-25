@@ -230,6 +230,9 @@ const ServicesManagement = () => {
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [pendingDeleteCount, setPendingDeleteCount] = useState(0);
   
+  // Bulk Operation Loading State
+  const [bulkOperationLoading, setBulkOperationLoading] = useState(false);
+  
   // View mode: list or kanban
   const [viewMode, setViewMode] = useState<"list" | "kanban">(() => {
     return (localStorage.getItem('services-view-mode') as "list" | "kanban") || "list";
@@ -751,6 +754,7 @@ const ServicesManagement = () => {
   };
 
   const executeBulkAction = async () => {
+    setBulkOperationLoading(true);
     try {
       // Capture previous state for undo
       const affectedServices = services.filter(s => selectedServices.includes(s.id));
@@ -807,6 +811,8 @@ const ServicesManagement = () => {
     } catch (error) {
       console.error('Bulk action error:', error);
       toast({ title: 'Action failed', variant: 'destructive' });
+    } finally {
+      setBulkOperationLoading(false);
     }
     setSelectedServices([]);
     setIsBulkDialogOpen(false);
@@ -1417,36 +1423,68 @@ const ServicesManagement = () => {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <Image className="w-4 h-4" />
-                    Service Icon
-                  </Label>
-                  <div className="grid grid-cols-8 gap-1.5 p-3 bg-muted/30 rounded-lg border max-h-40 overflow-y-auto">
-                    {Object.entries(SOCIAL_ICONS_MAP).map(([key, { icon: IconComponent, label, bgColor }]) => (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() => setNewService(prev => ({ ...prev, imageUrl: `icon:${key}` }))}
-                        className={cn(
-                          "p-1.5 rounded-lg transition-all hover:scale-105",
-                          newService.imageUrl === `icon:${key}`
-                            ? "ring-2 ring-primary bg-primary/10"
-                            : "hover:bg-muted/50"
-                        )}
-                        title={label}
-                      >
-                        <div className={cn("w-6 h-6 rounded-md flex items-center justify-center", bgColor)}>
-                          <IconComponent className="text-white" size={12} />
-                        </div>
-                      </button>
-                    ))}
+                  <div className="flex items-center justify-between">
+                    <Label className="flex items-center gap-2">
+                      <Image className="w-4 h-4" />
+                      Service Icon
+                    </Label>
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="add-custom-url" className="text-xs text-muted-foreground">Custom URL</Label>
+                      <Switch
+                        id="add-custom-url"
+                        checked={!newService.imageUrl.startsWith('icon:') && newService.imageUrl.length > 0}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setNewService(prev => ({ ...prev, imageUrl: '' }));
+                          } else {
+                            setNewService(prev => ({ ...prev, imageUrl: 'icon:instagram' }));
+                          }
+                        }}
+                      />
+                    </div>
                   </div>
-                  <Input 
-                    placeholder="Or enter custom image URL..." 
-                    className="bg-background/50 mt-2"
-                    value={newService.imageUrl.startsWith('icon:') ? '' : newService.imageUrl}
-                    onChange={(e) => setNewService(prev => ({ ...prev, imageUrl: e.target.value }))}
-                  />
+                  {(!newService.imageUrl || newService.imageUrl.startsWith('icon:')) ? (
+                    <div className="grid grid-cols-8 gap-1.5 p-3 bg-muted/30 rounded-lg border max-h-40 overflow-y-auto">
+                      {Object.entries(SOCIAL_ICONS_MAP).map(([key, { icon: IconComponent, label, bgColor }]) => (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => setNewService(prev => ({ ...prev, imageUrl: `icon:${key}` }))}
+                          className={cn(
+                            "p-1.5 rounded-lg transition-all hover:scale-105",
+                            newService.imageUrl === `icon:${key}`
+                              ? "ring-2 ring-primary bg-primary/10"
+                              : "hover:bg-muted/50"
+                          )}
+                          title={label}
+                        >
+                          <div className={cn("w-6 h-6 rounded-md flex items-center justify-center", bgColor)}>
+                            <IconComponent className="text-white" size={12} />
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <Input 
+                        placeholder="Enter custom image URL (https://...)" 
+                        className="bg-background/50"
+                        value={newService.imageUrl}
+                        onChange={(e) => setNewService(prev => ({ ...prev, imageUrl: e.target.value }))}
+                      />
+                      {newService.imageUrl && (
+                        <div className="flex items-center gap-2 p-2 bg-muted/30 rounded-lg">
+                          <img 
+                            src={newService.imageUrl} 
+                            alt="Preview" 
+                            className="w-8 h-8 rounded-md object-cover"
+                            onError={(e) => (e.currentTarget.style.display = 'none')}
+                          />
+                          <span className="text-xs text-muted-foreground">Image preview</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
               <DialogFooter className="flex-col sm:flex-row gap-2">
@@ -1574,22 +1612,55 @@ const ServicesManagement = () => {
               </div>
               <div className="hidden sm:block h-6 w-px bg-border" />
               <div className="flex flex-wrap items-center justify-center gap-1.5 md:gap-2">
-                <Button size="sm" variant="default" onClick={() => handleBulkAction("enable")} className="h-8 text-xs">
-                  <Power className="w-3 h-3 mr-1" /> Enable
+                <Button 
+                  size="sm" 
+                  variant="default" 
+                  onClick={() => handleBulkAction("enable")} 
+                  className="h-8 text-xs"
+                  disabled={bulkOperationLoading}
+                >
+                  {bulkOperationLoading && bulkAction === "enable" ? (
+                    <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                  ) : (
+                    <Power className="w-3 h-3 mr-1" />
+                  )}
+                  Enable
                 </Button>
-                <Button size="sm" variant="secondary" onClick={() => handleBulkAction("disable")} className="h-8 text-xs">
-                  <Power className="w-3 h-3 mr-1" /> Disable
+                <Button 
+                  size="sm" 
+                  variant="secondary" 
+                  onClick={() => handleBulkAction("disable")} 
+                  className="h-8 text-xs"
+                  disabled={bulkOperationLoading}
+                >
+                  {bulkOperationLoading && bulkAction === "disable" ? (
+                    <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                  ) : (
+                    <Power className="w-3 h-3 mr-1" />
+                  )}
+                  Disable
                 </Button>
-                <Button size="sm" variant="destructive" onClick={() => handleBulkAction("delete")} className="h-8 text-xs">
-                  <Trash2 className="w-3 h-3 mr-1" /> Delete
+                <Button 
+                  size="sm" 
+                  variant="destructive" 
+                  onClick={() => handleBulkAction("delete")} 
+                  className="h-8 text-xs"
+                  disabled={bulkOperationLoading}
+                >
+                  {bulkOperationLoading && bulkAction === "delete" ? (
+                    <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                  ) : (
+                    <Trash2 className="w-3 h-3 mr-1" />
+                  )}
+                  Delete
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => handleBulkAction("export-csv")} className="h-8 text-xs hidden md:flex">
+                <Button size="sm" variant="outline" onClick={() => handleBulkAction("export-csv")} className="h-8 text-xs hidden md:flex" disabled={bulkOperationLoading}>
                   <Download className="w-3 h-3 mr-1" /> Export
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => setIsBulkIconDialogOpen(true)} className="h-8 text-xs hidden md:flex">
+                <Button size="sm" variant="outline" onClick={() => setIsBulkIconDialogOpen(true)} className="h-8 text-xs hidden md:flex" disabled={bulkOperationLoading}>
                   <Palette className="w-3 h-3 mr-1" /> Icon
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => setIsBulkCategoryDialogOpen(true)} className="h-8 text-xs hidden md:flex">
+                <Button size="sm" variant="outline" onClick={() => setIsBulkCategoryDialogOpen(true)} className="h-8 text-xs hidden md:flex" disabled={bulkOperationLoading}>
                   <Layers className="w-3 h-3 mr-1" /> Category
                 </Button>
               </div>
