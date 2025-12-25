@@ -520,7 +520,7 @@ const ServicesManagement = () => {
     }
   };
 
-  // Fetch category counts separately for sidebar
+  // Fetch category counts separately for sidebar - ACCURATE COUNTS
   const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({ all: 0 });
   
   useEffect(() => {
@@ -532,19 +532,32 @@ const ServicesManagement = () => {
     if (!panel?.id) return;
     
     try {
-      // Use count: 'exact' to get accurate total count
-      const { data, error, count } = await supabase
+      // Use accurate count queries per category
+      const categoryIds = categories.map(c => c.id).filter(id => id !== 'all');
+      
+      // Total count
+      const { count: totalCount } = await supabase
         .from('services')
-        .select('category', { count: 'exact' })
+        .select('*', { count: 'exact', head: true })
         .eq('panel_id', panel.id);
-
-      if (error) throw error;
-
-      // Use the exact count from Supabase instead of data.length
-      const counts: Record<string, number> = { all: count || 0 };
-      data?.forEach((s) => {
-        counts[s.category] = (counts[s.category] || 0) + 1;
+      
+      const counts: Record<string, number> = { all: totalCount || 0 };
+      
+      // Fetch per-category counts in parallel
+      const categoryPromises = categoryIds.map(async (catId) => {
+        const { count } = await supabase
+          .from('services')
+          .select('*', { count: 'exact', head: true })
+          .eq('panel_id', panel.id)
+          .eq('category', catId as any);
+        return { catId, count: count || 0 };
       });
+      
+      const results = await Promise.all(categoryPromises);
+      results.forEach(({ catId, count }) => {
+        counts[catId] = count;
+      });
+      
       setCategoryCounts(counts);
     } catch (error) {
       console.error('Error fetching category counts:', error);
@@ -650,33 +663,54 @@ const ServicesManagement = () => {
     }
   };
 
-  // Fetch all filtered service IDs for "Select All on All Pages"
+  // Fetch all filtered service IDs for "Select All on All Pages" - PAGINATED up to 10,000
   const fetchAllFilteredIds = async () => {
     if (!panel?.id) return;
     
     setIsLoadingAllIds(true);
     try {
-      let query = supabase
-        .from('services')
-        .select('id')
-        .eq('panel_id', panel.id);
+      const pageSize = 1000;
+      const allIds: string[] = [];
+      let page = 0;
+      let hasMore = true;
+      
+      while (hasMore && allIds.length < SERVICE_LIMIT) {
+        let query = supabase
+          .from('services')
+          .select('id')
+          .eq('panel_id', panel.id)
+          .range(page * pageSize, (page + 1) * pageSize - 1);
 
-      if (selectedCategory !== 'all') {
-        query = query.eq('category', selectedCategory as any);
+        if (selectedCategory !== 'all') {
+          query = query.eq('category', selectedCategory as any);
+        }
+
+        if (debouncedSearch) {
+          query = query.ilike('name', `%${debouncedSearch}%`);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+        
+        if (!data || data.length === 0) {
+          hasMore = false;
+        } else {
+          allIds.push(...data.map(s => s.id));
+          page++;
+          if (data.length < pageSize) hasMore = false;
+        }
       }
 
-      if (debouncedSearch) {
-        query = query.ilike('name', `%${debouncedSearch}%`);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-
-      const ids = (data || []).map(s => s.id);
+      const ids = allIds.slice(0, SERVICE_LIMIT);
       setAllFilteredIds(ids);
       setSelectedServices(ids);
       setSelectAllPages(true);
-      toast({ title: `Selected all ${ids.length} services matching filters` });
+      
+      if (allIds.length >= SERVICE_LIMIT) {
+        toast({ title: `Selected ${ids.length} services (max limit)`, variant: "default" });
+      } else {
+        toast({ title: `Selected all ${ids.length} services matching filters` });
+      }
     } catch (error) {
       console.error('Error fetching all IDs:', error);
       toast({ title: 'Failed to select all', variant: 'destructive' });
