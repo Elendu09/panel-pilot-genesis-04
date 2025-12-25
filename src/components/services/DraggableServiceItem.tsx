@@ -1,6 +1,6 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Edit, Trash2, Power, Eye, MoreVertical, Image } from "lucide-react";
+import { GripVertical, Edit, Trash2, Power, Eye, MoreVertical, Image, Copy, DollarSign, Tag, FileText, Palette, Ban, CheckCircle, ArrowUpDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
@@ -84,6 +85,11 @@ interface DraggableServiceItemProps {
   onEdit: (service: ServiceItem) => void;
   onDelete: (id: string) => void;
   onView: (service: ServiceItem) => void;
+  onDuplicate?: (service: ServiceItem) => void;
+  onBulkEnable?: () => void;
+  onBulkDisable?: () => void;
+  onChangeCategory?: (service: ServiceItem) => void;
+  onChangeIcon?: (service: ServiceItem) => void;
   getCategoryIcon: (category: string) => React.ComponentType<{ className?: string }>;
   isMobile?: boolean;
   showDragHandle?: boolean;
@@ -97,6 +103,11 @@ export const DraggableServiceItem = ({
   onEdit,
   onDelete,
   onView,
+  onDuplicate,
+  onBulkEnable,
+  onBulkDisable,
+  onChangeCategory,
+  onChangeIcon,
   getCategoryIcon,
   isMobile = false,
   showDragHandle = true,
@@ -305,15 +316,51 @@ export const DraggableServiceItem = ({
               <MoreVertical className="w-4 h-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="glass-card">
+          <DropdownMenuContent align="end" className="w-56 bg-popover border border-border shadow-lg z-50">
+            <DropdownMenuLabel className="text-xs text-muted-foreground">Actions</DropdownMenuLabel>
+            <DropdownMenuItem onClick={() => onEdit(service)}>
+              <Edit className="w-4 h-4 mr-2" /> Edit
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onView(service)}>
               <Eye className="w-4 h-4 mr-2" /> View Details
             </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel className="text-xs text-muted-foreground">Bulk Operations</DropdownMenuLabel>
+            {onBulkDisable && (
+              <DropdownMenuItem onClick={onBulkDisable}>
+                <Ban className="w-4 h-4 mr-2" /> Disable all
+              </DropdownMenuItem>
+            )}
+            {onBulkEnable && (
+              <DropdownMenuItem onClick={onBulkEnable}>
+                <CheckCircle className="w-4 h-4 mr-2" /> Enable all
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel className="text-xs text-muted-foreground">Modify</DropdownMenuLabel>
+            {onChangeCategory && (
+              <DropdownMenuItem onClick={() => onChangeCategory(service)}>
+                <Tag className="w-4 h-4 mr-2" /> Change category
+              </DropdownMenuItem>
+            )}
+            {onChangeIcon && (
+              <DropdownMenuItem onClick={() => onChangeIcon(service)}>
+                <Palette className="w-4 h-4 mr-2" /> Change icon
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem onClick={() => onEdit(service)}>
-              <Edit className="w-4 h-4 mr-2" /> Edit Service
+              <FileText className="w-4 h-4 mr-2" /> Change name & description
+            </DropdownMenuItem>
+            {onDuplicate && (
+              <DropdownMenuItem onClick={() => onDuplicate(service)}>
+                <Copy className="w-4 h-4 mr-2" /> Duplicate
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem onClick={() => onEdit(service)}>
+              <DollarSign className="w-4 h-4 mr-2" /> Change price
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => onDelete(service.id)} className="text-destructive">
+            <DropdownMenuItem onClick={() => onDelete(service.id)} className="text-destructive focus:text-destructive">
               <Trash2 className="w-4 h-4 mr-2" /> Delete
             </DropdownMenuItem>
           </DropdownMenuContent>
