@@ -1283,7 +1283,7 @@ const ServicesManagement = () => {
     }
   };
 
-  // Import handler
+  // Import handler - stores provider_id to prevent duplicates
   const handleImport = async (importedServices: any[], markups: Record<number, number>) => {
     if (!panel?.id) return;
     
@@ -1297,6 +1297,7 @@ const ServicesManagement = () => {
         max_quantity: service.maxQty || 10000,
         is_active: true,
         display_order: services.length + index + 1,
+        provider_id: String(service.id), // Store provider service ID for duplicate detection
       }));
 
       const { error } = await supabase.from('services').insert(newServices);
@@ -1674,9 +1675,40 @@ const ServicesManagement = () => {
       <ServiceToolsCards
         onAutoFix={generateAutoFixPreview}
         onSmartCategorize={() => setIsSmartCategorizeOpen(true)}
-        onAutoArrange={() => {
-          setSortOption("name");
-          toast({ title: "Services arranged alphabetically" });
+        onAutoArrange={(option) => {
+          switch (option) {
+            case "name-asc":
+              setSortOption("name");
+              toast({ title: "Services arranged alphabetically (A-Z)" });
+              break;
+            case "name-desc":
+              // For desc, we'll handle in the sort logic
+              setSortOption("name");
+              setServices(prev => [...prev].sort((a, b) => b.name.localeCompare(a.name)));
+              toast({ title: "Services arranged alphabetically (Z-A)" });
+              break;
+            case "category":
+              setServices(prev => [...prev].sort((a, b) => a.category.localeCompare(b.category)));
+              toast({ title: "Services grouped by category" });
+              break;
+            case "price-high":
+              setSortOption("price-high");
+              toast({ title: "Services arranged by price (high to low)" });
+              break;
+            case "price-low":
+              setSortOption("price-low");
+              toast({ title: "Services arranged by price (low to high)" });
+              break;
+            case "popularity":
+              setSortOption("orders-high");
+              toast({ title: "Services arranged by popularity" });
+              break;
+            case "recent":
+              // Sort by display_order descending (newer services have higher order)
+              setServices(prev => [...prev].sort((a, b) => (b.displayOrder || 0) - (a.displayOrder || 0)));
+              toast({ title: "Services arranged by newest first" });
+              break;
+          }
         }}
         onHealthCheck={() => setIsHealthCheckOpen(true)}
         isAutoFixing={isAutoFixingIcons}
