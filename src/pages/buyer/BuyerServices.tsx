@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { 
   Package, 
   Search,
@@ -14,7 +15,9 @@ import {
   Loader2,
   Plus,
   Check,
-  ChevronRight
+  ChevronRight,
+  Filter,
+  X
 } from "lucide-react";
 import { SOCIAL_ICONS_MAP } from "@/components/icons/SocialIcons";
 import { motion, AnimatePresence } from "framer-motion";
@@ -33,6 +36,8 @@ interface CartItem {
   effectivePrice: number;
 }
 
+const CART_STORAGE_KEY = (panelId: string) => `buyer_cart_${panelId}`;
+
 const BuyerServices = () => {
   const { panel } = useTenant();
   const { buyer, refreshBuyer } = useBuyerAuth();
@@ -46,6 +51,35 @@ const BuyerServices = () => {
   const [customPrices, setCustomPrices] = useState<Map<string, number>>(new Map());
   const [cart, setCart] = useState<CartItem[]>([]);
   const [quickAddService, setQuickAddService] = useState<string | null>(null);
+  const [mobileCategoryOpen, setMobileCategoryOpen] = useState(false);
+
+  // Load cart from localStorage on mount
+  useEffect(() => {
+    if (!panel?.id) return;
+    try {
+      const savedCart = localStorage.getItem(CART_STORAGE_KEY(panel.id));
+      if (savedCart) {
+        const parsed = JSON.parse(savedCart);
+        if (Array.isArray(parsed)) {
+          setCart(parsed);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load cart from localStorage:', e);
+    }
+  }, [panel?.id]);
+
+  // Save cart to localStorage whenever it changes
+  useEffect(() => {
+    if (!panel?.id) return;
+    try {
+      localStorage.setItem(CART_STORAGE_KEY(panel.id), JSON.stringify(cart));
+      // Dispatch event for other components to update
+      window.dispatchEvent(new Event('cartUpdated'));
+    } catch (e) {
+      console.error('Failed to save cart to localStorage:', e);
+    }
+  }, [cart, panel?.id]);
 
   // Fetch custom prices for this buyer
   useEffect(() => {
@@ -240,19 +274,21 @@ const BuyerServices = () => {
   const totalPrice = selectedService ? (effectivePrice * quantity) / 1000 : 0;
   const hasEnoughBalance = (buyer?.balance || 0) >= totalPrice;
 
+  const selectedCategoryData = categoriesWithCounts.find(c => c.id === selectedCategory);
+
   return (
     <BuyerLayout>
       <motion.div
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="space-y-6"
+        className="space-y-4 md:space-y-6"
       >
         {/* Header */}
-        <motion.div variants={itemVariants} className="flex items-center justify-between">
+        <motion.div variants={itemVariants} className="flex items-center justify-between gap-2">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold">Services</h1>
-            <p className="text-muted-foreground">Browse and order our SMM services</p>
+            <h1 className="text-xl md:text-2xl lg:text-3xl font-bold">Services</h1>
+            <p className="text-sm text-muted-foreground">Browse and order SMM services</p>
           </div>
           <div className="flex items-center gap-2">
             <ShoppingCart
@@ -264,6 +300,68 @@ const BuyerServices = () => {
               onCheckoutComplete={refreshBuyer}
             />
           </div>
+        </motion.div>
+
+        {/* Mobile Category Filter Button */}
+        <motion.div variants={itemVariants} className="lg:hidden">
+          <Sheet open={mobileCategoryOpen} onOpenChange={setMobileCategoryOpen}>
+            <SheetTrigger asChild>
+              <Button variant="outline" className="w-full gap-2 justify-between">
+                <div className="flex items-center gap-2">
+                  <Filter className="w-4 h-4" />
+                  <span>{selectedCategoryData?.name || 'All Services'}</span>
+                </div>
+                <Badge variant="secondary">{selectedCategoryData?.count || 0}</Badge>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="bottom" className="h-[70vh] rounded-t-3xl">
+              <SheetHeader className="pb-4">
+                <SheetTitle>Select Category</SheetTitle>
+              </SheetHeader>
+              <ScrollArea className="h-[calc(100%-60px)]">
+                <div className="space-y-2 pb-6">
+                  {categoriesWithCounts.map((cat) => {
+                    const CategoryIcon = cat.icon;
+                    const isActive = selectedCategory === cat.id;
+
+                    return (
+                      <button
+                        key={cat.id}
+                        onClick={() => {
+                          setSelectedCategory(cat.id);
+                          setMobileCategoryOpen(false);
+                        }}
+                        className={cn(
+                          "w-full flex items-center gap-3 p-4 rounded-xl text-left transition-all",
+                          isActive
+                            ? "bg-primary text-primary-foreground"
+                            : "hover:bg-accent/50"
+                        )}
+                      >
+                        <div className={cn(
+                          "p-2 rounded-lg",
+                          isActive ? "bg-white/20" : cat.bgColor
+                        )}>
+                          <CategoryIcon 
+                            className={cn(
+                              "w-5 h-5",
+                              isActive ? "text-current" : "text-white"
+                            )} 
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium">{cat.name}</p>
+                        </div>
+                        <Badge variant={isActive ? "secondary" : "outline"}>
+                          {cat.count}
+                        </Badge>
+                      </button>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+            </SheetContent>
+          </Sheet>
         </motion.div>
 
         {/* Search Bar */}
@@ -279,15 +377,15 @@ const BuyerServices = () => {
           </div>
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Category Sidebar */}
-          <motion.div variants={itemVariants} className="lg:col-span-1">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 lg:gap-6">
+          {/* Desktop Category Sidebar */}
+          <motion.div variants={itemVariants} className="hidden lg:block lg:col-span-1">
             <Card className="glass-card sticky top-4">
               <CardContent className="p-4">
                 <h3 className="font-semibold mb-4 text-sm text-muted-foreground uppercase tracking-wider">
                   Categories
                 </h3>
-                <ScrollArea className="h-[calc(100vh-300px)] lg:h-auto">
+                <ScrollArea className="h-[calc(100vh-300px)]">
                   <div className="space-y-1">
                     {categoriesWithCounts.map((cat) => {
                       const CategoryIcon = cat.icon;
@@ -358,238 +456,217 @@ const BuyerServices = () => {
                   </CardContent>
                 </Card>
               ) : (
-                filteredServices.map((service: any) => {
-                  const categoryData = getCategoryData(service.category);
-                  const CategoryIcon = categoryData.icon;
-                  const isSelected = selectedService?.id === service.id;
-                  const serviceEffectivePrice = getEffectivePrice(service);
-                  const hasCustomPrice = customPrices.has(service.id);
-                  const isQuickAdding = quickAddService === service.id;
-                  const isInCart = cart.some(item => item.service.id === service.id);
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3">
+                  {filteredServices.map((service: any) => {
+                    const categoryData = getCategoryData(service.category);
+                    const CategoryIcon = categoryData.icon;
+                    const isSelected = selectedService?.id === service.id;
+                    const serviceEffectivePrice = getEffectivePrice(service);
+                    const hasCustomPrice = customPrices.has(service.id);
+                    const isQuickAdding = quickAddService === service.id;
+                    const isInCart = cart.some(item => item.service.id === service.id);
 
-                  return (
-                    <motion.div
-                      key={service.id}
-                      variants={itemVariants}
-                      layout
-                    >
-                      <Card 
-                        className={cn(
-                          "glass-card-hover cursor-pointer transition-all group",
-                          isSelected && "ring-2 ring-primary",
-                          isInCart && "border-green-500/30"
-                        )}
-                        onClick={() => setSelectedService(service)}
+                    return (
+                      <motion.div
+                        key={service.id}
+                        variants={itemVariants}
+                        layout
                       >
-                        <CardContent className="p-4">
-                          <div className="flex items-start gap-4">
-                            <div className={cn(
-                              "p-3 rounded-xl shadow-lg",
-                              categoryData.bgColor
-                            )}>
-                              <CategoryIcon className="w-6 h-6 text-white" size={24} />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    <h3 className="font-semibold truncate">{service.name}</h3>
-                                    {isInCart && (
-                                      <Badge variant="secondary" className="text-[10px] bg-green-500/10 text-green-500">
-                                        In Cart
-                                      </Badge>
-                                    )}
-                                  </div>
-                                  <p className="text-sm text-muted-foreground line-clamp-2">
-                                    {service.description || 'High quality service with fast delivery'}
-                                  </p>
-                                </div>
-                                <div className="text-right shrink-0">
-                                  <div className="flex items-center gap-1">
-                                    <p className="text-lg font-bold">${serviceEffectivePrice.toFixed(2)}</p>
-                                    {hasCustomPrice && (
-                                      <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-500 border-emerald-500/20">
-                                        VIP
-                                      </Badge>
-                                    )}
-                                  </div>
-                                  <p className="text-xs text-muted-foreground">per 1K</p>
-                                </div>
+                        <Card 
+                          className={cn(
+                            "glass-card-hover cursor-pointer transition-all group",
+                            isSelected && "ring-2 ring-primary",
+                            isInCart && "border-green-500/30"
+                          )}
+                          onClick={() => setSelectedService(service)}
+                        >
+                          <CardContent className="p-3 md:p-4">
+                            <div className="flex items-start gap-3 md:gap-4">
+                              <div className={cn(
+                                "p-2 md:p-3 rounded-xl shadow-lg shrink-0",
+                                categoryData.bgColor
+                              )}>
+                                <CategoryIcon className="w-5 h-5 md:w-6 md:h-6 text-white" />
                               </div>
-                              <div className="flex items-center justify-between mt-3">
-                                <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                                  <div className="flex items-center gap-1">
-                                    <Clock className="w-3 h-3" />
-                                    {service.estimated_time || '0-24 hours'}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <h3 className="font-semibold text-sm md:text-base truncate">{service.name}</h3>
+                                      {isInCart && (
+                                        <Badge variant="secondary" className="text-[10px] bg-green-500/10 text-green-500 shrink-0">
+                                          In Cart
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <p className="text-xs md:text-sm text-muted-foreground line-clamp-2">
+                                      {service.description || 'High quality service'}
+                                    </p>
                                   </div>
-                                  <div>
-                                    Min: {service.min_quantity || 100}
+                                  <div className="text-right shrink-0">
+                                    <div className="flex items-center gap-1">
+                                      <p className="text-base md:text-lg font-bold">${serviceEffectivePrice.toFixed(2)}</p>
+                                      {hasCustomPrice && (
+                                        <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-500 border-emerald-500/20">
+                                          VIP
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <p className="text-[10px] md:text-xs text-muted-foreground">per 1K</p>
                                   </div>
                                 </div>
-                                <Button
-                                  size="sm"
-                                  variant={isInCart ? "secondary" : "ghost"}
-                                  className={cn(
-                                    "gap-1 transition-opacity",
-                                    !isInCart && "opacity-0 group-hover:opacity-100",
-                                    isQuickAdding && "opacity-100"
-                                  )}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleQuickAdd(service);
-                                  }}
-                                >
-                                  <AnimatePresence mode="wait">
+                                <div className="flex items-center justify-between mt-2 md:mt-3">
+                                  <div className="flex items-center gap-3 md:gap-4 text-[10px] md:text-xs text-muted-foreground">
+                                    <div className="flex items-center gap-1">
+                                      <Clock className="w-3 h-3" />
+                                      {service.estimated_time || '0-24h'}
+                                    </div>
+                                    <div>
+                                      Min: {service.min_quantity || 100}
+                                    </div>
+                                  </div>
+                                  <Button
+                                    size="sm"
+                                    variant={isInCart ? "secondary" : "ghost"}
+                                    className={cn(
+                                      "gap-1 h-7 md:h-8 text-xs transition-opacity",
+                                      !isInCart && "opacity-0 group-hover:opacity-100"
+                                    )}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleQuickAdd(service);
+                                    }}
+                                    disabled={isQuickAdding}
+                                  >
                                     {isQuickAdding ? (
-                                      <motion.div
-                                        key="check"
-                                        initial={{ scale: 0 }}
-                                        animate={{ scale: 1 }}
-                                        exit={{ scale: 0 }}
-                                      >
-                                        <Check className="w-4 h-4 text-emerald-500" />
-                                      </motion.div>
-                                    ) : isInCart ? (
-                                      <motion.div
-                                        key="plus"
-                                        initial={{ scale: 0 }}
-                                        animate={{ scale: 1 }}
-                                        exit={{ scale: 0 }}
-                                      >
-                                        <Plus className="w-4 h-4" />
-                                      </motion.div>
+                                      <Check className="w-3 h-3 text-green-500" />
                                     ) : (
-                                      <motion.div
-                                        key="cart"
-                                        initial={{ scale: 0 }}
-                                        animate={{ scale: 1 }}
-                                        exit={{ scale: 0 }}
-                                      >
-                                        <CartIcon className="w-4 h-4" />
-                                      </motion.div>
+                                      <>
+                                        <Plus className="w-3 h-3" />
+                                        <span className="hidden sm:inline">Add</span>
+                                      </>
                                     )}
-                                  </AnimatePresence>
-                                  {isInCart ? 'Add More' : 'Add to Cart'}
-                                </Button>
+                                  </Button>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
-                  );
-                })
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    );
+                  })}
+                </div>
               )}
             </div>
           </motion.div>
 
-          {/* Order Form */}
-          <motion.div variants={itemVariants} className="lg:col-span-1 lg:sticky lg:top-4 h-fit">
-            <Card className="glass-card">
-              <CardContent className="p-6 space-y-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-3 rounded-xl bg-primary/10">
-                    <Zap className="w-6 h-6 text-primary" />
-                  </div>
-                  <div>
-                    <h2 className="font-bold text-lg">Quick Order</h2>
-                    <p className="text-sm text-muted-foreground">Order a single service</p>
-                  </div>
-                </div>
+          {/* Order Panel */}
+          <motion.div variants={itemVariants} className="lg:col-span-1">
+            <Card className="glass-card sticky top-4">
+              <CardContent className="p-4 space-y-4">
+                <h3 className="font-semibold">Quick Order</h3>
 
                 {selectedService ? (
-                  <div className="glass-card p-4 bg-primary/5 rounded-xl">
-                    <div className="flex items-center gap-3">
-                      {(() => {
-                        const catData = getCategoryData(selectedService.category);
-                        const CatIcon = catData.icon;
-                        return (
-                          <div className={cn("p-2 rounded-lg", catData.bgColor)}>
-                            <CatIcon className="w-4 h-4 text-white" size={16} />
-                          </div>
-                        );
-                      })()}
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{selectedService.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          ${getEffectivePrice(selectedService).toFixed(2)}/1K
-                          {customPrices.has(selectedService.id) && (
-                            <span className="text-emerald-500 ml-1">(VIP price)</span>
-                          )}
-                        </p>
+                  <>
+                    <div className="p-3 bg-muted/50 rounded-xl">
+                      <div className="flex items-center gap-3">
+                        {(() => {
+                          const catData = getCategoryData(selectedService.category);
+                          const CatIcon = catData.icon;
+                          return (
+                            <div className={cn("p-2 rounded-lg", catData.bgColor)}>
+                              <CatIcon className="w-4 h-4 text-white" />
+                            </div>
+                          );
+                        })()}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate">{selectedService.name}</p>
+                          <p className="text-xs text-muted-foreground">${effectivePrice.toFixed(2)} per 1K</p>
+                        </div>
+                        <Button 
+                          size="icon" 
+                          variant="ghost" 
+                          className="h-7 w-7" 
+                          onClick={() => setSelectedService(null)}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
                       </div>
                     </div>
-                  </div>
+
+                    <div className="space-y-3">
+                      <div className="space-y-2">
+                        <Label className="text-xs">Target URL</Label>
+                        <Input
+                          placeholder="https://..."
+                          value={targetUrl}
+                          onChange={(e) => setTargetUrl(e.target.value)}
+                          className="bg-background/50 text-sm"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-xs">Quantity</Label>
+                        <Input
+                          type="number"
+                          value={quantity}
+                          onChange={(e) => setQuantity(parseInt(e.target.value) || 0)}
+                          min={selectedService.min_quantity || 1}
+                          max={selectedService.max_quantity || 1000000}
+                          className="bg-background/50 text-sm"
+                        />
+                        <p className="text-[10px] text-muted-foreground">
+                          Min: {selectedService.min_quantity || 1} | Max: {selectedService.max_quantity || '1M'}
+                        </p>
+                      </div>
+
+                      <div className="p-3 bg-primary/5 rounded-xl space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Price per 1K</span>
+                          <span>${effectivePrice.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Quantity</span>
+                          <span>{quantity.toLocaleString()}</span>
+                        </div>
+                        <div className="border-t pt-2 flex justify-between font-semibold">
+                          <span>Total</span>
+                          <span className={cn(!hasEnoughBalance && "text-red-500")}>
+                            ${totalPrice.toFixed(2)}
+                          </span>
+                        </div>
+                        {!hasEnoughBalance && (
+                          <p className="text-[10px] text-red-500">
+                            Insufficient balance (${(buyer?.balance || 0).toFixed(2)})
+                          </p>
+                        )}
+                      </div>
+
+                      <Button 
+                        className="w-full gap-2" 
+                        onClick={handleOrder}
+                        disabled={orderLoading || !hasEnoughBalance || !targetUrl}
+                      >
+                        {orderLoading ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Processing...
+                          </>
+                        ) : (
+                          <>
+                            <Zap className="w-4 h-4" />
+                            Place Order
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </>
                 ) : (
-                  <div className="glass-card p-4 text-center rounded-xl border-dashed border-2">
-                    <p className="text-sm text-muted-foreground">Select a service from the list</p>
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Package className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                    <p className="text-sm">Select a service to order</p>
                   </div>
                 )}
-
-                <div className="space-y-2">
-                  <Label>Target URL</Label>
-                  <Input
-                    placeholder="https://..."
-                    value={targetUrl}
-                    onChange={(e) => setTargetUrl(e.target.value)}
-                    className="bg-background/50"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Quantity</Label>
-                  <Input
-                    type="number"
-                    value={quantity}
-                    onChange={(e) => setQuantity(parseInt(e.target.value) || 0)}
-                    min={selectedService?.min_quantity || 1}
-                    max={selectedService?.max_quantity || 100000}
-                    className="bg-background/50"
-                  />
-                  {selectedService && (
-                    <p className="text-xs text-muted-foreground">
-                      Min: {selectedService.min_quantity || 100} | Max: {(selectedService.max_quantity || 10000).toLocaleString()}
-                    </p>
-                  )}
-                </div>
-
-                <div className="pt-4 border-t border-border/50">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-muted-foreground">Your Balance</span>
-                    <span className={cn(
-                      "font-medium",
-                      hasEnoughBalance ? "text-emerald-500" : "text-destructive"
-                    )}>
-                      ${(buyer?.balance || 0).toFixed(2)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center mb-4">
-                    <span className="text-muted-foreground">Total</span>
-                    <span className="text-2xl font-bold">
-                      ${totalPrice.toFixed(2)}
-                    </span>
-                  </div>
-                  
-                  {!hasEnoughBalance && selectedService && (
-                    <p className="text-xs text-destructive mb-2">
-                      Insufficient balance. Please add funds.
-                    </p>
-                  )}
-                  
-                  <Button 
-                    className="w-full gap-2" 
-                    size="lg"
-                    onClick={handleOrder}
-                    disabled={!selectedService || orderLoading || !hasEnoughBalance}
-                  >
-                    {orderLoading ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Zap className="w-4 h-4" />
-                    )}
-                    {orderLoading ? 'Processing...' : 'Place Order'}
-                  </Button>
-                </div>
               </CardContent>
             </Card>
           </motion.div>

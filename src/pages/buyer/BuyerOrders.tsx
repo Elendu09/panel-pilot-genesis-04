@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   ShoppingCart,
   Search,
@@ -14,12 +16,19 @@ import {
   AlertCircle,
   RefreshCw,
   ExternalLink,
+  Calendar,
+  Package,
+  ChevronRight,
+  Eye,
+  Copy,
+  Filter,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useTenant } from "@/hooks/useTenant";
 import { useBuyerAuth } from "@/contexts/BuyerAuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 import BuyerLayout from "./BuyerLayout";
 
 interface Order {
@@ -41,6 +50,7 @@ const BuyerOrders = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [loading, setLoading] = useState(true);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
   useEffect(() => {
     if (buyer?.id) {
@@ -84,12 +94,12 @@ const BuyerOrders = () => {
     }
   };
 
-  const statusConfig: Record<string, { label: string; icon: any; color: string; spin?: boolean }> = {
-    pending: { label: 'Pending', icon: Clock, color: 'bg-amber-500/10 text-amber-500 border-amber-500/20' },
-    in_progress: { label: 'In Progress', icon: Loader2, color: 'bg-blue-500/10 text-blue-500 border-blue-500/20', spin: true },
-    completed: { label: 'Completed', icon: CheckCircle, color: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' },
-    partial: { label: 'Partial', icon: AlertCircle, color: 'bg-orange-500/10 text-orange-500 border-orange-500/20' },
-    cancelled: { label: 'Cancelled', icon: XCircle, color: 'bg-red-500/10 text-red-500 border-red-500/20' },
+  const statusConfig: Record<string, { label: string; icon: any; color: string; bgColor: string; spin?: boolean }> = {
+    pending: { label: 'Pending', icon: Clock, color: 'text-amber-500', bgColor: 'bg-amber-500/10 border-amber-500/20' },
+    in_progress: { label: 'In Progress', icon: Loader2, color: 'text-blue-500', bgColor: 'bg-blue-500/10 border-blue-500/20', spin: true },
+    completed: { label: 'Completed', icon: CheckCircle, color: 'text-emerald-500', bgColor: 'bg-emerald-500/10 border-emerald-500/20' },
+    partial: { label: 'Partial', icon: AlertCircle, color: 'text-orange-500', bgColor: 'bg-orange-500/10 border-orange-500/20' },
+    cancelled: { label: 'Cancelled', icon: XCircle, color: 'text-red-500', bgColor: 'bg-red-500/10 border-red-500/20' },
   };
 
   const filteredOrders = orders.filter(order => {
@@ -100,14 +110,19 @@ const BuyerOrders = () => {
   });
 
   const kanbanColumns = [
-    { title: 'Pending', status: 'pending', icon: Clock, color: 'from-amber-500 to-amber-600', bg: 'bg-amber-500/10', textColor: 'text-amber-500' },
-    { title: 'In Progress', status: 'in_progress', icon: Loader2, color: 'from-blue-500 to-blue-600', bg: 'bg-blue-500/10', textColor: 'text-blue-500' },
-    { title: 'Completed', status: 'completed', icon: CheckCircle, color: 'from-emerald-500 to-emerald-600', bg: 'bg-emerald-500/10', textColor: 'text-emerald-500' },
+    { title: 'Pending', status: 'pending', icon: Clock, gradient: 'from-amber-500 to-amber-600', bg: 'bg-amber-500/10', textColor: 'text-amber-500', borderColor: 'border-amber-500/30' },
+    { title: 'In Progress', status: 'in_progress', icon: Loader2, gradient: 'from-blue-500 to-blue-600', bg: 'bg-blue-500/10', textColor: 'text-blue-500', borderColor: 'border-blue-500/30' },
+    { title: 'Completed', status: 'completed', icon: CheckCircle, gradient: 'from-emerald-500 to-emerald-600', bg: 'bg-emerald-500/10', textColor: 'text-emerald-500', borderColor: 'border-emerald-500/30' },
   ];
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({ title: "Copied!", description: "Order number copied to clipboard" });
+  };
 
   const containerVariants = {
     hidden: { opacity: 0 },
-    visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
+    visible: { opacity: 1, transition: { staggerChildren: 0.08 } }
   };
 
   const itemVariants = {
@@ -121,46 +136,48 @@ const BuyerOrders = () => {
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="space-y-6"
+        className="space-y-4 md:space-y-6"
       >
         {/* Header */}
-        <motion.div variants={itemVariants} className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <motion.div variants={itemVariants} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold">My Orders</h1>
-            <p className="text-muted-foreground">Track and manage your service orders</p>
+            <h1 className="text-xl md:text-2xl lg:text-3xl font-bold">My Orders</h1>
+            <p className="text-sm text-muted-foreground">Track and manage your orders</p>
           </div>
-          <Button variant="outline" size="sm" onClick={fetchOrders}>
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Refresh
+          <Button variant="outline" size="sm" onClick={fetchOrders} className="gap-2 self-start sm:self-auto">
+            <RefreshCw className="w-4 h-4" />
+            <span className="hidden sm:inline">Refresh</span>
           </Button>
         </motion.div>
 
-        {/* Stats */}
-        <motion.div variants={itemVariants} className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          {Object.entries(statusConfig).map(([status, config]) => {
-            const count = orders.filter(o => o.status === status).length;
-            const Icon = config.icon;
-            return (
-              <button
-                key={status}
-                onClick={() => setStatusFilter(statusFilter === status ? 'all' : status)}
-                className={cn(
-                  "glass-card p-3 text-left transition-all",
-                  statusFilter === status && "ring-2 ring-primary"
-                )}
-              >
-                <div className="flex items-center gap-2">
-                  <div className={cn("p-1.5 rounded-lg", config.color.split(' ')[0])}>
-                    <Icon className={cn("w-4 h-4", config.spin && "animate-spin")} />
+        {/* Stats - Mobile optimized horizontal scroll */}
+        <motion.div variants={itemVariants} className="overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0">
+          <div className="flex md:grid md:grid-cols-5 gap-2 md:gap-3 min-w-max md:min-w-0">
+            {Object.entries(statusConfig).map(([status, config]) => {
+              const count = orders.filter(o => o.status === status).length;
+              const Icon = config.icon;
+              return (
+                <button
+                  key={status}
+                  onClick={() => setStatusFilter(statusFilter === status ? 'all' : status)}
+                  className={cn(
+                    "glass-card p-3 md:p-4 text-left transition-all min-w-[100px] md:min-w-0 shrink-0 md:shrink",
+                    statusFilter === status && "ring-2 ring-primary"
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <div className={cn("p-1.5 md:p-2 rounded-lg", config.bgColor.split(' ')[0])}>
+                      <Icon className={cn("w-3.5 h-3.5 md:w-4 md:h-4", config.color, config.spin && "animate-spin")} />
+                    </div>
+                    <div>
+                      <p className="text-lg md:text-xl font-bold">{count}</p>
+                      <p className="text-[10px] md:text-xs text-muted-foreground">{config.label}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-lg font-bold">{count}</p>
-                    <p className="text-[10px] text-muted-foreground">{config.label}</p>
-                  </div>
-                </div>
-              </button>
-            );
-          })}
+                </button>
+              );
+            })}
+          </div>
         </motion.div>
 
         {/* Search */}
@@ -174,9 +191,10 @@ const BuyerOrders = () => {
           />
         </motion.div>
 
-        {/* Kanban View */}
+        {/* Kanban View - Responsive */}
         <motion.div variants={itemVariants}>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Desktop/Tablet: Grid layout */}
+          <div className="hidden md:grid md:grid-cols-3 gap-4">
             {kanbanColumns.map((column) => {
               const columnOrders = filteredOrders.filter(o => o.status === column.status);
               const Icon = column.icon;
@@ -184,86 +202,101 @@ const BuyerOrders = () => {
               return (
                 <div key={column.status} className="space-y-3">
                   {/* Column Header */}
-                  <div className="glass-card p-3">
+                  <div className={cn("glass-card p-3 border-l-4", column.borderColor)}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <div className={cn("p-1.5 rounded-lg bg-gradient-to-br", column.color)}>
+                        <div className={cn("p-1.5 rounded-lg bg-gradient-to-br", column.gradient)}>
                           <Icon className="w-4 h-4 text-white" />
                         </div>
                         <span className="font-medium text-sm">{column.title}</span>
                       </div>
-                      <Badge variant="outline" className={column.bg}>
+                      <Badge variant="outline" className={cn(column.bg, column.textColor)}>
                         {columnOrders.length}
                       </Badge>
                     </div>
                   </div>
 
                   {/* Column Items */}
-                  <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
-                    {loading ? (
-                      [1, 2].map(i => (
-                        <div key={i} className="h-28 bg-muted rounded-xl animate-pulse" />
-                      ))
-                    ) : columnOrders.length === 0 ? (
-                      <div className="glass-card p-6 text-center">
-                        <Icon className={cn("w-8 h-8 mx-auto mb-2", column.textColor)} />
-                        <p className="text-sm text-muted-foreground">No {column.title.toLowerCase()} orders</p>
-                      </div>
-                    ) : (
-                      columnOrders.map((order) => {
-                        const config = statusConfig[order.status];
-                        const StatusIcon = config?.icon || Clock;
-
-                        return (
-                          <motion.div
-                            key={order.id}
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            className="glass-card-hover p-3 space-y-2"
-                          >
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1 min-w-0">
-                                <p className="font-medium text-sm truncate">{order.service?.name || 'Unknown'}</p>
-                                <p className="text-xs text-muted-foreground">{order.order_number}</p>
-                              </div>
-                            </div>
-
-                            <a 
-                              href={order.target_url} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="text-xs text-primary hover:underline truncate block flex items-center gap-1"
-                            >
-                              <ExternalLink className="w-3 h-3 shrink-0" />
-                              <span className="truncate">{order.target_url}</span>
-                            </a>
-
-                            {order.status === 'in_progress' && (
-                              <div className="space-y-1">
-                                <div className="flex justify-between text-xs">
-                                  <span className="text-muted-foreground">Progress</span>
-                                  <span>{order.progress}%</span>
-                                </div>
-                                <Progress value={order.progress} className="h-1.5" />
-                              </div>
-                            )}
-
-                            <div className="flex items-center justify-between text-xs pt-1 border-t border-border/50">
-                              <span className="text-muted-foreground">{order.quantity.toLocaleString()} qty</span>
-                              <span className="font-medium">${order.price.toFixed(2)}</span>
-                            </div>
-
-                            <p className="text-[10px] text-muted-foreground">
-                              {new Date(order.created_at).toLocaleDateString()}
-                            </p>
-                          </motion.div>
-                        );
-                      })
-                    )}
-                  </div>
+                  <ScrollArea className="h-[calc(100vh-400px)] pr-2">
+                    <div className="space-y-2">
+                      {loading ? (
+                        [1, 2].map(i => (
+                          <div key={i} className="h-28 bg-muted rounded-xl animate-pulse" />
+                        ))
+                      ) : columnOrders.length === 0 ? (
+                        <div className="glass-card p-6 text-center">
+                          <Icon className={cn("w-8 h-8 mx-auto mb-2", column.textColor)} />
+                          <p className="text-sm text-muted-foreground">No {column.title.toLowerCase()} orders</p>
+                        </div>
+                      ) : (
+                        columnOrders.map((order) => (
+                          <OrderCard 
+                            key={order.id} 
+                            order={order} 
+                            statusConfig={statusConfig}
+                            onView={() => setSelectedOrder(order)}
+                            onCopy={() => copyToClipboard(order.order_number)}
+                          />
+                        ))
+                      )}
+                    </div>
+                  </ScrollArea>
                 </div>
               );
             })}
+          </div>
+
+          {/* Mobile: Horizontal scroll kanban */}
+          <div className="md:hidden overflow-x-auto pb-4 -mx-4 px-4 snap-x snap-mandatory">
+            <div className="flex gap-4" style={{ width: 'max-content' }}>
+              {kanbanColumns.map((column) => {
+                const columnOrders = filteredOrders.filter(o => o.status === column.status);
+                const Icon = column.icon;
+
+                return (
+                  <div key={column.status} className="w-[85vw] max-w-[320px] shrink-0 snap-center space-y-3">
+                    {/* Column Header */}
+                    <div className={cn("glass-card p-3 border-l-4", column.borderColor)}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className={cn("p-1.5 rounded-lg bg-gradient-to-br", column.gradient)}>
+                            <Icon className="w-4 h-4 text-white" />
+                          </div>
+                          <span className="font-medium text-sm">{column.title}</span>
+                        </div>
+                        <Badge variant="outline" className={cn(column.bg, column.textColor)}>
+                          {columnOrders.length}
+                        </Badge>
+                      </div>
+                    </div>
+
+                    {/* Column Items */}
+                    <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+                      {loading ? (
+                        [1, 2].map(i => (
+                          <div key={i} className="h-28 bg-muted rounded-xl animate-pulse" />
+                        ))
+                      ) : columnOrders.length === 0 ? (
+                        <div className="glass-card p-6 text-center">
+                          <Icon className={cn("w-8 h-8 mx-auto mb-2", column.textColor)} />
+                          <p className="text-sm text-muted-foreground">No orders</p>
+                        </div>
+                      ) : (
+                        columnOrders.map((order) => (
+                          <OrderCard 
+                            key={order.id} 
+                            order={order} 
+                            statusConfig={statusConfig}
+                            onView={() => setSelectedOrder(order)}
+                            onCopy={() => copyToClipboard(order.order_number)}
+                          />
+                        ))
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </motion.div>
 
@@ -271,39 +304,167 @@ const BuyerOrders = () => {
         {filteredOrders.filter(o => !['pending', 'in_progress', 'completed'].includes(o.status)).length > 0 && (
           <motion.div variants={itemVariants}>
             <h3 className="text-lg font-semibold mb-3">Other Orders</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {filteredOrders
                 .filter(o => !['pending', 'in_progress', 'completed'].includes(o.status))
-                .map((order) => {
-                  const config = statusConfig[order.status] || statusConfig.pending;
-                  const StatusIcon = config.icon;
-
-                  return (
-                    <Card key={order.id} className="glass-card-hover">
-                      <CardContent className="p-4 space-y-2">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <p className="font-medium">{order.service?.name || 'Unknown'}</p>
-                            <p className="text-xs text-muted-foreground">{order.order_number}</p>
-                          </div>
-                          <Badge variant="outline" className={config.color}>
-                            <StatusIcon className={cn("w-3 h-3 mr-1", config.spin && "animate-spin")} />
-                            {config.label}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">{order.quantity.toLocaleString()} qty</span>
-                          <span className="font-medium">${order.price.toFixed(2)}</span>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
+                .map((order) => (
+                  <OrderCard 
+                    key={order.id} 
+                    order={order} 
+                    statusConfig={statusConfig}
+                    onView={() => setSelectedOrder(order)}
+                    onCopy={() => copyToClipboard(order.order_number)}
+                  />
+                ))}
             </div>
           </motion.div>
         )}
       </motion.div>
+
+      {/* Order Details Dialog */}
+      <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
+        <DialogContent className="sm:max-w-md glass-card">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="w-5 h-5" />
+              Order Details
+            </DialogTitle>
+          </DialogHeader>
+          {selectedOrder && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Order Number</span>
+                <div className="flex items-center gap-2">
+                  <code className="text-sm font-mono">{selectedOrder.order_number}</code>
+                  <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => copyToClipboard(selectedOrder.order_number)}>
+                    <Copy className="w-3 h-3" />
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Service</span>
+                <span className="font-medium">{selectedOrder.service?.name || 'Unknown'}</span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Status</span>
+                <Badge variant="outline" className={statusConfig[selectedOrder.status]?.bgColor}>
+                  {statusConfig[selectedOrder.status]?.label}
+                </Badge>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Quantity</span>
+                <span className="font-medium">{selectedOrder.quantity.toLocaleString()}</span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Price</span>
+                <span className="font-bold text-lg">${selectedOrder.price.toFixed(2)}</span>
+              </div>
+
+              {selectedOrder.status === 'in_progress' && (
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Progress</span>
+                    <span className="font-medium">{selectedOrder.progress}%</span>
+                  </div>
+                  <Progress value={selectedOrder.progress} className="h-2" />
+                </div>
+              )}
+
+              <div className="pt-2 border-t">
+                <p className="text-sm text-muted-foreground mb-2">Target URL</p>
+                <a 
+                  href={selectedOrder.target_url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-sm text-primary hover:underline break-all flex items-center gap-1"
+                >
+                  <ExternalLink className="w-3 h-3 shrink-0" />
+                  {selectedOrder.target_url}
+                </a>
+              </div>
+
+              <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t">
+                <Calendar className="w-3 h-3" />
+                Created: {new Date(selectedOrder.created_at).toLocaleString()}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </BuyerLayout>
+  );
+};
+
+// Order Card Component
+const OrderCard = ({ 
+  order, 
+  statusConfig, 
+  onView, 
+  onCopy 
+}: { 
+  order: Order; 
+  statusConfig: Record<string, any>; 
+  onView: () => void; 
+  onCopy: () => void;
+}) => {
+  const config = statusConfig[order.status];
+  const StatusIcon = config?.icon || Clock;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="glass-card-hover p-3 space-y-2"
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <p className="font-medium text-sm truncate">{order.service?.name || 'Unknown'}</p>
+          <button 
+            onClick={onCopy}
+            className="text-xs text-muted-foreground hover:text-primary transition-colors font-mono"
+          >
+            {order.order_number}
+          </button>
+        </div>
+        <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={onView}>
+          <Eye className="w-3.5 h-3.5" />
+        </Button>
+      </div>
+
+      <a 
+        href={order.target_url} 
+        target="_blank" 
+        rel="noopener noreferrer"
+        className="text-xs text-primary hover:underline truncate block flex items-center gap-1"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <ExternalLink className="w-3 h-3 shrink-0" />
+        <span className="truncate">{order.target_url}</span>
+      </a>
+
+      {order.status === 'in_progress' && (
+        <div className="space-y-1">
+          <div className="flex justify-between text-xs">
+            <span className="text-muted-foreground">Progress</span>
+            <span>{order.progress}%</span>
+          </div>
+          <Progress value={order.progress} className="h-1.5" />
+        </div>
+      )}
+
+      <div className="flex items-center justify-between text-xs pt-1 border-t border-border/50">
+        <span className="text-muted-foreground">{order.quantity.toLocaleString()} qty</span>
+        <span className="font-medium">${order.price.toFixed(2)}</span>
+      </div>
+
+      <p className="text-[10px] text-muted-foreground">
+        {new Date(order.created_at).toLocaleDateString()}
+      </p>
+    </motion.div>
   );
 };
 
