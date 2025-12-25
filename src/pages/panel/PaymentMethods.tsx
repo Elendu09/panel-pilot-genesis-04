@@ -390,7 +390,7 @@ const PaymentMethods = () => {
                         <CardContent className="p-4 space-y-4">
                           <div className="flex items-start justify-between">
                             <div className="flex items-center gap-3">
-                              <div className="text-3xl">{gateway.icon}</div>
+                              <gateway.Icon className="w-8 h-8" />
                               <div>
                                 <h3 className="font-semibold">{gateway.name}</h3>
                                 <p className="text-xs text-muted-foreground">{gateway.regions.join(", ")}</p>
@@ -431,7 +431,7 @@ const PaymentMethods = () => {
         <DialogContent className="sm:max-w-[500px] glass-card border-border/50">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3">
-              <span className="text-3xl">{selectedGateway?.icon}</span>
+              {selectedGateway && <selectedGateway.Icon className="w-8 h-8" />}
               Configure {selectedGateway?.name}
             </DialogTitle>
             <DialogDescription>Enter your API credentials to enable this payment gateway</DialogDescription>
