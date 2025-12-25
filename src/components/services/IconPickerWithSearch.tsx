@@ -1,8 +1,9 @@
 import { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Search } from "lucide-react";
+import { Search, Upload } from "lucide-react";
 import { SOCIAL_ICONS_MAP } from "@/components/icons/SocialIcons";
 
 interface IconPickerWithSearchProps {
@@ -10,6 +11,8 @@ interface IconPickerWithSearchProps {
   onSelectIcon: (iconKey: string) => void;
   className?: string;
   maxHeight?: string;
+  onUploadClick?: () => void;
+  showUploadButton?: boolean;
 }
 
 export function IconPickerWithSearch({
@@ -17,6 +20,8 @@ export function IconPickerWithSearch({
   onSelectIcon,
   className,
   maxHeight = "200px",
+  onUploadClick,
+  showUploadButton = true,
 }: IconPickerWithSearchProps) {
   const [searchQuery, setSearchQuery] = useState("");
   
@@ -34,15 +39,29 @@ export function IconPickerWithSearch({
   
   return (
     <div className={cn("space-y-2", className)}>
-      {/* Search Input */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          placeholder="Search icons..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-9 h-9 text-sm"
-        />
+      {/* Search Input with Upload Button */}
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Search icons..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 h-9 text-sm"
+          />
+        </div>
+        {showUploadButton && onUploadClick && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-9 px-3 shrink-0"
+            onClick={onUploadClick}
+          >
+            <Upload className="w-4 h-4 mr-1.5" />
+            Upload
+          </Button>
+        )}
       </div>
       
       {/* Icons Grid */}

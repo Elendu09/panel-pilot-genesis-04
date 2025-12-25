@@ -31,6 +31,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { usePanel } from "@/hooks/usePanel";
 import { getIconByKey } from "@/components/icons/SocialIcons";
 import { IconPickerWithSearch } from "./IconPickerWithSearch";
+import { IconUploadDialog } from "./IconUploadDialog";
 import {
   Settings,
   DollarSign,
@@ -46,6 +47,7 @@ import {
   Link,
   Package,
   TrendingUp,
+  Upload,
 } from "lucide-react";
 
 interface ServiceEditSheetProps {
@@ -109,6 +111,7 @@ export const ServiceEditSheet = ({
   const [generatingDescription, setGeneratingDescription] = useState(false);
   const [providers, setProviders] = useState<Provider[]>([]);
   const [useCustomUrl, setUseCustomUrl] = useState(false);
+  const [isIconUploadOpen, setIsIconUploadOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -428,6 +431,8 @@ export const ServiceEditSheet = ({
                           selectedIcon={formData.image_url}
                           onSelectIcon={(iconKey) => handleChange("image_url", iconKey)}
                           maxHeight="180px"
+                          showUploadButton={true}
+                          onUploadClick={() => setIsIconUploadOpen(true)}
                         />
                       ) : (
                         <div className="space-y-3">
@@ -674,6 +679,19 @@ export const ServiceEditSheet = ({
           </>
         )}
       </SheetContent>
+
+      {/* Icon Upload Dialog */}
+      {panel?.id && (
+        <IconUploadDialog
+          open={isIconUploadOpen}
+          onOpenChange={setIsIconUploadOpen}
+          panelId={panel.id}
+          onIconUploaded={(url) => {
+            handleChange("image_url", url);
+            setUseCustomUrl(true);
+          }}
+        />
+      )}
     </Sheet>
   );
 };

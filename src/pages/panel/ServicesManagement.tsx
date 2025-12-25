@@ -1758,6 +1758,36 @@ const ServicesManagement = () => {
           animate={{ opacity: 1, x: 0 }}
           className="hidden lg:block w-56 shrink-0 space-y-2"
         >
+          {/* Category Management & Advanced Filters */}
+          <div className="flex gap-2 mb-3">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1 h-9 text-xs"
+              onClick={() => setIsCategoryManagementOpen(true)}
+            >
+              <Settings2 className="w-3.5 h-3.5 mr-1.5" />
+              Manage
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className={cn(
+                "flex-1 h-9 text-xs relative",
+                activeFilterCount > 0 && "border-primary/50 bg-primary/5"
+              )}
+              onClick={() => setIsAdvancedFiltersOpen(true)}
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5 mr-1.5" />
+              Filters
+              {activeFilterCount > 0 && (
+                <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 text-[10px] flex items-center justify-center">
+                  {activeFilterCount}
+                </Badge>
+              )}
+            </Button>
+          </div>
+
           {categories.map((cat) => (
             <button
               key={cat.id}
@@ -1817,6 +1847,24 @@ const ServicesManagement = () => {
                 <SelectItem value="name">Name</SelectItem>
               </SelectContent>
             </Select>
+
+            {/* Mobile Advanced Filters Button */}
+            <Button
+              variant="outline"
+              size="icon"
+              className={cn(
+                "lg:hidden h-10 w-10 shrink-0",
+                activeFilterCount > 0 && "border-primary/50 bg-primary/5"
+              )}
+              onClick={() => setIsAdvancedFiltersOpen(true)}
+            >
+              <SlidersHorizontal className="w-4 h-4" />
+              {activeFilterCount > 0 && (
+                <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 text-[10px] flex items-center justify-center">
+                  {activeFilterCount}
+                </Badge>
+              )}
+            </Button>
           </div>
 
           {/* Services */}
@@ -2469,6 +2517,43 @@ const ServicesManagement = () => {
             setIsViewDialogOpen(false);
             setIsEditDialogOpen(true);
           }
+        }}
+      />
+
+      {/* Bulk Progress Modal */}
+      <BulkProgressModal
+        open={showBulkProgress}
+        onOpenChange={setShowBulkProgress}
+        progress={bulkProgress}
+        title={bulkProgressTitle}
+        description={`Processing ${bulkProgress.total.toLocaleString()} services...`}
+        onComplete={() => {
+          fetchServices();
+          fetchCategoryCounts();
+        }}
+      />
+
+      {/* Category Management Dialog */}
+      {panel?.id && (
+        <CategoryManagementDialog
+          open={isCategoryManagementOpen}
+          onOpenChange={setIsCategoryManagementOpen}
+          panelId={panel.id}
+          currentCategories={customCategories}
+          onCategoriesChange={setCustomCategories}
+        />
+      )}
+
+      {/* Advanced Filters Sheet */}
+      <AdvancedFiltersSheet
+        open={isAdvancedFiltersOpen}
+        onOpenChange={setIsAdvancedFiltersOpen}
+        filters={advancedFilters}
+        onFiltersChange={setAdvancedFilters}
+        providers={providers}
+        onApply={() => {
+          setCurrentPage(1);
+          fetchServices();
         }}
       />
     </div>
