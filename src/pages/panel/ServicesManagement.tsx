@@ -57,6 +57,16 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -215,6 +225,10 @@ const ServicesManagement = () => {
   // Health Check Dialog
   const [isHealthCheckOpen, setIsHealthCheckOpen] = useState(false);
   const [healthIssueCount, setHealthIssueCount] = useState(0);
+  
+  // Bulk Delete Confirmation
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [pendingDeleteCount, setPendingDeleteCount] = useState(0);
   
   // View mode: list or kanban
   const [viewMode, setViewMode] = useState<"list" | "kanban">(() => {
@@ -682,8 +696,58 @@ const ServicesManagement = () => {
       toast({ title: "No services selected", variant: "destructive" });
       return;
     }
+    
+    // For delete, show special confirmation dialog
+    if (action === "delete") {
+      setPendingDeleteCount(selectedServices.length);
+      setIsDeleteConfirmOpen(true);
+      return;
+    }
+    
     setBulkAction(action);
     setIsBulkDialogOpen(true);
+  };
+
+  // Execute bulk delete with confirmation
+  const executeBulkDelete = async () => {
+    try {
+      // Fetch full service data for restoration
+      const { data: fullServices } = await supabase
+        .from('services')
+        .select('*')
+        .in('id', selectedServices);
+      
+      const previousState = (fullServices || []).reduce((acc, s) => ({
+        ...acc,
+        [s.id]: s
+      }), {});
+      
+      await supabase.from('services').delete().in('id', selectedServices);
+      setServices(prev => prev.filter(s => !selectedServices.includes(s.id)));
+      
+      const deletedCount = selectedServices.length;
+      const deletedIds = [...selectedServices];
+      
+      pushUndo({
+        type: 'delete',
+        affectedIds: deletedIds,
+        previousState,
+        description: `Deleted ${deletedCount} services`,
+      });
+      
+      toast({ 
+        title: `${deletedCount} services deleted`,
+        description: "Use the Undo button at the bottom to restore",
+      });
+      
+      setSelectedServices([]);
+      setSelectAllPages(false);
+      setIsDeleteConfirmOpen(false);
+      fetchCategoryCounts();
+    } catch (error) {
+      console.error('Bulk delete error:', error);
+      toast({ title: 'Failed to delete services', variant: 'destructive' });
+    }
   };
 
   const executeBulkAction = async () => {
@@ -732,30 +796,6 @@ const ServicesManagement = () => {
             description: `Disabled ${selectedServices.length} services`,
           });
           toast({ title: `${selectedServices.length} services disabled` });
-          break;
-        }
-        case "delete": {
-          // Fetch full service data for restoration
-          const { data: fullServices } = await supabase
-            .from('services')
-            .select('*')
-            .in('id', selectedServices);
-          
-          const previousState = (fullServices || []).reduce((acc, s) => ({
-            ...acc,
-            [s.id]: s
-          }), {});
-          
-          await supabase.from('services').delete().in('id', selectedServices);
-          setServices(prev => prev.filter(s => !selectedServices.includes(s.id)));
-          
-          pushUndo({
-            type: 'delete',
-            affectedIds: selectedServices,
-            previousState,
-            description: `Deleted ${selectedServices.length} services`,
-          });
-          toast({ title: `${selectedServices.length} services deleted` });
           break;
         }
         case "export-csv":
@@ -1852,12 +1892,44 @@ const ServicesManagement = () => {
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsBulkDialogOpen(false)}>Cancel</Button>
-            <Button onClick={executeBulkAction} variant={bulkAction === "delete" ? "destructive" : "default"}>
+            <Button onClick={executeBulkAction}>
               Confirm
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Bulk Delete Confirmation AlertDialog */}
+      <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="w-5 h-5" />
+              Delete {pendingDeleteCount} Services?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>
+                This will permanently delete <strong>{pendingDeleteCount}</strong> service{pendingDeleteCount !== 1 ? 's' : ''} from your panel.
+              </p>
+              <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg text-sm">
+                <RefreshCw className="w-4 h-4 text-primary" />
+                <span className="text-foreground">
+                  You can restore them using the <strong>Undo</strong> button that will appear after deletion.
+                </span>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={executeBulkDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete {pendingDeleteCount} Services
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Import Dialog - Connected to Real Providers */}
       <ServiceImportDialog
