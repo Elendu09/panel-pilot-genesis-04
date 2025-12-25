@@ -1,5 +1,6 @@
 // Supabase Edge Function: domain-health-check
 // Checks DNS A/CNAME records + HTTP/HTTPS reachability for multiple hosting providers
+// Updated for Vercel wildcard DNS support
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 
@@ -12,6 +13,8 @@ const corsHeaders = {
 const LOVABLE_IP = "185.158.133.1";
 const NETLIFY_IPS = ["75.2.60.5"];
 const VERCEL_IPS = ["76.76.21.21"];
+const VERCEL_CNAMES = ["cname.vercel-dns.com", "vercel-dns.com", "vercel.app"];
+const NETLIFY_CNAMES = ["netlify.app", "netlify.com"];
 
 function json(data: unknown, init: ResponseInit = {}) {
   return new Response(JSON.stringify(data), {
@@ -34,7 +37,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json().catch(() => ({}));
-    const { domain, expectedTarget, hostingProvider = 'lovable' } = body;
+    const { domain, expectedTarget, hostingProvider = 'vercel' } = body;
 
     if (!domain || typeof domain !== "string") {
       return json({ error: "domain is required" }, { status: 400 });
@@ -60,9 +63,25 @@ serve(async (req) => {
       cnameRecords = [];
     }
 
+    // 3) DNS NS record check (important for Vercel wildcard)
+    let nsRecords: string[] = [];
+    try {
+      nsRecords = (await Deno.resolveDns(domain, "NS")) as string[];
+    } catch (e) {
+      console.log("[domain-health-check] NS records not found", { domain });
+      nsRecords = [];
+    }
+
     // Determine expected targets based on hosting provider
     let expectedTargets: string[] = [];
     let expectedCnames: string[] = [];
+    let isUsingVercelNameservers = false;
+    
+    // Check if using Vercel nameservers (for wildcard support)
+    if (nsRecords.some(ns => ns.toLowerCase().includes('vercel-dns.com'))) {
+      isUsingVercelNameservers = true;
+      console.log("[domain-health-check] Vercel nameservers detected - wildcard support enabled");
+    }
     
     switch (hostingProvider) {
       case 'lovable':
@@ -70,11 +89,11 @@ serve(async (req) => {
         break;
       case 'netlify':
         expectedTargets = NETLIFY_IPS;
-        expectedCnames = ['netlify'];
+        expectedCnames = NETLIFY_CNAMES;
         break;
       case 'vercel':
         expectedTargets = VERCEL_IPS;
-        expectedCnames = ['vercel'];
+        expectedCnames = VERCEL_CNAMES;
         break;
       case 'cloudflare_pages':
         expectedCnames = ['pages.dev'];
@@ -90,15 +109,24 @@ serve(async (req) => {
         }
         break;
       default:
-        expectedTargets = [LOVABLE_IP];
+        // Default to checking both Vercel and Lovable
+        expectedTargets = [...VERCEL_IPS, LOVABLE_IP];
+        expectedCnames = VERCEL_CNAMES;
     }
 
     // Check if DNS matches expected configuration
     let dnsOk = false;
     let dnsMatchType = 'none';
 
+    // If using Vercel nameservers, DNS is automatically OK for Vercel hosting
+    if (hostingProvider === 'vercel' && isUsingVercelNameservers) {
+      dnsOk = true;
+      dnsMatchType = 'NS';
+      console.log("[domain-health-check] Verified via Vercel nameservers");
+    }
+
     // Check A records
-    if (expectedTargets.length > 0 && aRecords.some(r => expectedTargets.includes(r))) {
+    if (!dnsOk && expectedTargets.length > 0 && aRecords.some(r => expectedTargets.includes(r))) {
       dnsOk = true;
       dnsMatchType = 'A';
     }
@@ -120,7 +148,7 @@ serve(async (req) => {
       dnsMatchType = aRecords.length > 0 ? 'A' : cnameRecords.length > 0 ? 'CNAME' : 'none';
     }
 
-    // 3) HTTPS reachability (true SSL check – if cert is broken, fetch throws)
+    // 4) HTTPS reachability (true SSL check – if cert is broken, fetch throws)
     let httpsOk = false;
     try {
       const res = await fetch(`https://${domain}`, {
@@ -133,7 +161,7 @@ serve(async (req) => {
       httpsOk = false;
     }
 
-    // 4) HTTP reachability (optional fallback)
+    // 5) HTTP reachability (optional fallback)
     let httpOk = false;
     try {
       const res = await fetch(`http://${domain}`, {
@@ -153,6 +181,9 @@ serve(async (req) => {
       expected_cnames: expectedCnames,
       a_records: aRecords,
       cname_records: cnameRecords,
+      ns_records: nsRecords,
+      using_vercel_nameservers: isUsingVercelNameservers,
+      wildcard_enabled: isUsingVercelNameservers && hostingProvider === 'vercel',
       dns_ok: dnsOk,
       dns_match_type: dnsMatchType,
       https_ok: httpsOk,

@@ -10,6 +10,8 @@ const corsHeaders = {
 const LOVABLE_IP = "185.158.133.1";
 const NETLIFY_IPS = ["75.2.60.5"];
 const VERCEL_IPS = ["76.76.21.21"];
+const VERCEL_CNAMES = ["cname.vercel-dns.com", "vercel-dns.com", "vercel.app"];
+const NETLIFY_CNAMES = ["netlify.app", "netlify.com"];
 
 interface DNSAnswer {
   name: string;
@@ -74,9 +76,9 @@ function getExpectedTargets(hostingProvider: string, customTarget?: string): { t
     case 'lovable':
       return { targets: [LOVABLE_IP], cnames: [] };
     case 'netlify':
-      return { targets: NETLIFY_IPS, cnames: ['netlify'] };
+      return { targets: NETLIFY_IPS, cnames: NETLIFY_CNAMES };
     case 'vercel':
-      return { targets: VERCEL_IPS, cnames: ['vercel'] };
+      return { targets: VERCEL_IPS, cnames: VERCEL_CNAMES };
     case 'cloudflare_pages':
       return { targets: [], cnames: ['pages.dev'] };
     case 'custom':
@@ -88,7 +90,8 @@ function getExpectedTargets(hostingProvider: string, customTarget?: string): { t
       }
       return { targets: [LOVABLE_IP], cnames: [] };
     default:
-      return { targets: [LOVABLE_IP], cnames: [] };
+      // Default to checking both Vercel and Lovable for flexibility
+      return { targets: [...VERCEL_IPS, LOVABLE_IP], cnames: VERCEL_CNAMES };
   }
 }
 
@@ -114,9 +117,11 @@ serve(async (req) => {
         panel_id, 
         verification_status,
         expected_target,
+        hosting_provider,
         panels!inner(
           id,
-          settings
+          settings,
+          hosting_provider
         )
       `)
       .eq("verification_status", "pending");
@@ -127,21 +132,28 @@ serve(async (req) => {
 
     console.log(`Found ${pendingDomains?.length || 0} pending domains`);
 
-    const results: { domain: string; verified: boolean; matchType?: string }[] = [];
+    const results: { domain: string; verified: boolean; matchType?: string; provider?: string }[] = [];
 
     for (const domainRecord of pendingDomains || []) {
       console.log(`Checking DNS for: ${domainRecord.domain}`);
       
-      // Get hosting provider from panel settings
-      const panelSettings = domainRecord.panels?.settings as Record<string, any> | null;
-      const hostingProvider = panelSettings?.hosting_provider || 'lovable';
-      const customTarget = domainRecord.expected_target || panelSettings?.custom_dns_target;
+      // Get hosting provider - prefer domain-specific, then panel-level, then settings
+      const hostingProvider = 
+        domainRecord.hosting_provider || 
+        (domainRecord.panels as any)?.hosting_provider ||
+        ((domainRecord.panels as any)?.settings as Record<string, any>)?.hosting_provider || 
+        'vercel'; // Default to Vercel now
+      
+      const customTarget = domainRecord.expected_target || 
+        ((domainRecord.panels as any)?.settings as Record<string, any>)?.custom_dns_target;
+      
+      console.log(`Using hosting provider: ${hostingProvider}`);
       
       const { targets, cnames } = getExpectedTargets(hostingProvider, customTarget);
       const { verified, matchType } = await checkDNS(domainRecord.domain, targets, cnames);
       
       if (verified) {
-        console.log(`✅ ${domainRecord.domain} verified via ${matchType}!`);
+        console.log(`✅ ${domainRecord.domain} verified via ${matchType} (provider: ${hostingProvider})`);
         
         // Update domain record
         const { error: updateError } = await supabase
@@ -169,16 +181,16 @@ serve(async (req) => {
             .eq("id", domainRecord.panel_id);
         }
       } else {
-        console.log(`⏳ ${domainRecord.domain} not yet configured`);
+        console.log(`⏳ ${domainRecord.domain} not yet configured (expected: ${targets.join(', ') || cnames.join(', ')})`);
       }
 
-      results.push({ domain: domainRecord.domain, verified, matchType });
+      results.push({ domain: domainRecord.domain, verified, matchType, provider: hostingProvider });
     }
 
     // Also check panels with custom_domain set but not verified
     const { data: panelsWithCustomDomain } = await supabase
       .from("panels")
-      .select("id, custom_domain, domain_verification_status, settings")
+      .select("id, custom_domain, domain_verification_status, settings, hosting_provider")
       .not("custom_domain", "is", null)
       .neq("domain_verification_status", "verified");
 
@@ -187,15 +199,16 @@ serve(async (req) => {
       
       console.log(`Checking panel custom domain: ${panel.custom_domain}`);
       
-      const panelSettings = panel.settings as Record<string, any> | null;
-      const hostingProvider = panelSettings?.hosting_provider || 'lovable';
-      const customTarget = panelSettings?.custom_dns_target;
+      const hostingProvider = panel.hosting_provider || 
+        (panel.settings as Record<string, any>)?.hosting_provider || 
+        'vercel';
+      const customTarget = (panel.settings as Record<string, any>)?.custom_dns_target;
       
       const { targets, cnames } = getExpectedTargets(hostingProvider, customTarget);
       const { verified, matchType } = await checkDNS(panel.custom_domain, targets, cnames);
       
       if (verified) {
-        console.log(`✅ Panel domain ${panel.custom_domain} verified via ${matchType}!`);
+        console.log(`✅ Panel domain ${panel.custom_domain} verified via ${matchType} (provider: ${hostingProvider})`);
         await supabase
           .from("panels")
           .update({
@@ -204,7 +217,7 @@ serve(async (req) => {
           })
           .eq("id", panel.id);
         
-        results.push({ domain: panel.custom_domain, verified: true, matchType });
+        results.push({ domain: panel.custom_domain, verified: true, matchType, provider: hostingProvider });
       }
     }
 
