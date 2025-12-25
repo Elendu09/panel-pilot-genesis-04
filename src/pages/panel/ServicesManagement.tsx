@@ -11,14 +11,6 @@ import {
   Download,
   CheckSquare,
   Square,
-  Instagram,
-  Facebook,
-  Twitter,
-  Youtube,
-  Linkedin,
-  MessageCircle,
-  Hash,
-  Globe,
   TrendingUp,
   DollarSign,
   Layers,
@@ -42,7 +34,11 @@ import {
   Wand2,
   Copy,
   SlidersHorizontal,
-  Clock
+  Clock,
+  CopyPlus,
+  BarChart2,
+  Tag,
+  Star
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -143,24 +139,37 @@ import {
 import { LayoutGrid, List, Stethoscope } from "lucide-react";
 
 
+// Helper function to get category icon from SOCIAL_ICONS_MAP
+const getCategoryIconComponent = (categoryId: string) => {
+  const iconData = SOCIAL_ICONS_MAP[categoryId];
+  if (iconData) {
+    return iconData.icon;
+  }
+  return SOCIAL_ICONS_MAP.other.icon;
+};
+
+const getCategoryColor = (categoryId: string) => {
+  const iconData = SOCIAL_ICONS_MAP[categoryId];
+  return iconData?.color || SOCIAL_ICONS_MAP.other.color;
+};
+
 const categories = [
-  { id: "all", name: "All Services", icon: Layers },
-  { id: "instagram", name: "Instagram", icon: Instagram },
-  { id: "facebook", name: "Facebook", icon: Facebook },
-  { id: "twitter", name: "Twitter/X", icon: Twitter },
-  { id: "youtube", name: "YouTube", icon: Youtube },
-  { id: "tiktok", name: "TikTok", icon: Hash },
-  { id: "linkedin", name: "LinkedIn", icon: Linkedin },
-  { id: "telegram", name: "Telegram", icon: MessageCircle },
-  { id: "spotify", name: "Spotify", icon: Globe },
-  { id: "soundcloud", name: "SoundCloud", icon: Globe },
-  { id: "audiomack", name: "Audiomack", icon: Globe },
-  { id: "twitch", name: "Twitch", icon: Globe },
-  { id: "discord", name: "Discord", icon: Globe },
-  { id: "pinterest", name: "Pinterest", icon: Globe },
-  { id: "snapchat", name: "Snapchat", icon: Globe },
-  { id: "threads", name: "Threads", icon: Globe },
-  { id: "other", name: "Other", icon: Globe },
+  { id: "all", name: "All Services", color: "#6B7280" },
+  { id: "instagram", name: "Instagram", color: SOCIAL_ICONS_MAP.instagram.color },
+  { id: "facebook", name: "Facebook", color: SOCIAL_ICONS_MAP.facebook.color },
+  { id: "twitter", name: "Twitter/X", color: SOCIAL_ICONS_MAP.twitter.color },
+  { id: "youtube", name: "YouTube", color: SOCIAL_ICONS_MAP.youtube.color },
+  { id: "tiktok", name: "TikTok", color: SOCIAL_ICONS_MAP.tiktok.color },
+  { id: "linkedin", name: "LinkedIn", color: SOCIAL_ICONS_MAP.linkedin.color },
+  { id: "telegram", name: "Telegram", color: SOCIAL_ICONS_MAP.telegram.color },
+  { id: "spotify", name: "Spotify", color: SOCIAL_ICONS_MAP.spotify.color },
+  { id: "soundcloud", name: "SoundCloud", color: SOCIAL_ICONS_MAP.soundcloud.color },
+  { id: "twitch", name: "Twitch", color: SOCIAL_ICONS_MAP.twitch.color },
+  { id: "discord", name: "Discord", color: SOCIAL_ICONS_MAP.discord.color },
+  { id: "pinterest", name: "Pinterest", color: SOCIAL_ICONS_MAP.pinterest.color },
+  { id: "snapchat", name: "Snapchat", color: SOCIAL_ICONS_MAP.snapchat.color },
+  { id: "threads", name: "Threads", color: SOCIAL_ICONS_MAP.threads.color },
+  { id: "other", name: "Other", color: SOCIAL_ICONS_MAP.other.color },
 ];
 
 type SortOption = "default" | "price-high" | "price-low" | "orders-high" | "orders-low" | "name";
@@ -630,10 +639,9 @@ const ServicesManagement = () => {
   const totalOrders = 0; // Server-side would need separate query
   const avgPrice = services.length > 0 ? (services.reduce((acc, s) => acc + s.price, 0) / services.length).toFixed(2) : '0.00';
 
-  // Category icon getter
+  // Category icon getter - now uses SOCIAL_ICONS_MAP
   const getCategoryIcon = (category: string) => {
-    const cat = categories.find(c => c.id === category);
-    return cat ? cat.icon : Globe;
+    return getCategoryIconComponent(category);
   };
 
   // Debounced save for drag-and-drop order
@@ -1416,7 +1424,7 @@ const ServicesManagement = () => {
                       key={provider.id} 
                       onClick={() => setIsImportDialogOpen(true)}
                     >
-                      <Globe className="w-4 h-4 mr-2" /> {provider.name}
+                      <Package className="w-4 h-4 mr-2" /> {provider.name}
                     </DropdownMenuItem>
                   ))}
                 </>
@@ -1847,7 +1855,7 @@ const ServicesManagement = () => {
                   : "glass-card hover:bg-accent/50"
               )}
             >
-              <cat.icon className="w-4 h-4" />
+              {(() => { const CatIcon = getCategoryIconComponent(cat.id); return <CatIcon className="w-4 h-4" size={16} />; })()}
               <span className="flex-1 text-left text-sm font-medium">{cat.name}</span>
               <Badge variant="secondary" className="text-xs">
                 {categoryCounts[cat.id] || 0}
@@ -2372,7 +2380,7 @@ const ServicesManagement = () => {
           <div className="grid grid-cols-2 gap-2 max-h-[400px] overflow-y-auto p-1">
             {categories.filter(c => c.id !== 'all').map((cat) => {
               const isSelected = selectedBulkCategory === cat.id;
-              const CatIcon = cat.icon;
+              const CatIcon = getCategoryIconComponent(cat.id);
               return (
                 <button
                   key={cat.id}
@@ -2386,7 +2394,7 @@ const ServicesManagement = () => {
                   )}
                 >
                   <div className="p-2 rounded-lg bg-muted">
-                    <CatIcon className="w-4 h-4" />
+                    <CatIcon className="w-4 h-4" size={16} />
                   </div>
                   <span className="text-sm font-medium">{cat.name}</span>
                 </button>
@@ -2400,11 +2408,11 @@ const ServicesManagement = () => {
               {(() => {
                 const cat = categories.find(c => c.id === selectedBulkCategory);
                 if (cat) {
-                  const CatIcon = cat.icon;
+                  const CatIcon = getCategoryIconComponent(cat.id);
                   return (
                     <>
                       <div className="p-1.5 rounded bg-muted">
-                        <CatIcon className="w-4 h-4" />
+                        <CatIcon className="w-4 h-4" size={16} />
                       </div>
                       <span className="text-sm font-medium">{cat.name}</span>
                     </>

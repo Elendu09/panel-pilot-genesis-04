@@ -7,19 +7,12 @@ import { Label } from "@/components/ui/label";
 import { 
   Package, 
   Search,
-  Instagram,
-  Facebook,
-  Twitter,
-  Youtube,
-  Linkedin,
-  MessageCircle,
-  Hash,
-  Globe,
   ShoppingCart,
   Clock,
   Zap,
   Loader2
 } from "lucide-react";
+import { SOCIAL_ICONS_MAP, getIconByKey } from "@/components/icons/SocialIcons";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useTenant, useTenantServices } from "@/hooks/useTenant";
@@ -39,16 +32,21 @@ const BuyerServices = () => {
   const [targetUrl, setTargetUrl] = useState("");
   const [orderLoading, setOrderLoading] = useState(false);
 
+  // Use SOCIAL_ICONS_MAP for proper branded icons
+  const getCategoryData = (categoryId: string) => {
+    return SOCIAL_ICONS_MAP[categoryId] || SOCIAL_ICONS_MAP.other;
+  };
+
   const categories = [
-    { id: 'all', name: 'All', icon: Package },
-    { id: 'instagram', name: 'Instagram', icon: Instagram },
-    { id: 'facebook', name: 'Facebook', icon: Facebook },
-    { id: 'twitter', name: 'Twitter', icon: Twitter },
-    { id: 'youtube', name: 'YouTube', icon: Youtube },
-    { id: 'tiktok', name: 'TikTok', icon: Hash },
-    { id: 'linkedin', name: 'LinkedIn', icon: Linkedin },
-    { id: 'telegram', name: 'Telegram', icon: MessageCircle },
-    { id: 'other', name: 'Other', icon: Globe },
+    { id: 'all', name: 'All', ...SOCIAL_ICONS_MAP.other },
+    { id: 'instagram', name: 'Instagram', ...SOCIAL_ICONS_MAP.instagram },
+    { id: 'facebook', name: 'Facebook', ...SOCIAL_ICONS_MAP.facebook },
+    { id: 'twitter', name: 'Twitter', ...SOCIAL_ICONS_MAP.twitter },
+    { id: 'youtube', name: 'YouTube', ...SOCIAL_ICONS_MAP.youtube },
+    { id: 'tiktok', name: 'TikTok', ...SOCIAL_ICONS_MAP.tiktok },
+    { id: 'linkedin', name: 'LinkedIn', ...SOCIAL_ICONS_MAP.linkedin },
+    { id: 'telegram', name: 'Telegram', ...SOCIAL_ICONS_MAP.telegram },
+    { id: 'other', name: 'Other', ...SOCIAL_ICONS_MAP.other },
   ];
 
   const filteredServices = useMemo(() => {
@@ -58,11 +56,6 @@ const BuyerServices = () => {
       return matchesCategory && matchesSearch;
     });
   }, [services, selectedCategory, searchQuery]);
-
-  const getCategoryIcon = (category: string) => {
-    const cat = categories.find(c => c.id === category);
-    return cat ? cat.icon : Globe;
-  };
 
   const handleOrder = async () => {
     if (!selectedService || !buyer || !panel) {
@@ -188,7 +181,7 @@ const BuyerServices = () => {
 
           <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 scrollbar-hide">
             {categories.map((cat) => {
-              const Icon = cat.icon;
+              const CategoryIcon = cat.icon;
               const count = cat.id === 'all' 
                 ? services.length 
                 : services.filter((s: any) => s.category === cat.id).length;
@@ -204,7 +197,7 @@ const BuyerServices = () => {
                       : "glass-card hover:bg-accent/50"
                   )}
                 >
-                  <Icon className="w-4 h-4" />
+                  <CategoryIcon className="w-4 h-4" size={16} />
                   {cat.name}
                   <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0">
                     {count}
@@ -231,8 +224,9 @@ const BuyerServices = () => {
                   </CardContent>
                 </Card>
               ) : (
-                filteredServices.map((service: any) => {
-                  const CategoryIcon = getCategoryIcon(service.category);
+              filteredServices.map((service: any) => {
+                  const categoryData = getCategoryData(service.category);
+                  const CategoryIcon = categoryData.icon;
                   const isSelected = selectedService?.id === service.id;
 
                   return (
@@ -250,7 +244,7 @@ const BuyerServices = () => {
                         <CardContent className="p-4">
                           <div className="flex items-start gap-4">
                             <div className="p-3 rounded-xl bg-primary/10">
-                              <CategoryIcon className="w-6 h-6 text-primary" />
+                              <CategoryIcon className="w-6 h-6 text-primary" size={24} />
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-start justify-between gap-2">
