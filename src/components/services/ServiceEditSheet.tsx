@@ -352,14 +352,14 @@ export const ServiceEditSheet = ({
                       </CardHeader>
                       <CardContent className="p-4 pt-0">
                         <Select
-                          value={formData.provider_id}
-                          onValueChange={(v) => handleChange("provider_id", v)}
+                          value={formData.provider_id || "__none__"}
+                          onValueChange={(v) => handleChange("provider_id", v === "__none__" ? "" : v)}
                         >
                           <SelectTrigger className="bg-background/50">
                             <SelectValue placeholder="Select provider" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">No Provider</SelectItem>
+                            <SelectItem value="__none__">No Provider</SelectItem>
                             {providers.map((p) => (
                               <SelectItem key={p.id} value={p.id}>
                                 {p.name}
