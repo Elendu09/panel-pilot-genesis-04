@@ -236,13 +236,18 @@ export const ServiceEditSheet = ({
     );
   };
 
-  if (!service || !service.id) {
-    return null;
-  }
-
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-xl flex flex-col p-0">
+        {!service?.id ? (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center space-y-4">
+              <Loader2 className="w-8 h-8 animate-spin mx-auto text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Loading service...</p>
+            </div>
+          </div>
+        ) : (
+          <>
         <SheetHeader className="p-6 pb-4 border-b">
           <div className="flex items-center gap-3">
             {renderIconPreview()}
@@ -554,6 +559,8 @@ export const ServiceEditSheet = ({
             </Button>
           </div>
         </SheetFooter>
+        </>
+        )}
       </SheetContent>
     </Sheet>
   );
