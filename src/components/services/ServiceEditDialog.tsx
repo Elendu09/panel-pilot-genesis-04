@@ -352,12 +352,12 @@ export const ServiceEditDialog = ({
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Provider</Label>
-                  <Select value={formData.provider_id} onValueChange={(v) => setFormData({...formData, provider_id: v})} disabled={loadingProviders}>
+                  <Select value={formData.provider_id || "__none__"} onValueChange={(v) => setFormData({...formData, provider_id: v === "__none__" ? "" : v})} disabled={loadingProviders}>
                     <SelectTrigger className="bg-background/50">
                       {loadingProviders ? <Loader2 className="w-4 h-4 animate-spin" /> : <SelectValue placeholder="Select provider" />}
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No Provider</SelectItem>
+                      <SelectItem value="__none__">No Provider</SelectItem>
                       {providers.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
