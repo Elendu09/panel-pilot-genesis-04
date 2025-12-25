@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { 
   LayoutDashboard, 
@@ -8,21 +8,32 @@ import {
   MessageSquare,
   Wallet,
   LogOut,
-  Home,
   CreditCard,
-  HelpCircle
+  HelpCircle,
+  Menu,
+  Plus,
+  ClipboardList,
+  HeadphonesIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { useTenant } from "@/hooks/useTenant";
 import { useBuyerAuth } from "@/contexts/BuyerAuthContext";
-import { LiveChatWidget } from "@/components/support/LiveChatWidget";
+import { supabase } from "@/integrations/supabase/client";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface BuyerLayoutProps {
   children?: React.ReactNode;
+}
+
+interface PanelSettings {
+  floating_chat_whatsapp?: string;
+  floating_chat_telegram?: string;
+  floating_chat_enabled?: boolean;
 }
 
 const BuyerLayout = ({ children }: BuyerLayoutProps) => {
@@ -30,6 +41,44 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
   const location = useLocation();
   const { panel } = useTenant();
   const { buyer, signOut } = useBuyerAuth();
+  const [panelSettings, setPanelSettings] = useState<PanelSettings | null>(null);
+  const [cartCount, setCartCount] = useState(0);
+
+  // Fetch panel settings for WhatsApp
+  useEffect(() => {
+    const fetchSettings = async () => {
+      if (!panel?.id) return;
+      const { data } = await supabase
+        .from('panel_settings')
+        .select('floating_chat_whatsapp, floating_chat_telegram, floating_chat_enabled')
+        .eq('panel_id', panel.id)
+        .single();
+      if (data) setPanelSettings(data);
+    };
+    fetchSettings();
+  }, [panel?.id]);
+
+  // Load cart count from localStorage
+  useEffect(() => {
+    const loadCartCount = () => {
+      try {
+        const savedCart = localStorage.getItem(`buyer_cart_${panel?.id}`);
+        if (savedCart) {
+          const cart = JSON.parse(savedCart);
+          setCartCount(Array.isArray(cart) ? cart.length : 0);
+        }
+      } catch {
+        setCartCount(0);
+      }
+    };
+    loadCartCount();
+    window.addEventListener('storage', loadCartCount);
+    window.addEventListener('cartUpdated', loadCartCount);
+    return () => {
+      window.removeEventListener('storage', loadCartCount);
+      window.removeEventListener('cartUpdated', loadCartCount);
+    };
+  }, [panel?.id]);
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -40,12 +89,13 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
     { name: 'Profile', href: '/profile', icon: User },
   ];
 
+  // Bottom nav items matching reference: Orders, Support, +New Order (center), Services, Menu
   const bottomNavItems = [
-    { name: 'Home', href: '/dashboard', icon: Home },
-    { name: 'Services', href: '/services', icon: Package },
-    { name: 'Orders', href: '/orders', icon: ShoppingCart },
-    { name: 'Wallet', href: '/deposit', icon: Wallet },
-    { name: 'Profile', href: '/profile', icon: User },
+    { name: 'Orders', href: '/orders', icon: ClipboardList },
+    { name: 'Support', href: '/support', icon: HeadphonesIcon },
+    { name: 'New Order', href: '/services', icon: Plus, isCenter: true },
+    { name: 'Services', href: '/services', icon: Package, badge: cartCount > 0 ? cartCount : undefined },
+    { name: 'Menu', href: '#menu', icon: Menu, isMenu: true },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -57,6 +107,8 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
   const handleSignOut = async () => {
     await signOut();
   };
+
+  const whatsappNumber = panelSettings?.floating_chat_whatsapp;
 
   return (
     <div className="min-h-screen bg-background">
@@ -71,7 +123,7 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
       </style>
 
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col fixed left-0 top-0 h-full w-64 glass-sidebar z-20">
+      <aside className="hidden lg:flex flex-col fixed left-0 top-0 h-full w-64 glass-sidebar z-20">
         {/* Header with Panel Branding */}
         <div className="p-4 border-b border-sidebar-border/50">
           <div className="flex items-center gap-3">
@@ -161,9 +213,49 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
         </div>
       </aside>
 
+      {/* Tablet Sidebar (collapsible) */}
+      <aside className="hidden md:flex lg:hidden flex-col fixed left-0 top-0 h-full w-16 glass-sidebar z-20 items-center py-4">
+        <div 
+          className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold mb-6"
+          style={{ background: `linear-gradient(135deg, ${panel?.primary_color || '#3b82f6'}, ${panel?.secondary_color || '#1e40af'})` }}
+        >
+          {panel?.name?.charAt(0) || 'P'}
+        </div>
+        
+        <nav className="flex-1 flex flex-col items-center gap-2">
+          {navigation.map((item) => (
+            <Link
+              key={item.name}
+              to={item.href}
+              className={cn(
+                "p-3 rounded-xl transition-all",
+                isActive(item.href) 
+                  ? "bg-primary text-primary-foreground" 
+                  : "text-muted-foreground hover:bg-accent hover:text-foreground"
+              )}
+              title={item.name}
+            >
+              <item.icon className="w-5 h-5" />
+            </Link>
+          ))}
+        </nav>
+
+        <div className="flex flex-col items-center gap-2">
+          <ThemeToggle />
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="text-muted-foreground hover:text-foreground"
+            onClick={handleSignOut}
+          >
+            <LogOut className="w-4 h-4" />
+          </Button>
+        </div>
+      </aside>
+
       {/* Mobile Header */}
-      <header className="md:hidden glass border-b border-border/50 p-4 flex items-center justify-between sticky top-0 z-30">
-        <div className="flex items-center gap-3">
+      <header className="md:hidden glass border-b border-border/50 p-3 flex items-center justify-between sticky top-0 z-30">
+        <div className="flex items-center gap-2">
           {panel?.logo_url ? (
             <img src={panel.logo_url} alt={panel.name} className="w-8 h-8 rounded-lg object-cover" />
           ) : (
@@ -174,10 +266,10 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
               {panel?.name?.charAt(0) || 'P'}
             </div>
           )}
-          <span className="font-bold">{panel?.name || 'Panel'}</span>
+          <span className="font-bold text-sm">{panel?.name || 'Panel'}</span>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-xs px-2 py-1">
             ${userBalance.toFixed(2)}
           </Badge>
           <ThemeToggle />
@@ -185,42 +277,145 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
       </header>
 
       {/* Main Content */}
-      <main className="md:ml-64 min-h-screen pb-20 md:pb-0">
+      <main className="lg:ml-64 md:ml-16 min-h-screen pb-24 md:pb-0">
         <div className="p-4 md:p-6 lg:p-8">
           {children}
         </div>
       </main>
 
+      {/* Floating WhatsApp Button - Mobile only, above bottom nav */}
+      <AnimatePresence>
+        {whatsappNumber && (
+          <motion.a
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0, opacity: 0 }}
+            href={`https://wa.me/${whatsappNumber.replace(/[^0-9]/g, '')}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="md:hidden fixed right-4 bottom-24 z-40 w-14 h-14 rounded-full bg-[#25D366] flex items-center justify-center shadow-lg shadow-[#25D366]/30 hover:scale-110 transition-transform"
+          >
+            <svg viewBox="0 0 24 24" className="w-7 h-7 text-white fill-current">
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+            </svg>
+          </motion.a>
+        )}
+      </AnimatePresence>
+
       {/* Mobile Bottom Navigation */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 glass border-t border-border/50 z-30">
-        <div className="flex items-center justify-around py-2">
-          {bottomNavItems.map((item) => (
-            <Link
-              key={item.name}
-              to={item.href}
-              className={cn(
-                "flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-colors",
-                isActive(item.href) 
-                  ? "text-primary" 
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <item.icon className="w-5 h-5" />
-              <span className="text-[10px] font-medium">{item.name}</span>
-            </Link>
-          ))}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-background/95 backdrop-blur-xl border-t border-border/50 safe-area-bottom">
+        <div className="flex items-center justify-around py-2 px-1">
+          {bottomNavItems.map((item, index) => {
+            if (item.isMenu) {
+              return (
+                <Sheet key={item.name} open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+                  <SheetTrigger asChild>
+                    <button className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl text-muted-foreground">
+                      <item.icon className="w-5 h-5" />
+                      <span className="text-[10px] font-medium">{item.name}</span>
+                    </button>
+                  </SheetTrigger>
+                  <SheetContent side="bottom" className="h-auto max-h-[80vh] rounded-t-3xl">
+                    <SheetHeader className="pb-4">
+                      <SheetTitle>Menu</SheetTitle>
+                    </SheetHeader>
+                    <div className="space-y-2 pb-6">
+                      {/* User Info */}
+                      <div className="flex items-center gap-3 p-4 rounded-xl bg-muted/50 mb-4">
+                        <Avatar className="w-12 h-12 border-2 border-primary/20">
+                          <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                            {userName.charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <p className="font-semibold">{userName}</p>
+                          <p className="text-sm text-muted-foreground">{userEmail}</p>
+                        </div>
+                        <Badge className="bg-primary/10 text-primary border-0">
+                          ${userBalance.toFixed(2)}
+                        </Badge>
+                      </div>
+
+                      {/* Navigation Links */}
+                      {navigation.map((navItem) => (
+                        <Link
+                          key={navItem.name}
+                          to={navItem.href}
+                          onClick={() => setMobileMenuOpen(false)}
+                          className={cn(
+                            "flex items-center gap-3 p-4 rounded-xl transition-all",
+                            isActive(navItem.href) 
+                              ? "bg-primary text-primary-foreground" 
+                              : "hover:bg-muted"
+                          )}
+                        >
+                          <navItem.icon className="w-5 h-5" />
+                          <span className="font-medium">{navItem.name}</span>
+                        </Link>
+                      ))}
+
+                      {/* Sign Out */}
+                      <button 
+                        onClick={() => { handleSignOut(); setMobileMenuOpen(false); }}
+                        className="w-full flex items-center gap-3 p-4 rounded-xl text-destructive hover:bg-destructive/10 transition-all"
+                      >
+                        <LogOut className="w-5 h-5" />
+                        <span className="font-medium">Sign Out</span>
+                      </button>
+                    </div>
+                  </SheetContent>
+                </Sheet>
+              );
+            }
+
+            if (item.isCenter) {
+              return (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  className="relative -mt-6"
+                >
+                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/30 hover:scale-105 transition-transform">
+                    <item.icon className="w-6 h-6 text-primary-foreground" />
+                  </div>
+                  <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] font-medium text-primary whitespace-nowrap">
+                    {item.name}
+                  </span>
+                </Link>
+              );
+            }
+
+            return (
+              <Link
+                key={item.name}
+                to={item.href}
+                className={cn(
+                  "flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-colors relative",
+                  isActive(item.href) 
+                    ? "text-primary" 
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <div className="relative">
+                  <item.icon className="w-5 h-5" />
+                  {item.badge && (
+                    <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-primary text-[10px] font-bold text-primary-foreground rounded-full flex items-center justify-center">
+                      {item.badge}
+                    </span>
+                  )}
+                </div>
+                <span className="text-[10px] font-medium">{item.name}</span>
+                {isActive(item.href) && (
+                  <motion.div 
+                    layoutId="bottomNavIndicator"
+                    className="absolute -bottom-1 w-1 h-1 rounded-full bg-primary"
+                  />
+                )}
+              </Link>
+            );
+          })}
         </div>
       </nav>
-
-      {/* Live Chat Widget */}
-      {panel?.id && (
-        <LiveChatWidget 
-          panelId={panel.id} 
-          visitorName={buyer?.full_name || buyer?.email?.split('@')[0]}
-          visitorEmail={buyer?.email}
-          panelName={panel.name}
-        />
-      )}
     </div>
   );
 };

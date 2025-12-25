@@ -122,11 +122,69 @@ const PaymentMethods = () => {
     });
   };
 
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string; accountName?: string; mode?: string } | null>(null);
+
   const testConnection = async () => {
+    if (!selectedGateway || !formData.apiKey) {
+      toast({ variant: "destructive", title: "API key required" });
+      return;
+    }
+
     setTesting(true);
-    await new Promise(r => setTimeout(r, 2000));
-    setTesting(false);
-    toast({ title: "Connection successful", description: `${selectedGateway?.name} API is responding correctly` });
+    setTestResult(null);
+
+    try {
+      const gatewayId = selectedGateway.id.toLowerCase();
+      let gateway: 'stripe' | 'paypal' | 'coinbase' | null = null;
+      
+      if (gatewayId === 'stripe') gateway = 'stripe';
+      else if (gatewayId === 'paypal') gateway = 'paypal';
+      else if (gatewayId === 'coinbase') gateway = 'coinbase';
+
+      if (!gateway) {
+        // For unsupported gateways, simulate success
+        await new Promise(r => setTimeout(r, 1500));
+        setTestResult({ success: true, message: 'Connection test simulated (gateway not yet supported for real testing)' });
+        toast({ title: "Test Simulated", description: "This gateway doesn't support real API validation yet" });
+        setTesting(false);
+        return;
+      }
+
+      const response = await fetch(
+        'https://tooudgubuhxjbbvzjcgx.supabase.co/functions/v1/validate-payment-gateway',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            gateway,
+            apiKey: formData.apiKey,
+            secretKey: formData.secretKey || undefined,
+          }),
+        }
+      );
+
+      const result = await response.json();
+      setTestResult(result);
+
+      if (result.success) {
+        toast({ 
+          title: "Connection Successful!", 
+          description: `${selectedGateway.name}: ${result.accountName || 'Connected'} (${result.mode || 'unknown'} mode)` 
+        });
+      } else {
+        toast({ 
+          variant: "destructive", 
+          title: "Connection Failed", 
+          description: result.error || result.message 
+        });
+      }
+    } catch (error) {
+      console.error('Test connection error:', error);
+      setTestResult({ success: false, message: 'Failed to connect to validation service' });
+      toast({ variant: "destructive", title: "Test Failed", description: "Could not reach validation service" });
+    } finally {
+      setTesting(false);
+    }
   };
 
   const enablePlatformGateway = (gatewayId: string) => {
@@ -523,6 +581,42 @@ const PaymentMethods = () => {
                 <ExternalLink className="w-4 h-4" />
                 View {selectedGateway.name} Documentation
               </a>
+            )}
+
+            {/* Test Result Display */}
+            {testResult && (
+              <div className={cn(
+                "p-4 rounded-lg border",
+                testResult.success 
+                  ? "bg-green-500/10 border-green-500/30" 
+                  : "bg-red-500/10 border-red-500/30"
+              )}>
+                <div className="flex items-start gap-3">
+                  {testResult.success ? (
+                    <CheckCircle className="w-5 h-5 text-green-500 shrink-0 mt-0.5" />
+                  ) : (
+                    <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className={cn("font-medium", testResult.success ? "text-green-500" : "text-red-500")}>
+                      {testResult.message}
+                    </p>
+                    {testResult.accountName && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Account: {testResult.accountName}
+                      </p>
+                    )}
+                    {testResult.mode && (
+                      <Badge variant="outline" className={cn(
+                        "mt-2",
+                        testResult.mode === 'test' ? "bg-amber-500/10 text-amber-500 border-amber-500/20" : "bg-green-500/10 text-green-500 border-green-500/20"
+                      )}>
+                        {testResult.mode === 'test' ? 'Sandbox/Test Mode' : 'Production Mode'}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
             )}
 
             <div className="flex gap-3 pt-4">

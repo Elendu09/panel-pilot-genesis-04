@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { 
   Wallet, 
@@ -9,13 +9,15 @@ import {
   ArrowRight,
   Sparkles,
   Shield,
-  Zap
+  Zap,
+  Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,9 +26,9 @@ import { useTenant } from "@/hooks/useTenant";
 import BuyerLayout from "./BuyerLayout";
 
 const paymentMethods = [
-  { id: "stripe", name: "Credit/Debit Card", icon: CreditCard, color: "from-blue-500 to-blue-600", badge: "Instant" },
+  { id: "stripe", name: "Card", icon: CreditCard, color: "from-blue-500 to-blue-600", badge: "Instant" },
   { id: "paypal", name: "PayPal", icon: DollarSign, color: "from-blue-400 to-blue-500", badge: "Instant" },
-  { id: "crypto", name: "Cryptocurrency", icon: Sparkles, color: "from-orange-500 to-yellow-500", badge: "5-30 min" },
+  { id: "crypto", name: "Crypto", icon: Sparkles, color: "from-orange-500 to-yellow-500", badge: "5-30 min" },
   { id: "perfectmoney", name: "Perfect Money", icon: Shield, color: "from-green-500 to-emerald-500", badge: "Instant" },
 ];
 
@@ -50,7 +52,7 @@ const BuyerDeposit = () => {
   const [loadingHistory, setLoadingHistory] = useState(true);
 
   // Fetch transaction history on mount
-  useState(() => {
+  useEffect(() => {
     const fetchTransactions = async () => {
       if (!buyer?.id) return;
       
@@ -72,7 +74,7 @@ const BuyerDeposit = () => {
     };
 
     fetchTransactions();
-  });
+  }, [buyer?.id]);
 
   const handleDeposit = async () => {
     if (!selectedMethod || !amount || parseFloat(amount) <= 0) {
@@ -153,39 +155,45 @@ const BuyerDeposit = () => {
     }
   };
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { staggerChildren: 0.08 } }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 }
+  };
+
   return (
     <BuyerLayout>
-      <div className="space-y-6 max-w-4xl mx-auto">
+      <motion.div 
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="space-y-4 md:space-y-6 max-w-4xl mx-auto"
+      >
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <h1 className="text-2xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">
-            Add Funds
-          </h1>
-          <p className="text-muted-foreground">Deposit money to purchase services</p>
+        <motion.div variants={itemVariants}>
+          <h1 className="text-xl md:text-2xl lg:text-3xl font-bold">Add Funds</h1>
+          <p className="text-sm text-muted-foreground">Deposit money to purchase services</p>
         </motion.div>
 
         {/* Current Balance */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
+        <motion.div variants={itemVariants}>
           <Card className="glass-card overflow-hidden">
-            <CardContent className="p-6">
+            <CardContent className="p-4 md:p-6">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/10">
-                    <Wallet className="w-8 h-8 text-primary" />
+                <div className="flex items-center gap-3 md:gap-4">
+                  <div className="p-2 md:p-3 rounded-xl md:rounded-2xl bg-gradient-to-br from-primary/20 to-primary/10">
+                    <Wallet className="w-6 h-6 md:w-8 md:h-8 text-primary" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Current Balance</p>
-                    <p className="text-3xl font-bold">${(buyer?.balance || 0).toFixed(2)}</p>
+                    <p className="text-xs md:text-sm text-muted-foreground">Current Balance</p>
+                    <p className="text-2xl md:text-3xl font-bold">${(buyer?.balance || 0).toFixed(2)}</p>
                   </div>
                 </div>
-                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-xs md:text-sm">
                   <Zap className="w-3 h-3 mr-1" />
                   Active
                 </Badge>
@@ -195,23 +203,18 @@ const BuyerDeposit = () => {
         </motion.div>
 
         {/* Quick Amount Selection */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="space-y-3"
-        >
-          <Label className="text-base font-semibold">Quick Select Amount</Label>
-          <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+        <motion.div variants={itemVariants} className="space-y-2 md:space-y-3">
+          <Label className="text-sm md:text-base font-semibold">Quick Select Amount</Label>
+          <div className="grid grid-cols-3 md:grid-cols-6 gap-2 md:gap-3">
             {quickAmounts.map((quickAmount, index) => (
               <motion.button
                 key={quickAmount}
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.3 + index * 0.05 }}
+                transition={{ delay: 0.1 + index * 0.03 }}
                 onClick={() => setAmount(quickAmount.toString())}
                 className={cn(
-                  "p-4 rounded-xl border-2 transition-all duration-200 font-semibold",
+                  "p-3 md:p-4 rounded-xl border-2 transition-all duration-200 font-semibold text-sm md:text-base",
                   amount === quickAmount.toString()
                     ? "border-primary bg-primary/10 text-primary shadow-lg shadow-primary/20"
                     : "border-border/50 bg-card/50 hover:border-primary/50 hover:bg-primary/5"
@@ -224,21 +227,16 @@ const BuyerDeposit = () => {
         </motion.div>
 
         {/* Custom Amount */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="space-y-2"
-        >
-          <Label>Custom Amount</Label>
+        <motion.div variants={itemVariants} className="space-y-2">
+          <Label className="text-sm">Custom Amount</Label>
           <div className="relative">
-            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-muted-foreground" />
             <Input
               type="number"
               placeholder="Enter amount"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              className="pl-10 text-lg h-12 bg-card/50"
+              className="pl-9 md:pl-10 text-base md:text-lg h-10 md:h-12 bg-card/50"
               min="1"
               step="0.01"
             />
@@ -246,44 +244,39 @@ const BuyerDeposit = () => {
         </motion.div>
 
         {/* Payment Methods */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="space-y-3"
-        >
-          <Label className="text-base font-semibold">Select Payment Method</Label>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <motion.div variants={itemVariants} className="space-y-2 md:space-y-3">
+          <Label className="text-sm md:text-base font-semibold">Select Payment Method</Label>
+          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
             {paymentMethods.map((method, index) => (
               <motion.button
                 key={method.id}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.6 + index * 0.1 }}
+                transition={{ delay: 0.2 + index * 0.05 }}
                 onClick={() => setSelectedMethod(method.id)}
                 className={cn(
-                  "p-4 rounded-xl border-2 transition-all duration-200 text-left relative overflow-hidden group",
+                  "p-3 md:p-4 rounded-xl border-2 transition-all duration-200 text-left relative overflow-hidden group",
                   selectedMethod === method.id
                     ? "border-primary bg-primary/10 shadow-lg shadow-primary/20"
                     : "border-border/50 bg-card/50 hover:border-primary/50"
                 )}
               >
-                <div className="flex items-center gap-4">
+                <div className="flex flex-col items-center md:flex-row md:items-center gap-2 md:gap-3">
                   <div className={cn(
-                    "p-3 rounded-xl bg-gradient-to-br transition-transform group-hover:scale-110",
+                    "p-2 md:p-3 rounded-xl bg-gradient-to-br transition-transform group-hover:scale-110 shrink-0",
                     method.color
                   )}>
-                    <method.icon className="w-6 h-6 text-white" />
+                    <method.icon className="w-5 h-5 md:w-6 md:h-6 text-white" />
                   </div>
-                  <div className="flex-1">
-                    <p className="font-semibold">{method.name}</p>
-                    <Badge variant="secondary" className="text-xs mt-1">
-                      <Clock className="w-3 h-3 mr-1" />
+                  <div className="text-center md:text-left flex-1">
+                    <p className="font-semibold text-sm md:text-base">{method.name}</p>
+                    <Badge variant="secondary" className="text-[10px] md:text-xs mt-1">
+                      <Clock className="w-2.5 h-2.5 md:w-3 md:h-3 mr-1" />
                       {method.badge}
                     </Badge>
                   </div>
                   {selectedMethod === method.id && (
-                    <CheckCircle className="w-5 h-5 text-primary" />
+                    <CheckCircle className="w-4 h-4 md:w-5 md:h-5 text-primary absolute top-2 right-2 md:static" />
                   )}
                 </div>
               </motion.button>
@@ -292,81 +285,81 @@ const BuyerDeposit = () => {
         </motion.div>
 
         {/* Deposit Button */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.8 }}
-        >
+        <motion.div variants={itemVariants}>
           <Button
             size="lg"
-            className="w-full h-14 text-lg gap-3 bg-gradient-to-r from-primary to-primary/80 shadow-lg shadow-primary/20"
+            className="w-full h-12 md:h-14 text-base md:text-lg gap-2 md:gap-3 bg-gradient-to-r from-primary to-primary/80 shadow-lg shadow-primary/20"
             disabled={!selectedMethod || !amount || parseFloat(amount) <= 0 || processing}
             onClick={handleDeposit}
           >
             {processing ? (
-              <>Processing...</>
+              <>
+                <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin" />
+                Processing...
+              </>
             ) : (
               <>
-                <Wallet className="w-5 h-5" />
+                <Wallet className="w-4 h-4 md:w-5 md:h-5" />
                 Deposit ${amount || "0.00"}
-                <ArrowRight className="w-5 h-5" />
+                <ArrowRight className="w-4 h-4 md:w-5 md:h-5" />
               </>
             )}
           </Button>
         </motion.div>
 
         {/* Recent Deposits */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.9 }}
-          className="space-y-4"
-        >
-          <h2 className="text-lg font-semibold">Recent Deposits</h2>
+        <motion.div variants={itemVariants} className="space-y-3 md:space-y-4">
+          <h2 className="text-base md:text-lg font-semibold">Recent Deposits</h2>
           <Card className="glass-card">
             <CardContent className="p-0">
               {loadingHistory ? (
-                <div className="p-8 text-center text-muted-foreground">
+                <div className="p-6 md:p-8 text-center text-muted-foreground">
+                  <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
                   Loading...
                 </div>
               ) : transactions.length === 0 ? (
-                <div className="p-8 text-center text-muted-foreground">
-                  <Wallet className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                  <p>No deposits yet</p>
+                <div className="p-6 md:p-8 text-center text-muted-foreground">
+                  <Wallet className="w-10 h-10 md:w-12 md:h-12 mx-auto mb-2 md:mb-3 opacity-50" />
+                  <p className="text-sm">No deposits yet</p>
                 </div>
               ) : (
-                <div className="divide-y divide-border/50">
-                  {transactions.map((tx) => (
-                    <div key={tx.id} className="p-4 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className={cn(
-                          "p-2 rounded-lg",
-                          tx.status === 'completed' ? "bg-green-500/10" : "bg-yellow-500/10"
-                        )}>
-                          {tx.status === 'completed' ? (
-                            <CheckCircle className="w-4 h-4 text-green-500" />
-                          ) : (
-                            <Clock className="w-4 h-4 text-yellow-500" />
-                          )}
+                <ScrollArea className="max-h-[300px]">
+                  <div className="divide-y divide-border/50">
+                    {transactions.map((tx) => (
+                      <div key={tx.id} className="p-3 md:p-4 flex items-center justify-between">
+                        <div className="flex items-center gap-2 md:gap-3">
+                          <div className={cn(
+                            "p-1.5 md:p-2 rounded-lg",
+                            tx.status === 'completed' ? "bg-green-500/10" : "bg-yellow-500/10"
+                          )}>
+                            {tx.status === 'completed' ? (
+                              <CheckCircle className="w-3.5 h-3.5 md:w-4 md:h-4 text-green-500" />
+                            ) : (
+                              <Clock className="w-3.5 h-3.5 md:w-4 md:h-4 text-yellow-500" />
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-medium text-sm md:text-base">${tx.amount.toFixed(2)}</p>
+                            <p className="text-[10px] md:text-xs text-muted-foreground">
+                              {tx.payment_method} • {new Date(tx.created_at).toLocaleDateString()}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium">${tx.amount.toFixed(2)}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {tx.payment_method} • {new Date(tx.created_at).toLocaleDateString()}
-                          </p>
-                        </div>
+                        <Badge 
+                          variant={tx.status === 'completed' ? 'default' : 'secondary'}
+                          className="text-[10px] md:text-xs"
+                        >
+                          {tx.status}
+                        </Badge>
                       </div>
-                      <Badge variant={tx.status === 'completed' ? 'default' : 'secondary'}>
-                        {tx.status}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                </ScrollArea>
               )}
             </CardContent>
           </Card>
         </motion.div>
-      </div>
+      </motion.div>
     </BuyerLayout>
   );
 };

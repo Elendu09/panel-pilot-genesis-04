@@ -74,3 +74,6 @@ verify_jwt = false
 
 [functions.dns-namecheap]
 verify_jwt = false
+
+[functions.validate-payment-gateway]
+verify_jwt = false
