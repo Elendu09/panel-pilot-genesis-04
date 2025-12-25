@@ -7,84 +7,38 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CreditCard, Plus, Settings, Search, CheckCircle, AlertCircle, Globe, Wallet, Bitcoin, Building2, Smartphone, DollarSign, Eye, EyeOff, Play, Loader2, Sparkles, Send, RefreshCw, Clock, TrendingUp, Users, BarChart3 } from "lucide-react";
+import { CreditCard, Plus, Settings, Search, CheckCircle, AlertCircle, Globe, Wallet, Bitcoin, Building2, Smartphone, DollarSign, Eye, EyeOff, Play, Loader2, Sparkles, Send, RefreshCw, Clock, TrendingUp, Users, BarChart3, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Textarea } from "@/components/ui/textarea";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { StripeIcon, PayPalIcon, BitcoinIcon, getPaymentIcon } from "@/components/payment/PaymentIcons";
+import { StripeIcon, PayPalIcon, BitcoinIcon, CoinbaseIcon, RazorpayIcon, PaystackIcon, FlutterwaveIcon, SquareIcon, getPaymentIcon } from "@/components/payment/PaymentIcons";
+import PaymentAnalyticsChart from "@/components/payment/PaymentAnalyticsChart";
 
 // Worldwide payment gateways
 const paymentGateways = {
   cards: [
-    { id: "stripe", name: "Stripe", icon: "💳", regions: ["Worldwide"], fee: "2.9% + $0.30" },
-    { id: "paypal", name: "PayPal", icon: "🅿️", regions: ["Worldwide"], fee: "2.9% + $0.30" },
-    { id: "authorize", name: "Authorize.Net", icon: "💳", regions: ["US, CA, UK, AU"], fee: "2.9% + $0.30" },
-    { id: "square", name: "Square", icon: "⬜", regions: ["US, CA, UK, AU, JP"], fee: "2.6% + $0.10" },
-    { id: "braintree", name: "Braintree", icon: "🌳", regions: ["Worldwide"], fee: "2.9% + $0.30" },
-    { id: "2checkout", name: "2Checkout", icon: "2️⃣", regions: ["Worldwide"], fee: "3.5% + $0.35" },
-    { id: "adyen", name: "Adyen", icon: "🔷", regions: ["Worldwide"], fee: "Varies" },
-    { id: "worldpay", name: "Worldpay", icon: "🌍", regions: ["Worldwide"], fee: "Varies" },
+    { id: "stripe", name: "Stripe", Icon: StripeIcon, regions: ["Worldwide"], fee: "2.9% + $0.30", docsUrl: "https://stripe.com/docs" },
+    { id: "paypal", name: "PayPal", Icon: PayPalIcon, regions: ["Worldwide"], fee: "2.9% + $0.30", docsUrl: "https://developer.paypal.com" },
+    { id: "square", name: "Square", Icon: SquareIcon, regions: ["US, CA, UK, AU, JP"], fee: "2.6% + $0.10", docsUrl: "https://developer.squareup.com" },
+    { id: "braintree", name: "Braintree", Icon: PayPalIcon, regions: ["Worldwide"], fee: "2.9% + $0.30", docsUrl: "https://developer.paypal.com/braintree" },
   ],
   regional: [
-    { id: "razorpay", name: "Razorpay", icon: "🇮🇳", regions: ["India"], fee: "2%" },
-    { id: "paytm", name: "Paytm", icon: "🇮🇳", regions: ["India"], fee: "1.99%" },
-    { id: "phonepe", name: "PhonePe", icon: "🇮🇳", regions: ["India"], fee: "0%" },
-    { id: "mercadopago", name: "Mercado Pago", icon: "🇧🇷", regions: ["Latin America"], fee: "3.99%" },
-    { id: "paystack", name: "Paystack", icon: "🇳🇬", regions: ["Africa"], fee: "1.5% + $0.15" },
-    { id: "flutterwave", name: "Flutterwave", icon: "🦋", regions: ["Africa"], fee: "1.4%" },
-    { id: "fawry", name: "Fawry", icon: "🇪🇬", regions: ["Egypt"], fee: "2.5%" },
-    { id: "ideal", name: "iDEAL", icon: "🇳🇱", regions: ["Netherlands"], fee: "€0.29" },
-    { id: "bancontact", name: "Bancontact", icon: "🇧🇪", regions: ["Belgium"], fee: "€0.39" },
-    { id: "giropay", name: "Giropay", icon: "🇩🇪", regions: ["Germany"], fee: "1.2%" },
-    { id: "sofort", name: "Sofort/Klarna", icon: "🇪🇺", regions: ["Europe"], fee: "1.4%" },
-    { id: "przelewy24", name: "Przelewy24", icon: "🇵🇱", regions: ["Poland"], fee: "1.2%" },
-    { id: "mollie", name: "Mollie", icon: "🐟", regions: ["Europe"], fee: "€0.25 + 0.9%" },
+    { id: "razorpay", name: "Razorpay", Icon: RazorpayIcon, regions: ["India"], fee: "2%", docsUrl: "https://razorpay.com/docs" },
+    { id: "paystack", name: "Paystack", Icon: PaystackIcon, regions: ["Africa"], fee: "1.5% + $0.15", docsUrl: "https://paystack.com/docs" },
+    { id: "flutterwave", name: "Flutterwave", Icon: FlutterwaveIcon, regions: ["Africa"], fee: "1.4%", docsUrl: "https://developer.flutterwave.com" },
   ],
   bank: [
-    { id: "ach", name: "ACH Transfer", icon: "🏦", regions: ["US"], fee: "$0.25" },
-    { id: "sepa", name: "SEPA Transfer", icon: "🇪🇺", regions: ["Europe"], fee: "€0.35" },
-    { id: "wire", name: "Wire Transfer", icon: "🔌", regions: ["Worldwide"], fee: "Varies" },
-    { id: "interac", name: "Interac", icon: "🇨🇦", regions: ["Canada"], fee: "1%" },
-    { id: "boleto", name: "Boleto", icon: "🇧🇷", regions: ["Brazil"], fee: "R$3.49" },
-    { id: "pix", name: "Pix", icon: "🇧🇷", regions: ["Brazil"], fee: "0.99%" },
-  ],
-  wallets: [
-    { id: "applepay", name: "Apple Pay", icon: "🍎", regions: ["Worldwide"], fee: "Via gateway" },
-    { id: "googlepay", name: "Google Pay", icon: "🔵", regions: ["Worldwide"], fee: "Via gateway" },
-    { id: "samsungpay", name: "Samsung Pay", icon: "📱", regions: ["Worldwide"], fee: "Via gateway" },
-    { id: "grabpay", name: "GrabPay", icon: "🚗", regions: ["Southeast Asia"], fee: "1.5%" },
-    { id: "gopay", name: "GoPay", icon: "🇮🇩", regions: ["Indonesia"], fee: "2%" },
-    { id: "ovo", name: "OVO", icon: "🟣", regions: ["Indonesia"], fee: "1.5%" },
-    { id: "dana", name: "Dana", icon: "🔵", regions: ["Indonesia"], fee: "1.5%" },
-    { id: "shopeepay", name: "ShopeePay", icon: "🛒", regions: ["Southeast Asia"], fee: "1.5%" },
-    { id: "gcash", name: "GCash", icon: "🇵🇭", regions: ["Philippines"], fee: "2%" },
-    { id: "truemoney", name: "TrueMoney", icon: "🇹🇭", regions: ["Thailand"], fee: "1%" },
-    { id: "mpesa", name: "M-Pesa", icon: "📲", regions: ["Africa"], fee: "1.5%" },
-    { id: "airtel", name: "Airtel Money", icon: "📱", regions: ["Africa"], fee: "1.5%" },
-    { id: "orange", name: "Orange Money", icon: "🍊", regions: ["Africa"], fee: "2%" },
+    { id: "ach", name: "ACH Transfer", Icon: StripeIcon, regions: ["US"], fee: "$0.25", docsUrl: "https://stripe.com/docs/ach" },
+    { id: "sepa", name: "SEPA Transfer", Icon: StripeIcon, regions: ["Europe"], fee: "€0.35", docsUrl: "https://stripe.com/docs/sepa" },
   ],
   crypto: [
-    { id: "coinbase", name: "Coinbase Commerce", icon: "₿", regions: ["Worldwide"], fee: "1%" },
-    { id: "btcpay", name: "BTCPay Server", icon: "⚡", regions: ["Worldwide"], fee: "0%" },
-    { id: "coingate", name: "CoinGate", icon: "🔗", regions: ["Worldwide"], fee: "1%" },
-    { id: "nowpayments", name: "NOWPayments", icon: "💰", regions: ["Worldwide"], fee: "0.5%" },
-    { id: "bitpay", name: "BitPay", icon: "💳", regions: ["Worldwide"], fee: "1%" },
-    { id: "cryptocom", name: "Crypto.com Pay", icon: "🔷", regions: ["Worldwide"], fee: "0.5%" },
-    { id: "binancepay", name: "Binance Pay", icon: "🟡", regions: ["Worldwide"], fee: "0%" },
-    { id: "plisio", name: "Plisio", icon: "💎", regions: ["Worldwide"], fee: "0.5%" },
-  ],
-  ewallets: [
-    { id: "skrill", name: "Skrill", icon: "💜", regions: ["Worldwide"], fee: "1.9%" },
-    { id: "neteller", name: "Neteller", icon: "🟢", regions: ["Worldwide"], fee: "1.9%" },
-    { id: "payoneer", name: "Payoneer", icon: "🔴", regions: ["Worldwide"], fee: "1%" },
-    { id: "wise", name: "Wise", icon: "💚", regions: ["Worldwide"], fee: "0.5%" },
-    { id: "perfectmoney", name: "Perfect Money", icon: "💛", regions: ["Worldwide"], fee: "1.99%" },
-    { id: "webmoney", name: "WebMoney", icon: "🌐", regions: ["Worldwide"], fee: "0.8%" },
-    { id: "payeer", name: "Payeer", icon: "💙", regions: ["Worldwide"], fee: "0.95%" },
-    { id: "airtm", name: "Airtm", icon: "☁️", regions: ["Latin America"], fee: "1%" },
+    { id: "coinbase", name: "Coinbase Commerce", Icon: CoinbaseIcon, regions: ["Worldwide"], fee: "1%", docsUrl: "https://commerce.coinbase.com/docs" },
+    { id: "btcpay", name: "BTCPay Server", Icon: BitcoinIcon, regions: ["Worldwide"], fee: "0%", docsUrl: "https://docs.btcpayserver.org" },
   ],
 };
+
+type GatewayType = { id: string; name: string; Icon: React.FC<{ className?: string }>; regions: string[]; fee: string; docsUrl?: string };
 
 const categoryIcons = {
   cards: CreditCard,
