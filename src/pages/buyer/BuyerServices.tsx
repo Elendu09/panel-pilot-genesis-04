@@ -1,25 +1,35 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   Package, 
   Search,
   ShoppingCart,
   Clock,
   Zap,
-  Loader2
+  Loader2,
+  Plus,
+  Check,
+  ChevronRight
 } from "lucide-react";
 import { SOCIAL_ICONS_MAP, getIconByKey } from "@/components/icons/SocialIcons";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useTenant, useTenantServices } from "@/hooks/useTenant";
 import { useBuyerAuth } from "@/contexts/BuyerAuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import BuyerLayout from "./BuyerLayout";
+
+interface CartItem {
+  service: any;
+  quantity: number;
+  targetUrl: string;
+}
 
 const BuyerServices = () => {
   const { panel } = useTenant();
@@ -31,23 +41,71 @@ const BuyerServices = () => {
   const [quantity, setQuantity] = useState(1000);
   const [targetUrl, setTargetUrl] = useState("");
   const [orderLoading, setOrderLoading] = useState(false);
+  const [customPrices, setCustomPrices] = useState<Map<string, number>>(new Map());
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [quickAddService, setQuickAddService] = useState<string | null>(null);
+
+  // Fetch custom prices for this buyer
+  useEffect(() => {
+    const fetchCustomPrices = async () => {
+      if (!buyer?.id || !panel?.id) return;
+      
+      const { data } = await supabase
+        .from('client_custom_prices')
+        .select('service_id, custom_price, discount_percent')
+        .eq('panel_id', panel.id)
+        .eq('client_id', buyer.id);
+      
+      if (data) {
+        const pricesMap = new Map<string, number>();
+        data.forEach((p: any) => {
+          const service = services.find((s: any) => s.id === p.service_id);
+          if (service) {
+            if (p.custom_price !== null) {
+              pricesMap.set(p.service_id, p.custom_price);
+            } else if (p.discount_percent) {
+              pricesMap.set(p.service_id, service.price * (1 - p.discount_percent / 100));
+            }
+          }
+        });
+        setCustomPrices(pricesMap);
+      }
+    };
+
+    if (services.length > 0) {
+      fetchCustomPrices();
+    }
+  }, [buyer?.id, panel?.id, services]);
+
+  // Get effective price for a service (custom or default)
+  const getEffectivePrice = (service: any) => {
+    return customPrices.get(service.id) ?? service.price;
+  };
 
   // Use SOCIAL_ICONS_MAP for proper branded icons
   const getCategoryData = (categoryId: string) => {
     return SOCIAL_ICONS_MAP[categoryId] || SOCIAL_ICONS_MAP.other;
   };
 
-  const categories = [
-    { id: 'all', name: 'All', ...SOCIAL_ICONS_MAP.other },
-    { id: 'instagram', name: 'Instagram', ...SOCIAL_ICONS_MAP.instagram },
-    { id: 'facebook', name: 'Facebook', ...SOCIAL_ICONS_MAP.facebook },
-    { id: 'twitter', name: 'Twitter', ...SOCIAL_ICONS_MAP.twitter },
-    { id: 'youtube', name: 'YouTube', ...SOCIAL_ICONS_MAP.youtube },
-    { id: 'tiktok', name: 'TikTok', ...SOCIAL_ICONS_MAP.tiktok },
-    { id: 'linkedin', name: 'LinkedIn', ...SOCIAL_ICONS_MAP.linkedin },
-    { id: 'telegram', name: 'Telegram', ...SOCIAL_ICONS_MAP.telegram },
-    { id: 'other', name: 'Other', ...SOCIAL_ICONS_MAP.other },
-  ];
+  // Get categories with counts
+  const categoriesWithCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: services.length };
+    services.forEach((s: any) => {
+      counts[s.category] = (counts[s.category] || 0) + 1;
+    });
+    
+    return [
+      { id: 'all', name: 'All Services', count: services.length, ...SOCIAL_ICONS_MAP.other },
+      { id: 'instagram', name: 'Instagram', count: counts.instagram || 0, ...SOCIAL_ICONS_MAP.instagram },
+      { id: 'facebook', name: 'Facebook', count: counts.facebook || 0, ...SOCIAL_ICONS_MAP.facebook },
+      { id: 'twitter', name: 'Twitter / X', count: counts.twitter || 0, ...SOCIAL_ICONS_MAP.twitter },
+      { id: 'youtube', name: 'YouTube', count: counts.youtube || 0, ...SOCIAL_ICONS_MAP.youtube },
+      { id: 'tiktok', name: 'TikTok', count: counts.tiktok || 0, ...SOCIAL_ICONS_MAP.tiktok },
+      { id: 'linkedin', name: 'LinkedIn', count: counts.linkedin || 0, ...SOCIAL_ICONS_MAP.linkedin },
+      { id: 'telegram', name: 'Telegram', count: counts.telegram || 0, ...SOCIAL_ICONS_MAP.telegram },
+      { id: 'other', name: 'Other', count: counts.other || 0, ...SOCIAL_ICONS_MAP.other },
+    ].filter(c => c.count > 0 || c.id === 'all');
+  }, [services]);
 
   const filteredServices = useMemo(() => {
     return services.filter((service: any) => {
@@ -56,6 +114,24 @@ const BuyerServices = () => {
       return matchesCategory && matchesSearch;
     });
   }, [services, selectedCategory, searchQuery]);
+
+  const handleQuickAdd = (service: any) => {
+    setQuickAddService(service.id);
+    setTimeout(() => {
+      const existing = cart.find(item => item.service.id === service.id);
+      if (existing) {
+        setCart(cart.map(item => 
+          item.service.id === service.id 
+            ? { ...item, quantity: item.quantity + 1000 } 
+            : item
+        ));
+      } else {
+        setCart([...cart, { service, quantity: 1000, targetUrl: '' }]);
+      }
+      toast({ title: "Added to cart", description: service.name });
+      setTimeout(() => setQuickAddService(null), 500);
+    }, 200);
+  };
 
   const handleOrder = async () => {
     if (!selectedService || !buyer || !panel) {
@@ -71,7 +147,8 @@ const BuyerServices = () => {
       return;
     }
 
-    const totalPrice = (selectedService.price * quantity) / 1000;
+    const effectivePrice = getEffectivePrice(selectedService);
+    const totalPrice = (effectivePrice * quantity) / 1000;
     
     // Check balance
     if ((buyer.balance || 0) < totalPrice) {
@@ -150,7 +227,8 @@ const BuyerServices = () => {
     visible: { opacity: 1, y: 0 }
   };
 
-  const totalPrice = selectedService ? (selectedService.price * quantity) / 1000 : 0;
+  const effectivePrice = selectedService ? getEffectivePrice(selectedService) : 0;
+  const totalPrice = selectedService ? (effectivePrice * quantity) / 1000 : 0;
   const hasEnoughBalance = (buyer?.balance || 0) >= totalPrice;
 
   return (
@@ -162,13 +240,21 @@ const BuyerServices = () => {
         className="space-y-6"
       >
         {/* Header */}
-        <motion.div variants={itemVariants}>
-          <h1 className="text-2xl md:text-3xl font-bold">Services</h1>
-          <p className="text-muted-foreground">Browse and order our SMM services</p>
+        <motion.div variants={itemVariants} className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold">Services</h1>
+            <p className="text-muted-foreground">Browse and order our SMM services</p>
+          </div>
+          {cart.length > 0 && (
+            <Badge variant="secondary" className="gap-1">
+              <ShoppingCart className="w-3 h-3" />
+              {cart.length} items
+            </Badge>
+          )}
         </motion.div>
 
-        {/* Search & Categories */}
-        <motion.div variants={itemVariants} className="space-y-4">
+        {/* Search Bar */}
+        <motion.div variants={itemVariants}>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
@@ -178,37 +264,72 @@ const BuyerServices = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-
-          <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 scrollbar-hide">
-            {categories.map((cat) => {
-              const CategoryIcon = cat.icon;
-              const count = cat.id === 'all' 
-                ? services.length 
-                : services.filter((s: any) => s.category === cat.id).length;
-
-              return (
-                <button
-                  key={cat.id}
-                  onClick={() => setSelectedCategory(cat.id)}
-                  className={cn(
-                    "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap",
-                    selectedCategory === cat.id
-                      ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-                      : "glass-card hover:bg-accent/50"
-                  )}
-                >
-                  <CategoryIcon className="w-4 h-4" size={16} />
-                  {cat.name}
-                  <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0">
-                    {count}
-                  </Badge>
-                </button>
-              );
-            })}
-          </div>
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Category Sidebar */}
+          <motion.div variants={itemVariants} className="lg:col-span-1">
+            <Card className="glass-card sticky top-4">
+              <CardContent className="p-4">
+                <h3 className="font-semibold mb-4 text-sm text-muted-foreground uppercase tracking-wider">
+                  Categories
+                </h3>
+                <ScrollArea className="h-[calc(100vh-300px)] lg:h-auto">
+                  <div className="space-y-1">
+                    {categoriesWithCounts.map((cat) => {
+                      const CategoryIcon = cat.icon;
+                      const isActive = selectedCategory === cat.id;
+
+                      return (
+                        <button
+                          key={cat.id}
+                          onClick={() => setSelectedCategory(cat.id)}
+                          className={cn(
+                            "w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all",
+                            isActive
+                              ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                              : "hover:bg-accent/50"
+                          )}
+                        >
+                          <div className={cn(
+                            "p-2 rounded-lg",
+                            isActive ? "bg-white/20" : cat.bgColor
+                          )}>
+                            <CategoryIcon 
+                              className={cn(
+                                "w-4 h-4",
+                                isActive ? "text-current" : "text-white"
+                              )} 
+                              size={16} 
+                            />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className={cn(
+                              "font-medium text-sm truncate",
+                              !isActive && "text-foreground"
+                            )}>
+                              {cat.name}
+                            </p>
+                          </div>
+                          <Badge 
+                            variant={isActive ? "secondary" : "outline"} 
+                            className={cn(
+                              "text-xs",
+                              isActive && "bg-white/20 border-0"
+                            )}
+                          >
+                            {cat.count}
+                          </Badge>
+                          {isActive && <ChevronRight className="w-4 h-4" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </motion.div>
+
           {/* Services List */}
           <motion.div variants={itemVariants} className="lg:col-span-2">
             <div className="space-y-3">
@@ -224,52 +345,100 @@ const BuyerServices = () => {
                   </CardContent>
                 </Card>
               ) : (
-              filteredServices.map((service: any) => {
+                filteredServices.map((service: any) => {
                   const categoryData = getCategoryData(service.category);
                   const CategoryIcon = categoryData.icon;
                   const isSelected = selectedService?.id === service.id;
+                  const serviceEffectivePrice = getEffectivePrice(service);
+                  const hasCustomPrice = customPrices.has(service.id);
+                  const isQuickAdding = quickAddService === service.id;
 
                   return (
                     <motion.div
                       key={service.id}
                       variants={itemVariants}
+                      layout
                     >
                       <Card 
                         className={cn(
-                          "glass-card-hover cursor-pointer transition-all",
+                          "glass-card-hover cursor-pointer transition-all group",
                           isSelected && "ring-2 ring-primary"
                         )}
                         onClick={() => setSelectedService(service)}
                       >
                         <CardContent className="p-4">
                           <div className="flex items-start gap-4">
-                            <div className="p-3 rounded-xl bg-primary/10">
-                              <CategoryIcon className="w-6 h-6 text-primary" size={24} />
+                            <div className={cn(
+                              "p-3 rounded-xl shadow-lg",
+                              categoryData.bgColor
+                            )}>
+                              <CategoryIcon className="w-6 h-6 text-white" size={24} />
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-start justify-between gap-2">
-                                <div>
-                                  <h3 className="font-semibold">{service.name}</h3>
+                                <div className="flex-1 min-w-0">
+                                  <h3 className="font-semibold truncate">{service.name}</h3>
                                   <p className="text-sm text-muted-foreground line-clamp-2">
                                     {service.description || 'High quality service with fast delivery'}
                                   </p>
                                 </div>
                                 <div className="text-right shrink-0">
-                                  <p className="text-lg font-bold">${service.price}</p>
+                                  <div className="flex items-center gap-1">
+                                    <p className="text-lg font-bold">${serviceEffectivePrice.toFixed(2)}</p>
+                                    {hasCustomPrice && (
+                                      <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-500 border-emerald-500/20">
+                                        VIP
+                                      </Badge>
+                                    )}
+                                  </div>
                                   <p className="text-xs text-muted-foreground">per 1K</p>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
-                                <div className="flex items-center gap-1">
-                                  <Clock className="w-3 h-3" />
-                                  {service.estimated_time || '0-24 hours'}
+                              <div className="flex items-center justify-between mt-3">
+                                <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                                  <div className="flex items-center gap-1">
+                                    <Clock className="w-3 h-3" />
+                                    {service.estimated_time || '0-24 hours'}
+                                  </div>
+                                  <div>
+                                    Min: {service.min_quantity || 100}
+                                  </div>
                                 </div>
-                                <div>
-                                  Min: {service.min_quantity || 100}
-                                </div>
-                                <div>
-                                  Max: {(service.max_quantity || 10000).toLocaleString()}
-                                </div>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className={cn(
+                                    "gap-1 opacity-0 group-hover:opacity-100 transition-opacity",
+                                    isQuickAdding && "opacity-100"
+                                  )}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleQuickAdd(service);
+                                  }}
+                                >
+                                  <AnimatePresence mode="wait">
+                                    {isQuickAdding ? (
+                                      <motion.div
+                                        key="check"
+                                        initial={{ scale: 0 }}
+                                        animate={{ scale: 1 }}
+                                        exit={{ scale: 0 }}
+                                      >
+                                        <Check className="w-4 h-4 text-emerald-500" />
+                                      </motion.div>
+                                    ) : (
+                                      <motion.div
+                                        key="plus"
+                                        initial={{ scale: 0 }}
+                                        animate={{ scale: 1 }}
+                                        exit={{ scale: 0 }}
+                                      >
+                                        <Plus className="w-4 h-4" />
+                                      </motion.div>
+                                    )}
+                                  </AnimatePresence>
+                                  Quick Add
+                                </Button>
                               </div>
                             </div>
                           </div>
@@ -283,7 +452,7 @@ const BuyerServices = () => {
           </motion.div>
 
           {/* Order Form */}
-          <motion.div variants={itemVariants} className="lg:sticky lg:top-4 h-fit">
+          <motion.div variants={itemVariants} className="lg:col-span-1 lg:sticky lg:top-4 h-fit">
             <Card className="glass-card">
               <CardContent className="p-6 space-y-6">
                 <div className="flex items-center gap-3">
@@ -297,12 +466,30 @@ const BuyerServices = () => {
                 </div>
 
                 {selectedService ? (
-                  <div className="glass-card p-4 bg-primary/5">
-                    <p className="font-medium">{selectedService.name}</p>
-                    <p className="text-sm text-muted-foreground">${selectedService.price}/1K</p>
+                  <div className="glass-card p-4 bg-primary/5 rounded-xl">
+                    <div className="flex items-center gap-3">
+                      {(() => {
+                        const catData = getCategoryData(selectedService.category);
+                        const CatIcon = catData.icon;
+                        return (
+                          <div className={cn("p-2 rounded-lg", catData.bgColor)}>
+                            <CatIcon className="w-4 h-4 text-white" size={16} />
+                          </div>
+                        );
+                      })()}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">{selectedService.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          ${getEffectivePrice(selectedService).toFixed(2)}/1K
+                          {customPrices.has(selectedService.id) && (
+                            <span className="text-emerald-500 ml-1">(VIP price)</span>
+                          )}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 ) : (
-                  <div className="glass-card p-4 text-center">
+                  <div className="glass-card p-4 text-center rounded-xl border-dashed border-2">
                     <p className="text-sm text-muted-foreground">Select a service from the list</p>
                   </div>
                 )}

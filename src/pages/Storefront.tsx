@@ -7,6 +7,7 @@ import { ThemeThree } from '@/components/themes/ThemeThree';
 import { ThemeFour } from '@/components/themes/ThemeFour';
 import { FloatingChatWidget } from '@/components/storefront/FloatingChatWidget';
 import { LiveChatWidget } from '@/components/support/LiveChatWidget';
+import { FastOrderSection } from '@/components/storefront/FastOrderSection';
 import { supabase } from '@/integrations/supabase/client';
 
 const Storefront = () => {
@@ -108,6 +109,14 @@ const Storefront = () => {
         {panel.logo_url && <meta property="og:image" content={panel.logo_url} />}
       </Helmet>
       {renderTheme()}
+      {/* Fast Order Section */}
+      {services.length > 0 && panel && (
+        <FastOrderSection 
+          services={services} 
+          panelId={panel.id} 
+          panelName={panel.name} 
+        />
+      )}
       {/* Floating Chat Widget (WhatsApp/Telegram) */}
       <FloatingChatWidget panelId={panel?.id} />
       {/* Live Chat Widget */}

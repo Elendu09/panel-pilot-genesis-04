@@ -115,12 +115,17 @@ export function BuyerAuthProvider({ children, panelId }: { children: ReactNode; 
         .single();
 
       if (error || !data) {
-        return { error: { message: 'Invalid email or password' } };
+        return { error: { message: 'No account found with this email' } };
+      }
+
+      // Check if account is active
+      if (!data.is_active) {
+        return { error: { message: 'Your account has been suspended. Please contact support.' } };
       }
 
       // Check password (using password_temp for demo, would use password_hash in production)
       if (data.password_temp !== password && data.password_hash !== password) {
-        return { error: { message: 'Invalid email or password' } };
+        return { error: { message: 'Incorrect password. Please try again.' } };
       }
 
       // Update last login
