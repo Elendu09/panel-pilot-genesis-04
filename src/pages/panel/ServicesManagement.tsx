@@ -40,7 +40,8 @@ import {
   Sparkles,
   Hand,
   Wand2,
-  Copy
+  Copy,
+  SlidersHorizontal
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -124,6 +125,17 @@ import { ServiceAnalytics } from "@/components/services/ServiceAnalytics";
 import { ServiceKanbanCard } from "@/components/services/ServiceKanbanCard";
 import { ServiceToolsCards } from "@/components/services/ServiceToolsCards";
 import { ServiceHealthCheck } from "@/components/services/ServiceHealthCheck";
+import { BulkProgressModal } from "@/components/services/BulkProgressModal";
+import { CategoryManagementDialog, CategoryPreset } from "@/components/services/CategoryManagementDialog";
+import { AdvancedFiltersSheet, ServiceFilters, countActiveFilters } from "@/components/services/AdvancedFiltersSheet";
+import { IconPickerWithSearch } from "@/components/services/IconPickerWithSearch";
+import { 
+  bulkUpdateStatus, 
+  bulkDeleteServices, 
+  bulkUpdateIcons, 
+  bulkUpdateCategories,
+  BulkOperationProgress 
+} from "@/lib/bulk-ops";
 import { LayoutGrid, List, Stethoscope } from "lucide-react";
 
 
@@ -233,6 +245,25 @@ const ServicesManagement = () => {
   // Bulk Operation Loading State
   const [bulkOperationLoading, setBulkOperationLoading] = useState(false);
   
+  // Bulk Progress Modal State
+  const [showBulkProgress, setShowBulkProgress] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState<BulkOperationProgress>({
+    processed: 0,
+    total: 0,
+    currentChunk: 0,
+    totalChunks: 0,
+    status: 'idle',
+  });
+  const [bulkProgressTitle, setBulkProgressTitle] = useState("");
+  
+  // Category Management
+  const [isCategoryManagementOpen, setIsCategoryManagementOpen] = useState(false);
+  const [customCategories, setCustomCategories] = useState<CategoryPreset[]>([]);
+  
+  // Advanced Filters
+  const [isAdvancedFiltersOpen, setIsAdvancedFiltersOpen] = useState(false);
+  const [advancedFilters, setAdvancedFilters] = useState<ServiceFilters>({});
+  
   // View mode: list or kanban
   const [viewMode, setViewMode] = useState<"list" | "kanban">(() => {
     return (localStorage.getItem('services-view-mode') as "list" | "kanban") || "list";
@@ -243,6 +274,9 @@ const ServicesManagement = () => {
   const WARNING_THRESHOLD = 9000;
   const isNearLimit = totalCount >= WARNING_THRESHOLD;
   const isAtLimit = totalCount >= SERVICE_LIMIT;
+  
+  // Active filter count for badge
+  const activeFilterCount = countActiveFilters(advancedFilters);
 
   // Provider name lookup
   const getProviderName = (providerId: string) => {
@@ -745,10 +779,12 @@ const ServicesManagement = () => {
     setIsBulkDialogOpen(true);
   };
 
-  // Execute bulk delete with confirmation
+  // Execute bulk delete with confirmation and progress
   const executeBulkDelete = async () => {
+    setIsDeleteConfirmOpen(false);
+    setBulkOperationLoading(true);
+    
     try {
-      // Fetch full service data for restoration
       const { data: fullServices } = await supabase
         .from('services')
         .select('*')
@@ -759,7 +795,11 @@ const ServicesManagement = () => {
         [s.id]: s
       }), {});
       
-      await supabase.from('services').delete().in('id', selectedServices);
+      setBulkProgressTitle("Deleting Services");
+      setShowBulkProgress(true);
+      
+      await bulkDeleteServices(selectedServices, setBulkProgress);
+      
       setServices(prev => prev.filter(s => !selectedServices.includes(s.id)));
       
       const deletedCount = selectedServices.length;
@@ -779,29 +819,34 @@ const ServicesManagement = () => {
       
       setSelectedServices([]);
       setSelectAllPages(false);
-      setIsDeleteConfirmOpen(false);
       fetchCategoryCounts();
     } catch (error) {
       console.error('Bulk delete error:', error);
       toast({ title: 'Failed to delete services', variant: 'destructive' });
+    } finally {
+      setBulkOperationLoading(false);
     }
   };
 
   const executeBulkAction = async () => {
     setBulkOperationLoading(true);
+    setIsBulkDialogOpen(false);
+    
     try {
-      // Capture previous state for undo
       const affectedServices = services.filter(s => selectedServices.includes(s.id));
       
       switch (bulkAction) {
         case "enable": {
-          // Store previous status for undo
           const previousState = affectedServices.reduce((acc, s) => ({
             ...acc,
             [s.id]: { status: s.status }
           }), {});
           
-          await supabase.from('services').update({ is_active: true }).in('id', selectedServices);
+          setBulkProgressTitle("Enabling Services");
+          setShowBulkProgress(true);
+          
+          await bulkUpdateStatus(selectedServices, true, setBulkProgress);
+          
           setServices(prev => prev.map(s => 
             selectedServices.includes(s.id) ? { ...s, status: true } : s
           ));
@@ -816,13 +861,16 @@ const ServicesManagement = () => {
           break;
         }
         case "disable": {
-          // Store previous status for undo
           const previousState = affectedServices.reduce((acc, s) => ({
             ...acc,
             [s.id]: { status: s.status }
           }), {});
           
-          await supabase.from('services').update({ is_active: false }).in('id', selectedServices);
+          setBulkProgressTitle("Disabling Services");
+          setShowBulkProgress(true);
+          
+          await bulkUpdateStatus(selectedServices, false, setBulkProgress);
+          
           setServices(prev => prev.map(s => 
             selectedServices.includes(s.id) ? { ...s, status: false } : s
           ));
@@ -849,7 +897,6 @@ const ServicesManagement = () => {
       setBulkOperationLoading(false);
     }
     setSelectedServices([]);
-    setIsBulkDialogOpen(false);
   };
 
   // Bulk icon assignment
