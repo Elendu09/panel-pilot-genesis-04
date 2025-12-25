@@ -477,6 +477,61 @@ export type Database = {
           },
         ]
       }
+      client_custom_prices: {
+        Row: {
+          client_id: string | null
+          created_at: string
+          custom_price: number | null
+          discount_percent: number | null
+          id: string
+          panel_id: string | null
+          service_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string
+          custom_price?: number | null
+          discount_percent?: number | null
+          id?: string
+          panel_id?: string | null
+          service_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string
+          custom_price?: number | null
+          discount_percent?: number | null
+          id?: string
+          panel_id?: string | null
+          service_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_custom_prices_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_custom_prices_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_custom_prices_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_users: {
         Row: {
           balance: number | null

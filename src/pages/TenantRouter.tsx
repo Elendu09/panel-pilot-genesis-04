@@ -18,6 +18,7 @@ import BuyerProfile from './buyer/BuyerProfile';
 import BuyerAuth from './buyer/BuyerAuth';
 import BuyerDeposit from './buyer/BuyerDeposit';
 import BuyerSupport from './buyer/BuyerSupport';
+import Storefront from './Storefront';
 
 const queryClient = new QueryClient();
 
@@ -58,7 +59,7 @@ const TenantRouter = () => {
     return <App />;
   }
 
-  // If this is a tenant domain and we found a panel, show the buyer dashboard
+  // If this is a tenant domain and we found a panel, show PUBLIC storefront first
   if (isTenantDomain && panel) {
     return (
       <QueryClientProvider client={queryClient}>
@@ -70,15 +71,11 @@ const TenantRouter = () => {
               <BuyerAuthProvider panelId={panel.id}>
                 <BrowserRouter>
                   <Routes>
-                    {/* Public auth route */}
+                    {/* PUBLIC routes - Storefront accessible without login */}
+                    <Route path="/" element={<Storefront />} />
                     <Route path="/auth" element={<BuyerAuth />} />
                     
                     {/* Protected buyer routes */}
-                    <Route path="/" element={
-                      <BuyerProtectedRoute>
-                        <BuyerDashboard />
-                      </BuyerProtectedRoute>
-                    } />
                     <Route path="/dashboard" element={
                       <BuyerProtectedRoute>
                         <BuyerDashboard />
@@ -110,8 +107,8 @@ const TenantRouter = () => {
                       </BuyerProtectedRoute>
                     } />
                     
-                    {/* Catch all - redirect to auth */}
-                    <Route path="*" element={<Navigate to="/auth" replace />} />
+                    {/* Catch all - redirect to storefront */}
+                    <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
                 </BrowserRouter>
               </BuyerAuthProvider>

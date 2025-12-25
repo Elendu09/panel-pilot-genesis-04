@@ -32,6 +32,7 @@ import { usePanel } from "@/hooks/usePanel";
 import { getIconByKey } from "@/components/icons/SocialIcons";
 import { IconPickerWithSearch } from "./IconPickerWithSearch";
 import { IconUploadDialog } from "./IconUploadDialog";
+import { CustomerPricingTab } from "./CustomerPricingTab";
 import {
   Settings,
   DollarSign,
@@ -626,15 +627,10 @@ export const ServiceEditSheet = ({
 
                 {/* Custom Prices Tab */}
                 <TabsContent value="custom" className="m-0 space-y-4">
-                  <Card className="bg-muted/30 border-dashed">
-                    <CardContent className="p-8 text-center">
-                      <Users className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
-                      <p className="text-lg font-medium mb-2">Custom Pricing per Customer</p>
-                      <p className="text-sm text-muted-foreground">
-                        Coming soon - Set special prices for VIP customers
-                      </p>
-                    </CardContent>
-                  </Card>
+                  <CustomerPricingTab 
+                    serviceId={service.id} 
+                    basePrice={calculatedPrice} 
+                  />
                 </TabsContent>
 
                 {/* SEO Tab */}

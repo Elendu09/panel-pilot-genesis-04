@@ -469,7 +469,7 @@ const CustomerManagement = () => {
           username: newCustomer.username,
           is_active: newCustomer.status === 'active',
           balance: newCustomer.balance,
-          password_temp: 'temp123', // Would need proper password handling
+          password_temp: newCustomer.password, // Use the password from the form
         })
         .select()
         .single();
