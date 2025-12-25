@@ -81,8 +81,13 @@ const categories = [
   { id: "linkedin", name: "LinkedIn", icon: "💼" },
   { id: "telegram", name: "Telegram", icon: "✈️" },
   { id: "spotify", name: "Spotify", icon: "🎧" },
-  { id: "discord", name: "Discord", icon: "🎮" },
+  { id: "soundcloud", name: "SoundCloud", icon: "🎵" },
+  { id: "audiomack", name: "Audiomack", icon: "🎧" },
   { id: "twitch", name: "Twitch", icon: "📺" },
+  { id: "discord", name: "Discord", icon: "🎮" },
+  { id: "pinterest", name: "Pinterest", icon: "📌" },
+  { id: "snapchat", name: "Snapchat", icon: "👻" },
+  { id: "threads", name: "Threads", icon: "🧵" },
   { id: "other", name: "Other", icon: "🌐" },
 ];
 
