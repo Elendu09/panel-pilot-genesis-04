@@ -41,7 +41,8 @@ import {
   Hand,
   Wand2,
   Copy,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Clock
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -126,6 +127,7 @@ import { ServiceKanbanCard } from "@/components/services/ServiceKanbanCard";
 import { ServiceToolsCards } from "@/components/services/ServiceToolsCards";
 import { ServiceHealthCheck } from "@/components/services/ServiceHealthCheck";
 import { BulkProgressModal } from "@/components/services/BulkProgressModal";
+import { BulkOperationHistory } from "@/components/services/BulkOperationHistory";
 import { CategoryManagementDialog, CategoryPreset } from "@/components/services/CategoryManagementDialog";
 import { AdvancedFiltersSheet, ServiceFilters, countActiveFilters } from "@/components/services/AdvancedFiltersSheet";
 import { IconPickerWithSearch } from "@/components/services/IconPickerWithSearch";
@@ -134,7 +136,9 @@ import {
   bulkDeleteServices, 
   bulkUpdateIcons, 
   bulkUpdateCategories,
-  BulkOperationProgress 
+  bulkUpdateDisplayOrder,
+  BulkOperationProgress,
+  BulkOperationJob,
 } from "@/lib/bulk-ops";
 import { LayoutGrid, List, Stethoscope } from "lucide-react";
 
@@ -263,6 +267,13 @@ const ServicesManagement = () => {
   // Advanced Filters
   const [isAdvancedFiltersOpen, setIsAdvancedFiltersOpen] = useState(false);
   const [advancedFilters, setAdvancedFilters] = useState<ServiceFilters>({});
+  
+  // Bulk Operation History
+  const [isBulkHistoryOpen, setIsBulkHistoryOpen] = useState(false);
+  
+  // Drag-and-drop order save state
+  const [isSavingOrder, setIsSavingOrder] = useState(false);
+  const [pendingOrderUpdates, setPendingOrderUpdates] = useState<Array<{ id: string; display_order: number }> | null>(null);
   
   // View mode: list or kanban
   const [viewMode, setViewMode] = useState<"list" | "kanban">(() => {
@@ -625,7 +636,32 @@ const ServicesManagement = () => {
     return cat ? cat.icon : Globe;
   };
 
-  // Drag end handler
+  // Debounced save for drag-and-drop order
+  useEffect(() => {
+    if (!pendingOrderUpdates || pendingOrderUpdates.length === 0) return;
+    
+    const timer = setTimeout(async () => {
+      setIsSavingOrder(true);
+      try {
+        const { success, error } = await bulkUpdateDisplayOrder(pendingOrderUpdates);
+        if (success) {
+          toast({ title: "Service order saved" });
+        } else {
+          toast({ title: "Failed to save order", variant: "destructive", description: error });
+        }
+      } catch (err) {
+        console.error('Error saving order:', err);
+        toast({ title: "Failed to save order", variant: "destructive" });
+      } finally {
+        setIsSavingOrder(false);
+        setPendingOrderUpdates(null);
+      }
+    }, 800); // Debounce 800ms
+    
+    return () => clearTimeout(timer);
+  }, [pendingOrderUpdates]);
+
+  // Drag end handler with debounced persistence
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
 
@@ -639,17 +675,15 @@ const ServicesManagement = () => {
         displayOrder: index + 1,
       }));
       
+      // Optimistic update
       setServices(updatedOrder);
       
-      // Update in Supabase
-      try {
-        await Promise.all(updatedOrder.map(s => 
-          supabase.from('services').update({ display_order: s.displayOrder }).eq('id', s.id)
-        ));
-        toast({ title: "Service order updated" });
-      } catch (error) {
-        console.error('Error updating order:', error);
-      }
+      // Queue the database update (debounced)
+      const updates = updatedOrder.map((s, idx) => ({
+        id: s.id,
+        display_order: idx + 1,
+      }));
+      setPendingOrderUpdates(updates);
     }
   };
 
@@ -798,7 +832,7 @@ const ServicesManagement = () => {
       setBulkProgressTitle("Deleting Services");
       setShowBulkProgress(true);
       
-      await bulkDeleteServices(selectedServices, setBulkProgress);
+      await bulkDeleteServices(selectedServices, setBulkProgress, panel?.id);
       
       setServices(prev => prev.filter(s => !selectedServices.includes(s.id)));
       
@@ -845,7 +879,7 @@ const ServicesManagement = () => {
           setBulkProgressTitle("Enabling Services");
           setShowBulkProgress(true);
           
-          await bulkUpdateStatus(selectedServices, true, setBulkProgress);
+          await bulkUpdateStatus(selectedServices, true, setBulkProgress, panel?.id);
           
           setServices(prev => prev.map(s => 
             selectedServices.includes(s.id) ? { ...s, status: true } : s
@@ -869,7 +903,7 @@ const ServicesManagement = () => {
           setBulkProgressTitle("Disabling Services");
           setShowBulkProgress(true);
           
-          await bulkUpdateStatus(selectedServices, false, setBulkProgress);
+          await bulkUpdateStatus(selectedServices, false, setBulkProgress, panel?.id);
           
           setServices(prev => prev.map(s => 
             selectedServices.includes(s.id) ? { ...s, status: false } : s
@@ -1419,7 +1453,21 @@ const ServicesManagement = () => {
               onCheckedChange={setIsDragEnabled}
               className="scale-90"
             />
+            {isSavingOrder && (
+              <Loader2 className="w-3 h-3 animate-spin text-primary ml-1" />
+            )}
           </div>
+          
+          {/* Bulk History Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="glass-card border-border/50"
+            onClick={() => setIsBulkHistoryOpen(true)}
+          >
+            <Clock className="w-4 h-4 mr-2" />
+            <span className="hidden sm:inline">History</span>
+          </Button>
 
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
@@ -2554,6 +2602,17 @@ const ServicesManagement = () => {
         onApply={() => {
           setCurrentPage(1);
           fetchServices();
+        }}
+      />
+      
+      {/* Bulk Operation History */}
+      <BulkOperationHistory
+        open={isBulkHistoryOpen}
+        onOpenChange={setIsBulkHistoryOpen}
+        onRetry={(job) => {
+          // TODO: Implement retry logic
+          console.log('Retry job:', job);
+          toast({ title: "Retry functionality coming soon" });
         }}
       />
     </div>

@@ -1,9 +1,10 @@
+import { useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { Loader2, CheckCircle, AlertCircle, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { BulkOperationProgress } from "@/lib/bulk-ops";
+import { subscribeToBulkOperationJob, type BulkOperationProgress } from "@/lib/bulk-ops";
 
 interface BulkProgressModalProps {
   open: boolean;
@@ -27,6 +28,21 @@ export function BulkProgressModal({
     : 0;
   
   const isComplete = progress.status === 'completed' || progress.status === 'error';
+  
+  // Subscribe to realtime updates if we have a jobId
+  useEffect(() => {
+    if (!progress.jobId || !open) return;
+    
+    const unsubscribe = subscribeToBulkOperationJob(progress.jobId, (jobUpdate) => {
+      // The parent component should handle the actual state update
+      // This is just for showing that realtime is working
+      console.log('Realtime job update:', jobUpdate);
+    });
+    
+    return () => {
+      unsubscribe();
+    };
+  }, [progress.jobId, open]);
   
   const handleClose = () => {
     if (isComplete && onComplete) {
@@ -82,6 +98,13 @@ export function BulkProgressModal({
             </div>
           </div>
           
+          {/* Job ID for tracking */}
+          {progress.jobId && (
+            <div className="text-xs text-muted-foreground font-mono">
+              Job ID: {progress.jobId.slice(0, 8)}...
+            </div>
+          )}
+          
           {/* Error Display */}
           {progress.error && (
             <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-sm">
@@ -120,3 +143,5 @@ export function BulkProgressModal({
     </Dialog>
   );
 }
+
+export type { BulkOperationProgress };

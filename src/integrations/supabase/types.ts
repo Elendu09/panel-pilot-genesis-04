@@ -288,6 +288,72 @@ export type Database = {
           },
         ]
       }
+      bulk_operation_jobs: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          error_log: Json | null
+          failed_items: number
+          id: string
+          operation_data: Json | null
+          operation_type: string
+          panel_id: string | null
+          processed_items: number
+          started_at: string | null
+          status: string
+          target_ids: string[]
+          total_items: number
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          error_log?: Json | null
+          failed_items?: number
+          id?: string
+          operation_data?: Json | null
+          operation_type: string
+          panel_id?: string | null
+          processed_items?: number
+          started_at?: string | null
+          status?: string
+          target_ids?: string[]
+          total_items: number
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          error_log?: Json | null
+          failed_items?: number
+          id?: string
+          operation_data?: Json | null
+          operation_type?: string
+          panel_id?: string | null
+          processed_items?: number
+          started_at?: string | null
+          status?: string
+          target_ids?: string[]
+          total_items?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bulk_operation_jobs_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bulk_operation_jobs_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       canned_responses: {
         Row: {
           category: string | null
