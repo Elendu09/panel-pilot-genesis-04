@@ -78,9 +78,9 @@ const PaymentMethods = () => {
   
   // Platform-enabled gateways (simulating admin-enabled methods)
   const platformGateways = [
-    { id: "stripe", name: "Stripe", icon: "💳", enabled: true, fee: "2.9% + $0.30" },
-    { id: "paypal", name: "PayPal", icon: "🅿️", enabled: true, fee: "2.9% + $0.30" },
-    { id: "coinbase", name: "Coinbase Commerce", icon: "₿", enabled: true, fee: "1%" },
+    { id: "stripe", name: "Stripe", Icon: StripeIcon, enabled: true, fee: "2.9% + $0.30" },
+    { id: "paypal", name: "PayPal", Icon: PayPalIcon, enabled: true, fee: "2.9% + $0.30" },
+    { id: "coinbase", name: "Coinbase Commerce", Icon: CoinbaseIcon, enabled: true, fee: "1%" },
   ];
 
   const filteredGateways = paymentGateways[activeCategory].filter(g => 
@@ -227,7 +227,7 @@ const PaymentMethods = () => {
                 >
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3">
-                      <span className="text-3xl">{gateway.icon}</span>
+                      <gateway.Icon className="w-8 h-8" />
                       <div>
                         <h4 className="font-semibold">{gateway.name}</h4>
                         <p className="text-xs text-muted-foreground">Fee: {gateway.fee}</p>
@@ -437,18 +437,54 @@ const PaymentMethods = () => {
             <DialogDescription>Enter your API credentials to enable this payment gateway</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 pt-4">
+            {/* Mode Detection */}
+            {formData.apiKey && (
+              <div className={cn(
+                "p-3 rounded-lg border text-sm",
+                formData.apiKey.includes('test') || formData.apiKey.includes('sandbox')
+                  ? "bg-amber-500/10 border-amber-500/30 text-amber-500"
+                  : "bg-green-500/10 border-green-500/30 text-green-500"
+              )}>
+                <div className="flex items-center gap-2">
+                  {formData.apiKey.includes('test') || formData.apiKey.includes('sandbox') ? (
+                    <>
+                      <AlertCircle className="w-4 h-4" />
+                      <span className="font-medium">Test/Sandbox Mode Detected</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="w-4 h-4" />
+                      <span className="font-medium">Production Mode</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label>API Key / Public Key</Label>
-              <Input value={formData.apiKey} onChange={(e) => setFormData({...formData, apiKey: e.target.value})} placeholder="pk_live_..." className="bg-background/50 font-mono text-sm" />
+              <Input value={formData.apiKey} onChange={(e) => setFormData({...formData, apiKey: e.target.value})} placeholder={selectedGateway?.id === 'stripe' ? 'pk_live_xxxx or pk_test_xxxx' : 'Your public/api key'} className="bg-background/50 font-mono text-sm" />
+              <p className="text-xs text-muted-foreground">
+                {selectedGateway?.id === 'stripe' && 'Starts with pk_live_ (production) or pk_test_ (sandbox)'}
+                {selectedGateway?.id === 'paypal' && 'Your PayPal Client ID from developer dashboard'}
+                {selectedGateway?.id === 'coinbase' && 'Your Coinbase Commerce API Key'}
+              </p>
             </div>
             <div className="space-y-2">
               <Label>Secret Key</Label>
               <div className="relative">
-                <Input type={showSecretKey ? "text" : "password"} value={formData.secretKey} onChange={(e) => setFormData({...formData, secretKey: e.target.value})} placeholder="sk_live_..." className="bg-background/50 font-mono text-sm pr-10" />
+                <Input type={showSecretKey ? "text" : "password"} value={formData.secretKey} onChange={(e) => setFormData({...formData, secretKey: e.target.value})} placeholder={selectedGateway?.id === 'stripe' ? 'sk_live_xxxx or sk_test_xxxx' : 'Your secret key'} className="bg-background/50 font-mono text-sm pr-10" />
                 <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => setShowSecretKey(!showSecretKey)}>
                   {showSecretKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </Button>
               </div>
+            </div>
+
+            {/* Webhook URL */}
+            <div className="space-y-2">
+              <Label>Webhook URL (auto-generated)</Label>
+              <Input readOnly value={`${window.location.origin}/api/webhooks/${selectedGateway?.id}`} className="bg-muted/50 font-mono text-xs" />
+              <p className="text-xs text-muted-foreground">Configure this URL in your {selectedGateway?.name} dashboard</p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -481,14 +517,22 @@ const PaymentMethods = () => {
               <Switch checked={formData.testMode} onCheckedChange={(checked) => setFormData({...formData, testMode: checked})} />
             </div>
 
+            {/* Documentation Link */}
+            {selectedGateway?.docsUrl && (
+              <a href={selectedGateway.docsUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-primary hover:underline">
+                <ExternalLink className="w-4 h-4" />
+                View {selectedGateway.name} Documentation
+              </a>
+            )}
+
             <div className="flex gap-3 pt-4">
               <Button variant="outline" className="flex-1 gap-2" onClick={testConnection} disabled={testing || !formData.apiKey}>
                 {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-                Test
+                Test Connection
               </Button>
               <Button className="flex-1 gap-2 bg-gradient-to-r from-primary to-primary/80" onClick={saveGatewayConfig}>
                 <CheckCircle className="w-4 h-4" />
-                Save
+                Save Gateway
               </Button>
             </div>
           </div>

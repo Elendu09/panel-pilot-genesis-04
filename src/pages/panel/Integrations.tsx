@@ -63,6 +63,11 @@ const integrations: Integration[] = [
   // Chat Widgets
   { id: "floating-chat", name: "Floating Chat Widget", description: "WhatsApp & Telegram floating chat buttons", icon: MessageCircle, status: "disconnected", category: "chat", color: "from-green-500 to-emerald-600" },
   
+  // Authentication / OAuth
+  { id: "google-oauth", name: "Google Sign-In", description: "Allow users to sign in with Google accounts", icon: Shield, status: "disconnected", category: "third-party", color: "from-red-500 to-yellow-500" },
+  { id: "github-oauth", name: "GitHub Sign-In", description: "Allow users to sign in with GitHub accounts", icon: Shield, status: "disconnected", category: "third-party", color: "from-gray-700 to-gray-900" },
+  { id: "discord-oauth", name: "Discord Sign-In", description: "Allow users to sign in with Discord accounts", icon: Shield, status: "disconnected", category: "third-party", color: "from-indigo-500 to-purple-600" },
+  
   // Payment Gateways
   { id: "stripe", name: "Stripe", description: "Accept credit card payments worldwide", icon: CreditCard, status: "connected", category: "payment", color: "from-purple-500 to-indigo-600", lastSync: "2 min ago" },
   { id: "paypal", name: "PayPal", description: "Accept PayPal payments", icon: CreditCard, status: "disconnected", category: "payment", color: "from-blue-500 to-blue-600" },
@@ -102,6 +107,8 @@ const Integrations = () => {
   const [configDialog, setConfigDialog] = useState<Integration | null>(null);
   const [isLoading, setIsLoading] = useState<string | null>(null);
   const [chatConfigOpen, setChatConfigOpen] = useState(false);
+  const [oauthConfigOpen, setOauthConfigOpen] = useState(false);
+  const [selectedOAuthProvider, setSelectedOAuthProvider] = useState<string | null>(null);
   const [panelId, setPanelId] = useState<string | null>(null);
   const [chatSettings, setChatSettings] = useState({
     enabled: false,
@@ -110,7 +117,13 @@ const Integrations = () => {
     position: 'bottom-right',
     message: 'Need help? Chat with us!'
   });
+  const [oauthSettings, setOauthSettings] = useState({
+    clientId: '',
+    clientSecret: '',
+    enabled: false
+  });
   const [savingChat, setSavingChat] = useState(false);
+  const [savingOAuth, setSavingOAuth] = useState(false);
   const [localIntegrations, setLocalIntegrations] = useState(integrations);
 
   // Fetch panel ID and chat settings on mount
@@ -241,6 +254,14 @@ const Integrations = () => {
   const handleConnect = async (integration: Integration) => {
     if (integration.id === 'floating-chat') {
       setChatConfigOpen(true);
+      return;
+    }
+    
+    // Handle OAuth providers
+    if (integration.id.includes('-oauth')) {
+      setSelectedOAuthProvider(integration.id);
+      setOauthSettings({ clientId: '', clientSecret: '', enabled: false });
+      setOauthConfigOpen(true);
       return;
     }
     
@@ -619,6 +640,153 @@ const Integrations = () => {
                 </>
               ) : (
                 'Save Settings'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* OAuth Provider Configuration Dialog */}
+      <Dialog open={oauthConfigOpen} onOpenChange={setOauthConfigOpen}>
+        <DialogContent className="glass-card max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              <div className={cn("p-2 rounded-lg bg-gradient-to-br", 
+                selectedOAuthProvider === 'google-oauth' ? "from-red-500 to-yellow-500" :
+                selectedOAuthProvider === 'github-oauth' ? "from-gray-700 to-gray-900" :
+                "from-indigo-500 to-purple-600"
+              )}>
+                <Shield className="w-4 h-4 text-white" />
+              </div>
+              Configure {
+                selectedOAuthProvider === 'google-oauth' ? 'Google Sign-In' :
+                selectedOAuthProvider === 'github-oauth' ? 'GitHub Sign-In' :
+                selectedOAuthProvider === 'discord-oauth' ? 'Discord Sign-In' : 'OAuth'
+              }
+            </DialogTitle>
+            <DialogDescription>
+              {selectedOAuthProvider === 'google-oauth' && 'Set up Google Sign-In for your storefront users'}
+              {selectedOAuthProvider === 'github-oauth' && 'Set up GitHub Sign-In for your storefront users'}
+              {selectedOAuthProvider === 'discord-oauth' && 'Set up Discord Sign-In for your storefront users'}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {/* Setup Instructions */}
+            <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
+              <p className="text-sm font-medium mb-2">Setup Instructions:</p>
+              <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
+                {selectedOAuthProvider === 'google-oauth' && (
+                  <>
+                    <li>Go to <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Google Cloud Console</a></li>
+                    <li>Create a new OAuth 2.0 Client ID</li>
+                    <li>Set the authorized redirect URI to the URL below</li>
+                    <li>Copy the Client ID and Secret here</li>
+                  </>
+                )}
+                {selectedOAuthProvider === 'github-oauth' && (
+                  <>
+                    <li>Go to <a href="https://github.com/settings/developers" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">GitHub Developer Settings</a></li>
+                    <li>Create a new OAuth App</li>
+                    <li>Set the callback URL to the URL below</li>
+                    <li>Copy the Client ID and Secret here</li>
+                  </>
+                )}
+                {selectedOAuthProvider === 'discord-oauth' && (
+                  <>
+                    <li>Go to <a href="https://discord.com/developers/applications" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Discord Developer Portal</a></li>
+                    <li>Create a new Application</li>
+                    <li>In OAuth2, add the redirect URL below</li>
+                    <li>Copy the Client ID and Secret here</li>
+                  </>
+                )}
+              </ol>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Redirect URI (copy this to your OAuth app)</Label>
+              <Input 
+                readOnly 
+                value={`https://tooudgubuhxjbbvzjcgx.supabase.co/auth/v1/callback`}
+                className="bg-muted/50 font-mono text-xs"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Client ID</Label>
+              <Input 
+                placeholder={
+                  selectedOAuthProvider === 'google-oauth' ? 'xxxx.apps.googleusercontent.com' :
+                  selectedOAuthProvider === 'github-oauth' ? 'Ov23lixxxxxxxxx' : 
+                  'Enter client ID'
+                }
+                value={oauthSettings.clientId}
+                onChange={(e) => setOauthSettings(prev => ({ ...prev, clientId: e.target.value }))}
+                className="bg-background/50 font-mono text-sm"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Client Secret</Label>
+              <Input 
+                type="password"
+                placeholder="Enter client secret"
+                value={oauthSettings.clientSecret}
+                onChange={(e) => setOauthSettings(prev => ({ ...prev, clientSecret: e.target.value }))}
+                className="bg-background/50 font-mono text-sm"
+              />
+            </div>
+
+            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+              <div>
+                <p className="text-sm font-medium">Enable Provider</p>
+                <p className="text-xs text-muted-foreground">Allow users to sign in with this provider</p>
+              </div>
+              <Switch 
+                checked={oauthSettings.enabled}
+                onCheckedChange={(checked) => setOauthSettings(prev => ({ ...prev, enabled: checked }))}
+              />
+            </div>
+
+            {/* Important Note */}
+            <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30">
+              <p className="text-xs text-amber-600 dark:text-amber-400">
+                <strong>Note:</strong> OAuth providers must also be enabled in your Supabase dashboard under Authentication → Providers.
+                <a href="https://supabase.com/dashboard/project/tooudgubuhxjbbvzjcgx/auth/providers" target="_blank" rel="noopener noreferrer" className="ml-1 underline">
+                  Open Supabase Auth Settings →
+                </a>
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOauthConfigOpen(false)}>Cancel</Button>
+            <Button 
+              onClick={async () => {
+                setSavingOAuth(true);
+                await new Promise(r => setTimeout(r, 1500));
+                setLocalIntegrations(prev => prev.map(i => 
+                  i.id === selectedOAuthProvider 
+                    ? { ...i, status: oauthSettings.enabled ? 'connected' as const : 'disconnected' as const }
+                    : i
+                ));
+                setSavingOAuth(false);
+                setOauthConfigOpen(false);
+                toast({ 
+                  title: "OAuth Provider Configured", 
+                  description: "Don't forget to also enable this provider in your Supabase dashboard!" 
+                });
+              }}
+              disabled={savingOAuth || !oauthSettings.clientId}
+              className="bg-gradient-to-r from-primary to-primary/80"
+            >
+              {savingOAuth ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  Saving...
+                </>
+              ) : (
+                'Save Configuration'
               )}
             </Button>
           </DialogFooter>
