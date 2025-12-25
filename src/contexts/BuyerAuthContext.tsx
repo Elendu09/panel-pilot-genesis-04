@@ -88,11 +88,28 @@ export function BuyerAuthProvider({ children, panelId }: { children: ReactNode; 
 
   const signIn = async (email: string, password: string, panelId: string) => {
     try {
+      // Input validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const trimmedEmail = email.trim().toLowerCase();
+      
+      if (!trimmedEmail || !emailRegex.test(trimmedEmail)) {
+        return { error: { message: 'Invalid email format' } };
+      }
+      if (trimmedEmail.length > 254) {
+        return { error: { message: 'Email address is too long' } };
+      }
+      if (!password || password.length < 1) {
+        return { error: { message: 'Password is required' } };
+      }
+      if (password.length > 128) {
+        return { error: { message: 'Password is too long' } };
+      }
+
       // Simple password check - in production you'd use proper hashing
       const { data, error } = await supabase
         .from('client_users')
         .select('*')
-        .eq('email', email.toLowerCase())
+        .eq('email', trimmedEmail)
         .eq('panel_id', panelId)
         .eq('is_active', true)
         .single();
@@ -125,11 +142,35 @@ export function BuyerAuthProvider({ children, panelId }: { children: ReactNode; 
 
   const signUp = async (email: string, password: string, fullName: string, panelId: string) => {
     try {
+      // Input validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const trimmedEmail = email.trim().toLowerCase();
+      const trimmedName = fullName.trim();
+      
+      if (!trimmedEmail || !emailRegex.test(trimmedEmail)) {
+        return { error: { message: 'Invalid email format' } };
+      }
+      if (trimmedEmail.length > 254) {
+        return { error: { message: 'Email address is too long' } };
+      }
+      if (!password || password.length < 6) {
+        return { error: { message: 'Password must be at least 6 characters' } };
+      }
+      if (password.length > 128) {
+        return { error: { message: 'Password is too long' } };
+      }
+      if (!trimmedName || trimmedName.length < 2) {
+        return { error: { message: 'Full name must be at least 2 characters' } };
+      }
+      if (trimmedName.length > 100) {
+        return { error: { message: 'Full name is too long' } };
+      }
+
       // Check if email already exists for this panel
       const { data: existing } = await supabase
         .from('client_users')
         .select('id')
-        .eq('email', email.toLowerCase())
+        .eq('email', trimmedEmail)
         .eq('panel_id', panelId)
         .single();
 
@@ -141,8 +182,8 @@ export function BuyerAuthProvider({ children, panelId }: { children: ReactNode; 
       const { data, error } = await supabase
         .from('client_users')
         .insert({
-          email: email.toLowerCase(),
-          full_name: fullName,
+          email: trimmedEmail,
+          full_name: trimmedName,
           password_temp: password, // In production, use proper hashing
           panel_id: panelId,
           is_active: true,
