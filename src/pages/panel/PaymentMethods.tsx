@@ -40,22 +40,18 @@ const paymentGateways = {
 
 type GatewayType = { id: string; name: string; Icon: React.FC<{ className?: string }>; regions: string[]; fee: string; docsUrl?: string };
 
-const categoryIcons = {
+const categoryIcons: Record<keyof typeof paymentGateways, React.ElementType> = {
   cards: CreditCard,
   regional: Globe,
   bank: Building2,
-  wallets: Smartphone,
   crypto: Bitcoin,
-  ewallets: Wallet,
 };
 
-const categoryLabels = {
+const categoryLabels: Record<keyof typeof paymentGateways, string> = {
   cards: "Card Payments",
   regional: "Regional Gateways",
   bank: "Bank Transfers",
-  wallets: "Mobile Wallets",
   crypto: "Cryptocurrency",
-  ewallets: "E-Wallets",
 };
 
 const PaymentMethods = () => {
