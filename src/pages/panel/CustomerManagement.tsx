@@ -85,6 +85,8 @@ import { BulkEmailDialog } from "@/components/customers/BulkEmailDialog";
 import { BulkDiscountDialog } from "@/components/customers/BulkDiscountDialog";
 import { BulkBalanceDialog } from "@/components/customers/BulkBalanceDialog";
 import { BulkEditDialog } from "@/components/customers/BulkEditDialog";
+import { CustomerDetailsSheet } from "@/components/customers/CustomerDetailsSheet";
+import { CustomerEditDialog } from "@/components/customers/CustomerEditDialog";
 
 interface Customer {
   id: string;
@@ -120,6 +122,8 @@ const CustomerManagement = () => {
   const [showBulkDiscountDialog, setShowBulkDiscountDialog] = useState(false);
   const [showBulkBalanceDialog, setShowBulkBalanceDialog] = useState(false);
   const [showBulkEditDialog, setShowBulkEditDialog] = useState(false);
+  const [showDetailsSheet, setShowDetailsSheet] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const [balanceAction, setBalanceAction] = useState<"add" | "subtract">("add");
   const [balanceAmount, setBalanceAmount] = useState("");
   const [balanceReason, setBalanceReason] = useState("");
@@ -456,6 +460,109 @@ const CustomerManagement = () => {
     toast({ title: `${action} - ${customer.name}`, description: `Action "${action}" performed successfully.` });
   };
 
+  // Single customer actions
+  const handleSingleSuspend = async (customerId: string) => {
+    try {
+      const { error } = await supabase
+        .from('client_users')
+        .update({ is_active: false })
+        .eq('id', customerId);
+
+      if (error) throw error;
+
+      setCustomers(prev => prev.map(c => 
+        c.id === customerId ? { ...c, status: "suspended" as const } : c
+      ));
+      toast({ title: "Customer Suspended", description: "Customer has been suspended" });
+    } catch (error) {
+      console.error('Error suspending customer:', error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to suspend customer' });
+    }
+  };
+
+  const handleSingleActivate = async (customerId: string) => {
+    try {
+      const { error } = await supabase
+        .from('client_users')
+        .update({ is_active: true, is_banned: false, ban_reason: null, banned_at: null })
+        .eq('id', customerId);
+
+      if (error) throw error;
+
+      setCustomers(prev => prev.map(c => 
+        c.id === customerId ? { ...c, status: "active" as const } : c
+      ));
+      toast({ title: "Customer Activated", description: "Customer has been activated" });
+    } catch (error) {
+      console.error('Error activating customer:', error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to activate customer' });
+    }
+  };
+
+  const handleSingleBan = async (customerId: string, reason?: string) => {
+    try {
+      const { error } = await supabase
+        .from('client_users')
+        .update({ 
+          is_banned: true, 
+          is_active: false, 
+          ban_reason: reason || 'Banned by admin',
+          banned_at: new Date().toISOString()
+        })
+        .eq('id', customerId);
+
+      if (error) throw error;
+
+      setCustomers(prev => prev.map(c => 
+        c.id === customerId ? { ...c, status: "suspended" as const } : c
+      ));
+      toast({ title: "Customer Banned", description: "Customer has been banned" });
+    } catch (error) {
+      console.error('Error banning customer:', error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to ban customer' });
+    }
+  };
+
+  const handleSingleUnban = async (customerId: string) => {
+    try {
+      const { error } = await supabase
+        .from('client_users')
+        .update({ 
+          is_banned: false, 
+          is_active: true, 
+          ban_reason: null,
+          banned_at: null
+        })
+        .eq('id', customerId);
+
+      if (error) throw error;
+
+      setCustomers(prev => prev.map(c => 
+        c.id === customerId ? { ...c, status: "active" as const } : c
+      ));
+      toast({ title: "Customer Unbanned", description: "Customer has been unbanned" });
+    } catch (error) {
+      console.error('Error unbanning customer:', error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to unban customer' });
+    }
+  };
+
+  const handleViewDetails = (customer: Customer) => {
+    setSelectedCustomer(customer);
+    setShowDetailsSheet(true);
+  };
+
+  const handleEditCustomer = (customer: Customer) => {
+    setSelectedCustomer(customer);
+    setShowEditDialog(true);
+  };
+
+  const handleCustomerSaved = () => {
+    fetchCustomers();
+    setShowEditDialog(false);
+    setShowDetailsSheet(false);
+  };
+
   const handleAddCustomer = async (newCustomer: NewCustomer) => {
     if (!panel?.id) return;
 
@@ -712,8 +819,11 @@ const CustomerManagement = () => {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="glass">
-                            <DropdownMenuItem onClick={() => setSelectedCustomer(customer)}>
+                            <DropdownMenuItem onClick={() => handleViewDetails(customer)}>
                               <Eye className="w-4 h-4 mr-2" /> View Details
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleEditCustomer(customer)}>
+                              <Edit className="w-4 h-4 mr-2" /> Edit Customer
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleSetPricing(customer)}>
                               <Percent className="w-4 h-4 mr-2" /> Set Pricing
@@ -733,7 +843,7 @@ const CustomerManagement = () => {
                             <DropdownMenuSeparator />
                             <DropdownMenuItem 
                               className="text-destructive"
-                              onClick={() => customer.status === 'suspended' ? handleBulkActivate() : handleBulkSuspend()}
+                              onClick={() => customer.status === 'suspended' ? handleSingleActivate(customer.id) : handleSingleSuspend(customer.id)}
                             >
                               <Ban className="w-4 h-4 mr-2" /> 
                               {customer.status === 'suspended' ? 'Activate' : 'Suspend'}
@@ -754,10 +864,10 @@ const CustomerManagement = () => {
               <CustomerMobileCard
                 key={customer.id}
                 customer={customer as any}
-                onView={() => setSelectedCustomer(customer)}
-                onEdit={() => setSelectedCustomer(customer)}
+                onView={() => handleViewDetails(customer)}
+                onEdit={() => handleEditCustomer(customer)}
                 onAdjustBalance={() => { setSelectedCustomer(customer); setShowBalanceModal(true); }}
-                onSuspend={async () => { setSelectedCustomers([customer.id]); await handleBulkSuspend(); }}
+                onSuspend={async () => { await handleSingleSuspend(customer.id); }}
               />
             ))}
           </div>
@@ -816,6 +926,60 @@ const CustomerManagement = () => {
         onSuspend={handleBulkSuspend}
         onAdjustBalance={handleBulkBalance}
       />
+
+      {/* Customer Details Sheet */}
+      {selectedCustomer && (
+        <CustomerDetailsSheet
+          open={showDetailsSheet}
+          onOpenChange={setShowDetailsSheet}
+          customer={{
+            id: selectedCustomer.id,
+            name: selectedCustomer.name,
+            email: selectedCustomer.email,
+            username: selectedCustomer.username,
+            status: selectedCustomer.status,
+            segment: selectedCustomer.segment,
+            balance: selectedCustomer.balance,
+            totalSpent: selectedCustomer.totalSpent,
+            totalOrders: selectedCustomer.totalOrders,
+            joinedAt: selectedCustomer.joinedAt,
+            lastActive: selectedCustomer.lastActive,
+            isOnline: selectedCustomer.isOnline,
+            referralCode: selectedCustomer.referralCode,
+            customDiscount: selectedCustomer.customDiscount,
+            isBanned: selectedCustomer.status === 'suspended',
+          }}
+          onEdit={() => handleEditCustomer(selectedCustomer)}
+          onAdjustBalance={() => { setShowDetailsSheet(false); setShowBalanceModal(true); }}
+          onSetPricing={() => { setShowDetailsSheet(false); setShowPricingDialog(true); }}
+          onSuspend={() => handleSingleSuspend(selectedCustomer.id)}
+          onActivate={() => handleSingleActivate(selectedCustomer.id)}
+          onBan={(reason) => handleSingleBan(selectedCustomer.id, reason)}
+          onUnban={() => handleSingleUnban(selectedCustomer.id)}
+        />
+      )}
+
+      {/* Customer Edit Dialog */}
+      {selectedCustomer && (
+        <CustomerEditDialog
+          open={showEditDialog}
+          onOpenChange={setShowEditDialog}
+          customer={{
+            id: selectedCustomer.id,
+            email: selectedCustomer.email,
+            full_name: selectedCustomer.name,
+            username: selectedCustomer.username || null,
+            balance: selectedCustomer.balance,
+            total_spent: selectedCustomer.totalSpent,
+            is_active: selectedCustomer.status === 'active',
+            is_banned: selectedCustomer.status === 'suspended',
+            custom_discount: selectedCustomer.customDiscount || 0,
+            referral_code: selectedCustomer.referralCode || null,
+            created_at: selectedCustomer.joinedAt,
+          }}
+          onSave={handleCustomerSaved}
+        />
+      )}
 
       {/* Balance Adjustment Modal */}
       <Dialog open={showBalanceModal} onOpenChange={setShowBalanceModal}>
