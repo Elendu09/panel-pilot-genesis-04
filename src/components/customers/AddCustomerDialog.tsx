@@ -112,9 +112,12 @@ export function AddCustomerDialog({ open, onOpenChange, onAdd }: AddCustomerDial
       return;
     }
 
+    // Normalize email to lowercase
+    const normalizedEmail = formData.email.trim().toLowerCase();
+
     onAdd({
-      fullName: formData.fullName,
-      email: formData.email,
+      fullName: formData.fullName.trim(),
+      email: normalizedEmail,
       username: formData.username,
       password: formData.password,
       balance: parseFloat(formData.balance) || 0,

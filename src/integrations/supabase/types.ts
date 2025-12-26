@@ -535,12 +535,15 @@ export type Database = {
       client_users: {
         Row: {
           balance: number | null
+          ban_reason: string | null
+          banned_at: string | null
           created_at: string
           custom_discount: number | null
           email: string
           full_name: string | null
           id: string
           is_active: boolean | null
+          is_banned: boolean | null
           last_login_at: string | null
           panel_id: string | null
           password_hash: string | null
@@ -554,12 +557,15 @@ export type Database = {
         }
         Insert: {
           balance?: number | null
+          ban_reason?: string | null
+          banned_at?: string | null
           created_at?: string
           custom_discount?: number | null
           email: string
           full_name?: string | null
           id?: string
           is_active?: boolean | null
+          is_banned?: boolean | null
           last_login_at?: string | null
           panel_id?: string | null
           password_hash?: string | null
@@ -573,12 +579,15 @@ export type Database = {
         }
         Update: {
           balance?: number | null
+          ban_reason?: string | null
+          banned_at?: string | null
           created_at?: string
           custom_discount?: number | null
           email?: string
           full_name?: string | null
           id?: string
           is_active?: boolean | null
+          is_banned?: boolean | null
           last_login_at?: string | null
           panel_id?: string | null
           password_hash?: string | null
