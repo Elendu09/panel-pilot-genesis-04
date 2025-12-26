@@ -168,12 +168,20 @@ export const ThemeThree = ({ panel, services = [], customization = {} }: ThemeTh
             </motion.p>
             
             <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
-              <ShiningButton gradient="accent" size="lg" className="text-lg px-10 py-6 bg-gradient-to-r from-orange-500 to-amber-500 shadow-xl shadow-orange-500/25" asChild>
-                <Link to="/services">⚡ Fast Order <ArrowRight className="ml-2 w-5 h-5" /></Link>
-              </ShiningButton>
-              <Button asChild variant="outline" size="lg" className="text-lg px-10 py-6 border-gray-300 text-gray-700 hover:bg-white shadow-lg">
-                <Link to="/register"><Sparkles className="mr-2" /> Start Now</Link>
-              </Button>
+              {customization.enableFastOrder ? (
+                <ShiningButton gradient="accent" size="lg" className="text-lg px-10 py-6 bg-gradient-to-r from-orange-500 to-amber-500 shadow-xl shadow-orange-500/25" asChild>
+                  <a href="#fast-order">⚡ Fast Order <ArrowRight className="ml-2 w-5 h-5" /></a>
+                </ShiningButton>
+              ) : (
+                <>
+                  <ShiningButton gradient="accent" size="lg" className="text-lg px-10 py-6 bg-gradient-to-r from-orange-500 to-amber-500 shadow-xl shadow-orange-500/25" asChild>
+                    <Link to="/register">Get Started <ArrowRight className="ml-2 w-5 h-5" /></Link>
+                  </ShiningButton>
+                  <Button asChild variant="outline" size="lg" className="text-lg px-10 py-6 border-gray-300 text-gray-700 hover:bg-white shadow-lg">
+                    <a href="#services"><Sparkles className="mr-2" /> Services</a>
+                  </Button>
+                </>
+              )}
             </motion.div>
             
             <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="flex flex-wrap justify-center gap-4">

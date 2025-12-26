@@ -175,12 +175,20 @@ export const ThemeOne = ({ panel, services = [], customization = {} }: ThemeOneP
             </motion.p>
             
             <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-              <ShiningButton gradient="rainbow" size="lg" className="text-lg px-10 py-6 shadow-2xl" style={{ borderRadius: `${borderRadius}px`, boxShadow: `0 25px 50px -12px ${primaryColor}40` }} asChild>
-                <Link to="/services">⚡ Fast Order <ArrowRight className="ml-2 w-5 h-5" /></Link>
-              </ShiningButton>
-              <Button asChild variant="outline" size="lg" className="text-lg px-10 py-6 border-white/30 text-white hover:bg-white/10 backdrop-blur-sm" style={{ borderRadius: `${borderRadius}px` }}>
-                <Link to="/register"><PlayCircle className="mr-2" /> Create Account</Link>
-              </Button>
+              {customization.enableFastOrder ? (
+                <ShiningButton gradient="rainbow" size="lg" className="text-lg px-10 py-6 shadow-2xl" style={{ borderRadius: `${borderRadius}px`, boxShadow: `0 25px 50px -12px ${primaryColor}40` }} asChild>
+                  <a href="#fast-order">⚡ Fast Order <ArrowRight className="ml-2 w-5 h-5" /></a>
+                </ShiningButton>
+              ) : (
+                <>
+                  <ShiningButton gradient="rainbow" size="lg" className="text-lg px-10 py-6 shadow-2xl" style={{ borderRadius: `${borderRadius}px`, boxShadow: `0 25px 50px -12px ${primaryColor}40` }} asChild>
+                    <Link to="/register">Get Started <ArrowRight className="ml-2 w-5 h-5" /></Link>
+                  </ShiningButton>
+                  <Button asChild variant="outline" size="lg" className="text-lg px-10 py-6 border-white/30 text-white hover:bg-white/10 backdrop-blur-sm" style={{ borderRadius: `${borderRadius}px` }}>
+                    <a href="#services"><PlayCircle className="mr-2" /> Services</a>
+                  </Button>
+                </>
+              )}
             </motion.div>
             
             <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="grid grid-cols-2 md:grid-cols-4 gap-4">
