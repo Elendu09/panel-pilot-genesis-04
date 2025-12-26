@@ -13,6 +13,9 @@ interface BuyerUser {
   referral_count: number;
   custom_discount: number;
   is_active: boolean;
+  is_banned: boolean;
+  banned_at: string | null;
+  ban_reason: string | null;
   panel_id: string;
   created_at: string;
 }
@@ -20,7 +23,7 @@ interface BuyerUser {
 interface BuyerAuthContextType {
   buyer: BuyerUser | null;
   loading: boolean;
-  signIn: (email: string, password: string, panelId: string) => Promise<{ error: any }>;
+  signIn: (identifier: string, password: string, panelId: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, fullName: string, panelId: string) => Promise<{ error: any }>;
   signOut: () => void;
   refreshBuyer: () => Promise<void>;
@@ -58,19 +61,20 @@ export function BuyerAuthProvider({ children, panelId }: { children: ReactNode; 
 
   const fetchBuyer = async (buyerId: string) => {
     try {
-      const { data, error } = await supabase
-        .from('client_users')
-        .select('*')
-        .eq('id', buyerId)
-        .eq('panel_id', panelId)
-        .eq('is_active', true)
-        .single();
+      // Use edge function to fetch buyer data (bypasses RLS)
+      const { data, error } = await supabase.functions.invoke('buyer-auth', {
+        body: { 
+          panelId, 
+          action: 'fetch',
+          buyerId 
+        }
+      });
 
-      if (error || !data) {
+      if (error || !data?.user) {
         localStorage.removeItem(BUYER_STORAGE_KEY);
         setBuyer(null);
       } else {
-        setBuyer(data as BuyerUser);
+        setBuyer(data.user as BuyerUser);
       }
     } catch {
       localStorage.removeItem(BUYER_STORAGE_KEY);
@@ -86,17 +90,16 @@ export function BuyerAuthProvider({ children, panelId }: { children: ReactNode; 
     }
   };
 
-  const signIn = async (email: string, password: string, panelId: string) => {
+  const signIn = async (identifier: string, password: string, panelId: string) => {
     try {
       // Input validation
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      const trimmedEmail = email.trim().toLowerCase();
+      const trimmedIdentifier = identifier.trim();
       
-      if (!trimmedEmail || !emailRegex.test(trimmedEmail)) {
-        return { error: { message: 'Invalid email format' } };
+      if (!trimmedIdentifier || trimmedIdentifier.length < 1) {
+        return { error: { message: 'Email or username is required' } };
       }
-      if (trimmedEmail.length > 254) {
-        return { error: { message: 'Email address is too long' } };
+      if (trimmedIdentifier.length > 254) {
+        return { error: { message: 'Email or username is too long' } };
       }
       if (!password || password.length < 1) {
         return { error: { message: 'Password is required' } };
@@ -105,42 +108,37 @@ export function BuyerAuthProvider({ children, panelId }: { children: ReactNode; 
         return { error: { message: 'Password is too long' } };
       }
 
-      // Simple password check - in production you'd use proper hashing
-      const { data, error } = await supabase
-        .from('client_users')
-        .select('*')
-        .eq('email', trimmedEmail)
-        .eq('panel_id', panelId)
-        .eq('is_active', true)
-        .single();
+      // Call edge function for authentication (bypasses RLS)
+      const { data, error } = await supabase.functions.invoke('buyer-auth', {
+        body: { 
+          panelId, 
+          identifier: trimmedIdentifier, 
+          password,
+          action: 'login'
+        }
+      });
 
-      if (error || !data) {
-        return { error: { message: 'No account found with this email' } };
+      if (error) {
+        console.error('Edge function error:', error);
+        return { error: { message: 'Authentication service unavailable' } };
       }
 
-      // Check if account is active
-      if (!data.is_active) {
-        return { error: { message: 'Your account has been suspended. Please contact support.' } };
+      if (data?.error) {
+        return { error: { message: data.error, reason: data.reason } };
       }
 
-      // Check password (using password_temp for demo, would use password_hash in production)
-      if (data.password_temp !== password && data.password_hash !== password) {
-        return { error: { message: 'Incorrect password. Please try again.' } };
+      if (!data?.user) {
+        return { error: { message: 'Login failed. Please try again.' } };
       }
-
-      // Update last login
-      await supabase
-        .from('client_users')
-        .update({ last_login_at: new Date().toISOString() })
-        .eq('id', data.id);
 
       // Store session
-      localStorage.setItem(BUYER_STORAGE_KEY, JSON.stringify({ buyerId: data.id, panelId }));
-      setBuyer(data as BuyerUser);
+      localStorage.setItem(BUYER_STORAGE_KEY, JSON.stringify({ buyerId: data.user.id, panelId }));
+      setBuyer(data.user as BuyerUser);
 
-      toast({ title: 'Welcome back!', description: `Logged in as ${data.email}` });
+      toast({ title: 'Welcome back!', description: `Logged in as ${data.user.email}` });
       return { error: null };
     } catch (err: any) {
+      console.error('Sign in error:', err);
       return { error: { message: err.message || 'Login failed' } };
     }
   };
@@ -171,6 +169,10 @@ export function BuyerAuthProvider({ children, panelId }: { children: ReactNode; 
         return { error: { message: 'Full name is too long' } };
       }
 
+      // For signup, we need to use service role - call via edge function would be needed
+      // For now, use direct insert which works if RLS allows panel owners
+      // In production, create a signup edge function
+      
       // Check if email already exists for this panel
       const { data: existing } = await supabase
         .from('client_users')
@@ -189,9 +191,10 @@ export function BuyerAuthProvider({ children, panelId }: { children: ReactNode; 
         .insert({
           email: trimmedEmail,
           full_name: trimmedName,
-          password_temp: password, // In production, use proper hashing
+          password_temp: password,
           panel_id: panelId,
           is_active: true,
+          is_banned: false,
           balance: 0,
           total_spent: 0,
         })
@@ -199,6 +202,7 @@ export function BuyerAuthProvider({ children, panelId }: { children: ReactNode; 
         .single();
 
       if (error) {
+        console.error('Signup error:', error);
         return { error: { message: error.message } };
       }
 

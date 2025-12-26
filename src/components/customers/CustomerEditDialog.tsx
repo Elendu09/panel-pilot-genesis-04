@@ -15,11 +15,12 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { 
   User, 
-  Mail, 
   DollarSign, 
   Percent, 
   Shield, 
@@ -28,9 +29,13 @@ import {
   History,
   TrendingUp,
   TrendingDown,
-  RefreshCw
+  RefreshCw,
+  Ban,
+  UserCheck,
+  AlertTriangle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 
 interface Customer {
   id: string;
@@ -40,6 +45,9 @@ interface Customer {
   balance: number;
   total_spent: number;
   is_active: boolean;
+  is_banned?: boolean;
+  banned_at?: string;
+  ban_reason?: string;
   custom_discount: number;
   referral_code: string | null;
   created_at: string;
@@ -65,6 +73,8 @@ export const CustomerEditDialog = ({
     email: "",
     username: "",
     is_active: true,
+    is_banned: false,
+    ban_reason: "",
     custom_discount: 0,
   });
   
@@ -73,15 +83,27 @@ export const CustomerEditDialog = ({
   const [adjustmentAmount, setAdjustmentAmount] = useState("");
   const [adjustmentReason, setAdjustmentReason] = useState("");
 
+  // Account status
+  const [accountStatus, setAccountStatus] = useState<'active' | 'suspended' | 'banned'>('active');
+
   useEffect(() => {
     if (customer) {
+      const status = customer.is_banned 
+        ? 'banned' 
+        : customer.is_active 
+          ? 'active' 
+          : 'suspended';
+      
       setFormData({
         full_name: customer.full_name || "",
         email: customer.email,
         username: customer.username || "",
         is_active: customer.is_active,
+        is_banned: customer.is_banned || false,
+        ban_reason: customer.ban_reason || "",
         custom_discount: customer.custom_discount || 0,
       });
+      setAccountStatus(status);
     }
   }, [customer]);
 
@@ -90,16 +112,35 @@ export const CustomerEditDialog = ({
     
     setLoading(true);
     try {
+      const updateData: any = {
+        full_name: formData.full_name || null,
+        email: formData.email.trim().toLowerCase(), // Normalize email
+        username: formData.username || null,
+        custom_discount: formData.custom_discount,
+        updated_at: new Date().toISOString()
+      };
+
+      // Handle status changes
+      if (accountStatus === 'banned') {
+        updateData.is_banned = true;
+        updateData.banned_at = new Date().toISOString();
+        updateData.ban_reason = formData.ban_reason || null;
+        updateData.is_active = false;
+      } else if (accountStatus === 'suspended') {
+        updateData.is_active = false;
+        updateData.is_banned = false;
+        updateData.banned_at = null;
+        updateData.ban_reason = null;
+      } else {
+        updateData.is_active = true;
+        updateData.is_banned = false;
+        updateData.banned_at = null;
+        updateData.ban_reason = null;
+      }
+
       const { error } = await supabase
         .from('client_users')
-        .update({
-          full_name: formData.full_name || null,
-          email: formData.email,
-          username: formData.username || null,
-          is_active: formData.is_active,
-          custom_discount: formData.custom_discount,
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', customer.id);
 
       if (error) throw error;
@@ -315,8 +356,14 @@ export const CustomerEditDialog = ({
                       <p className="text-sm text-muted-foreground">Current Balance</p>
                       <p className="text-3xl font-bold">${customer.balance?.toFixed(2) || '0.00'}</p>
                     </div>
-                    <Badge variant="outline" className="bg-primary/10 text-primary">
-                      {customer.is_active ? 'Active' : 'Inactive'}
+                    <Badge variant="outline" className={cn(
+                      customer.is_banned 
+                        ? "bg-red-500/10 text-red-500" 
+                        : customer.is_active 
+                          ? "bg-primary/10 text-primary"
+                          : "bg-amber-500/10 text-amber-500"
+                    )}>
+                      {customer.is_banned ? 'Banned' : customer.is_active ? 'Active' : 'Suspended'}
                     </Badge>
                   </div>
                 </CardContent>
@@ -383,22 +430,81 @@ export const CustomerEditDialog = ({
 
             {/* Settings Tab */}
             <TabsContent value="settings" className="m-0 space-y-4">
-              {/* Status */}
-              <div className="flex items-center justify-between p-4 rounded-xl border">
-                <div className="flex items-center gap-3">
-                  <Shield className="w-5 h-5 text-muted-foreground" />
-                  <div>
-                    <p className="font-medium">Account Status</p>
-                    <p className="text-sm text-muted-foreground">
-                      {formData.is_active ? 'Active account' : 'Suspended account'}
-                    </p>
+              {/* Account Status */}
+              <div className="space-y-3">
+                <Label className="flex items-center gap-2">
+                  <Shield className="w-4 h-4" />
+                  Account Status
+                </Label>
+                <RadioGroup
+                  value={accountStatus}
+                  onValueChange={(v) => setAccountStatus(v as 'active' | 'suspended' | 'banned')}
+                  className="space-y-2"
+                >
+                  <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
+                    <RadioGroupItem value="active" id="active" />
+                    <Label htmlFor="active" className="flex-1 cursor-pointer flex items-center gap-2">
+                      <UserCheck className="w-4 h-4 text-green-500" />
+                      <div>
+                        <p className="font-medium">Active</p>
+                        <p className="text-xs text-muted-foreground">Account has full access</p>
+                      </div>
+                    </Label>
                   </div>
-                </div>
-                <Switch
-                  checked={formData.is_active}
-                  onCheckedChange={(checked) => setFormData({...formData, is_active: checked})}
-                />
+                  <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
+                    <RadioGroupItem value="suspended" id="suspended" />
+                    <Label htmlFor="suspended" className="flex-1 cursor-pointer flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 text-amber-500" />
+                      <div>
+                        <p className="font-medium">Suspended</p>
+                        <p className="text-xs text-muted-foreground">Temporarily disabled, can be reactivated</p>
+                      </div>
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
+                    <RadioGroupItem value="banned" id="banned" />
+                    <Label htmlFor="banned" className="flex-1 cursor-pointer flex items-center gap-2">
+                      <Ban className="w-4 h-4 text-red-500" />
+                      <div>
+                        <p className="font-medium">Banned</p>
+                        <p className="text-xs text-muted-foreground">Permanently banned from the panel</p>
+                      </div>
+                    </Label>
+                  </div>
+                </RadioGroup>
               </div>
+
+              {/* Ban Reason */}
+              {accountStatus === 'banned' && (
+                <div className="space-y-2">
+                  <Label>Ban Reason</Label>
+                  <Textarea
+                    placeholder="Enter reason for banning this customer..."
+                    value={formData.ban_reason}
+                    onChange={(e) => setFormData({...formData, ban_reason: e.target.value})}
+                    rows={3}
+                  />
+                </div>
+              )}
+
+              {/* Show current ban info if banned */}
+              {customer.is_banned && customer.banned_at && (
+                <Card className="border-red-500/20 bg-red-500/5">
+                  <CardContent className="p-3 text-sm">
+                    <p className="text-red-500 font-medium">Currently Banned</p>
+                    <p className="text-muted-foreground">
+                      Banned on: {format(new Date(customer.banned_at), 'PPp')}
+                    </p>
+                    {customer.ban_reason && (
+                      <p className="text-muted-foreground mt-1">
+                        Reason: {customer.ban_reason}
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              <Separator />
 
               {/* Custom Discount */}
               <div className="space-y-2">
