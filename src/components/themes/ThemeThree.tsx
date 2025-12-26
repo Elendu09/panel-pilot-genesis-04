@@ -27,8 +27,25 @@ export const ThemeThree = ({ panel, services = [], customization = {} }: ThemeTh
     textColor: customization.textColor || '#1F2937',
   };
 
+  // Inject CSS variables for the theme
+  const themeStyles = `
+    :root {
+      --theme-primary: ${themeThreeCustomization.primaryColor};
+      --theme-secondary: ${themeThreeCustomization.secondaryColor};
+      --theme-background: ${themeThreeCustomization.backgroundColor};
+      --theme-text: ${themeThreeCustomization.textColor};
+    }
+  `;
+
   return (
-    <div className="min-h-screen" style={{ backgroundColor: themeThreeCustomization.backgroundColor }}>
+    <div 
+      className="min-h-screen" 
+      style={{ 
+        backgroundColor: themeThreeCustomization.backgroundColor,
+        color: themeThreeCustomization.textColor 
+      }}
+    >
+      <style>{themeStyles}</style>
       {/* Navigation */}
       <StorefrontNavigation panel={panel} customization={themeThreeCustomization} />
 

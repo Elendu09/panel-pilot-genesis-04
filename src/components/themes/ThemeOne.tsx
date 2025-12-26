@@ -21,10 +21,29 @@ export const ThemeOne = ({ panel, services = [], customization = {} }: ThemeOneP
     logoUrl: customization.logoUrl || panel?.logo_url,
     primaryColor: customization.primaryColor || panel?.primary_color || '#8B5CF6',
     secondaryColor: customization.secondaryColor || panel?.secondary_color || '#EC4899',
+    backgroundColor: customization.backgroundColor || '#0F172A',
+    textColor: customization.textColor || '#FFFFFF',
   };
 
+  // Inject CSS variables for the theme
+  const themeStyles = `
+    :root {
+      --theme-primary: ${mergedCustomization.primaryColor};
+      --theme-secondary: ${mergedCustomization.secondaryColor};
+      --theme-background: ${mergedCustomization.backgroundColor};
+      --theme-text: ${mergedCustomization.textColor};
+    }
+  `;
+
   return (
-    <div className="min-h-screen bg-background">
+    <div 
+      className="min-h-screen" 
+      style={{ 
+        backgroundColor: mergedCustomization.backgroundColor,
+        color: mergedCustomization.textColor 
+      }}
+    >
+      <style>{themeStyles}</style>
       {/* Navigation */}
       <StorefrontNavigation panel={panel} customization={mergedCustomization} />
 

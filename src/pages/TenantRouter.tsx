@@ -50,29 +50,9 @@ const TenantRouter = () => {
     setLoadingTimeout(false);
   }, [loading]);
 
-  // Show loading state wrapped in providers for consistent styling
+  // Skip loading spinner - render immediately
   if (loading && !loadingTimeout) {
-    const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
-    return (
-      <QueryClientProvider client={queryClient}>
-        <HelmetProvider>
-          <ThemeProvider defaultTheme="dark" storageKey="smm-panel-theme">
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-primary/5 to-secondary/10">
-              <div className="text-center max-w-md px-6">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-                <p className="text-muted-foreground mb-2">Connecting to panel...</p>
-                <p className="text-xs text-muted-foreground/60 font-mono">{hostname}</p>
-                {domainConfig && (
-                  <p className="text-xs text-muted-foreground/40 mt-1">
-                    Type: {domainConfig.type}
-                  </p>
-                )}
-              </div>
-            </div>
-          </ThemeProvider>
-        </HelmetProvider>
-      </QueryClientProvider>
-    );
+    return null;
   }
 
   // Show error if loading timed out

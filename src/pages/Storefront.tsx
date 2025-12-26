@@ -80,15 +80,9 @@ const Storefront = () => {
   const customBranding = panel?.custom_branding as any;
   const selectedTheme = customBranding?.selectedTheme || themeType;
 
+  // Skip loading state - render immediately with defaults if still loading
   if (tenantLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-900">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
-          <p className="text-slate-400">Loading panel...</p>
-        </div>
-      </div>
-    );
+    return null; // Let the theme render with defaults
   }
 
   if (tenantError || !panel) {
