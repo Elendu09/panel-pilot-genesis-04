@@ -164,12 +164,20 @@ export const ThemeTwo = ({ panel, services = [], customization = {} }: ThemeTwoP
               </motion.p>
               
               <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="flex flex-col sm:flex-row gap-4 mb-8">
-                <ShiningButton gradient="primary" size="lg" className="text-lg px-8 py-6" asChild>
-                  <Link to="/services">Get Started <ArrowRight className="ml-2" /></Link>
-                </ShiningButton>
-                <Button asChild variant="outline" size="lg" className="text-lg px-8 py-6 border-white/20 text-white hover:bg-white/5">
-                  <Link to="/register">View Pricing</Link>
-                </Button>
+                {customization.enableFastOrder ? (
+                  <ShiningButton gradient="primary" size="lg" className="text-lg px-8 py-6" asChild>
+                    <a href="#fast-order">⚡ Fast Order <ArrowRight className="ml-2" /></a>
+                  </ShiningButton>
+                ) : (
+                  <>
+                    <ShiningButton gradient="primary" size="lg" className="text-lg px-8 py-6" asChild>
+                      <Link to="/register">Get Started <ArrowRight className="ml-2" /></Link>
+                    </ShiningButton>
+                    <Button asChild variant="outline" size="lg" className="text-lg px-8 py-6 border-white/20 text-white hover:bg-white/5">
+                      <a href="#services">Services</a>
+                    </Button>
+                  </>
+                )}
               </motion.div>
               
               <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="flex flex-wrap items-center gap-6">

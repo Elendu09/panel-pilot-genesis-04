@@ -212,12 +212,20 @@ export const ThemeFour = ({ panel, services = [], customization = {} }: ThemeFou
             </motion.p>
             
             <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="flex flex-col sm:flex-row gap-4">
-              <Button size="lg" className="bg-white text-[#5D3A1A] hover:bg-white/90 text-lg px-8 py-6 rounded-full shadow-xl" asChild>
-                <Link to="/register">Get started <ArrowRight className="ml-2" /></Link>
-              </Button>
-              <Button size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10 text-lg px-8 py-6 rounded-full" asChild>
-                <Link to="/services">Explore services</Link>
-              </Button>
+              {customization.enableFastOrder ? (
+                <Button size="lg" className="bg-white text-[#5D3A1A] hover:bg-white/90 text-lg px-8 py-6 rounded-full shadow-xl" asChild>
+                  <a href="#fast-order">⚡ Fast Order <ArrowRight className="ml-2" /></a>
+                </Button>
+              ) : (
+                <>
+                  <Button size="lg" className="bg-white text-[#5D3A1A] hover:bg-white/90 text-lg px-8 py-6 rounded-full shadow-xl" asChild>
+                    <Link to="/register">Get Started <ArrowRight className="ml-2" /></Link>
+                  </Button>
+                  <Button size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10 text-lg px-8 py-6 rounded-full" asChild>
+                    <a href="#services">Explore Services</a>
+                  </Button>
+                </>
+              )}
             </motion.div>
           </div>
         </div>
