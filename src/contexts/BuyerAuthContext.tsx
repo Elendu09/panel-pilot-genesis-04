@@ -25,7 +25,7 @@ interface BuyerAuthContextType {
   loading: boolean;
   panelId: string;
   signIn: (identifier: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, fullName: string, username?: string) => Promise<{ error: any }>;
   signOut: () => void;
   refreshBuyer: () => Promise<void>;
 }
@@ -41,27 +41,33 @@ export function BuyerAuthProvider({ children, panelId }: { children: ReactNode; 
 
   useEffect(() => {
     // Check for existing session
-    const stored = localStorage.getItem(BUYER_STORAGE_KEY);
-    if (stored) {
-      try {
-        const session = JSON.parse(stored);
-        if (session.panelId === panelId) {
-          fetchBuyer(session.buyerId);
-        } else {
+    const initializeAuth = async () => {
+      const stored = localStorage.getItem(BUYER_STORAGE_KEY);
+      if (stored) {
+        try {
+          const session = JSON.parse(stored);
+          if (session.panelId === panelId && session.buyerId) {
+            await fetchBuyer(session.buyerId);
+          } else {
+            localStorage.removeItem(BUYER_STORAGE_KEY);
+            setLoading(false);
+          }
+        } catch {
           localStorage.removeItem(BUYER_STORAGE_KEY);
           setLoading(false);
         }
-      } catch {
-        localStorage.removeItem(BUYER_STORAGE_KEY);
+      } else {
         setLoading(false);
       }
-    } else {
-      setLoading(false);
-    }
+    };
+
+    initializeAuth();
   }, [panelId]);
 
   const fetchBuyer = async (buyerId: string) => {
     try {
+      console.log('Fetching buyer data for:', buyerId);
+      
       // Use edge function to fetch buyer data (bypasses RLS)
       const { data, error } = await supabase.functions.invoke('buyer-auth', {
         body: { 
@@ -71,13 +77,35 @@ export function BuyerAuthProvider({ children, panelId }: { children: ReactNode; 
         }
       });
 
-      if (error || !data?.user) {
+      if (error) {
+        console.error('Edge function error:', error);
         localStorage.removeItem(BUYER_STORAGE_KEY);
         setBuyer(null);
-      } else {
-        setBuyer(data.user as BuyerUser);
+        setLoading(false);
+        return;
       }
-    } catch {
+
+      if (data?.error) {
+        console.log('Fetch returned error:', data.error);
+        // If banned or suspended, clear session
+        if (data.error.includes('banned') || data.error.includes('suspended')) {
+          toast({ 
+            title: 'Account Restricted', 
+            description: data.error,
+            variant: 'destructive'
+          });
+        }
+        localStorage.removeItem(BUYER_STORAGE_KEY);
+        setBuyer(null);
+      } else if (data?.user) {
+        console.log('Buyer fetched successfully:', data.user.id);
+        setBuyer(data.user as BuyerUser);
+      } else {
+        localStorage.removeItem(BUYER_STORAGE_KEY);
+        setBuyer(null);
+      }
+    } catch (err) {
+      console.error('Fetch buyer error:', err);
       localStorage.removeItem(BUYER_STORAGE_KEY);
       setBuyer(null);
     } finally {
@@ -109,6 +137,8 @@ export function BuyerAuthProvider({ children, panelId }: { children: ReactNode; 
         return { error: { message: 'Password is too long' } };
       }
 
+      console.log('Signing in with identifier:', trimmedIdentifier);
+
       // Call edge function for authentication (bypasses RLS)
       const { data, error } = await supabase.functions.invoke('buyer-auth', {
         body: { 
@@ -121,10 +151,11 @@ export function BuyerAuthProvider({ children, panelId }: { children: ReactNode; 
 
       if (error) {
         console.error('Edge function error:', error);
-        return { error: { message: 'Authentication service unavailable' } };
+        return { error: { message: 'Authentication service unavailable. Please try again.' } };
       }
 
       if (data?.error) {
+        console.log('Login error:', data.error);
         return { error: { message: data.error, reason: data.reason } };
       }
 
@@ -144,7 +175,7 @@ export function BuyerAuthProvider({ children, panelId }: { children: ReactNode; 
     }
   };
 
-  const signUp = async (email: string, password: string, fullName: string) => {
+  const signUp = async (email: string, password: string, fullName: string, username?: string) => {
     try {
       // Input validation
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -170,50 +201,42 @@ export function BuyerAuthProvider({ children, panelId }: { children: ReactNode; 
         return { error: { message: 'Full name is too long' } };
       }
 
-      // For signup, we need to use service role - call via edge function would be needed
-      // For now, use direct insert which works if RLS allows panel owners
-      // In production, create a signup edge function
-      
-      // Check if email already exists for this panel
-      const { data: existing } = await supabase
-        .from('client_users')
-        .select('id')
-        .eq('email', trimmedEmail)
-        .eq('panel_id', panelId)
-        .single();
+      console.log('Signing up with email:', trimmedEmail);
 
-      if (existing) {
-        return { error: { message: 'Email already registered' } };
-      }
-
-      // Create new buyer account
-      const { data, error } = await supabase
-        .from('client_users')
-        .insert({
-          email: trimmedEmail,
-          full_name: trimmedName,
-          password_temp: password,
-          panel_id: panelId,
-          is_active: true,
-          is_banned: false,
-          balance: 0,
-          total_spent: 0,
-        })
-        .select()
-        .single();
+      // Call edge function for signup (bypasses RLS)
+      const { data, error } = await supabase.functions.invoke('buyer-auth', {
+        body: { 
+          panelId, 
+          email: trimmedEmail, 
+          password,
+          fullName: trimmedName,
+          username: username?.trim(),
+          action: 'signup'
+        }
+      });
 
       if (error) {
-        console.error('Signup error:', error);
-        return { error: { message: error.message } };
+        console.error('Edge function error:', error);
+        return { error: { message: 'Registration service unavailable. Please try again.' } };
+      }
+
+      if (data?.error) {
+        console.log('Signup error:', data.error);
+        return { error: { message: data.error } };
+      }
+
+      if (!data?.user) {
+        return { error: { message: 'Registration failed. Please try again.' } };
       }
 
       // Store session
-      localStorage.setItem(BUYER_STORAGE_KEY, JSON.stringify({ buyerId: data.id, panelId }));
-      setBuyer(data as BuyerUser);
+      localStorage.setItem(BUYER_STORAGE_KEY, JSON.stringify({ buyerId: data.user.id, panelId }));
+      setBuyer(data.user as BuyerUser);
 
       toast({ title: 'Account created!', description: 'Welcome to the panel' });
       return { error: null };
     } catch (err: any) {
+      console.error('Sign up error:', err);
       return { error: { message: err.message || 'Registration failed' } };
     }
   };
