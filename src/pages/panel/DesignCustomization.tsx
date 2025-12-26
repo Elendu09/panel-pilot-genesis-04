@@ -6,13 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Slider } from "@/components/ui/slider";
-import { ImageUpload } from "@/components/panel/ImageUpload";
-import { ThemePreviewCard } from "@/components/design/ThemePreviewCard";
-import { SocialIconSelector } from "@/components/design/SocialIconSelector";
-import { AccessibilitySettings } from "@/components/design/AccessibilitySettings";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { 
   Palette, 
   Eye, 
@@ -26,36 +21,33 @@ import {
   RotateCcw,
   ExternalLink,
   Lock,
-  Check,
   Loader2,
-  RefreshCw,
   Wand2,
   Type,
   PaintBucket,
-  AlertCircle,
-  Zap,
-  Shield,
-  Clock,
-  TrendingUp,
-  MessageCircle,
-  HelpCircle,
   ChevronDown,
-  ChevronUp,
+  ChevronRight,
   Globe,
-  CheckCircle,
-  Accessibility,
   Share2,
-  Instagram,
-  Facebook,
-  Twitter,
-  Youtube,
-  Hash
+  Accessibility,
+  Save,
+  Check,
+  Zap,
+  Settings,
+  Layers,
+  MessageSquare
 } from "lucide-react";
-import { LiveStorefrontPreview } from "@/components/design/LiveStorefrontPreview";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+
+interface Section {
+  id: string;
+  title: string;
+  icon: React.ComponentType<{ className?: string }>;
+  isOpen: boolean;
+}
 
 const DesignCustomization = () => {
   const { toast } = useToast();
@@ -63,13 +55,23 @@ const DesignCustomization = () => {
   const [panelSubdomain, setPanelSubdomain] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
   const [selectedTheme, setSelectedTheme] = useState("dark_gradient");
-  const [activeTab, setActiveTab] = useState("themes");
-  const [previewMode, setPreviewMode] = useState<"local" | "live">("local");
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "tablet" | "mobile">("desktop");
   const [isGeneratingTheme, setIsGeneratingTheme] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
-  const [isPro] = useState(true); // Simulated pro status
+  const [isPro] = useState(true);
+
+  const [sections, setSections] = useState<Section[]>([
+    { id: "themes", title: "Theme Gallery", icon: Palette, isOpen: true },
+    { id: "branding", title: "Branding", icon: Image, isOpen: false },
+    { id: "colors", title: "Colors", icon: PaintBucket, isOpen: false },
+    { id: "hero", title: "Hero Section", icon: Layers, isOpen: false },
+    { id: "content", title: "Content", icon: Type, isOpen: false },
+    { id: "layout", title: "Layout Options", icon: Layout, isOpen: false },
+    { id: "social", title: "Social Links", icon: Share2, isOpen: false },
+    { id: "advanced", title: "Advanced", icon: Code, isOpen: false },
+  ]);
 
   const [customization, setCustomization] = useState({
     primaryColor: "#8B5CF6",
@@ -97,98 +99,69 @@ const DesignCustomization = () => {
     showStats: true,
     showTestimonials: true,
     showFaqs: true,
-    // Editable content
     heroTitle: "Grow Your Social Media Presence",
-    heroSubtitle: "The #1 SMM Panel for Instagram, TikTok, YouTube and more. Start growing today!",
+    heroSubtitle: "The #1 SMM Panel for Instagram, TikTok, YouTube and more.",
     heroCta: "Get Started",
-    features: [
-      { icon: "Zap", title: "Lightning Fast", description: "Orders start within seconds" },
-      { icon: "Shield", title: "100% Safe", description: "Secure payment & delivery" },
-      { icon: "Clock", title: "24/7 Support", description: "We're always here to help" },
-      { icon: "TrendingUp", title: "Real Results", description: "Genuine engagement growth" },
-    ],
-    stats: [
-      { value: "10K+", label: "Happy Customers" },
-      { value: "50K+", label: "Orders Completed" },
-      { value: "99.9%", label: "Uptime" },
-    ],
-    faqs: [
-      { question: "How fast are orders delivered?", answer: "Most orders start within 0-15 minutes and complete within 24 hours depending on the service." },
-      { question: "Is it safe for my account?", answer: "Yes! We use safe delivery methods that comply with platform guidelines to protect your account." },
-      { question: "What payment methods do you accept?", answer: "We accept all major payment methods including PayPal, credit cards, and cryptocurrency." },
-      { question: "Can I get a refund?", answer: "Yes, we offer refunds for undelivered orders. Contact our support team for assistance." },
-    ],
-    footerAbout: "Your trusted SMM partner since 2020. We help businesses and influencers grow their social media presence.",
+    footerAbout: "Your trusted SMM partner since 2020.",
     footerContact: "support@example.com",
+    socialInstagram: "",
+    socialFacebook: "",
+    socialTwitter: "",
+    socialTelegram: "",
+    socialDiscord: "",
   });
 
   const themes = [
     {
       id: "dark_gradient",
       name: "Dark Gradient",
-      colors: { primary: "#8B5CF6", secondary: "#06B6D4", bg: "#0F172A", surface: "#1E293B" },
+      colors: { primary: "#8B5CF6", secondary: "#06B6D4", bg: "#0F172A", surface: "#1E293B", text: "#F8FAFC" },
       preview: "bg-gradient-to-br from-purple-900 via-slate-900 to-blue-900",
-      description: "Modern dark theme with gradient accents"
     },
     {
       id: "light_minimal",
       name: "Light Minimal",
-      colors: { primary: "#3B82F6", secondary: "#10B981", bg: "#FFFFFF", surface: "#F8FAFC" },
-      preview: "bg-gradient-to-br from-gray-50 to-white border border-gray-200",
-      description: "Clean and professional light theme"
+      colors: { primary: "#3B82F6", secondary: "#10B981", bg: "#FFFFFF", surface: "#F8FAFC", text: "#0F172A" },
+      preview: "bg-gradient-to-br from-gray-50 to-white border border-border",
     },
     {
       id: "neon_glow",
       name: "Neon Glow",
-      colors: { primary: "#00FF88", secondary: "#FF00FF", bg: "#0A0A0A", surface: "#1A1A2E" },
+      colors: { primary: "#00FF88", secondary: "#FF00FF", bg: "#0A0A0A", surface: "#1A1A2E", text: "#FFFFFF" },
       preview: "bg-gradient-to-br from-purple-950 via-black to-cyan-950",
-      description: "Vibrant neon colors with dark base"
     },
     {
       id: "ocean_blue",
       name: "Ocean Blue",
-      colors: { primary: "#0EA5E9", secondary: "#06B6D4", bg: "#0C1929", surface: "#132F4C" },
+      colors: { primary: "#0EA5E9", secondary: "#06B6D4", bg: "#0C1929", surface: "#132F4C", text: "#E0F2FE" },
       preview: "bg-gradient-to-br from-blue-950 via-slate-900 to-cyan-950",
-      description: "Deep ocean inspired palette"
     },
     {
       id: "forest_green",
       name: "Forest Green",
-      colors: { primary: "#22C55E", secondary: "#84CC16", bg: "#0D1F12", surface: "#1A2F1C" },
+      colors: { primary: "#22C55E", secondary: "#84CC16", bg: "#0D1F12", surface: "#1A2F1C", text: "#DCFCE7" },
       preview: "bg-gradient-to-br from-green-950 via-slate-900 to-emerald-950",
-      description: "Natural green tones"
     },
     {
       id: "sunset_orange",
       name: "Sunset Orange",
-      colors: { primary: "#F97316", secondary: "#EF4444", bg: "#1C1410", surface: "#2D1F1A" },
+      colors: { primary: "#F97316", secondary: "#EF4444", bg: "#1C1410", surface: "#2D1F1A", text: "#FED7AA" },
       preview: "bg-gradient-to-br from-orange-950 via-slate-900 to-red-950",
-      description: "Warm sunset vibes"
     },
     {
       id: "royal_purple",
       name: "Royal Purple",
-      colors: { primary: "#A855F7", secondary: "#EC4899", bg: "#1A0F1C", surface: "#2D1B30" },
+      colors: { primary: "#A855F7", secondary: "#EC4899", bg: "#1A0F1C", surface: "#2D1B30", text: "#F5D0FE" },
       preview: "bg-gradient-to-br from-purple-950 via-slate-900 to-pink-950",
-      description: "Luxurious purple palette"
     },
     {
       id: "corporate",
-      name: "Corporate Clean",
-      colors: { primary: "#2563EB", secondary: "#64748B", bg: "#F8FAFC", surface: "#FFFFFF" },
-      preview: "bg-gradient-to-br from-slate-50 to-blue-50 border border-slate-200",
-      description: "Professional business look"
-    },
-    {
-      id: "grace_cometh",
-      name: "Grace Cometh",
-      colors: { primary: "#8B6914", secondary: "#D4A84B", bg: "#0A0A0A", surface: "#1A1410" },
-      preview: "bg-gradient-to-br from-amber-950 via-slate-950 to-yellow-950",
-      description: "Warm golden tones with elegant dark base"
+      name: "Corporate",
+      colors: { primary: "#2563EB", secondary: "#64748B", bg: "#F8FAFC", surface: "#FFFFFF", text: "#1E293B" },
+      preview: "bg-gradient-to-br from-slate-50 to-blue-50 border border-border",
     },
   ];
 
-  // Load customization from database on mount
   useEffect(() => {
     const loadDesignSettings = async () => {
       try {
@@ -215,7 +188,6 @@ const DesignCustomization = () => {
         setPanelId(panel.id);
         setPanelSubdomain(panel.subdomain);
 
-        // Load saved customization from custom_branding
         if (panel.custom_branding && typeof panel.custom_branding === 'object') {
           const saved = panel.custom_branding as Record<string, any>;
           setCustomization(prev => ({
@@ -229,7 +201,6 @@ const DesignCustomization = () => {
             setSelectedTheme(saved.selectedTheme);
           }
         } else {
-          // Use panel defaults
           setCustomization(prev => ({
             ...prev,
             companyName: panel.name || prev.companyName,
@@ -247,6 +218,17 @@ const DesignCustomization = () => {
     loadDesignSettings();
   }, []);
 
+  const toggleSection = (sectionId: string) => {
+    setSections(prev => prev.map(s => 
+      s.id === sectionId ? { ...s, isOpen: !s.isOpen } : s
+    ));
+  };
+
+  const updateCustomization = (key: string, value: any) => {
+    setCustomization(prev => ({ ...prev, [key]: value }));
+    setHasChanges(true);
+  };
+
   const applyTheme = (themeId: string) => {
     const theme = themes.find(t => t.id === themeId);
     if (theme) {
@@ -257,62 +239,42 @@ const DesignCustomization = () => {
         secondaryColor: theme.colors.secondary,
         backgroundColor: theme.colors.bg,
         surfaceColor: theme.colors.surface,
+        textColor: theme.colors.text,
       }));
-      toast({
-        title: "Theme applied",
-        description: `${theme.name} theme has been applied.`,
-      });
+      setHasChanges(true);
+      toast({ title: "Theme applied", description: `${theme.name} theme has been applied.` });
     }
   };
 
   const generateAITheme = async () => {
     if (!aiPrompt.trim()) {
-      toast({
-        variant: "destructive",
-        title: "Prompt required",
-        description: "Please describe the theme you want to generate.",
-      });
+      toast({ variant: "destructive", title: "Prompt required", description: "Please describe the theme you want." });
       return;
     }
 
     setIsGeneratingTheme(true);
-    
     try {
       const { data, error } = await supabase.functions.invoke('generate-theme', {
         body: { prompt: aiPrompt }
       });
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
 
-      if (data.error) {
-        throw new Error(data.error);
-      }
-
-      const colors = data.colors;
-      
       setCustomization(prev => ({
         ...prev,
-        primaryColor: colors.primary,
-        secondaryColor: colors.secondary,
-        accentColor: colors.accent,
-        backgroundColor: colors.background,
-        surfaceColor: colors.surface,
-        textColor: colors.text,
+        primaryColor: data.colors.primary,
+        secondaryColor: data.colors.secondary,
+        accentColor: data.colors.accent,
+        backgroundColor: data.colors.background,
+        surfaceColor: data.colors.surface,
+        textColor: data.colors.text,
       }));
-      
-      toast({
-        title: "AI Theme Generated",
-        description: "Your custom theme has been created based on your prompt.",
-      });
+      setHasChanges(true);
+      toast({ title: "AI Theme Generated", description: "Your custom theme has been created!" });
     } catch (error) {
       console.error("Failed to generate theme:", error);
-      toast({
-        variant: "destructive",
-        title: "Failed to generate theme",
-        description: error instanceof Error ? error.message : "Please try again later.",
-      });
+      toast({ variant: "destructive", title: "Failed to generate", description: error instanceof Error ? error.message : "Please try again." });
     } finally {
       setIsGeneratingTheme(false);
     }
@@ -326,7 +288,6 @@ const DesignCustomization = () => {
 
     setSaving(true);
     try {
-      // Save all customization to custom_branding jsonb field
       const brandingData = {
         ...customization,
         selectedTheme,
@@ -345,43 +306,21 @@ const DesignCustomization = () => {
 
       if (error) throw error;
 
-      toast({
-        title: "Design saved!",
-        description: "Your panel design is now live on your storefront.",
-      });
+      setHasChanges(false);
+      toast({ title: "Design saved!", description: "Your changes are now live." });
     } catch (err) {
       console.error('Error saving design:', err);
-      toast({
-        variant: "destructive",
-        title: "Failed to save",
-        description: "Please try again.",
-      });
+      toast({ variant: "destructive", title: "Failed to save", description: "Please try again." });
     } finally {
       setSaving(false);
     }
   };
 
-  const generatePreviewUrl = () => {
-    const previewId = crypto.randomUUID().slice(0, 12);
-    const previewData = {
-      ...customization,
-      expiresAt: Date.now() + 30 * 60 * 1000 // 30 min expiry
-    };
-    
-    // Store preview data in localStorage
-    localStorage.setItem(`preview_${previewId}`, JSON.stringify(previewData));
-    
-    // Generate URL using main domain
-    return `/preview/${previewId}`;
-  };
-
   const handlePreviewNewTab = () => {
-    const previewUrl = generatePreviewUrl();
-    window.open(previewUrl, '_blank');
-    toast({
-      title: "Preview opened",
-      description: "Preview link is valid for 30 minutes.",
-    });
+    if (panelSubdomain) {
+      window.open(`/storefront-preview/${panelSubdomain}`, '_blank');
+    }
+    toast({ title: "Preview opened" });
   };
 
   const resetColors = () => {
@@ -393,1012 +332,633 @@ const DesignCustomization = () => {
         secondaryColor: theme.colors.secondary,
         backgroundColor: theme.colors.bg,
         surfaceColor: theme.colors.surface,
+        textColor: theme.colors.text,
       }));
+      setHasChanges(true);
       toast({ title: "Colors reset to theme defaults" });
     }
   };
 
-  const deviceSizes = {
-    desktop: { width: "100%", maxWidth: "100%" },
-    tablet: { width: "768px", maxWidth: "768px" },
-    mobile: { width: "375px", maxWidth: "375px" },
+  const deviceConfig = {
+    desktop: { width: "100%", icon: Monitor },
+    tablet: { width: "768px", icon: Tablet },
+    mobile: { width: "375px", icon: Smartphone },
   };
 
+  const currentTheme = themes.find(t => t.id === selectedTheme);
+
+  if (loading) {
+    return (
+      <div className="h-[calc(100vh-120px)] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Loading design settings...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="h-[calc(100vh-120px)] flex flex-col lg:flex-row gap-6">
-      {/* Left Panel - Settings */}
-      <div className="lg:w-[55%] flex flex-col overflow-hidden">
-        <div className="flex justify-between items-center mb-4">
-          <div>
-            <h1 className="text-2xl font-bold">Design Customization</h1>
-            <p className="text-muted-foreground text-sm">Customize your panel's appearance</p>
-          </div>
-          <Button onClick={handleSave} disabled={saving || loading} className="bg-gradient-to-r from-primary to-primary/80">
-            {saving ? 'Saving...' : 'Save Changes'}
+    <div className="h-[calc(100vh-120px)] flex flex-col">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4 shrink-0">
+        <div>
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+            Design Studio
+          </h1>
+          <p className="text-muted-foreground text-sm">Customize your storefront appearance</p>
+        </div>
+        <div className="flex items-center gap-3">
+          {hasChanges && (
+            <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/30">
+              Unsaved changes
+            </Badge>
+          )}
+          <Button variant="outline" onClick={handlePreviewNewTab} className="gap-2">
+            <ExternalLink className="w-4 h-4" />
+            <span className="hidden sm:inline">Preview</span>
+          </Button>
+          <Button 
+            onClick={handleSave} 
+            disabled={saving || !hasChanges} 
+            className="bg-gradient-to-r from-primary to-primary/80 gap-2"
+          >
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            {saving ? 'Saving...' : 'Save'}
           </Button>
         </div>
+      </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
-          <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
-            <TabsList className="bg-card/50 backdrop-blur-sm border border-border/50 p-1 mb-4 min-w-max">
-              <TabsTrigger value="themes" className="gap-2">
-                <Palette className="w-4 h-4" />
-                Themes
-              </TabsTrigger>
-              <TabsTrigger value="colors" className="gap-2">
-                <PaintBucket className="w-4 h-4" />
-                Colors
-              </TabsTrigger>
-              <TabsTrigger value="content" className="gap-2">
-                <Type className="w-4 h-4" />
-                Content
-              </TabsTrigger>
-              <TabsTrigger value="branding" className="gap-2">
-                <Image className="w-4 h-4" />
-                Branding
-              </TabsTrigger>
-              <TabsTrigger value="social" className="gap-2">
-                <Share2 className="w-4 h-4" />
-                Social
-              </TabsTrigger>
-              <TabsTrigger value="accessibility" className="gap-2">
-                <Accessibility className="w-4 h-4" />
-                A11y
-              </TabsTrigger>
-              <TabsTrigger value="layout" className="gap-2">
-                <Layout className="w-4 h-4" />
-                Layout
-              </TabsTrigger>
-              <TabsTrigger value="code" className="gap-2">
-                <Code className="w-4 h-4" />
-                Code
-              </TabsTrigger>
-            </TabsList>
-          </div>
-
-          <div className="flex-1 overflow-y-auto pr-2 space-y-4">
-            {/* Themes Tab */}
-            <TabsContent value="themes" className="m-0 space-y-4">
-              {/* AI Theme Generator */}
-              <Card className="bg-gradient-to-br from-primary/10 via-card to-secondary/10 border-primary/20">
-                <CardHeader className="pb-2">
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <Sparkles className="w-5 h-5 text-primary" />
-                    AI Theme Generator
-                    {!isPro && (
-                      <Badge variant="secondary" className="ml-2 gap-1">
-                        <Lock className="w-3 h-3" /> PRO
-                      </Badge>
+      {/* Main Layout */}
+      <div className="flex-1 flex gap-6 min-h-0">
+        {/* Left Panel - Controls */}
+        <div className="w-full lg:w-[400px] xl:w-[450px] flex flex-col overflow-hidden bg-card/30 backdrop-blur-xl rounded-xl border border-border/50">
+          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            {sections.map((section) => (
+              <Collapsible 
+                key={section.id} 
+                open={section.isOpen} 
+                onOpenChange={() => toggleSection(section.id)}
+              >
+                <CollapsibleTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    className="w-full justify-between p-4 h-auto hover:bg-muted/50"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <section.icon className="w-4 h-4 text-primary" />
+                      </div>
+                      <span className="font-medium">{section.title}</span>
+                    </div>
+                    {section.isOpen ? (
+                      <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                    ) : (
+                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
                     )}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <p className="text-sm text-muted-foreground">
-                    Describe your ideal theme and let AI create it for you
-                  </p>
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="e.g., Modern dark tech theme with blue accents"
-                      value={aiPrompt}
-                      onChange={(e) => setAiPrompt(e.target.value)}
-                      disabled={!isPro || isGeneratingTheme}
-                      className="bg-background/50"
-                    />
-                    <Button 
-                      onClick={generateAITheme} 
-                      disabled={!isPro || isGeneratingTheme}
-                      className="gap-2 min-w-[140px]"
-                    >
-                      {isGeneratingTheme ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          Generating...
-                        </>
-                      ) : (
-                        <>
-                          <Wand2 className="w-4 h-4" />
-                          Generate
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {["Dark minimal", "Vibrant gaming", "Corporate blue", "Nature green"].map((suggestion) => (
-                      <Button
-                        key={suggestion}
-                        variant="outline"
-                        size="sm"
-                        className="text-xs"
-                        onClick={() => setAiPrompt(suggestion)}
-                        disabled={!isPro}
-                      >
-                        {suggestion}
-                      </Button>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="px-4 pb-4 space-y-4"
+                  >
+                    {/* Theme Gallery */}
+                    {section.id === "themes" && (
+                      <>
+                        {/* AI Generator */}
+                        <Card className="bg-gradient-to-br from-primary/5 to-secondary/5 border-primary/20">
+                          <CardContent className="p-4 space-y-3">
+                            <div className="flex items-center gap-2">
+                              <Sparkles className="w-4 h-4 text-primary" />
+                              <span className="text-sm font-medium">AI Theme Generator</span>
+                              {!isPro && <Badge variant="secondary" className="text-xs"><Lock className="w-3 h-3 mr-1" />PRO</Badge>}
+                            </div>
+                            <div className="flex gap-2">
+                              <Input
+                                placeholder="e.g., Modern dark tech with blue accents"
+                                value={aiPrompt}
+                                onChange={(e) => setAiPrompt(e.target.value)}
+                                disabled={!isPro || isGeneratingTheme}
+                                className="bg-background/50 text-sm"
+                              />
+                              <Button 
+                                size="sm"
+                                onClick={generateAITheme} 
+                                disabled={!isPro || isGeneratingTheme}
+                              >
+                                {isGeneratingTheme ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
 
-              {/* Theme Gallery */}
-              <Card className="bg-card/50 border-border/50">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg">Theme Gallery</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 gap-3">
-                    {themes.map((theme) => (
-                      <motion.div
-                        key={theme.id}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        className={cn(
-                          "relative p-3 border rounded-xl cursor-pointer transition-all",
-                          selectedTheme === theme.id 
-                            ? "border-primary ring-2 ring-primary/20" 
-                            : "border-border/50 hover:border-primary/50"
-                        )}
-                        onClick={() => applyTheme(theme.id)}
-                      >
-                        <div className={cn("w-full h-16 rounded-lg mb-2", theme.preview)} />
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h3 className="font-medium text-sm">{theme.name}</h3>
-                            <p className="text-xs text-muted-foreground line-clamp-1">{theme.description}</p>
-                          </div>
-                          {selectedTheme === theme.id && (
-                            <div className="bg-primary rounded-full p-1">
-                              <Check className="w-3 h-3 text-primary-foreground" />
+                        {/* Theme Grid */}
+                        <div className="grid grid-cols-2 gap-3">
+                          {themes.map((theme) => (
+                            <motion.div
+                              key={theme.id}
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                              onClick={() => applyTheme(theme.id)}
+                              className={cn(
+                                "cursor-pointer rounded-xl overflow-hidden border-2 transition-all",
+                                selectedTheme === theme.id
+                                  ? "border-primary ring-2 ring-primary/30"
+                                  : "border-transparent hover:border-border"
+                              )}
+                            >
+                              <div className={cn("h-16 relative", theme.preview)}>
+                                {selectedTheme === theme.id && (
+                                  <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                                    <Check className="w-3 h-3 text-primary-foreground" />
+                                  </div>
+                                )}
+                              </div>
+                              <div className="p-2 bg-card">
+                                <p className="text-xs font-medium truncate">{theme.name}</p>
+                              </div>
+                            </motion.div>
+                          ))}
+                        </div>
+                      </>
+                    )}
+
+                    {/* Branding */}
+                    {section.id === "branding" && (
+                      <div className="space-y-4">
+                        <div>
+                          <Label className="text-sm">Company Name</Label>
+                          <Input
+                            value={customization.companyName}
+                            onChange={(e) => updateCustomization("companyName", e.target.value)}
+                            className="mt-1.5"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm">Tagline</Label>
+                          <Input
+                            value={customization.tagline}
+                            onChange={(e) => updateCustomization("tagline", e.target.value)}
+                            className="mt-1.5"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm">Logo</Label>
+                          <Input
+                            value={customization.logoUrl}
+                            onChange={(e) => updateCustomization("logoUrl", e.target.value)}
+                            placeholder="Enter logo URL or upload"
+                            className="mt-1.5"
+                          />
+                          {customization.logoUrl && (
+                            <div className="mt-2 p-2 bg-muted/50 rounded-lg">
+                              <img src={customization.logoUrl} alt="Logo" className="h-10 object-contain" />
                             </div>
                           )}
                         </div>
-                        {/* Color dots */}
-                        <div className="flex gap-1 mt-2">
-                          <div className="w-4 h-4 rounded-full border border-border" style={{ backgroundColor: theme.colors.primary }} />
-                          <div className="w-4 h-4 rounded-full border border-border" style={{ backgroundColor: theme.colors.secondary }} />
-                          <div className="w-4 h-4 rounded-full border border-border" style={{ backgroundColor: theme.colors.bg }} />
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Colors Tab */}
-            <TabsContent value="colors" className="m-0 space-y-4">
-              <Card className="bg-card/50 border-border/50">
-                <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                  <CardTitle className="text-lg">Color Scheme</CardTitle>
-                  <Button variant="outline" size="sm" onClick={resetColors} className="gap-2">
-                    <RotateCcw className="w-4 h-4" />
-                    Reset
-                  </Button>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    {[
-                      { key: "primaryColor", label: "Primary" },
-                      { key: "secondaryColor", label: "Secondary" },
-                      { key: "accentColor", label: "Accent" },
-                      { key: "backgroundColor", label: "Background" },
-                      { key: "surfaceColor", label: "Surface" },
-                      { key: "textColor", label: "Text" },
-                    ].map(({ key, label }) => (
-                      <div key={key} className="space-y-2">
-                        <Label className="text-sm">{label}</Label>
-                        <div className="flex gap-2">
+                        <div>
+                          <Label className="text-sm">Favicon URL</Label>
                           <Input
-                            type="color"
-                            value={(customization as any)[key]}
-                            onChange={(e) => setCustomization({...customization, [key]: e.target.value})}
-                            className="w-12 h-10 p-1 cursor-pointer"
-                          />
-                          <Input
-                            value={(customization as any)[key]}
-                            onChange={(e) => setCustomization({...customization, [key]: e.target.value})}
-                            className="flex-1 font-mono text-sm bg-background/50"
+                            value={customization.faviconUrl}
+                            onChange={(e) => updateCustomization("faviconUrl", e.target.value)}
+                            placeholder="Enter favicon URL"
+                            className="mt-1.5"
                           />
                         </div>
                       </div>
-                    ))}
-                  </div>
-
-                  {/* Font Family Selector */}
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Font Family</Label>
-                    <Select
-                      value={customization.fontFamily}
-                      onValueChange={(value) => setCustomization({...customization, fontFamily: value})}
-                    >
-                      <SelectTrigger className="bg-background/50">
-                        <SelectValue placeholder="Select font" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Inter, system-ui, sans-serif">Inter</SelectItem>
-                        <SelectItem value="Poppins, sans-serif">Poppins</SelectItem>
-                        <SelectItem value="Roboto, sans-serif">Roboto</SelectItem>
-                        <SelectItem value="'Space Grotesk', sans-serif">Space Grotesk</SelectItem>
-                        <SelectItem value="Montserrat, sans-serif">Montserrat</SelectItem>
-                        <SelectItem value="'Open Sans', sans-serif">Open Sans</SelectItem>
-                        <SelectItem value="Nunito, sans-serif">Nunito</SelectItem>
-                        <SelectItem value="Raleway, sans-serif">Raleway</SelectItem>
-                        <SelectItem value="'Playfair Display', serif">Playfair Display</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">Choose a Google Font for your storefront</p>
-                  </div>
-
-                  {/* Border Radius Slider */}
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-sm font-medium">Border Radius</Label>
-                      <Badge variant="outline" className="font-mono">{customization.borderRadius}px</Badge>
-                    </div>
-                    <Slider
-                      value={[parseInt(customization.borderRadius)]}
-                      onValueChange={(v) => setCustomization({...customization, borderRadius: v[0].toString()})}
-                      min={0}
-                      max={24}
-                      step={2}
-                      className="w-full"
-                    />
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>Square (0px)</span>
-                      <span>Rounded (12px)</span>
-                      <span>Pill (24px)</span>
-                    </div>
-                  </div>
-
-                  {/* Color Preview */}
-                  <div className="p-4 border border-border/50" style={{ backgroundColor: customization.backgroundColor, borderRadius: `${customization.borderRadius}px`, fontFamily: customization.fontFamily }}>
-                    <div className="flex gap-2 mb-3 flex-wrap">
-                      <div className="px-4 py-2 text-sm font-medium" style={{ backgroundColor: customization.primaryColor, color: "#fff", borderRadius: `${customization.borderRadius}px` }}>
-                        Primary
-                      </div>
-                      <div className="px-4 py-2 text-sm font-medium" style={{ backgroundColor: customization.secondaryColor, color: "#fff", borderRadius: `${customization.borderRadius}px` }}>
-                        Secondary
-                      </div>
-                      <div className="px-4 py-2 text-sm font-medium" style={{ backgroundColor: customization.accentColor, color: "#fff", borderRadius: `${customization.borderRadius}px` }}>
-                        Accent
-                      </div>
-                    </div>
-                    <div className="p-3" style={{ backgroundColor: customization.surfaceColor, borderRadius: `${customization.borderRadius}px` }}>
-                      <p style={{ color: customization.textColor }} className="text-sm">Sample text on surface</p>
-                      <p style={{ color: customization.mutedColor }} className="text-xs">Muted text example</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Content Tab - Edit homepage text */}
-            <TabsContent value="content" className="m-0 space-y-4">
-              <Card className="bg-card/50 border-border/50">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Type className="w-5 h-5" />
-                    Hero Section
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Hero Title</Label>
-                    <Input
-                      value={customization.heroTitle}
-                      onChange={(e) => setCustomization({...customization, heroTitle: e.target.value})}
-                      placeholder="Main headline for your homepage"
-                      className="bg-background/50"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Hero Subtitle</Label>
-                    <Textarea
-                      value={customization.heroSubtitle}
-                      onChange={(e) => setCustomization({...customization, heroSubtitle: e.target.value})}
-                      placeholder="Supporting text under the headline"
-                      className="bg-background/50"
-                      rows={2}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>CTA Button Text</Label>
-                    <Input
-                      value={customization.heroCta}
-                      onChange={(e) => setCustomization({...customization, heroCta: e.target.value})}
-                      placeholder="Get Started"
-                      className="bg-background/50"
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-card/50 border-border/50">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Zap className="w-5 h-5" />
-                    Features Section
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {customization.features.map((feature, index) => (
-                    <div key={index} className="p-3 rounded-lg bg-background/50 space-y-2">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Badge variant="outline" className="text-xs">Feature {index + 1}</Badge>
-                      </div>
-                      <Input
-                        value={feature.title}
-                        onChange={(e) => {
-                          const newFeatures = [...customization.features];
-                          newFeatures[index].title = e.target.value;
-                          setCustomization({...customization, features: newFeatures});
-                        }}
-                        placeholder="Feature title"
-                        className="bg-background/80"
-                      />
-                      <Input
-                        value={feature.description}
-                        onChange={(e) => {
-                          const newFeatures = [...customization.features];
-                          newFeatures[index].description = e.target.value;
-                          setCustomization({...customization, features: newFeatures});
-                        }}
-                        placeholder="Feature description"
-                        className="bg-background/80"
-                      />
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-
-              <Card className="bg-card/50 border-border/50">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <HelpCircle className="w-5 h-5" />
-                    FAQs Section
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {customization.faqs.map((faq, index) => (
-                    <div key={index} className="p-3 rounded-lg bg-background/50 space-y-2">
-                      <Input
-                        value={faq.question}
-                        onChange={(e) => {
-                          const newFaqs = [...customization.faqs];
-                          newFaqs[index].question = e.target.value;
-                          setCustomization({...customization, faqs: newFaqs});
-                        }}
-                        placeholder="Question"
-                        className="bg-background/80 font-medium"
-                      />
-                      <Textarea
-                        value={faq.answer}
-                        onChange={(e) => {
-                          const newFaqs = [...customization.faqs];
-                          newFaqs[index].answer = e.target.value;
-                          setCustomization({...customization, faqs: newFaqs});
-                        }}
-                        placeholder="Answer"
-                        className="bg-background/80"
-                        rows={2}
-                      />
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-
-              <Card className="bg-card/50 border-border/50">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <MessageCircle className="w-5 h-5" />
-                    Footer Content
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>About Text</Label>
-                    <Textarea
-                      value={customization.footerAbout}
-                      onChange={(e) => setCustomization({...customization, footerAbout: e.target.value})}
-                      placeholder="Short description about your company"
-                      className="bg-background/50"
-                      rows={2}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Contact Email</Label>
-                    <Input
-                      value={customization.footerContact}
-                      onChange={(e) => setCustomization({...customization, footerContact: e.target.value})}
-                      placeholder="support@example.com"
-                      className="bg-background/50"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Copyright Text</Label>
-                    <Input
-                      value={customization.footerText}
-                      onChange={(e) => setCustomization({...customization, footerText: e.target.value})}
-                      placeholder="© 2024 Company Name"
-                      className="bg-background/50"
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            <TabsContent value="branding" className="m-0 space-y-4">
-              <Card className="bg-card/50 border-border/50">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg">Logo & Favicon</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {panelId && (
-                      <>
-                        <ImageUpload
-                          label="Logo"
-                          value={customization.logoUrl}
-                          onChange={(url) => setCustomization({...customization, logoUrl: url})}
-                          panelId={panelId}
-                          folder="logos"
-                          placeholder="Upload your panel logo"
-                          aspectRatio="wide"
-                          maxSizeMB={2}
-                        />
-                        <ImageUpload
-                          label="Favicon"
-                          value={customization.faviconUrl}
-                          onChange={(url) => setCustomization({...customization, faviconUrl: url})}
-                          panelId={panelId}
-                          folder="favicon"
-                          placeholder="32x32 or 64x64 icon"
-                          aspectRatio="square"
-                          maxSizeMB={1}
-                        />
-                      </>
                     )}
-                  </div>
-                </CardContent>
-              </Card>
 
-              <Card className="bg-card/50 border-border/50">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg">Hero Image</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {panelId && (
-                    <ImageUpload
-                      label="Hero Background Image"
-                      value={customization.heroImage}
-                      onChange={(url) => setCustomization({...customization, heroImage: url})}
-                      panelId={panelId}
-                      folder="hero"
-                      placeholder="Upload a hero banner image (1920x1080 recommended)"
-                      aspectRatio="wide"
-                      maxSizeMB={5}
-                    />
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card className="bg-card/50 border-border/50">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg">Brand Identity</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Company Name</Label>
-                    <Input
-                      value={customization.companyName}
-                      onChange={(e) => setCustomization({...customization, companyName: e.target.value})}
-                      className="bg-background/50"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Tagline</Label>
-                    <Input
-                      value={customization.tagline}
-                      onChange={(e) => setCustomization({...customization, tagline: e.target.value})}
-                      placeholder="Your catchy tagline"
-                      className="bg-background/50"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Footer Text</Label>
-                    <Input
-                      value={customization.footerText}
-                      onChange={(e) => setCustomization({...customization, footerText: e.target.value})}
-                      className="bg-background/50"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Border Radius (px)</Label>
-                    <Input
-                      type="number"
-                      value={customization.borderRadius}
-                      onChange={(e) => setCustomization({...customization, borderRadius: e.target.value})}
-                      className="bg-background/50 w-32"
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Social Icons Tab */}
-            <TabsContent value="social" className="m-0 space-y-4">
-              <Card className="bg-card/50 border-border/50">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Share2 className="w-5 h-5" />
-                    Social Media Icons
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <SocialIconSelector
-                    platforms={[
-                      { id: 'instagram', name: 'Instagram', icon: 'instagram', color: 'text-pink-500', bgColor: 'bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400', enabled: true },
-                      { id: 'facebook', name: 'Facebook', icon: 'facebook', color: 'text-blue-600', bgColor: 'bg-blue-600', enabled: true },
-                      { id: 'twitter', name: 'Twitter/X', icon: 'twitter', color: 'text-sky-500', bgColor: 'bg-slate-900', enabled: true },
-                      { id: 'youtube', name: 'YouTube', icon: 'youtube', color: 'text-red-500', bgColor: 'bg-red-500', enabled: true },
-                      { id: 'tiktok', name: 'TikTok', icon: 'tiktok', color: 'text-foreground', bgColor: 'bg-gradient-to-br from-cyan-400 via-slate-900 to-pink-500', enabled: false },
-                      { id: 'telegram', name: 'Telegram', icon: 'telegram', color: 'text-sky-400', bgColor: 'bg-sky-500', enabled: false },
-                    ]}
-                    onChange={(platforms) => {
-                      setCustomization(prev => ({ ...prev, socialPlatforms: platforms } as any));
-                    }}
-                    showUrls={true}
-                  />
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Accessibility Tab */}
-            <TabsContent value="accessibility" className="m-0 space-y-4">
-              <Card className="bg-card/50 border-border/50">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Accessibility className="w-5 h-5" />
-                    Accessibility Settings
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <AccessibilitySettings
-                    settings={{
-                      highContrast: false,
-                      largeText: false,
-                      reduceMotion: false,
-                      fontSize: 16,
-                      focusIndicators: false,
-                      screenReaderOptimized: false
-                    }}
-                    onChange={(settings) => {
-                      setCustomization(prev => ({ ...prev, accessibilitySettings: settings } as any));
-                    }}
-                  />
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Layout Tab */}
-            <TabsContent value="layout" className="m-0 space-y-4">
-              <Card className="bg-card/50 border-border/50">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg">Header & Navigation</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Header Style</Label>
-                      <Select value={customization.headerStyle} onValueChange={(v) => setCustomization({...customization, headerStyle: v})}>
-                        <SelectTrigger className="bg-background/50">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="fixed">Fixed</SelectItem>
-                          <SelectItem value="sticky">Sticky</SelectItem>
-                          <SelectItem value="static">Static</SelectItem>
-                          <SelectItem value="hidden">Hide on Scroll</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Navigation Style</Label>
-                      <Select value={customization.navStyle} onValueChange={(v) => setCustomization({...customization, navStyle: v})}>
-                        <SelectTrigger className="bg-background/50">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="sidebar">Sidebar</SelectItem>
-                          <SelectItem value="topnav">Top Navigation</SelectItem>
-                          <SelectItem value="both">Both</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-card/50 border-border/50">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg">Homepage Sections</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {[
-                    { key: "showHero", label: "Hero Section", desc: "Main banner with CTA" },
-                    { key: "showFeatures", label: "Features Section", desc: "Highlight your services" },
-                    { key: "showStats", label: "Stats Section", desc: "Show key metrics" },
-                    { key: "showFaqs", label: "FAQs Section", desc: "Common questions" },
-                    { key: "showTestimonials", label: "Testimonials", desc: "Customer reviews" },
-                  ].map(({ key, label, desc }) => (
-                    <div key={key} className="flex items-center justify-between p-3 rounded-lg bg-background/30">
-                      <div>
-                        <p className="font-medium text-sm">{label}</p>
-                        <p className="text-xs text-muted-foreground">{desc}</p>
+                    {/* Colors */}
+                    {section.id === "colors" && (
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-muted-foreground">Current theme: {currentTheme?.name}</span>
+                          <Button variant="ghost" size="sm" onClick={resetColors}>
+                            <RotateCcw className="w-3 h-3 mr-1" /> Reset
+                          </Button>
+                        </div>
+                        {[
+                          { key: "primaryColor", label: "Primary" },
+                          { key: "secondaryColor", label: "Secondary" },
+                          { key: "accentColor", label: "Accent" },
+                          { key: "backgroundColor", label: "Background" },
+                          { key: "surfaceColor", label: "Surface" },
+                          { key: "textColor", label: "Text" },
+                        ].map((color) => (
+                          <div key={color.key} className="flex items-center justify-between">
+                            <Label className="text-sm">{color.label}</Label>
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="color"
+                                value={(customization as any)[color.key]}
+                                onChange={(e) => updateCustomization(color.key, e.target.value)}
+                                className="w-10 h-8 p-0 border-0 cursor-pointer"
+                              />
+                              <Input
+                                value={(customization as any)[color.key]}
+                                onChange={(e) => updateCustomization(color.key, e.target.value)}
+                                className="w-24 h-8 text-xs font-mono"
+                              />
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                      <Switch
-                        checked={(customization as any)[key]}
-                        onCheckedChange={(v) => setCustomization({...customization, [key]: v})}
-                      />
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Code Tab */}
-            <TabsContent value="code" className="m-0 space-y-4">
-              <Card className="bg-card/50 border-border/50">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg">Custom CSS</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Textarea
-                    placeholder={`/* Add your custom CSS here */
-.custom-button {
-  background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
-}`}
-                    value={customization.customCSS}
-                    onChange={(e) => setCustomization({...customization, customCSS: e.target.value})}
-                    rows={10}
-                    className="font-mono text-sm bg-slate-950 text-green-400 border-border/50"
-                  />
-                </CardContent>
-              </Card>
-
-              <Card className="bg-card/50 border-border/50">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    Custom JavaScript
-                    <Badge variant="outline" className="text-xs">Advanced</Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Textarea
-                    placeholder={`// Add your custom JavaScript here
-// Be careful with custom scripts`}
-                    value={customization.customJS}
-                    onChange={(e) => setCustomization({...customization, customJS: e.target.value})}
-                    rows={6}
-                    className="font-mono text-sm bg-slate-950 text-yellow-400 border-border/50"
-                  />
-                  <p className="text-xs text-muted-foreground mt-2">
-                    ⚠️ Custom JavaScript runs on your storefront. Use with caution.
-                  </p>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </div>
-        </Tabs>
-      </div>
-
-      {/* Right Panel - Live Preview */}
-      <div className="lg:w-[45%] flex flex-col bg-card/30 rounded-2xl border border-border/50 overflow-hidden">
-        {/* Preview Header */}
-        <div className="flex items-center justify-between p-3 border-b border-border/50 bg-card/50">
-          <div className="flex items-center gap-2">
-            <div className="flex bg-muted rounded-lg p-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                className={cn(
-                  "h-7 px-3 text-xs gap-1.5",
-                  previewMode === "local" && "bg-background shadow-sm"
-                )}
-                onClick={() => setPreviewMode("local")}
-              >
-                <Eye className="w-3 h-3" />
-                Local
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className={cn(
-                  "h-7 px-3 text-xs gap-1.5",
-                  previewMode === "live" && "bg-background shadow-sm"
-                )}
-                onClick={() => setPreviewMode("live")}
-              >
-                <Globe className="w-3 h-3" />
-                Live
-              </Button>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {previewMode === "local" && (
-              <div className="flex bg-muted rounded-lg p-1">
-                {[
-                  { device: "desktop" as const, icon: Monitor },
-                  { device: "tablet" as const, icon: Tablet },
-                  { device: "mobile" as const, icon: Smartphone },
-                ].map(({ device, icon: Icon }) => (
-                  <Button
-                    key={device}
-                    variant="ghost"
-                    size="sm"
-                    className={cn(
-                      "h-8 w-8 p-0",
-                      previewDevice === device && "bg-background shadow-sm"
                     )}
-                    onClick={() => setPreviewDevice(device)}
-                  >
-                    <Icon className="w-4 h-4" />
-                  </Button>
-                ))}
-              </div>
-            )}
-            <Button variant="outline" size="sm" onClick={handlePreviewNewTab} className="gap-2">
-              <ExternalLink className="w-4 h-4" />
-              Open
-            </Button>
+
+                    {/* Hero Section */}
+                    {section.id === "hero" && (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm">Show Hero Section</Label>
+                          <Switch
+                            checked={customization.showHero}
+                            onCheckedChange={(val) => updateCustomization("showHero", val)}
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm">Hero Title</Label>
+                          <Input
+                            value={customization.heroTitle}
+                            onChange={(e) => updateCustomization("heroTitle", e.target.value)}
+                            className="mt-1.5"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm">Hero Subtitle</Label>
+                          <Textarea
+                            value={customization.heroSubtitle}
+                            onChange={(e) => updateCustomization("heroSubtitle", e.target.value)}
+                            className="mt-1.5"
+                            rows={2}
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm">CTA Button Text</Label>
+                          <Input
+                            value={customization.heroCta}
+                            onChange={(e) => updateCustomization("heroCta", e.target.value)}
+                            className="mt-1.5"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm">Hero Background Image URL</Label>
+                          <Input
+                            value={customization.heroImage}
+                            onChange={(e) => updateCustomization("heroImage", e.target.value)}
+                            placeholder="Enter image URL"
+                            className="mt-1.5"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Content */}
+                    {section.id === "content" && (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm">Show Features</Label>
+                          <Switch
+                            checked={customization.showFeatures}
+                            onCheckedChange={(val) => updateCustomization("showFeatures", val)}
+                          />
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm">Show Stats</Label>
+                          <Switch
+                            checked={customization.showStats}
+                            onCheckedChange={(val) => updateCustomization("showStats", val)}
+                          />
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm">Show Testimonials</Label>
+                          <Switch
+                            checked={customization.showTestimonials}
+                            onCheckedChange={(val) => updateCustomization("showTestimonials", val)}
+                          />
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm">Show FAQs</Label>
+                          <Switch
+                            checked={customization.showFaqs}
+                            onCheckedChange={(val) => updateCustomization("showFaqs", val)}
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm">Footer Text</Label>
+                          <Input
+                            value={customization.footerText}
+                            onChange={(e) => updateCustomization("footerText", e.target.value)}
+                            className="mt-1.5"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm">Footer About</Label>
+                          <Textarea
+                            value={customization.footerAbout}
+                            onChange={(e) => updateCustomization("footerAbout", e.target.value)}
+                            className="mt-1.5"
+                            rows={2}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Layout */}
+                    {section.id === "layout" && (
+                      <div className="space-y-4">
+                        <div>
+                          <Label className="text-sm">Header Style</Label>
+                          <Select
+                            value={customization.headerStyle}
+                            onValueChange={(val) => updateCustomization("headerStyle", val)}
+                          >
+                            <SelectTrigger className="mt-1.5">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="sticky">Sticky</SelectItem>
+                              <SelectItem value="fixed">Fixed</SelectItem>
+                              <SelectItem value="static">Static</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label className="text-sm">Navigation Style</Label>
+                          <Select
+                            value={customization.navStyle}
+                            onValueChange={(val) => updateCustomization("navStyle", val)}
+                          >
+                            <SelectTrigger className="mt-1.5">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="sidebar">Sidebar</SelectItem>
+                              <SelectItem value="topbar">Top Bar</SelectItem>
+                              <SelectItem value="minimal">Minimal</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label className="text-sm">Border Radius (px)</Label>
+                          <Input
+                            type="number"
+                            value={customization.borderRadius}
+                            onChange={(e) => updateCustomization("borderRadius", e.target.value)}
+                            className="mt-1.5"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm">Font Family</Label>
+                          <Select
+                            value={customization.fontFamily}
+                            onValueChange={(val) => updateCustomization("fontFamily", val)}
+                          >
+                            <SelectTrigger className="mt-1.5">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Inter, system-ui, sans-serif">Inter</SelectItem>
+                              <SelectItem value="'Space Grotesk', sans-serif">Space Grotesk</SelectItem>
+                              <SelectItem value="'DM Sans', sans-serif">DM Sans</SelectItem>
+                              <SelectItem value="'Poppins', sans-serif">Poppins</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Social Links */}
+                    {section.id === "social" && (
+                      <div className="space-y-4">
+                        {[
+                          { key: "socialInstagram", label: "Instagram", placeholder: "https://instagram.com/..." },
+                          { key: "socialFacebook", label: "Facebook", placeholder: "https://facebook.com/..." },
+                          { key: "socialTwitter", label: "Twitter/X", placeholder: "https://x.com/..." },
+                          { key: "socialTelegram", label: "Telegram", placeholder: "https://t.me/..." },
+                          { key: "socialDiscord", label: "Discord", placeholder: "https://discord.gg/..." },
+                        ].map((social) => (
+                          <div key={social.key}>
+                            <Label className="text-sm">{social.label}</Label>
+                            <Input
+                              value={(customization as any)[social.key]}
+                              onChange={(e) => updateCustomization(social.key, e.target.value)}
+                              placeholder={social.placeholder}
+                              className="mt-1.5"
+                            />
+                          </div>
+                        ))}
+                        <div>
+                          <Label className="text-sm">Contact Email</Label>
+                          <Input
+                            value={customization.footerContact}
+                            onChange={(e) => updateCustomization("footerContact", e.target.value)}
+                            placeholder="support@example.com"
+                            className="mt-1.5"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Advanced */}
+                    {section.id === "advanced" && (
+                      <div className="space-y-4">
+                        <div>
+                          <Label className="text-sm">Custom CSS</Label>
+                          <Textarea
+                            value={customization.customCSS}
+                            onChange={(e) => updateCustomization("customCSS", e.target.value)}
+                            placeholder="/* Add your custom CSS here */"
+                            className="mt-1.5 font-mono text-xs"
+                            rows={6}
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm">Custom JavaScript</Label>
+                          <Textarea
+                            value={customization.customJS}
+                            onChange={(e) => updateCustomization("customJS", e.target.value)}
+                            placeholder="// Add your custom JS here"
+                            className="mt-1.5 font-mono text-xs"
+                            rows={6}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </motion.div>
+                </CollapsibleContent>
+              </Collapsible>
+            ))}
           </div>
         </div>
 
-        {/* Preview Content */}
-        {previewMode === "live" ? (
-          <LiveStorefrontPreview subdomain={panelSubdomain || undefined} />
-        ) : (
-          <div className="flex-1 p-4 overflow-auto flex items-start justify-center bg-[#1a1a2e]">
-            <motion.div
-              layout
-              className="bg-background rounded-lg overflow-hidden shadow-2xl transition-all duration-300"
-              style={{
-                width: deviceSizes[previewDevice].width,
-                maxWidth: deviceSizes[previewDevice].maxWidth,
-                minHeight: "400px",
-              }}
-            >
-            {/* Full Storefront Preview */}
+        {/* Right Panel - Live Preview */}
+        <div className="hidden lg:flex flex-1 flex-col min-h-0">
+          {/* Device Switcher */}
+          <div className="flex items-center justify-between mb-3 shrink-0">
+            <div className="flex items-center gap-2 bg-muted/50 rounded-lg p-1">
+              {Object.entries(deviceConfig).map(([device, config]) => (
+                <Button
+                  key={device}
+                  variant={previewDevice === device ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => setPreviewDevice(device as any)}
+                  className="h-8 w-8 p-0"
+                >
+                  <config.icon className="w-4 h-4" />
+                </Button>
+              ))}
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/30">
+                <span className="w-2 h-2 rounded-full bg-green-500 mr-2 animate-pulse" />
+                Live Preview
+              </Badge>
+            </div>
+          </div>
+
+          {/* Preview Frame */}
+          <div className="flex-1 bg-muted/30 rounded-xl border border-border/50 overflow-hidden flex items-start justify-center p-4">
             <div 
-              className="min-h-[400px] overflow-y-auto"
+              className="bg-background rounded-lg shadow-2xl overflow-hidden transition-all duration-300 h-full"
               style={{ 
-                backgroundColor: customization.backgroundColor,
-                borderRadius: `${customization.borderRadius}px`,
+                width: deviceConfig[previewDevice].width,
+                maxWidth: "100%"
               }}
             >
-              {/* Header */}
-              <div 
-                className="p-4 flex items-center justify-between sticky top-0 z-10"
-                style={{ backgroundColor: customization.surfaceColor }}
-              >
-                <div className="flex items-center gap-2">
-                  {customization.logoUrl ? (
-                    <img src={customization.logoUrl} alt="Logo" className="h-6" />
-                  ) : (
-                    <div 
-                      className="w-8 h-8 rounded-lg flex items-center justify-center"
-                      style={{ backgroundColor: customization.primaryColor }}
-                    >
-                      <Zap className="w-4 h-4 text-white" />
-                    </div>
-                  )}
-                  <span 
-                    className="font-bold text-sm"
-                    style={{ color: customization.textColor }}
-                  >
-                    {customization.companyName}
-                  </span>
+              {/* Browser Chrome */}
+              <div className="bg-muted/50 px-4 py-2 flex items-center gap-2 border-b border-border/50">
+                <div className="flex gap-1.5">
+                  <div className="w-3 h-3 rounded-full bg-red-500/70" />
+                  <div className="w-3 h-3 rounded-full bg-yellow-500/70" />
+                  <div className="w-3 h-3 rounded-full bg-green-500/70" />
                 </div>
-                <div className="flex gap-2">
-                  <div 
-                    className="px-3 py-1.5 rounded text-xs font-medium cursor-pointer hover:opacity-90 transition-opacity"
-                    style={{ 
-                      backgroundColor: customization.primaryColor,
-                      color: "#fff",
-                      borderRadius: `${customization.borderRadius}px`,
-                    }}
-                  >
-                    Login
+                <div className="flex-1 flex justify-center">
+                  <div className="bg-background/50 rounded-full px-4 py-1 text-xs text-muted-foreground flex items-center gap-2 max-w-xs">
+                    <Globe className="w-3 h-3" />
+                    <span className="truncate">{panelSubdomain}.lovable.app</span>
                   </div>
                 </div>
               </div>
-
-              {/* Hero Section */}
-              {customization.showHero && (
-                <div className="px-6 py-10 text-center">
-                  <h1 
-                    className="text-2xl font-bold mb-3"
-                    style={{ color: customization.textColor }}
-                  >
-                    {customization.heroTitle}
-                  </h1>
-                  <p 
-                    className="text-sm mb-6 max-w-md mx-auto"
-                    style={{ color: customization.mutedColor }}
-                  >
-                    {customization.heroSubtitle}
-                  </p>
+              
+              {/* Preview Content */}
+              <div 
+                className="h-[calc(100%-40px)] overflow-auto"
+                style={{ 
+                  backgroundColor: customization.backgroundColor,
+                  color: customization.textColor
+                }}
+              >
+                {/* Mini Hero Preview */}
+                {customization.showHero && (
                   <div 
-                    className="inline-block px-6 py-3 rounded text-sm font-semibold cursor-pointer hover:opacity-90 transition-opacity"
+                    className="p-8 text-center"
                     style={{ 
-                      backgroundColor: customization.primaryColor,
-                      color: "#fff",
-                      borderRadius: `${customization.borderRadius}px`,
+                      background: `linear-gradient(135deg, ${customization.primaryColor}20, ${customization.secondaryColor}20)` 
                     }}
                   >
-                    {customization.heroCta}
+                    {customization.logoUrl && (
+                      <img src={customization.logoUrl} alt="Logo" className="h-10 mx-auto mb-4 object-contain" />
+                    )}
+                    <h1 
+                      className="text-2xl font-bold mb-2"
+                      style={{ color: customization.textColor }}
+                    >
+                      {customization.heroTitle || customization.companyName}
+                    </h1>
+                    <p 
+                      className="text-sm opacity-70 mb-4"
+                      style={{ color: customization.mutedColor }}
+                    >
+                      {customization.heroSubtitle || customization.tagline}
+                    </p>
+                    <button
+                      className="px-6 py-2 rounded-lg text-sm font-medium text-white transition-all"
+                      style={{ 
+                        backgroundColor: customization.primaryColor,
+                        borderRadius: `${customization.borderRadius}px`
+                      }}
+                    >
+                      {customization.heroCta}
+                    </button>
                   </div>
-                </div>
-              )}
-
-              {/* Features Section */}
-              {customization.showFeatures && (
-                <div className="p-4">
-                  <h2 
-                    className="text-center text-lg font-bold mb-4"
-                    style={{ color: customization.textColor }}
-                  >
-                    Why Choose Us?
-                  </h2>
-                  <div className="grid grid-cols-2 gap-3">
-                    {customization.features.map((feature, i) => {
-                      const iconMap: Record<string, any> = { Zap, Shield, Clock, TrendingUp };
-                      const IconComponent = iconMap[feature.icon] || Zap;
-                      return (
+                )}
+                
+                {/* Features Preview */}
+                {customization.showFeatures && (
+                  <div className="p-6">
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        { icon: Zap, title: "Lightning Fast" },
+                        { icon: Settings, title: "Easy Setup" },
+                        { icon: MessageSquare, title: "24/7 Support" },
+                        { icon: Layers, title: "Real Results" },
+                      ].map((feature, i) => (
                         <div 
                           key={i}
                           className="p-3 rounded-lg"
                           style={{ 
                             backgroundColor: customization.surfaceColor,
-                            borderRadius: `${customization.borderRadius}px`,
+                            borderRadius: `${customization.borderRadius}px`
                           }}
                         >
-                          <div 
-                            className="w-8 h-8 rounded-lg mb-2 flex items-center justify-center"
-                            style={{ backgroundColor: `${customization.secondaryColor}30` }}
-                          >
-                            <IconComponent className="w-4 h-4" style={{ color: customization.secondaryColor }} />
-                          </div>
-                          <h3 
-                            className="font-semibold text-sm mb-1"
-                            style={{ color: customization.textColor }}
-                          >
+                          <feature.icon 
+                            className="w-5 h-5 mb-2" 
+                            style={{ color: customization.primaryColor }}
+                          />
+                          <p className="text-xs font-medium" style={{ color: customization.textColor }}>
                             {feature.title}
-                          </h3>
-                          <p 
-                            className="text-xs"
-                            style={{ color: customization.mutedColor }}
-                          >
-                            {feature.description}
                           </p>
                         </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Stats Section */}
-              {customization.showStats && (
-                <div className="p-6 flex justify-around" style={{ backgroundColor: `${customization.primaryColor}15` }}>
-                  {customization.stats.map((stat, i) => (
-                    <div key={i} className="text-center">
-                      <div 
-                        className="text-2xl font-bold"
-                        style={{ color: customization.primaryColor }}
-                      >
-                        {stat.value}
-                      </div>
-                      <div 
-                        className="text-xs"
-                        style={{ color: customization.mutedColor }}
-                      >
-                        {stat.label}
-                      </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              )}
+                  </div>
+                )}
 
-              {/* FAQs Section */}
-              {customization.showFaqs && (
-                <div className="p-4">
-                  <h2 
-                    className="text-center text-lg font-bold mb-4"
-                    style={{ color: customization.textColor }}
+                {/* Stats Preview */}
+                {customization.showStats && (
+                  <div 
+                    className="p-6 flex justify-around"
+                    style={{ backgroundColor: customization.surfaceColor }}
                   >
-                    Frequently Asked Questions
-                  </h2>
-                  <div className="space-y-2">
-                    {customization.faqs.slice(0, 3).map((faq, i) => (
-                      <div 
-                        key={i}
-                        className="p-3 rounded-lg"
-                        style={{ 
-                          backgroundColor: customization.surfaceColor,
-                          borderRadius: `${customization.borderRadius}px`,
-                        }}
-                      >
-                        <div className="flex items-center justify-between">
-                          <h3 
-                            className="font-medium text-sm"
-                            style={{ color: customization.textColor }}
-                          >
-                            {faq.question}
-                          </h3>
-                          <ChevronDown className="w-4 h-4" style={{ color: customization.mutedColor }} />
-                        </div>
+                    {[
+                      { value: "10K+", label: "Customers" },
+                      { value: "50K+", label: "Orders" },
+                      { value: "99.9%", label: "Uptime" },
+                    ].map((stat, i) => (
+                      <div key={i} className="text-center">
                         <p 
-                          className="text-xs mt-2"
+                          className="text-xl font-bold"
+                          style={{ color: customization.primaryColor }}
+                        >
+                          {stat.value}
+                        </p>
+                        <p 
+                          className="text-xs"
                           style={{ color: customization.mutedColor }}
                         >
-                          {faq.answer}
+                          {stat.label}
                         </p>
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Footer */}
-              <div 
-                className="p-4 mt-4"
-                style={{ backgroundColor: customization.surfaceColor }}
-              >
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <h4 
-                      className="font-semibold text-xs mb-2"
-                      style={{ color: customization.textColor }}
-                    >
-                      About
-                    </h4>
-                    <p 
-                      className="text-xs line-clamp-3"
-                      style={{ color: customization.mutedColor }}
-                    >
-                      {customization.footerAbout}
-                    </p>
-                  </div>
-                  <div>
-                    <h4 
-                      className="font-semibold text-xs mb-2"
-                      style={{ color: customization.textColor }}
-                    >
-                      Contact
-                    </h4>
-                    <p 
-                      className="text-xs"
-                      style={{ color: customization.mutedColor }}
-                    >
-                      {customization.footerContact}
-                    </p>
-                  </div>
-                </div>
+                {/* Footer Preview */}
                 <div 
-                  className="text-center pt-3 border-t"
-                  style={{ borderColor: `${customization.mutedColor}30` }}
+                  className="p-4 text-center mt-auto"
+                  style={{ backgroundColor: customization.surfaceColor }}
                 >
-                  <p 
-                    className="text-xs"
-                    style={{ color: customization.mutedColor }}
-                  >
+                  <p className="text-xs" style={{ color: customization.mutedColor }}>
                     {customization.footerText}
                   </p>
                 </div>
               </div>
             </div>
-          </motion.div>
+          </div>
         </div>
-        )}
       </div>
     </div>
   );
