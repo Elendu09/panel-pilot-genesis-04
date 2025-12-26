@@ -9,30 +9,71 @@ import { FloatingChatWidget } from '@/components/storefront/FloatingChatWidget';
 import { LiveChatWidget } from '@/components/support/LiveChatWidget';
 import { FastOrderSection } from '@/components/storefront/FastOrderSection';
 import { supabase } from '@/integrations/supabase/client';
+import { AlertTriangle } from 'lucide-react';
+
+// Error Boundary Component
+const ErrorFallback = ({ error, panelName }: { error: string; panelName?: string }) => (
+  <div className="min-h-screen flex items-center justify-center bg-slate-900">
+    <div className="text-center max-w-md mx-auto p-6">
+      <AlertTriangle className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
+      <h1 className="text-2xl font-bold text-white mb-4">
+        {panelName || 'Panel'} - Error Loading
+      </h1>
+      <p className="text-slate-400 mb-6">
+        We encountered an issue loading this page. Please try refreshing.
+      </p>
+      <p className="text-xs text-slate-500 bg-slate-800 p-3 rounded-lg font-mono">
+        {error}
+      </p>
+      <button 
+        onClick={() => window.location.reload()} 
+        className="mt-6 px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+      >
+        Refresh Page
+      </button>
+    </div>
+  </div>
+);
 
 const Storefront = () => {
   const { panel, loading: tenantLoading, error: tenantError } = useTenant();
   const { services } = useTenantServices(panel?.id);
   const [liveChatEnabled, setLiveChatEnabled] = useState(false);
+  const [renderError, setRenderError] = useState<string | null>(null);
 
   // Check if live chat is enabled for this panel
   useEffect(() => {
     const checkLiveChat = async () => {
       if (!panel?.id) return;
       
-      const { data } = await supabase
-        .from('panel_settings')
-        .select('floating_chat_enabled')
-        .eq('panel_id', panel.id)
-        .single();
-      
-      // If floating chat is NOT enabled (for WhatsApp/Telegram), enable live chat
-      // This is a simple heuristic - in production you might have a separate setting
-      setLiveChatEnabled(true); // Always enable live chat for now
+      try {
+        const { data } = await supabase
+          .from('panel_settings')
+          .select('floating_chat_enabled')
+          .eq('panel_id', panel.id)
+          .single();
+        
+        setLiveChatEnabled(true);
+      } catch (err) {
+        console.log('Live chat check failed:', err);
+      }
     };
 
     checkLiveChat();
   }, [panel?.id]);
+
+  // Debug logging
+  useEffect(() => {
+    console.log('Storefront render state:', {
+      tenantLoading,
+      tenantError,
+      hasPanel: !!panel,
+      panelId: panel?.id,
+      panelName: panel?.name,
+      themeType: panel?.theme_type,
+      servicesCount: services?.length
+    });
+  }, [tenantLoading, tenantError, panel, services]);
 
   const design = panel?.custom_branding || {};
   const themeType = panel?.theme_type || 'dark_gradient';
@@ -63,37 +104,53 @@ const Storefront = () => {
     );
   }
 
+  if (renderError) {
+    return <ErrorFallback error={renderError} panelName={panel?.name} />;
+  }
+
   const canonicalUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
   // Render appropriate theme based on panel.theme_type or custom_branding.selectedTheme
   const renderTheme = () => {
-    const themeProps = {
-      panel,
-      services,
-      customization: design
-    };
+    try {
+      const themeProps = {
+        panel,
+        services,
+        customization: design
+      };
 
-    switch (selectedTheme) {
-      case 'dark_gradient':
-      case 'ocean_blue':
-      case 'forest_green':
-        return <ThemeOne {...themeProps} />;
-      case 'professional':
-      case 'light_minimal':
-      case 'corporate':
-        return <ThemeTwo {...themeProps} />;
-      case 'vibrant':
-      case 'neon_glow':
-      case 'sunset_orange':
-      case 'royal_purple':
-        return <ThemeThree {...themeProps} />;
-      case 'grace':
-      case 'grace_cometh':
-        return <ThemeFour {...themeProps} />;
-      default:
-        return <ThemeOne {...themeProps} />;
+      console.log('Rendering theme:', selectedTheme, 'with props:', { panelName: panel?.name, servicesCount: services?.length });
+
+      switch (selectedTheme) {
+        case 'dark_gradient':
+        case 'ocean_blue':
+        case 'forest_green':
+          return <ThemeOne {...themeProps} />;
+        case 'professional':
+        case 'light_minimal':
+        case 'corporate':
+          return <ThemeTwo {...themeProps} />;
+        case 'vibrant':
+        case 'neon_glow':
+        case 'sunset_orange':
+        case 'royal_purple':
+          return <ThemeThree {...themeProps} />;
+        case 'grace':
+        case 'grace_cometh':
+          return <ThemeFour {...themeProps} />;
+        default:
+          console.log('Unknown theme, falling back to ThemeOne:', selectedTheme);
+          return <ThemeOne {...themeProps} />;
+      }
+    } catch (err: any) {
+      console.error('Theme render error:', err);
+      setRenderError(err.message || 'Failed to render theme');
+      return null;
     }
   };
+
+  // Check if Fast Order is enabled
+  const enableFastOrder = (design as any)?.enableFastOrder !== false;
 
   return (
     <>
@@ -109,8 +166,8 @@ const Storefront = () => {
         {panel.logo_url && <meta property="og:image" content={panel.logo_url} />}
       </Helmet>
       {renderTheme()}
-      {/* Fast Order Section */}
-      {services.length > 0 && panel && (
+      {/* Fast Order Section - only show if enabled */}
+      {enableFastOrder && services.length > 0 && panel && (
         <FastOrderSection 
           services={services} 
           panelId={panel.id} 
