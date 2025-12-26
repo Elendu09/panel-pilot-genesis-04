@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { useTenant } from '@/hooks/useTenant';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -35,22 +36,80 @@ const queryClient = new QueryClient();
  */
 const TenantRouter = () => {
   const { panel, loading, error, isTenantDomain, isPlatformDomain, domainConfig, debugInfo } = useTenant();
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
 
-  if (loading) {
+  // Add timeout for loading state
+  useEffect(() => {
+    if (loading) {
+      const timer = setTimeout(() => {
+        console.warn('[TenantRouter] Loading timeout reached');
+        setLoadingTimeout(true);
+      }, 10000); // 10 second timeout
+      return () => clearTimeout(timer);
+    }
+    setLoadingTimeout(false);
+  }, [loading]);
+
+  // Show loading state wrapped in providers for consistent styling
+  if (loading && !loadingTimeout) {
     const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-primary/5 to-secondary/10">
-        <div className="text-center max-w-md px-6">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground mb-2">Connecting to panel...</p>
-          <p className="text-xs text-muted-foreground/60 font-mono">{hostname}</p>
-          {domainConfig && (
-            <p className="text-xs text-muted-foreground/40 mt-1">
-              Type: {domainConfig.type}
-            </p>
-          )}
-        </div>
-      </div>
+      <QueryClientProvider client={queryClient}>
+        <HelmetProvider>
+          <ThemeProvider defaultTheme="dark" storageKey="smm-panel-theme">
+            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-primary/5 to-secondary/10">
+              <div className="text-center max-w-md px-6">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                <p className="text-muted-foreground mb-2">Connecting to panel...</p>
+                <p className="text-xs text-muted-foreground/60 font-mono">{hostname}</p>
+                {domainConfig && (
+                  <p className="text-xs text-muted-foreground/40 mt-1">
+                    Type: {domainConfig.type}
+                  </p>
+                )}
+              </div>
+            </div>
+          </ThemeProvider>
+        </HelmetProvider>
+      </QueryClientProvider>
+    );
+  }
+
+  // Show error if loading timed out
+  if (loadingTimeout) {
+    const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
+    return (
+      <QueryClientProvider client={queryClient}>
+        <HelmetProvider>
+          <ThemeProvider defaultTheme="dark" storageKey="smm-panel-theme">
+            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-primary/5 to-secondary/10">
+              <div className="text-center max-w-md px-6">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-yellow-500/20 flex items-center justify-center">
+                  <span className="text-3xl">⚠️</span>
+                </div>
+                <h1 className="text-2xl font-bold text-foreground mb-2">Connection Timeout</h1>
+                <p className="text-muted-foreground mb-4">
+                  Unable to load panel for <span className="font-mono text-sm">{hostname}</span>
+                </p>
+                <button 
+                  onClick={() => window.location.reload()}
+                  className="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90"
+                >
+                  Retry
+                </button>
+                {debugInfo && (
+                  <div className="mt-6 text-left bg-muted/50 p-4 rounded-lg text-xs">
+                    <p className="font-mono text-muted-foreground">
+                      Subdomain: {debugInfo.detectedSubdomain || 'none'}<br/>
+                      Attempts: {debugInfo.searchAttempts?.join(', ') || 'none'}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </ThemeProvider>
+        </HelmetProvider>
+      </QueryClientProvider>
     );
   }
 
