@@ -704,30 +704,72 @@ export default function DesignCustomization() {
           ))}
         </div>
 
-        {/* Right Panel - Preview */}
-        <div className="flex-1 flex flex-col bg-muted/20">
-          <div className="flex items-center justify-center gap-2 p-4 border-b border-border/50">
-            {(['desktop', 'tablet', 'mobile'] as const).map(device => (
-              <Button 
-                key={device} 
-                variant={previewDevice === device ? 'default' : 'ghost'} 
-                size="sm" 
-                onClick={() => setPreviewDevice(device)}
-              >
-                {device === 'desktop' ? <Monitor className="w-4 h-4 mr-2" /> : 
-                 device === 'tablet' ? <Tablet className="w-4 h-4 mr-2" /> : 
-                 <Smartphone className="w-4 h-4 mr-2" />}
-                {device.charAt(0).toUpperCase() + device.slice(1)}
+        {/* Right Panel - Live Preview */}
+        <div className="flex-1 flex flex-col bg-[#0a0a12]">
+          {/* Preview Header */}
+          <div className="flex items-center justify-between p-3 border-b border-border/30 bg-card/30">
+            <div className="flex items-center gap-3">
+              <div className="flex gap-1.5">
+                <div className="w-3 h-3 rounded-full bg-red-500/80" />
+                <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
+                <div className="w-3 h-3 rounded-full bg-green-500/80" />
+              </div>
+              <div className="px-4 py-1.5 bg-background/50 rounded-lg border border-border/30 flex items-center gap-2 min-w-[300px]">
+                <div className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center">
+                  <ExternalLink className="w-2.5 h-2.5 text-primary" />
+                </div>
+                <span className="text-xs text-muted-foreground font-mono truncate">
+                  {customization.companyName?.toLowerCase().replace(/\s+/g, '') || 'yourpanel'}.smmpilot.online
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {/* Device Toggle */}
+              <div className="flex bg-background/50 rounded-lg p-1 border border-border/30">
+                {(['desktop', 'tablet', 'mobile'] as const).map(device => (
+                  <Button 
+                    key={device} 
+                    variant="ghost"
+                    size="sm" 
+                    className={`h-8 w-8 p-0 ${previewDevice === device ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+                    onClick={() => setPreviewDevice(device)}
+                  >
+                    {device === 'desktop' ? <Monitor className="w-4 h-4" /> : 
+                     device === 'tablet' ? <Tablet className="w-4 h-4" /> : 
+                     <Smartphone className="w-4 h-4" />}
+                  </Button>
+                ))}
+              </div>
+              
+              <Button variant="outline" size="sm" onClick={() => window.open('/storefront-preview', '_blank')} className="gap-2">
+                <ExternalLink className="w-4 h-4" />
+                Open
               </Button>
-            ))}
+            </div>
           </div>
           
-          <div className="flex-1 overflow-auto p-6">
-            <div className={`mx-auto transition-all duration-300 ${
-              previewDevice === 'mobile' ? 'max-w-[375px]' : 
-              previewDevice === 'tablet' ? 'max-w-[768px]' : 'w-full'
-            }`}>
-              <InlinePreview customization={customization} previewDevice={previewDevice} />
+          {/* Live Preview Container */}
+          <div className="flex-1 overflow-hidden p-4 flex items-start justify-center">
+            <div 
+              className={`transition-all duration-500 ease-out origin-top rounded-xl overflow-hidden shadow-2xl ring-1 ring-white/10 ${
+                previewDevice === 'mobile' ? 'w-[375px]' : 
+                previewDevice === 'tablet' ? 'w-[768px]' : 'w-full max-w-[1200px]'
+              }`}
+              style={{ 
+                height: previewDevice === 'mobile' ? '667px' : previewDevice === 'tablet' ? '100%' : '100%',
+              }}
+            >
+              <div 
+                className="w-full h-full overflow-auto"
+                style={{
+                  transform: previewDevice === 'desktop' ? 'scale(0.7)' : previewDevice === 'tablet' ? 'scale(0.85)' : 'scale(1)',
+                  transformOrigin: 'top center',
+                  width: previewDevice === 'desktop' ? '142.85%' : previewDevice === 'tablet' ? '117.65%' : '100%',
+                  height: previewDevice === 'desktop' ? '142.85%' : previewDevice === 'tablet' ? '117.65%' : '100%',
+                }}
+              >
+                <LivePreviewRenderer customization={customization} />
+              </div>
             </div>
           </div>
         </div>
@@ -736,7 +778,27 @@ export default function DesignCustomization() {
   );
 }
 
-// Inline Preview Component
+// Live Preview Renderer using ThemeOne
+import { ThemeOne } from "@/components/themes/ThemeOne";
+
+function LivePreviewRenderer({ customization }: { customization: any }) {
+  const mockPanel = {
+    name: customization.companyName || 'Your Panel',
+    logo_url: customization.logoUrl,
+    primary_color: customization.primaryColor,
+    secondary_color: customization.secondaryColor,
+  };
+
+  return (
+    <ThemeOne 
+      panel={mockPanel} 
+      services={[]} 
+      customization={customization} 
+    />
+  );
+}
+
+// Icon map for InlinePreview fallback
 const iconMap: Record<string, React.ElementType> = {
   Zap, Shield, Headphones, Award, Users, Star, Clock, ShoppingCart, TrendingUp, CheckCircle, Heart, ThumbsUp
 };
