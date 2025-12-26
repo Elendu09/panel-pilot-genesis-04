@@ -23,8 +23,9 @@ interface BuyerUser {
 interface BuyerAuthContextType {
   buyer: BuyerUser | null;
   loading: boolean;
-  signIn: (identifier: string, password: string, panelId: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string, fullName: string, panelId: string) => Promise<{ error: any }>;
+  panelId: string;
+  signIn: (identifier: string, password: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, fullName: string) => Promise<{ error: any }>;
   signOut: () => void;
   refreshBuyer: () => Promise<void>;
 }
@@ -90,7 +91,7 @@ export function BuyerAuthProvider({ children, panelId }: { children: ReactNode; 
     }
   };
 
-  const signIn = async (identifier: string, password: string, panelId: string) => {
+  const signIn = async (identifier: string, password: string) => {
     try {
       // Input validation
       const trimmedIdentifier = identifier.trim();
@@ -143,7 +144,7 @@ export function BuyerAuthProvider({ children, panelId }: { children: ReactNode; 
     }
   };
 
-  const signUp = async (email: string, password: string, fullName: string, panelId: string) => {
+  const signUp = async (email: string, password: string, fullName: string) => {
     try {
       // Input validation
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -224,7 +225,7 @@ export function BuyerAuthProvider({ children, panelId }: { children: ReactNode; 
   };
 
   return (
-    <BuyerAuthContext.Provider value={{ buyer, loading, signIn, signUp, signOut, refreshBuyer }}>
+    <BuyerAuthContext.Provider value={{ buyer, loading, panelId, signIn, signUp, signOut, refreshBuyer }}>
       {children}
     </BuyerAuthContext.Provider>
   );
