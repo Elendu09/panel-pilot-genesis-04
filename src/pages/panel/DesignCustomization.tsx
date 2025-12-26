@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import type { Json } from '@/integrations/supabase/types';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -216,7 +217,7 @@ export default function DesignCustomization() {
     setSaving(true);
     try {
       await supabase.from('panels').update({ 
-        custom_branding: customization as unknown as Record<string, unknown>, 
+        custom_branding: customization as unknown as Json, 
         theme_type: customization.selectedTheme as any 
       }).eq('id', panelId);
       toast({ title: 'Design saved!' }); 
