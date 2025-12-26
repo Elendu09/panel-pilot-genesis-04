@@ -27,8 +27,25 @@ export const ThemeFour = ({ panel, services = [], customization = {} }: ThemeFou
     textColor: customization.textColor || '#FFFFFF',
   };
 
+  // Inject CSS variables for the theme
+  const themeStyles = `
+    :root {
+      --theme-primary: ${themeFourCustomization.primaryColor};
+      --theme-secondary: ${themeFourCustomization.secondaryColor};
+      --theme-background: ${themeFourCustomization.backgroundColor};
+      --theme-text: ${themeFourCustomization.textColor};
+    }
+  `;
+
   return (
-    <div className="min-h-screen" style={{ backgroundColor: themeFourCustomization.backgroundColor }}>
+    <div 
+      className="min-h-screen" 
+      style={{ 
+        backgroundColor: themeFourCustomization.backgroundColor,
+        color: themeFourCustomization.textColor 
+      }}
+    >
+      <style>{themeStyles}</style>
       {/* Navigation */}
       <StorefrontNavigation panel={panel} customization={themeFourCustomization} />
 

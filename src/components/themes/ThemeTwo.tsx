@@ -27,8 +27,25 @@ export const ThemeTwo = ({ panel, services = [], customization = {} }: ThemeTwoP
     textColor: customization.textColor || '#FFFFFF',
   };
 
+  // Inject CSS variables for the theme
+  const themeStyles = `
+    :root {
+      --theme-primary: ${themeTwoCustomization.primaryColor};
+      --theme-secondary: ${themeTwoCustomization.secondaryColor};
+      --theme-background: ${themeTwoCustomization.backgroundColor};
+      --theme-text: ${themeTwoCustomization.textColor};
+    }
+  `;
+
   return (
-    <div className="min-h-screen" style={{ backgroundColor: themeTwoCustomization.backgroundColor }}>
+    <div 
+      className="min-h-screen" 
+      style={{ 
+        backgroundColor: themeTwoCustomization.backgroundColor,
+        color: themeTwoCustomization.textColor 
+      }}
+    >
+      <style>{themeStyles}</style>
       {/* Navigation */}
       <StorefrontNavigation panel={panel} customization={themeTwoCustomization} />
 
