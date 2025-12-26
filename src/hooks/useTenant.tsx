@@ -93,53 +93,61 @@ export function useTenant(): TenantDetectionResult {
   const [debugInfo, setDebugInfo] = useState<TenantDetectionResult['debugInfo']>();
 
   useEffect(() => {
+    let isMounted = true;
+    
     const detectTenant = async () => {
       const searchAttempts: string[] = [];
       
       try {
-        setLoading(true);
-        setError(null);
+        if (isMounted) {
+          setLoading(true);
+          setError(null);
+        }
 
         const hostname = window.location.hostname.toLowerCase();
         
         // Use centralized domain analysis
         const config = analyzeDomain(hostname);
-        setDomainConfig(config);
+        if (isMounted) setDomainConfig(config);
         
         const isExternalHosting = config.type === 'external';
         const isDevPreview = config.type === 'development';
         
         console.log('[useTenant] ===== TENANT DETECTION START =====');
         console.log('[useTenant] Hostname:', hostname);
-        console.log('[useTenant] Domain config:', config);
+        console.log('[useTenant] Domain config:', JSON.stringify(config, null, 2));
         
         // Check cache first
         const cached = tenantCache.get(hostname);
         if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-          console.log('[useTenant] Using cached tenant data');
-          setPanel(cached.panel);
-          setIsPlatformDomain(config.type === 'platform' || config.type === 'development');
-          setIsTenantDomain(config.type === 'subdomain' || config.type === 'custom' || config.type === 'external');
-          setLoading(false);
+          console.log('[useTenant] Using cached tenant data:', cached.panel?.name);
+          if (isMounted) {
+            setPanel(cached.panel);
+            setIsPlatformDomain(config.type === 'platform' || config.type === 'development');
+            setIsTenantDomain(config.type === 'subdomain' || config.type === 'custom' || config.type === 'external');
+            setLoading(false);
+          }
           return;
         }
         
         // Development/preview domains should always show platform app
         if (isDevPreview) {
           console.log('[useTenant] Detected as dev preview domain - showing platform app');
-          setIsPlatformDomain(true);
-          setIsTenantDomain(false);
-          setPanel(null);
-          setDebugInfo({
-            hostname,
-            detectedSubdomain: null,
-            isSubdomainOfPlatform: false,
-            isPlatformMatch: true,
-            isExternalHosting: false,
-            isDevPreview: true,
-            searchAttempts
-          });
-          setLoading(false);
+          if (isMounted) {
+            setIsPlatformDomain(true);
+            setIsTenantDomain(false);
+            setPanel(null);
+            setDebugInfo({
+              hostname,
+              detectedSubdomain: null,
+              isSubdomainOfPlatform: false,
+              isPlatformMatch: true,
+              isExternalHosting: false,
+              isDevPreview: true,
+              searchAttempts
+            });
+            setLoading(false);
+          }
           return;
         }
 
@@ -164,26 +172,30 @@ export function useTenant(): TenantDetectionResult {
         // If it's the platform root domain, show the main app
         if (isPlatformRoot) {
           console.log('[useTenant] Detected as platform root domain');
-          setIsPlatformDomain(true);
-          setIsTenantDomain(false);
-          setPanel(null);
-          setDebugInfo({
-            hostname,
-            detectedSubdomain: null,
-            isSubdomainOfPlatform,
-            isPlatformMatch: true,
-            isExternalHosting,
-            isDevPreview: false,
-            searchAttempts
-          });
-          setLoading(false);
+          if (isMounted) {
+            setIsPlatformDomain(true);
+            setIsTenantDomain(false);
+            setPanel(null);
+            setDebugInfo({
+              hostname,
+              detectedSubdomain: null,
+              isSubdomainOfPlatform,
+              isPlatformMatch: true,
+              isExternalHosting,
+              isDevPreview: false,
+              searchAttempts
+            });
+            setLoading(false);
+          }
           return;
         }
 
         // This is a tenant domain - try to find the panel
         console.log('[useTenant] ===== TENANT DOMAIN DETECTED =====');
-        setIsPlatformDomain(false);
-        setIsTenantDomain(true);
+        if (isMounted) {
+          setIsPlatformDomain(false);
+          setIsTenantDomain(true);
+        }
 
         let subdomain: string | null = null;
         let panelData: any = null;
@@ -428,15 +440,17 @@ export function useTenant(): TenantDetectionResult {
           }
         }
 
-        setDebugInfo({
-          hostname,
-          detectedSubdomain: subdomain,
-          isSubdomainOfPlatform,
-          isPlatformMatch: isPlatformRoot,
-          isExternalHosting,
-          isDevPreview: false,
-          searchAttempts
-        });
+        if (isMounted) {
+          setDebugInfo({
+            hostname,
+            detectedSubdomain: subdomain,
+            isSubdomainOfPlatform,
+            isPlatformMatch: isPlatformRoot,
+            isExternalHosting,
+            isDevPreview: false,
+            searchAttempts
+          });
+        }
 
         if (panelError && panelError.code !== 'PGRST116') {
           console.error('[useTenant] Database error:', panelError);
@@ -464,22 +478,35 @@ export function useTenant(): TenantDetectionResult {
           // Cache the result
           tenantCache.set(hostname, { panel: resolvedPanel, timestamp: Date.now() });
           
-          setPanel(resolvedPanel);
+          if (isMounted) {
+            setPanel(resolvedPanel);
+          }
         } else {
           console.warn('[useTenant] No panel found for:', { hostname, subdomain, searchAttempts });
           tenantCache.set(hostname, { panel: null, timestamp: Date.now() });
-          setError(`Panel not found. Searched: ${searchAttempts.join(', ')}`);
+          if (isMounted) {
+            setError(`Panel not found. Searched: ${searchAttempts.join(', ')}`);
+          }
         }
 
       } catch (err) {
         console.error('[useTenant] Detection error:', err);
-        setError(err instanceof Error ? err.message : 'Failed to detect tenant');
+        if (isMounted) {
+          setError(err instanceof Error ? err.message : 'Failed to detect tenant');
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          console.log('[useTenant] ===== DETECTION COMPLETE =====');
+          setLoading(false);
+        }
       }
     };
 
     detectTenant();
+    
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   return {
