@@ -174,15 +174,39 @@ export const StorefrontNavigation = ({ panel, customization = {} }: StorefrontNa
             </motion.div>
           </div>
 
-          {/* Mobile Menu Button */}
-          <motion.button
-            className="md:hidden p-2 rounded-lg bg-transparent border-none cursor-pointer"
-            style={{ color: textColor }}
-            onClick={() => setIsOpen(!isOpen)}
-            whileTap={{ scale: 0.95 }}
-          >
-            {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </motion.button>
+          {/* Mobile Header Icons - VISIBLE BESIDE HAMBURGER */}
+          <div className="md:hidden flex items-center gap-2">
+            <LowVisionToggle 
+              accessibilitySettings={customization.accessibilitySettings} 
+              panelId={panel?.id} 
+              variant={themeMode === 'dark' ? 'dark' : 'light'}
+            />
+            
+            {setThemeMode && (
+              <motion.button
+                onClick={toggleThemeMode}
+                className="p-2 rounded-lg"
+                style={{ 
+                  backgroundColor: themeMode === 'dark' ? `${primaryColor}20` : 'rgba(0,0,0,0.05)',
+                  color: textColor,
+                  border: themeMode === 'light' ? '1px solid rgba(0,0,0,0.15)' : 'none'
+                }}
+                whileTap={{ scale: 0.95 }}
+                aria-label={themeMode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              >
+                {themeMode === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              </motion.button>
+            )}
+            
+            <motion.button
+              className="p-2 rounded-lg bg-transparent border-none cursor-pointer"
+              style={{ color: textColor }}
+              onClick={() => setIsOpen(!isOpen)}
+              whileTap={{ scale: 0.95 }}
+            >
+              {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </motion.button>
+          </div>
         </div>
 
         {/* Mobile Navigation */}

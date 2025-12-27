@@ -12,9 +12,11 @@ import {
   Music,
   Youtube,
   Send,
-  Twitter
+  Twitter,
+  Building2
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { PayPalIcon, StripeIcon, BitcoinIcon } from "@/components/payment/PaymentIcons";
 
 interface StorefrontFeaturesSectionProps {
   customization?: any;
@@ -147,10 +149,10 @@ export const StorefrontFeaturesSection = ({ customization = {} }: StorefrontFeat
             </div>
             <div className="space-y-3 relative z-10">
               {[
-                { name: "PayPal", letter: "P", gradient: "from-blue-500 to-blue-600" },
-                { name: "Stripe", letter: "S", gradient: "from-purple-500 to-indigo-600" },
-                { name: "Crypto", letter: "₿", gradient: "from-yellow-500 to-amber-500" },
-                { name: "Bank Transfer", letter: "B", gradient: "from-green-500 to-green-600" },
+                { name: "PayPal", Icon: PayPalIcon },
+                { name: "Stripe", Icon: StripeIcon },
+                { name: "Crypto", Icon: BitcoinIcon },
+                { name: "Bank Transfer", Icon: Building2, isLucide: true, gradient: "from-green-500 to-green-600" },
               ].map((payment, index) => (
                 <motion.div 
                   key={payment.name}
@@ -163,14 +165,19 @@ export const StorefrontFeaturesSection = ({ customization = {} }: StorefrontFeat
                   whileHover={{ x: 5 }}
                 >
                   <span className="font-medium flex items-center gap-3" style={{ color: textColor }}>
-                    <div className={`w-8 h-8 bg-gradient-to-br ${payment.gradient} rounded-lg flex items-center justify-center text-white text-xs font-bold`}>
-                      {payment.letter}
-                    </div>
+                    {payment.isLucide ? (
+                      <div className={`w-8 h-8 bg-gradient-to-br ${payment.gradient} rounded-lg flex items-center justify-center`}>
+                        <payment.Icon className="w-5 h-5 text-white" />
+                      </div>
+                    ) : (
+                      <payment.Icon className="w-8 h-8 rounded-lg" />
+                    )}
                     {payment.name}
                   </span>
                   <motion.div 
-                    className={`w-6 h-6 bg-gradient-to-br ${payment.gradient} rounded-full`}
-                    whileHover={{ scale: 1.2, rotate: 180 }}
+                    className="w-2 h-2 rounded-full"
+                    style={{ backgroundColor: customization.primaryColor || '#8B5CF6' }}
+                    whileHover={{ scale: 1.5 }}
                   />
                 </motion.div>
               ))}

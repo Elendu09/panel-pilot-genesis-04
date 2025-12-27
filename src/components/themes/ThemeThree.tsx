@@ -56,6 +56,9 @@ export const ThemeThree = ({ panel, services = [], customization = {} }: ThemeTh
 
   useEffect(() => {
     localStorage.setItem('storefront-theme-mode', themeMode);
+    // Sync with document class for shadcn/tailwind components
+    document.documentElement.classList.remove('light', 'dark');
+    document.documentElement.classList.add(themeMode);
   }, [themeMode]);
 
   const palette = themeMode === 'dark' ? darkPalette : lightPalette;
