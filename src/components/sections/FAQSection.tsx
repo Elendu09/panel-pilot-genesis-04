@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown, HelpCircle, Sparkles } from "lucide-react";
+import { ChevronDown, HelpCircle, Sparkles, Rocket, Scale, DollarSign, CreditCard, Globe, Target } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const containerVariants = {
@@ -29,36 +29,52 @@ const itemVariants = {
 export const FAQSection = () => {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
+  // Icon mapping for FAQ items
+  const iconMap: Record<string, any> = {
+    rocket: Rocket,
+    scale: Scale,
+    dollar: DollarSign,
+    credit: CreditCard,
+    globe: Globe,
+    target: Target,
+  };
+
   const faqs = [
     {
       question: "What is an SMM panel and how does it work?",
       answer: "An SMM panel is a social media marketing platform that allows users to purchase social media services like followers, likes, views, and comments. Our white-label solution lets you create and manage your own branded SMM panel with custom domains, themes, and complete control over pricing and services.",
-      icon: "🚀"
+      iconKey: "rocket",
+      gradient: "from-blue-500 to-cyan-500"
     },
     {
       question: "Is it legal to use an SMM panel for social media growth?",
       answer: "Yes, SMM panels are legal business tools. However, it's important to comply with each social media platform's terms of service and local regulations. We recommend transparency with your customers about the nature of the services and ensuring all services are delivered ethically.",
-      icon: "⚖️"
+      iconKey: "scale",
+      gradient: "from-purple-500 to-pink-500"
     },
     {
       question: "How much can I earn with my SMM panel?",
       answer: "Earnings vary based on your marketing efforts, pricing strategy, and customer base. Our platform charges only 5% commission on completed orders with zero fees if you have no income. Many successful panel owners earn thousands monthly by building a loyal customer base.",
-      icon: "💰"
+      iconKey: "dollar",
+      gradient: "from-green-500 to-emerald-500"
     },
     {
       question: "What payment methods do you support?",
       answer: "We support 200+ payment systems including PayPal, Stripe, Paystack, Korapay, Flutterwave, PerfectMoney, Cryptomus, USDT, and bank transfers for multiple countries. You can configure which payment methods to offer your customers.",
-      icon: "💳"
+      iconKey: "credit",
+      gradient: "from-amber-500 to-orange-500"
     },
     {
       question: "Can I use my own domain name?",
       answer: "Absolutely! You can connect your own custom domain or use a free subdomain (yourpanel.ourplatform.com). We provide SSL certificates and handle all the technical setup for you.",
-      icon: "🌐"
+      iconKey: "globe",
+      gradient: "from-blue-500 to-indigo-500"
     },
     {
       question: "Do you provide customer support?",
       answer: "Yes, we provide comprehensive support for panel owners including setup assistance, technical support, and business guidance. Your customers will contact you directly for support, but we're here to help you succeed.",
-      icon: "🎯"
+      iconKey: "target",
+      gradient: "from-red-500 to-rose-500"
     }
   ];
 
@@ -134,16 +150,19 @@ export const FAQSection = () => {
                 onClick={() => setOpenIndex(openIndex === index ? null : index)}
               >
                 {/* Icon */}
-                <motion.span 
-                  className="text-2xl flex-shrink-0"
+                <motion.div 
+                  className={`flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br ${faq.gradient} flex items-center justify-center shadow-lg`}
                   animate={{ 
                     scale: openIndex === index ? 1.1 : 1,
                     rotate: openIndex === index ? [0, -10, 10, 0] : 0
                   }}
                   transition={{ duration: 0.3 }}
                 >
-                  {faq.icon}
-                </motion.span>
+                  {(() => {
+                    const IconComponent = iconMap[faq.iconKey];
+                    return <IconComponent className="w-5 h-5 text-white" />;
+                  })()}
+                </motion.div>
                 
                 {/* Question */}
                 <span className={`font-semibold text-lg flex-1 transition-colors ${

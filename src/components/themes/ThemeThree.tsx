@@ -27,6 +27,7 @@ const darkPalette = {
   border: 'rgba(249, 115, 22, 0.3)',
   glow: 'rgba(249, 115, 22, 0.45)',
   gradient: 'linear-gradient(135deg, #F97316 0%, #FBBF24 100%)',
+  cardBorder: 'rgba(255, 255, 255, 0.1)',
 };
 
 const lightPalette = {
@@ -36,10 +37,11 @@ const lightPalette = {
   secondary: '#D97706',
   accent: '#C2410C',
   text: '#431407',
-  textMuted: '#78716C',
-  border: 'rgba(234, 88, 12, 0.1)',
+  textMuted: '#57534E',
+  border: 'rgba(234, 88, 12, 0.15)',
   glow: 'rgba(234, 88, 12, 0.15)',
   gradient: 'linear-gradient(135deg, #EA580C 0%, #D97706 100%)',
+  cardBorder: 'rgba(0, 0, 0, 0.1)',
 };
 
 export const ThemeThree = ({ panel, services = [], customization = {} }: ThemeThreeProps) => {

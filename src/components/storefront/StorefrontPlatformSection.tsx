@@ -51,8 +51,13 @@ export const StorefrontPlatformSection = ({ customization = {} }: StorefrontPlat
     }
   };
 
+  const themeMode = customization?.themeMode || 'dark';
+
   return (
-    <section className="py-24 bg-card/50 border-t border-border">
+    <section 
+      className={`py-24 border-t ${themeMode === 'dark' ? 'border-white/10' : 'border-gray-200'}`}
+      style={{ backgroundColor: themeMode === 'dark' ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' }}
+    >
       <div className="container mx-auto px-4">
         <div className="grid lg:grid-cols-2 gap-16 items-start">
           {/* Left Content */}
@@ -106,7 +111,11 @@ export const StorefrontPlatformSection = ({ customization = {} }: StorefrontPlat
                   key={index}
                   variants={itemVariants}
                   whileHover={{ y: -5, scale: 1.02 }}
-                  className={`p-8 rounded-2xl bg-gradient-to-br ${feature.gradient} border border-border/50 hover:border-primary/30 transition-all duration-300 hover:shadow-lg group`}
+                  className={`p-8 rounded-2xl bg-gradient-to-br ${feature.gradient} transition-all duration-300 hover:shadow-lg group ${
+                    themeMode === 'dark' 
+                      ? 'border border-white/10 hover:border-primary/30' 
+                      : 'border border-gray-200 hover:border-primary/40 shadow-sm'
+                  }`}
                 >
                   <div className="mb-6">
                     <div className="w-12 h-12 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">

@@ -27,6 +27,7 @@ const darkPalette = {
   border: 'rgba(34, 197, 94, 0.25)',
   glow: 'rgba(34, 197, 94, 0.4)',
   gradient: 'linear-gradient(135deg, #22C55E 0%, #84CC16 100%)',
+  cardBorder: 'rgba(255, 255, 255, 0.1)',
 };
 
 const lightPalette = {
@@ -36,10 +37,11 @@ const lightPalette = {
   secondary: '#65A30D',
   accent: '#15803D',
   text: '#14532D',
-  textMuted: '#6B7280',
-  border: 'rgba(22, 163, 74, 0.1)',
+  textMuted: '#4B5563',
+  border: 'rgba(22, 163, 74, 0.15)',
   glow: 'rgba(22, 163, 74, 0.12)',
   gradient: 'linear-gradient(135deg, #16A34A 0%, #65A30D 100%)',
+  cardBorder: 'rgba(0, 0, 0, 0.1)',
 };
 
 export const ThemeFour = ({ panel, services = [], customization = {} }: ThemeFourProps) => {

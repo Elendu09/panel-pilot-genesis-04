@@ -28,6 +28,7 @@ const darkPalette = {
   border: 'rgba(139, 92, 246, 0.25)',
   glow: 'rgba(139, 92, 246, 0.5)',
   gradient: 'linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%)',
+  cardBorder: 'rgba(255, 255, 255, 0.1)',
 };
 
 const lightPalette = {
@@ -42,6 +43,7 @@ const lightPalette = {
   border: 'rgba(124, 58, 237, 0.15)',
   glow: 'rgba(124, 58, 237, 0.12)',
   gradient: 'linear-gradient(135deg, #7C3AED 0%, #DB2777 100%)',
+  cardBorder: 'rgba(0, 0, 0, 0.1)',
 };
 
 export const ThemeOne = ({ panel, services = [], customization = {} }: ThemeOneProps) => {

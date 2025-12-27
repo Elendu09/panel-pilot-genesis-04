@@ -27,6 +27,7 @@ const darkPalette = {
   border: 'rgba(59, 130, 246, 0.25)',
   glow: 'rgba(59, 130, 246, 0.4)',
   gradient: 'linear-gradient(135deg, #3B82F6 0%, #0EA5E9 100%)',
+  cardBorder: 'rgba(255, 255, 255, 0.1)',
 };
 
 const lightPalette = {
@@ -36,10 +37,11 @@ const lightPalette = {
   secondary: '#0284C7',
   accent: '#0369A1',
   text: '#0C4A6E',
-  textMuted: '#64748B',
-  border: 'rgba(37, 99, 235, 0.1)',
+  textMuted: '#475569',
+  border: 'rgba(37, 99, 235, 0.15)',
   glow: 'rgba(37, 99, 235, 0.12)',
   gradient: 'linear-gradient(135deg, #2563EB 0%, #0284C7 100%)',
+  cardBorder: 'rgba(0, 0, 0, 0.1)',
 };
 
 export const ThemeTwo = ({ panel, services = [], customization = {} }: ThemeTwoProps) => {

@@ -92,8 +92,10 @@ export const StorefrontStatsSection = ({ panel, customization = {} }: Storefront
     }
   };
 
+  const themeMode = customization?.themeMode || 'dark';
+
   return (
-    <section ref={sectionRef} className="py-24 bg-background relative overflow-hidden">
+    <section ref={sectionRef} className="py-24 relative overflow-hidden" style={{ backgroundColor: customization?.backgroundColor }}>
       {/* Grid overlay */}
       <div className="absolute inset-0 bg-grid-pattern opacity-20 pointer-events-none" />
       
@@ -120,13 +122,22 @@ export const StorefrontStatsSection = ({ panel, customization = {} }: Storefront
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
         >
-          <h2 className="text-3xl md:text-5xl font-bold mb-4">
+          <h2 
+            className="text-3xl md:text-5xl font-bold mb-4"
+            style={{ color: customization?.textColor }}
+          >
             Trusted by{" "}
-            <span className="bg-gradient-primary bg-clip-text text-transparent">
+            <span 
+              className="bg-clip-text text-transparent"
+              style={{ backgroundImage: `linear-gradient(135deg, ${customization?.primaryColor || '#8B5CF6'}, ${customization?.secondaryColor || '#EC4899'})` }}
+            >
               thousands of users
             </span>
           </h2>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+          <p 
+            className="text-xl max-w-2xl mx-auto"
+            style={{ color: customization?.textMuted }}
+          >
             Join our growing community of satisfied customers who trust our platform
           </p>
         </motion.div>
@@ -155,6 +166,7 @@ export const StorefrontStatsSection = ({ panel, customization = {} }: Storefront
                 suffix={suffix}
                 isInView={isInView}
                 itemVariants={itemVariants}
+                customization={customization}
               />
             );
           })}
@@ -164,9 +176,9 @@ export const StorefrontStatsSection = ({ panel, customization = {} }: Storefront
   );
 };
 
-// Separate component for stat card with counter
-const StatCard = ({ stat, index, Icon, num, suffix, isInView, itemVariants }: any) => {
+const StatCard = ({ stat, index, Icon, num, suffix, isInView, itemVariants, customization }: any) => {
   const count = useCounter(num, 2000 + index * 200, isInView);
+  const themeMode = customization?.themeMode || 'dark';
   
   return (
     <motion.div 
@@ -179,10 +191,13 @@ const StatCard = ({ stat, index, Icon, num, suffix, isInView, itemVariants }: an
       }}
       className="relative group perspective-1000"
     >
-      <div className="glass-stat-card p-6 lg:p-8 text-center h-full relative overflow-hidden transform-3d">
-        {/* Shimmer effect */}
-        <div className="absolute inset-0 shimmer-effect opacity-0 group-hover:opacity-100 pointer-events-none" />
-        
+      <div 
+        className={`p-6 lg:p-8 text-center h-full relative overflow-hidden rounded-xl backdrop-blur-xl transition-all ${
+          themeMode === 'dark' 
+            ? 'bg-white/5 border border-white/10' 
+            : 'bg-white shadow-md border border-gray-200'
+        }`}
+      >
         {/* Glow effect on hover */}
         <motion.div 
           className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"
@@ -216,7 +231,10 @@ const StatCard = ({ stat, index, Icon, num, suffix, isInView, itemVariants }: an
         </motion.div>
 
         {/* Label */}
-        <div className="text-muted-foreground text-sm lg:text-base font-medium group-hover:text-foreground transition-colors">
+        <div 
+          className="text-sm lg:text-base font-medium transition-colors"
+          style={{ color: customization?.textMuted }}
+        >
           {stat.label}
         </div>
 
