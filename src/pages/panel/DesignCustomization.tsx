@@ -10,7 +10,8 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Save, ExternalLink, Smartphone, Tablet, Monitor, ChevronDown, Palette, Image, Layout, Zap, BarChart3, HelpCircle, MessageSquare, Loader2, Sparkles, Settings, Users, Star, Plus, Trash2, GripVertical, Shield, Headphones, Award, Clock, ShoppingCart, TrendingUp, CheckCircle, Heart, ThumbsUp, Undo2, Redo2, Wand2 } from 'lucide-react';
+import { Save, ExternalLink, Smartphone, Tablet, Monitor, ChevronDown, Palette, Image, Layout, Zap, BarChart3, HelpCircle, MessageSquare, Loader2, Sparkles, Settings, Users, Star, Plus, Trash2, GripVertical, Shield, Headphones, Award, Clock, ShoppingCart, TrendingUp, CheckCircle, Heart, ThumbsUp, Undo2, Redo2, Wand2, Type, Maximize, Layers, MousePointer, Code } from 'lucide-react';
+import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -57,9 +58,51 @@ const defaultCustomization = {
   surfaceColor: '#1E293B',
   textColor: '#FFFFFF',
   
-  // Typography
-  fontFamily: 'Inter, system-ui, sans-serif',
+  // Typography (NEW - Wix-like)
+  fontFamily: 'Inter',
+  headingFont: 'Inter',
+  baseFontSize: 16,
+  headingWeight: '700',
+  bodyWeight: '400',
+  lineHeight: 1.6,
+  letterSpacing: 0,
   borderRadius: '12',
+  
+  // Spacing & Layout (NEW - Wix-like)
+  sectionPaddingY: 80,
+  containerMaxWidth: 1280,
+  cardSpacing: 24,
+  elementGap: 16,
+  
+  // Animations (NEW - Wix-like)
+  enableAnimations: true,
+  animationStyle: 'fade',
+  animationDuration: 500,
+  enableParallax: false,
+  hoverScale: 1.02,
+  scrollReveal: true,
+  
+  // Background Options (NEW - Wix-like)
+  backgroundPattern: 'none',
+  patternOpacity: 0.03,
+  patternColor: '#6366F1',
+  gradientAngle: 180,
+  backgroundImageUrl: '',
+  backgroundOverlayOpacity: 0.5,
+  enableBackgroundBlur: false,
+  
+  // Button Styles (NEW - Wix-like)
+  buttonRadius: 12,
+  buttonSize: 'md',
+  buttonHoverEffect: 'glow',
+  buttonStyle: 'solid',
+  buttonShadow: true,
+  
+  // Shadows & Effects (NEW - Wix-like)
+  shadowIntensity: 'medium',
+  cardRadius: 16,
+  cardBorder: false,
+  glowEffects: true,
   
   // Hero Section
   enableFastOrder: true,
@@ -116,6 +159,17 @@ const defaultCustomization = {
   // Theme
   selectedTheme: 'dark_gradient',
 };
+
+const fontOptions = [
+  { value: 'Inter', label: 'Inter (Modern)' },
+  { value: 'Poppins', label: 'Poppins (Friendly)' },
+  { value: 'Roboto', label: 'Roboto (Clean)' },
+  { value: 'Open Sans', label: 'Open Sans (Classic)' },
+  { value: 'Montserrat', label: 'Montserrat (Elegant)' },
+  { value: 'Playfair Display', label: 'Playfair Display (Serif)' },
+  { value: 'Space Grotesk', label: 'Space Grotesk (Tech)' },
+  { value: 'DM Sans', label: 'DM Sans (Geometric)' },
+];
 
 const themes = [
   { id: 'dark_gradient', name: 'Dark Gradient', colors: ['#0F172A', '#6366F1', '#8B5CF6'] },
@@ -396,6 +450,11 @@ export default function DesignCustomization() {
     { id: 'themes', title: 'Theme Gallery', icon: Palette },
     { id: 'branding', title: 'Branding', icon: Image },
     { id: 'colors', title: 'Colors', icon: Sparkles },
+    { id: 'typography', title: 'Typography', icon: Type },
+    { id: 'spacing', title: 'Spacing & Layout', icon: Maximize },
+    { id: 'animations', title: 'Animations', icon: Sparkles },
+    { id: 'backgrounds', title: 'Background', icon: Layers },
+    { id: 'buttons', title: 'Button Styles', icon: MousePointer },
     { id: 'hero', title: 'Hero Section', icon: Layout },
     { id: 'platform', title: 'Platform Features', icon: Zap },
     { id: 'stats', title: 'Statistics', icon: BarChart3 },
@@ -403,6 +462,7 @@ export default function DesignCustomization() {
     { id: 'testimonials', title: 'Testimonials', icon: Users },
     { id: 'faqs', title: 'FAQ Section', icon: HelpCircle },
     { id: 'footer', title: 'Footer', icon: MessageSquare },
+    { id: 'advanced', title: 'Advanced', icon: Code },
   ];
 
   return (
@@ -632,7 +692,548 @@ export default function DesignCustomization() {
                     </div>
                   )}
 
-                  {/* Hero Section */}
+                  {/* Typography Section - NEW Wix-like */}
+                  {section.id === 'typography' && (
+                    <div className="space-y-4">
+                      <div>
+                        <Label className="text-sm font-medium">Primary Font</Label>
+                        <select 
+                          className="w-full h-10 rounded-md border border-input bg-background px-3 mt-1"
+                          value={customization.fontFamily}
+                          onChange={(e) => updateCustomization('fontFamily', e.target.value)}
+                        >
+                          {fontOptions.map(font => (
+                            <option key={font.value} value={font.value}>{font.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                      
+                      <div>
+                        <Label className="text-sm font-medium">Heading Font</Label>
+                        <select 
+                          className="w-full h-10 rounded-md border border-input bg-background px-3 mt-1"
+                          value={customization.headingFont}
+                          onChange={(e) => updateCustomization('headingFont', e.target.value)}
+                        >
+                          {fontOptions.map(font => (
+                            <option key={font.value} value={font.value}>{font.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                      
+                      <div>
+                        <Label className="text-sm font-medium">Heading Weight</Label>
+                        <select 
+                          className="w-full h-10 rounded-md border border-input bg-background px-3 mt-1"
+                          value={customization.headingWeight}
+                          onChange={(e) => updateCustomization('headingWeight', e.target.value)}
+                        >
+                          <option value="400">Regular (400)</option>
+                          <option value="500">Medium (500)</option>
+                          <option value="600">Semi Bold (600)</option>
+                          <option value="700">Bold (700)</option>
+                          <option value="800">Extra Bold (800)</option>
+                        </select>
+                      </div>
+                      
+                      <div>
+                        <div className="flex justify-between mb-2">
+                          <Label className="text-sm font-medium">Base Font Size</Label>
+                          <span className="text-sm text-muted-foreground">{customization.baseFontSize}px</span>
+                        </div>
+                        <Slider
+                          value={[customization.baseFontSize]}
+                          onValueChange={(v) => updateCustomization('baseFontSize', v[0])}
+                          min={12}
+                          max={20}
+                          step={1}
+                          className="w-full"
+                        />
+                      </div>
+                      
+                      <div>
+                        <div className="flex justify-between mb-2">
+                          <Label className="text-sm font-medium">Line Height</Label>
+                          <span className="text-sm text-muted-foreground">{customization.lineHeight}</span>
+                        </div>
+                        <Slider
+                          value={[customization.lineHeight * 10]}
+                          onValueChange={(v) => updateCustomization('lineHeight', v[0] / 10)}
+                          min={12}
+                          max={24}
+                          step={1}
+                          className="w-full"
+                        />
+                      </div>
+                      
+                      <div>
+                        <div className="flex justify-between mb-2">
+                          <Label className="text-sm font-medium">Letter Spacing</Label>
+                          <span className="text-sm text-muted-foreground">{customization.letterSpacing}px</span>
+                        </div>
+                        <Slider
+                          value={[customization.letterSpacing + 2]}
+                          onValueChange={(v) => updateCustomization('letterSpacing', v[0] - 2)}
+                          min={0}
+                          max={4}
+                          step={0.5}
+                          className="w-full"
+                        />
+                      </div>
+                      
+                      {/* Live Preview */}
+                      <div className="p-4 rounded-lg bg-muted/30 border border-border">
+                        <p className="text-xs text-muted-foreground mb-2">Preview</p>
+                        <h3 
+                          className="text-xl mb-1" 
+                          style={{ 
+                            fontFamily: customization.headingFont, 
+                            fontWeight: customization.headingWeight,
+                            letterSpacing: `${customization.letterSpacing}px`
+                          }}
+                        >
+                          Heading Preview
+                        </h3>
+                        <p 
+                          style={{ 
+                            fontFamily: customization.fontFamily, 
+                            fontSize: `${customization.baseFontSize}px`,
+                            lineHeight: customization.lineHeight,
+                            fontWeight: customization.bodyWeight
+                          }}
+                        >
+                          Body text preview with your selected typography settings.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Spacing Section - NEW Wix-like */}
+                  {section.id === 'spacing' && (
+                    <div className="space-y-4">
+                      <div>
+                        <div className="flex justify-between mb-2">
+                          <Label className="text-sm font-medium">Section Padding (Y)</Label>
+                          <span className="text-sm text-muted-foreground">{customization.sectionPaddingY}px</span>
+                        </div>
+                        <Slider
+                          value={[customization.sectionPaddingY]}
+                          onValueChange={(v) => updateCustomization('sectionPaddingY', v[0])}
+                          min={40}
+                          max={160}
+                          step={8}
+                          className="w-full"
+                        />
+                      </div>
+                      
+                      <div>
+                        <div className="flex justify-between mb-2">
+                          <Label className="text-sm font-medium">Container Max Width</Label>
+                          <span className="text-sm text-muted-foreground">{customization.containerMaxWidth}px</span>
+                        </div>
+                        <Slider
+                          value={[customization.containerMaxWidth]}
+                          onValueChange={(v) => updateCustomization('containerMaxWidth', v[0])}
+                          min={960}
+                          max={1536}
+                          step={32}
+                          className="w-full"
+                        />
+                      </div>
+                      
+                      <div>
+                        <div className="flex justify-between mb-2">
+                          <Label className="text-sm font-medium">Card Spacing</Label>
+                          <span className="text-sm text-muted-foreground">{customization.cardSpacing}px</span>
+                        </div>
+                        <Slider
+                          value={[customization.cardSpacing]}
+                          onValueChange={(v) => updateCustomization('cardSpacing', v[0])}
+                          min={12}
+                          max={48}
+                          step={4}
+                          className="w-full"
+                        />
+                      </div>
+                      
+                      <div>
+                        <div className="flex justify-between mb-2">
+                          <Label className="text-sm font-medium">Element Gap</Label>
+                          <span className="text-sm text-muted-foreground">{customization.elementGap}px</span>
+                        </div>
+                        <Slider
+                          value={[customization.elementGap]}
+                          onValueChange={(v) => updateCustomization('elementGap', v[0])}
+                          min={8}
+                          max={32}
+                          step={4}
+                          className="w-full"
+                        />
+                      </div>
+                      
+                      <div>
+                        <div className="flex justify-between mb-2">
+                          <Label className="text-sm font-medium">Border Radius</Label>
+                          <span className="text-sm text-muted-foreground">{customization.cardRadius}px</span>
+                        </div>
+                        <Slider
+                          value={[customization.cardRadius]}
+                          onValueChange={(v) => updateCustomization('cardRadius', v[0])}
+                          min={0}
+                          max={32}
+                          step={2}
+                          className="w-full"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Animations Section - NEW Wix-like */}
+                  {section.id === 'animations' && (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-accent/30">
+                        <span className="font-medium">Enable Animations</span>
+                        <Switch 
+                          checked={customization.enableAnimations} 
+                          onCheckedChange={(c) => updateCustomization('enableAnimations', c)} 
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label className="text-sm font-medium">Animation Style</Label>
+                        <select 
+                          className="w-full h-10 rounded-md border border-input bg-background px-3 mt-1"
+                          value={customization.animationStyle}
+                          onChange={(e) => updateCustomization('animationStyle', e.target.value)}
+                        >
+                          <option value="fade">Fade In</option>
+                          <option value="slide">Slide Up</option>
+                          <option value="zoom">Zoom In</option>
+                          <option value="bounce">Bounce</option>
+                          <option value="none">None</option>
+                        </select>
+                      </div>
+                      
+                      <div>
+                        <div className="flex justify-between mb-2">
+                          <Label className="text-sm font-medium">Animation Duration</Label>
+                          <span className="text-sm text-muted-foreground">{customization.animationDuration}ms</span>
+                        </div>
+                        <Slider
+                          value={[customization.animationDuration]}
+                          onValueChange={(v) => updateCustomization('animationDuration', v[0])}
+                          min={200}
+                          max={1000}
+                          step={50}
+                          className="w-full"
+                        />
+                      </div>
+                      
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-accent/30">
+                        <span className="font-medium">Scroll Reveal</span>
+                        <Switch 
+                          checked={customization.scrollReveal} 
+                          onCheckedChange={(c) => updateCustomization('scrollReveal', c)} 
+                        />
+                      </div>
+                      
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-accent/30">
+                        <span className="font-medium">Parallax Effects</span>
+                        <Switch 
+                          checked={customization.enableParallax} 
+                          onCheckedChange={(c) => updateCustomization('enableParallax', c)} 
+                        />
+                      </div>
+                      
+                      <div>
+                        <div className="flex justify-between mb-2">
+                          <Label className="text-sm font-medium">Hover Scale</Label>
+                          <span className="text-sm text-muted-foreground">{customization.hoverScale}x</span>
+                        </div>
+                        <Slider
+                          value={[customization.hoverScale * 100]}
+                          onValueChange={(v) => updateCustomization('hoverScale', v[0] / 100)}
+                          min={100}
+                          max={115}
+                          step={1}
+                          className="w-full"
+                        />
+                      </div>
+                      
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-accent/30">
+                        <span className="font-medium">Glow Effects</span>
+                        <Switch 
+                          checked={customization.glowEffects} 
+                          onCheckedChange={(c) => updateCustomization('glowEffects', c)} 
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Background Section - NEW Wix-like */}
+                  {section.id === 'backgrounds' && (
+                    <div className="space-y-4">
+                      <div>
+                        <Label className="text-sm font-medium">Background Pattern</Label>
+                        <select 
+                          className="w-full h-10 rounded-md border border-input bg-background px-3 mt-1"
+                          value={customization.backgroundPattern}
+                          onChange={(e) => updateCustomization('backgroundPattern', e.target.value)}
+                        >
+                          <option value="none">None</option>
+                          <option value="grid">Grid Lines</option>
+                          <option value="dots">Dots</option>
+                          <option value="diagonal">Diagonal Lines</option>
+                          <option value="waves">Waves</option>
+                        </select>
+                      </div>
+                      
+                      <div>
+                        <div className="flex justify-between mb-2">
+                          <Label className="text-sm font-medium">Pattern Opacity</Label>
+                          <span className="text-sm text-muted-foreground">{Math.round(customization.patternOpacity * 100)}%</span>
+                        </div>
+                        <Slider
+                          value={[customization.patternOpacity * 100]}
+                          onValueChange={(v) => updateCustomization('patternOpacity', v[0] / 100)}
+                          min={1}
+                          max={20}
+                          step={1}
+                          className="w-full"
+                        />
+                      </div>
+                      
+                      <div className="flex items-center gap-3">
+                        <input 
+                          type="color" 
+                          value={customization.patternColor} 
+                          onChange={(e) => updateCustomization('patternColor', e.target.value)} 
+                          className="w-10 h-10 rounded-lg cursor-pointer border-0" 
+                        />
+                        <div className="flex-1">
+                          <Label className="text-sm">Pattern Color</Label>
+                          <Input 
+                            value={customization.patternColor} 
+                            onChange={(e) => updateCustomization('patternColor', e.target.value)} 
+                            className="h-8 text-xs font-mono" 
+                          />
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <div className="flex justify-between mb-2">
+                          <Label className="text-sm font-medium">Gradient Angle</Label>
+                          <span className="text-sm text-muted-foreground">{customization.gradientAngle}°</span>
+                        </div>
+                        <Slider
+                          value={[customization.gradientAngle]}
+                          onValueChange={(v) => updateCustomization('gradientAngle', v[0])}
+                          min={0}
+                          max={360}
+                          step={15}
+                          className="w-full"
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label className="text-sm font-medium">Background Image URL</Label>
+                        <Input 
+                          value={customization.backgroundImageUrl} 
+                          onChange={(e) => updateCustomization('backgroundImageUrl', e.target.value)} 
+                          placeholder="https://..." 
+                          className="mt-1"
+                        />
+                      </div>
+                      
+                      {customization.backgroundImageUrl && (
+                        <div>
+                          <div className="flex justify-between mb-2">
+                            <Label className="text-sm font-medium">Overlay Opacity</Label>
+                            <span className="text-sm text-muted-foreground">{Math.round(customization.backgroundOverlayOpacity * 100)}%</span>
+                          </div>
+                          <Slider
+                            value={[customization.backgroundOverlayOpacity * 100]}
+                            onValueChange={(v) => updateCustomization('backgroundOverlayOpacity', v[0] / 100)}
+                            min={0}
+                            max={100}
+                            step={5}
+                            className="w-full"
+                          />
+                        </div>
+                      )}
+                      
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-accent/30">
+                        <span className="font-medium">Background Blur</span>
+                        <Switch 
+                          checked={customization.enableBackgroundBlur} 
+                          onCheckedChange={(c) => updateCustomization('enableBackgroundBlur', c)} 
+                        />
+                      </div>
+                      
+                      {/* Pattern Preview */}
+                      <div 
+                        className="h-32 rounded-lg border border-border relative overflow-hidden"
+                        style={{ backgroundColor: customization.backgroundColor }}
+                      >
+                        {customization.backgroundPattern !== 'none' && (
+                          <div 
+                            className="absolute inset-0"
+                            style={{
+                              backgroundImage: customization.backgroundPattern === 'grid' 
+                                ? `linear-gradient(${customization.patternColor}${Math.round(customization.patternOpacity * 255).toString(16).padStart(2, '0')} 1px, transparent 1px), linear-gradient(90deg, ${customization.patternColor}${Math.round(customization.patternOpacity * 255).toString(16).padStart(2, '0')} 1px, transparent 1px)`
+                                : customization.backgroundPattern === 'dots'
+                                ? `radial-gradient(circle, ${customization.patternColor}${Math.round(customization.patternOpacity * 255).toString(16).padStart(2, '0')} 1px, transparent 1px)`
+                                : customization.backgroundPattern === 'diagonal'
+                                ? `repeating-linear-gradient(45deg, ${customization.patternColor}${Math.round(customization.patternOpacity * 255).toString(16).padStart(2, '0')}, ${customization.patternColor}${Math.round(customization.patternOpacity * 255).toString(16).padStart(2, '0')} 1px, transparent 1px, transparent 10px)`
+                                : 'none',
+                              backgroundSize: customization.backgroundPattern === 'dots' ? '20px 20px' : '40px 40px',
+                            }}
+                          />
+                        )}
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="text-xs text-muted-foreground bg-background/80 px-2 py-1 rounded">Pattern Preview</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Button Styles Section - NEW Wix-like */}
+                  {section.id === 'buttons' && (
+                    <div className="space-y-4">
+                      <div>
+                        <Label className="text-sm font-medium mb-2 block">Button Style</Label>
+                        <div className="grid grid-cols-3 gap-2">
+                          {['solid', 'outline', 'ghost'].map(style => (
+                            <button
+                              key={style}
+                              onClick={() => updateCustomization('buttonStyle', style)}
+                              className={`p-3 rounded-lg border-2 text-sm capitalize transition-all ${
+                                customization.buttonStyle === style 
+                                  ? 'border-primary bg-primary/10' 
+                                  : 'border-border hover:border-primary/50'
+                              }`}
+                            >
+                              {style}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <Label className="text-sm font-medium mb-2 block">Button Size</Label>
+                        <div className="grid grid-cols-3 gap-2">
+                          {[
+                            { id: 'sm', label: 'Small' },
+                            { id: 'md', label: 'Medium' },
+                            { id: 'lg', label: 'Large' }
+                          ].map(size => (
+                            <button
+                              key={size.id}
+                              onClick={() => updateCustomization('buttonSize', size.id)}
+                              className={`p-3 rounded-lg border-2 text-sm transition-all ${
+                                customization.buttonSize === size.id 
+                                  ? 'border-primary bg-primary/10' 
+                                  : 'border-border hover:border-primary/50'
+                              }`}
+                            >
+                              {size.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <div className="flex justify-between mb-2">
+                          <Label className="text-sm font-medium">Border Radius</Label>
+                          <span className="text-sm text-muted-foreground">{customization.buttonRadius}px</span>
+                        </div>
+                        <Slider
+                          value={[customization.buttonRadius]}
+                          onValueChange={(v) => updateCustomization('buttonRadius', v[0])}
+                          min={0}
+                          max={50}
+                          step={2}
+                          className="w-full"
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label className="text-sm font-medium">Hover Effect</Label>
+                        <select 
+                          className="w-full h-10 rounded-md border border-input bg-background px-3 mt-1"
+                          value={customization.buttonHoverEffect}
+                          onChange={(e) => updateCustomization('buttonHoverEffect', e.target.value)}
+                        >
+                          <option value="glow">Glow</option>
+                          <option value="scale">Scale Up</option>
+                          <option value="slide">Background Slide</option>
+                          <option value="none">None</option>
+                        </select>
+                      </div>
+                      
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-accent/30">
+                        <span className="font-medium">Button Shadow</span>
+                        <Switch 
+                          checked={customization.buttonShadow} 
+                          onCheckedChange={(c) => updateCustomization('buttonShadow', c)} 
+                        />
+                      </div>
+                      
+                      {/* Live Button Preview */}
+                      <div className="p-6 rounded-lg bg-muted/30 border border-border flex flex-col items-center gap-4">
+                        <p className="text-xs text-muted-foreground">Button Preview</p>
+                        <button 
+                          className="font-medium transition-all"
+                          style={{
+                            backgroundColor: customization.buttonStyle === 'solid' ? customization.primaryColor : 'transparent',
+                            color: customization.buttonStyle === 'solid' ? '#fff' : customization.primaryColor,
+                            border: customization.buttonStyle === 'outline' ? `2px solid ${customization.primaryColor}` : customization.buttonStyle === 'ghost' ? 'none' : 'none',
+                            borderRadius: `${customization.buttonRadius}px`,
+                            padding: customization.buttonSize === 'sm' ? '8px 16px' : customization.buttonSize === 'lg' ? '16px 32px' : '12px 24px',
+                            fontSize: customization.buttonSize === 'sm' ? '14px' : customization.buttonSize === 'lg' ? '18px' : '16px',
+                            boxShadow: customization.buttonShadow && customization.buttonStyle === 'solid' ? `0 4px 14px ${customization.primaryColor}40` : 'none',
+                          }}
+                        >
+                          Preview Button
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Advanced Section - NEW Wix-like */}
+                  {section.id === 'advanced' && (
+                    <div className="space-y-4">
+                      <div>
+                        <Label className="text-sm font-medium">Shadow Intensity</Label>
+                        <select 
+                          className="w-full h-10 rounded-md border border-input bg-background px-3 mt-1"
+                          value={customization.shadowIntensity}
+                          onChange={(e) => updateCustomization('shadowIntensity', e.target.value)}
+                        >
+                          <option value="none">None</option>
+                          <option value="light">Light</option>
+                          <option value="medium">Medium</option>
+                          <option value="heavy">Heavy</option>
+                        </select>
+                      </div>
+                      
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-accent/30">
+                        <span className="font-medium">Card Borders</span>
+                        <Switch 
+                          checked={customization.cardBorder} 
+                          onCheckedChange={(c) => updateCustomization('cardBorder', c)} 
+                        />
+                      </div>
+                      
+                      <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+                        <p className="text-sm text-yellow-200">
+                          💡 <strong>Pro Tip:</strong> These advanced settings affect the overall look and feel of your storefront. Use shadow intensity sparingly for a cleaner design.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+
                   {section.id === 'hero' && (
                     <div className="space-y-4">
                       <div className="flex items-center justify-between p-3 rounded-lg bg-accent/30">
