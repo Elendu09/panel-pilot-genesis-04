@@ -45,8 +45,23 @@ export const StorefrontFeaturesSection = ({ customization = {} }: StorefrontFeat
 
   return (
     <section id="features" className="py-24 bg-background relative overflow-hidden">
+      {/* Grid overlay */}
+      <div className="absolute inset-0 bg-grid-pattern opacity-20 pointer-events-none" />
+      
       {/* Background decoration */}
       <div className="absolute inset-0 bg-mesh opacity-30" />
+      
+      {/* Animated gradient orbs */}
+      <motion.div 
+        className="absolute -top-40 -right-40 w-96 h-96 bg-primary/10 rounded-full blur-3xl"
+        animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.2, 0.1] }}
+        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+      />
+      <motion.div 
+        className="absolute -bottom-40 -left-40 w-96 h-96 bg-accent/10 rounded-full blur-3xl"
+        animate={{ scale: [1.2, 1, 1.2], opacity: [0.1, 0.2, 0.1] }}
+        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+      />
 
       {/* Header */}
       <div className="container mx-auto px-4 text-center mb-16 relative z-10">
@@ -86,10 +101,16 @@ export const StorefrontFeaturesSection = ({ customization = {} }: StorefrontFeat
           {/* Payment Systems Card */}
           <motion.div 
             variants={cardVariants}
-            whileHover={{ y: -8, scale: 1.02 }}
-            className="glass-card p-8 group relative overflow-hidden"
+            whileHover={{ y: -8, scale: 1.02, rotateY: 3, rotateX: 2 }}
+            className="glass-card p-8 group relative overflow-hidden perspective-1000 transform-3d"
           >
-            <motion.div 
+            {/* Shimmer effect */}
+            <div className="absolute inset-0 shimmer-effect opacity-0 group-hover:opacity-100 pointer-events-none rounded-xl" />
+            
+            {/* Gradient border glow */}
+            <div className="absolute -inset-[1px] rounded-xl bg-gradient-to-r from-primary/40 via-accent/40 to-primary/40 opacity-0 group-hover:opacity-100 blur-[2px] transition-opacity duration-500" style={{ zIndex: -1 }} />
+            
+            <motion.div
               className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
             />
             
@@ -140,8 +161,8 @@ export const StorefrontFeaturesSection = ({ customization = {} }: StorefrontFeat
           {/* Center Enhanced Dashboard Card */}
           <motion.div 
             variants={cardVariants}
-            whileHover={{ y: -8, scale: 1.02 }}
-            className="glass-card p-8 group relative overflow-hidden"
+            whileHover={{ y: -8, scale: 1.02, rotateY: -3, rotateX: 2 }}
+            className="glass-card p-8 group relative overflow-hidden perspective-1000 transform-3d"
           >
             <div className="absolute inset-0">
               <motion.div 
@@ -209,9 +230,15 @@ export const StorefrontFeaturesSection = ({ customization = {} }: StorefrontFeat
           {/* Services Card */}
           <motion.div 
             variants={cardVariants}
-            whileHover={{ y: -8, scale: 1.02 }}
-            className="glass-card p-8 group relative overflow-hidden"
+            whileHover={{ y: -8, scale: 1.02, rotateY: 3, rotateX: 2 }}
+            className="glass-card p-8 group relative overflow-hidden perspective-1000 transform-3d"
           >
+            {/* Shimmer effect */}
+            <div className="absolute inset-0 shimmer-effect opacity-0 group-hover:opacity-100 pointer-events-none rounded-xl" />
+            
+            {/* Gradient border glow */}
+            <div className="absolute -inset-[1px] rounded-xl bg-gradient-to-r from-accent/40 via-primary/40 to-accent/40 opacity-0 group-hover:opacity-100 blur-[2px] transition-opacity duration-500" style={{ zIndex: -1 }} />
+            
             <motion.div 
               className="absolute inset-0 bg-gradient-to-br from-accent/10 via-transparent to-primary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
             />
@@ -270,9 +297,15 @@ export const StorefrontFeaturesSection = ({ customization = {} }: StorefrontFeat
             <motion.div
               key={feature.title}
               variants={featureCardVariants}
-              whileHover={{ y: -8, scale: 1.02 }}
-              className="text-center p-8 glass-card group relative overflow-hidden"
+              whileHover={{ y: -8, scale: 1.03, rotateY: 5, rotateX: 3 }}
+              className="text-center p-8 glass-card group relative overflow-hidden perspective-1000 transform-3d hover-tilt"
             >
+              {/* Shimmer effect */}
+              <div className="absolute inset-0 shimmer-effect opacity-0 group-hover:opacity-100 pointer-events-none rounded-xl" />
+              
+              {/* Gradient border glow */}
+              <div className="absolute -inset-[1px] rounded-xl bg-gradient-to-r from-primary/30 via-accent/30 to-primary/30 opacity-0 group-hover:opacity-100 blur-[2px] transition-opacity duration-500" style={{ zIndex: -1 }} />
+              
               <motion.div 
                 className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
               />

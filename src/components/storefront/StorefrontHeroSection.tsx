@@ -48,6 +48,34 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
 
   return (
     <section className="relative min-h-screen bg-gradient-hero overflow-hidden perspective-1000">
+      {/* Grid Overlay */}
+      <div className="absolute inset-0 bg-grid-pattern opacity-30 pointer-events-none" />
+      
+      {/* Floating Particles */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {[...Array(20)].map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute w-1 h-1 bg-primary/40 rounded-full"
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+            }}
+            animate={{
+              y: [0, -30, 0],
+              opacity: [0.2, 0.6, 0.2],
+              scale: [1, 1.5, 1],
+            }}
+            transition={{
+              duration: 3 + Math.random() * 4,
+              repeat: Infinity,
+              delay: Math.random() * 2,
+              ease: "easeInOut",
+            }}
+          />
+        ))}
+      </div>
+      
       {/* Enhanced Background Effects */}
       <div className="absolute inset-0 opacity-20">
         <motion.div 
@@ -65,6 +93,16 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
             opacity: [0.15, 0.3, 0.15]
           }}
           transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
+        />
+        {/* Extra animated blob */}
+        <motion.div 
+          className="absolute top-1/2 right-1/3 w-80 h-80 bg-accent/30 rounded-full blur-[100px]"
+          animate={{ 
+            x: [0, 50, 0],
+            y: [0, -30, 0],
+            opacity: [0.1, 0.25, 0.1]
+          }}
+          transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
         />
       </div>
 
@@ -282,31 +320,53 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 1.2 + index * 0.1 }}
-                    whileHover={{ y: -5, scale: 1.02 }}
-                    className="group"
+                    whileHover={{ 
+                      y: -8, 
+                      scale: 1.03,
+                      rotateY: 5,
+                      rotateX: 5,
+                    }}
+                    className="group perspective-1000"
                   >
-                    <Card className="p-4 bg-background/50 backdrop-blur-sm border-border/50 hover:border-primary/50 transition-all relative overflow-hidden">
+                    <Card className="p-4 bg-background/50 backdrop-blur-sm border-border/50 hover:border-primary/50 transition-all relative overflow-hidden transform-3d hover-tilt">
+                      {/* Shimmer effect */}
+                      <motion.div
+                        className="absolute inset-0 shimmer-effect opacity-0 group-hover:opacity-100 pointer-events-none"
+                        initial={false}
+                      />
+                      
                       {/* Glow effect */}
                       <motion.div
-                        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
                         style={{
-                          background: `radial-gradient(circle at center, hsl(var(--primary) / 0.1) 0%, transparent 70%)`
+                          background: `radial-gradient(circle at center, hsl(var(--primary) / 0.15) 0%, transparent 70%)`
                         }}
+                      />
+                      
+                      {/* Gradient border glow on hover */}
+                      <motion.div 
+                        className="absolute -inset-[1px] rounded-lg bg-gradient-to-r from-primary via-accent to-primary opacity-0 group-hover:opacity-100 blur-sm transition-opacity duration-300"
+                        style={{ zIndex: -1 }}
                       />
                       
                       {/* Discount badge */}
                       {service.discount && (
-                        <Badge className="absolute -top-1 -right-1 bg-green-500 text-white text-xs">
+                        <Badge className="absolute -top-1 -right-1 bg-green-500 text-white text-xs shadow-lg shadow-green-500/30">
                           {service.discount}
                         </Badge>
                       )}
                       
-                      {/* Premium SVG Icon */}
-                      <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${service.gradient} flex items-center justify-center mb-3 shadow-lg`}>
-                        <service.icon className="text-white" size={24} />
-                      </div>
+                      {/* Premium SVG Icon with glow */}
+                      <motion.div 
+                        className={`w-12 h-12 rounded-xl bg-gradient-to-br ${service.gradient} flex items-center justify-center mb-3 shadow-lg relative`}
+                        whileHover={{ scale: 1.1, rotate: [0, -5, 5, 0] }}
+                        transition={{ duration: 0.4 }}
+                      >
+                        <div className={`absolute inset-0 rounded-xl bg-gradient-to-br ${service.gradient} blur-md opacity-50`} />
+                        <service.icon className="text-white relative z-10" size={24} />
+                      </motion.div>
                       
-                      <h3 className="font-semibold text-sm mb-2 line-clamp-2">{service.name}</h3>
+                      <h3 className="font-semibold text-sm mb-2 line-clamp-2 group-hover:text-primary transition-colors">{service.name}</h3>
                       <div className="flex items-center justify-between">
                         <span className="text-xl font-bold text-primary">{service.price}</span>
                         <span className="text-xs text-muted-foreground">per 100</span>
