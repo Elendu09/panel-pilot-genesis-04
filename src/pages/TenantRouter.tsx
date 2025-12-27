@@ -19,6 +19,7 @@ import BuyerProfile from './buyer/BuyerProfile';
 import BuyerAuth from './buyer/BuyerAuth';
 import BuyerDeposit from './buyer/BuyerDeposit';
 import BuyerSupport from './buyer/BuyerSupport';
+import BuyerPublicServices from './buyer/BuyerPublicServices';
 import Storefront from './Storefront';
 
 const queryClient = new QueryClient();
@@ -113,6 +114,7 @@ const TenantRouter = () => {
                     {/* PUBLIC routes - Storefront accessible without login */}
                     <Route path="/" element={<Storefront />} />
                     <Route path="/auth" element={<BuyerAuth />} />
+                    <Route path="/services" element={<BuyerPublicServices />} />
                     
                     {/* Protected buyer routes */}
                     <Route path="/dashboard" element={

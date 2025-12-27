@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Menu, X, Zap, LogIn, Sun, Moon } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { LowVisionToggle } from "./LowVisionToggle";
 
@@ -12,22 +12,24 @@ interface StorefrontNavigationProps {
 
 export const StorefrontNavigation = ({ panel, customization = {} }: StorefrontNavigationProps) => {
   const [isOpen, setIsOpen] = useState(false);
+  const navigate = useNavigate();
   
   const panelName = customization.companyName || panel?.name || 'SMM Panel';
   const logoUrl = customization.logoUrl || panel?.logo_url;
   const primaryColor = customization.primaryColor || '#6366F1';
   const themeMode = customization.themeMode || 'dark';
   const setThemeMode = customization.setThemeMode;
-  const backgroundColor = customization.backgroundColor || '#0F0F1A';
-  const textColor = customization.textColor || '#FFFFFF';
-  const surfaceColor = customization.surfaceColor || '#1A1A2E';
-  const borderColor = customization.borderColor || 'rgba(255,255,255,0.1)';
+  const textColor = customization.textColor || (themeMode === 'dark' ? '#FFFFFF' : '#1F2937');
+  const textMuted = customization.textMuted || (themeMode === 'dark' ? '#A1A1AA' : '#4B5563');
+  const surfaceColor = customization.surfaceColor || (themeMode === 'dark' ? '#12121F' : '#FFFFFF');
+  const borderColor = customization.borderColor || (themeMode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)');
 
+  // Navigation links with proper routing
   const navLinks = [
-    { href: "#services", label: "Services" },
-    { href: "#features", label: "Features" },
-    { href: "#testimonials", label: "Reviews" },
-    { href: "#faq", label: "FAQ" },
+    { href: "/services", label: "Services", isRoute: true },
+    { href: "#features", label: "Features", isRoute: false },
+    { href: "#testimonials", label: "Reviews", isRoute: false },
+    { href: "#faq", label: "FAQ", isRoute: false },
   ];
 
   const toggleThemeMode = () => {
@@ -36,11 +38,24 @@ export const StorefrontNavigation = ({ panel, customization = {} }: StorefrontNa
     }
   };
 
+  const handleNavClick = (link: { href: string; isRoute: boolean }) => {
+    if (link.isRoute) {
+      navigate(link.href);
+    } else {
+      // For anchor links, scroll to element
+      const element = document.querySelector(link.href);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+    setIsOpen(false);
+  };
+
   return (
     <motion.nav 
       className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl"
       style={{ 
-        backgroundColor: `${surfaceColor}E6`,
+        backgroundColor: themeMode === 'dark' ? `${surfaceColor}E6` : `${surfaceColor}F2`,
         borderBottom: `1px solid ${borderColor}`
       }}
       initial={{ y: -100 }}
@@ -70,11 +85,9 @@ export const StorefrontNavigation = ({ panel, customization = {} }: StorefrontNa
               </motion.div>
             )}
             <span 
-              className="text-xl font-bold"
+              className="text-xl font-bold bg-clip-text text-transparent"
               style={{ 
-                background: `linear-gradient(135deg, ${primaryColor}, ${customization.secondaryColor || primaryColor})`,
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent'
+                backgroundImage: `linear-gradient(135deg, ${primaryColor}, ${customization.secondaryColor || primaryColor})`
               }}
             >
               {panelName}
@@ -84,11 +97,11 @@ export const StorefrontNavigation = ({ panel, customization = {} }: StorefrontNa
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
             {navLinks.map((link, index) => (
-              <motion.a 
+              <motion.button 
                 key={link.href}
-                href={link.href} 
-                className="text-sm font-medium transition-colors"
-                style={{ color: customization.textMuted || '#A1A1AA' }}
+                onClick={() => handleNavClick(link)}
+                className="text-sm font-medium transition-colors bg-transparent border-none cursor-pointer"
+                style={{ color: textMuted }}
                 whileHover={{ 
                   color: textColor,
                   y: -2 
@@ -98,7 +111,7 @@ export const StorefrontNavigation = ({ panel, customization = {} }: StorefrontNa
                 transition={{ delay: index * 0.1 }}
               >
                 {link.label}
-              </motion.a>
+              </motion.button>
             ))}
           </div>
 
@@ -127,7 +140,7 @@ export const StorefrontNavigation = ({ panel, customization = {} }: StorefrontNa
             )}
             
             <Button asChild variant="ghost" size="sm" style={{ color: textColor }}>
-              <Link to="/buyer/auth">
+              <Link to="/auth">
                 <LogIn className="w-4 h-4 mr-2" />
                 Sign In
               </Link>
@@ -136,12 +149,13 @@ export const StorefrontNavigation = ({ panel, customization = {} }: StorefrontNa
               <Button 
                 asChild 
                 size="sm"
+                className="text-white"
                 style={{ 
                   background: `linear-gradient(135deg, ${primaryColor}, ${customization.secondaryColor || primaryColor})`,
                   boxShadow: `0 4px 20px ${primaryColor}40`
                 }}
               >
-                <Link to="/buyer/auth?mode=signup">
+                <Link to="/auth?mode=signup">
                   Get Started
                 </Link>
               </Button>
@@ -150,7 +164,7 @@ export const StorefrontNavigation = ({ panel, customization = {} }: StorefrontNa
 
           {/* Mobile Menu Button */}
           <motion.button
-            className="md:hidden p-2 rounded-lg"
+            className="md:hidden p-2 rounded-lg bg-transparent border-none cursor-pointer"
             style={{ color: textColor }}
             onClick={() => setIsOpen(!isOpen)}
             whileTap={{ scale: 0.95 }}
@@ -171,18 +185,17 @@ export const StorefrontNavigation = ({ panel, customization = {} }: StorefrontNa
             >
               <div className="flex flex-col space-y-4">
                 {navLinks.map((link, index) => (
-                  <motion.a 
+                  <motion.button 
                     key={link.href}
-                    href={link.href} 
-                    className="transition-colors"
-                    style={{ color: customization.textMuted || '#A1A1AA' }}
-                    onClick={() => setIsOpen(false)}
+                    onClick={() => handleNavClick(link)}
+                    className="text-left transition-colors bg-transparent border-none cursor-pointer py-2"
+                    style={{ color: textMuted }}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.05 }}
                   >
                     {link.label}
-                  </motion.a>
+                  </motion.button>
                 ))}
                 <div 
                   className="flex flex-col space-y-2 pt-4" 
@@ -210,16 +223,16 @@ export const StorefrontNavigation = ({ panel, customization = {} }: StorefrontNa
                     className="w-full"
                     style={{ borderColor, color: textColor }}
                   >
-                    <Link to="/buyer/auth">Sign In</Link>
+                    <Link to="/auth">Sign In</Link>
                   </Button>
                   <Button 
                     asChild 
-                    className="w-full"
+                    className="w-full text-white"
                     style={{ 
                       background: `linear-gradient(135deg, ${primaryColor}, ${customization.secondaryColor || primaryColor})`
                     }}
                   >
-                    <Link to="/buyer/auth?mode=signup">Get Started</Link>
+                    <Link to="/auth?mode=signup">Get Started</Link>
                   </Button>
                 </div>
               </div>

@@ -15,30 +15,32 @@ interface ThemeOneProps {
   customization?: any;
 }
 
-// Theme One Color Palettes - Cosmic Purple (Enhanced)
+// Theme One Color Palettes - Cosmic Purple (Enhanced for better contrast)
 const darkPalette = {
   background: '#0A0A12',
   surface: '#12121F',
+  card: '#1A1A2E',
   primary: '#8B5CF6',
   secondary: '#EC4899',
   accent: '#A855F7',
   text: '#FFFFFF',
-  textMuted: '#9CA3AF',
+  textMuted: '#A1A1AA',
   border: 'rgba(139, 92, 246, 0.25)',
   glow: 'rgba(139, 92, 246, 0.5)',
   gradient: 'linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%)',
 };
 
 const lightPalette = {
-  background: '#FAFAFF',
+  background: '#F8F7FF',
   surface: '#FFFFFF',
+  card: '#FFFFFF',
   primary: '#7C3AED',
   secondary: '#DB2777',
   accent: '#9333EA',
-  text: '#1E1B4B',
-  textMuted: '#6B7280',
-  border: 'rgba(124, 58, 237, 0.12)',
-  glow: 'rgba(124, 58, 237, 0.18)',
+  text: '#1F2937',
+  textMuted: '#4B5563',
+  border: 'rgba(124, 58, 237, 0.15)',
+  glow: 'rgba(124, 58, 237, 0.12)',
   gradient: 'linear-gradient(135deg, #7C3AED 0%, #DB2777 100%)',
 };
 
@@ -71,6 +73,7 @@ export const ThemeOne = ({ panel, services = [], customization = {} }: ThemeOneP
     secondaryColor: customization.secondaryColor || panel?.secondary_color || palette.secondary,
     backgroundColor: palette.background,
     surfaceColor: palette.surface,
+    cardColor: palette.card,
     textColor: palette.text,
     textMuted: palette.textMuted,
     borderColor: palette.border,
@@ -86,6 +89,7 @@ export const ThemeOne = ({ panel, services = [], customization = {} }: ThemeOneP
       --theme-secondary: ${mergedCustomization.secondaryColor};
       --theme-background: ${mergedCustomization.backgroundColor};
       --theme-surface: ${mergedCustomization.surfaceColor};
+      --theme-card: ${mergedCustomization.cardColor};
       --theme-text: ${mergedCustomization.textColor};
       --theme-text-muted: ${mergedCustomization.textMuted};
       --theme-border: ${mergedCustomization.borderColor};
@@ -119,17 +123,21 @@ export const ThemeOne = ({ panel, services = [], customization = {} }: ThemeOneP
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         {/* Grid Overlay */}
         <div 
-          className="absolute inset-0 bg-grid-pattern opacity-30"
+          className="absolute inset-0 bg-grid-pattern"
           style={{ 
             backgroundImage: `linear-gradient(${palette.border} 1px, transparent 1px), linear-gradient(90deg, ${palette.border} 1px, transparent 1px)`,
-            backgroundSize: '60px 60px'
+            backgroundSize: '60px 60px',
+            opacity: themeMode === 'dark' ? 0.3 : 0.5
           }}
         />
         
         {/* Animated Gradient Orbs */}
         <motion.div
           className="absolute -top-40 -right-40 w-96 h-96 rounded-full blur-3xl"
-          style={{ background: `radial-gradient(circle, ${palette.glow}, transparent 70%)` }}
+          style={{ 
+            background: `radial-gradient(circle, ${palette.glow}, transparent 70%)`,
+            opacity: themeMode === 'dark' ? 1 : 0.6
+          }}
           animate={{
             x: [0, 50, 0],
             y: [0, -30, 0],
@@ -139,7 +147,10 @@ export const ThemeOne = ({ panel, services = [], customization = {} }: ThemeOneP
         />
         <motion.div
           className="absolute top-1/2 -left-40 w-80 h-80 rounded-full blur-3xl"
-          style={{ background: `radial-gradient(circle, ${mergedCustomization.secondaryColor}30, transparent 70%)` }}
+          style={{ 
+            background: `radial-gradient(circle, ${mergedCustomization.secondaryColor}30, transparent 70%)`,
+            opacity: themeMode === 'dark' ? 1 : 0.5
+          }}
           animate={{
             x: [0, 30, 0],
             y: [0, 50, 0],
@@ -149,7 +160,10 @@ export const ThemeOne = ({ panel, services = [], customization = {} }: ThemeOneP
         />
         <motion.div
           className="absolute bottom-20 right-1/4 w-64 h-64 rounded-full blur-3xl"
-          style={{ background: `radial-gradient(circle, ${palette.primary}20, transparent 70%)` }}
+          style={{ 
+            background: `radial-gradient(circle, ${palette.primary}20, transparent 70%)`,
+            opacity: themeMode === 'dark' ? 1 : 0.4
+          }}
           animate={{
             x: [0, -40, 0],
             y: [0, 30, 0],
