@@ -1,7 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Sparkles, Zap, TrendingUp, Users, Star, MessageCircle, Shield, DollarSign, Clock, CheckCircle, CreditCard } from "lucide-react";
+import { 
+  ArrowRight, Sparkles, Zap, TrendingUp, Users, Star, MessageCircle, Shield, DollarSign, Clock, CheckCircle, CreditCard,
+  Instagram, Music, Youtube, Send, Twitter
+} from "lucide-react";
 import { Link } from "react-router-dom";
 import { AnimatedText } from "@/components/ui/animated-text";
 import { motion } from "framer-motion";
@@ -25,18 +28,26 @@ const rightCards = [
 
 // Service categories with platform icons
 const serviceCategories = [
-  { name: "Instagram", icon: "📸", color: "from-pink-500 to-purple-500" },
-  { name: "TikTok", icon: "🎵", color: "from-cyan-400 to-pink-500" },
-  { name: "YouTube", icon: "▶️", color: "from-red-500 to-red-600" },
-  { name: "Telegram", icon: "✈️", color: "from-blue-400 to-blue-600" },
-  { name: "Twitter", icon: "🐦", color: "from-sky-400 to-blue-500" },
+  { name: "Instagram", Icon: Instagram, color: "from-pink-500 to-purple-500" },
+  { name: "TikTok", Icon: Music, color: "from-cyan-400 to-pink-500" },
+  { name: "YouTube", Icon: Youtube, color: "from-red-500 to-red-600" },
+  { name: "Telegram", Icon: Send, color: "from-blue-400 to-blue-600" },
+  { name: "Twitter", Icon: Twitter, color: "from-sky-400 to-blue-500" },
 ];
 
 // Trust indicators
 const trustBadges = [
-  { icon: CheckCircle, text: "50K+ Happy Customers", color: "text-green-400" },
-  { icon: Star, text: "99.9% Success Rate", color: "text-yellow-400" },
-  { icon: Clock, text: "Instant Delivery", color: "text-blue-400" },
+  { icon: CheckCircle, text: "50K+ Happy Customers", color: "text-green-500" },
+  { icon: Star, text: "99.9% Success Rate", color: "text-yellow-500" },
+  { icon: Clock, text: "Instant Delivery", color: "text-blue-500" },
+];
+
+// Payment icons
+const paymentMethods = [
+  { letter: "V", name: "Visa", gradient: "from-blue-600 to-blue-700" },
+  { letter: "M", name: "Mastercard", gradient: "from-red-500 to-orange-500" },
+  { letter: "P", name: "PayPal", gradient: "from-blue-500 to-blue-600" },
+  { letter: "₿", name: "Bitcoin", gradient: "from-yellow-500 to-amber-600" },
 ];
 
 export const StorefrontHeroSection = ({ panel, services = [], customization = {} }: StorefrontHeroSectionProps) => {
@@ -46,6 +57,10 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
   const badgeText = customization.badgeText || customization.heroBadgeText || '#1 SMM Panel';
   const enableFastOrder = customization.enableFastOrder ?? true;
   const themeMode = customization.themeMode || 'dark';
+  const textColor = customization.textColor || (themeMode === 'dark' ? '#FFFFFF' : '#1F2937');
+  const textMuted = customization.textMuted || (themeMode === 'dark' ? '#A1A1AA' : '#4B5563');
+  const cardBg = themeMode === 'dark' ? 'bg-slate-900/80' : 'bg-white/90';
+  const borderStyle = themeMode === 'dark' ? 'border-white/10' : 'border-gray-200';
 
   const animatedPhrases = customization.animatedPhrases || [
     { static: "grow your audience", bold: "for profit" },
@@ -64,7 +79,7 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
             style={{
               left: `${Math.random() * 100}%`,
               top: `${Math.random() * 100}%`,
-              background: `linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.5))`,
+              background: `linear-gradient(135deg, ${customization.primaryColor || '#8B5CF6'}, ${customization.primaryColor || '#8B5CF6'}80)`,
             }}
             animate={{
               y: [0, -40, 0],
@@ -91,14 +106,14 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
             transition={{ delay: card.delay, duration: 0.8, ease: "easeOut" }}
             whileHover={{ scale: 1.05, x: 10 }}
           >
-            <Card className="p-4 bg-card/60 backdrop-blur-xl border border-primary/20 shadow-2xl w-[190px]">
+            <Card className={`p-4 ${cardBg} backdrop-blur-xl border ${borderStyle} shadow-2xl w-[190px]`}>
               <div className="flex items-center gap-3">
                 <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${card.gradient} flex items-center justify-center shadow-lg`}>
                   <card.icon className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm">{card.title}</h3>
-                  <p className="text-xs text-muted-foreground">{card.subtitle}</p>
+                  <h3 className="font-bold text-sm" style={{ color: textColor }}>{card.title}</h3>
+                  <p className="text-xs" style={{ color: textMuted }}>{card.subtitle}</p>
                 </div>
               </div>
             </Card>
@@ -116,14 +131,14 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
             transition={{ delay: card.delay, duration: 0.8, ease: "easeOut" }}
             whileHover={{ scale: 1.05, x: -10 }}
           >
-            <Card className="p-4 bg-card/60 backdrop-blur-xl border border-primary/20 shadow-2xl w-[190px]">
+            <Card className={`p-4 ${cardBg} backdrop-blur-xl border ${borderStyle} shadow-2xl w-[190px]`}>
               <div className="flex items-center gap-3">
                 <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${card.gradient} flex items-center justify-center shadow-lg`}>
                   <card.icon className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm">{card.title}</h3>
-                  <p className="text-xs text-muted-foreground">{card.subtitle}</p>
+                  <h3 className="font-bold text-sm" style={{ color: textColor }}>{card.title}</h3>
+                  <p className="text-xs" style={{ color: textMuted }}>{card.subtitle}</p>
                 </div>
               </div>
             </Card>
@@ -141,20 +156,26 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
         >
           {/* Badge */}
           <motion.div 
-            className="inline-flex items-center space-x-2 bg-card/80 backdrop-blur-xl border border-border/50 rounded-full px-6 py-2.5 mb-8"
+            className={`inline-flex items-center space-x-2 ${cardBg} backdrop-blur-xl border ${borderStyle} rounded-full px-6 py-2.5 mb-8`}
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.2, duration: 0.5 }}
             whileHover={{ scale: 1.05 }}
           >
-            <Sparkles className="w-4 h-4 text-primary animate-pulse" />
-            <span className="text-sm font-medium">{badgeText}</span>
-            <span className="px-2 py-0.5 bg-primary/20 text-primary text-xs rounded-full font-semibold">Trusted</span>
+            <Sparkles className="w-4 h-4 animate-pulse" style={{ color: customization.primaryColor || '#8B5CF6' }} />
+            <span className="text-sm font-medium" style={{ color: textColor }}>{badgeText}</span>
+            <span 
+              className="px-2 py-0.5 text-xs rounded-full font-semibold text-white"
+              style={{ backgroundColor: customization.primaryColor || '#8B5CF6' }}
+            >
+              Trusted
+            </span>
           </motion.div>
 
           {/* Main Heading */}
           <motion.h1 
             className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight"
+            style={{ color: textColor }}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3, duration: 0.6 }}
@@ -162,12 +183,14 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
             {heroTitle.split(' ').slice(0, Math.ceil(heroTitle.split(' ').length / 2)).join(' ')}
             <br />
             <motion.span 
-              className="bg-gradient-to-r from-primary via-primary to-secondary bg-clip-text text-transparent inline-block"
+              className="bg-clip-text text-transparent inline-block"
+              style={{ 
+                backgroundImage: `linear-gradient(135deg, ${customization.primaryColor || '#8B5CF6'}, ${customization.secondaryColor || '#EC4899'})` 
+              }}
               animate={{ 
                 backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"]
               }}
               transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
-              style={{ backgroundSize: "200% 200%" }}
             >
               {heroTitle.split(' ').slice(Math.ceil(heroTitle.split(' ').length / 2)).join(' ') || 'Presence'}
             </motion.span>
@@ -175,7 +198,8 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
 
           {/* Subtitle */}
           <motion.p 
-            className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto"
+            className="text-lg md:text-xl mb-8 max-w-2xl mx-auto"
+            style={{ color: textMuted }}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4, duration: 0.6 }}
@@ -193,34 +217,68 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
             {enableFastOrder ? (
               <>
                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.98 }}>
-                  <Button asChild size="lg" className="bg-gradient-to-r from-primary to-primary/80 hover:shadow-lg hover:shadow-primary/25 text-lg px-8 py-6 rounded-full">
+                  <Button 
+                    asChild 
+                    size="lg" 
+                    className="text-lg px-8 py-6 rounded-full text-white"
+                    style={{ 
+                      background: `linear-gradient(135deg, ${customization.primaryColor || '#8B5CF6'}, ${customization.secondaryColor || '#EC4899'})`,
+                      boxShadow: `0 10px 30px ${customization.primaryColor || '#8B5CF6'}40`
+                    }}
+                  >
                     <a href="#fast-order">
                       <Zap className="mr-2 w-5 h-5" /> Fast Order
                     </a>
                   </Button>
                 </motion.div>
                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.98 }}>
-                  <Button asChild variant="outline" size="lg" className="text-lg px-8 py-6 border-primary/30 hover:bg-primary/10 rounded-full backdrop-blur-sm">
-                    <a href="#services">
+                  <Button 
+                    asChild 
+                    variant="outline" 
+                    size="lg" 
+                    className="text-lg px-8 py-6 rounded-full backdrop-blur-sm"
+                    style={{ 
+                      borderColor: `${customization.primaryColor || '#8B5CF6'}50`,
+                      color: textColor
+                    }}
+                  >
+                    <Link to="/services">
                       View Services
-                    </a>
+                    </Link>
                   </Button>
                 </motion.div>
               </>
             ) : (
               <>
                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.98 }}>
-                  <Button asChild size="lg" className="bg-gradient-to-r from-primary to-primary/80 hover:shadow-lg hover:shadow-primary/25 text-lg px-8 py-6 rounded-full">
-                    <Link to="/auth?mode=signup">
+                  <Button 
+                    asChild 
+                    size="lg" 
+                    className="text-lg px-8 py-6 rounded-full text-white"
+                    style={{ 
+                      background: `linear-gradient(135deg, ${customization.primaryColor || '#8B5CF6'}, ${customization.secondaryColor || '#EC4899'})`,
+                      boxShadow: `0 10px 30px ${customization.primaryColor || '#8B5CF6'}40`
+                    }}
+                  >
+                    <Link to="/buyer/auth?mode=signup">
                       Get Started <ArrowRight className="ml-2 w-5 h-5" />
                     </Link>
                   </Button>
                 </motion.div>
                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.98 }}>
-                  <Button asChild variant="outline" size="lg" className="text-lg px-8 py-6 border-primary/30 hover:bg-primary/10 rounded-full backdrop-blur-sm">
-                    <a href="#services">
+                  <Button 
+                    asChild 
+                    variant="outline" 
+                    size="lg" 
+                    className="text-lg px-8 py-6 rounded-full backdrop-blur-sm"
+                    style={{ 
+                      borderColor: `${customization.primaryColor || '#8B5CF6'}50`,
+                      color: textColor
+                    }}
+                  >
+                    <Link to="/services">
                       View Services
-                    </a>
+                    </Link>
                   </Button>
                 </motion.div>
               </>
@@ -241,9 +299,10 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.7 + index * 0.1 }}
                 whileHover={{ scale: 1.05, y: -2 }}
-                className="px-4 py-2 rounded-full bg-card/60 backdrop-blur-sm border border-border/50 hover:border-primary/50 transition-all flex items-center gap-2"
+                className={`px-4 py-2 rounded-full ${cardBg} backdrop-blur-sm border ${borderStyle} transition-all flex items-center gap-2`}
+                style={{ color: textColor }}
               >
-                <span>{category.icon}</span>
+                <category.Icon className="w-4 h-4" />
                 <span className="text-sm font-medium">{category.name}</span>
               </motion.button>
             ))}
@@ -266,24 +325,30 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
             transition={{ delay: 0.9, duration: 0.8 }}
             className="max-w-4xl mx-auto"
           >
-            <Card className="bg-card/60 backdrop-blur-2xl border border-primary/20 shadow-2xl overflow-hidden">
+            <Card className={`${cardBg} backdrop-blur-2xl border ${borderStyle} shadow-2xl overflow-hidden`}>
               {/* Panel Header */}
-              <div className="flex items-center justify-between p-4 border-b border-border/50 bg-muted/30">
+              <div 
+                className={`flex items-center justify-between p-4 border-b ${borderStyle}`}
+                style={{ backgroundColor: themeMode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }}
+              >
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+                  <div 
+                    className="w-10 h-10 rounded-xl flex items-center justify-center"
+                    style={{ background: `linear-gradient(135deg, ${customization.primaryColor || '#8B5CF6'}, ${customization.secondaryColor || '#EC4899'})` }}
+                  >
                     <Sparkles className="w-5 h-5 text-white" />
                   </div>
-                  <span className="font-bold text-lg">{panelName}</span>
+                  <span className="font-bold text-lg" style={{ color: textColor }}>{panelName}</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Badge variant="secondary" className="bg-green-500/20 text-green-400 border-green-500/30">
+                  <Badge className="bg-green-500/20 text-green-500 border-green-500/30">
                     <CheckCircle className="w-3 h-3 mr-1" /> Online
                   </Badge>
                 </div>
               </div>
 
               {/* Quick Stats in Showcase */}
-              <div className="grid grid-cols-3 divide-x divide-border/50 border-b border-border/50">
+              <div className={`grid grid-cols-3 divide-x ${themeMode === 'dark' ? 'divide-white/10' : 'divide-gray-200'} border-b ${borderStyle}`}>
                 {[
                   { label: "Services", value: services.length > 0 ? `${services.length}+` : "500+" },
                   { label: "Avg. Delivery", value: "0-1 hr" },
@@ -296,8 +361,8 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 1 + index * 0.1 }}
                   >
-                    <p className="text-2xl font-bold text-primary">{stat.value}</p>
-                    <p className="text-xs text-muted-foreground">{stat.label}</p>
+                    <p className="text-2xl font-bold" style={{ color: customization.primaryColor || '#8B5CF6' }}>{stat.value}</p>
+                    <p className="text-xs" style={{ color: textMuted }}>{stat.label}</p>
                   </motion.div>
                 ))}
               </div>
@@ -314,11 +379,11 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
                       whileHover={{ y: -5, scale: 1.05 }}
                       className="group cursor-pointer"
                     >
-                      <Card className="p-4 bg-background/50 border-border/50 hover:border-primary/50 transition-all text-center">
+                      <Card className={`p-4 ${themeMode === 'dark' ? 'bg-slate-800/50' : 'bg-gray-50'} border ${borderStyle} transition-all text-center`}>
                         <div className={`w-12 h-12 mx-auto rounded-xl bg-gradient-to-br ${category.color} flex items-center justify-center mb-2 shadow-lg group-hover:shadow-xl transition-shadow`}>
-                          <span className="text-2xl">{category.icon}</span>
+                          <category.Icon className="w-6 h-6 text-white" />
                         </div>
-                        <p className="text-sm font-medium">{category.name}</p>
+                        <p className="text-sm font-medium" style={{ color: textColor }}>{category.name}</p>
                       </Card>
                     </motion.div>
                   ))}
@@ -343,7 +408,7 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
                 transition={{ delay: 1.6 + index * 0.1 }}
               >
                 <badge.icon className={`w-5 h-5 ${badge.color}`} />
-                <span className="text-muted-foreground">{badge.text}</span>
+                <span style={{ color: textMuted }}>{badge.text}</span>
               </motion.div>
             ))}
           </motion.div>
@@ -355,15 +420,16 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
             animate={{ opacity: 1 }}
             transition={{ delay: 1.8, duration: 0.6 }}
           >
-            <span className="text-xs text-muted-foreground">We accept:</span>
+            <span className="text-xs" style={{ color: textMuted }}>We accept:</span>
             <div className="flex items-center gap-3">
-              {['💳', '🅿️', '₿', '💰'].map((icon, i) => (
+              {paymentMethods.map((method, i) => (
                 <motion.div
                   key={i}
-                  className="w-8 h-8 rounded-lg bg-card/60 border border-border/50 flex items-center justify-center text-lg"
+                  className={`w-10 h-7 rounded-md bg-gradient-to-br ${method.gradient} flex items-center justify-center text-white text-xs font-bold shadow-md`}
                   whileHover={{ scale: 1.1, y: -2 }}
+                  title={method.name}
                 >
-                  {icon}
+                  {method.letter}
                 </motion.div>
               ))}
             </div>
