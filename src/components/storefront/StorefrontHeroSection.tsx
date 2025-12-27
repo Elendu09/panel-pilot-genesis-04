@@ -117,8 +117,8 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
 
   return (
     <section className="relative min-h-screen overflow-hidden">
-      {/* Floating Particles */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {/* Floating Particles - Hidden on mobile for performance */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none hidden md:block">
         {[...Array(15)].map((_, i) => (
           <motion.div
             key={i}
@@ -194,7 +194,7 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
       </div>
 
       {/* Main Content */}
-      <div className="container mx-auto px-4 text-center relative z-10 pt-24 lg:pt-32">
+      <div className="container mx-auto px-4 text-center relative z-10 pt-16 sm:pt-20 lg:pt-32">
         <motion.div 
           className="max-w-4xl mx-auto"
           initial={{ opacity: 0, y: 30 }}
@@ -203,16 +203,16 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
         >
           {/* Badge */}
           <motion.div 
-            className={`inline-flex items-center space-x-2 ${cardBg} backdrop-blur-xl border ${borderStyle} rounded-full px-6 py-2.5 mb-8`}
+            className={`inline-flex items-center space-x-1.5 sm:space-x-2 ${cardBg} backdrop-blur-xl border ${borderStyle} rounded-full px-4 sm:px-6 py-2 sm:py-2.5 mb-6 sm:mb-8`}
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.2, duration: 0.5 }}
             whileHover={{ scale: 1.05 }}
           >
-            <Sparkles className="w-4 h-4 animate-pulse" style={{ color: customization.primaryColor || '#8B5CF6' }} />
-            <span className="text-sm font-medium" style={{ color: textColor }}>{badgeText}</span>
+            <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 animate-pulse" style={{ color: customization.primaryColor || '#8B5CF6' }} />
+            <span className="text-xs sm:text-sm font-medium" style={{ color: textColor }}>{badgeText}</span>
             <span 
-              className="px-2 py-0.5 text-xs rounded-full font-semibold text-white"
+              className="px-1.5 sm:px-2 py-0.5 text-[10px] sm:text-xs rounded-full font-semibold text-white"
               style={{ backgroundColor: customization.primaryColor || '#8B5CF6' }}
             >
               Trusted
@@ -221,7 +221,7 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
 
           {/* Main Heading */}
           <motion.h1 
-            className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight"
+            className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-bold mb-4 sm:mb-6 leading-tight px-2"
             style={{ color: textColor }}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -245,7 +245,7 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
 
           {/* Subtitle */}
           <motion.p 
-            className="text-lg md:text-xl mb-8 max-w-2xl mx-auto"
+            className="text-base sm:text-lg md:text-xl mb-6 sm:mb-8 max-w-2xl mx-auto px-4"
             style={{ color: textMuted }}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -256,7 +256,7 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
 
           {/* CTA Buttons */}
           <motion.div 
-            className="flex flex-col sm:flex-row gap-4 justify-center mb-8"
+            className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center mb-6 sm:mb-8 px-4"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5, duration: 0.6 }}
@@ -267,14 +267,14 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
                   <Button 
                     asChild 
                     size="lg" 
-                    className="text-lg px-8 py-6 rounded-full text-white"
+                    className="text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 rounded-full text-white w-full sm:w-auto"
                     style={{ 
                       background: `linear-gradient(135deg, ${customization.primaryColor || '#8B5CF6'}, ${customization.secondaryColor || '#EC4899'})`,
                       boxShadow: `0 10px 30px ${customization.primaryColor || '#8B5CF6'}40`
                     }}
                   >
                     <a href="#fast-order">
-                      <Zap className="mr-2 w-5 h-5" /> Fast Order
+                      <Zap className="mr-2 w-4 h-4 sm:w-5 sm:h-5" /> Fast Order
                     </a>
                   </Button>
                 </motion.div>
@@ -283,7 +283,7 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
                     asChild 
                     variant="outline" 
                     size="lg" 
-                    className="text-lg px-8 py-6 rounded-full backdrop-blur-sm"
+                    className="text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 rounded-full backdrop-blur-sm w-full sm:w-auto"
                     style={{ 
                       borderColor: `${customization.primaryColor || '#8B5CF6'}50`,
                       color: textColor
@@ -301,14 +301,14 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
                   <Button 
                     asChild 
                     size="lg" 
-                    className="text-lg px-8 py-6 rounded-full text-white"
+                    className="text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 rounded-full text-white w-full sm:w-auto"
                     style={{ 
                       background: `linear-gradient(135deg, ${customization.primaryColor || '#8B5CF6'}, ${customization.secondaryColor || '#EC4899'})`,
                       boxShadow: `0 10px 30px ${customization.primaryColor || '#8B5CF6'}40`
                     }}
                   >
                     <Link to="/buyer/auth?mode=signup">
-                      Get Started <ArrowRight className="ml-2 w-5 h-5" />
+                      Get Started <ArrowRight className="ml-2 w-4 h-4 sm:w-5 sm:h-5" />
                     </Link>
                   </Button>
                 </motion.div>
@@ -317,7 +317,7 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
                     asChild 
                     variant="outline" 
                     size="lg" 
-                    className="text-lg px-8 py-6 rounded-full backdrop-blur-sm"
+                    className="text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 rounded-full backdrop-blur-sm w-full sm:w-auto"
                     style={{ 
                       borderColor: `${customization.primaryColor || '#8B5CF6'}50`,
                       color: textColor
@@ -334,7 +334,7 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
 
           {/* Platform Categories - Quick Access */}
           <motion.div 
-            className="flex flex-wrap justify-center gap-2 mb-10"
+            className="flex flex-wrap justify-center gap-1.5 sm:gap-2 mb-8 sm:mb-10 px-2"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6, duration: 0.6 }}
@@ -346,18 +346,18 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.7 + index * 0.1 }}
                 whileHover={{ scale: 1.05, y: -2 }}
-                className={`px-4 py-2 rounded-full ${cardBg} backdrop-blur-sm border ${borderStyle} transition-all flex items-center gap-2`}
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full ${cardBg} backdrop-blur-sm border ${borderStyle} transition-all flex items-center gap-1.5 sm:gap-2`}
                 style={{ color: textColor }}
               >
-                <category.Icon className="w-4 h-4" />
-                <span className="text-sm font-medium">{category.name}</span>
+                <category.Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span className="text-xs sm:text-sm font-medium">{category.name}</span>
               </motion.button>
             ))}
           </motion.div>
 
           {/* Animated Text */}
           <motion.div 
-            className="mb-10"
+            className="mb-8 sm:mb-10"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.8, duration: 0.6 }}
@@ -365,30 +365,30 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
             <AnimatedText phrases={animatedPhrases} />
           </motion.div>
 
-          {/* Service Showcase Card */}
+          {/* Service Showcase Card - Hidden on mobile, shown on tablet+ */}
           <motion.div
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.9, duration: 0.8 }}
-            className="max-w-4xl mx-auto"
+            className="max-w-4xl mx-auto hidden sm:block"
           >
             <Card className={`${cardBg} backdrop-blur-2xl border ${borderStyle} shadow-2xl overflow-hidden`}>
               {/* Panel Header */}
               <div 
-                className={`flex items-center justify-between p-4 border-b ${borderStyle}`}
+                className={`flex items-center justify-between p-3 sm:p-4 border-b ${borderStyle}`}
                 style={{ backgroundColor: themeMode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }}
               >
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3 sm:gap-4">
                   <div 
-                    className="w-10 h-10 rounded-xl flex items-center justify-center"
+                    className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center"
                     style={{ background: `linear-gradient(135deg, ${customization.primaryColor || '#8B5CF6'}, ${customization.secondaryColor || '#EC4899'})` }}
                   >
-                    <Sparkles className="w-5 h-5 text-white" />
+                    <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                   </div>
-                  <span className="font-bold text-lg" style={{ color: textColor }}>{panelName}</span>
+                  <span className="font-bold text-base sm:text-lg" style={{ color: textColor }}>{panelName}</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Badge className="bg-green-500/20 text-green-500 border-green-500/30">
+                  <Badge className="bg-green-500/20 text-green-500 border-green-500/30 text-xs">
                     <CheckCircle className="w-3 h-3 mr-1" /> Online
                   </Badge>
                 </div>
@@ -403,20 +403,20 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
                 ].map((stat, index) => (
                   <motion.div 
                     key={index} 
-                    className="p-4 text-center"
+                    className="p-3 sm:p-4 text-center"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 1 + index * 0.1 }}
                   >
-                    <p className="text-2xl font-bold" style={{ color: customization.primaryColor || '#8B5CF6' }}>{stat.value}</p>
-                    <p className="text-xs" style={{ color: textMuted }}>{stat.label}</p>
+                    <p className="text-xl sm:text-2xl font-bold" style={{ color: customization.primaryColor || '#8B5CF6' }}>{stat.value}</p>
+                    <p className="text-[10px] sm:text-xs" style={{ color: textMuted }}>{stat.label}</p>
                   </motion.div>
                 ))}
               </div>
 
               {/* Category Preview */}
-              <div className="p-4">
-                <div className="grid grid-cols-5 gap-3">
+              <div className="p-3 sm:p-4">
+                <div className="grid grid-cols-5 gap-2 sm:gap-3">
                   {serviceCategories.map((category, index) => (
                     <motion.div
                       key={index}
@@ -426,11 +426,11 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
                       whileHover={{ y: -5, scale: 1.05 }}
                       className="group cursor-pointer"
                     >
-                      <Card className={`p-4 ${themeMode === 'dark' ? 'bg-slate-800/50' : 'bg-gray-50'} border ${borderStyle} transition-all text-center`}>
-                        <div className={`w-12 h-12 mx-auto rounded-xl bg-gradient-to-br ${category.color} flex items-center justify-center mb-2 shadow-lg group-hover:shadow-xl transition-shadow`}>
-                          <category.Icon className="w-6 h-6 text-white" />
+                      <Card className={`p-2 sm:p-4 ${themeMode === 'dark' ? 'bg-slate-800/50' : 'bg-gray-50'} border ${borderStyle} transition-all text-center`}>
+                        <div className={`w-8 h-8 sm:w-12 sm:h-12 mx-auto rounded-lg sm:rounded-xl bg-gradient-to-br ${category.color} flex items-center justify-center mb-1 sm:mb-2 shadow-lg group-hover:shadow-xl transition-shadow`}>
+                          <category.Icon className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
                         </div>
-                        <p className="text-sm font-medium" style={{ color: textColor }}>{category.name}</p>
+                        <p className="text-[10px] sm:text-sm font-medium" style={{ color: textColor }}>{category.name}</p>
                       </Card>
                     </motion.div>
                   ))}
@@ -439,9 +439,36 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
             </Card>
           </motion.div>
 
+          {/* Mobile Service Showcase - Compact horizontal scroll */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.9, duration: 0.6 }}
+            className="sm:hidden overflow-x-auto pb-4 -mx-4 px-4 snap-x snap-mandatory"
+          >
+            <div className="flex gap-3" style={{ width: 'max-content' }}>
+              {serviceCategories.map((category, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 1 + index * 0.1 }}
+                  className="snap-center"
+                >
+                  <Card className={`p-3 ${cardBg} border ${borderStyle} text-center min-w-[80px]`}>
+                    <div className={`w-10 h-10 mx-auto rounded-lg bg-gradient-to-br ${category.color} flex items-center justify-center mb-2 shadow-lg`}>
+                      <category.Icon className="w-5 h-5 text-white" />
+                    </div>
+                    <p className="text-xs font-medium" style={{ color: textColor }}>{category.name}</p>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+
           {/* Trust Indicators */}
           <motion.div 
-            className="flex flex-wrap justify-center gap-6 mt-10 mb-8"
+            className="flex flex-wrap justify-center gap-3 sm:gap-6 mt-6 sm:mt-10 mb-6 sm:mb-8 px-2"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 1.5, duration: 0.6 }}
@@ -449,12 +476,12 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
             {trustBadges.map((badge, index) => (
               <motion.div 
                 key={index}
-                className="flex items-center gap-2 text-sm"
+                className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm"
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 1.6 + index * 0.1 }}
               >
-                <badge.icon className={`w-5 h-5 ${badge.color}`} />
+                <badge.icon className={`w-4 h-4 sm:w-5 sm:h-5 ${badge.color}`} />
                 <span style={{ color: textMuted }}>{badge.text}</span>
               </motion.div>
             ))}
@@ -462,17 +489,17 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
 
           {/* Payment Methods */}
           <motion.div
-            className="flex items-center justify-center gap-4 pb-8"
+            className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 pb-6 sm:pb-8"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 1.8, duration: 0.6 }}
           >
-            <span className="text-xs" style={{ color: textMuted }}>We accept:</span>
-            <div className="flex items-center gap-3">
+            <span className="text-[10px] sm:text-xs" style={{ color: textMuted }}>We accept:</span>
+            <div className="flex items-center gap-2 sm:gap-3">
               {paymentIcons.map((payment, i) => (
                 <motion.div
                   key={i}
-                  className="w-12 h-8 rounded-md overflow-hidden shadow-md"
+                  className="w-10 h-6 sm:w-12 sm:h-8 rounded-md overflow-hidden shadow-md"
                   whileHover={{ scale: 1.1, y: -2 }}
                   title={payment.name}
                 >
