@@ -105,6 +105,7 @@ const Storefront = () => {
   const canonicalUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
   // Render appropriate theme based on panel.theme_type or custom_branding.selectedTheme
+  // ThemeOne is ALWAYS the default - it's the primary/recommended theme
   const renderTheme = () => {
     try {
       const themeProps = {
@@ -115,14 +116,12 @@ const Storefront = () => {
 
       console.log('Rendering theme:', selectedTheme, 'with props:', { panelName: panel?.name, servicesCount: services?.length });
 
+      // ThemeOne is the default and recommended theme
       switch (selectedTheme) {
-        case 'dark_gradient':
-        case 'ocean_blue':
-        case 'forest_green':
-          return <ThemeOne {...themeProps} />;
         case 'professional':
         case 'light_minimal':
         case 'corporate':
+        case 'ocean_blue':
           return <ThemeTwo {...themeProps} />;
         case 'vibrant':
         case 'neon_glow':
@@ -131,9 +130,13 @@ const Storefront = () => {
           return <ThemeThree {...themeProps} />;
         case 'grace':
         case 'grace_cometh':
+        case 'forest_earth':
           return <ThemeFour {...themeProps} />;
+        // ThemeOne is the default for all other cases
+        case 'dark_gradient':
+        case 'cosmic_purple':
         default:
-          console.log('Unknown theme, falling back to ThemeOne:', selectedTheme);
+          // ThemeOne is always the fallback/default theme
           return <ThemeOne {...themeProps} />;
       }
     } catch (err: any) {

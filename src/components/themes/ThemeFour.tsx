@@ -1,3 +1,5 @@
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import { StorefrontNavigation } from "@/components/storefront/StorefrontNavigation";
 import { StorefrontHeroSection } from "@/components/storefront/StorefrontHeroSection";
 import { StorefrontPlatformSection } from "@/components/storefront/StorefrontPlatformSection";
@@ -13,72 +15,168 @@ interface ThemeFourProps {
   customization?: any;
 }
 
+// Theme Four Color Palettes - Forest Earth (Natural)
+const darkPalette = {
+  background: '#0D1912',
+  surface: '#162419',
+  primary: '#22C55E',
+  secondary: '#84CC16',
+  text: '#FFFFFF',
+  textMuted: '#9CA3AF',
+  border: 'rgba(34, 197, 94, 0.2)',
+  glow: 'rgba(34, 197, 94, 0.3)',
+};
+
+const lightPalette = {
+  background: '#F5FFF8',
+  surface: '#FFFFFF',
+  primary: '#16A34A',
+  secondary: '#65A30D',
+  text: '#14532D',
+  textMuted: '#6B7280',
+  border: 'rgba(22, 163, 74, 0.12)',
+  glow: 'rgba(22, 163, 74, 0.15)',
+};
+
 export const ThemeFour = ({ panel, services = [], customization = {} }: ThemeFourProps) => {
-  // Theme Four specific styling: Brown/amber warm earthy theme
+  const [themeMode, setThemeMode] = useState<'dark' | 'light'>('dark');
+  
+  useEffect(() => {
+    const saved = localStorage.getItem('storefront-theme-mode');
+    if (saved === 'light' || saved === 'dark') {
+      setThemeMode(saved);
+    } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+      setThemeMode('light');
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('storefront-theme-mode', themeMode);
+  }, [themeMode]);
+
+  const palette = themeMode === 'dark' ? darkPalette : lightPalette;
+
   const themeFourCustomization = {
     ...customization,
     companyName: customization.companyName || panel?.name,
     logoUrl: customization.logoUrl || panel?.logo_url,
-    // Brown/amber earthy color scheme
-    primaryColor: customization.primaryColor || panel?.primary_color || '#6B4226',
-    secondaryColor: customization.secondaryColor || '#F59E0B',
-    backgroundColor: customization.backgroundColor || '#5D3A1A',
-    surfaceColor: customization.surfaceColor || '#4A2E15',
-    textColor: customization.textColor || '#FFFFFF',
+    primaryColor: customization.primaryColor || panel?.primary_color || palette.primary,
+    secondaryColor: customization.secondaryColor || palette.secondary,
+    backgroundColor: palette.background,
+    surfaceColor: palette.surface,
+    textColor: palette.text,
+    textMuted: palette.textMuted,
+    borderColor: palette.border,
+    glowColor: palette.glow,
+    themeMode,
+    setThemeMode,
   };
 
-  // Inject CSS variables for the theme
   const themeStyles = `
     :root {
       --theme-primary: ${themeFourCustomization.primaryColor};
       --theme-secondary: ${themeFourCustomization.secondaryColor};
       --theme-background: ${themeFourCustomization.backgroundColor};
+      --theme-surface: ${themeFourCustomization.surfaceColor};
       --theme-text: ${themeFourCustomization.textColor};
+      --theme-text-muted: ${themeFourCustomization.textMuted};
+      --theme-border: ${themeFourCustomization.borderColor};
+      --theme-glow: ${themeFourCustomization.glowColor};
     }
   `;
 
+  const pageVariants = {
+    initial: { opacity: 0 },
+    animate: { 
+      opacity: 1,
+      transition: { duration: 0.5, staggerChildren: 0.1 }
+    },
+  };
+
   return (
-    <div 
-      className="min-h-screen" 
+    <motion.div 
+      className="min-h-screen relative overflow-hidden"
       style={{ 
         backgroundColor: themeFourCustomization.backgroundColor,
         color: themeFourCustomization.textColor 
       }}
+      variants={pageVariants}
+      initial="initial"
+      animate="animate"
     >
       <style>{themeStyles}</style>
+      
+      {/* Animated Background Effects */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        {/* Nature-inspired Gradients */}
+        <motion.div
+          className="absolute top-0 left-0 w-full h-1/2"
+          style={{ 
+            background: `linear-gradient(180deg, ${palette.glow}, transparent)`,
+          }}
+          animate={{ opacity: [0.4, 0.6, 0.4] }}
+          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+        />
+        
+        {/* Organic Blob Shapes */}
+        <motion.div
+          className="absolute top-1/4 right-10 w-80 h-80 rounded-full blur-3xl"
+          style={{ background: palette.glow }}
+          animate={{
+            scale: [1, 1.1, 1],
+            x: [0, -20, 0],
+            y: [0, 30, 0],
+          }}
+          transition={{ duration: 16, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div
+          className="absolute bottom-20 left-20 w-64 h-64 rounded-full blur-3xl"
+          style={{ background: `${palette.secondary}30` }}
+          animate={{
+            scale: [1, 1.2, 1],
+            rotate: [0, 10, 0],
+          }}
+          transition={{ duration: 14, repeat: Infinity, ease: "easeInOut", delay: 4 }}
+        />
+        
+        {/* Leaf-like Pattern */}
+        <div 
+          className="absolute inset-0 opacity-10"
+          style={{ 
+            backgroundImage: `linear-gradient(135deg, ${palette.border} 25%, transparent 25%), 
+                              linear-gradient(225deg, ${palette.border} 25%, transparent 25%)`,
+            backgroundSize: '60px 60px'
+          }}
+        />
+      </div>
+
       {/* Navigation */}
       <StorefrontNavigation panel={panel} customization={themeFourCustomization} />
 
       {/* Main Content */}
-      <main>
-        {/* Hero Section */}
+      <main className="relative z-10">
         <StorefrontHeroSection 
           panel={panel} 
           services={services} 
           customization={themeFourCustomization} 
         />
 
-        {/* Platform Features Section */}
         {customization.enablePlatformFeatures !== false && (
           <StorefrontPlatformSection customization={themeFourCustomization} />
         )}
 
-        {/* Stats Section */}
         {customization.enableStats !== false && (
           <StorefrontStatsSection panel={panel} customization={themeFourCustomization} />
         )}
 
-        {/* Features Section */}
         {customization.enableFeatures !== false && (
           <StorefrontFeaturesSection customization={themeFourCustomization} />
         )}
 
-        {/* Testimonials Section */}
         {customization.enableTestimonials !== false && (
           <StorefrontTestimonialsSection customization={themeFourCustomization} />
         )}
 
-        {/* FAQ Section */}
         {customization.enableFAQs !== false && (
           <StorefrontFAQSection customization={themeFourCustomization} />
         )}
@@ -91,9 +189,9 @@ export const ThemeFour = ({ panel, services = [], customization = {} }: ThemeFou
         footerText={themeFourCustomization.footerText}
         socialPlatforms={themeFourCustomization.socialPlatforms}
         primaryColor={themeFourCustomization.primaryColor}
-        variant="dark"
+        variant={themeMode === 'dark' ? 'dark' : 'light'}
       />
-    </div>
+    </motion.div>
   );
 };
 
