@@ -8,6 +8,7 @@ import {
   Search, ArrowLeft, Instagram, Music, Youtube, Send, Twitter, 
   Linkedin, Facebook, Globe, Zap, Star, ShoppingCart, Filter
 } from "lucide-react";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -106,6 +107,7 @@ const BuyerPublicServices = () => {
               <h1 className="text-xl font-bold text-gray-900 dark:text-white">Our Services</h1>
             </div>
             <div className="flex items-center gap-3">
+              <ThemeToggle />
               {buyer ? (
                 <Button asChild size="sm">
                   <Link to="/dashboard">
