@@ -33,6 +33,7 @@ interface BuyerAuthContextType {
   signUp: (email: string, password: string, fullName: string, username?: string) => Promise<{ error: any }>;
   signOut: () => void;
   refreshBuyer: () => Promise<void>;
+  login: (identifier: string, password: string) => Promise<boolean>;
 }
 
 const BuyerAuthContext = createContext<BuyerAuthContextType | undefined>(undefined);
@@ -252,8 +253,14 @@ export function BuyerAuthProvider({ children, panelId }: { children: ReactNode; 
     toast({ title: 'Signed out successfully' });
   };
 
+  // Alias for signIn that returns boolean for simpler usage
+  const login = async (identifier: string, password: string): Promise<boolean> => {
+    const result = await signIn(identifier, password);
+    return !result.error;
+  };
+
   return (
-    <BuyerAuthContext.Provider value={{ buyer, loading, panelId, signIn, signUp, signOut, refreshBuyer }}>
+    <BuyerAuthContext.Provider value={{ buyer, loading, panelId, signIn, signUp, signOut, refreshBuyer, login }}>
       {children}
     </BuyerAuthContext.Provider>
   );
