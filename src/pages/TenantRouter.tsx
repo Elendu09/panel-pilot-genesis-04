@@ -158,7 +158,7 @@ const TenantRouter = () => {
     );
   }
 
-  // If this is a tenant domain but no panel found, show subdomain claim CTA with debugging
+  // If this is a tenant domain but no panel found, show clean subdomain claim CTA
   if (isTenantDomain && !panel) {
     const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
     const requestedSubdomain = hostname.split('.')[0];
@@ -170,60 +170,48 @@ const TenantRouter = () => {
             <TooltipProvider>
               <Toaster />
               <Sonner />
-              <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-primary/5 to-secondary/10">
-                <div className="text-center max-w-md p-8">
-                  {/* Subdomain Badge */}
-                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium mb-6">
-                    <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                    {hostname}
+              <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900">
+                {/* Animated background */}
+                <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                  <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse" />
+                  <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+                </div>
+                
+                <div className="text-center max-w-md p-8 relative z-10">
+                  {/* Logo/Icon */}
+                  <div className="w-24 h-24 mx-auto mb-8 rounded-2xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center shadow-2xl shadow-purple-500/20">
+                    <span className="text-5xl">🚀</span>
                   </div>
                   
-                  <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-amber-500/20 to-amber-500/5 flex items-center justify-center">
-                    <span className="text-4xl">🔍</span>
-                  </div>
-                  
-                  <h1 className="text-3xl font-bold mb-3">Panel Not Found</h1>
-                  <p className="text-muted-foreground mb-6">
-                    We couldn't find an active panel for <span className="font-semibold text-foreground">{requestedSubdomain}</span>.
+                  <h1 className="text-4xl font-bold text-white mb-4">
+                    {requestedSubdomain}
+                  </h1>
+                  <p className="text-xl text-slate-300 mb-2">
+                    is available!
                   </p>
-                  
-                  {error && (
-                    <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 mb-6 text-left">
-                      <p className="text-destructive text-sm font-medium mb-2">Debug Information:</p>
-                      <p className="text-xs text-muted-foreground font-mono break-all">{error}</p>
-                      {debugInfo && (
-                        <div className="mt-2 text-xs text-muted-foreground/80 space-y-1">
-                          <p>Hostname: {debugInfo.hostname}</p>
-                          <p>Subdomain: {debugInfo.detectedSubdomain || 'none'}</p>
-                          <p>Attempts: {debugInfo.searchAttempts?.join(', ')}</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  
-                  <div className="bg-muted/50 rounded-lg p-4 mb-6 text-left">
-                    <p className="text-sm font-medium mb-2">Possible reasons:</p>
-                    <ul className="text-xs text-muted-foreground space-y-1">
-                      <li>• The panel status is not "active"</li>
-                      <li>• DNS is not configured correctly</li>
-                      <li>• The subdomain was never created</li>
-                    </ul>
-                  </div>
+                  <p className="text-slate-400 mb-8">
+                    This subdomain is not yet configured. Be the first to claim it and start your SMM business today.
+                  </p>
                   
                   <div className="space-y-3">
                     <button 
                       onClick={() => window.location.href = `https://smmpilot.online/auth?subdomain=${requestedSubdomain}`}
-                      className="flex items-center justify-center gap-2 w-full px-6 py-3 bg-gradient-to-r from-primary to-primary/80 text-primary-foreground font-medium rounded-xl hover:opacity-90 transition-opacity"
+                      className="flex items-center justify-center gap-2 w-full px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-purple-500/30 hover:-translate-y-0.5 transition-all"
                     >
-                      Claim This Subdomain
+                      <span className="text-lg">✨</span>
+                      Claim {requestedSubdomain}.smmpilot.online
                     </button>
                     <button 
                       onClick={() => window.location.href = "https://smmpilot.online"}
-                      className="flex items-center justify-center gap-2 w-full px-6 py-3 border border-border/50 text-foreground font-medium rounded-xl hover:bg-accent/50 transition-colors"
+                      className="flex items-center justify-center gap-2 w-full px-8 py-4 border border-slate-600 text-slate-300 font-medium rounded-xl hover:bg-slate-800/50 transition-colors"
                     >
-                      Go to SMMPilot
+                      Visit SMMPilot
                     </button>
                   </div>
+                  
+                  <p className="text-sm text-slate-500 mt-8">
+                    Powered by <span className="text-purple-400 font-medium">SMMPilot</span>
+                  </p>
                 </div>
               </div>
             </TooltipProvider>

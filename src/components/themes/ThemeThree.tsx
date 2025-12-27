@@ -15,27 +15,31 @@ interface ThemeThreeProps {
   customization?: any;
 }
 
-// Theme Three Color Palettes - Sunset Orange (Vibrant)
+// Theme Three Color Palettes - Sunset Orange (Vibrant/Enhanced)
 const darkPalette = {
-  background: '#1A1310',
-  surface: '#2A1F1A',
+  background: '#18120E',
+  surface: '#231A14',
   primary: '#F97316',
-  secondary: '#EAB308',
+  secondary: '#FBBF24',
+  accent: '#FB923C',
   text: '#FFFFFF',
   textMuted: '#A8A29E',
-  border: 'rgba(249, 115, 22, 0.25)',
-  glow: 'rgba(249, 115, 22, 0.35)',
+  border: 'rgba(249, 115, 22, 0.3)',
+  glow: 'rgba(249, 115, 22, 0.45)',
+  gradient: 'linear-gradient(135deg, #F97316 0%, #FBBF24 100%)',
 };
 
 const lightPalette = {
-  background: '#FFFBF5',
+  background: '#FFFCF5',
   surface: '#FFFFFF',
   primary: '#EA580C',
-  secondary: '#CA8A04',
+  secondary: '#D97706',
+  accent: '#C2410C',
   text: '#431407',
   textMuted: '#78716C',
-  border: 'rgba(234, 88, 12, 0.12)',
-  glow: 'rgba(234, 88, 12, 0.18)',
+  border: 'rgba(234, 88, 12, 0.1)',
+  glow: 'rgba(234, 88, 12, 0.15)',
+  gradient: 'linear-gradient(135deg, #EA580C 0%, #D97706 100%)',
 };
 
 export const ThemeThree = ({ panel, services = [], customization = {} }: ThemeThreeProps) => {

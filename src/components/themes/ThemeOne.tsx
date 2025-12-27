@@ -15,27 +15,31 @@ interface ThemeOneProps {
   customization?: any;
 }
 
-// Theme One Color Palettes - Cosmic Purple
+// Theme One Color Palettes - Cosmic Purple (Enhanced)
 const darkPalette = {
-  background: '#0F0F1A',
-  surface: '#1A1A2E',
+  background: '#0A0A12',
+  surface: '#12121F',
   primary: '#8B5CF6',
   secondary: '#EC4899',
+  accent: '#A855F7',
   text: '#FFFFFF',
-  textMuted: '#A1A1AA',
-  border: 'rgba(139, 92, 246, 0.2)',
-  glow: 'rgba(139, 92, 246, 0.4)',
+  textMuted: '#9CA3AF',
+  border: 'rgba(139, 92, 246, 0.25)',
+  glow: 'rgba(139, 92, 246, 0.5)',
+  gradient: 'linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%)',
 };
 
 const lightPalette = {
-  background: '#FAF8FF',
+  background: '#FAFAFF',
   surface: '#FFFFFF',
   primary: '#7C3AED',
   secondary: '#DB2777',
+  accent: '#9333EA',
   text: '#1E1B4B',
   textMuted: '#6B7280',
-  border: 'rgba(124, 58, 237, 0.15)',
-  glow: 'rgba(124, 58, 237, 0.2)',
+  border: 'rgba(124, 58, 237, 0.12)',
+  glow: 'rgba(124, 58, 237, 0.18)',
+  gradient: 'linear-gradient(135deg, #7C3AED 0%, #DB2777 100%)',
 };
 
 export const ThemeOne = ({ panel, services = [], customization = {} }: ThemeOneProps) => {
