@@ -176,48 +176,69 @@ const TenantRouter = () => {
             <TooltipProvider>
               <Toaster />
               <Sonner />
-              <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900">
-                {/* Animated background */}
-                <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                  <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse" />
-                  <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-                </div>
+              <div className="min-h-screen flex items-center justify-center bg-[#0a0a12] relative overflow-hidden">
+                {/* Grid pattern background */}
+                <div 
+                  className="absolute inset-0 pointer-events-none"
+                  style={{
+                    backgroundImage: `
+                      linear-gradient(rgba(99, 102, 241, 0.04) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(99, 102, 241, 0.04) 1px, transparent 1px)
+                    `,
+                    backgroundSize: '60px 60px',
+                  }}
+                />
                 
-                <div className="text-center max-w-md p-8 relative z-10">
-                  {/* Logo/Icon */}
-                  <div className="w-24 h-24 mx-auto mb-8 rounded-2xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center shadow-2xl shadow-purple-500/20">
-                    <span className="text-5xl">🚀</span>
+                {/* Top gradient overlay */}
+                <div className="absolute top-0 left-0 right-0 h-96 bg-gradient-to-b from-purple-600/10 via-purple-600/5 to-transparent" />
+                
+                {/* Animated glow circles */}
+                <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-purple-500/15 rounded-full blur-[120px] animate-pulse" />
+                <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-blue-500/15 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '1s' }} />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-indigo-500/10 rounded-full blur-[150px]" />
+                
+                <div className="text-center max-w-lg p-8 relative z-10">
+                  {/* Enhanced Logo/Icon with glow */}
+                  <div className="w-28 h-28 mx-auto mb-8 rounded-2xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center shadow-2xl shadow-purple-500/40 ring-2 ring-white/10 ring-offset-4 ring-offset-[#0a0a12]">
+                    <span className="text-6xl">🚀</span>
                   </div>
                   
-                  <h1 className="text-4xl font-bold text-white mb-4">
+                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-500/10 border border-green-500/20 mb-6">
+                    <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                    <span className="text-green-400 text-sm font-medium">Available for Registration</span>
+                  </div>
+                  
+                  <h1 className="text-5xl font-bold text-white mb-3 tracking-tight">
                     {requestedSubdomain}
                   </h1>
-                  <p className="text-xl text-slate-300 mb-2">
-                    is available!
+                  <p className="text-xl text-purple-300 mb-2 font-medium">
+                    .smmpilot.online
                   </p>
-                  <p className="text-slate-400 mb-8">
+                  <p className="text-slate-400 mb-10 leading-relaxed">
                     This subdomain is not yet configured. Be the first to claim it and start your SMM business today.
                   </p>
                   
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     <button 
                       onClick={() => window.location.href = `https://smmpilot.online/auth?subdomain=${requestedSubdomain}`}
-                      className="flex items-center justify-center gap-2 w-full px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-purple-500/30 hover:-translate-y-0.5 transition-all"
+                      className="flex items-center justify-center gap-3 w-full px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold rounded-xl hover:shadow-xl hover:shadow-purple-500/40 hover:-translate-y-1 transition-all duration-300 group"
                     >
-                      <span className="text-lg">✨</span>
-                      Claim {requestedSubdomain}.smmpilot.online
+                      <span className="text-xl group-hover:scale-110 transition-transform">✨</span>
+                      Claim This Subdomain
                     </button>
                     <button 
                       onClick={() => window.location.href = "https://smmpilot.online"}
-                      className="flex items-center justify-center gap-2 w-full px-8 py-4 border border-slate-600 text-slate-300 font-medium rounded-xl hover:bg-slate-800/50 transition-colors"
+                      className="flex items-center justify-center gap-2 w-full px-8 py-4 border border-slate-700 text-slate-300 font-medium rounded-xl hover:bg-white/5 hover:border-slate-600 transition-all duration-300"
                     >
-                      Visit SMMPilot
+                      Learn More About SMMPilot
                     </button>
                   </div>
                   
-                  <p className="text-sm text-slate-500 mt-8">
-                    Powered by <span className="text-purple-400 font-medium">SMMPilot</span>
-                  </p>
+                  <div className="mt-12 pt-8 border-t border-slate-800/50">
+                    <p className="text-sm text-slate-500">
+                      Powered by <span className="text-purple-400 font-medium hover:text-purple-300 transition-colors cursor-pointer">SMMPilot</span> — The #1 SMM Panel Platform
+                    </p>
+                  </div>
                 </div>
               </div>
             </TooltipProvider>
