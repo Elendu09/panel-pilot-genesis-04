@@ -948,8 +948,15 @@
   font-size: calc(1rem * var(--low-vision-font-scale, 1));
   letter-spacing: 0.02em;
   line-height: 1.65;
-  /* Slight warm tint to reduce harsh whites/blacks */
-  background-color: hsl(var(--lv-warm-bg)) !important;
+  /* Warm sepia tint for reduced eye strain - subtle and non-invasive */
+  filter: sepia(0.08) saturate(0.95);
+}
+
+/* Cards and surfaces get warm background in low vision mode */
+.low-vision-active .glass-card,
+.low-vision-active .glass-stat-card,
+.low-vision-active [class*="bg-card"] {
+  background-color: hsl(var(--lv-warm-surface)) !important;
 }
 
 /* Low Vision - Subtle text scaling (not aggressive) */

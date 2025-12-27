@@ -23,13 +23,15 @@ export const LowVisionToggle = ({
   variant = 'dark' 
 }: LowVisionToggleProps) => {
   const storageKey = `lowVisionMode_${panelId || 'default'}`;
+  // Default OFF - only enable if explicitly saved as true
   const [isEnabled, setIsEnabled] = useState(false);
 
   useEffect(() => {
-    // Load from localStorage
+    // Load from localStorage - default is OFF
     const saved = localStorage.getItem(storageKey);
-    if (saved === 'true') {
-      setIsEnabled(true);
+    const shouldEnable = saved === 'true';
+    setIsEnabled(shouldEnable);
+    if (shouldEnable) {
       applyLowVisionStyles(true);
     }
   }, [storageKey]);

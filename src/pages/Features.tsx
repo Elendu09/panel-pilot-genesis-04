@@ -18,9 +18,30 @@ import {
   TrendingUp,
   Lock,
   CheckCircle,
-  ArrowRight
+  ArrowRight,
+  Instagram,
+  Youtube,
+  Music,
+  Twitter,
+  Linkedin,
+  Send,
+  MessageSquare,
+  Facebook,
+  type LucideIcon
 } from "lucide-react";
 import { Link } from "react-router-dom";
+
+// Platform icons with proper gradients
+const platformsData: { name: string; icon: LucideIcon; gradient: string }[] = [
+  { name: "Instagram", icon: Instagram, gradient: "from-pink-500 to-purple-600" },
+  { name: "YouTube", icon: Youtube, gradient: "from-red-500 to-red-600" },
+  { name: "TikTok", icon: Music, gradient: "from-gray-900 to-pink-500" },
+  { name: "Twitter", icon: Twitter, gradient: "from-blue-400 to-blue-500" },
+  { name: "Facebook", icon: Facebook, gradient: "from-blue-600 to-blue-700" },
+  { name: "LinkedIn", icon: Linkedin, gradient: "from-blue-700 to-blue-800" },
+  { name: "Telegram", icon: Send, gradient: "from-sky-400 to-sky-600" },
+  { name: "Discord", icon: MessageSquare, gradient: "from-indigo-500 to-indigo-600" }
+];
 
 export default function Features() {
   const features = [
@@ -62,16 +83,7 @@ export default function Features() {
     }
   ];
 
-  const platforms = [
-    { name: "Instagram", icon: "📸", color: "bg-pink-500" },
-    { name: "YouTube", icon: "🎥", color: "bg-red-500" },
-    { name: "TikTok", icon: "🎵", color: "bg-black" },
-    { name: "Twitter", icon: "🐦", color: "bg-blue-500" },
-    { name: "Facebook", icon: "👥", color: "bg-blue-600" },
-    { name: "LinkedIn", icon: "💼", color: "bg-blue-700" },
-    { name: "Telegram", icon: "✈️", color: "bg-sky-500" },
-    { name: "Discord", icon: "🎮", color: "bg-indigo-500" }
-  ];
+  // Use platformsData defined above
 
   const stats = [
     { number: "500K+", label: "Orders Delivered", icon: <CheckCircle className="h-6 w-6" /> },
@@ -164,12 +176,17 @@ export default function Features() {
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-6">
-            {platforms.map((platform, index) => (
-              <Card key={index} className="p-6 text-center bg-card/70 backdrop-blur-sm hover:bg-card/90 transition-all hover-scale">
-                <div className="text-3xl mb-3">{platform.icon}</div>
-                <div className="font-medium text-sm">{platform.name}</div>
-              </Card>
-            ))}
+            {platformsData.map((platform, index) => {
+              const IconComponent = platform.icon;
+              return (
+                <Card key={index} className="p-6 text-center bg-card/70 backdrop-blur-sm hover:bg-card/90 transition-all hover-scale group">
+                  <div className={`w-12 h-12 mx-auto mb-3 rounded-xl bg-gradient-to-br ${platform.gradient} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform`}>
+                    <IconComponent className="w-6 h-6 text-white" />
+                  </div>
+                  <div className="font-medium text-sm">{platform.name}</div>
+                </Card>
+              );
+            })}
           </div>
         </div>
       </section>
