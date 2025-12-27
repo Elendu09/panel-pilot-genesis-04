@@ -15,27 +15,31 @@ interface ThemeTwoProps {
   customization?: any;
 }
 
-// Theme Two Color Palettes - Ocean Blue (Professional)
+// Theme Two Color Palettes - Ocean Blue (Professional/Enhanced)
 const darkPalette = {
-  background: '#0C1929',
-  surface: '#152238',
+  background: '#0A1628',
+  surface: '#101D2E',
   primary: '#3B82F6',
-  secondary: '#06B6D4',
+  secondary: '#0EA5E9',
+  accent: '#38BDF8',
   text: '#FFFFFF',
   textMuted: '#94A3B8',
-  border: 'rgba(59, 130, 246, 0.2)',
-  glow: 'rgba(59, 130, 246, 0.3)',
+  border: 'rgba(59, 130, 246, 0.25)',
+  glow: 'rgba(59, 130, 246, 0.4)',
+  gradient: 'linear-gradient(135deg, #3B82F6 0%, #0EA5E9 100%)',
 };
 
 const lightPalette = {
-  background: '#F8FAFC',
+  background: '#F0F9FF',
   surface: '#FFFFFF',
   primary: '#2563EB',
-  secondary: '#0891B2',
-  text: '#1E3A5F',
+  secondary: '#0284C7',
+  accent: '#0369A1',
+  text: '#0C4A6E',
   textMuted: '#64748B',
-  border: 'rgba(37, 99, 235, 0.12)',
-  glow: 'rgba(37, 99, 235, 0.15)',
+  border: 'rgba(37, 99, 235, 0.1)',
+  glow: 'rgba(37, 99, 235, 0.12)',
+  gradient: 'linear-gradient(135deg, #2563EB 0%, #0284C7 100%)',
 };
 
 export const ThemeTwo = ({ panel, services = [], customization = {} }: ThemeTwoProps) => {

@@ -1,11 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Sparkles, Zap, TrendingUp, Users, Star, MessageCircle } from "lucide-react";
+import { ArrowRight, Sparkles, Zap, TrendingUp, Users, Star, MessageCircle, Shield, DollarSign, Clock, CheckCircle, CreditCard } from "lucide-react";
 import { Link } from "react-router-dom";
 import { AnimatedText } from "@/components/ui/animated-text";
 import { motion } from "framer-motion";
-import { TelegramIcon, VoteIcon, ViewsIcon, HeartIcon } from "@/components/icons/SocialIcons";
 
 interface StorefrontHeroSectionProps {
   panel?: any;
@@ -13,32 +12,40 @@ interface StorefrontHeroSectionProps {
   customization?: any;
 }
 
-// Floating feature cards data
+// Buyer-focused floating cards - different from homepage
 const leftCards = [
-  { title: "Ultra fast.", subtitle: "Almost speed of light.", delay: 0.8 },
-  { title: "Best prices.", subtitle: "Lowest in the market.", delay: 1.2 },
+  { icon: DollarSign, title: "Best Prices", subtitle: "Lowest in the market", delay: 0.8, gradient: "from-green-500 to-emerald-500" },
+  { icon: Zap, title: "Instant Start", subtitle: "Orders begin in seconds", delay: 1.2, gradient: "from-yellow-500 to-orange-500" },
 ];
 
 const rightCards = [
-  { title: "24/7 Support.", subtitle: "Always here to help.", delay: 1.0 },
-  { title: "Real quality.", subtitle: "Genuine engagement.", delay: 1.4 },
+  { icon: Shield, title: "100% Safe", subtitle: "No password needed", delay: 1.0, gradient: "from-blue-500 to-cyan-500" },
+  { icon: MessageCircle, title: "24/7 Support", subtitle: "Always here to help", delay: 1.4, gradient: "from-purple-500 to-pink-500" },
 ];
 
-// Panel showcase services with SVG icons
-const showcaseServices = [
-  { icon: TelegramIcon, name: "Telegram Subscribers", price: "$0.3", discount: "-50%", gradient: "from-blue-500 to-cyan-500" },
-  { icon: VoteIcon, name: "Premium Votes", price: "$1", discount: "-30%", gradient: "from-amber-400 to-yellow-500" },
-  { icon: ViewsIcon, name: "Channel Viewers", price: "$0.5", gradient: "from-green-500 to-emerald-500" },
-  { icon: HeartIcon, name: "Real Likes", price: "$20", gradient: "from-red-500 to-pink-500" },
+// Service categories with platform icons
+const serviceCategories = [
+  { name: "Instagram", icon: "📸", color: "from-pink-500 to-purple-500" },
+  { name: "TikTok", icon: "🎵", color: "from-cyan-400 to-pink-500" },
+  { name: "YouTube", icon: "▶️", color: "from-red-500 to-red-600" },
+  { name: "Telegram", icon: "✈️", color: "from-blue-400 to-blue-600" },
+  { name: "Twitter", icon: "🐦", color: "from-sky-400 to-blue-500" },
+];
+
+// Trust indicators
+const trustBadges = [
+  { icon: CheckCircle, text: "50K+ Happy Customers", color: "text-green-400" },
+  { icon: Star, text: "99.9% Success Rate", color: "text-yellow-400" },
+  { icon: Clock, text: "Instant Delivery", color: "text-blue-400" },
 ];
 
 export const StorefrontHeroSection = ({ panel, services = [], customization = {} }: StorefrontHeroSectionProps) => {
   const panelName = customization.companyName || panel?.name || 'SMM Panel';
   const heroTitle = customization.heroTitle || 'Boost Your Social Media';
-  const heroSubtitle = customization.heroSubtitle || 'Get real followers, likes, and views at the lowest prices with instant delivery.';
-  const badgeText = customization.badgeText || 'Best SMM Services';
+  const heroSubtitle = customization.heroSubtitle || 'Get real followers, likes, and views at the lowest prices with instant delivery. Trusted by thousands of creators and businesses worldwide.';
+  const badgeText = customization.badgeText || customization.heroBadgeText || '#1 SMM Panel';
   const enableFastOrder = customization.enableFastOrder ?? true;
-  const primaryColor = customization.primaryColor || '#6366F1';
+  const themeMode = customization.themeMode || 'dark';
 
   const animatedPhrases = customization.animatedPhrases || [
     { static: "grow your audience", bold: "for profit" },
@@ -47,63 +54,31 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
   ];
 
   return (
-    <section className="relative min-h-screen bg-gradient-hero overflow-hidden perspective-1000">
-      {/* Grid Overlay */}
-      <div className="absolute inset-0 bg-grid-pattern opacity-30 pointer-events-none" />
-      
+    <section className="relative min-h-screen overflow-hidden">
       {/* Floating Particles */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(20)].map((_, i) => (
+        {[...Array(15)].map((_, i) => (
           <motion.div
             key={i}
-            className="absolute w-1 h-1 bg-primary/40 rounded-full"
+            className="absolute w-1.5 h-1.5 rounded-full"
             style={{
               left: `${Math.random() * 100}%`,
               top: `${Math.random() * 100}%`,
+              background: `linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.5))`,
             }}
             animate={{
-              y: [0, -30, 0],
-              opacity: [0.2, 0.6, 0.2],
+              y: [0, -40, 0],
+              opacity: [0.2, 0.7, 0.2],
               scale: [1, 1.5, 1],
             }}
             transition={{
-              duration: 3 + Math.random() * 4,
+              duration: 4 + Math.random() * 3,
               repeat: Infinity,
               delay: Math.random() * 2,
               ease: "easeInOut",
             }}
           />
         ))}
-      </div>
-      
-      {/* Enhanced Background Effects */}
-      <div className="absolute inset-0 opacity-20">
-        <motion.div 
-          className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary rounded-full blur-[120px]"
-          animate={{ 
-            scale: [1, 1.3, 1],
-            opacity: [0.2, 0.4, 0.2]
-          }}
-          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-        />
-        <motion.div 
-          className="absolute bottom-1/3 right-1/4 w-[500px] h-[500px] bg-primary/50 rounded-full blur-[150px]"
-          animate={{ 
-            scale: [1.2, 1, 1.2],
-            opacity: [0.15, 0.3, 0.15]
-          }}
-          transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
-        />
-        {/* Extra animated blob */}
-        <motion.div 
-          className="absolute top-1/2 right-1/3 w-80 h-80 bg-accent/30 rounded-full blur-[100px]"
-          animate={{ 
-            x: [0, 50, 0],
-            y: [0, -30, 0],
-            opacity: [0.1, 0.25, 0.1]
-          }}
-          transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
-        />
       </div>
 
       {/* Left Floating Cards */}
@@ -115,17 +90,17 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: card.delay, duration: 0.8, ease: "easeOut" }}
             whileHover={{ scale: 1.05, x: 10 }}
-            className="relative"
           >
-            <Card className="p-5 bg-card/40 backdrop-blur-xl border border-primary/20 shadow-2xl shadow-primary/10 w-[200px]">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent rounded-lg" />
-              <h3 className="font-bold text-lg text-foreground relative z-10">{card.title}</h3>
-              <p className="text-sm text-muted-foreground mt-1 relative z-10">{card.subtitle}</p>
-              <motion.div 
-                className="absolute -inset-[1px] bg-gradient-to-r from-primary/50 via-primary/20 to-primary/50 rounded-lg opacity-0 blur-sm"
-                whileHover={{ opacity: 1 }}
-                transition={{ duration: 0.3 }}
-              />
+            <Card className="p-4 bg-card/60 backdrop-blur-xl border border-primary/20 shadow-2xl w-[190px]">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${card.gradient} flex items-center justify-center shadow-lg`}>
+                  <card.icon className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm">{card.title}</h3>
+                  <p className="text-xs text-muted-foreground">{card.subtitle}</p>
+                </div>
+              </div>
             </Card>
           </motion.div>
         ))}
@@ -140,17 +115,17 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: card.delay, duration: 0.8, ease: "easeOut" }}
             whileHover={{ scale: 1.05, x: -10 }}
-            className="relative"
           >
-            <Card className="p-5 bg-card/40 backdrop-blur-xl border border-primary/20 shadow-2xl shadow-primary/10 w-[200px]">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent rounded-lg" />
-              <h3 className="font-bold text-lg text-foreground relative z-10">{card.title}</h3>
-              <p className="text-sm text-muted-foreground mt-1 relative z-10">{card.subtitle}</p>
-              <motion.div 
-                className="absolute -inset-[1px] bg-gradient-to-r from-primary/50 via-primary/20 to-primary/50 rounded-lg opacity-0 blur-sm"
-                whileHover={{ opacity: 1 }}
-                transition={{ duration: 0.3 }}
-              />
+            <Card className="p-4 bg-card/60 backdrop-blur-xl border border-primary/20 shadow-2xl w-[190px]">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${card.gradient} flex items-center justify-center shadow-lg`}>
+                  <card.icon className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm">{card.title}</h3>
+                  <p className="text-xs text-muted-foreground">{card.subtitle}</p>
+                </div>
+              </div>
             </Card>
           </motion.div>
         ))}
@@ -166,14 +141,15 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
         >
           {/* Badge */}
           <motion.div 
-            className="inline-flex items-center space-x-2 bg-card/80 backdrop-blur-xl border border-border/50 rounded-full px-6 py-2 mb-8"
+            className="inline-flex items-center space-x-2 bg-card/80 backdrop-blur-xl border border-border/50 rounded-full px-6 py-2.5 mb-8"
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.2, duration: 0.5 }}
-            whileHover={{ scale: 1.05, boxShadow: "0 0 30px hsl(var(--primary) / 0.3)" }}
+            whileHover={{ scale: 1.05 }}
           >
             <Sparkles className="w-4 h-4 text-primary animate-pulse" />
             <span className="text-sm font-medium">{badgeText}</span>
+            <span className="px-2 py-0.5 bg-primary/20 text-primary text-xs rounded-full font-semibold">Trusted</span>
           </motion.div>
 
           {/* Main Heading */}
@@ -186,14 +162,14 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
             {heroTitle.split(' ').slice(0, Math.ceil(heroTitle.split(' ').length / 2)).join(' ')}
             <br />
             <motion.span 
-              className="bg-gradient-primary bg-clip-text text-transparent inline-block"
+              className="bg-gradient-to-r from-primary via-primary to-secondary bg-clip-text text-transparent inline-block"
               animate={{ 
                 backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"]
               }}
               transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
               style={{ backgroundSize: "200% 200%" }}
             >
-              {heroTitle.split(' ').slice(Math.ceil(heroTitle.split(' ').length / 2)).join(' ') || 'Social Media'}
+              {heroTitle.split(' ').slice(Math.ceil(heroTitle.split(' ').length / 2)).join(' ') || 'Presence'}
             </motion.span>
           </motion.h1>
 
@@ -209,7 +185,7 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
 
           {/* CTA Buttons */}
           <motion.div 
-            className="flex flex-col sm:flex-row gap-4 justify-center mb-12"
+            className="flex flex-col sm:flex-row gap-4 justify-center mb-8"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5, duration: 0.6 }}
@@ -217,7 +193,7 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
             {enableFastOrder ? (
               <>
                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.98 }}>
-                  <Button asChild size="lg" className="bg-gradient-primary hover:shadow-glow text-lg px-8 py-6 rounded-full">
+                  <Button asChild size="lg" className="bg-gradient-to-r from-primary to-primary/80 hover:shadow-lg hover:shadow-primary/25 text-lg px-8 py-6 rounded-full">
                     <a href="#fast-order">
                       <Zap className="mr-2 w-5 h-5" /> Fast Order
                     </a>
@@ -234,8 +210,8 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
             ) : (
               <>
                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.98 }}>
-                  <Button asChild size="lg" className="bg-gradient-primary hover:shadow-glow text-lg px-8 py-6 rounded-full">
-                    <Link to="/buyer/auth?mode=signup">
+                  <Button asChild size="lg" className="bg-gradient-to-r from-primary to-primary/80 hover:shadow-lg hover:shadow-primary/25 text-lg px-8 py-6 rounded-full">
+                    <Link to="/auth?mode=signup">
                       Get Started <ArrowRight className="ml-2 w-5 h-5" />
                     </Link>
                   </Button>
@@ -250,166 +226,152 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
               </>
             )}
           </motion.div>
-        </motion.div>
 
-        {/* Animated Text */}
-        <motion.div 
-          className="mb-8"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.7, duration: 0.6 }}
-        >
-          <AnimatedText phrases={animatedPhrases} />
-        </motion.div>
+          {/* Platform Categories - Quick Access */}
+          <motion.div 
+            className="flex flex-wrap justify-center gap-2 mb-10"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6, duration: 0.6 }}
+          >
+            {serviceCategories.map((category, index) => (
+              <motion.button
+                key={category.name}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.7 + index * 0.1 }}
+                whileHover={{ scale: 1.05, y: -2 }}
+                className="px-4 py-2 rounded-full bg-card/60 backdrop-blur-sm border border-border/50 hover:border-primary/50 transition-all flex items-center gap-2"
+              >
+                <span>{category.icon}</span>
+                <span className="text-sm font-medium">{category.name}</span>
+              </motion.button>
+            ))}
+          </motion.div>
 
-        {/* Panel Showcase - Kanban Style */}
-        <motion.div
-          initial={{ opacity: 0, y: 50 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.9, duration: 0.8 }}
-          className="max-w-4xl mx-auto"
-        >
-          <Card className="bg-card/60 backdrop-blur-2xl border border-primary/20 shadow-2xl shadow-primary/10 overflow-hidden">
-            {/* Panel Header */}
-            <div className="flex items-center justify-between p-4 border-b border-border/50 bg-muted/30">
-              <div className="flex items-center gap-4">
-                <span className="font-bold text-lg bg-gradient-primary bg-clip-text text-transparent">{panelName}</span>
-                <Button size="sm" variant="default" className="bg-primary/90 text-xs">New order</Button>
-                <Button size="sm" variant="outline" className="text-xs">
-                  My orders <Badge variant="secondary" className="ml-1 text-xs">1</Badge>
-                </Button>
+          {/* Animated Text */}
+          <motion.div 
+            className="mb-10"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.8, duration: 0.6 }}
+          >
+            <AnimatedText phrases={animatedPhrases} />
+          </motion.div>
+
+          {/* Service Showcase Card */}
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.9, duration: 0.8 }}
+            className="max-w-4xl mx-auto"
+          >
+            <Card className="bg-card/60 backdrop-blur-2xl border border-primary/20 shadow-2xl overflow-hidden">
+              {/* Panel Header */}
+              <div className="flex items-center justify-between p-4 border-b border-border/50 bg-muted/30">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+                    <Sparkles className="w-5 h-5 text-white" />
+                  </div>
+                  <span className="font-bold text-lg">{panelName}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Badge variant="secondary" className="bg-green-500/20 text-green-400 border-green-500/30">
+                    <CheckCircle className="w-3 h-3 mr-1" /> Online
+                  </Badge>
+                </div>
               </div>
-              <div className="flex items-center gap-4">
-                <motion.span 
-                  className="text-primary font-bold text-xl"
-                  animate={{ scale: [1, 1.05, 1] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                >
-                  $800
-                </motion.span>
-                <Button size="sm" variant="ghost" className="text-xs">Menu</Button>
-              </div>
-            </div>
 
-            {/* Category Tabs */}
-            <div className="flex gap-2 p-4 border-b border-border/50 overflow-x-auto">
-              {['All', 'Instagram', 'Telegram', 'YouTube', 'TikTok'].map((cat, i) => (
-                <motion.div
-                  key={cat}
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 1 + i * 0.1 }}
-                >
-                  <Button 
-                    size="sm" 
-                    variant={i === 0 ? "default" : "outline"}
-                    className={i === 0 ? "bg-primary" : ""}
-                  >
-                    {cat}
-                  </Button>
-                </motion.div>
-              ))}
-            </div>
-
-            {/* Service Cards Grid - Kanban Style */}
-            <div className="p-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {showcaseServices.map((service, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, y: 20 }}
+              {/* Quick Stats in Showcase */}
+              <div className="grid grid-cols-3 divide-x divide-border/50 border-b border-border/50">
+                {[
+                  { label: "Services", value: services.length > 0 ? `${services.length}+` : "500+" },
+                  { label: "Avg. Delivery", value: "0-1 hr" },
+                  { label: "Min. Order", value: "$0.01" },
+                ].map((stat, index) => (
+                  <motion.div 
+                    key={index} 
+                    className="p-4 text-center"
+                    initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 1.2 + index * 0.1 }}
-                    whileHover={{ 
-                      y: -8, 
-                      scale: 1.03,
-                      rotateY: 5,
-                      rotateX: 5,
-                    }}
-                    className="group perspective-1000"
+                    transition={{ delay: 1 + index * 0.1 }}
                   >
-                    <Card className="p-4 bg-background/50 backdrop-blur-sm border-border/50 hover:border-primary/50 transition-all relative overflow-hidden transform-3d hover-tilt">
-                      {/* Shimmer effect */}
-                      <motion.div
-                        className="absolute inset-0 shimmer-effect opacity-0 group-hover:opacity-100 pointer-events-none"
-                        initial={false}
-                      />
-                      
-                      {/* Glow effect */}
-                      <motion.div
-                        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                        style={{
-                          background: `radial-gradient(circle at center, hsl(var(--primary) / 0.15) 0%, transparent 70%)`
-                        }}
-                      />
-                      
-                      {/* Gradient border glow on hover */}
-                      <motion.div 
-                        className="absolute -inset-[1px] rounded-lg bg-gradient-to-r from-primary via-accent to-primary opacity-0 group-hover:opacity-100 blur-sm transition-opacity duration-300"
-                        style={{ zIndex: -1 }}
-                      />
-                      
-                      {/* Discount badge */}
-                      {service.discount && (
-                        <Badge className="absolute -top-1 -right-1 bg-green-500 text-white text-xs shadow-lg shadow-green-500/30">
-                          {service.discount}
-                        </Badge>
-                      )}
-                      
-                      {/* Premium SVG Icon with glow */}
-                      <motion.div 
-                        className={`w-12 h-12 rounded-xl bg-gradient-to-br ${service.gradient} flex items-center justify-center mb-3 shadow-lg relative`}
-                        whileHover={{ scale: 1.1, rotate: [0, -5, 5, 0] }}
-                        transition={{ duration: 0.4 }}
-                      >
-                        <div className={`absolute inset-0 rounded-xl bg-gradient-to-br ${service.gradient} blur-md opacity-50`} />
-                        <service.icon className="text-white relative z-10" size={24} />
-                      </motion.div>
-                      
-                      <h3 className="font-semibold text-sm mb-2 line-clamp-2 group-hover:text-primary transition-colors">{service.name}</h3>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xl font-bold text-primary">{service.price}</span>
-                        <span className="text-xs text-muted-foreground">per 100</span>
-                      </div>
-                    </Card>
+                    <p className="text-2xl font-bold text-primary">{stat.value}</p>
+                    <p className="text-xs text-muted-foreground">{stat.label}</p>
                   </motion.div>
                 ))}
               </div>
-            </div>
-          </Card>
-        </motion.div>
 
-        {/* Bottom Stats */}
-        <motion.div 
-          className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto mt-12 mb-8"
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1.5, duration: 0.6 }}
-        >
-          {[
-            { value: "10K+", label: "Happy Customers", icon: Users },
-            { value: "1M+", label: "Orders Delivered", icon: TrendingUp },
-            { value: "24/7", label: "Customer Support", icon: MessageCircle },
-            { value: "99.9%", label: "Success Rate", icon: Star },
-          ].map((stat, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 1.6 + index * 0.1 }}
-              whileHover={{ y: -5, scale: 1.02 }}
-            >
-              <Card className="p-4 glass-card text-center group">
-                <div className="w-10 h-10 mx-auto mb-3 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                  <stat.icon className="w-5 h-5 text-primary" />
+              {/* Category Preview */}
+              <div className="p-4">
+                <div className="grid grid-cols-5 gap-3">
+                  {serviceCategories.map((category, index) => (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 1.2 + index * 0.1 }}
+                      whileHover={{ y: -5, scale: 1.05 }}
+                      className="group cursor-pointer"
+                    >
+                      <Card className="p-4 bg-background/50 border-border/50 hover:border-primary/50 transition-all text-center">
+                        <div className={`w-12 h-12 mx-auto rounded-xl bg-gradient-to-br ${category.color} flex items-center justify-center mb-2 shadow-lg group-hover:shadow-xl transition-shadow`}>
+                          <span className="text-2xl">{category.icon}</span>
+                        </div>
+                        <p className="text-sm font-medium">{category.name}</p>
+                      </Card>
+                    </motion.div>
+                  ))}
                 </div>
-                <div className="text-xl font-bold text-primary mb-1">{stat.value}</div>
-                <div className="text-xs text-muted-foreground">{stat.label}</div>
-              </Card>
-            </motion.div>
-          ))}
+              </div>
+            </Card>
+          </motion.div>
+
+          {/* Trust Indicators */}
+          <motion.div 
+            className="flex flex-wrap justify-center gap-6 mt-10 mb-8"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 1.5, duration: 0.6 }}
+          >
+            {trustBadges.map((badge, index) => (
+              <motion.div 
+                key={index}
+                className="flex items-center gap-2 text-sm"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 1.6 + index * 0.1 }}
+              >
+                <badge.icon className={`w-5 h-5 ${badge.color}`} />
+                <span className="text-muted-foreground">{badge.text}</span>
+              </motion.div>
+            ))}
+          </motion.div>
+
+          {/* Payment Methods */}
+          <motion.div
+            className="flex items-center justify-center gap-4 pb-8"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1.8, duration: 0.6 }}
+          >
+            <span className="text-xs text-muted-foreground">We accept:</span>
+            <div className="flex items-center gap-3">
+              {['💳', '🅿️', '₿', '💰'].map((icon, i) => (
+                <motion.div
+                  key={i}
+                  className="w-8 h-8 rounded-lg bg-card/60 border border-border/50 flex items-center justify-center text-lg"
+                  whileHover={{ scale: 1.1, y: -2 }}
+                >
+                  {icon}
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
         </motion.div>
       </div>
     </section>
   );
 };
+
+export default StorefrontHeroSection;

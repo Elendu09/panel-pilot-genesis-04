@@ -15,27 +15,31 @@ interface ThemeFourProps {
   customization?: any;
 }
 
-// Theme Four Color Palettes - Forest Earth (Natural)
+// Theme Four Color Palettes - Forest Earth (Natural/Enhanced)
 const darkPalette = {
-  background: '#0D1912',
-  surface: '#162419',
+  background: '#0B1610',
+  surface: '#111F16',
   primary: '#22C55E',
   secondary: '#84CC16',
+  accent: '#4ADE80',
   text: '#FFFFFF',
   textMuted: '#9CA3AF',
-  border: 'rgba(34, 197, 94, 0.2)',
-  glow: 'rgba(34, 197, 94, 0.3)',
+  border: 'rgba(34, 197, 94, 0.25)',
+  glow: 'rgba(34, 197, 94, 0.4)',
+  gradient: 'linear-gradient(135deg, #22C55E 0%, #84CC16 100%)',
 };
 
 const lightPalette = {
-  background: '#F5FFF8',
+  background: '#F0FDF4',
   surface: '#FFFFFF',
   primary: '#16A34A',
   secondary: '#65A30D',
+  accent: '#15803D',
   text: '#14532D',
   textMuted: '#6B7280',
-  border: 'rgba(22, 163, 74, 0.12)',
-  glow: 'rgba(22, 163, 74, 0.15)',
+  border: 'rgba(22, 163, 74, 0.1)',
+  glow: 'rgba(22, 163, 74, 0.12)',
+  gradient: 'linear-gradient(135deg, #16A34A 0%, #65A30D 100%)',
 };
 
 export const ThemeFour = ({ panel, services = [], customization = {} }: ThemeFourProps) => {
