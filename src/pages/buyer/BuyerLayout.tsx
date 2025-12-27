@@ -13,7 +13,8 @@ import {
   Menu,
   Plus,
   ClipboardList,
-  HeadphonesIcon
+  HeadphonesIcon,
+  Heart
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -25,6 +26,8 @@ import { useTenant } from "@/hooks/useTenant";
 import { useBuyerAuth } from "@/contexts/BuyerAuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
+import { BuyerNotifications } from "@/components/buyer/BuyerNotifications";
+import { LanguageSelector } from "@/components/buyer/LanguageSelector";
 
 interface BuyerLayoutProps {
   children?: React.ReactNode;
@@ -84,6 +87,7 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Services', href: '/services', icon: Package },
     { name: 'My Orders', href: '/orders', icon: ShoppingCart },
+    { name: 'Favorites', href: '/services?favorites=true', icon: Heart },
     { name: 'Add Funds', href: '/deposit', icon: Wallet },
     { name: 'Support', href: '/support', icon: MessageSquare },
     { name: 'Profile', href: '/profile', icon: User },
@@ -197,6 +201,8 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
           </div>
           
           <div className="flex items-center gap-2">
+            <LanguageSelector />
+            <BuyerNotifications />
             <ThemeToggle />
             <Button variant="ghost" size="icon" className="h-9 w-9">
               <HelpCircle className="w-4 h-4" />
@@ -272,6 +278,7 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
           <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-xs px-2 py-1">
             ${userBalance.toFixed(2)}
           </Badge>
+          <BuyerNotifications />
           <ThemeToggle />
         </div>
       </header>

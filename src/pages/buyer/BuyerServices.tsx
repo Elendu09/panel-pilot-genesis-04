@@ -28,6 +28,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import BuyerLayout from "./BuyerLayout";
 import ShoppingCart from "@/components/buyer/ShoppingCart";
+import { FavoriteButton } from "@/components/buyer/FavoriteButton";
+import { ServiceRating } from "@/components/buyer/ServiceRating";
 
 interface CartItem {
   service: any;
@@ -524,29 +526,33 @@ const BuyerServices = () => {
                                     <div>
                                       Min: {service.min_quantity || 100}
                                     </div>
+                                    <ServiceRating serviceId={service.id} size="sm" />
                                   </div>
-                                  <Button
-                                    size="sm"
-                                    variant={isInCart ? "secondary" : "ghost"}
-                                    className={cn(
-                                      "gap-1 h-7 md:h-8 text-xs transition-opacity",
-                                      !isInCart && "opacity-0 group-hover:opacity-100"
-                                    )}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleQuickAdd(service);
-                                    }}
-                                    disabled={isQuickAdding}
-                                  >
-                                    {isQuickAdding ? (
-                                      <Check className="w-3 h-3 text-green-500" />
-                                    ) : (
-                                      <>
-                                        <Plus className="w-3 h-3" />
-                                        <span className="hidden sm:inline">Add</span>
-                                      </>
-                                    )}
-                                  </Button>
+                                  <div className="flex items-center gap-1">
+                                    <FavoriteButton serviceId={service.id} size="sm" />
+                                    <Button
+                                      size="sm"
+                                      variant={isInCart ? "secondary" : "ghost"}
+                                      className={cn(
+                                        "gap-1 h-7 md:h-8 text-xs transition-opacity",
+                                        !isInCart && "opacity-0 group-hover:opacity-100"
+                                      )}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleQuickAdd(service);
+                                      }}
+                                      disabled={isQuickAdding}
+                                    >
+                                      {isQuickAdding ? (
+                                        <Check className="w-3 h-3 text-green-500" />
+                                      ) : (
+                                        <>
+                                          <Plus className="w-3 h-3" />
+                                          <span className="hidden sm:inline">Add</span>
+                                        </>
+                                      )}
+                                    </Button>
+                                  </div>
                                 </div>
                               </div>
                             </div>
