@@ -33,7 +33,17 @@ import Blog from "./pages/Blog";
 import Auth from "./pages/Auth";
 import SEOSettings from "./pages/panel/SEOSettings";
 
-const queryClient = new QueryClient();
+// Enhanced QueryClient with caching for faster page loads
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes - data stays fresh
+      gcTime: 10 * 60 * 1000, // 10 minutes garbage collection (formerly cacheTime)
+      refetchOnWindowFocus: false, // Don't refetch when user focuses window
+      retry: 1, // Only retry failed requests once
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
