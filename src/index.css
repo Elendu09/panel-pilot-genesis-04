@@ -915,3 +915,89 @@
   border-color: rgba(255, 255, 255, 0.2);
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
 }
+
+/* ============================================
+   LOW VISION ACCESSIBILITY MODE
+   ============================================ */
+
+/* Base low vision mode - enables scaling */
+.low-vision-mode {
+  --low-vision-font-scale: 1.2;
+}
+
+.low-vision-active {
+  font-size: calc(1rem * var(--low-vision-font-scale, 1));
+  letter-spacing: 0.025em;
+  line-height: 1.7;
+}
+
+/* Low Vision - Scaled Text Elements */
+.low-vision-active p,
+.low-vision-active span:not(.sr-only),
+.low-vision-active div,
+.low-vision-active label {
+  font-size: max(1em, calc(1em * var(--low-vision-font-scale, 1)));
+}
+
+.low-vision-active h1 { font-size: max(2.5rem, calc(2.5rem * var(--low-vision-font-scale, 1))); }
+.low-vision-active h2 { font-size: max(2rem, calc(2rem * var(--low-vision-font-scale, 1))); }
+.low-vision-active h3 { font-size: max(1.5rem, calc(1.5rem * var(--low-vision-font-scale, 1))); }
+.low-vision-active h4 { font-size: max(1.25rem, calc(1.25rem * var(--low-vision-font-scale, 1))); }
+.low-vision-active button { font-size: max(1rem, calc(1rem * var(--low-vision-font-scale, 1))); }
+.low-vision-active input,
+.low-vision-active textarea,
+.low-vision-active select { font-size: max(1rem, calc(1rem * var(--low-vision-font-scale, 1))); }
+
+/* High Contrast Mode - Light Theme */
+.high-contrast,
+.low-vision-mode.high-contrast {
+  --foreground: 0 0% 0%;
+  --background: 0 0% 100%;
+  --muted-foreground: 0 0% 15%;
+  --card: 0 0% 98%;
+  --border: 0 0% 25%;
+  --primary: 250 84% 40%;
+}
+
+/* High Contrast Mode - Dark Theme */
+.dark.high-contrast,
+.dark .high-contrast,
+.dark.low-vision-mode.high-contrast {
+  --foreground: 0 0% 100%;
+  --background: 0 0% 0%;
+  --muted-foreground: 0 0% 90%;
+  --card: 0 0% 5%;
+  --border: 0 0% 80%;
+  --primary: 250 84% 70%;
+}
+
+/* Reduce Motion Mode */
+.reduce-motion *,
+.low-vision-mode.reduce-motion *,
+.reduce-motion *::before,
+.reduce-motion *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* Enhanced Focus Mode */
+.enhanced-focus *:focus,
+.low-vision-mode.enhanced-focus *:focus {
+  outline: 3px solid hsl(var(--primary)) !important;
+  outline-offset: 3px !important;
+  box-shadow: 0 0 0 6px hsl(var(--primary) / 0.25) !important;
+}
+
+.enhanced-focus *:focus-visible {
+  outline: 4px solid hsl(var(--primary)) !important;
+  outline-offset: 4px !important;
+}
+
+/* Low Vision Button Styles */
+.low-vision-active button,
+.low-vision-active a {
+  min-height: 44px;
+  min-width: 44px;
+}

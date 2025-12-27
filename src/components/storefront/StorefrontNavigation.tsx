@@ -117,7 +117,11 @@ export const StorefrontNavigation = ({ panel, customization = {} }: StorefrontNa
 
           {/* Desktop Actions */}
           <div className="hidden md:flex items-center space-x-3">
-            <LowVisionToggle accessibilitySettings={customization.accessibilitySettings} panelId={panel?.id} />
+            <LowVisionToggle 
+              accessibilitySettings={customization.accessibilitySettings} 
+              panelId={panel?.id} 
+              variant={themeMode === 'dark' ? 'dark' : 'light'}
+            />
             
             {/* Theme Mode Toggle */}
             {setThemeMode && (
@@ -125,11 +129,13 @@ export const StorefrontNavigation = ({ panel, customization = {} }: StorefrontNa
                 onClick={toggleThemeMode}
                 className="p-2 rounded-lg transition-colors"
                 style={{ 
-                  backgroundColor: `${primaryColor}15`,
-                  color: textColor
+                  backgroundColor: themeMode === 'dark' ? `${primaryColor}20` : `${primaryColor}15`,
+                  color: textColor,
+                  border: themeMode === 'light' ? '1px solid rgba(0,0,0,0.1)' : 'none'
                 }}
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.95 }}
+                aria-label={themeMode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
               >
                 {themeMode === 'dark' ? (
                   <Sun className="w-4 h-4" />
@@ -139,7 +145,13 @@ export const StorefrontNavigation = ({ panel, customization = {} }: StorefrontNa
               </motion.button>
             )}
             
-            <Button asChild variant="ghost" size="sm" style={{ color: textColor }}>
+            <Button 
+              asChild 
+              variant="ghost" 
+              size="sm" 
+              className={themeMode === 'light' ? 'hover:bg-gray-100' : ''}
+              style={{ color: textColor }}
+            >
               <Link to="/auth">
                 <LogIn className="w-4 h-4 mr-2" />
                 Sign In
@@ -198,30 +210,39 @@ export const StorefrontNavigation = ({ panel, customization = {} }: StorefrontNa
                   </motion.button>
                 ))}
                 <div 
-                  className="flex flex-col space-y-2 pt-4" 
+                  className="flex flex-col space-y-3 pt-4" 
                   style={{ borderTop: `1px solid ${borderColor}` }}
                 >
-                  <div className="flex items-center gap-2">
-                    <LowVisionToggle accessibilitySettings={customization.accessibilitySettings} panelId={panel?.id} />
+                  <div className="flex items-center gap-2 mb-2">
+                    <LowVisionToggle 
+                      accessibilitySettings={customization.accessibilitySettings} 
+                      panelId={panel?.id}
+                      variant={themeMode === 'dark' ? 'dark' : 'light'}
+                    />
                     {setThemeMode && (
                       <motion.button
                         onClick={toggleThemeMode}
-                        className="p-2 rounded-lg"
+                        className="p-2 rounded-lg flex items-center gap-2"
                         style={{ 
-                          backgroundColor: `${primaryColor}15`,
-                          color: textColor
+                          backgroundColor: themeMode === 'dark' ? `${primaryColor}20` : 'rgba(0,0,0,0.05)',
+                          color: textColor,
+                          border: themeMode === 'light' ? '1px solid rgba(0,0,0,0.1)' : 'none'
                         }}
                         whileTap={{ scale: 0.95 }}
                       >
                         {themeMode === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                        <span className="text-sm">{themeMode === 'dark' ? 'Light' : 'Dark'}</span>
                       </motion.button>
                     )}
                   </div>
                   <Button 
                     asChild 
                     variant="outline" 
-                    className="w-full"
-                    style={{ borderColor, color: textColor }}
+                    className={`w-full ${themeMode === 'light' ? 'bg-white hover:bg-gray-50' : ''}`}
+                    style={{ 
+                      borderColor: themeMode === 'light' ? 'rgba(0,0,0,0.2)' : borderColor, 
+                      color: textColor 
+                    }}
                   >
                     <Link to="/auth">Sign In</Link>
                   </Button>
