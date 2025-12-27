@@ -58,10 +58,21 @@ export const StorefrontTestimonialsSection = ({ customization = {} }: Storefront
 
   return (
     <section id="testimonials" className="py-24 bg-background relative overflow-hidden">
+      {/* Grid overlay */}
+      <div className="absolute inset-0 bg-grid-pattern opacity-15 pointer-events-none" />
+      
       {/* Background effects */}
       <div className="absolute inset-0">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
+        <motion.div 
+          className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl"
+          animate={{ scale: [1, 1.2, 1], opacity: [0.05, 0.1, 0.05] }}
+          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div 
+          className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent/5 rounded-full blur-3xl"
+          animate={{ scale: [1.2, 1, 1.2], opacity: [0.05, 0.1, 0.05] }}
+          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+        />
       </div>
 
       <div className="container mx-auto px-4 relative z-10">
@@ -107,11 +118,19 @@ export const StorefrontTestimonialsSection = ({ customization = {} }: Storefront
               variants={cardVariants}
               whileHover={{ 
                 y: -10,
+                rotateY: 5,
+                rotateX: 3,
                 transition: { type: "spring", stiffness: 300 }
               }}
-              className="relative group perspective-1000"
+              className="relative group perspective-1000 transform-3d"
             >
-              <div className="glass-card p-8 h-full relative overflow-hidden">
+              <div className="glass-card p-8 h-full relative overflow-hidden hover-tilt">
+                {/* Shimmer/shine effect */}
+                <div className="absolute inset-0 shimmer-effect opacity-0 group-hover:opacity-100 pointer-events-none rounded-xl" />
+                
+                {/* Gradient border glow on hover */}
+                <div className={`absolute -inset-[1px] rounded-xl bg-gradient-to-r ${testimonial.color || 'from-primary to-accent'} opacity-0 group-hover:opacity-40 blur-[2px] transition-opacity duration-500`} style={{ zIndex: -1 }} />
+                
                 {/* Background gradient on hover */}
                 <motion.div 
                   className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
@@ -152,10 +171,12 @@ export const StorefrontTestimonialsSection = ({ customization = {} }: Storefront
                 {/* Author */}
                 <div className="flex items-center gap-3 relative z-10">
                   <motion.div 
-                    className={`w-12 h-12 rounded-full bg-gradient-to-br ${testimonial.color || 'from-primary to-accent'} flex items-center justify-center text-white font-bold text-lg shadow-lg`}
+                    className={`w-12 h-12 rounded-full bg-gradient-to-br ${testimonial.color || 'from-primary to-accent'} flex items-center justify-center text-white font-bold text-lg shadow-lg relative`}
                     whileHover={{ scale: 1.1, rotate: 5 }}
                   >
-                    {testimonial.avatar || testimonial.name[0].toUpperCase()}
+                    {/* Avatar glow */}
+                    <div className={`absolute inset-0 rounded-full bg-gradient-to-br ${testimonial.color || 'from-primary to-accent'} blur-lg opacity-50 group-hover:opacity-80 transition-opacity`} />
+                    <span className="relative z-10">{testimonial.avatar || testimonial.name[0].toUpperCase()}</span>
                   </motion.div>
                   <div>
                     <div className="font-semibold text-foreground">@{testimonial.name}</div>

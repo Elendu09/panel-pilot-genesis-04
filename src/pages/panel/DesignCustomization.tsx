@@ -254,6 +254,8 @@ const gradientOptions = [
 
 export default function DesignCustomization() {
   const [panelId, setPanelId] = useState<string | null>(null);
+  const [panelSubdomain, setPanelSubdomain] = useState<string>('');
+  const [panelCustomDomain, setPanelCustomDomain] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -281,9 +283,11 @@ export default function DesignCustomization() {
         if (!user) return;
         const { data: profile } = await supabase.from('profiles').select('id').eq('user_id', user.id).single();
         if (!profile) return;
-        const { data: panel } = await supabase.from('panels').select('id, name, custom_branding, theme_type').eq('owner_id', profile.id).single();
+        const { data: panel } = await supabase.from('panels').select('id, name, custom_branding, theme_type, subdomain, custom_domain').eq('owner_id', profile.id).single();
         if (panel) {
           setPanelId(panel.id);
+          setPanelSubdomain(panel.subdomain || '');
+          setPanelCustomDomain(panel.custom_domain || '');
           const branding = panel.custom_branding as any || {};
           const loadedCustomization = { 
             ...defaultCustomization, 
@@ -462,6 +466,38 @@ export default function DesignCustomization() {
             <Button variant="outline" size="sm" onClick={() => window.open('/storefront-preview', '_blank')}>
               <ExternalLink className="w-4 h-4 mr-2" />Preview
             </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => {
+                    const storefrontUrl = panelCustomDomain 
+                      ? `https://${panelCustomDomain}`
+                      : panelSubdomain 
+                        ? `https://${panelSubdomain}.smmpilot.online`
+                        : null;
+                    if (storefrontUrl) {
+                      window.open(storefrontUrl, '_blank');
+                    } else {
+                      toast({ title: 'No domain configured', description: 'Please set up your subdomain first.', variant: 'destructive' });
+                    }
+                  }}
+                  disabled={!panelSubdomain && !panelCustomDomain}
+                  className="bg-gradient-to-r from-primary/10 to-secondary/10 hover:from-primary/20 hover:to-secondary/20 border-primary/30"
+                >
+                  <Users className="w-4 h-4 mr-2" />
+                  Preview as Buyer
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {panelCustomDomain 
+                  ? `Opens ${panelCustomDomain} in new tab` 
+                  : panelSubdomain 
+                    ? `Opens ${panelSubdomain}.smmpilot.online in new tab`
+                    : 'Configure your subdomain first'}
+              </TooltipContent>
+            </Tooltip>
             <Button onClick={handleSave} disabled={saving || !hasUnsavedChanges} className="relative">
               {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
               {hasUnsavedChanges ? 'Save' : 'Saved'}
