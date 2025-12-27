@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Menu, X, Zap, LogIn, Sun, Moon } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { LowVisionToggle } from "./LowVisionToggle";
 
 interface StorefrontNavigationProps {
   panel?: any;
@@ -117,12 +116,6 @@ export const StorefrontNavigation = ({ panel, customization = {} }: StorefrontNa
 
           {/* Desktop Actions */}
           <div className="hidden md:flex items-center space-x-3">
-            <LowVisionToggle 
-              accessibilitySettings={customization.accessibilitySettings} 
-              panelId={panel?.id} 
-              variant={themeMode === 'dark' ? 'dark' : 'light'}
-            />
-            
             {/* Theme Mode Toggle */}
             {setThemeMode && (
               <motion.button
@@ -152,7 +145,7 @@ export const StorefrontNavigation = ({ panel, customization = {} }: StorefrontNa
               className={themeMode === 'light' ? 'hover:bg-gray-100' : ''}
               style={{ color: textColor }}
             >
-              <Link to="/auth">
+              <Link to="/auth?tab=login">
                 <LogIn className="w-4 h-4 mr-2" />
                 Sign In
               </Link>
@@ -167,7 +160,7 @@ export const StorefrontNavigation = ({ panel, customization = {} }: StorefrontNa
                   boxShadow: `0 4px 20px ${primaryColor}40`
                 }}
               >
-                <Link to="/auth?mode=signup">
+                <Link to="/auth?tab=signup">
                   Get Started
                 </Link>
               </Button>
@@ -176,12 +169,6 @@ export const StorefrontNavigation = ({ panel, customization = {} }: StorefrontNa
 
           {/* Mobile Header Icons - VISIBLE BESIDE HAMBURGER */}
           <div className="md:hidden flex items-center gap-2">
-            <LowVisionToggle 
-              accessibilitySettings={customization.accessibilitySettings} 
-              panelId={panel?.id} 
-              variant={themeMode === 'dark' ? 'dark' : 'light'}
-            />
-            
             {setThemeMode && (
               <motion.button
                 onClick={toggleThemeMode}
@@ -237,28 +224,21 @@ export const StorefrontNavigation = ({ panel, customization = {} }: StorefrontNa
                   className="flex flex-col space-y-3 pt-4" 
                   style={{ borderTop: `1px solid ${borderColor}` }}
                 >
-                  <div className="flex items-center gap-2 mb-2">
-                    <LowVisionToggle 
-                      accessibilitySettings={customization.accessibilitySettings} 
-                      panelId={panel?.id}
-                      variant={themeMode === 'dark' ? 'dark' : 'light'}
-                    />
-                    {setThemeMode && (
-                      <motion.button
-                        onClick={toggleThemeMode}
-                        className="p-2 rounded-lg flex items-center gap-2"
-                        style={{ 
-                          backgroundColor: themeMode === 'dark' ? `${primaryColor}20` : 'rgba(0,0,0,0.05)',
-                          color: textColor,
-                          border: themeMode === 'light' ? '1px solid rgba(0,0,0,0.1)' : 'none'
-                        }}
-                        whileTap={{ scale: 0.95 }}
-                      >
-                        {themeMode === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-                        <span className="text-sm">{themeMode === 'dark' ? 'Light' : 'Dark'}</span>
-                      </motion.button>
-                    )}
-                  </div>
+                  {setThemeMode && (
+                    <motion.button
+                      onClick={toggleThemeMode}
+                      className="p-2 rounded-lg flex items-center gap-2 mb-2"
+                      style={{ 
+                        backgroundColor: themeMode === 'dark' ? `${primaryColor}20` : 'rgba(0,0,0,0.05)',
+                        color: textColor,
+                        border: themeMode === 'light' ? '1px solid rgba(0,0,0,0.1)' : 'none'
+                      }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      {themeMode === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                      <span className="text-sm">{themeMode === 'dark' ? 'Light' : 'Dark'}</span>
+                    </motion.button>
+                  )}
                   <Button 
                     asChild 
                     variant="outline" 
@@ -268,7 +248,7 @@ export const StorefrontNavigation = ({ panel, customization = {} }: StorefrontNa
                       color: textColor 
                     }}
                   >
-                    <Link to="/auth">Sign In</Link>
+                    <Link to="/auth?tab=login">Sign In</Link>
                   </Button>
                   <Button 
                     asChild 
@@ -277,7 +257,7 @@ export const StorefrontNavigation = ({ panel, customization = {} }: StorefrontNa
                       background: `linear-gradient(135deg, ${primaryColor}, ${customization.secondaryColor || primaryColor})`
                     }}
                   >
-                    <Link to="/auth?mode=signup">Get Started</Link>
+                    <Link to="/auth?tab=signup">Get Started</Link>
                   </Button>
                 </div>
               </div>
