@@ -354,6 +354,110 @@ export type Database = {
           },
         ]
       }
+      buyer_favorites: {
+        Row: {
+          buyer_id: string | null
+          created_at: string | null
+          id: string
+          panel_id: string | null
+          service_id: string | null
+        }
+        Insert: {
+          buyer_id?: string | null
+          created_at?: string | null
+          id?: string
+          panel_id?: string | null
+          service_id?: string | null
+        }
+        Update: {
+          buyer_id?: string | null
+          created_at?: string | null
+          id?: string
+          panel_id?: string | null
+          service_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "buyer_favorites_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "client_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "buyer_favorites_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "buyer_favorites_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      buyer_notifications: {
+        Row: {
+          buyer_id: string | null
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          message: string | null
+          order_id: string | null
+          panel_id: string | null
+          title: string
+          type: string | null
+        }
+        Insert: {
+          buyer_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message?: string | null
+          order_id?: string | null
+          panel_id?: string | null
+          title: string
+          type?: string | null
+        }
+        Update: {
+          buyer_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message?: string | null
+          order_id?: string | null
+          panel_id?: string | null
+          title?: string
+          type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "buyer_notifications_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "client_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "buyer_notifications_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "buyer_notifications_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       canned_responses: {
         Row: {
           category: string | null
@@ -544,16 +648,21 @@ export type Database = {
           id: string
           is_active: boolean | null
           is_banned: boolean | null
+          is_vip: boolean | null
           last_login_at: string | null
+          low_balance_threshold: number | null
           panel_id: string | null
           password_hash: string | null
           password_temp: string | null
+          preferred_language: string | null
           referral_code: string | null
           referral_count: number | null
           referred_by: string | null
+          timezone: string | null
           total_spent: number | null
           updated_at: string
           username: string | null
+          vip_since: string | null
         }
         Insert: {
           balance?: number | null
@@ -566,16 +675,21 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_banned?: boolean | null
+          is_vip?: boolean | null
           last_login_at?: string | null
+          low_balance_threshold?: number | null
           panel_id?: string | null
           password_hash?: string | null
           password_temp?: string | null
+          preferred_language?: string | null
           referral_code?: string | null
           referral_count?: number | null
           referred_by?: string | null
+          timezone?: string | null
           total_spent?: number | null
           updated_at?: string
           username?: string | null
+          vip_since?: string | null
         }
         Update: {
           balance?: number | null
@@ -588,16 +702,21 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_banned?: boolean | null
+          is_vip?: boolean | null
           last_login_at?: string | null
+          low_balance_threshold?: number | null
           panel_id?: string | null
           password_hash?: string | null
           password_temp?: string | null
+          preferred_language?: string | null
           referral_code?: string | null
           referral_count?: number | null
           referred_by?: string | null
+          timezone?: string | null
           total_spent?: number | null
           updated_at?: string
           username?: string | null
+          vip_since?: string | null
         }
         Relationships: [
           {
@@ -696,7 +815,9 @@ export type Database = {
       orders: {
         Row: {
           buyer_id: string | null
+          completed_at: string | null
           created_at: string
+          estimated_completion: string | null
           id: string
           notes: string | null
           order_number: string
@@ -708,13 +829,16 @@ export type Database = {
           remains: number | null
           service_id: string | null
           start_count: number | null
+          started_at: string | null
           status: Database["public"]["Enums"]["order_status"] | null
           target_url: string
           updated_at: string
         }
         Insert: {
           buyer_id?: string | null
+          completed_at?: string | null
           created_at?: string
+          estimated_completion?: string | null
           id?: string
           notes?: string | null
           order_number: string
@@ -726,13 +850,16 @@ export type Database = {
           remains?: number | null
           service_id?: string | null
           start_count?: number | null
+          started_at?: string | null
           status?: Database["public"]["Enums"]["order_status"] | null
           target_url: string
           updated_at?: string
         }
         Update: {
           buyer_id?: string | null
+          completed_at?: string | null
           created_at?: string
+          estimated_completion?: string | null
           id?: string
           notes?: string | null
           order_number?: string
@@ -744,6 +871,7 @@ export type Database = {
           remains?: number | null
           service_id?: string | null
           start_count?: number | null
+          started_at?: string | null
           status?: Database["public"]["Enums"]["order_status"] | null
           target_url?: string
           updated_at?: string
@@ -1590,6 +1718,74 @@ export type Database = {
           },
         ]
       }
+      service_reviews: {
+        Row: {
+          buyer_id: string | null
+          created_at: string | null
+          id: string
+          is_verified: boolean | null
+          is_visible: boolean | null
+          order_id: string | null
+          panel_id: string | null
+          rating: number
+          review_text: string | null
+          service_id: string | null
+        }
+        Insert: {
+          buyer_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_verified?: boolean | null
+          is_visible?: boolean | null
+          order_id?: string | null
+          panel_id?: string | null
+          rating: number
+          review_text?: string | null
+          service_id?: string | null
+        }
+        Update: {
+          buyer_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_verified?: boolean | null
+          is_visible?: boolean | null
+          order_id?: string | null
+          panel_id?: string | null
+          rating?: number
+          review_text?: string | null
+          service_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_reviews_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "client_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_reviews_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_reviews_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_reviews_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       services: {
         Row: {
           category: Database["public"]["Enums"]["service_category"]
@@ -1842,6 +2038,10 @@ export type Database = {
       get_masked_provider_credentials: {
         Args: { provider_id: string }
         Returns: Json
+      }
+      get_service_avg_rating: {
+        Args: { p_service_id: string }
+        Returns: number
       }
       has_completed_onboarding: { Args: { user_id: string }; Returns: boolean }
       has_role: {
