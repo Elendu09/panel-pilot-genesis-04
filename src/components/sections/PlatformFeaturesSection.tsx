@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Zap, Users, Globe, BarChart3 } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export const PlatformFeaturesSection = () => {
   const features = [
@@ -49,8 +50,11 @@ export const PlatformFeaturesSection = () => {
               <Button 
                 variant="outline" 
                 className="border-primary/30 hover:bg-primary/10"
+                asChild
               >
-                Platform Docs <ArrowRight className="ml-2 w-4 h-4" />
+                <Link to="/docs">
+                  Platform Docs <ArrowRight className="ml-2 w-4 h-4" />
+                </Link>
               </Button>
             </div>
           </div>

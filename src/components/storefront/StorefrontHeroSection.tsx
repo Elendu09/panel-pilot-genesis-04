@@ -3,17 +3,23 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
   ArrowRight, Sparkles, Zap, TrendingUp, Users, Star, MessageCircle, Shield, DollarSign, Clock, CheckCircle, CreditCard,
-  Instagram, Music, Youtube, Send, Twitter
+  Instagram, Youtube, Send, Twitter
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { AnimatedText } from "@/components/ui/animated-text";
 import { motion } from "framer-motion";
+import { TikTokIcon } from "@/components/icons/SocialIcons";
 
 interface StorefrontHeroSectionProps {
   panel?: any;
   services?: any[];
   customization?: any;
 }
+
+// TikTok wrapper for consistent sizing
+const TikTokWrapper = ({ className }: { className?: string }) => (
+  <TikTokIcon className={className} size={16} />
+);
 
 // Buyer-focused floating cards - different from homepage
 const leftCards = [
@@ -29,7 +35,7 @@ const rightCards = [
 // Service categories with platform icons
 const serviceCategories = [
   { name: "Instagram", Icon: Instagram, color: "from-pink-500 to-purple-500" },
-  { name: "TikTok", Icon: Music, color: "from-cyan-400 to-pink-500" },
+  { name: "TikTok", Icon: TikTokWrapper, color: "from-cyan-400 to-pink-500" },
   { name: "YouTube", Icon: Youtube, color: "from-red-500 to-red-600" },
   { name: "Telegram", Icon: Send, color: "from-blue-400 to-blue-600" },
   { name: "Twitter", Icon: Twitter, color: "from-sky-400 to-blue-500" },
