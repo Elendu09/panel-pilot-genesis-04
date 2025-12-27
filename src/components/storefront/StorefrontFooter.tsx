@@ -92,10 +92,10 @@ export const StorefrontFooter = ({
           <div>
             <h4 className="font-semibold mb-4">Services</h4>
             <ul className={`space-y-2 text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-              <li><a href="#services" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>Instagram</a></li>
-              <li><a href="#services" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>YouTube</a></li>
-              <li><a href="#services" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>TikTok</a></li>
-              <li><a href="#services" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>Twitter</a></li>
+              <li><a href="/services" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>Instagram</a></li>
+              <li><a href="/services" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>YouTube</a></li>
+              <li><a href="/services" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>TikTok</a></li>
+              <li><a href="/services" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>Twitter</a></li>
             </ul>
           </div>
           
