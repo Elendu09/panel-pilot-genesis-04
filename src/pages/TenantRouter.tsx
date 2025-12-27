@@ -9,6 +9,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { BuyerAuthProvider } from '@/contexts/BuyerAuthContext';
 import { BuyerProtectedRoute } from '@/components/buyer/BuyerProtectedRoute';
+import { CurrencyProvider } from '@/contexts/CurrencyContext';
 import App from '../App';
 
 // Buyer pages
@@ -107,58 +108,55 @@ const TenantRouter = () => {
         <HelmetProvider>
           <ThemeProvider defaultTheme="dark" storageKey="smm-panel-theme">
             <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <BuyerAuthProvider panelId={panel.id}>
-                <BrowserRouter>
-                  <Routes>
-                    {/* PUBLIC routes - Storefront accessible without login */}
-                    <Route path="/" element={<Storefront />} />
-                    <Route path="/auth" element={<BuyerAuth />} />
-                    <Route path="/services" element={<BuyerPublicServices />} />
-                    
-                    {/* Protected buyer routes */}
-                    <Route path="/dashboard" element={
-                      <BuyerProtectedRoute>
-                        <BuyerDashboard />
-                      </BuyerProtectedRoute>
-                    } />
-                    <Route path="/services" element={
-                      <BuyerProtectedRoute>
-                        <BuyerServices />
-                      </BuyerProtectedRoute>
-                    } />
-                    <Route path="/orders" element={
-                      <BuyerProtectedRoute>
-                        <BuyerOrders />
-                      </BuyerProtectedRoute>
-                    } />
-                    <Route path="/orders/:orderId" element={
-                      <BuyerProtectedRoute>
-                        <BuyerOrderTracking />
-                      </BuyerProtectedRoute>
-                    } />
-                    <Route path="/profile" element={
-                      <BuyerProtectedRoute>
-                        <BuyerProfile />
-                      </BuyerProtectedRoute>
-                    } />
-                    <Route path="/deposit" element={
-                      <BuyerProtectedRoute>
-                        <BuyerDeposit />
-                      </BuyerProtectedRoute>
-                    } />
-                    <Route path="/support" element={
-                      <BuyerProtectedRoute>
-                        <BuyerSupport />
-                      </BuyerProtectedRoute>
-                    } />
-                    
-                    {/* Catch all - redirect to storefront */}
-                    <Route path="*" element={<Navigate to="/" replace />} />
-                  </Routes>
-                </BrowserRouter>
-              </BuyerAuthProvider>
+              <CurrencyProvider>
+                <Toaster />
+                <Sonner />
+                <BuyerAuthProvider panelId={panel.id}>
+                  <BrowserRouter>
+                    <Routes>
+                      {/* PUBLIC routes - Storefront accessible without login */}
+                      <Route path="/" element={<Storefront />} />
+                      <Route path="/auth" element={<BuyerAuth />} />
+                      <Route path="/services" element={<BuyerPublicServices />} />
+                      
+                      {/* Protected buyer routes */}
+                      <Route path="/dashboard" element={
+                        <BuyerProtectedRoute>
+                          <BuyerDashboard />
+                        </BuyerProtectedRoute>
+                      } />
+                      <Route path="/orders" element={
+                        <BuyerProtectedRoute>
+                          <BuyerOrders />
+                        </BuyerProtectedRoute>
+                      } />
+                      <Route path="/orders/:orderId" element={
+                        <BuyerProtectedRoute>
+                          <BuyerOrderTracking />
+                        </BuyerProtectedRoute>
+                      } />
+                      <Route path="/profile" element={
+                        <BuyerProtectedRoute>
+                          <BuyerProfile />
+                        </BuyerProtectedRoute>
+                      } />
+                      <Route path="/deposit" element={
+                        <BuyerProtectedRoute>
+                          <BuyerDeposit />
+                        </BuyerProtectedRoute>
+                      } />
+                      <Route path="/support" element={
+                        <BuyerProtectedRoute>
+                          <BuyerSupport />
+                        </BuyerProtectedRoute>
+                      } />
+                      
+                      {/* Catch all - redirect to storefront */}
+                      <Route path="*" element={<Navigate to="/" replace />} />
+                    </Routes>
+                  </BrowserRouter>
+                </BuyerAuthProvider>
+              </CurrencyProvider>
             </TooltipProvider>
           </ThemeProvider>
         </HelmetProvider>

@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
-import { Instagram, Facebook, Twitter, Youtube, MessageCircle, Send, Music, Linkedin } from "lucide-react";
+import { Instagram, Facebook, Twitter, Youtube, MessageCircle, Send, Linkedin } from "lucide-react";
+import { TikTokIcon } from "@/components/icons/SocialIcons";
 
 interface SocialPlatform {
   id: string;
@@ -22,7 +23,7 @@ const SOCIAL_ICONS: Record<string, any> = {
   facebook: Facebook,
   twitter: Twitter,
   youtube: Youtube,
-  tiktok: Music,
+  tiktok: TikTokIcon,
   telegram: Send,
   linkedin: Linkedin,
   whatsapp: MessageCircle,

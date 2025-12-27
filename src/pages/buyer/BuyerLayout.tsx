@@ -28,6 +28,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { BuyerNotifications } from "@/components/buyer/BuyerNotifications";
 import { LanguageSelector } from "@/components/buyer/LanguageSelector";
+import { CurrencySelector } from "@/components/buyer/CurrencySelector";
+import { useCurrency } from "@/contexts/CurrencyContext";
 
 interface BuyerLayoutProps {
   children?: React.ReactNode;
@@ -201,6 +203,7 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
           </div>
           
           <div className="flex items-center gap-2">
+            <CurrencySelector />
             <LanguageSelector />
             <BuyerNotifications />
             <ThemeToggle />

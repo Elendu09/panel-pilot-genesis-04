@@ -1,18 +1,26 @@
-import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useBuyerAuth } from "@/contexts/BuyerAuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { User, Lock, Mail, Loader2, ArrowLeft, Sparkles, Shield, Zap } from "lucide-react";
+import { User, Lock, Mail, Loader2, ArrowLeft, Sparkles, Shield, Zap, KeyRound } from "lucide-react";
 import { motion } from "framer-motion";
+import { supabase } from "@/integrations/supabase/client";
 
 const BuyerAuth = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { signIn, signUp, loading, buyer, panelId } = useBuyerAuth();
+  
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    const tabParam = searchParams.get('tab');
+    return tabParam === 'signup' ? 'signup' : 'login';
+  });
   
   const [loginData, setLoginData] = useState({ identifier: "", password: "" });
   const [signupData, setSignupData] = useState({ 
@@ -22,6 +30,19 @@ const BuyerAuth = () => {
     confirmPassword: "",
     fullName: ""
   });
+  
+  // Forgot password state
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
+  const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
+
+  // Update tab when URL param changes
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam === 'signup' || tabParam === 'login') {
+      setActiveTab(tabParam);
+    }
+  }, [searchParams]);
 
   // If already logged in, redirect to dashboard
   if (buyer) {
@@ -75,6 +96,37 @@ const BuyerAuth = () => {
     }
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!forgotPasswordEmail) {
+      toast.error("Please enter your email address");
+      return;
+    }
+
+    setForgotPasswordLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('buyer-auth', {
+        body: {
+          action: 'forgot-password',
+          panelId,
+          email: forgotPasswordEmail,
+        }
+      });
+
+      if (error) throw error;
+      
+      toast.success(data?.message || "If an account exists with this email, you will receive a password reset link.");
+      setShowForgotPassword(false);
+      setForgotPasswordEmail("");
+    } catch (error: any) {
+      console.error('Forgot password error:', error);
+      toast.error("Failed to send reset email. Please try again.");
+    } finally {
+      setForgotPasswordLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-950 py-12 px-4">
       {/* Back to Storefront Link */}
@@ -122,7 +174,7 @@ const BuyerAuth = () => {
           </CardHeader>
           
           <CardContent className="pt-4">
-            <Tabs defaultValue="login" className="w-full">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="grid w-full grid-cols-2 bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
                 <TabsTrigger 
                   value="login" 
@@ -170,6 +222,17 @@ const BuyerAuth = () => {
                         disabled={loading}
                       />
                     </div>
+                  </div>
+
+                  {/* Forgot Password Link */}
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setShowForgotPassword(true)}
+                      className="text-sm text-primary hover:text-primary/80 hover:underline"
+                    >
+                      Forgot Password?
+                    </button>
                   </div>
                   
                   <Button 
@@ -290,6 +353,62 @@ const BuyerAuth = () => {
           </CardContent>
         </Card>
       </motion.div>
+
+      {/* Forgot Password Dialog */}
+      <Dialog open={showForgotPassword} onOpenChange={setShowForgotPassword}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyRound className="w-5 h-5 text-primary" />
+              Reset Password
+            </DialogTitle>
+            <DialogDescription>
+              Enter your email address and we'll send you a link to reset your password.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleForgotPassword} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="forgot-email">Email Address</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  id="forgot-email"
+                  type="email"
+                  placeholder="your@email.com"
+                  value={forgotPasswordEmail}
+                  onChange={(e) => setForgotPasswordEmail(e.target.value)}
+                  className="pl-10"
+                  disabled={forgotPasswordLoading}
+                />
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setShowForgotPassword(false)}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit" 
+                className="flex-1"
+                disabled={forgotPasswordLoading}
+              >
+                {forgotPasswordLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  "Send Reset Link"
+                )}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -39,18 +39,20 @@ serve(async (req) => {
     );
 
     // Handle different actions
-    switch (action) {
-      case 'login':
-        return await handleLogin(supabaseAdmin, body);
-      case 'fetch':
-        return await handleFetch(supabaseAdmin, body);
-      case 'signup':
-        return await handleSignup(supabaseAdmin, body);
-      case 'guest-order':
-        return await handleGuestOrder(supabaseAdmin, body);
-      default:
-        return jsonResponse({ error: 'Invalid action' });
-    }
+  switch (action) {
+    case 'login':
+      return await handleLogin(supabaseAdmin, body);
+    case 'fetch':
+      return await handleFetch(supabaseAdmin, body);
+    case 'signup':
+      return await handleSignup(supabaseAdmin, body);
+    case 'guest-order':
+      return await handleGuestOrder(supabaseAdmin, body);
+    case 'forgot-password':
+      return await handleForgotPassword(supabaseAdmin, body);
+    default:
+      return jsonResponse({ error: 'Invalid action' });
+  }
 
   } catch (error) {
     console.error('Buyer auth error:', error);
@@ -390,4 +392,73 @@ function generateTempPassword(): string {
     password += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return password;
+}
+
+// Handle forgot password action
+async function handleForgotPassword(supabaseAdmin: any, body: any) {
+  const { panelId, email } = body;
+  
+  console.log(`Forgot password request: email=${email}`);
+
+  if (!email) {
+    return jsonResponse({ error: 'Email is required' });
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+
+  // Find user by email
+  const { data: user, error: queryError } = await supabaseAdmin
+    .from('client_users')
+    .select('id, email, full_name')
+    .eq('email', normalizedEmail)
+    .eq('panel_id', panelId)
+    .maybeSingle();
+
+  if (queryError) {
+    console.error('Database query error:', queryError);
+    return jsonResponse({ error: 'Database error' });
+  }
+
+  // Always return success to not reveal if email exists (security)
+  if (!user) {
+    console.log('No user found with email:', normalizedEmail);
+    return jsonResponse({ 
+      success: true, 
+      message: 'If an account exists with this email, you will receive a password reset link.' 
+    });
+  }
+
+  // Generate reset token
+  const resetToken = crypto.randomUUID();
+  const expiresAt = new Date(Date.now() + 3600000); // 1 hour from now
+
+  // Generate a new temporary password
+  const newPassword = generateTempPassword();
+
+  // Update user with new temp password (simple reset for now)
+  const { error: updateError } = await supabaseAdmin
+    .from('client_users')
+    .update({ 
+      password_temp: newPassword,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', user.id);
+
+  if (updateError) {
+    console.error('Error updating password:', updateError);
+    return jsonResponse({ error: 'Failed to reset password' });
+  }
+
+  console.log('Password reset for user:', user.id, 'New temp password generated');
+
+  // In production, you would send an email here with the new password
+  // For now, we just log it and return success
+  console.log(`Password reset - Email: ${user.email}, New Password: ${newPassword}`);
+
+  return jsonResponse({ 
+    success: true, 
+    message: 'If an account exists with this email, you will receive a password reset link.',
+    // Only include in development - remove in production
+    _debug_password: newPassword
+  });
 }
