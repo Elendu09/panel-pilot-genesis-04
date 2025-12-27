@@ -85,7 +85,7 @@ export const StorefrontPlatformSection = ({ customization = {} }: StorefrontPlat
                   className="border-primary/30 hover:bg-primary/10"
                   asChild
                 >
-                  <a href="#services">
+                  <a href="/services">
                     Browse Services <ArrowRight className="ml-2 w-4 h-4" />
                   </a>
                 </Button>
