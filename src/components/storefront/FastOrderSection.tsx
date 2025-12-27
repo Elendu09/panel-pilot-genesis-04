@@ -33,9 +33,15 @@ interface FastOrderSectionProps {
   services: Service[];
   panelId: string;
   panelName: string;
+  customization?: any;
 }
 
-export const FastOrderSection = ({ services, panelId, panelName }: FastOrderSectionProps) => {
+export const FastOrderSection = ({ services, panelId, panelName, customization }: FastOrderSectionProps) => {
+  const themeMode = customization?.themeMode || 'dark';
+  const textColor = customization?.textColor || (themeMode === 'dark' ? '#FFFFFF' : '#1F2937');
+  const textMuted = customization?.textMuted || (themeMode === 'dark' ? '#A1A1AA' : '#4B5563');
+  const cardBg = themeMode === 'dark' ? 'bg-slate-900/80 border-white/10' : 'bg-white shadow-md border-gray-200';
+  const inputBg = themeMode === 'dark' ? 'bg-slate-800/50 border-white/10' : 'bg-gray-50 border-gray-200';
   const navigate = useNavigate();
   const { buyer, refreshBuyer } = useBuyerAuth();
   const [selectedServiceId, setSelectedServiceId] = useState<string>('');
@@ -137,7 +143,7 @@ export const FastOrderSection = ({ services, panelId, panelName }: FastOrderSect
   if (services.length === 0) return null;
 
   return (
-    <section className="py-16 md:py-24 relative overflow-hidden">
+    <section className="py-16 md:py-24 relative overflow-hidden" id="fast-order">
       {/* Background Effects */}
       <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent" />
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl" />
@@ -153,10 +159,10 @@ export const FastOrderSection = ({ services, panelId, panelName }: FastOrderSect
             <Zap className="w-3 h-3 mr-1" />
             Fast Order
           </Badge>
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
+          <h2 className="text-3xl md:text-4xl font-bold mb-4" style={{ color: textColor }}>
             Quick Order in Seconds
           </h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
+          <p className="max-w-2xl mx-auto" style={{ color: textMuted }}>
             Select a service, enter your link, and boost your social presence instantly
           </p>
         </motion.div>
@@ -169,7 +175,7 @@ export const FastOrderSection = ({ services, panelId, panelName }: FastOrderSect
             viewport={{ once: true }}
             className="space-y-4"
           >
-            <h3 className="text-lg font-semibold mb-4">Popular Services</h3>
+            <h3 className="text-lg font-semibold mb-4" style={{ color: textColor }}>Popular Services</h3>
             <div className="grid grid-cols-2 gap-3">
               {popularServices.map((service) => {
                 const categoryData = getCategoryIcon(service.category);
@@ -186,16 +192,18 @@ export const FastOrderSection = ({ services, panelId, panelName }: FastOrderSect
                       "p-4 rounded-xl border text-left transition-all",
                       isSelected
                         ? "border-primary bg-primary/10 ring-2 ring-primary/20"
-                        : "border-border/50 bg-card/50 hover:bg-card hover:border-primary/30"
+                        : themeMode === 'dark' 
+                          ? "border-white/10 bg-slate-800/50 hover:bg-slate-800 hover:border-primary/30"
+                          : "border-gray-200 bg-white hover:bg-gray-50 hover:border-primary/30 shadow-sm"
                     )}
                   >
                     <div className="flex items-center gap-3 mb-2">
                       <div className={cn("p-2 rounded-lg", categoryData.bgColor)}>
                         <CategoryIcon className="w-4 h-4 text-white" size={16} />
                       </div>
-                      <span className="text-lg font-bold">${service.price}</span>
+                      <span className="text-lg font-bold" style={{ color: textColor }}>${service.price}</span>
                     </div>
-                    <p className="text-sm text-muted-foreground line-clamp-2">
+                    <p className="text-sm line-clamp-2" style={{ color: textMuted }}>
                       {service.name}
                     </p>
                   </motion.button>
@@ -210,23 +218,23 @@ export const FastOrderSection = ({ services, panelId, panelName }: FastOrderSect
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
           >
-            <Card className="glass-card border-border/50">
+            <Card className={`backdrop-blur-xl border ${cardBg}`}>
               <CardContent className="p-6 space-y-5">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="p-3 rounded-xl bg-gradient-to-br from-primary to-primary/60">
                     <Zap className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <h3 className="font-bold">Place Your Order</h3>
-                    <p className="text-sm text-muted-foreground">Fast & secure delivery</p>
+                    <h3 className="font-bold" style={{ color: textColor }}>Place Your Order</h3>
+                    <p className="text-sm" style={{ color: textMuted }}>Fast & secure delivery</p>
                   </div>
                 </div>
 
                 {/* Service Selector */}
                 <div className="space-y-2">
-                  <Label>Service</Label>
+                  <Label style={{ color: textColor }}>Service</Label>
                   <Select value={selectedServiceId} onValueChange={setSelectedServiceId}>
-                    <SelectTrigger className="bg-background/50">
+                    <SelectTrigger className={inputBg}>
                       <SelectValue placeholder="Select a service" />
                     </SelectTrigger>
                     <SelectContent>
@@ -241,37 +249,37 @@ export const FastOrderSection = ({ services, panelId, panelName }: FastOrderSect
 
                 {/* Target URL */}
                 <div className="space-y-2">
-                  <Label>Link / Username</Label>
+                  <Label style={{ color: textColor }}>Link / Username</Label>
                   <Input
                     placeholder="https://instagram.com/yourprofile"
                     value={targetUrl}
                     onChange={(e) => setTargetUrl(e.target.value)}
-                    className="bg-background/50"
+                    className={inputBg}
                   />
                 </div>
 
                 {/* Quantity */}
                 <div className="space-y-2">
-                  <Label>Quantity</Label>
+                  <Label style={{ color: textColor }}>Quantity</Label>
                   <Input
                     type="number"
                     value={quantity}
                     onChange={(e) => setQuantity(parseInt(e.target.value) || 0)}
                     min={selectedService?.min_quantity || 100}
                     max={selectedService?.max_quantity || 100000}
-                    className="bg-background/50"
+                    className={inputBg}
                   />
                   {selectedService && (
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs" style={{ color: textMuted }}>
                       Min: {selectedService.min_quantity || 100} | Max: {(selectedService.max_quantity || 10000).toLocaleString()}
                     </p>
                   )}
                 </div>
 
                 {/* Total */}
-                <div className="pt-4 border-t border-border/50">
+                <div className={`pt-4 border-t ${themeMode === 'dark' ? 'border-white/10' : 'border-gray-200'}`}>
                   <div className="flex justify-between items-center mb-4">
-                    <span className="text-muted-foreground">Total</span>
+                    <span style={{ color: textMuted }}>Total</span>
                     <span className="text-2xl font-bold text-primary">${totalPrice.toFixed(2)}</span>
                   </div>
 
