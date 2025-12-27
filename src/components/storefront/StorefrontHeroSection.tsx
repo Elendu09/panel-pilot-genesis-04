@@ -59,7 +59,7 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
   const themeMode = customization.themeMode || 'dark';
   const textColor = customization.textColor || (themeMode === 'dark' ? '#FFFFFF' : '#1F2937');
   const textMuted = customization.textMuted || (themeMode === 'dark' ? '#A1A1AA' : '#4B5563');
-  const cardBg = themeMode === 'dark' ? 'bg-slate-900/80' : 'bg-white/90';
+  const cardBg = themeMode === 'dark' ? 'bg-slate-900/80' : 'bg-white shadow-md';
   const borderStyle = themeMode === 'dark' ? 'border-white/10' : 'border-gray-200';
 
   const animatedPhrases = customization.animatedPhrases || [

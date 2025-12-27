@@ -56,8 +56,10 @@ export const StorefrontTestimonialsSection = ({ customization = {} }: Storefront
     }
   };
 
+  const themeMode = customization?.themeMode || 'dark';
+
   return (
-    <section id="testimonials" className="py-24 bg-background relative overflow-hidden">
+    <section id="testimonials" className="py-24 relative overflow-hidden" style={{ backgroundColor: customization?.backgroundColor }}>
       {/* Grid overlay */}
       <div className="absolute inset-0 bg-grid-pattern opacity-15 pointer-events-none" />
       
@@ -124,9 +126,13 @@ export const StorefrontTestimonialsSection = ({ customization = {} }: Storefront
               }}
               className="relative group perspective-1000 transform-3d"
             >
-              <div className="glass-card p-8 h-full relative overflow-hidden hover-tilt">
-                {/* Shimmer/shine effect */}
-                <div className="absolute inset-0 shimmer-effect opacity-0 group-hover:opacity-100 pointer-events-none rounded-xl" />
+              <div 
+                className={`p-8 h-full relative overflow-hidden rounded-xl backdrop-blur-xl border transition-all ${
+                  themeMode === 'dark' 
+                    ? 'bg-white/5 border-white/10' 
+                    : 'bg-white shadow-md border-gray-200'
+                }`}
+              >
                 
                 {/* Gradient border glow on hover */}
                 <div className={`absolute -inset-[1px] rounded-xl bg-gradient-to-r ${testimonial.color || 'from-primary to-accent'} opacity-0 group-hover:opacity-40 blur-[2px] transition-opacity duration-500`} style={{ zIndex: -1 }} />
@@ -164,7 +170,10 @@ export const StorefrontTestimonialsSection = ({ customization = {} }: Storefront
                 </div>
 
                 {/* Testimonial text */}
-                <p className="text-muted-foreground mb-6 leading-relaxed relative z-10">
+                <p 
+                  className="mb-6 leading-relaxed relative z-10"
+                  style={{ color: customization?.textMuted || (themeMode === 'dark' ? '#A1A1AA' : '#4B5563') }}
+                >
                   "{testimonial.text}"
                 </p>
 
@@ -179,8 +188,18 @@ export const StorefrontTestimonialsSection = ({ customization = {} }: Storefront
                     <span className="relative z-10">{testimonial.avatar || testimonial.name[0].toUpperCase()}</span>
                   </motion.div>
                   <div>
-                    <div className="font-semibold text-foreground">@{testimonial.name}</div>
-                    <div className="text-sm text-muted-foreground">Verified Customer</div>
+                    <div 
+                      className="font-semibold"
+                      style={{ color: customization?.textColor || (themeMode === 'dark' ? '#FFFFFF' : '#1F2937') }}
+                    >
+                      @{testimonial.name}
+                    </div>
+                    <div 
+                      className="text-sm"
+                      style={{ color: customization?.textMuted || (themeMode === 'dark' ? '#A1A1AA' : '#4B5563') }}
+                    >
+                      Verified Customer
+                    </div>
                   </div>
                 </div>
 
