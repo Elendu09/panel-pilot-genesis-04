@@ -179,89 +179,15 @@ export const FastOrderSection = ({ services, panelId, panelName, customization }
       return;
     }
 
-    if (!selectedService) {
-      toast({ title: "Please select a service", variant: "destructive" });
-      return;
-    }
-
-    if (!targetUrl) {
-      toast({ title: "Please enter a target URL", variant: "destructive" });
-      return;
-    }
-
-    if ((buyer.balance || 0) < totalPrice) {
-      toast({
-        title: "Insufficient Balance",
-        description: `You need $${totalPrice.toFixed(2)} but only have $${(buyer.balance || 0).toFixed(2)}`,
-        variant: "destructive"
-      });
-      navigate('/deposit');
-      return;
-    }
-
-    setIsOrdering(true);
-    try {
-      // Upload attachment if present
-      let attachmentUrl = null;
-      if (orderAttachment) {
-        const fileName = `${panelId}/orders/${Date.now()}-${orderAttachment.name}`;
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('panel-assets')
-          .upload(fileName, orderAttachment);
-        
-        if (uploadData && !uploadError) {
-          attachmentUrl = supabase.storage.from('panel-assets').getPublicUrl(fileName).data.publicUrl;
-        }
-      }
-
-      const orderNumber = `ORD${Date.now()}`;
-
-      const { error: orderError } = await supabase
-        .from('orders')
-        .insert({
-          order_number: orderNumber,
-          panel_id: panelId,
-          buyer_id: buyer.id,
-          service_id: selectedService.id,
-          target_url: targetUrl,
-          quantity,
-          price: totalPrice,
-          status: 'pending',
-          progress: 0,
-          notes: attachmentUrl ? `Attachment: ${attachmentUrl}` : null,
-        });
-
-      if (orderError) throw orderError;
-
-      const newBalance = (buyer.balance || 0) - totalPrice;
-      await supabase
-        .from('client_users')
-        .update({
-          balance: newBalance,
-          total_spent: (buyer.total_spent || 0) + totalPrice,
-        })
-        .eq('id', buyer.id);
-
-      await refreshBuyer();
-
-      toast({
-        title: "Order Placed!",
-        description: `Your order for ${quantity.toLocaleString()} ${selectedService.name} has been placed.`,
-      });
-
-      setSelectedServiceId('');
-      setTargetUrl('');
-      setQuantity(1000);
-      setOrderAttachment(null);
-    } catch (error) {
-      console.error('Error placing order:', error);
-      toast({
-        title: "Order Failed",
-        description: "Failed to place order. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsOrdering(false);
+    // Authenticated user - redirect to services/order page with pre-filled data
+    if (selectedService) {
+      const params = new URLSearchParams();
+      params.set('service', selectedServiceId);
+      if (quantity) params.set('quantity', quantity.toString());
+      if (targetUrl) params.set('url', encodeURIComponent(targetUrl));
+      navigate(`/services?${params.toString()}`);
+    } else {
+      navigate('/services');
     }
   };
 
