@@ -42,8 +42,8 @@ interface Order {
 }
 
 const BuyerDashboard = () => {
-  const { panel } = useTenant();
-  const { buyer } = useBuyerAuth();
+  const { panel, loading: panelLoading } = useTenant();
+  const { buyer, loading: authLoading } = useBuyerAuth();
   const { services, loading: servicesLoading } = useTenantServices(panel?.id);
   const [stats, setStats] = useState({
     totalOrders: 0,
@@ -58,8 +58,10 @@ const BuyerDashboard = () => {
   useEffect(() => {
     if (buyer?.id && panel?.id) {
       fetchBuyerData();
+    } else if (!authLoading && !panelLoading) {
+      setLoading(false);
     }
-  }, [buyer?.id, panel?.id]);
+  }, [buyer?.id, panel?.id, authLoading, panelLoading]);
 
   const fetchBuyerData = async () => {
     if (!buyer?.id) return;
@@ -182,6 +184,35 @@ const BuyerDashboard = () => {
     { name: 'Add Funds', icon: CreditCard, href: '/deposit', gradient: 'from-emerald-500 to-emerald-600' },
     { name: 'Support', icon: Zap, href: '/support', gradient: 'from-amber-500 to-amber-600' },
   ];
+
+  // Show loading state while auth/panel is being determined
+  if (panelLoading || authLoading) {
+    return (
+      <BuyerLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </BuyerLayout>
+    );
+  }
+
+  // Show login prompt if no buyer after loading
+  if (!buyer) {
+    return (
+      <BuyerLayout>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+          <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+            <Wallet className="w-8 h-8 text-muted-foreground" />
+          </div>
+          <h2 className="text-xl font-bold mb-2">Please Sign In</h2>
+          <p className="text-muted-foreground mb-6">You need to be logged in to view your dashboard</p>
+          <Button asChild>
+            <Link to="/auth">Sign In</Link>
+          </Button>
+        </div>
+      </BuyerLayout>
+    );
+  }
 
   return (
     <BuyerLayout>

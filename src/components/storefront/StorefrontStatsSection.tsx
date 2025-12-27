@@ -150,9 +150,21 @@ export const StorefrontStatsSection = ({ panel, customization = {} }: Storefront
           viewport={{ once: true, margin: "-50px" }}
         >
           {customStats.map((stat, index) => {
-            const Icon = typeof stat.icon === 'string' 
-              ? { Users, ShoppingBag, Zap, Globe }[stat.icon] || Users
-              : stat.icon;
+            // Robust icon lookup with fallback
+            const getIconComponent = (icon: any) => {
+              if (typeof icon === 'function') return icon;
+              if (typeof icon === 'string') {
+                const iconMap: Record<string, any> = {
+                  'users': Users, 'Users': Users,
+                  'shoppingbag': ShoppingBag, 'ShoppingBag': ShoppingBag,
+                  'zap': Zap, 'Zap': Zap,
+                  'globe': Globe, 'Globe': Globe,
+                };
+                return iconMap[icon] || iconMap[icon.toLowerCase()] || Users;
+              }
+              return Users;
+            };
+            const Icon = getIconComponent(stat.icon);
             
             const { num, suffix } = parseStatValue(stat.value);
             
