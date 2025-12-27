@@ -18,6 +18,11 @@ interface BuyerUser {
   ban_reason: string | null;
   panel_id: string;
   created_at: string;
+  is_vip: boolean;
+  vip_since: string | null;
+  preferred_language: string | null;
+  timezone: string | null;
+  low_balance_threshold: number | null;
 }
 
 interface BuyerAuthContextType {
