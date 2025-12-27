@@ -55,31 +55,31 @@ export const StorefrontPlatformSection = ({ customization = {} }: StorefrontPlat
 
   return (
     <section 
-      className={`py-24 border-t ${themeMode === 'dark' ? 'border-white/10' : 'border-gray-200'}`}
+      className={`py-12 sm:py-16 md:py-24 border-t ${themeMode === 'dark' ? 'border-white/10' : 'border-gray-200'}`}
       style={{ backgroundColor: themeMode === 'dark' ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' }}
     >
       <div className="container mx-auto px-4">
-        <div className="grid lg:grid-cols-2 gap-16 items-start">
+        <div className="grid lg:grid-cols-2 gap-8 md:gap-12 lg:gap-16 items-start">
           {/* Left Content */}
           <motion.div 
-            className="space-y-8"
+            className="space-y-6 sm:space-y-8 text-center lg:text-left"
             initial={{ opacity: 0, x: -30 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
           >
             <div>
-              <h2 className="text-4xl md:text-5xl font-bold mb-6 leading-tight">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-4 sm:mb-6 leading-tight">
                 Why Choose
                 <br />
                 <span className="bg-gradient-primary bg-clip-text text-transparent">
                   Our Services?
                 </span>
               </h2>
-              <p className="text-lg text-muted-foreground leading-relaxed mb-8">
+              <p className="text-base sm:text-lg text-muted-foreground leading-relaxed mb-6 sm:mb-8">
                 We've helped thousands of customers grow their social media presence with our reliable, fast, and affordable SMM services. Join our community of satisfied customers today.
               </p>
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.98 }}>
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.98 }} className="inline-block">
                 <Button 
                   variant="outline" 
                   className="border-primary/30 hover:bg-primary/10"
@@ -95,7 +95,7 @@ export const StorefrontPlatformSection = ({ customization = {} }: StorefrontPlat
 
           {/* Right Grid */}
           <motion.div 
-            className="grid grid-cols-1 sm:grid-cols-2 gap-6"
+            className="grid grid-cols-2 gap-3 sm:gap-4 md:gap-6"
             variants={containerVariants}
             initial="hidden"
             whileInView="visible"
@@ -111,20 +111,20 @@ export const StorefrontPlatformSection = ({ customization = {} }: StorefrontPlat
                   key={index}
                   variants={itemVariants}
                   whileHover={{ y: -5, scale: 1.02 }}
-                  className={`p-8 rounded-2xl bg-gradient-to-br ${feature.gradient} transition-all duration-300 hover:shadow-lg group ${
+                  className={`p-4 sm:p-6 md:p-8 rounded-xl sm:rounded-2xl bg-gradient-to-br ${feature.gradient} transition-all duration-300 hover:shadow-lg group ${
                     themeMode === 'dark' 
                       ? 'border border-white/10 hover:border-primary/30' 
                       : 'border border-gray-200 hover:border-primary/40 shadow-sm'
                   }`}
                 >
-                  <div className="mb-6">
-                    <div className="w-12 h-12 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
-                      <Icon className="w-6 h-6 text-primary" />
+                  <div className="mb-3 sm:mb-4 md:mb-6">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center mb-3 sm:mb-4 group-hover:bg-primary/20 transition-colors">
+                      <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
                     </div>
-                    <h3 className="text-xl font-semibold mb-3">
+                    <h3 className="text-base sm:text-lg md:text-xl font-semibold mb-2 sm:mb-3">
                       {feature.title}
                     </h3>
-                    <p className="text-muted-foreground text-sm leading-relaxed">
+                    <p className="text-muted-foreground text-xs sm:text-sm leading-relaxed line-clamp-3 sm:line-clamp-none">
                       {feature.description}
                     </p>
                   </div>
