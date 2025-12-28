@@ -272,14 +272,14 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
                       background: `linear-gradient(135deg, ${customization.primaryColor || '#8B5CF6'}, ${customization.secondaryColor || '#EC4899'})`,
                       boxShadow: `0 10px 30px ${customization.primaryColor || '#8B5CF6'}40`
                     }}
-                    onClick={() => {
-                      // Navigate to services page with fast order params
-                      const firstService = services?.[0];
-                      const params = new URLSearchParams();
-                      if (firstService?.id) params.set('service', firstService.id);
-                      params.set('quantity', '1000');
-                      params.set('fastOrder', 'true');
-                      navigate(`/services${params.toString() ? `?${params.toString()}` : ''}`);
+                    onClick={(e) => {
+                      e.preventDefault();
+                      const section = document.getElementById('fast-order');
+                      if (section) {
+                        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      } else {
+                        navigate('/services');
+                      }
                     }}
                   >
                     <Zap className="mr-2 w-4 h-4 sm:w-5 sm:h-5" /> Fast Order

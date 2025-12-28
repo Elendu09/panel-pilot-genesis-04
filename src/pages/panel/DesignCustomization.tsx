@@ -17,6 +17,7 @@ import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { MobileDesignEditor } from '@/components/design/MobileDesignEditor';
+import { ThemeOne } from '@/components/themes/ThemeOne';
 
 interface FAQ {
   question: string;
@@ -502,8 +503,18 @@ export default function DesignCustomization() {
       expiresAt: Date.now() + 30 * 60 * 1000,
     };
 
-    localStorage.setItem(`preview_${previewId}`, JSON.stringify(previewData));
-    window.open(`/preview/${previewId}`, '_blank');
+    try {
+      localStorage.setItem(`preview_${previewId}`, JSON.stringify(previewData));
+      window.open(`/preview/${previewId}`, '_blank');
+    } catch (error) {
+      console.error('Failed to create preview:', error);
+      toast({
+        title: 'Preview unavailable',
+        description: 'Your browser blocked local preview storage. Try another browser or disable private mode.',
+        variant: 'destructive',
+      });
+    }
+  };
   };
 
   const updateNestedArray = (key: string, index: number, field: string, value: any) => {
@@ -875,9 +886,7 @@ export default function DesignCustomization() {
               <TooltipContent>Redo (Ctrl+Shift+Z)</TooltipContent>
             </Tooltip>
 
-            <div className="w-px h-6 bg-border mx-1" />
-            
-            <Button variant="outline" size="sm" onClick={() => window.open('/storefront-preview', '_blank')}>
+            <Button variant="outline" size="sm" onClick={createPreview}>
               <ExternalLink className="w-4 h-4 mr-2" />Preview
             </Button>
             <Tooltip>
@@ -1976,7 +1985,7 @@ export default function DesignCustomization() {
                   ))}
                 </div>
                 
-                <Button variant="outline" size="sm" onClick={() => window.open('/storefront-preview', '_blank')} className="gap-1.5 sm:gap-2 h-7 sm:h-8 text-xs sm:text-sm">
+                <Button variant="outline" size="sm" onClick={createPreview} className="gap-1.5 sm:gap-2 h-7 sm:h-8 text-xs sm:text-sm">
                   <ExternalLink className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   <span className="hidden sm:inline">Open</span>
                 </Button>
@@ -1987,29 +1996,17 @@ export default function DesignCustomization() {
             <div className="flex-1 overflow-hidden p-2 sm:p-4 flex items-start justify-center bg-gradient-to-b from-[#0a0a12] to-[#0f0f1a]">
               <div 
                 className={cn(
-                  "transition-all duration-500 ease-out origin-top rounded-lg sm:rounded-xl overflow-hidden shadow-2xl ring-1 ring-white/10",
-                  previewDevice === 'mobile' && "w-full max-w-[375px]",
-                  previewDevice === 'tablet' && "w-full max-w-[768px]",
-                  previewDevice === 'desktop' && "w-full"
+                  "transition-all duration-500 ease-out origin-top rounded-lg sm:rounded-xl overflow-hidden shadow-2xl ring-1 ring-white/10 w-full",
+                  previewDevice === 'mobile' && "max-w-[400px]",
+                  previewDevice === 'tablet' && "max-w-[900px]",
+                  previewDevice === 'desktop' && "max-w-[1200px]"
                 )}
-                style={{ 
-                  height: previewDevice === 'mobile' ? 'min(667px, calc(100vh - 200px))' : 
-                          previewDevice === 'tablet' ? 'calc(100vh - 180px)' : 
-                          'calc(100vh - 180px)',
-                  maxHeight: 'calc(100vh - 160px)'
-                }}
               >
                 <div 
-                  className="w-full h-full overflow-auto scrollbar-thin scrollbar-thumb-primary/20"
+                  className="w-full h-full overflow-auto scrollbar-thin scrollbar-thumb-primary/20 bg-background"
                   style={{
-                    // Responsive scaling based on device
-                    transform: previewDevice === 'desktop' ? 'scale(0.6)' : 
-                               previewDevice === 'tablet' ? 'scale(0.75)' : 'scale(1)',
-                    transformOrigin: 'top center',
-                    width: previewDevice === 'desktop' ? '166.67%' : 
-                           previewDevice === 'tablet' ? '133.33%' : '100%',
-                    height: previewDevice === 'desktop' ? '166.67%' : 
-                            previewDevice === 'tablet' ? '133.33%' : '100%',
+                    height: 'calc(100vh - 180px)',
+                    maxHeight: 'calc(100vh - 160px)'
                   }}
                 >
                   <LivePreviewRenderer customization={customization} />
@@ -2024,8 +2021,6 @@ export default function DesignCustomization() {
 }
 
 // Live Preview Renderer using ThemeOne
-import { ThemeOne } from "@/components/themes/ThemeOne";
-
 function LivePreviewRenderer({ customization }: { customization: any }) {
   const mockPanel = {
     name: customization.companyName || 'Your Panel',
@@ -2042,3 +2037,4 @@ function LivePreviewRenderer({ customization }: { customization: any }) {
     />
   );
 }
+
