@@ -111,6 +111,46 @@ export const ThemeOne = ({ panel, services = [], customization = {} }: ThemeOneP
     },
   };
 
+  const layout = (customization?.homepageLayout && customization.homepageLayout.length
+    ? customization.homepageLayout
+    : ['hero', 'platform', 'stats', 'features', 'testimonials', 'faqs']);
+
+  const renderSection = (sectionId: string) => {
+    switch (sectionId) {
+      case 'hero':
+        return (
+          <StorefrontHeroSection 
+            key="hero"
+            panel={panel} 
+            services={services} 
+            customization={mergedCustomization} 
+          />
+        );
+      case 'platform':
+        return customization.enablePlatformFeatures !== false ? (
+          <StorefrontPlatformSection key="platform" customization={mergedCustomization} />
+        ) : null;
+      case 'stats':
+        return customization.enableStats !== false ? (
+          <StorefrontStatsSection key="stats" panel={panel} customization={mergedCustomization} />
+        ) : null;
+      case 'features':
+        return customization.enableFeatures !== false ? (
+          <StorefrontFeaturesSection key="features" customization={mergedCustomization} />
+        ) : null;
+      case 'testimonials':
+        return customization.enableTestimonials !== false ? (
+          <StorefrontTestimonialsSection key="testimonials" customization={mergedCustomization} />
+        ) : null;
+      case 'faqs':
+        return customization.enableFAQs !== false ? (
+          <StorefrontFAQSection key="faqs" customization={mergedCustomization} />
+        ) : null;
+      default:
+        return null;
+    }
+  };
+
   return (
     <motion.div 
       className="min-h-screen relative overflow-hidden"
@@ -182,37 +222,7 @@ export const ThemeOne = ({ panel, services = [], customization = {} }: ThemeOneP
 
       {/* Main Content */}
       <main className="relative z-10">
-        {/* Hero Section */}
-        <StorefrontHeroSection 
-          panel={panel} 
-          services={services} 
-          customization={mergedCustomization} 
-        />
-
-        {/* Platform Features Section */}
-        {customization.enablePlatformFeatures !== false && (
-          <StorefrontPlatformSection customization={mergedCustomization} />
-        )}
-
-        {/* Stats Section */}
-        {customization.enableStats !== false && (
-          <StorefrontStatsSection panel={panel} customization={mergedCustomization} />
-        )}
-
-        {/* Features Section */}
-        {customization.enableFeatures !== false && (
-          <StorefrontFeaturesSection customization={mergedCustomization} />
-        )}
-
-        {/* Testimonials Section */}
-        {customization.enableTestimonials !== false && (
-          <StorefrontTestimonialsSection customization={mergedCustomization} />
-        )}
-
-        {/* FAQ Section */}
-        {customization.enableFAQs !== false && (
-          <StorefrontFAQSection customization={mergedCustomization} />
-        )}
+        {layout.map((sectionId) => renderSection(sectionId))}
       </main>
 
       {/* Footer */}
