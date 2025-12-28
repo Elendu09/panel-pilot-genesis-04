@@ -205,7 +205,6 @@ const BuyerDeposit = () => {
         animate="visible"
         className="space-y-4 md:space-y-6 max-w-4xl mx-auto"
       >
-      >
         {/* Header */}
         <motion.div variants={itemVariants}>
           <h1 className="text-xl md:text-2xl lg:text-3xl font-bold">Add Funds</h1>
