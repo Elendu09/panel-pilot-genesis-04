@@ -117,10 +117,10 @@ export const FastOrderSection = ({ services, panelId, panelName, customization }
         setTempPassword(data.tempPassword);
         setAccountCreated(true);
         
-        // Store buyer session
-        localStorage.setItem(`buyer_session_${panelId}`, JSON.stringify({
-          id: data.user.id,
-          email: data.user.email,
+        // Store buyer session - use consistent key format
+        localStorage.setItem('buyer_session', JSON.stringify({
+          buyerId: data.user.id,
+          panelId,
         }));
         
         // Refresh buyer context
