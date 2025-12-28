@@ -290,9 +290,9 @@ const themes = [
 // Design Presets - One-click beautiful designs
 const designPresets = [
   {
-    id: 'default',
-    name: 'Default',
-    description: 'Original Socpanel AI layout & colors',
+    id: 'my_default_theme',
+    name: 'My Default Theme',
+    description: 'Your primary default layout & colors',
     preview: [defaultCustomization.backgroundColor, defaultCustomization.primaryColor, defaultCustomization.secondaryColor],
     customization: {
       backgroundColor: defaultCustomization.backgroundColor,
@@ -300,7 +300,83 @@ const designPresets = [
       secondaryColor: defaultCustomization.secondaryColor,
       textColor: defaultCustomization.textColor,
       surfaceColor: defaultCustomization.surfaceColor,
-      selectedTheme: 'theme_one',
+      selectedTheme: 'dark_gradient',
+      heroVariant: 'ali_panel',
+      faqVariant: 'glass_cards',
+      navVariant: 'floating_glass',
+      footerVariant: 'classic_columns',
+    }
+  },
+  {
+    id: 'dark_gradient_preset',
+    name: 'Dark Gradient',
+    description: 'Deep purple gradients with vibrant accents',
+    preview: ['#0F172A', '#6366F1', '#8B5CF6'],
+    customization: {
+      backgroundColor: '#0F172A',
+      primaryColor: '#6366F1',
+      secondaryColor: '#8B5CF6',
+      textColor: '#FFFFFF',
+      surfaceColor: '#1E293B',
+      selectedTheme: 'dark_gradient',
+      heroVariant: 'ali_panel',
+      faqVariant: 'glass_cards',
+      navVariant: 'floating_glass',
+      footerVariant: 'classic_columns',
+    }
+  },
+  {
+    id: 'ocean_blue_preset',
+    name: 'Ocean Blue',
+    description: 'Cool blues with cyan highlights',
+    preview: ['#0C4A6E', '#0EA5E9', '#38BDF8'],
+    customization: {
+      backgroundColor: '#0C4A6E',
+      primaryColor: '#0EA5E9',
+      secondaryColor: '#38BDF8',
+      textColor: '#FFFFFF',
+      surfaceColor: '#0e5a82',
+      selectedTheme: 'ocean_blue',
+      heroVariant: 'professional_quick_order',
+      faqVariant: 'simple_accordion',
+      navVariant: 'solid',
+      footerVariant: 'compact_columns',
+    }
+  },
+  {
+    id: 'sunset_orange_preset',
+    name: 'Sunset Orange',
+    description: 'Warm and vibrant orange tones',
+    preview: ['#1A1310', '#F97316', '#EAB308'],
+    customization: {
+      backgroundColor: '#1A1310',
+      primaryColor: '#F97316',
+      secondaryColor: '#EAB308',
+      textColor: '#FFFFFF',
+      surfaceColor: '#2A1F1A',
+      selectedTheme: 'vibrant',
+      heroVariant: 'promo_cards',
+      faqVariant: 'cards',
+      navVariant: 'floating_solid',
+      footerVariant: 'promo_columns',
+    }
+  },
+  {
+    id: 'forest_earth_preset',
+    name: 'Forest Earth',
+    description: 'Natural green with earthy accents',
+    preview: ['#0D1912', '#22C55E', '#84CC16'],
+    customization: {
+      backgroundColor: '#0D1912',
+      primaryColor: '#22C55E',
+      secondaryColor: '#84CC16',
+      textColor: '#FFFFFF',
+      surfaceColor: '#162419',
+      selectedTheme: 'forest_green',
+      heroVariant: 'forest_split',
+      faqVariant: 'bordered_cards',
+      navVariant: 'solid_transparent',
+      footerVariant: 'earthy_columns',
     }
   },
   {
@@ -664,6 +740,54 @@ export default function DesignCustomization() {
   const applyTheme = (themeId: string) => {
     const theme = themes.find(t => t.id === themeId);
     if (theme) { 
+      let variants: any = {};
+      switch (themeId) {
+        case 'dark_gradient':
+        case 'midnight':
+          variants = {
+            heroVariant: 'ali_panel',
+            faqVariant: 'glass_cards',
+            navVariant: 'floating_glass',
+            footerVariant: 'classic_columns',
+          };
+          break;
+        case 'ocean_blue':
+        case 'ocean_breeze':
+          variants = {
+            heroVariant: 'professional_quick_order',
+            faqVariant: 'simple_accordion',
+            navVariant: 'solid',
+            footerVariant: 'compact_columns',
+          };
+          break;
+        case 'forest_green':
+          variants = {
+            heroVariant: 'forest_split',
+            faqVariant: 'bordered_cards',
+            navVariant: 'solid_transparent',
+            footerVariant: 'earthy_columns',
+          };
+          break;
+        case 'professional':
+          variants = {
+            heroVariant: 'professional_quick_order',
+            faqVariant: 'simple_accordion',
+            navVariant: 'solid',
+            footerVariant: 'compact_columns',
+          };
+          break;
+        case 'vibrant':
+          variants = {
+            heroVariant: 'promo_cards',
+            faqVariant: 'cards',
+            navVariant: 'floating_solid',
+            footerVariant: 'promo_columns',
+          };
+          break;
+        default:
+          break;
+      }
+
       setCustomization(prev => ({ 
         ...prev, 
         selectedTheme: themeId, 
@@ -671,6 +795,7 @@ export default function DesignCustomization() {
         primaryColor: theme.colors[1], 
         secondaryColor: theme.colors[2],
         ...(theme as any).sections,
+        ...variants,
       })); 
       setHasUnsavedChanges(true); 
     }
@@ -1187,7 +1312,12 @@ export default function DesignCustomization() {
                         variant="outline" 
                         className="w-full" 
                         onClick={() => {
-                          resetHistory(defaultCustomization);
+                          const defaultPreset = designPresets.find(p => p.id === 'my_default_theme') || designPresets[0];
+                          const merged = {
+                            ...defaultCustomization,
+                            ...(defaultPreset?.customization || {}),
+                          };
+                          resetHistory(merged);
                           setHasUnsavedChanges(true);
                           toast({ title: 'Reset to defaults' });
                         }}

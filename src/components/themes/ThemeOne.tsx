@@ -85,8 +85,13 @@ export const ThemeOne = ({ panel, services = [], customization = {} }: ThemeOneP
     glowColor: palette.glow,
     themeMode,
     setThemeMode,
-  };
+  } as any;
 
+  // Ensure layout variants are always available
+  mergedCustomization.heroVariant = mergedCustomization.heroVariant || customization.heroVariant || 'ali_panel';
+  mergedCustomization.faqVariant = mergedCustomization.faqVariant || customization.faqVariant || 'glass_cards';
+  mergedCustomization.navVariant = mergedCustomization.navVariant || customization.navVariant || 'floating_glass';
+  mergedCustomization.footerVariant = mergedCustomization.footerVariant || customization.footerVariant || 'classic_columns';
   // Inject CSS variables for the theme
   const themeStyles = `
     :root {
