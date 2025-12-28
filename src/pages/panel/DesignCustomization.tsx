@@ -122,7 +122,8 @@ const defaultCustomization = {
   enableFeatures: true,
   enableTestimonials: true,
   enableFAQs: true,
-  
+  showBlogInMenu: false,
+
   // Platform Features
   platformFeatures: [
     { title: 'Lightning Fast', description: 'Orders start within seconds', icon: 'Zap', gradient: 'from-yellow-500 to-orange-500' },
@@ -186,6 +187,76 @@ const themes = [
 // Design Presets - One-click beautiful designs
 const designPresets = [
   {
+    id: 'default',
+    name: 'Default',
+    description: 'Original Socpanel AI layout & colors',
+    preview: [defaultCustomization.backgroundColor, defaultCustomization.primaryColor, defaultCustomization.secondaryColor],
+    customization: {
+      backgroundColor: defaultCustomization.backgroundColor,
+      primaryColor: defaultCustomization.primaryColor,
+      secondaryColor: defaultCustomization.secondaryColor,
+      textColor: defaultCustomization.textColor,
+      surfaceColor: defaultCustomization.surfaceColor,
+      selectedTheme: 'theme_one',
+    }
+  },
+  {
+    id: 'dark_gradient_preset',
+    name: 'Dark Gradient',
+    description: 'Deep purple gradients with vibrant accents',
+    preview: ['#0F172A', '#6366F1', '#8B5CF6'],
+    customization: {
+      backgroundColor: '#0F172A',
+      primaryColor: '#6366F1',
+      secondaryColor: '#8B5CF6',
+      textColor: '#FFFFFF',
+      surfaceColor: '#1E293B',
+      selectedTheme: 'theme_one',
+    }
+  },
+  {
+    id: 'ocean_blue_preset',
+    name: 'Ocean Blue',
+    description: 'Cool blues with cyan highlights',
+    preview: ['#0C4A6E', '#0EA5E9', '#38BDF8'],
+    customization: {
+      backgroundColor: '#0C4A6E',
+      primaryColor: '#0EA5E9',
+      secondaryColor: '#38BDF8',
+      textColor: '#FFFFFF',
+      surfaceColor: '#0e5a82',
+      selectedTheme: 'theme_two',
+    }
+  },
+  {
+    id: 'sunset_orange_preset',
+    name: 'Sunset Orange',
+    description: 'Warm and vibrant orange tones',
+    preview: ['#1A1310', '#F97316', '#EAB308'],
+    customization: {
+      backgroundColor: '#1A1310',
+      primaryColor: '#F97316',
+      secondaryColor: '#EAB308',
+      textColor: '#FFFFFF',
+      surfaceColor: '#2A1F1A',
+      selectedTheme: 'theme_three',
+    }
+  },
+  {
+    id: 'forest_earth_preset',
+    name: 'Forest Earth',
+    description: 'Natural green with earthy accents',
+    preview: ['#0D1912', '#22C55E', '#84CC16'],
+    customization: {
+      backgroundColor: '#0D1912',
+      primaryColor: '#22C55E',
+      secondaryColor: '#84CC16',
+      textColor: '#FFFFFF',
+      surfaceColor: '#162419',
+      selectedTheme: 'theme_four',
+    }
+  },
+  {
     id: 'midnight_aurora',
     name: 'Midnight Aurora',
     description: 'Deep purple gradients with vibrant accents',
@@ -196,7 +267,7 @@ const designPresets = [
       secondaryColor: '#EC4899',
       textColor: '#FFFFFF',
       surfaceColor: '#1a1a2e',
-      selectedTheme: 'midnight_aurora',
+      selectedTheme: 'theme_one',
     }
   },
   {
@@ -210,7 +281,7 @@ const designPresets = [
       secondaryColor: '#38BDF8',
       textColor: '#FFFFFF',
       surfaceColor: '#0e5a82',
-      selectedTheme: 'ocean_breeze',
+      selectedTheme: 'theme_two',
     }
   },
   {
@@ -224,7 +295,7 @@ const designPresets = [
       secondaryColor: '#EF4444',
       textColor: '#1F2937',
       surfaceColor: '#FFFFFF',
-      selectedTheme: 'sunset_glow',
+      selectedTheme: 'theme_three',
     }
   },
   {
@@ -238,7 +309,7 @@ const designPresets = [
       secondaryColor: '#4ADE80',
       textColor: '#FFFFFF',
       surfaceColor: '#166534',
-      selectedTheme: 'forest_premium',
+      selectedTheme: 'theme_four',
     }
   },
   {
@@ -252,7 +323,7 @@ const designPresets = [
       secondaryColor: '#A855F7',
       textColor: '#FFFFFF',
       surfaceColor: '#312e81',
-      selectedTheme: 'royal_purple',
+      selectedTheme: 'theme_one',
     }
   },
   {
@@ -266,7 +337,7 @@ const designPresets = [
       secondaryColor: '#1E40AF',
       textColor: '#1F2937',
       surfaceColor: '#F8FAFC',
-      selectedTheme: 'minimal_light',
+      selectedTheme: 'theme_two',
     }
   },
   {
@@ -280,7 +351,7 @@ const designPresets = [
       secondaryColor: '#EC4899',
       textColor: '#FFFFFF',
       surfaceColor: '#27272a',
-      selectedTheme: 'neon_dreams',
+      selectedTheme: 'theme_three',
     }
   },
   {
@@ -294,7 +365,49 @@ const designPresets = [
       secondaryColor: '#60A5FA',
       textColor: '#FFFFFF',
       surfaceColor: '#374151',
-      selectedTheme: 'professional_dark',
+      selectedTheme: 'theme_two',
+    }
+  },
+  {
+    id: 'smm_premium_blue',
+    name: 'SMM Premium Blue',
+    description: 'Inspired by modern SMM panels, deep blue with cyan accents',
+    preview: ['#020617', '#0EA5E9', '#22D3EE'],
+    customization: {
+      backgroundColor: '#020617',
+      primaryColor: '#0EA5E9',
+      secondaryColor: '#22D3EE',
+      textColor: '#E5E7EB',
+      surfaceColor: '#020617',
+      selectedTheme: 'theme_two',
+    }
+  },
+  {
+    id: 'smm_premium_dark',
+    name: 'SMM Premium Dark',
+    description: 'High contrast dark layout with glowing accents',
+    preview: ['#020617', '#7C3AED', '#22C55E'],
+    customization: {
+      backgroundColor: '#020617',
+      primaryColor: '#7C3AED',
+      secondaryColor: '#22C55E',
+      textColor: '#F9FAFB',
+      surfaceColor: '#020617',
+      selectedTheme: 'theme_one',
+    }
+  },
+  {
+    id: 'smm_clean_light',
+    name: 'SMM Clean Light',
+    description: 'Clean light layout with subtle gray sections',
+    preview: ['#F9FAFB', '#0F172A', '#6366F1'],
+    customization: {
+      backgroundColor: '#F9FAFB',
+      primaryColor: '#6366F1',
+      secondaryColor: '#0F172A',
+      textColor: '#0F172A',
+      surfaceColor: '#FFFFFF',
+      selectedTheme: 'theme_two',
     }
   },
 ];
@@ -364,6 +477,33 @@ export default function DesignCustomization() {
   const updateCustomization = (key: string, value: any) => { 
     setCustomization(prev => ({ ...prev, [key]: value })); 
     setHasUnsavedChanges(true); 
+  };
+
+  const createPreview = () => {
+    const previewId = crypto.randomUUID();
+    const previewData = {
+      primaryColor: customization.primaryColor,
+      secondaryColor: customization.secondaryColor,
+      accentColor: customization.accentColor,
+      backgroundColor: customization.backgroundColor,
+      surfaceColor: customization.surfaceColor,
+      textColor: customization.textColor,
+      mutedColor: '#6B7280',
+      borderRadius: String(customization.cardRadius ?? customization.borderRadius ?? 12),
+      logoUrl: customization.logoUrl,
+      companyName: customization.companyName || 'SMM Panel',
+      tagline: customization.tagline,
+      headerTitle: customization.companyName || 'SMM Panel',
+      footerText: customization.footerText || '',
+      showHero: true,
+      showFeatures: customization.enableFeatures !== false,
+      showStats: customization.enableStats !== false,
+      showTestimonials: customization.enableTestimonials !== false,
+      expiresAt: Date.now() + 30 * 60 * 1000,
+    };
+
+    localStorage.setItem(`preview_${previewId}`, JSON.stringify(previewData));
+    window.open(`/preview/${previewId}`, '_blank');
   };
 
   const updateNestedArray = (key: string, index: number, field: string, value: any) => {

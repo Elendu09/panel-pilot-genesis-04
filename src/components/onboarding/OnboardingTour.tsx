@@ -480,9 +480,9 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
   // Get the appropriate action text based on screen size
   const getActionText = useCallback(() => {
     if (!step) return "";
-    if (isMobile && step.mobileAction) return step.mobileAction;
+    if ((isMobile || isTablet) && step.mobileAction) return step.mobileAction;
     return step.action || "";
-  }, [step, isMobile]);
+  }, [step, isMobile, isTablet]);
 
   // Get the appropriate position based on screen size
   const getPosition = useCallback(() => {
