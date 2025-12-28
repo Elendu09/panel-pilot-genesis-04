@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, useCallback, memo } from "react";
 import { Button } from "@/components/ui/button";
 import { Menu, X, Zap, LogIn, Sun, Moon, LayoutDashboard, LogOut } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
@@ -10,7 +10,29 @@ interface StorefrontNavigationProps {
   customization?: any;
 }
 
-export const StorefrontNavigation = ({ panel, customization = {} }: StorefrontNavigationProps) => {
+// Memoized nav link component
+const NavLink = memo(({ link, index, textMuted, textColor, onClick }: { 
+  link: { href: string; label: string; isRoute: boolean }; 
+  index: number; 
+  textMuted: string; 
+  textColor: string;
+  onClick: (link: { href: string; isRoute: boolean }) => void;
+}) => (
+  <motion.button 
+    onClick={() => onClick(link)}
+    className="text-sm font-medium transition-colors bg-transparent border-none cursor-pointer"
+    style={{ color: textMuted }}
+    whileHover={{ color: textColor, y: -2 }}
+    initial={{ opacity: 0, y: -10 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ delay: index * 0.1 }}
+  >
+    {link.label}
+  </motion.button>
+));
+NavLink.displayName = 'NavLink';
+
+export const StorefrontNavigation = memo(({ panel, customization = {} }: StorefrontNavigationProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
   
@@ -22,58 +44,65 @@ export const StorefrontNavigation = ({ panel, customization = {} }: StorefrontNa
     buyer = auth.buyer;
     signOut = auth.signOut;
   } catch {
-    // Not within BuyerAuthProvider context, buyer is null
+    // Not within BuyerAuthProvider context
   }
   
-  const panelName = customization.companyName || panel?.name || 'SMM Panel';
-  const logoUrl = customization.logoUrl || panel?.logo_url;
-  const primaryColor = customization.primaryColor || '#6366F1';
-  const themeMode = customization.themeMode || 'dark';
-  const setThemeMode = customization.setThemeMode;
-  const textColor = customization.textColor || (themeMode === 'dark' ? '#FFFFFF' : '#1F2937');
-  const textMuted = customization.textMuted || (themeMode === 'dark' ? '#A1A1AA' : '#4B5563');
-  const surfaceColor = customization.surfaceColor || (themeMode === 'dark' ? '#12121F' : '#FFFFFF');
-  const borderColor = customization.borderColor || (themeMode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)');
+  // Memoize derived values
+  const styles = useMemo(() => {
+    const themeMode = customization.themeMode || 'dark';
+    return {
+      panelName: customization.companyName || panel?.name || 'SMM Panel',
+      logoUrl: customization.logoUrl || panel?.logo_url,
+      primaryColor: customization.primaryColor || '#6366F1',
+      themeMode,
+      textColor: customization.textColor || (themeMode === 'dark' ? '#FFFFFF' : '#1F2937'),
+      textMuted: customization.textMuted || (themeMode === 'dark' ? '#A1A1AA' : '#4B5563'),
+      surfaceColor: customization.surfaceColor || (themeMode === 'dark' ? '#12121F' : '#FFFFFF'),
+      borderColor: customization.borderColor || (themeMode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'),
+    };
+  }, [customization, panel]);
 
+  const { panelName, logoUrl, primaryColor, themeMode, textColor, textMuted, surfaceColor, borderColor } = styles;
+  const setThemeMode = customization.setThemeMode;
   const showBlogInMenu = customization.showBlogInMenu ?? false;
 
-  // Navigation links with proper routing
-  const baseNavLinks = [
-    { href: "/services", label: "Services", isRoute: true },
-    { href: "#features", label: "Features", isRoute: false },
-    { href: "#testimonials", label: "Reviews", isRoute: false },
-    { href: "#faq", label: "FAQ", isRoute: false },
-  ];
+  // Memoize navigation links
+  const navLinks = useMemo(() => {
+    const baseNavLinks = [
+      { href: "/services", label: "Services", isRoute: true },
+      { href: "#features", label: "Features", isRoute: false },
+      { href: "#testimonials", label: "Reviews", isRoute: false },
+      { href: "#faq", label: "FAQ", isRoute: false },
+    ];
+    return showBlogInMenu
+      ? [...baseNavLinks, { href: "/blog", label: "Blog", isRoute: true }]
+      : baseNavLinks;
+  }, [showBlogInMenu]);
 
-  const navLinks = showBlogInMenu
-    ? [...baseNavLinks, { href: "/blog", label: "Blog", isRoute: true }]
-    : baseNavLinks;
-
-  const toggleThemeMode = () => {
+  const toggleThemeMode = useCallback(() => {
     if (setThemeMode) {
       setThemeMode(themeMode === 'dark' ? 'light' : 'dark');
     }
-  };
+  }, [setThemeMode, themeMode]);
 
-  const handleNavClick = (link: { href: string; isRoute: boolean }) => {
+  const handleNavClick = useCallback((link: { href: string; isRoute: boolean }) => {
     if (link.isRoute) {
       navigate(link.href);
     } else {
-      // For anchor links, scroll to element
       const element = document.querySelector(link.href);
       if (element) {
         element.scrollIntoView({ behavior: 'smooth' });
       }
     }
     setIsOpen(false);
-  };
+  }, [navigate]);
 
-  const handleSignOut = () => {
+  const handleSignOut = useCallback(() => {
     if (signOut) {
       signOut();
       navigate('/');
     }
-  };
+  }, [signOut, navigate]);
 
   return (
     <motion.nav 
@@ -120,22 +149,15 @@ export const StorefrontNavigation = ({ panel, customization = {} }: StorefrontNa
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
-            {navLinks.map((link, index) => (
-              <motion.button 
+          {navLinks.map((link, index) => (
+              <NavLink 
                 key={link.href}
-                onClick={() => handleNavClick(link)}
-                className="text-sm font-medium transition-colors bg-transparent border-none cursor-pointer"
-                style={{ color: textMuted }}
-                whileHover={{ 
-                  color: textColor,
-                  y: -2 
-                }}
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-              >
-                {link.label}
-              </motion.button>
+                link={link}
+                index={index}
+                textMuted={textMuted}
+                textColor={textColor}
+                onClick={handleNavClick}
+              />
             ))}
           </div>
 
@@ -358,4 +380,5 @@ export const StorefrontNavigation = ({ panel, customization = {} }: StorefrontNa
       </div>
     </motion.nav>
   );
-};
+});
+StorefrontNavigation.displayName = 'StorefrontNavigation';
