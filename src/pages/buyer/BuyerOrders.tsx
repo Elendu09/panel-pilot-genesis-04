@@ -22,6 +22,8 @@ import {
   Eye,
   Copy,
   Filter,
+  AlertTriangle,
+  LogIn,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -44,12 +46,13 @@ interface Order {
 }
 
 const BuyerOrders = () => {
-  const { panel } = useTenant();
-  const { buyer } = useBuyerAuth();
+  const { panel, loading: panelLoading } = useTenant();
+  const { buyer, loading: authLoading } = useBuyerAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
   useEffect(() => {
@@ -62,6 +65,7 @@ const BuyerOrders = () => {
     if (!buyer?.id) return;
 
     setLoading(true);
+    setError(null);
     try {
       const { data, error } = await supabase
         .from('orders')
@@ -87,8 +91,9 @@ const BuyerOrders = () => {
       }));
 
       setOrders(formattedOrders);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching orders:', error);
+      setError('Failed to load your orders. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -129,6 +134,51 @@ const BuyerOrders = () => {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0 }
   };
+
+  // Loading state
+  if (panelLoading || authLoading) {
+    return (
+      <BuyerLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </BuyerLayout>
+    );
+  }
+
+  // Not authenticated
+  if (!buyer) {
+    return (
+      <BuyerLayout>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+            <LogIn className="w-8 h-8 text-primary" />
+          </div>
+          <h2 className="text-xl font-bold mb-2">Login Required</h2>
+          <p className="text-muted-foreground mb-4 text-sm">Please sign in to view your orders.</p>
+          <Button asChild>
+            <a href="/auth">Sign In</a>
+          </Button>
+        </div>
+      </BuyerLayout>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <BuyerLayout>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+          <div className="w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-500/10 flex items-center justify-center mb-4">
+            <AlertTriangle className="w-8 h-8 text-amber-500" />
+          </div>
+          <h2 className="text-xl font-bold mb-2">Something went wrong</h2>
+          <p className="text-muted-foreground mb-4 text-sm">{error}</p>
+          <Button onClick={fetchOrders}>Try Again</Button>
+        </div>
+      </BuyerLayout>
+    );
+  }
 
   return (
     <BuyerLayout>

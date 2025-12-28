@@ -11,7 +11,9 @@ import {
   Search,
   Filter,
   Inbox,
-  Loader2
+  Loader2,
+  AlertTriangle,
+  LogIn
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -74,10 +76,11 @@ const priorityConfig: Record<string, string> = {
 };
 
 const BuyerSupport = () => {
-  const { buyer } = useBuyerAuth();
-  const { panel } = useTenant();
+  const { buyer, loading: authLoading } = useBuyerAuth();
+  const { panel, loading: panelLoading } = useTenant();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [isNewTicketOpen, setIsNewTicketOpen] = useState(false);
   const [isTicketViewOpen, setIsTicketViewOpen] = useState(false);
@@ -101,6 +104,7 @@ const BuyerSupport = () => {
     if (!buyer?.id || !panel?.id) return;
     
     setLoading(true);
+    setError(null);
     try {
       const { data, error } = await supabase
         .from('support_tickets')
@@ -116,8 +120,9 @@ const BuyerSupport = () => {
         messages: Array.isArray(ticket.messages) ? ticket.messages : []
       })) as Ticket[];
       setTickets(transformedTickets);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching tickets:', error);
+      setError('Failed to load your support tickets. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -222,8 +227,52 @@ const BuyerSupport = () => {
     { id: 'closed', title: 'Closed', tickets: filteredTickets.filter(t => t.status === 'closed') },
   ];
 
+  // Loading state
+  if (panelLoading || authLoading) {
+    return (
+      <BuyerLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </BuyerLayout>
+    );
+  }
+
+  // Not authenticated
+  if (!buyer) {
+    return (
+      <BuyerLayout>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+            <LogIn className="w-8 h-8 text-primary" />
+          </div>
+          <h2 className="text-xl font-bold mb-2">Login Required</h2>
+          <p className="text-muted-foreground mb-4 text-sm">Please sign in to access support.</p>
+          <Button asChild>
+            <a href="/auth">Sign In</a>
+          </Button>
+        </div>
+      </BuyerLayout>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <BuyerLayout>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+          <div className="w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-500/10 flex items-center justify-center mb-4">
+            <AlertTriangle className="w-8 h-8 text-amber-500" />
+          </div>
+          <h2 className="text-xl font-bold mb-2">Something went wrong</h2>
+          <p className="text-muted-foreground mb-4 text-sm">{error}</p>
+          <Button onClick={fetchTickets}>Try Again</Button>
+        </div>
+      </BuyerLayout>
+    );
+  }
+
   return (
-    <BuyerLayout>
       <div className="space-y-6">
         {/* Header */}
         <motion.div
