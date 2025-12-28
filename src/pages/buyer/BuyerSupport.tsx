@@ -273,6 +273,7 @@ const BuyerSupport = () => {
   }
 
   return (
+    <BuyerLayout>
       <div className="space-y-6">
         {/* Header */}
         <motion.div
