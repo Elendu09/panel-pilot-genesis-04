@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, memo } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { Json } from '@/integrations/supabase/types';
 import { useToast } from '@/hooks/use-toast';
@@ -18,6 +19,40 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { MobileDesignEditor } from '@/components/design/MobileDesignEditor';
 import { ThemeOne } from '@/components/themes/ThemeOne';
+
+// Memoized preset button for performance
+const PresetButton = memo(({ preset, onApply }: { preset: any; onApply: (p: any) => void }) => (
+  <button 
+    onClick={() => onApply(preset)} 
+    className="p-3 rounded-xl border-2 border-border hover:border-primary/50 transition-all text-left group"
+  >
+    <div className="flex gap-1 mb-2">
+      {preset.preview.map((c: string, i: number) => (
+        <div key={i} className="w-5 h-5 rounded-full" style={{ backgroundColor: c }} />
+      ))}
+    </div>
+    <p className="text-sm font-medium">{preset.name}</p>
+    <p className="text-xs text-muted-foreground">{preset.description}</p>
+  </button>
+));
+PresetButton.displayName = 'PresetButton';
+
+// Memoized theme button for performance
+const ThemeButton = memo(({ theme, isActive, onApply }: { theme: any; isActive: boolean; onApply: (id: string) => void }) => (
+  <button 
+    onClick={() => onApply(theme.id)} 
+    className={`p-3 rounded-xl border-2 transition-all ${isActive ? 'border-primary ring-2 ring-primary/20' : 'border-border hover:border-primary/50'}`}
+  >
+    <div className="flex gap-1 mb-2">
+      {theme.colors.map((c: string, i: number) => (
+        <div key={i} className="w-5 h-5 rounded-full" style={{ backgroundColor: c }} />
+      ))}
+    </div>
+    <p className="text-xs font-medium text-left">{theme.name}</p>
+    {isActive && <Badge variant="secondary" className="mt-1 text-[10px]">Active</Badge>}
+  </button>
+));
+ThemeButton.displayName = 'ThemeButton';
 
 interface FAQ {
   question: string;
@@ -624,7 +659,6 @@ export default function DesignCustomization() {
   const [panelSubdomain, setPanelSubdomain] = useState<string>('');
   const [panelCustomDomain, setPanelCustomDomain] = useState<string>('');
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({ presets: true, themes: true });
@@ -645,32 +679,51 @@ export default function DesignCustomization() {
     reset: resetHistory 
   } = useDesignHistory(defaultCustomization, { maxHistory: 20, debounceMs: 500 });
 
+  // Use React Query for faster data fetching with caching
+  const queryClient = useQueryClient();
+  
+  const { data: panelData, isLoading: panelLoading } = useQuery({
+    queryKey: ['panel-design-settings'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+      
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+      if (!profile) throw new Error('No profile');
+      
+      const { data: panel } = await supabase
+        .from('panels')
+        .select('id, name, custom_branding, theme_type, subdomain, custom_domain')
+        .eq('owner_id', profile.id)
+        .single();
+      
+      return panel;
+    },
+    staleTime: 30000, // Cache for 30 seconds
+    gcTime: 300000, // Keep in cache for 5 minutes
+  });
+
+  // Initialize state from query data
   useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-        const { data: profile } = await supabase.from('profiles').select('id').eq('user_id', user.id).single();
-        if (!profile) return;
-        const { data: panel } = await supabase.from('panels').select('id, name, custom_branding, theme_type, subdomain, custom_domain').eq('owner_id', profile.id).single();
-        if (panel) {
-          setPanelId(panel.id);
-          setPanelSubdomain(panel.subdomain || '');
-          setPanelCustomDomain(panel.custom_domain || '');
-          const branding = panel.custom_branding as any || {};
-          const loadedCustomization = { 
-            ...defaultCustomization, 
-            companyName: panel.name || '', 
-            selectedTheme: branding.selectedTheme || panel.theme_type || 'dark_gradient', 
-            ...branding 
-          };
-          resetHistory(loadedCustomization);
-        }
-      } catch (error) { console.error('Error:', error); }
-      finally { setLoading(false); }
-    };
-    fetchSettings();
-  }, []);
+    if (panelData) {
+      setPanelId(panelData.id);
+      setPanelSubdomain(panelData.subdomain || '');
+      setPanelCustomDomain(panelData.custom_domain || '');
+      const branding = panelData.custom_branding as any || {};
+      const loadedCustomization = { 
+        ...defaultCustomization, 
+        companyName: panelData.name || '', 
+        selectedTheme: branding.selectedTheme || panelData.theme_type || 'dark_gradient', 
+        ...branding 
+      };
+      resetHistory(loadedCustomization);
+      setLoading(false);
+    }
+  }, [panelData]);
 
   const updateCustomization = (key: string, value: any) => { 
     setCustomization(prev => ({ ...prev, [key]: value })); 
@@ -823,22 +876,32 @@ export default function DesignCustomization() {
     toast({ title: 'Redone', description: `${futureLength - 1} more redo${futureLength - 1 !== 1 ? 's' : ''} available` });
   };
 
-  const handleSave = async () => {
-    if (!panelId) return;
-    setSaving(true);
-    try {
-      await supabase.from('panels').update({ 
+  // Use mutation for optimistic updates
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      if (!panelId) throw new Error('No panel ID');
+      const { error } = await supabase.from('panels').update({ 
         custom_branding: customization as unknown as Json, 
         theme_type: customization.selectedTheme as any 
       }).eq('id', panelId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['panel-design-settings'] });
+      queryClient.invalidateQueries({ queryKey: ['panel-customization', panelId] });
       toast({ title: 'Design saved!' }); 
       setHasUnsavedChanges(false);
-    } catch (error: any) { 
+    },
+    onError: (error: any) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' }); 
-    } finally { 
-      setSaving(false); 
-    }
-  };
+    },
+  });
+
+  const handleSave = useCallback(() => {
+    saveMutation.mutate();
+  }, [saveMutation]);
+  
+  const saving = saveMutation.isPending;
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center">

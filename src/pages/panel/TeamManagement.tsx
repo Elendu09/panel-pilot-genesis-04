@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { useState, memo, useCallback } from 'react';
 import { usePanel } from '@/hooks/usePanel';
+import { useTeamMembers } from '@/hooks/useTeamMembers';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,16 +14,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Users, Plus, MoreVertical, Shield, UserCog, Headphones, Trash2, Mail, Clock, CheckCircle, Loader2 } from 'lucide-react';
 
 type PanelRole = 'panel_admin' | 'manager' | 'agent';
-
-interface TeamMember {
-  id: string;
-  email: string;
-  full_name: string | null;
-  role: PanelRole;
-  is_active: boolean;
-  invited_at: string;
-  accepted_at: string | null;
-}
 
 const roleConfig = {
   panel_admin: {
@@ -48,133 +37,171 @@ const roleConfig = {
     color: 'bg-green-500/10 text-green-500 border-green-500/20',
     permissions: ['Dashboard', 'Orders (view)', 'Support Tickets']
   }
-};
+} as const;
+
+// Memoized role card
+const RoleCard = memo(({ roleKey, config }: { roleKey: string; config: typeof roleConfig[PanelRole] }) => (
+  <Card className="border-dashed">
+    <CardHeader className="pb-3">
+      <div className="flex items-center gap-2">
+        <div className={`p-2 rounded-lg ${config.color}`}>
+          <config.icon className="w-4 h-4" />
+        </div>
+        <CardTitle className="text-sm">{config.label}</CardTitle>
+      </div>
+    </CardHeader>
+    <CardContent>
+      <p className="text-xs text-muted-foreground mb-2">{config.description}</p>
+      <div className="flex flex-wrap gap-1">
+        {config.permissions.map((perm) => (
+          <Badge key={perm} variant="secondary" className="text-[10px]">
+            {perm}
+          </Badge>
+        ))}
+      </div>
+    </CardContent>
+  </Card>
+));
+RoleCard.displayName = 'RoleCard';
+
+// Memoized member row
+const MemberRow = memo(({ 
+  member, 
+  onRoleChange, 
+  onToggleActive, 
+  onDelete 
+}: { 
+  member: any; 
+  onRoleChange: (id: string, role: PanelRole) => void;
+  onToggleActive: (id: string, isActive: boolean) => void;
+  onDelete: (id: string) => void;
+}) => {
+  const config = roleConfig[member.role as PanelRole];
+  const RoleIcon = config.icon;
+  
+  return (
+    <div
+      className={`flex items-center justify-between p-4 rounded-lg border ${
+        !member.is_active ? 'opacity-50 bg-muted/30' : 'bg-card'
+      }`}
+    >
+      <div className="flex items-center gap-3">
+        <Avatar>
+          <AvatarFallback className="bg-primary/10 text-primary">
+            {(member.full_name || member.email).charAt(0).toUpperCase()}
+          </AvatarFallback>
+        </Avatar>
+        <div>
+          <div className="flex items-center gap-2">
+            <p className="font-medium">{member.full_name || member.email}</p>
+            {!member.is_active && (
+              <Badge variant="outline" className="text-[10px]">Inactive</Badge>
+            )}
+          </div>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Mail className="w-3 h-3" />
+            <span>{member.email}</span>
+          </div>
+        </div>
+      </div>
+      
+      <div className="flex items-center gap-3">
+        <Badge className={config.color}>
+          <RoleIcon className="w-3 h-3 mr-1" />
+          {config.label}
+        </Badge>
+        
+        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          {member.accepted_at ? (
+            <>
+              <CheckCircle className="w-3 h-3 text-green-500" />
+              <span>Active</span>
+            </>
+          ) : (
+            <>
+              <Clock className="w-3 h-3" />
+              <span>Pending</span>
+            </>
+          )}
+        </div>
+        
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <MoreVertical className="w-4 h-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => onRoleChange(member.id, 'panel_admin')}>
+              <Shield className="w-4 h-4 mr-2" />
+              Set as Admin
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onRoleChange(member.id, 'manager')}>
+              <UserCog className="w-4 h-4 mr-2" />
+              Set as Manager
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onRoleChange(member.id, 'agent')}>
+              <Headphones className="w-4 h-4 mr-2" />
+              Set as Agent
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onToggleActive(member.id, member.is_active)}>
+              {member.is_active ? 'Deactivate' : 'Activate'}
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+              onClick={() => onDelete(member.id)}
+              className="text-destructive"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Remove
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </div>
+  );
+});
+MemberRow.displayName = 'MemberRow';
 
 export default function TeamManagement() {
   const { panel } = usePanel();
-  const { toast } = useToast();
-  const [members, setMembers] = useState<TeamMember[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { members, isLoading, invite, updateRole, toggleActive, deleteMember, isInviting } = useTeamMembers(panel?.id);
+  
   const [inviteOpen, setInviteOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-  
-  // Invite form state
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteFullName, setInviteFullName] = useState('');
   const [inviteRole, setInviteRole] = useState<PanelRole>('agent');
 
-  useEffect(() => {
-    if (panel?.id) {
-      fetchMembers();
-    }
-  }, [panel?.id]);
-
-  const fetchMembers = async () => {
-    if (!panel?.id) return;
-    
-    try {
-      const { data, error } = await supabase
-        .from('panel_team_members')
-        .select('*')
-        .eq('panel_id', panel.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setMembers(data || []);
-    } catch (error: any) {
-      toast({ title: 'Error loading team', description: error.message, variant: 'destructive' });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleInvite = async () => {
-    if (!panel?.id || !inviteEmail) return;
-    
-    setSaving(true);
-    try {
-      const { error } = await supabase
-        .from('panel_team_members')
-        .insert({
-          panel_id: panel.id,
-          email: inviteEmail.toLowerCase().trim(),
-          full_name: inviteFullName.trim() || null,
-          role: inviteRole,
-        });
-
-      if (error) {
-        if (error.code === '23505') {
-          throw new Error('This email is already a team member');
+  const handleInvite = useCallback(() => {
+    invite(
+      { email: inviteEmail, fullName: inviteFullName, role: inviteRole },
+      {
+        onSuccess: () => {
+          setInviteOpen(false);
+          setInviteEmail('');
+          setInviteFullName('');
+          setInviteRole('agent');
         }
-        throw error;
       }
+    );
+  }, [invite, inviteEmail, inviteFullName, inviteRole]);
 
-      toast({ title: 'Team member added!', description: `${inviteEmail} has been added as ${roleConfig[inviteRole].label}` });
-      setInviteOpen(false);
-      setInviteEmail('');
-      setInviteFullName('');
-      setInviteRole('agent');
-      fetchMembers();
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    } finally {
-      setSaving(false);
-    }
-  };
+  const handleRoleChange = useCallback((memberId: string, newRole: PanelRole) => {
+    updateRole({ memberId, newRole });
+  }, [updateRole]);
 
-  const handleRoleChange = async (memberId: string, newRole: PanelRole) => {
-    try {
-      const { error } = await supabase
-        .from('panel_team_members')
-        .update({ role: newRole })
-        .eq('id', memberId);
+  const handleToggleActive = useCallback((memberId: string, isActive: boolean) => {
+    toggleActive({ memberId, isActive });
+  }, [toggleActive]);
 
-      if (error) throw error;
-      
-      toast({ title: 'Role updated' });
-      fetchMembers();
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!deleteId) return;
-    
-    try {
-      const { error } = await supabase
-        .from('panel_team_members')
-        .delete()
-        .eq('id', deleteId);
-
-      if (error) throw error;
-      
-      toast({ title: 'Team member removed' });
+  const handleDelete = useCallback(() => {
+    if (deleteId) {
+      deleteMember(deleteId);
       setDeleteId(null);
-      fetchMembers();
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
-  };
+  }, [deleteMember, deleteId]);
 
-  const toggleActive = async (memberId: string, isActive: boolean) => {
-    try {
-      const { error } = await supabase
-        .from('panel_team_members')
-        .update({ is_active: !isActive })
-        .eq('id', memberId);
-
-      if (error) throw error;
-      
-      toast({ title: isActive ? 'Member deactivated' : 'Member activated' });
-      fetchMembers();
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    }
-  };
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -246,8 +273,8 @@ export default function TeamManagement() {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setInviteOpen(false)}>Cancel</Button>
-              <Button onClick={handleInvite} disabled={!inviteEmail || saving}>
-                {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              <Button onClick={handleInvite} disabled={!inviteEmail || isInviting}>
+                {isInviting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 Add Member
               </Button>
             </DialogFooter>
@@ -258,26 +285,7 @@ export default function TeamManagement() {
       {/* Role Permissions Overview */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {Object.entries(roleConfig).map(([key, config]) => (
-          <Card key={key} className="border-dashed">
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-2">
-                <div className={`p-2 rounded-lg ${config.color}`}>
-                  <config.icon className="w-4 h-4" />
-                </div>
-                <CardTitle className="text-sm">{config.label}</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-xs text-muted-foreground mb-2">{config.description}</p>
-              <div className="flex flex-wrap gap-1">
-                {config.permissions.map((perm) => (
-                  <Badge key={perm} variant="secondary" className="text-[10px]">
-                    {perm}
-                  </Badge>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <RoleCard key={key} roleKey={key} config={config} />
         ))}
       </div>
 
@@ -299,92 +307,15 @@ export default function TeamManagement() {
             </div>
           ) : (
             <div className="space-y-3">
-              {members.map((member) => {
-                const config = roleConfig[member.role];
-                const RoleIcon = config.icon;
-                
-                return (
-                  <div
-                    key={member.id}
-                    className={`flex items-center justify-between p-4 rounded-lg border ${
-                      !member.is_active ? 'opacity-50 bg-muted/30' : 'bg-card'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Avatar>
-                        <AvatarFallback className="bg-primary/10 text-primary">
-                          {(member.full_name || member.email).charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium">{member.full_name || member.email}</p>
-                          {!member.is_active && (
-                            <Badge variant="outline" className="text-[10px]">Inactive</Badge>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Mail className="w-3 h-3" />
-                          <span>{member.email}</span>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-3">
-                      <Badge className={config.color}>
-                        <RoleIcon className="w-3 h-3 mr-1" />
-                        {config.label}
-                      </Badge>
-                      
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        {member.accepted_at ? (
-                          <>
-                            <CheckCircle className="w-3 h-3 text-green-500" />
-                            <span>Active</span>
-                          </>
-                        ) : (
-                          <>
-                            <Clock className="w-3 h-3" />
-                            <span>Pending</span>
-                          </>
-                        )}
-                      </div>
-                      
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreVertical className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleRoleChange(member.id, 'panel_admin')}>
-                            <Shield className="w-4 h-4 mr-2" />
-                            Set as Admin
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleRoleChange(member.id, 'manager')}>
-                            <UserCog className="w-4 h-4 mr-2" />
-                            Set as Manager
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleRoleChange(member.id, 'agent')}>
-                            <Headphones className="w-4 h-4 mr-2" />
-                            Set as Agent
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => toggleActive(member.id, member.is_active)}>
-                            {member.is_active ? 'Deactivate' : 'Activate'}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={() => setDeleteId(member.id)}
-                            className="text-destructive"
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Remove
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
-                );
-              })}
+              {members.map((member) => (
+                <MemberRow
+                  key={member.id}
+                  member={member}
+                  onRoleChange={handleRoleChange}
+                  onToggleActive={handleToggleActive}
+                  onDelete={setDeleteId}
+                />
+              ))}
             </div>
           )}
         </CardContent>
