@@ -64,7 +64,8 @@ export const StorefrontNavigation = memo(({ panel, customization = {} }: Storefr
 
   const { panelName, logoUrl, primaryColor, themeMode, textColor, textMuted, surfaceColor, borderColor } = styles;
   const setThemeMode = customization.setThemeMode;
-  const showBlogInMenu = customization.showBlogInMenu ?? false;
+  // Show blog in menu if explicitly enabled via customization or if panel has blog_enabled
+  const showBlogInMenu = customization.showBlogInMenu ?? panel?.blog_enabled ?? false;
 
   // Memoize navigation links
   const navLinks = useMemo(() => {
