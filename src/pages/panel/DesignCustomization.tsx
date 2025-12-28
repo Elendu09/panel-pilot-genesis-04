@@ -423,6 +423,24 @@ const gradientOptions = [
   'from-indigo-500 to-violet-500',
 ];
 
+// Live Preview Renderer using ThemeOne
+function LivePreviewRenderer({ customization }: { customization: any }) {
+  const mockPanel = {
+    name: customization.companyName || 'Your Panel',
+    logo_url: customization.logoUrl,
+    primary_color: customization.primaryColor,
+    secondary_color: customization.secondaryColor,
+  };
+
+  return (
+    <ThemeOne
+      panel={mockPanel}
+      services={[]}
+      customization={customization}
+    />
+  );
+}
+
 export default function DesignCustomization() {
   const [panelId, setPanelId] = useState<string | null>(null);
   const [panelSubdomain, setPanelSubdomain] = useState<string>('');
@@ -514,7 +532,6 @@ export default function DesignCustomization() {
         variant: 'destructive',
       });
     }
-  };
   };
 
   const updateNestedArray = (key: string, index: number, field: string, value: any) => {
@@ -1967,46 +1984,57 @@ export default function DesignCustomization() {
               <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
                 {/* Device Toggle */}
                 <div className="flex bg-background/50 rounded-lg p-0.5 sm:p-1 border border-border/30">
-                  {(['desktop', 'tablet', 'mobile'] as const).map(device => (
-                    <Button 
-                      key={device} 
+                  {(['desktop', 'tablet', 'mobile'] as const).map((device) => (
+                    <Button
+                      key={device}
                       variant="ghost"
-                      size="sm" 
+                      size="sm"
                       className={cn(
-                        "h-7 w-7 sm:h-8 sm:w-8 p-0",
-                        previewDevice === device ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-foreground'
+                        'h-7 w-7 sm:h-8 sm:w-8 p-0',
+                        previewDevice === device
+                          ? 'bg-primary/20 text-primary'
+                          : 'text-muted-foreground hover:text-foreground'
                       )}
                       onClick={() => setPreviewDevice(device)}
                     >
-                      {device === 'desktop' ? <Monitor className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : 
-                       device === 'tablet' ? <Tablet className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : 
-                       <Smartphone className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+                      {device === 'desktop' ? (
+                        <Monitor className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      ) : device === 'tablet' ? (
+                        <Tablet className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      ) : (
+                        <Smartphone className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      )}
                     </Button>
                   ))}
                 </div>
-                
-                <Button variant="outline" size="sm" onClick={createPreview} className="gap-1.5 sm:gap-2 h-7 sm:h-8 text-xs sm:text-sm">
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={createPreview}
+                  className="gap-1.5 sm:gap-2 h-7 sm:h-8 text-xs sm:text-sm"
+                >
                   <ExternalLink className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   <span className="hidden sm:inline">Open</span>
                 </Button>
               </div>
             </div>
-            
+
             {/* Live Preview Container - Fully Responsive */}
             <div className="flex-1 overflow-hidden p-2 sm:p-4 flex items-start justify-center bg-gradient-to-b from-[#0a0a12] to-[#0f0f1a]">
-              <div 
+              <div
                 className={cn(
-                  "transition-all duration-500 ease-out origin-top rounded-lg sm:rounded-xl overflow-hidden shadow-2xl ring-1 ring-white/10 w-full",
-                  previewDevice === 'mobile' && "max-w-[400px]",
-                  previewDevice === 'tablet' && "max-w-[900px]",
-                  previewDevice === 'desktop' && "max-w-[1200px]"
+                  'transition-all duration-500 ease-out origin-top rounded-lg sm:rounded-xl overflow-hidden shadow-2xl ring-1 ring-white/10 w-full',
+                  previewDevice === 'mobile' && 'max-w-[400px]',
+                  previewDevice === 'tablet' && 'max-w-[900px]',
+                  previewDevice === 'desktop' && 'max-w-[1200px]'
                 )}
               >
-                <div 
+                <div
                   className="w-full h-full overflow-auto scrollbar-thin scrollbar-thumb-primary/20 bg-background"
                   style={{
                     height: 'calc(100vh - 180px)',
-                    maxHeight: 'calc(100vh - 160px)'
+                    maxHeight: 'calc(100vh - 160px)',
                   }}
                 >
                   <LivePreviewRenderer customization={customization} />
@@ -2017,24 +2045,6 @@ export default function DesignCustomization() {
         </div>
       </div>
     </TooltipProvider>
-  );
-}
-
-// Live Preview Renderer using ThemeOne
-function LivePreviewRenderer({ customization }: { customization: any }) {
-  const mockPanel = {
-    name: customization.companyName || 'Your Panel',
-    logo_url: customization.logoUrl,
-    primary_color: customization.primaryColor,
-    secondary_color: customization.secondaryColor,
-  };
-
-  return (
-    <ThemeOne 
-      panel={mockPanel} 
-      services={[]} 
-      customization={customization} 
-    />
   );
 }
 
