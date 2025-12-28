@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +18,8 @@ import {
   Check,
   ChevronRight,
   Filter,
-  X
+  X,
+  Sparkles
 } from "lucide-react";
 import { SOCIAL_ICONS_MAP } from "@/components/icons/SocialIcons";
 import { motion, AnimatePresence } from "framer-motion";
@@ -44,6 +46,7 @@ const BuyerServices = () => {
   const { panel } = useTenant();
   const { buyer, refreshBuyer } = useBuyerAuth();
   const { services, loading } = useTenantServices(panel?.id);
+  const [searchParams, setSearchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedService, setSelectedService] = useState<any>(null);
@@ -54,6 +57,7 @@ const BuyerServices = () => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [quickAddService, setQuickAddService] = useState<string | null>(null);
   const [mobileCategoryOpen, setMobileCategoryOpen] = useState(false);
+  const [fastOrderApplied, setFastOrderApplied] = useState(false);
 
   // Load cart from localStorage on mount
   useEffect(() => {
@@ -112,6 +116,33 @@ const BuyerServices = () => {
 
     if (services.length > 0) {
       fetchCustomPrices();
+    }
+  }, [buyer?.id, panel?.id, services]);
+
+  // Handle Fast Order URL parameters
+  useEffect(() => {
+    if (!services.length || fastOrderApplied) return;
+    
+    const serviceId = searchParams.get('service');
+    const quantityParam = searchParams.get('quantity');
+    const urlParam = searchParams.get('url');
+    
+    if (serviceId) {
+      const service = services.find((s: any) => s.id === serviceId);
+      if (service) {
+        setSelectedService(service);
+        if (quantityParam) setQuantity(parseInt(quantityParam) || 1000);
+        if (urlParam) setTargetUrl(decodeURIComponent(urlParam));
+        setFastOrderApplied(true);
+        
+        // Clear URL params after applying
+        setSearchParams({}, { replace: true });
+        
+        toast({
+          title: "Fast Order Ready",
+          description: `${service.name} has been pre-selected. Complete your order below.`,
+        });
+      }
     }
   }, [buyer?.id, panel?.id, services]);
 
