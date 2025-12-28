@@ -661,10 +661,15 @@ export default function DesignCustomization() {
   const [loading, setLoading] = useState(true);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
+  const [previewThemeMode, setPreviewThemeMode] = useState<'dark' | 'light'>('dark');
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({ presets: true, themes: true });
   const [showAllPresets, setShowAllPresets] = useState(false);
   const { toast } = useToast();
   const isMobile = useIsMobile();
+
+  const togglePreviewTheme = () => {
+    setPreviewThemeMode(prev => prev === 'dark' ? 'light' : 'dark');
+  };
 
   // Use the design history hook for undo/redo
   const { 
@@ -1189,8 +1194,10 @@ export default function DesignCustomization() {
         currentTheme={customization.selectedTheme}
         primaryColor={customization.primaryColor}
         secondaryColor={customization.secondaryColor}
+        previewThemeMode={previewThemeMode}
+        onTogglePreviewTheme={togglePreviewTheme}
       >
-        <LivePreviewRenderer customization={customization} />
+        <LivePreviewRenderer customization={{ ...customization, themeMode: previewThemeMode }} />
       </MobileDesignSlider>
     );
   }
