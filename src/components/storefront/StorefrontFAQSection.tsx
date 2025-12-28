@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { ChevronDown, HelpCircle, Sparkles, Zap, CreditCard, DollarSign, Shield, Target } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useDeviceKey, defaultFaqDeviceLayout, defaultFaqCompactMode } from "@/hooks/use-device-key";
+import { cn } from "@/lib/utils";
 
 interface FAQ {
   question: string;
@@ -48,11 +50,17 @@ const iconMapping: Record<string, React.ElementType> = {
 
 export const StorefrontFAQSection = ({ customization = {} }: StorefrontFAQSectionProps) => {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
+  const deviceKey = useDeviceKey();
+  
   const themeMode = customization.themeMode || 'dark';
   const textColor = customization.textColor || (themeMode === 'dark' ? '#FFFFFF' : '#1F2937');
   const textMuted = customization.textMuted || (themeMode === 'dark' ? '#A1A1AA' : '#4B5563');
   const cardBg = themeMode === 'dark' ? 'bg-slate-900/60' : 'bg-white/80';
   const borderStyle = themeMode === 'dark' ? 'border-white/10' : 'border-gray-200';
+
+  // Per-device settings
+  const faqLayout = customization.faqDeviceLayout?.[deviceKey] ?? defaultFaqDeviceLayout[deviceKey];
+  const faqCompactMode = customization.faqCompactMode?.[deviceKey] ?? defaultFaqCompactMode[deviceKey];
 
   const defaultFaqs: FAQ[] = [
     {
@@ -153,7 +161,10 @@ export const StorefrontFAQSection = ({ customization = {} }: StorefrontFAQSectio
 
         {/* FAQ Grid */}
         <motion.div 
-          className="max-w-4xl mx-auto grid gap-4"
+          className={cn(
+            "max-w-4xl mx-auto grid gap-4",
+            faqLayout === 'grid' && "md:grid-cols-2"
+          )}
           variants={containerVariants}
           initial="hidden"
           whileInView="visible"
@@ -165,11 +176,14 @@ export const StorefrontFAQSection = ({ customization = {} }: StorefrontFAQSectio
               <motion.div 
                 key={index}
                 variants={itemVariants}
-                className={`group relative rounded-2xl transition-all duration-300 ${
+                className={cn(
+                  "group relative rounded-2xl transition-all duration-300",
                   openIndex === index 
                     ? `border ${borderStyle} shadow-lg`
-                    : `${cardBg} backdrop-blur-sm border ${borderStyle}`
-                } overflow-hidden`}
+                    : `${cardBg} backdrop-blur-sm border ${borderStyle}`,
+                  "overflow-hidden",
+                  faqCompactMode && "rounded-xl"
+                )}
                 style={{
                   backgroundColor: openIndex === index 
                     ? `${customization.primaryColor || '#8B5CF6'}08`
@@ -190,7 +204,10 @@ export const StorefrontFAQSection = ({ customization = {} }: StorefrontFAQSectio
                 )}
                 
                 <button
-                  className="w-full px-6 py-5 text-left flex items-center gap-4 relative z-10"
+                  className={cn(
+                    "w-full text-left flex items-center gap-4 relative z-10",
+                    faqCompactMode ? "px-4 py-3" : "px-6 py-5"
+                  )}
                   onClick={() => setOpenIndex(openIndex === index ? null : index)}
                 >
                   {/* Icon */}

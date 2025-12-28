@@ -9,6 +9,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { AnimatedText } from "@/components/ui/animated-text";
 import { motion } from "framer-motion";
 import { TikTokIcon } from "@/components/icons/SocialIcons";
+import { useDeviceKey, defaultHeroShowFloatingCards, defaultHeroShowCategories } from "@/hooks/use-device-key";
 
 interface StorefrontHeroSectionProps {
   panel?: any;
@@ -99,6 +100,8 @@ const paymentIcons = [
 
 export const StorefrontHeroSection = ({ panel, services = [], customization = {} }: StorefrontHeroSectionProps) => {
   const navigate = useNavigate();
+  const deviceKey = useDeviceKey();
+  
   const panelName = customization.companyName || panel?.name || 'SMM Panel';
   const heroTitle = customization.heroTitle || 'Boost Your Social Media';
   const heroSubtitle = customization.heroSubtitle || 'Get real followers, likes, and views at the lowest prices with instant delivery. Trusted by thousands of creators and businesses worldwide.';
@@ -109,6 +112,10 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
   const textMuted = customization.textMuted || (themeMode === 'dark' ? '#A1A1AA' : '#4B5563');
   const cardBg = themeMode === 'dark' ? 'bg-slate-900/80' : 'bg-white shadow-md';
   const borderStyle = themeMode === 'dark' ? 'border-white/10' : 'border-gray-200';
+
+  // Per-device settings
+  const heroShowFloatingCards = customization.heroShowFloatingCards?.[deviceKey] ?? defaultHeroShowFloatingCards[deviceKey];
+  const heroShowCategories = customization.heroShowCategories?.[deviceKey] ?? defaultHeroShowCategories[deviceKey];
 
   const animatedPhrases = customization.animatedPhrases || [
     { static: "grow your audience", bold: "for profit" },
@@ -145,8 +152,9 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
       </div>
 
       {/* Left Floating Cards */}
-      <div className="absolute left-4 lg:left-[5%] top-1/4 space-y-4 hidden lg:block z-20">
-        {leftCards.map((card, index) => (
+      {heroShowFloatingCards && (
+        <div className="absolute left-4 lg:left-[5%] top-1/4 space-y-4 hidden lg:block z-20">
+          {leftCards.map((card, index) => (
           <motion.div
             key={index}
             initial={{ opacity: 0, x: -100 }}
@@ -166,11 +174,13 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
               </div>
             </Card>
           </motion.div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Right Floating Cards */}
-      <div className="absolute right-4 lg:right-[5%] top-1/4 space-y-4 hidden lg:block z-20">
+      {heroShowFloatingCards && (
+        <div className="absolute right-4 lg:right-[5%] top-1/4 space-y-4 hidden lg:block z-20">
         {rightCards.map((card, index) => (
           <motion.div
             key={index}
@@ -191,8 +201,9 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
               </div>
             </Card>
           </motion.div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Main Content */}
       <div className="container mx-auto px-4 text-center relative z-10 pt-16 sm:pt-20 lg:pt-32">
@@ -340,27 +351,29 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
           </motion.div>
 
           {/* Platform Categories - Quick Access */}
-          <motion.div 
-            className="flex flex-wrap justify-center gap-1.5 sm:gap-2 mb-8 sm:mb-10 px-2"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6, duration: 0.6 }}
-          >
-            {serviceCategories.map((category, index) => (
-              <motion.button
-                key={category.name}
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.7 + index * 0.1 }}
-                whileHover={{ scale: 1.05, y: -2 }}
-                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full ${cardBg} backdrop-blur-sm border ${borderStyle} transition-all flex items-center gap-1.5 sm:gap-2`}
-                style={{ color: textColor }}
-              >
-                <category.Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                <span className="text-xs sm:text-sm font-medium">{category.name}</span>
-              </motion.button>
-            ))}
-          </motion.div>
+          {heroShowCategories && (
+            <motion.div 
+              className="flex flex-wrap justify-center gap-1.5 sm:gap-2 mb-8 sm:mb-10 px-2"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6, duration: 0.6 }}
+            >
+              {serviceCategories.map((category, index) => (
+                <motion.button
+                  key={category.name}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.7 + index * 0.1 }}
+                  whileHover={{ scale: 1.05, y: -2 }}
+                  className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full ${cardBg} backdrop-blur-sm border ${borderStyle} transition-all flex items-center gap-1.5 sm:gap-2`}
+                  style={{ color: textColor }}
+                >
+                  <category.Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <span className="text-xs sm:text-sm font-medium">{category.name}</span>
+                </motion.button>
+              ))}
+            </motion.div>
+          )}
 
           {/* Animated Text */}
           <motion.div 

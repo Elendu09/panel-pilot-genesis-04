@@ -19,7 +19,8 @@ import {
   CreditCard,
   ExternalLink,
   Activity,
-  ChevronRight
+  ChevronRight,
+  AlertTriangle
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -56,6 +57,7 @@ const BuyerDashboard = () => {
   });
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showVerifyBanner, setShowVerifyBanner] = useState(false);
 
   useEffect(() => {
@@ -78,6 +80,7 @@ const BuyerDashboard = () => {
     if (!buyer?.id) return;
 
     setLoading(true);
+    setError(null);
     try {
       const { data: orders, error } = await supabase
         .from('orders')
@@ -118,8 +121,9 @@ const BuyerDashboard = () => {
         completedOrders,
         totalSpent,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching buyer data:', error);
+      setError('We had trouble loading your dashboard. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -242,6 +246,24 @@ const BuyerDashboard = () => {
           <p className="text-muted-foreground mb-6">You need to be logged in to view your dashboard</p>
           <Button asChild>
             <Link to="/auth">Sign In</Link>
+          </Button>
+        </div>
+      </BuyerLayout>
+    );
+  }
+
+  // Show error state if data fetch failed
+  if (error) {
+    return (
+      <BuyerLayout>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+          <div className="w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-500/10 flex items-center justify-center mb-4">
+            <AlertTriangle className="w-8 h-8 text-amber-500" />
+          </div>
+          <h2 className="text-xl font-bold mb-2">Dashboard temporarily unavailable</h2>
+          <p className="text-muted-foreground mb-4 text-sm max-w-md">{error}</p>
+          <Button onClick={fetchBuyerData}>
+            Retry
           </Button>
         </div>
       </BuyerLayout>

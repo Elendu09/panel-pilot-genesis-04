@@ -10,7 +10,9 @@ import {
   Sparkles,
   Shield,
   Zap,
-  Loader2
+  Loader2,
+  AlertTriangle,
+  LogIn
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,6 +26,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useBuyerAuth } from "@/contexts/BuyerAuthContext";
 import { useTenant } from "@/hooks/useTenant";
 import BuyerLayout from "./BuyerLayout";
+import { Link } from "react-router-dom";
 
 const paymentMethods = [
   { id: "stripe", name: "Card", icon: CreditCard, color: "from-blue-500 to-blue-600", badge: "Instant" },
@@ -43,8 +46,8 @@ interface Transaction {
 }
 
 const BuyerDeposit = () => {
-  const { buyer, refreshBuyer } = useBuyerAuth();
-  const { panel } = useTenant();
+  const { buyer, refreshBuyer, loading: authLoading } = useBuyerAuth();
+  const { panel, loading: panelLoading } = useTenant();
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
   const [amount, setAmount] = useState("");
   const [processing, setProcessing] = useState(false);
@@ -165,6 +168,35 @@ const BuyerDeposit = () => {
     visible: { opacity: 1, y: 0 }
   };
 
+  // Loading state
+  if (panelLoading || authLoading) {
+    return (
+      <BuyerLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </BuyerLayout>
+    );
+  }
+
+  // Not authenticated
+  if (!buyer) {
+    return (
+      <BuyerLayout>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+            <LogIn className="w-8 h-8 text-primary" />
+          </div>
+          <h2 className="text-xl font-bold mb-2">Login Required</h2>
+          <p className="text-muted-foreground mb-4 text-sm">Please sign in to add funds.</p>
+          <Button asChild>
+            <Link to="/auth">Sign In</Link>
+          </Button>
+        </div>
+      </BuyerLayout>
+    );
+  }
+
   return (
     <BuyerLayout>
       <motion.div 
@@ -172,6 +204,7 @@ const BuyerDeposit = () => {
         initial="hidden"
         animate="visible"
         className="space-y-4 md:space-y-6 max-w-4xl mx-auto"
+      >
       >
         {/* Header */}
         <motion.div variants={itemVariants}>
