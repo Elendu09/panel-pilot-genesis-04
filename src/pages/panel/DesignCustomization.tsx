@@ -123,6 +123,9 @@ const defaultCustomization = {
   enableFeatures: true,
   enableTestimonials: true,
   enableFAQs: true,
+
+  // Homepage layout order
+  homepageLayout: ['hero', 'platform', 'stats', 'features', 'testimonials', 'faqs'],
   showBlogInMenu: false,
 
   // Custom design presets (saved by tenant)
@@ -198,6 +201,15 @@ const fontOptions = [
   { value: 'Playfair Display', label: 'Playfair Display (Serif)' },
   { value: 'Space Grotesk', label: 'Space Grotesk (Tech)' },
   { value: 'DM Sans', label: 'DM Sans (Geometric)' },
+];
+
+const layoutSections = [
+  { id: 'hero', label: 'Hero', description: 'Top hero section with main CTA' },
+  { id: 'platform', label: 'Platform Features', description: 'Feature highlight cards' },
+  { id: 'stats', label: 'Stats', description: 'KPIs like orders and delivery time' },
+  { id: 'features', label: 'Features Grid', description: 'Detailed feature grid' },
+  { id: 'testimonials', label: 'Testimonials', description: 'Customer quotes and ratings' },
+  { id: 'faqs', label: 'FAQ', description: 'Frequently asked questions' },
 ];
 
 const themes = [
@@ -1363,83 +1375,9 @@ export default function DesignCustomization() {
                     </div>
                   )}
 
-                  {/* Spacing Section - NEW Wix-like */}
                   {section.id === 'spacing' && (
                     <div className="space-y-4">
-                      <div>
-                        <div className="flex justify-between mb-2">
-                          <Label className="text-sm font-medium">Section Padding (Y)</Label>
-                          <span className="text-sm text-muted-foreground">{customization.sectionPaddingY}px</span>
-                        </div>
-                        <Slider
-                          value={[customization.sectionPaddingY]}
-                          onValueChange={(v) => updateCustomization('sectionPaddingY', v[0])}
-                          min={40}
-                          max={160}
-                          step={8}
-                          className="w-full"
-                        />
-                      </div>
-                      
-                      <div>
-                        <div className="flex justify-between mb-2">
-                          <Label className="text-sm font-medium">Container Max Width</Label>
-                          <span className="text-sm text-muted-foreground">{customization.containerMaxWidth}px</span>
-                        </div>
-                        <Slider
-                          value={[customization.containerMaxWidth]}
-                          onValueChange={(v) => updateCustomization('containerMaxWidth', v[0])}
-                          min={960}
-                          max={1536}
-                          step={32}
-                          className="w-full"
-                        />
-                      </div>
-                      
-                      <div>
-                        <div className="flex justify-between mb-2">
-                          <Label className="text-sm font-medium">Card Spacing</Label>
-                          <span className="text-sm text-muted-foreground">{customization.cardSpacing}px</span>
-                        </div>
-                        <Slider
-                          value={[customization.cardSpacing]}
-                          onValueChange={(v) => updateCustomization('cardSpacing', v[0])}
-                          min={12}
-                          max={48}
-                          step={4}
-                          className="w-full"
-                        />
-                      </div>
-                      
-                      <div>
-                        <div className="flex justify-between mb-2">
-                          <Label className="text-sm font-medium">Element Gap</Label>
-                          <span className="text-sm text-muted-foreground">{customization.elementGap}px</span>
-                        </div>
-                        <Slider
-                          value={[customization.elementGap]}
-                          onValueChange={(v) => updateCustomization('elementGap', v[0])}
-                          min={8}
-                          max={32}
-                          step={4}
-                          className="w-full"
-                        />
-                      </div>
-                      
-                      <div>
-                        <div className="flex justify-between mb-2">
-                          <Label className="text-sm font-medium">Border Radius</Label>
-                          <span className="text-sm text-muted-foreground">{customization.cardRadius}px</span>
-                        </div>
-                        <Slider
-                          value={[customization.cardRadius]}
-                          onValueChange={(v) => updateCustomization('cardRadius', v[0])}
-                          min={0}
-                          max={32}
-                          step={2}
-                          className="w-full"
-                        />
-                      </div>
+                      {renderSectionContent('spacing')}
                     </div>
                   )}
 

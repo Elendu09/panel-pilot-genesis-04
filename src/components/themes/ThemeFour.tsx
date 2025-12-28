@@ -102,6 +102,46 @@ export const ThemeFour = ({ panel, services = [], customization = {} }: ThemeFou
     },
   };
 
+  const layout = (customization?.homepageLayout && customization.homepageLayout.length
+    ? customization.homepageLayout
+    : ['hero', 'platform', 'stats', 'features', 'testimonials', 'faqs']);
+
+  const renderSection = (sectionId: string) => {
+    switch (sectionId) {
+      case 'hero':
+        return (
+          <StorefrontHeroSection 
+            key="hero"
+            panel={panel} 
+            services={services} 
+            customization={themeFourCustomization} 
+          />
+        );
+      case 'platform':
+        return customization.enablePlatformFeatures !== false ? (
+          <StorefrontPlatformSection key="platform" customization={themeFourCustomization} />
+        ) : null;
+      case 'stats':
+        return customization.enableStats !== false ? (
+          <StorefrontStatsSection key="stats" panel={panel} customization={themeFourCustomization} />
+        ) : null;
+      case 'features':
+        return customization.enableFeatures !== false ? (
+          <StorefrontFeaturesSection key="features" customization={themeFourCustomization} />
+        ) : null;
+      case 'testimonials':
+        return customization.enableTestimonials !== false ? (
+          <StorefrontTestimonialsSection key="testimonials" customization={themeFourCustomization} />
+        ) : null;
+      case 'faqs':
+        return customization.enableFAQs !== false ? (
+          <StorefrontFAQSection key="faqs" customization={themeFourCustomization} />
+        ) : null;
+      default:
+        return null;
+    }
+  };
+
   return (
     <motion.div 
       className="min-h-screen relative overflow-hidden"
@@ -164,31 +204,7 @@ export const ThemeFour = ({ panel, services = [], customization = {} }: ThemeFou
 
       {/* Main Content */}
       <main className="relative z-10">
-        <StorefrontHeroSection 
-          panel={panel} 
-          services={services} 
-          customization={themeFourCustomization} 
-        />
-
-        {customization.enablePlatformFeatures !== false && (
-          <StorefrontPlatformSection customization={themeFourCustomization} />
-        )}
-
-        {customization.enableStats !== false && (
-          <StorefrontStatsSection panel={panel} customization={themeFourCustomization} />
-        )}
-
-        {customization.enableFeatures !== false && (
-          <StorefrontFeaturesSection customization={themeFourCustomization} />
-        )}
-
-        {customization.enableTestimonials !== false && (
-          <StorefrontTestimonialsSection customization={themeFourCustomization} />
-        )}
-
-        {customization.enableFAQs !== false && (
-          <StorefrontFAQSection customization={themeFourCustomization} />
-        )}
+        {layout.map((sectionId) => renderSection(sectionId))}
       </main>
 
       {/* Footer */}
