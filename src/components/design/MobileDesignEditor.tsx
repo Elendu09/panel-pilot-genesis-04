@@ -200,7 +200,7 @@ export function MobileDesignEditor({
                 "bg-white rounded-xl overflow-hidden shadow-2xl ring-1 ring-white/10 transition-all",
                 previewDevice === 'mobile' && "w-full max-w-[375px]",
                 previewDevice === 'tablet' && "w-full max-w-[500px]",
-                previewDevice === 'desktop' && "w-full"
+                previewDevice === 'desktop' && "w-full max-w-[1024px]"
               )}
               style={{ 
                 height: previewDevice === 'mobile' ? 'min(667px, calc(100vh - 180px))' : 'calc(100vh - 180px)',
@@ -210,13 +210,10 @@ export function MobileDesignEditor({
               <div 
                 className="w-full h-full overflow-auto"
                 style={{
-                  transform: previewDevice === 'desktop' ? 'scale(0.4)' : 
-                             previewDevice === 'tablet' ? 'scale(0.5)' : 'scale(1)',
-                  transformOrigin: 'top left',
-                  width: previewDevice === 'desktop' ? '250%' : 
-                         previewDevice === 'tablet' ? '200%' : '100%',
-                  height: previewDevice === 'desktop' ? '250%' : 
-                          previewDevice === 'tablet' ? '200%' : '100%',
+                  transform: 'none',
+                  transformOrigin: 'top center',
+                  width: '100%',
+                  height: '100%',
                 }}
               >
                 {children}

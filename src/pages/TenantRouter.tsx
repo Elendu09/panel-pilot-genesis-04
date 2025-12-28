@@ -23,6 +23,7 @@ import BuyerDeposit from './buyer/BuyerDeposit';
 import BuyerSupport from './buyer/BuyerSupport';
 import BuyerPublicServices from './buyer/BuyerPublicServices';
 import Storefront from './Storefront';
+import StorefrontBlog from './storefront/StorefrontBlog';
 
 const queryClient = new QueryClient();
 
@@ -155,6 +156,9 @@ const TenantRouter = () => {
                       <Route path="/" element={<Storefront />} />
                       <Route path="/auth" element={<BuyerAuth />} />
                       <Route path="/services" element={<BuyerPublicServices />} />
+
+                      {/* Tenant blog route */}
+                      <Route path="/blog" element={<StorefrontBlog />} />
                       
                       {/* Protected buyer routes */}
                       <Route path="/dashboard" element={
