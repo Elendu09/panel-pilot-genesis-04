@@ -7,10 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Star, Users, Search, Package, TrendingUp, Shield, CheckCircle, LayoutDashboard, ShoppingCart, Heart, Zap } from "lucide-react";
+import { Star, Users, Search, Package, TrendingUp, Shield, CheckCircle, LayoutDashboard, ShoppingCart, Heart, Zap, Home, User } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { useAuth } from "@/contexts/AuthContext";
+import { BottomNav } from "@/components/ui/bottom-nav";
 
 const topServices = [
   {
@@ -358,6 +359,19 @@ const Services = () => {
       </div>
       
       <Footer />
+
+      {/* Bottom Nav for Auth Users */}
+      {user && (
+        <BottomNav 
+          items={[
+            { name: 'Home', href: '/', icon: Home },
+            { name: 'Services', href: '/services', icon: Package },
+            { name: 'Orders', href: '/new-order', icon: ShoppingCart },
+            { name: 'Dashboard', href: profile?.role === 'admin' ? '/admin' : '/panel', icon: LayoutDashboard },
+            { name: 'Profile', href: '/panel/settings', icon: User },
+          ]}
+        />
+      )}
     </div>
   );
 };
