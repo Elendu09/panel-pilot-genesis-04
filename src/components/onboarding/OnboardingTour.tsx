@@ -52,10 +52,10 @@ interface TourStep {
 const tourSteps: TourStep[] = [
   {
     id: "welcome",
-    title: "Welcome to Your Panel! 🎉",
-    description: "Let's take a quick tour to help you get started with managing your SMM panel. We'll show you where everything is.",
-    mobileDescription: "Quick tour of your SMM panel! Swipe through to learn where everything is.",
-    tabletDescription: "Let's explore your panel! We'll show you the key features and navigation.",
+    title: "Welcome to Your Panel",
+    description: "Let’s take a quick tour to help you get oriented in your SMM panel admin interface.",
+    mobileDescription: "Short tour of your SMM panel. Swipe through to see where the main actions live.",
+    tabletDescription: "Let’s quickly walk through the main areas of your panel and how to navigate them.",
     icon: Sparkles,
     target: null,
     position: "center",
