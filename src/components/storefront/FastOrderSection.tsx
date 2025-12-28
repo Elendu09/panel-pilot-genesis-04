@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,6 +36,20 @@ interface Service {
   max_quantity?: number;
 }
 
+interface RecentTarget {
+  target_url: string;
+  service_id: string | null;
+  quantity: number | null;
+}
+
+interface OrderProfile {
+  id: string;
+  name: string;
+  target_url: string;
+  service_id: string | null;
+  quantity: number;
+}
+
 interface FastOrderSectionProps {
   services: Service[];
   panelId: string;
@@ -59,6 +73,10 @@ export const FastOrderSection = ({ services, panelId, panelName, customization }
   const [isOrdering, setIsOrdering] = useState(false);
   const [orderAttachment, setOrderAttachment] = useState<File | null>(null);
   
+  const [recentTargets, setRecentTargets] = useState<RecentTarget[]>([]);
+  const [favoriteServices, setFavoriteServices] = useState<Service[]>([]);
+  const [profiles, setProfiles] = useState<OrderProfile[]>([]);
+  
   // Guest signup modal state
   const [showGuestModal, setShowGuestModal] = useState(false);
   const [guestEmail, setGuestEmail] = useState('');
@@ -78,7 +96,128 @@ export const FastOrderSection = ({ services, panelId, panelName, customization }
     return SOCIAL_ICONS_MAP[category] || SOCIAL_ICONS_MAP.other;
   };
 
-  // Handle guest signup or login
+  useEffect(() => {
+    if (!buyer?.id || !panelId) return;
+
+    const fetchData = async () => {
+      try {
+        const [{ data: orders }, { data: favorites }] = await Promise.all([
+          supabase
+            .from('orders')
+            .select('service_id, target_url, quantity, created_at')
+            .eq('buyer_id', buyer.id)
+            .eq('panel_id', panelId)
+            .not('target_url', 'is', null)
+            .order('created_at', { ascending: false })
+            .limit(30),
+          supabase
+            .from('buyer_favorites')
+            .select('service_id')
+            .eq('buyer_id', buyer.id)
+            .eq('panel_id', panelId),
+        ]);
+
+        if (orders) {
+          const byUrl: Record<string, RecentTarget> = {};
+          for (const o of orders as any[]) {
+            if (!o.target_url) continue;
+            if (!byUrl[o.target_url]) {
+              byUrl[o.target_url] = {
+                target_url: o.target_url,
+                service_id: o.service_id ?? null,
+                quantity: o.quantity ?? null,
+              };
+            }
+          }
+          setRecentTargets(Object.values(byUrl).slice(0, 5));
+        }
+
+        if (favorites) {
+          const favIds = (favorites as any[]).map(f => f.service_id).filter(Boolean);
+          const fav = services.filter(s => favIds.includes(s.id));
+          setFavoriteServices(fav);
+        }
+      } catch (err) {
+        console.error('FastOrder favorites/recent error', err);
+      }
+    };
+
+    fetchData();
+  }, [buyer?.id, panelId, services]);
+
+  useEffect(() => {
+    if (buyer) return;
+    const key = `fast_order_recent_${panelId}`;
+    const stored = localStorage.getItem(key);
+    if (!stored) return;
+    try {
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed)) {
+        setRecentTargets(parsed.slice(0, 5));
+      }
+    } catch {
+      // ignore
+    }
+  }, [buyer, panelId]);
+
+  useEffect(() => {
+    const key = `fast_order_profiles_${panelId}`;
+    const stored = localStorage.getItem(key);
+    if (!stored) return;
+    try {
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed)) {
+        setProfiles(parsed);
+      }
+    } catch {
+      // ignore
+    }
+  }, [panelId]);
+
+  const saveGuestRecent = () => {
+    if (!targetUrl) return;
+    const entry: RecentTarget = {
+      target_url: targetUrl,
+      service_id: selectedServiceId || null,
+      quantity,
+    };
+    const key = `fast_order_recent_${panelId}`;
+    try {
+      const existing = JSON.parse(localStorage.getItem(key) || '[]');
+      const filtered = existing.filter((e: any) => e.target_url !== targetUrl);
+      const updated = [entry, ...filtered].slice(0, 5);
+      localStorage.setItem(key, JSON.stringify(updated));
+    } catch {
+      localStorage.setItem(key, JSON.stringify([entry]));
+    }
+  };
+
+  const saveProfile = () => {
+    if (!targetUrl) return;
+    const name = window.prompt('Profile name');
+    if (!name) return;
+    const profile: OrderProfile = {
+      id: `${Date.now()}`,
+      name,
+      target_url: targetUrl,
+      service_id: selectedServiceId || null,
+      quantity,
+    };
+    const key = `fast_order_profiles_${panelId}`;
+    const updated = [profile, ...profiles].slice(0, 10);
+    setProfiles(updated);
+    try {
+      localStorage.setItem(key, JSON.stringify(updated));
+    } catch {
+      // ignore
+    }
+  };
+
+  const applyProfile = (profile: OrderProfile) => {
+    setTargetUrl(profile.target_url);
+    if (profile.service_id) setSelectedServiceId(profile.service_id);
+    if (profile.quantity) setQuantity(profile.quantity);
+  };
   const handleGuestSignup = async () => {
     if (!guestEmail) {
       toast({ title: "Email is required", variant: "destructive" });
@@ -202,6 +341,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization }
         price: totalPrice,
         panelId,
       }));
+      saveGuestRecent();
     }
     setShowGuestModal(false);
     navigate('/deposit');
@@ -237,13 +377,31 @@ export const FastOrderSection = ({ services, panelId, panelName, customization }
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-5xl mx-auto">
             {/* Popular Services Grid */}
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              className="space-y-4"
-            >
-              <h3 className="text-lg font-semibold mb-4" style={{ color: textColor }}>Popular Services</h3>
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                className="space-y-4"
+              >
+                {buyer && favoriteServices.length > 0 && (
+                  <div className="mb-2 space-y-2">
+                    <h4 className="text-sm font-semibold" style={{ color: textColor }}>My Favorites</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {favoriteServices.map(service => (
+                        <Button
+                          key={service.id}
+                          variant={selectedServiceId === service.id ? "default" : "outline"}
+                          size="sm"
+                          className="text-xs"
+                          onClick={() => setSelectedServiceId(service.id)}
+                        >
+                          {service.name}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <h3 className="text-lg font-semibold mb-4" style={{ color: textColor }}>Popular Services</h3>
               <div className="grid grid-cols-2 gap-3">
                 {popularServices.map((service) => {
                   const categoryData = getCategoryIcon(service.category);
@@ -343,6 +501,63 @@ export const FastOrderSection = ({ services, panelId, panelName, customization }
                       </p>
                     )}
                   </div>
+
+                  {recentTargets.length > 0 && (
+                    <div className="mt-2 space-y-1">
+                      <Label className="text-xs" style={{ color: textMuted }}>
+                        Frequently used links {buyer ? '' : '(this device)'}
+                      </Label>
+                      <div className="flex flex-wrap gap-2">
+                        {recentTargets.map(item => {
+                          const label = (() => {
+                            try {
+                              const u = new URL(item.target_url);
+                              return u.hostname;
+                            } catch {
+                              return item.target_url.length > 22
+                                ? item.target_url.slice(0, 22) + '…'
+                                : item.target_url;
+                            }
+                          })();
+
+                          return (
+                            <button
+                              key={item.target_url}
+                              type="button"
+                              onClick={() => {
+                                setTargetUrl(item.target_url);
+                                if (item.service_id) setSelectedServiceId(item.service_id);
+                                if (item.quantity) setQuantity(item.quantity);
+                              }}
+                              className="px-2 py-1 rounded-full border text-xs bg-primary/5 border-primary/30 text-primary hover:bg-primary/10 transition-colors"
+                            >
+                              {label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {profiles.length > 0 && (
+                    <div className="mt-3 space-y-1">
+                      <Label className="text-xs" style={{ color: textMuted }}>
+                        Saved profiles
+                      </Label>
+                      <div className="flex flex-wrap gap-2">
+                        {profiles.map(profile => (
+                          <button
+                            key={profile.id}
+                            type="button"
+                            onClick={() => applyProfile(profile)}
+                            className="px-2 py-1 rounded-full border text-xs bg-secondary/10 border-secondary/30 text-secondary-foreground/90 hover:bg-secondary/20 transition-colors"
+                          >
+                            {profile.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Attachment Upload */}
                   <div className="space-y-2">

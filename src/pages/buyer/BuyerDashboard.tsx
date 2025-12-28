@@ -28,6 +28,7 @@ import { useTenant, useTenantServices } from "@/hooks/useTenant";
 import { useBuyerAuth } from "@/contexts/BuyerAuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import BuyerLayout from "./BuyerLayout";
+import { useToast } from "@/hooks/use-toast";
 
 interface Order {
   id: string;
@@ -45,6 +46,7 @@ const BuyerDashboard = () => {
   const { panel, loading: panelLoading } = useTenant();
   const { buyer, loading: authLoading } = useBuyerAuth();
   const { services, loading: servicesLoading } = useTenantServices(panel?.id);
+  const { toast } = useToast();
   const [stats, setStats] = useState({
     totalOrders: 0,
     pendingOrders: 0,
@@ -54,6 +56,7 @@ const BuyerDashboard = () => {
   });
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showVerifyBanner, setShowVerifyBanner] = useState(false);
 
   useEffect(() => {
     if (buyer?.id && panel?.id) {
@@ -62,6 +65,14 @@ const BuyerDashboard = () => {
       setLoading(false);
     }
   }, [buyer?.id, panel?.id, authLoading, panelLoading]);
+
+  useEffect(() => {
+    if (!buyer) return;
+    const key = `buyer_verify_dismissed_${buyer.id}`;
+    if (!localStorage.getItem(key)) {
+      setShowVerifyBanner(true);
+    }
+  }, [buyer?.id]);
 
   const fetchBuyerData = async () => {
     if (!buyer?.id) return;
@@ -112,6 +123,29 @@ const BuyerDashboard = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSendVerification = async () => {
+    if (!buyer?.email || !panel?.id) return;
+    try {
+      const { data, error } = await supabase.functions.invoke('buyer-auth', {
+        body: { panelId: panel.id, email: buyer.email, action: 'forgot-password' },
+      });
+      if (error || data?.error) {
+        toast({ title: 'Could not send email', description: data?.error || 'Please try again later.', variant: 'destructive' });
+        return;
+      }
+      toast({ title: 'Verification email sent', description: 'Check your inbox to verify your email.' });
+    } catch (err: any) {
+      console.error('Verification send error', err);
+    }
+  };
+
+  const handleDismissVerifyBanner = () => {
+    if (!buyer) return;
+    const key = `buyer_verify_dismissed_${buyer.id}`;
+    localStorage.setItem(key, '1');
+    setShowVerifyBanner(false);
   };
 
   const containerVariants = {
@@ -222,6 +256,28 @@ const BuyerDashboard = () => {
         animate="visible"
         className="space-y-4 md:space-y-6"
       >
+        {showVerifyBanner && (
+          <motion.div
+            variants={itemVariants}
+            className="rounded-lg border border-amber-300 bg-amber-50 text-amber-900 px-4 py-3 flex flex-col md:flex-row md:items-center md:justify-between gap-2"
+          >
+            <div>
+              <p className="font-medium text-sm">Verify your email when you’re ready</p>
+              <p className="text-xs text-amber-800">
+                You can continue placing orders without verification, but verifying your email helps secure your account and receive important updates.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={handleSendVerification}>
+                Send Verification Email
+              </Button>
+              <Button variant="ghost" size="sm" onClick={handleDismissVerifyBanner}>
+                Not now
+              </Button>
+            </div>
+          </motion.div>
+        )}
+
         {/* Welcome Header */}
         <motion.div variants={itemVariants} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
