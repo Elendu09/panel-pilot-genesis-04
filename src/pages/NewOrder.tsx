@@ -6,19 +6,24 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Navigation } from "@/components/layout/Navigation";
 import { Footer } from "@/components/layout/Footer";
-import { Calculator, ShoppingCart, Zap, Clock, Users, Shield, ArrowLeft } from 'lucide-react';
+import { Calculator, ShoppingCart, Zap, Clock, Users, Shield, ArrowLeft, Sparkles, History, Star } from 'lucide-react';
 import { Link, useSearchParams, Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { QuickOrderWidget } from '@/components/order/QuickOrderWidget';
 
 export default function NewOrder() {
   const { user, profile } = useAuth();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
   const serviceId = searchParams.get('service');
+  const prefilledQuantity = searchParams.get('quantity');
+  const prefilledUrl = searchParams.get('url');
+  const [activeTab, setActiveTab] = useState('quick');
   
   const [selectedService, setSelectedService] = useState(null);
   const [quantity, setQuantity] = useState('');
@@ -70,10 +75,14 @@ export default function NewOrder() {
       const service = sampleServices.find(s => s.id === serviceId);
       if (service) {
         setSelectedService(service);
-        setQuantity(service.min_quantity.toString());
+        setQuantity(prefilledQuantity || service.min_quantity.toString());
+        setActiveTab('detailed');
       }
     }
-  }, [serviceId]);
+    if (prefilledUrl) {
+      setTargetUrl(decodeURIComponent(prefilledUrl));
+    }
+  }, [serviceId, prefilledQuantity, prefilledUrl]);
 
   useEffect(() => {
     if (selectedService && quantity) {
@@ -199,7 +208,7 @@ export default function NewOrder() {
               </Link>
             </div>
             
-            <div className="text-center mb-12">
+            <div className="text-center mb-8">
               <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent mb-4">
                 Place New Order
               </h1>
@@ -208,10 +217,81 @@ export default function NewOrder() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* Order Form */}
-              <div className="lg:col-span-2 space-y-6">
-                <Card className="p-6">
+            {/* Order Mode Tabs */}
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-8">
+              <TabsList className="grid grid-cols-3 w-full max-w-md mx-auto">
+                <TabsTrigger value="quick" className="gap-2">
+                  <Zap className="w-4 h-4" />
+                  Quick Order
+                </TabsTrigger>
+                <TabsTrigger value="detailed" className="gap-2">
+                  <ShoppingCart className="w-4 h-4" />
+                  Detailed
+                </TabsTrigger>
+                <TabsTrigger value="popular" className="gap-2">
+                  <Star className="w-4 h-4" />
+                  Popular
+                </TabsTrigger>
+              </TabsList>
+
+              {/* Quick Order Tab */}
+              <TabsContent value="quick" className="mt-6">
+                <div className="max-w-lg mx-auto">
+                  <QuickOrderWidget 
+                    services={sampleServices.map(s => ({
+                      id: s.id,
+                      name: s.name,
+                      category: s.category,
+                      price: s.price,
+                      min_quantity: s.min_quantity,
+                      max_quantity: s.max_quantity
+                    }))}
+                    showTitle={false}
+                  />
+                  <p className="text-center text-sm text-muted-foreground mt-4">
+                    Need more options? Switch to <button onClick={() => setActiveTab('detailed')} className="text-primary hover:underline">Detailed Order</button>
+                  </p>
+                </div>
+              </TabsContent>
+
+              {/* Popular Services Tab */}
+              <TabsContent value="popular" className="mt-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mx-auto">
+                  {sampleServices.map((service) => (
+                    <Card 
+                      key={service.id}
+                      className="p-4 hover:border-primary/50 transition-all cursor-pointer group"
+                      onClick={() => {
+                        setSelectedService(service);
+                        setQuantity(service.min_quantity.toString());
+                        setActiveTab('detailed');
+                      }}
+                    >
+                      <div className="flex items-center gap-3 mb-3">
+                        <span className="text-2xl">{getCategoryIcon(service.category)}</span>
+                        <div>
+                          <h3 className="font-semibold group-hover:text-primary transition-colors">{service.name}</h3>
+                          <Badge variant="secondary" className="text-xs">
+                            ${service.price.toFixed(3)}/1K
+                          </Badge>
+                        </div>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-3">{service.description}</p>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Clock className="w-3 h-3" />
+                        <span>{service.estimated_time}</span>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </TabsContent>
+
+              {/* Detailed Order Tab */}
+              <TabsContent value="detailed" className="mt-6">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                  {/* Order Form */}
+                  <div className="lg:col-span-2 space-y-6">
+                    <Card className="p-6">
                   <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
                     <ShoppingCart className="h-6 w-6 text-primary" />
                     Order Details
@@ -300,12 +380,12 @@ export default function NewOrder() {
                       </>
                     )}
                   </div>
-                </Card>
-              </div>
+                  </Card>
+                </div>
 
-              {/* Order Summary */}
-              <div className="space-y-6">
-                <Card className="p-6 sticky top-24">
+                {/* Order Summary */}
+                <div className="space-y-6">
+                  <Card className="p-6 sticky top-24">
                   <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
                     <Calculator className="h-5 w-5 text-primary" />
                     Order Summary
@@ -388,9 +468,11 @@ export default function NewOrder() {
                       </p>
                     </div>
                   )}
-                </Card>
+                  </Card>
+                </div>
               </div>
-            </div>
+            </TabsContent>
+          </Tabs>
           </div>
         </div>
       </section>
