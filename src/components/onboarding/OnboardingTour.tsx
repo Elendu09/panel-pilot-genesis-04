@@ -197,9 +197,9 @@ const tourSteps: TourStep[] = [
   {
     id: "design",
     title: "Design Customization",
-    description: "Customize your panel's appearance with themes, colors, and branding options.",
-    mobileDescription: "Change themes and colors. Use bottom sheet controls for easy editing on mobile.",
-    tabletDescription: "Customize appearance with themes and colors. Swipe between preview modes.",
+    description: "Customize your panel's appearance with themes, colors, and branding. Use the device icons above the preview to switch between mobile, tablet, and desktop.",
+    mobileDescription: "Change themes and colors. Use the bottom sheet and device icons to preview mobile, tablet, and desktop.",
+    tabletDescription: "Customize appearance with themes, colors, and device previews. Switch between mobile, tablet, and desktop modes at the top.",
     icon: Palette,
     target: "design",
     selector: "[data-tour='design']",
@@ -208,8 +208,8 @@ const tourSteps: TourStep[] = [
     position: "right",
     tabletPosition: "right",
     mobilePosition: "center",
-    action: "Click to customize",
-    mobileAction: "Access via More menu",
+    action: "Click to customize design",
+    mobileAction: "Tap to customize design",
   },
   {
     id: "more-menu",
