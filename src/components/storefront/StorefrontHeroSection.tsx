@@ -5,7 +5,7 @@ import {
   ArrowRight, Sparkles, Zap, TrendingUp, Users, Star, MessageCircle, Shield, DollarSign, Clock, CheckCircle, CreditCard,
   Instagram, Youtube, Send, Twitter
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { AnimatedText } from "@/components/ui/animated-text";
 import { motion } from "framer-motion";
 import { TikTokIcon } from "@/components/icons/SocialIcons";
@@ -98,6 +98,7 @@ const paymentIcons = [
 ];
 
 export const StorefrontHeroSection = ({ panel, services = [], customization = {} }: StorefrontHeroSectionProps) => {
+  const navigate = useNavigate();
   const panelName = customization.companyName || panel?.name || 'SMM Panel';
   const heroTitle = customization.heroTitle || 'Boost Your Social Media';
   const heroSubtitle = customization.heroSubtitle || 'Get real followers, likes, and views at the lowest prices with instant delivery. Trusted by thousands of creators and businesses worldwide.';
@@ -265,17 +266,23 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
               <>
                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.98 }}>
                   <Button 
-                    asChild 
                     size="lg" 
                     className="text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 rounded-full text-white w-full sm:w-auto"
                     style={{ 
                       background: `linear-gradient(135deg, ${customization.primaryColor || '#8B5CF6'}, ${customization.secondaryColor || '#EC4899'})`,
                       boxShadow: `0 10px 30px ${customization.primaryColor || '#8B5CF6'}40`
                     }}
+                    onClick={() => {
+                      // Navigate to services page with fast order params
+                      const firstService = services?.[0];
+                      const params = new URLSearchParams();
+                      if (firstService?.id) params.set('service', firstService.id);
+                      params.set('quantity', '1000');
+                      params.set('fastOrder', 'true');
+                      navigate(`/services${params.toString() ? `?${params.toString()}` : ''}`);
+                    }}
                   >
-                    <a href="#fast-order">
-                      <Zap className="mr-2 w-4 h-4 sm:w-5 sm:h-5" /> Fast Order
-                    </a>
+                    <Zap className="mr-2 w-4 h-4 sm:w-5 sm:h-5" /> Fast Order
                   </Button>
                 </motion.div>
                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.98 }}>

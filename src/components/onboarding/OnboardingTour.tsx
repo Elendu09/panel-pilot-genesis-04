@@ -31,15 +31,19 @@ interface TourStep {
   id: string;
   title: string;
   description: string;
+  mobileDescription?: string;
+  tabletDescription?: string;
   icon: React.ComponentType<{ className?: string }>;
   target: string | null;
   selector?: string;
   tabletSelector?: string;
   mobileSelector?: string;
+  fallbackSelector?: string;
   position?: "top" | "bottom" | "left" | "right" | "center";
   tabletPosition?: "top" | "bottom" | "left" | "right" | "center";
   mobilePosition?: "top" | "bottom" | "center";
   action?: string;
+  mobileAction?: string;
   mobileOnly?: boolean;
   desktopOnly?: boolean;
   tabletOnly?: boolean;
@@ -50,6 +54,8 @@ const tourSteps: TourStep[] = [
     id: "welcome",
     title: "Welcome to Your Panel! 🎉",
     description: "Let's take a quick tour to help you get started with managing your SMM panel. We'll show you where everything is.",
+    mobileDescription: "Quick tour of your SMM panel! Swipe through to learn where everything is.",
+    tabletDescription: "Let's explore your panel! We'll show you the key features and navigation.",
     icon: Sparkles,
     target: null,
     position: "center",
@@ -64,6 +70,7 @@ const tourSteps: TourStep[] = [
     target: "sidebar",
     selector: "[data-tour='sidebar']",
     tabletSelector: "[data-tour='sidebar']",
+    fallbackSelector: "[data-tour='mobile-home']",
     position: "right",
     tabletPosition: "right",
     desktopOnly: true,
@@ -73,122 +80,153 @@ const tourSteps: TourStep[] = [
     id: "mobile-nav",
     title: "Bottom Navigation",
     description: "Use the bottom navigation bar to quickly access key features of your panel on mobile.",
+    mobileDescription: "Your main navigation! Tap icons to switch between Dashboard, Services, Orders, Analytics, and More.",
+    tabletDescription: "Quick access bar at the bottom. Tap icons to navigate between main sections.",
     icon: Menu,
     target: "mobile-nav",
     mobileSelector: "[data-tour='mobile-home']",
     tabletSelector: "[data-tour='mobile-home']",
+    fallbackSelector: "[data-tour='sidebar']",
     mobilePosition: "top",
     tabletPosition: "top",
     mobileOnly: true,
     action: "Tap icons to navigate",
+    mobileAction: "Tap the icons below",
   },
   {
     id: "dashboard",
     title: "Dashboard Overview",
     description: "Your dashboard shows real-time stats, recent orders, and quick actions. Monitor everything at a glance.",
+    mobileDescription: "View your stats, orders, and revenue at a glance. Pull down to refresh.",
+    tabletDescription: "Your command center! Real-time stats, recent activity, and quick actions all in one view.",
     icon: LayoutDashboard,
     target: "overview",
     selector: "[data-tour='dashboard-stats']",
     tabletSelector: "[data-tour='dashboard-stats']",
     mobileSelector: "[data-tour='mobile-home']",
+    fallbackSelector: ".dashboard-stats, [class*='stats'], [class*='overview']",
     position: "bottom",
     tabletPosition: "bottom",
     mobilePosition: "top",
     action: "View your key metrics here",
+    mobileAction: "Tap to see details",
   },
   {
     id: "services",
     title: "Services Management",
     description: "Add and manage SMM services. Set prices, categories, and import services from providers.",
+    mobileDescription: "Manage your services here. Tap to add, edit prices, or import from providers.",
     icon: Package,
     target: "services",
     selector: "[data-tour='services']",
     tabletSelector: "[data-tour='services']",
     mobileSelector: "[data-tour='mobile-services']",
+    fallbackSelector: "[href*='services']",
     position: "right",
     tabletPosition: "right",
     mobilePosition: "top",
     action: "Click to manage services",
+    mobileAction: "Tap to manage services",
   },
   {
     id: "orders",
     title: "Orders Management",
     description: "View and manage customer orders. Track status, process refunds, and monitor delivery progress.",
+    mobileDescription: "Track all orders here. Swipe to see details, tap to manage refunds.",
     icon: ShoppingCart,
     target: "orders",
     selector: "[data-tour='orders']",
     tabletSelector: "[data-tour='orders']",
     mobileSelector: "[data-tour='mobile-orders']",
+    fallbackSelector: "[href*='orders']",
     position: "right",
     tabletPosition: "right",
     mobilePosition: "top",
     action: "Click to view orders",
+    mobileAction: "Tap to view orders",
   },
   {
     id: "providers",
     title: "Provider Integration",
     description: "Connect to SMM providers, sync services, and manage API connections for automated order processing.",
+    mobileDescription: "Connect SMM providers to automate order processing. Find this in More menu.",
     icon: Users,
     target: "providers",
     selector: "[data-tour='providers']",
     tabletSelector: "[data-tour='providers']",
+    fallbackSelector: "[href*='provider']",
     position: "right",
     tabletPosition: "right",
     mobilePosition: "center",
     action: "Click to add providers",
+    mobileAction: "Access via More menu",
   },
   {
     id: "analytics",
     title: "Analytics & Reports",
     description: "Detailed analytics showing revenue, orders, and customer activity trends over time.",
+    mobileDescription: "View revenue trends and order stats. Swipe charts to see different time periods.",
     icon: BarChart3,
     target: "analytics",
     selector: "[data-tour='analytics']",
     tabletSelector: "[data-tour='analytics']",
     mobileSelector: "[data-tour='mobile-analytics']",
+    fallbackSelector: "[href*='analytics']",
     position: "right",
     tabletPosition: "right",
     mobilePosition: "top",
     action: "Click for insights",
+    mobileAction: "Tap for insights",
   },
   {
     id: "payments",
     title: "Payment Methods",
     description: "Configure payment gateways to accept payments from customers worldwide.",
+    mobileDescription: "Set up payment gateways. Access this from the More menu.",
     icon: CreditCard,
     target: "payment-methods",
     selector: "[data-tour='payments']",
     tabletSelector: "[data-tour='payments']",
+    fallbackSelector: "[href*='payment']",
     position: "right",
     tabletPosition: "right",
     mobilePosition: "center",
     action: "Click to configure",
+    mobileAction: "Access via More menu",
   },
   {
     id: "design",
     title: "Design Customization",
     description: "Customize your panel's appearance with themes, colors, and branding options.",
+    mobileDescription: "Change themes and colors. Use bottom sheet controls for easy editing on mobile.",
+    tabletDescription: "Customize appearance with themes and colors. Swipe between preview modes.",
     icon: Palette,
     target: "design",
     selector: "[data-tour='design']",
     tabletSelector: "[data-tour='design']",
+    fallbackSelector: "[href*='design']",
     position: "right",
     tabletPosition: "right",
     mobilePosition: "center",
     action: "Click to customize",
+    mobileAction: "Access via More menu",
   },
   {
     id: "more-menu",
     title: "More Options",
     description: "Access additional settings like API management, domain configuration, and more from the menu.",
+    mobileDescription: "Find extra features here: Providers, Payments, Design, Domain settings, and more!",
+    tabletDescription: "Access additional settings: API, Domain, Providers, Design customization and more.",
     icon: Menu,
     target: "more",
     mobileSelector: "[data-tour='mobile-more']",
     tabletSelector: "[data-tour='mobile-more']",
+    fallbackSelector: "[data-tour='sidebar']",
     mobilePosition: "top",
     tabletPosition: "top",
     mobileOnly: true,
     action: "Tap for more options",
+    mobileAction: "Tap the More icon",
   },
   {
     id: "api",
@@ -198,6 +236,7 @@ const tourSteps: TourStep[] = [
     target: "api",
     selector: "[data-tour='api']",
     tabletSelector: "[data-tour='api']",
+    fallbackSelector: "[href*='api']",
     position: "right",
     tabletPosition: "right",
     mobilePosition: "center",
@@ -212,6 +251,7 @@ const tourSteps: TourStep[] = [
     target: "domains",
     selector: "[data-tour='domain']",
     tabletSelector: "[data-tour='domain']",
+    fallbackSelector: "[href*='domain']",
     position: "right",
     tabletPosition: "right",
     mobilePosition: "center",
@@ -222,6 +262,8 @@ const tourSteps: TourStep[] = [
     id: "complete",
     title: "You're All Set! ✨",
     description: "You're ready to start managing your SMM panel. Explore all features and grow your business!",
+    mobileDescription: "All done! Start managing your panel. Need help? Check the More menu for support.",
+    tabletDescription: "You're ready! Explore all features and grow your SMM business.",
     icon: Sparkles,
     target: null,
     position: "center",
@@ -404,11 +446,11 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
     const selectors: (string | undefined)[] = [];
     
     if (isMobile) {
-      selectors.push(step.mobileSelector, step.tabletSelector, step.selector);
+      selectors.push(step.mobileSelector, step.tabletSelector, step.selector, step.fallbackSelector);
     } else if (isTablet) {
-      selectors.push(step.tabletSelector, step.selector, step.mobileSelector);
+      selectors.push(step.tabletSelector, step.selector, step.mobileSelector, step.fallbackSelector);
     } else {
-      selectors.push(step.selector, step.tabletSelector);
+      selectors.push(step.selector, step.tabletSelector, step.fallbackSelector);
     }
     
     // Find first selector that matches a visible element
@@ -426,6 +468,21 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
     
     return null;
   }, [step, isMobile, isTablet]);
+
+  // Get the appropriate description based on screen size
+  const getDescription = useCallback(() => {
+    if (!step) return "";
+    if (isMobile && step.mobileDescription) return step.mobileDescription;
+    if (isTablet && step.tabletDescription) return step.tabletDescription;
+    return step.description;
+  }, [step, isMobile, isTablet]);
+
+  // Get the appropriate action text based on screen size
+  const getActionText = useCallback(() => {
+    if (!step) return "";
+    if (isMobile && step.mobileAction) return step.mobileAction;
+    return step.action || "";
+  }, [step, isMobile]);
 
   // Get the appropriate position based on screen size
   const getPosition = useCallback(() => {
@@ -694,11 +751,11 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
                 transition={{ delay: 0.2 }}
                 className={`text-muted-foreground leading-relaxed ${isCompact ? 'text-xs' : 'text-sm'}`}
               >
-                {step.description}
+                {getDescription()}
               </motion.p>
               
-              {/* Action hint */}
-              {step.action && (
+              {/* Action hint - uses device-specific action text */}
+              {getActionText() && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -707,7 +764,7 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
                 >
                   <span className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-primary/10 text-primary rounded-full">
                     <Hand className="w-3 h-3" />
-                    {step.action}
+                    {getActionText()}
                   </span>
                 </motion.div>
               )}

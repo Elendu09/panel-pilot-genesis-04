@@ -12,7 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Save, ExternalLink, Smartphone, Tablet, Monitor, ChevronDown, Palette, Image, Layout, Zap, BarChart3, HelpCircle, MessageSquare, Loader2, Sparkles, Settings, Users, Star, Plus, Trash2, GripVertical, Shield, Headphones, Award, Clock, ShoppingCart, TrendingUp, CheckCircle, Heart, ThumbsUp, Undo2, Redo2, Wand2, Type, Maximize, Layers, MousePointer, Code, ChevronRight } from 'lucide-react';
+import { Save, ExternalLink, Smartphone, Tablet, Monitor, ChevronDown, Palette, Image, Layout, Zap, BarChart3, HelpCircle, MessageSquare, Loader2, Sparkles, Settings, Users, Star, Plus, Trash2, GripVertical, Shield, Headphones, Award, Clock, ShoppingCart, TrendingUp, CheckCircle, Heart, ThumbsUp, Undo2, Redo2, Wand2, Type, Maximize, Layers, MousePointer, Code, ChevronRight, Info } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -655,6 +655,44 @@ export default function DesignCustomization() {
               <p className="text-sm text-muted-foreground">Customize your storefront</p>
             </div>
           </div>
+          
+          {/* Current Theme Indicator + Change Theme Button */}
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 rounded-lg border border-border/50">
+              <div className="flex gap-1">
+                <div className="w-3 h-3 rounded-full ring-1 ring-white/20" style={{ backgroundColor: customization.backgroundColor }} />
+                <div className="w-3 h-3 rounded-full ring-1 ring-white/20" style={{ backgroundColor: customization.primaryColor }} />
+                <div className="w-3 h-3 rounded-full ring-1 ring-white/20" style={{ backgroundColor: customization.secondaryColor }} />
+              </div>
+              <span className="text-xs font-medium text-muted-foreground capitalize">
+                {customization.selectedTheme?.replace(/_/g, ' ') || 'Custom'}
+              </span>
+            </div>
+            
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setOpenSections(prev => ({ ...prev, themes: true, presets: true }))}
+                  className="gap-2 bg-gradient-to-r from-primary/10 to-secondary/10 hover:from-primary/20 hover:to-secondary/20 border-primary/30"
+                >
+                  <Palette className="w-4 h-4" />
+                  Change Theme
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-xs">
+                <div className="flex items-start gap-2">
+                  <Info className="w-4 h-4 mt-0.5 text-primary shrink-0" />
+                  <div>
+                    <p className="font-medium">Where to change theme?</p>
+                    <p className="text-xs text-muted-foreground">Click here or scroll to "Theme Gallery" in the left panel to pick a new theme or preset.</p>
+                  </div>
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+          
           <div className="flex items-center gap-2">
             {/* Undo/Redo Buttons */}
             <Tooltip>
