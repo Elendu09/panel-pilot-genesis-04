@@ -14,7 +14,7 @@ export function usePanelCustomization(panelId: string | undefined) {
       // Fetch panel with custom_branding in a single query
       const { data, error } = await supabase
         .from('panels')
-        .select('custom_branding, theme_type, primary_color, secondary_color, logo_url, name')
+        .select('custom_branding, theme_type, primary_color, secondary_color, logo_url, name, blog_enabled')
         .eq('id', panelId)
         .single();
 
@@ -27,6 +27,7 @@ export function usePanelCustomization(panelId: string | undefined) {
         secondaryColor: data?.secondary_color,
         logoUrl: data?.logo_url,
         companyName: data?.name,
+        showBlogInMenu: data?.blog_enabled ?? false,
       };
     },
     enabled: !!panelId,

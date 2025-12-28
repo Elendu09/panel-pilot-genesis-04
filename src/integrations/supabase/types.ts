@@ -1094,6 +1094,7 @@ export type Database = {
       }
       panel_settings: {
         Row: {
+          blog_enabled: boolean | null
           contact_info: Json | null
           created_at: string | null
           custom_css: string | null
@@ -1120,6 +1121,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          blog_enabled?: boolean | null
           contact_info?: Json | null
           created_at?: string | null
           custom_css?: string | null
@@ -1146,6 +1148,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          blog_enabled?: boolean | null
           contact_info?: Json | null
           created_at?: string | null
           custom_css?: string | null
@@ -1322,6 +1325,7 @@ export type Database = {
       panels: {
         Row: {
           balance: number | null
+          blog_enabled: boolean | null
           commission_rate: number | null
           created_at: string
           custom_branding: Json | null
@@ -1353,6 +1357,7 @@ export type Database = {
         }
         Insert: {
           balance?: number | null
+          blog_enabled?: boolean | null
           commission_rate?: number | null
           created_at?: string
           custom_branding?: Json | null
@@ -1384,6 +1389,7 @@ export type Database = {
         }
         Update: {
           balance?: number | null
+          blog_enabled?: boolean | null
           commission_rate?: number | null
           created_at?: string
           custom_branding?: Json | null

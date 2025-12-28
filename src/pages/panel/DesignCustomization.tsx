@@ -13,11 +13,11 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Save, ExternalLink, Smartphone, Tablet, Monitor, ChevronDown, Palette, Image, Layout, Zap, BarChart3, HelpCircle, MessageSquare, Loader2, Sparkles, Settings, Users, Star, Plus, Trash2, GripVertical, Shield, Headphones, Award, Clock, ShoppingCart, TrendingUp, CheckCircle, Heart, ThumbsUp, Undo2, Redo2, Wand2, Type, Maximize, Layers, MousePointer, Code, ChevronRight, Info } from 'lucide-react';
+import { Save, ExternalLink, Smartphone, Tablet, Monitor, ChevronDown, Palette, Image, Layout, Zap, BarChart3, HelpCircle, MessageSquare, Loader2, Sparkles, Settings, Users, Star, Plus, Trash2, GripVertical, Shield, Headphones, Award, Clock, ShoppingCart, TrendingUp, CheckCircle, Heart, ThumbsUp, Undo2, Redo2, Wand2, Type, Maximize, Layers, MousePointer, Code, ChevronRight, Info, Sun, Moon } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { MobileDesignEditor } from '@/components/design/MobileDesignEditor';
+import { MobileDesignSlider } from '@/components/design/MobileDesignSlider';
 import { ThemeOne } from '@/components/themes/ThemeOne';
 
 // Memoized preset button for performance
@@ -1176,10 +1176,10 @@ export default function DesignCustomization() {
     { id: 'advanced', title: 'Advanced', icon: Code },
   ];
 
-  // Mobile view uses the MobileDesignEditor component
+  // Mobile view uses the MobileDesignSlider component
   if (isMobile) {
     return (
-      <MobileDesignEditor
+      <MobileDesignSlider
         previewDevice={previewDevice}
         setPreviewDevice={setPreviewDevice}
         hasUnsavedChanges={hasUnsavedChanges}
@@ -1191,7 +1191,7 @@ export default function DesignCustomization() {
         secondaryColor={customization.secondaryColor}
       >
         <LivePreviewRenderer customization={customization} />
-      </MobileDesignEditor>
+      </MobileDesignSlider>
     );
   }
 

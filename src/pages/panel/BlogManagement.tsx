@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { 
   FileText, Plus, Search, Edit, Trash2, Eye, Calendar, Tag, MoreVertical, Image as ImageIcon,
-  Clock, CheckCircle, Globe, TrendingUp, Users, Upload, X, Monitor, Tablet, Smartphone, Loader2
+  Clock, CheckCircle, Globe, TrendingUp, Users, Upload, X, Monitor, Tablet, Smartphone, Loader2, ToggleLeft, ToggleRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -35,9 +36,11 @@ interface BlogPost {
 const categories = ["All", "Instagram", "TikTok", "YouTube", "Marketing", "Tips"];
 
 const BlogManagement = () => {
-  const { panel } = usePanel();
+  const { panel, refreshPanel } = usePanel();
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [blogEnabled, setBlogEnabled] = useState(false);
+  const [togglingBlog, setTogglingBlog] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -54,8 +57,51 @@ const BlogManagement = () => {
   useEffect(() => {
     if (panel?.id) {
       fetchPosts();
+      fetchBlogEnabled();
     }
   }, [panel?.id]);
+
+  const fetchBlogEnabled = async () => {
+    if (!panel?.id) return;
+    try {
+      const { data } = await supabase
+        .from('panels')
+        .select('blog_enabled')
+        .eq('id', panel.id)
+        .single();
+      setBlogEnabled(data?.blog_enabled ?? false);
+    } catch (error) {
+      console.error('Error fetching blog enabled status:', error);
+    }
+  };
+
+  const toggleBlogEnabled = async () => {
+    if (!panel?.id) return;
+    setTogglingBlog(true);
+    try {
+      const newValue = !blogEnabled;
+      const { error } = await supabase
+        .from('panels')
+        .update({ blog_enabled: newValue })
+        .eq('id', panel.id);
+      
+      if (error) throw error;
+      
+      setBlogEnabled(newValue);
+      toast({ 
+        title: newValue ? "Blog enabled" : "Blog disabled",
+        description: newValue 
+          ? "Blog is now visible in your storefront menu" 
+          : "Blog has been hidden from your storefront menu"
+      });
+      refreshPanel?.();
+    } catch (error) {
+      console.error('Error toggling blog:', error);
+      toast({ variant: "destructive", title: "Failed to update blog visibility" });
+    } finally {
+      setTogglingBlog(false);
+    }
+  };
 
   const fetchPosts = async () => {
     if (!panel?.id) return;
@@ -250,10 +296,24 @@ const BlogManagement = () => {
           <h1 className="text-2xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">Blog Management</h1>
           <p className="text-muted-foreground">Create and manage blog posts for your panel</p>
         </div>
-        <Button onClick={() => openEditor()} className="gap-2 bg-gradient-to-r from-primary to-primary/80 shadow-lg shadow-primary/20">
-          <Plus className="w-4 h-4" />
-          New Post
-        </Button>
+        <div className="flex items-center gap-3">
+          {/* Blog Enable/Disable Toggle */}
+          <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-muted/50 border border-border/50">
+            <span className="text-sm font-medium">Blog Visibility</span>
+            <Switch
+              checked={blogEnabled}
+              onCheckedChange={toggleBlogEnabled}
+              disabled={togglingBlog}
+            />
+            <Badge variant={blogEnabled ? "default" : "secondary"} className="text-xs">
+              {blogEnabled ? "Visible" : "Hidden"}
+            </Badge>
+          </div>
+          <Button onClick={() => openEditor()} className="gap-2 bg-gradient-to-r from-primary to-primary/80 shadow-lg shadow-primary/20">
+            <Plus className="w-4 h-4" />
+            New Post
+          </Button>
+        </div>
       </motion.div>
 
       {/* Stats */}
