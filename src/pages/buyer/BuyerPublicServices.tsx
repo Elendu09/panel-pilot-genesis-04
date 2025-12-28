@@ -1,18 +1,27 @@
-import { useState, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { useState, useMemo, useEffect } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
   Search, ArrowLeft, Instagram, Music, Youtube, Send, Twitter, 
-  Linkedin, Facebook, Globe, Zap, Star, ShoppingCart, Filter
+  Linkedin, Facebook, Globe, Zap, Star, ShoppingCart, Filter, CheckCircle
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { useBuyerAuth } from "@/contexts/BuyerAuthContext";
+import { toast } from "@/hooks/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
 // Platform icon mapping
 const platformIcons: Record<string, React.ElementType> = {
@@ -39,8 +48,15 @@ const platformColors: Record<string, string> = {
 
 const BuyerPublicServices = () => {
   const { panelId, buyer } = useBuyerAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  
+  // Fast Order prefill state
+  const [showOrderModal, setShowOrderModal] = useState(false);
+  const [prefilledService, setPrefilledService] = useState<any>(null);
+  const [prefilledQuantity, setPrefilledQuantity] = useState<number>(1000);
+  const [prefilledUrl, setPrefilledUrl] = useState<string>("");
 
   // Fetch services for this panel
   const { data: services = [], isLoading } = useQuery({
@@ -61,6 +77,33 @@ const BuyerPublicServices = () => {
     },
     enabled: !!panelId,
   });
+
+  // Handle Fast Order URL parameters
+  useEffect(() => {
+    if (services.length === 0) return;
+    
+    const serviceId = searchParams.get('service');
+    const quantityParam = searchParams.get('quantity');
+    const urlParam = searchParams.get('url');
+    
+    if (serviceId) {
+      const service = services.find(s => s.id === serviceId);
+      if (service) {
+        setPrefilledService(service);
+        if (quantityParam) setPrefilledQuantity(parseInt(quantityParam) || 1000);
+        if (urlParam) setPrefilledUrl(decodeURIComponent(urlParam));
+        setShowOrderModal(true);
+        
+        // Clear URL params after reading
+        setSearchParams({});
+        
+        toast({
+          title: "Order Pre-filled",
+          description: `${service.name} selected from Fast Order`,
+        });
+      }
+    }
+  }, [services, searchParams, setSearchParams]);
 
   // Get unique categories
   const categories = useMemo(() => {
@@ -277,6 +320,75 @@ const BuyerPublicServices = () => {
             })}
           </div>
         )}
+
+        {/* Fast Order Pre-fill Modal */}
+        <Dialog open={showOrderModal} onOpenChange={setShowOrderModal}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Zap className="w-5 h-5 text-primary" />
+                Complete Your Order
+              </DialogTitle>
+              <DialogDescription>
+                Your order has been pre-filled from Fast Order
+              </DialogDescription>
+            </DialogHeader>
+            
+            {prefilledService && (
+              <div className="space-y-4 py-4">
+                <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CheckCircle className="w-4 h-4 text-primary" />
+                    <span className="font-medium">{prefilledService.name}</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">${prefilledService.price}/1K</p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Quantity</Label>
+                  <Input
+                    type="number"
+                    value={prefilledQuantity}
+                    onChange={(e) => setPrefilledQuantity(parseInt(e.target.value) || 1000)}
+                    min={prefilledService.min_quantity || 100}
+                    max={prefilledService.max_quantity || 100000}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Target URL</Label>
+                  <Input
+                    placeholder="https://..."
+                    value={prefilledUrl}
+                    onChange={(e) => setPrefilledUrl(e.target.value)}
+                  />
+                </div>
+                
+                <div className="flex justify-between items-center pt-4 border-t">
+                  <span className="text-muted-foreground">Total</span>
+                  <span className="text-xl font-bold text-primary">
+                    ${((prefilledService.price * prefilledQuantity) / 1000).toFixed(2)}
+                  </span>
+                </div>
+                
+                {buyer ? (
+                  <Button className="w-full" asChild>
+                    <Link to={`/dashboard?service=${prefilledService.id}&quantity=${prefilledQuantity}&url=${encodeURIComponent(prefilledUrl)}`}>
+                      <ShoppingCart className="w-4 h-4 mr-2" />
+                      Proceed to Order
+                    </Link>
+                  </Button>
+                ) : (
+                  <Button className="w-full" asChild>
+                    <Link to="/auth">
+                      Sign In to Order
+                    </Link>
+                  </Button>
+                )}
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );

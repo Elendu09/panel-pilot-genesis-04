@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { Json } from '@/integrations/supabase/types';
 import { useToast } from '@/hooks/use-toast';
 import { useDesignHistory } from '@/hooks/use-design-history';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,10 +12,11 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Save, ExternalLink, Smartphone, Tablet, Monitor, ChevronDown, Palette, Image, Layout, Zap, BarChart3, HelpCircle, MessageSquare, Loader2, Sparkles, Settings, Users, Star, Plus, Trash2, GripVertical, Shield, Headphones, Award, Clock, ShoppingCart, TrendingUp, CheckCircle, Heart, ThumbsUp, Undo2, Redo2, Wand2, Type, Maximize, Layers, MousePointer, Code } from 'lucide-react';
+import { Save, ExternalLink, Smartphone, Tablet, Monitor, ChevronDown, Palette, Image, Layout, Zap, BarChart3, HelpCircle, MessageSquare, Loader2, Sparkles, Settings, Users, Star, Plus, Trash2, GripVertical, Shield, Headphones, Award, Clock, ShoppingCart, TrendingUp, CheckCircle, Heart, ThumbsUp, Undo2, Redo2, Wand2, Type, Maximize, Layers, MousePointer, Code, ChevronRight } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { MobileDesignEditor } from '@/components/design/MobileDesignEditor';
 
 interface FAQ {
   question: string;
@@ -315,8 +317,9 @@ export default function DesignCustomization() {
   const [saving, setSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>({ presets: true, themes: false });
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({ presets: true, themes: true });
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   // Use the design history hook for undo/redo
   const { 
@@ -446,6 +449,159 @@ export default function DesignCustomization() {
     </div>
   );
 
+  // Helper function to render section content (used by both desktop and mobile)
+  const renderSectionContent = (sectionId: string) => {
+    switch (sectionId) {
+      case 'presets':
+        return (
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Apply a complete design with one click.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              {designPresets.map(preset => (
+                <button 
+                  key={preset.id} 
+                  onClick={() => applyPreset(preset)} 
+                  className="p-3 rounded-xl border-2 border-border hover:border-primary/50 transition-all text-left group"
+                >
+                  <div className="flex gap-1 mb-2">
+                    {preset.preview.map((c, i) => (
+                      <div key={i} className="w-5 h-5 rounded-full" style={{ backgroundColor: c }} />
+                    ))}
+                  </div>
+                  <p className="text-sm font-medium">{preset.name}</p>
+                  <p className="text-xs text-muted-foreground">{preset.description}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+      case 'themes':
+        return (
+          <div className="space-y-4">
+            <div className="p-3 rounded-lg bg-primary/10 border border-primary/20 mb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Palette className="w-4 h-4 text-primary" />
+                <span className="text-sm font-medium">Current Theme</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="flex gap-1">
+                  <div className="w-4 h-4 rounded-full" style={{ backgroundColor: customization.backgroundColor }} />
+                  <div className="w-4 h-4 rounded-full" style={{ backgroundColor: customization.primaryColor }} />
+                  <div className="w-4 h-4 rounded-full" style={{ backgroundColor: customization.secondaryColor }} />
+                </div>
+                <span className="text-xs">{customization.selectedTheme || 'Custom'}</span>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {themes.map(theme => (
+                <button 
+                  key={theme.id} 
+                  onClick={() => applyTheme(theme.id)} 
+                  className={`p-3 rounded-xl border-2 transition-all ${customization.selectedTheme === theme.id ? 'border-primary ring-2 ring-primary/20' : 'border-border hover:border-primary/50'}`}
+                >
+                  <div className="flex gap-1 mb-2">
+                    {theme.colors.map((c, i) => (
+                      <div key={i} className="w-5 h-5 rounded-full" style={{ backgroundColor: c }} />
+                    ))}
+                  </div>
+                  <p className="text-xs font-medium text-left">{theme.name}</p>
+                  {customization.selectedTheme === theme.id && (
+                    <Badge variant="secondary" className="mt-1 text-[10px]">Active</Badge>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+      case 'branding':
+        return (
+          <div className="space-y-4">
+            <div>
+              <Label>Logo URL</Label>
+              <Input value={customization.logoUrl} onChange={(e) => updateCustomization('logoUrl', e.target.value)} placeholder="https://..." />
+            </div>
+            <div>
+              <Label>Company Name</Label>
+              <Input value={customization.companyName} onChange={(e) => updateCustomization('companyName', e.target.value)} />
+            </div>
+            <div>
+              <Label>Tagline</Label>
+              <Input value={customization.tagline} onChange={(e) => updateCustomization('tagline', e.target.value)} />
+            </div>
+          </div>
+        );
+      case 'colors':
+        return (
+          <div className="space-y-3">
+            {['primaryColor', 'secondaryColor', 'backgroundColor', 'textColor'].map(key => (
+              <div key={key} className="flex items-center gap-3">
+                <input 
+                  type="color" 
+                  value={(customization as any)[key]} 
+                  onChange={(e) => updateCustomization(key, e.target.value)} 
+                  className="w-10 h-10 rounded-lg border-0 cursor-pointer"
+                />
+                <div className="flex-1">
+                  <Label className="text-xs capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</Label>
+                  <Input 
+                    value={(customization as any)[key]} 
+                    onChange={(e) => updateCustomization(key, e.target.value)} 
+                    className="h-8 text-xs font-mono"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        );
+      case 'typography':
+        return (
+          <div className="space-y-4">
+            <div>
+              <Label>Font Family</Label>
+              <select 
+                value={customization.fontFamily}
+                onChange={(e) => updateCustomization('fontFamily', e.target.value)}
+                className="w-full h-10 px-3 rounded-md border bg-background"
+              >
+                {fontOptions.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <Label>Base Font Size: {customization.baseFontSize}px</Label>
+              <Slider 
+                value={[customization.baseFontSize]} 
+                onValueChange={([v]) => updateCustomization('baseFontSize', v)} 
+                min={12} 
+                max={24} 
+                step={1} 
+              />
+            </div>
+          </div>
+        );
+      case 'hero':
+        return (
+          <div className="space-y-4">
+            <div>
+              <Label>Hero Title</Label>
+              <Input value={customization.heroTitle} onChange={(e) => updateCustomization('heroTitle', e.target.value)} />
+            </div>
+            <div>
+              <Label>Hero Subtitle</Label>
+              <Textarea value={customization.heroSubtitle} onChange={(e) => updateCustomization('heroSubtitle', e.target.value)} rows={3} />
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-lg bg-accent/30">
+              <span className="font-medium">Enable Fast Order</span>
+              <Switch checked={customization.enableFastOrder} onCheckedChange={(c) => updateCustomization('enableFastOrder', c)} />
+            </div>
+          </div>
+        );
+      default:
+        return <p className="text-sm text-muted-foreground">Configure {sectionId} settings</p>;
+    }
+  };
+
   const sections = [
     { id: 'presets', title: 'Design Presets', icon: Wand2 },
     { id: 'themes', title: 'Theme Gallery', icon: Palette },
@@ -465,6 +621,25 @@ export default function DesignCustomization() {
     { id: 'footer', title: 'Footer', icon: MessageSquare },
     { id: 'advanced', title: 'Advanced', icon: Code },
   ];
+
+  // Mobile view uses the MobileDesignEditor component
+  if (isMobile) {
+    return (
+      <MobileDesignEditor
+        previewDevice={previewDevice}
+        setPreviewDevice={setPreviewDevice}
+        hasUnsavedChanges={hasUnsavedChanges}
+        saving={saving}
+        onSave={handleSave}
+        renderSection={renderSectionContent}
+        currentTheme={customization.selectedTheme}
+        primaryColor={customization.primaryColor}
+        secondaryColor={customization.secondaryColor}
+      >
+        <LivePreviewRenderer customization={customization} />
+      </MobileDesignEditor>
+    );
+  }
 
   return (
     <TooltipProvider>
