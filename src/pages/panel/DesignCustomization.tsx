@@ -125,6 +125,27 @@ const defaultCustomization = {
   enableFAQs: true,
   showBlogInMenu: false,
 
+  // Custom design presets (saved by tenant)
+  customPresets: [] as Array<{
+    id: string;
+    name: string;
+    colors: {
+      primaryColor: string;
+      secondaryColor: string;
+      backgroundColor: string;
+      textColor: string;
+      surfaceColor: string;
+    };
+    typography: {
+      fontFamily: string;
+      baseFontSize: number;
+      headingWeight: string;
+      bodyWeight: string;
+      lineHeight: number;
+      letterSpacing: number;
+    };
+  }>,
+
   // Platform Features
   platformFeatures: [
     { title: 'Lightning Fast', description: 'Orders start within seconds', icon: 'Zap', gradient: 'from-yellow-500 to-orange-500' },
@@ -163,6 +184,9 @@ const defaultCustomization = {
   
   // Theme
   selectedTheme: 'dark_gradient',
+
+  // UI helpers
+  newPresetName: '',
 };
 
 const fontOptions = [
@@ -177,12 +201,78 @@ const fontOptions = [
 ];
 
 const themes = [
-  { id: 'dark_gradient', name: 'Dark Gradient', colors: ['#0F172A', '#6366F1', '#8B5CF6'] },
-  { id: 'ocean_blue', name: 'Ocean Blue', colors: ['#0C4A6E', '#0EA5E9', '#38BDF8'] },
-  { id: 'forest_green', name: 'Forest Green', colors: ['#14532D', '#22C55E', '#4ADE80'] },
-  { id: 'professional', name: 'Professional', colors: ['#FFFFFF', '#3B82F6', '#1E40AF'] },
-  { id: 'vibrant', name: 'Vibrant', colors: ['#FFF7ED', '#F97316', '#F59E0B'] },
-  { id: 'midnight', name: 'Midnight', colors: ['#020617', '#7C3AED', '#A855F7'] },
+  { 
+    id: 'dark_gradient', 
+    name: 'Dark Gradient', 
+    colors: ['#0F172A', '#6366F1', '#8B5CF6'],
+    sections: {
+      enablePlatformFeatures: true,
+      enableStats: true,
+      enableFeatures: true,
+      enableTestimonials: true,
+      enableFAQs: true,
+    },
+  },
+  { 
+    id: 'ocean_blue', 
+    name: 'Ocean Blue', 
+    colors: ['#0C4A6E', '#0EA5E9', '#38BDF8'],
+    sections: {
+      enablePlatformFeatures: true,
+      enableStats: true,
+      enableFeatures: true,
+      enableTestimonials: true,
+      enableFAQs: true,
+    },
+  },
+  { 
+    id: 'forest_green', 
+    name: 'Forest Green', 
+    colors: ['#14532D', '#22C55E', '#4ADE80'],
+    sections: {
+      enablePlatformFeatures: true,
+      enableStats: true,
+      enableFeatures: true,
+      enableTestimonials: true,
+      enableFAQs: true,
+    },
+  },
+  { 
+    id: 'professional', 
+    name: 'Professional', 
+    colors: ['#FFFFFF', '#3B82F6', '#1E40AF'],
+    sections: {
+      enablePlatformFeatures: true,
+      enableStats: true,
+      enableFeatures: true,
+      enableTestimonials: false,
+      enableFAQs: false,
+    },
+  },
+  { 
+    id: 'vibrant', 
+    name: 'Vibrant', 
+    colors: ['#FFF7ED', '#F97316', '#F59E0B'],
+    sections: {
+      enablePlatformFeatures: true,
+      enableStats: false,
+      enableFeatures: true,
+      enableTestimonials: true,
+      enableFAQs: true,
+    },
+  },
+  { 
+    id: 'midnight', 
+    name: 'Midnight', 
+    colors: ['#020617', '#7C3AED', '#A855F7'],
+    sections: {
+      enablePlatformFeatures: true,
+      enableStats: true,
+      enableFeatures: true,
+      enableTestimonials: true,
+      enableFAQs: true,
+    },
+  },
 ];
 
 // Design Presets - One-click beautiful designs
@@ -567,7 +657,8 @@ export default function DesignCustomization() {
         selectedTheme: themeId, 
         backgroundColor: theme.colors[0], 
         primaryColor: theme.colors[1], 
-        secondaryColor: theme.colors[2] 
+        secondaryColor: theme.colors[2],
+        ...(theme as any).sections,
       })); 
       setHasUnsavedChanges(true); 
     }
@@ -622,9 +713,9 @@ export default function DesignCustomization() {
     switch (sectionId) {
       case 'presets':
         return (
-          <div className="space-y-3">
+          <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Apply a complete design with one click.
+              Apply a complete design with one click, or save your own presets.
             </p>
             <div className="grid grid-cols-2 gap-3">
               {designPresets.map(preset => (
@@ -642,6 +733,87 @@ export default function DesignCustomization() {
                   <p className="text-xs text-muted-foreground">{preset.description}</p>
                 </button>
               ))}
+            </div>
+
+            {/* Custom presets saved per tenant */}
+            <div className="pt-4 border-t border-border/60 space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">My presets</p>
+              {customization.customPresets?.length ? (
+                <div className="grid grid-cols-2 gap-3">
+                  {customization.customPresets.map((preset: any) => (
+                    <button
+                      key={preset.id}
+                      onClick={() => {
+                        updateCustomization('primaryColor', preset.colors.primaryColor);
+                        updateCustomization('secondaryColor', preset.colors.secondaryColor);
+                        updateCustomization('backgroundColor', preset.colors.backgroundColor);
+                        updateCustomization('textColor', preset.colors.textColor);
+                        updateCustomization('surfaceColor', preset.colors.surfaceColor);
+                        updateCustomization('fontFamily', preset.typography.fontFamily);
+                        updateCustomization('baseFontSize', preset.typography.baseFontSize);
+                        updateCustomization('headingWeight', preset.typography.headingWeight);
+                        updateCustomization('bodyWeight', preset.typography.bodyWeight);
+                        updateCustomization('lineHeight', preset.typography.lineHeight);
+                        updateCustomization('letterSpacing', preset.typography.letterSpacing);
+                      }}
+                      className="p-3 rounded-xl border-2 border-border hover:border-primary/60 transition-all text-left"
+                    >
+                      <div className="flex gap-1 mb-2">
+                        <div className="w-4 h-4 rounded-full" style={{ backgroundColor: preset.colors.backgroundColor }} />
+                        <div className="w-4 h-4 rounded-full" style={{ backgroundColor: preset.colors.primaryColor }} />
+                        <div className="w-4 h-4 rounded-full" style={{ backgroundColor: preset.colors.secondaryColor }} />
+                      </div>
+                      <p className="text-xs font-medium truncate">{preset.name}</p>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">No custom presets yet. Create one below from your current design.</p>
+              )}
+
+              {/* Save current design as preset */}
+              <div className="space-y-2">
+                <Label className="text-xs">Save current colors & typography as preset</Label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Preset name"
+                    value={customization.newPresetName || ''}
+                    onChange={(e) => updateCustomization('newPresetName', e.target.value)}
+                    className="h-8 text-xs"
+                  />
+                  <Button
+                    size="sm"
+                    disabled={!customization.newPresetName}
+                    onClick={() => {
+                      const id = crypto.randomUUID();
+                      const newPreset = {
+                        id,
+                        name: customization.newPresetName,
+                        colors: {
+                          primaryColor: customization.primaryColor,
+                          secondaryColor: customization.secondaryColor,
+                          backgroundColor: customization.backgroundColor,
+                          textColor: customization.textColor,
+                          surfaceColor: customization.surfaceColor,
+                        },
+                        typography: {
+                          fontFamily: customization.fontFamily,
+                          baseFontSize: customization.baseFontSize,
+                          headingWeight: customization.headingWeight,
+                          bodyWeight: customization.bodyWeight,
+                          lineHeight: customization.lineHeight,
+                          letterSpacing: customization.letterSpacing,
+                        },
+                      };
+                      const existing = customization.customPresets || [];
+                      updateCustomization('customPresets', [...existing, newPreset]);
+                      updateCustomization('newPresetName', '');
+                    }}
+                  >
+                    Save
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
         );
@@ -721,6 +893,9 @@ export default function DesignCustomization() {
                 </div>
               </div>
             ))}
+            <p className="text-[11px] text-muted-foreground">
+              These colors update the live preview on the right instantly. Save them as a preset from the "Design Presets" section.
+            </p>
           </div>
         );
       case 'typography':
