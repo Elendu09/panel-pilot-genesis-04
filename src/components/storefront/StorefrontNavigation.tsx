@@ -23,13 +23,19 @@ export const StorefrontNavigation = ({ panel, customization = {} }: StorefrontNa
   const surfaceColor = customization.surfaceColor || (themeMode === 'dark' ? '#12121F' : '#FFFFFF');
   const borderColor = customization.borderColor || (themeMode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)');
 
+  const showBlogInMenu = customization.showBlogInMenu ?? false;
+
   // Navigation links with proper routing
-  const navLinks = [
+  const baseNavLinks = [
     { href: "/services", label: "Services", isRoute: true },
     { href: "#features", label: "Features", isRoute: false },
     { href: "#testimonials", label: "Reviews", isRoute: false },
     { href: "#faq", label: "FAQ", isRoute: false },
   ];
+
+  const navLinks = showBlogInMenu
+    ? [...baseNavLinks, { href: "/blog", label: "Blog", isRoute: true }]
+    : baseNavLinks;
 
   const toggleThemeMode = () => {
     if (setThemeMode) {
