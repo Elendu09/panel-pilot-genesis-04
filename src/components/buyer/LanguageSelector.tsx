@@ -7,6 +7,8 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { useLanguage, Language } from "@/contexts/LanguageContext";
+import { useBuyerAuth } from "@/contexts/BuyerAuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
 const languages: { code: Language; name: string; nativeName: string; flag: string }[] = [
@@ -20,8 +22,24 @@ const languages: { code: Language; name: string; nativeName: string; flag: strin
 
 export const LanguageSelector = () => {
   const { language, setLanguage } = useLanguage();
+  const { buyer, panelId } = useBuyerAuth();
 
   const currentLanguage = languages.find(l => l.code === language);
+
+  const handleChangeLanguage = async (code: Language) => {
+    setLanguage(code);
+    if (buyer) {
+      try {
+        await supabase
+          .from('client_users')
+          .update({ preferred_language: code })
+          .eq('id', buyer.id)
+          .eq('panel_id', panelId);
+      } catch (e) {
+        console.error('Failed to update preferred language', e);
+      }
+    }
+  };
 
   return (
     <DropdownMenu>
@@ -34,7 +52,7 @@ export const LanguageSelector = () => {
         {languages.map((lang) => (
           <DropdownMenuItem
             key={lang.code}
-            onClick={() => setLanguage(lang.code)}
+            onClick={() => handleChangeLanguage(lang.code)}
             className={cn(
               "flex items-center gap-3 cursor-pointer",
               language === lang.code && "bg-primary/10"
