@@ -50,6 +50,7 @@ import SecuritySettings from "./panel/SecuritySettings";
 import MoreMenu from "./panel/MoreMenu";
 import Billing from "./panel/Billing";
 import Integrations from "./panel/Integrations";
+import TeamManagement from "./panel/TeamManagement";
 import { Helmet } from "react-helmet-async";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -118,6 +119,7 @@ const PanelOwnerDashboard = () => {
   const settingsNavigation = [
     { name: 'Providers', href: '/panel/providers', icon: Plug, tourId: 'providers' },
     { name: 'Payments', href: '/panel/payments', icon: CreditCard, tourId: 'payments' },
+    { name: 'Team', href: '/panel/team', icon: Users, tourId: 'team' },
     { name: 'API', href: '/panel/api', icon: Code, tourId: 'api' },
     { name: 'Blog', href: '/panel/blog', icon: FileText, tourId: 'blog' },
     { name: 'Domain', href: '/panel/domain', icon: Globe, tourId: 'domain' },
@@ -415,6 +417,7 @@ const PanelOwnerDashboard = () => {
             <Route path="security" element={<SecuritySettings />} />
             <Route path="billing" element={<Billing />} />
             <Route path="integrations" element={<Integrations />} />
+            <Route path="team" element={<TeamManagement />} />
             <Route path="more" element={<MoreMenu />} />
           </Routes>
         </div>

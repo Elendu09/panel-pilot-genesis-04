@@ -1228,6 +1228,59 @@ export type Database = {
           },
         ]
       }
+      panel_team_members: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          email: string
+          full_name: string | null
+          id: string
+          invited_at: string | null
+          invited_by: string | null
+          is_active: boolean | null
+          panel_id: string
+          permissions: Json | null
+          role: Database["public"]["Enums"]["panel_role"]
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          email: string
+          full_name?: string | null
+          id?: string
+          invited_at?: string | null
+          invited_by?: string | null
+          is_active?: boolean | null
+          panel_id: string
+          permissions?: Json | null
+          role?: Database["public"]["Enums"]["panel_role"]
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          email?: string
+          full_name?: string | null
+          id?: string
+          invited_at?: string | null
+          invited_by?: string | null
+          is_active?: boolean | null
+          panel_id?: string
+          permissions?: Json | null
+          role?: Database["public"]["Enums"]["panel_role"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "panel_team_members_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       panel_templates: {
         Row: {
           created_at: string
@@ -2070,6 +2123,7 @@ export type Database = {
         | "completed"
         | "cancelled"
         | "partial"
+      panel_role: "panel_admin" | "manager" | "agent"
       panel_status: "pending" | "active" | "suspended" | "rejected"
       payment_status: "pending" | "completed" | "failed" | "refunded"
       service_category:
@@ -2220,6 +2274,7 @@ export const Constants = {
         "cancelled",
         "partial",
       ],
+      panel_role: ["panel_admin", "manager", "agent"],
       panel_status: ["pending", "active", "suspended", "rejected"],
       payment_status: ["pending", "completed", "failed", "refunded"],
       service_category: [

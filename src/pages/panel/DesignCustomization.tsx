@@ -628,6 +628,7 @@ export default function DesignCustomization() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({ presets: true, themes: true });
+  const [showAllPresets, setShowAllPresets] = useState(false);
   const { toast } = useToast();
   const isMobile = useIsMobile();
 
@@ -849,13 +850,14 @@ export default function DesignCustomization() {
   const renderSectionContent = (sectionId: string) => {
     switch (sectionId) {
       case 'presets':
+        const displayedPresets = showAllPresets ? designPresets : designPresets.slice(0, 4);
         return (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
               Apply a complete design with one click, or save your own presets.
             </p>
             <div className="grid grid-cols-2 gap-3">
-              {designPresets.map(preset => (
+              {displayedPresets.map(preset => (
                 <button 
                   key={preset.id} 
                   onClick={() => applyPreset(preset)} 
@@ -871,6 +873,15 @@ export default function DesignCustomization() {
                 </button>
               ))}
             </div>
+            {designPresets.length > 4 && (
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={() => setShowAllPresets(!showAllPresets)}
+              >
+                {showAllPresets ? 'Show Less' : `Load More (${designPresets.length - 4} more)`}
+              </Button>
+            )}
 
             {/* Custom presets saved per tenant */}
             <div className="pt-4 border-t border-border/60 space-y-3">
