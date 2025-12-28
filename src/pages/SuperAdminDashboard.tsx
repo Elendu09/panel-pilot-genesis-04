@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Routes, Route, Link, useLocation } from "react-router-dom";
+import { Routes, Route, Link, useLocation, useNavigate } from "react-router-dom";
 import { 
   LayoutDashboard, 
   Users, 
@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { BottomNav } from "@/components/ui/bottom-nav";
 import { Separator } from "@/components/ui/separator";
+import { useAuth } from "@/contexts/AuthContext";
 import PanelManagement from "./admin/PanelManagement";
 import UserManagement from "./admin/UserManagement";
 import PlatformSettings from "./admin/PlatformSettings";
@@ -50,6 +51,8 @@ import { Helmet } from "react-helmet-async";
 const SuperAdminDashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { signOut } = useAuth();
   const canonicalUrl = typeof window !== 'undefined' ? `${window.location.origin}${location.pathname}` : '';
 
   // Grouped navigation for better organization
@@ -195,7 +198,11 @@ const SuperAdminDashboard = () => {
         <div className="absolute bottom-4 left-3 right-3">
           <Button
             variant="ghost"
-            className={`w-full ${sidebarOpen ? 'justify-start' : 'justify-center'} text-muted-foreground hover:text-foreground`}
+            onClick={async () => {
+              await signOut();
+              navigate('/auth');
+            }}
+            className={`w-full ${sidebarOpen ? 'justify-start' : 'justify-center'} text-muted-foreground hover:text-foreground hover:text-destructive`}
           >
             <LogOut className={`${sidebarOpen ? 'w-4 h-4 mr-3' : 'w-6 h-6'} `} />
             {sidebarOpen && <span>Logout</span>}

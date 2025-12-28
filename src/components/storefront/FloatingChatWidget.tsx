@@ -1,10 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, X } from "lucide-react";
+import { MessageCircle, X, Send, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface FloatingChatWidgetProps {
   panelId?: string;
+  panelName?: string;
   whatsappNumber?: string;
   telegramUsername?: string;
   messengerUsername?: string;
@@ -13,6 +17,13 @@ interface FloatingChatWidgetProps {
   customLabel?: string;
   position?: 'bottom-right' | 'bottom-left';
   message?: string;
+  enableAI?: boolean;
+  pageContext?: string;
+}
+
+interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
 }
 
 // WhatsApp SVG Icon
@@ -43,15 +54,9 @@ const DiscordIcon = () => (
   </svg>
 );
 
-// Custom Chat Icon
-const CustomChatIcon = () => (
-  <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current">
-    <path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.37 5.07L2 22l4.93-1.37C8.42 21.5 10.15 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm0 18c-1.7 0-3.29-.46-4.66-1.25l-.33-.19-3.43.95.97-3.42-.2-.34C3.46 14.29 3 12.7 3 11c0-4.97 4.03-9 9-9s9 4.03 9 9-4.03 9-9 9z"/>
-  </svg>
-);
-
 export const FloatingChatWidget = ({
   panelId,
+  panelName,
   whatsappNumber,
   telegramUsername,
   messengerUsername,
@@ -59,9 +64,16 @@ export const FloatingChatWidget = ({
   customUrl,
   customLabel,
   position = 'bottom-right',
-  message = 'Need help? Chat with us!'
+  message = 'Need help? Chat with us!',
+  enableAI = true,
+  pageContext = 'Homepage'
 }: FloatingChatWidgetProps) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [showAIChat, setShowAIChat] = useState(false);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [inputValue, setInputValue] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const [settings, setSettings] = useState({
     enabled: false,
     whatsapp: whatsappNumber || '',
@@ -100,9 +112,8 @@ export const FloatingChatWidget = ({
       };
       fetchSettings();
     } else {
-      // Use props directly
       setSettings({
-        enabled: !!(whatsappNumber || telegramUsername || messengerUsername || discordInvite || customUrl),
+        enabled: !!(whatsappNumber || telegramUsername || messengerUsername || discordInvite || customUrl || enableAI),
         whatsapp: whatsappNumber || '',
         telegram: telegramUsername || '',
         messenger: messengerUsername || '',
@@ -113,12 +124,17 @@ export const FloatingChatWidget = ({
         message: message
       });
     }
-  }, [panelId, whatsappNumber, telegramUsername, messengerUsername, discordInvite, customUrl, customLabel, position, message]);
+  }, [panelId, whatsappNumber, telegramUsername, messengerUsername, discordInvite, customUrl, customLabel, position, message, enableAI]);
 
-  // Check if any chat option is available
-  const hasAnyChatOption = settings.whatsapp || settings.telegram || settings.messenger || settings.discord || settings.customUrl;
+  // Auto scroll to bottom when messages change
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  const hasAnyChatOption = settings.whatsapp || settings.telegram || settings.messenger || settings.discord || settings.customUrl || enableAI;
   
-  // Don't render if no chat options available
   if (!settings.enabled && !hasAnyChatOption) {
     return null;
   }
@@ -150,7 +166,38 @@ export const FloatingChatWidget = ({
     window.open(settings.customUrl, '_blank');
   };
 
-  // Get primary icon for button
+  const handleSendMessage = async () => {
+    if (!inputValue.trim() || isLoading) return;
+
+    const userMessage = inputValue.trim();
+    setInputValue('');
+    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+    setIsLoading(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-chat-reply', {
+        body: {
+          message: userMessage,
+          pageContext,
+          panelInfo: { name: panelName },
+          conversationHistory: messages.slice(-6)
+        }
+      });
+
+      if (error) throw error;
+
+      setMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);
+    } catch (error) {
+      console.error('AI chat error:', error);
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: 'Sorry, I\'m having trouble responding right now. Please try again or use one of our other contact options.' 
+      }]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const getPrimaryIcon = () => {
     if (settings.whatsapp) return <WhatsAppIcon />;
     if (settings.telegram) return <TelegramIcon />;
@@ -159,7 +206,6 @@ export const FloatingChatWidget = ({
     return <MessageCircle className="w-6 h-6" />;
   };
 
-  // Get primary color for button
   const getPrimaryColor = () => {
     if (settings.whatsapp) return 'bg-green-500 hover:bg-green-600';
     if (settings.telegram) return 'bg-sky-500 hover:bg-sky-600';
@@ -176,17 +222,17 @@ export const FloatingChatWidget = ({
             initial={{ opacity: 0, y: 20, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.9 }}
-            className="mb-4 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden w-72"
+            className="mb-4 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden w-80"
           >
             {/* Header */}
-            <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-4 text-white">
+            <div className="bg-gradient-to-r from-primary to-primary/80 p-4 text-white">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <MessageCircle className="w-5 h-5" />
-                  <span className="font-semibold">Chat with us</span>
+                  <span className="font-semibold">{showAIChat ? 'AI Assistant' : 'Chat with us'}</span>
                 </div>
                 <button 
-                  onClick={() => setIsOpen(false)}
+                  onClick={() => { setIsOpen(false); setShowAIChat(false); }}
                   className="p-1 hover:bg-white/20 rounded-full transition-colors"
                 >
                   <X className="w-4 h-4" />
@@ -195,83 +241,159 @@ export const FloatingChatWidget = ({
               <p className="text-sm text-white/80 mt-1">{settings.message}</p>
             </div>
 
-            {/* Chat options */}
-            <div className="p-4 space-y-3 max-h-80 overflow-y-auto">
-              {settings.whatsapp && (
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={handleWhatsApp}
-                  className="w-full flex items-center gap-3 p-3 bg-green-500 hover:bg-green-600 text-white rounded-xl transition-colors"
-                >
-                  <WhatsAppIcon />
-                  <div className="text-left">
-                    <p className="font-semibold">WhatsApp</p>
-                    <p className="text-xs text-white/80">Chat on WhatsApp</p>
+            {showAIChat ? (
+              /* AI Chat Interface */
+              <div className="flex flex-col h-80">
+                <ScrollArea ref={scrollRef} className="flex-1 p-3">
+                  <div className="space-y-3">
+                    {messages.length === 0 && (
+                      <div className="text-center text-sm text-muted-foreground py-4">
+                        👋 Hi! How can I help you today?
+                      </div>
+                    )}
+                    {messages.map((msg, i) => (
+                      <div
+                        key={i}
+                        className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                      >
+                        <div
+                          className={`max-w-[85%] px-3 py-2 rounded-xl text-sm ${
+                            msg.role === 'user'
+                              ? 'bg-primary text-white rounded-br-sm'
+                              : 'bg-slate-100 dark:bg-slate-700 text-foreground rounded-bl-sm'
+                          }`}
+                        >
+                          {msg.content}
+                        </div>
+                      </div>
+                    ))}
+                    {isLoading && (
+                      <div className="flex justify-start">
+                        <div className="bg-slate-100 dark:bg-slate-700 px-4 py-2 rounded-xl rounded-bl-sm">
+                          <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </motion.button>
-              )}
+                </ScrollArea>
+                <div className="p-3 border-t dark:border-slate-700">
+                  <form
+                    onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }}
+                    className="flex gap-2"
+                  >
+                    <Input
+                      value={inputValue}
+                      onChange={(e) => setInputValue(e.target.value)}
+                      placeholder="Type a message..."
+                      className="flex-1 h-9"
+                      disabled={isLoading}
+                    />
+                    <Button type="submit" size="sm" disabled={!inputValue.trim() || isLoading}>
+                      <Send className="w-4 h-4" />
+                    </Button>
+                  </form>
+                  <button
+                    onClick={() => setShowAIChat(false)}
+                    className="w-full mt-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    ← Back to options
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* Chat options */
+              <div className="p-4 space-y-3 max-h-80 overflow-y-auto">
+                {enableAI && (
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setShowAIChat(true)}
+                    className="w-full flex items-center gap-3 p-3 bg-gradient-to-r from-primary to-primary/80 text-white rounded-xl transition-colors"
+                  >
+                    <MessageCircle className="w-6 h-6" />
+                    <div className="text-left">
+                      <p className="font-semibold">AI Assistant</p>
+                      <p className="text-xs text-white/80">Get instant answers</p>
+                    </div>
+                  </motion.button>
+                )}
 
-              {settings.telegram && (
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={handleTelegram}
-                  className="w-full flex items-center gap-3 p-3 bg-sky-500 hover:bg-sky-600 text-white rounded-xl transition-colors"
-                >
-                  <TelegramIcon />
-                  <div className="text-left">
-                    <p className="font-semibold">Telegram</p>
-                    <p className="text-xs text-white/80">Message on Telegram</p>
-                  </div>
-                </motion.button>
-              )}
+                {settings.whatsapp && (
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleWhatsApp}
+                    className="w-full flex items-center gap-3 p-3 bg-green-500 hover:bg-green-600 text-white rounded-xl transition-colors"
+                  >
+                    <WhatsAppIcon />
+                    <div className="text-left">
+                      <p className="font-semibold">WhatsApp</p>
+                      <p className="text-xs text-white/80">Chat on WhatsApp</p>
+                    </div>
+                  </motion.button>
+                )}
 
-              {settings.messenger && (
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={handleMessenger}
-                  className="w-full flex items-center gap-3 p-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl transition-colors"
-                >
-                  <MessengerIcon />
-                  <div className="text-left">
-                    <p className="font-semibold">Messenger</p>
-                    <p className="text-xs text-white/80">Chat on Facebook</p>
-                  </div>
-                </motion.button>
-              )}
+                {settings.telegram && (
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleTelegram}
+                    className="w-full flex items-center gap-3 p-3 bg-sky-500 hover:bg-sky-600 text-white rounded-xl transition-colors"
+                  >
+                    <TelegramIcon />
+                    <div className="text-left">
+                      <p className="font-semibold">Telegram</p>
+                      <p className="text-xs text-white/80">Message on Telegram</p>
+                    </div>
+                  </motion.button>
+                )}
 
-              {settings.discord && (
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={handleDiscord}
-                  className="w-full flex items-center gap-3 p-3 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl transition-colors"
-                >
-                  <DiscordIcon />
-                  <div className="text-left">
-                    <p className="font-semibold">Discord</p>
-                    <p className="text-xs text-white/80">Join our server</p>
-                  </div>
-                </motion.button>
-              )}
+                {settings.messenger && (
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleMessenger}
+                    className="w-full flex items-center gap-3 p-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl transition-colors"
+                  >
+                    <MessengerIcon />
+                    <div className="text-left">
+                      <p className="font-semibold">Messenger</p>
+                      <p className="text-xs text-white/80">Chat on Facebook</p>
+                    </div>
+                  </motion.button>
+                )}
 
-              {settings.customUrl && (
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={handleCustom}
-                  className="w-full flex items-center gap-3 p-3 bg-gradient-to-r from-primary to-primary/80 text-white rounded-xl transition-colors"
-                >
-                  <CustomChatIcon />
-                  <div className="text-left">
-                    <p className="font-semibold">{settings.customLabel}</p>
-                    <p className="text-xs text-white/80">Start conversation</p>
-                  </div>
-                </motion.button>
-              )}
-            </div>
+                {settings.discord && (
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleDiscord}
+                    className="w-full flex items-center gap-3 p-3 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl transition-colors"
+                  >
+                    <DiscordIcon />
+                    <div className="text-left">
+                      <p className="font-semibold">Discord</p>
+                      <p className="text-xs text-white/80">Join our server</p>
+                    </div>
+                  </motion.button>
+                )}
+
+                {settings.customUrl && (
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleCustom}
+                    className="w-full flex items-center gap-3 p-3 bg-slate-600 hover:bg-slate-700 text-white rounded-xl transition-colors"
+                  >
+                    <MessageCircle className="w-6 h-6" />
+                    <div className="text-left">
+                      <p className="font-semibold">{settings.customLabel}</p>
+                      <p className="text-xs text-white/80">Start conversation</p>
+                    </div>
+                  </motion.button>
+                )}
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
