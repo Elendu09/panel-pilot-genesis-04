@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Zap, LogIn, Sun, Moon } from "lucide-react";
+import { Menu, X, Zap, LogIn, Sun, Moon, LayoutDashboard, LogOut } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { useBuyerAuth } from "@/contexts/BuyerAuthContext";
 
 interface StorefrontNavigationProps {
   panel?: any;
@@ -12,6 +13,17 @@ interface StorefrontNavigationProps {
 export const StorefrontNavigation = ({ panel, customization = {} }: StorefrontNavigationProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
+  
+  // Get buyer auth state - wrapped in try/catch since it may not always be available
+  let buyer = null;
+  let signOut: (() => void) | null = null;
+  try {
+    const auth = useBuyerAuth();
+    buyer = auth.buyer;
+    signOut = auth.signOut;
+  } catch {
+    // Not within BuyerAuthProvider context, buyer is null
+  }
   
   const panelName = customization.companyName || panel?.name || 'SMM Panel';
   const logoUrl = customization.logoUrl || panel?.logo_url;
@@ -54,6 +66,13 @@ export const StorefrontNavigation = ({ panel, customization = {} }: StorefrontNa
       }
     }
     setIsOpen(false);
+  };
+
+  const handleSignOut = () => {
+    if (signOut) {
+      signOut();
+      navigate('/');
+    }
   };
 
   return (
@@ -144,33 +163,67 @@ export const StorefrontNavigation = ({ panel, customization = {} }: StorefrontNa
               </motion.button>
             )}
             
-            <Button 
-              asChild 
-              variant="ghost" 
-              size="sm" 
-              className={themeMode === 'light' ? 'hover:bg-gray-100' : ''}
-              style={{ color: textColor }}
-            >
-              <Link to="/auth?tab=login">
-                <LogIn className="w-4 h-4 mr-2" />
-                Sign In
-              </Link>
-            </Button>
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.98 }}>
-              <Button 
-                asChild 
-                size="sm"
-                className="text-white"
-                style={{ 
-                  background: `linear-gradient(135deg, ${primaryColor}, ${customization.secondaryColor || primaryColor})`,
-                  boxShadow: `0 4px 20px ${primaryColor}40`
-                }}
-              >
-                <Link to="/auth?tab=signup">
-                  Get Started
-                </Link>
-              </Button>
-            </motion.div>
+            {/* Auth buttons - show Dashboard if logged in */}
+            {buyer ? (
+              <>
+                <Button 
+                  asChild 
+                  variant="ghost" 
+                  size="sm" 
+                  className={themeMode === 'light' ? 'hover:bg-gray-100' : ''}
+                  style={{ color: textColor }}
+                >
+                  <Link to="/dashboard">
+                    <LayoutDashboard className="w-4 h-4 mr-2" />
+                    Dashboard
+                  </Link>
+                </Button>
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.98 }}>
+                  <Button 
+                    size="sm"
+                    variant="outline"
+                    onClick={handleSignOut}
+                    style={{ 
+                      borderColor: themeMode === 'light' ? 'rgba(0,0,0,0.2)' : borderColor,
+                      color: textColor 
+                    }}
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Sign Out
+                  </Button>
+                </motion.div>
+              </>
+            ) : (
+              <>
+                <Button 
+                  asChild 
+                  variant="ghost" 
+                  size="sm" 
+                  className={themeMode === 'light' ? 'hover:bg-gray-100' : ''}
+                  style={{ color: textColor }}
+                >
+                  <Link to="/auth?tab=login">
+                    <LogIn className="w-4 h-4 mr-2" />
+                    Sign In
+                  </Link>
+                </Button>
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.98 }}>
+                  <Button 
+                    asChild 
+                    size="sm"
+                    className="text-white"
+                    style={{ 
+                      background: `linear-gradient(135deg, ${primaryColor}, ${customization.secondaryColor || primaryColor})`,
+                      boxShadow: `0 4px 20px ${primaryColor}40`
+                    }}
+                  >
+                    <Link to="/auth?tab=signup">
+                      Get Started
+                    </Link>
+                  </Button>
+                </motion.div>
+              </>
+            )}
           </div>
 
           {/* Mobile Header Icons - VISIBLE BESIDE HAMBURGER */}
@@ -245,26 +298,58 @@ export const StorefrontNavigation = ({ panel, customization = {} }: StorefrontNa
                       <span className="text-sm">{themeMode === 'dark' ? 'Light' : 'Dark'}</span>
                     </motion.button>
                   )}
-                  <Button 
-                    asChild 
-                    variant="outline" 
-                    className={`w-full ${themeMode === 'light' ? 'bg-white hover:bg-gray-50' : ''}`}
-                    style={{ 
-                      borderColor: themeMode === 'light' ? 'rgba(0,0,0,0.2)' : borderColor, 
-                      color: textColor 
-                    }}
-                  >
-                    <Link to="/auth?tab=login">Sign In</Link>
-                  </Button>
-                  <Button 
-                    asChild 
-                    className="w-full text-white"
-                    style={{ 
-                      background: `linear-gradient(135deg, ${primaryColor}, ${customization.secondaryColor || primaryColor})`
-                    }}
-                  >
-                    <Link to="/auth?tab=signup">Get Started</Link>
-                  </Button>
+                  {/* Auth buttons - show Dashboard if logged in */}
+                  {buyer ? (
+                    <>
+                      <Button 
+                        asChild 
+                        variant="outline" 
+                        className={`w-full ${themeMode === 'light' ? 'bg-white hover:bg-gray-50' : ''}`}
+                        style={{ 
+                          borderColor: themeMode === 'light' ? 'rgba(0,0,0,0.2)' : borderColor, 
+                          color: textColor 
+                        }}
+                      >
+                        <Link to="/dashboard">
+                          <LayoutDashboard className="w-4 h-4 mr-2" />
+                          Dashboard
+                        </Link>
+                      </Button>
+                      <Button 
+                        onClick={handleSignOut}
+                        className="w-full text-white"
+                        style={{ 
+                          background: `linear-gradient(135deg, ${primaryColor}, ${customization.secondaryColor || primaryColor})`
+                        }}
+                      >
+                        <LogOut className="w-4 h-4 mr-2" />
+                        Sign Out
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button 
+                        asChild 
+                        variant="outline" 
+                        className={`w-full ${themeMode === 'light' ? 'bg-white hover:bg-gray-50' : ''}`}
+                        style={{ 
+                          borderColor: themeMode === 'light' ? 'rgba(0,0,0,0.2)' : borderColor, 
+                          color: textColor 
+                        }}
+                      >
+                        <Link to="/auth?tab=login">Sign In</Link>
+                      </Button>
+                      <Button 
+                        asChild 
+                        className="w-full text-white"
+                        style={{ 
+                          background: `linear-gradient(135deg, ${primaryColor}, ${customization.secondaryColor || primaryColor})`
+                        }}
+                      >
+                        <Link to="/auth?tab=signup">Get Started</Link>
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
             </motion.div>
