@@ -27,6 +27,7 @@ import BuyerPublicServices from './buyer/BuyerPublicServices';
 import BuyerFavorites from './buyer/BuyerFavorites';
 import Storefront from './Storefront';
 import StorefrontBlog from './storefront/StorefrontBlog';
+import FastOrder from './FastOrder';
 
 const queryClient = new QueryClient();
 
@@ -128,6 +129,7 @@ const TenantRouter = () => {
                         <Route path="/" element={<Storefront />} />
                         <Route path="/auth" element={<BuyerAuth />} />
                         <Route path="/services" element={<BuyerPublicServices />} />
+                        <Route path="/fast-order" element={<FastOrder />} />
 
                         {/* Tenant blog route */}
                         <Route path="/blog" element={<StorefrontBlog />} />

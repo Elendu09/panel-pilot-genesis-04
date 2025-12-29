@@ -136,18 +136,13 @@ const StepIndicator = ({ currentStep, selectedCategory }: { currentStep: number;
 
 export const FastOrderSection = ({ services, panelId, panelName, customization }: FastOrderSectionProps) => {
   const { buyer, refreshBuyer, login } = useBuyerAuth();
-  
-  // Hide Fast Order section for logged-in users - they should use the proper order page
-  if (buyer) {
-    return null;
-  }
+  const navigate = useNavigate();
   
   const themeMode = customization?.themeMode || 'dark';
   const textColor = customization?.textColor || (themeMode === 'dark' ? '#FFFFFF' : '#1F2937');
   const textMuted = customization?.textMuted || (themeMode === 'dark' ? '#A1A1AA' : '#4B5563');
   const cardBg = themeMode === 'dark' ? 'bg-slate-900/80 border-white/10' : 'bg-white shadow-md border-gray-200';
   const inputBg = themeMode === 'dark' ? 'bg-slate-800/50 border-white/10' : 'bg-gray-50 border-gray-200';
-  const navigate = useNavigate();
   
   // Step state
   const [currentStep, setCurrentStep] = useState(1);
@@ -173,8 +168,8 @@ export const FastOrderSection = ({ services, panelId, panelName, customization }
   const [modalStep, setModalStep] = useState<'email' | 'credentials' | 'login'>('email');
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
-  // Get unique categories from services
-  const categories = [...new Set(services.map(s => s.category))];
+  // Get unique categories from services (filter out empty/null categories)
+  const categories = [...new Set(services.map(s => s.category).filter(Boolean))];
   
   // Get services for selected category
   const categoryServices = selectedCategory 
@@ -409,7 +404,42 @@ export const FastOrderSection = ({ services, panelId, panelName, customization }
     }
   };
 
-  if (services.length === 0) return null;
+  // Show empty state if no services available
+  if (services.length === 0 || categories.length === 0) {
+    return (
+      <section className="py-16 md:py-24 relative overflow-hidden" id="fast-order">
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent" />
+        <div className="container mx-auto px-4 relative z-10">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center"
+          >
+            <div className="max-w-md mx-auto">
+              <div className={`p-8 rounded-2xl border ${cardBg}`}>
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
+                  <Zap className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <h3 className="text-xl font-bold mb-2" style={{ color: textColor }}>
+                  No Services Available Yet
+                </h3>
+                <p className="mb-6" style={{ color: textMuted }}>
+                  This panel hasn't added any services yet. Please check back later or contact support.
+                </p>
+                <Button 
+                  onClick={() => navigate('/')}
+                  variant="outline"
+                  className="w-full"
+                >
+                  Back to Storefront
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <>
