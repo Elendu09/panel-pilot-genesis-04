@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Helmet } from 'react-helmet-async';
-import { ArrowLeft, Zap, ShoppingBag, FileText, UserPlus, LogIn, Search, Sparkles } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Check, Search, Sparkles } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { FastOrderSection } from '@/components/storefront/FastOrderSection';
 import { useBuyerAuth } from '@/contexts/BuyerAuthContext';
@@ -11,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 interface Panel {
   id: string;
@@ -29,6 +29,187 @@ interface Service {
   max_quantity?: number;
 }
 
+// Vertical Step Progress Component for Desktop Sidebar
+const VerticalStepProgress = ({ 
+  currentStep, 
+  panelLogo, 
+  panelName,
+  themeMode 
+}: { 
+  currentStep: number; 
+  panelLogo?: string;
+  panelName: string;
+  themeMode: string;
+}) => {
+  const steps = [
+    { id: 1, label: 'Fast Order' },
+    { id: 2, label: 'Categories' },
+    { id: 3, label: 'Service' },
+    { id: 4, label: 'Payment' },
+  ];
+
+  return (
+    <motion.aside
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      className={cn(
+        "hidden lg:flex flex-col w-64 min-h-screen border-r p-6",
+        themeMode === 'dark' 
+          ? 'bg-slate-900/80 border-white/10' 
+          : 'bg-white border-gray-200'
+      )}
+    >
+      {/* Panel Logo */}
+      <div className="flex items-center gap-3 mb-10">
+        {panelLogo ? (
+          <img 
+            src={panelLogo} 
+            alt={panelName} 
+            className="h-10 w-auto object-contain"
+          />
+        ) : (
+          <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center text-white font-bold text-lg">
+            {panelName.charAt(0).toUpperCase()}
+          </div>
+        )}
+        <span className={cn(
+          "font-bold text-lg",
+          themeMode === 'dark' ? 'text-white' : 'text-gray-900'
+        )}>
+          {panelName}
+        </span>
+      </div>
+
+      {/* Vertical Step Progress */}
+      <div className="flex-1">
+        <div className="relative pl-4">
+          {steps.map((step, index) => {
+            const isCompleted = currentStep > step.id;
+            const isActive = currentStep === step.id;
+            const isPending = currentStep < step.id;
+
+            return (
+              <div key={step.id} className="relative mb-8 last:mb-0">
+                {/* Connecting Line */}
+                {index < steps.length - 1 && (
+                  <div 
+                    className={cn(
+                      "absolute left-0 top-8 w-0.5 h-10 -translate-x-1/2 transition-colors duration-500",
+                      isCompleted ? 'bg-blue-500' : themeMode === 'dark' ? 'bg-white/10' : 'bg-gray-200'
+                    )}
+                  />
+                )}
+
+                {/* Step Item */}
+                <div className="flex items-center gap-4">
+                  {/* Step Circle */}
+                  <motion.div 
+                    initial={{ scale: 0.8 }}
+                    animate={{ scale: isActive ? 1.1 : 1 }}
+                    className={cn(
+                      "relative z-10 flex items-center justify-center w-8 h-8 rounded-full -ml-4 transition-all duration-300",
+                      isCompleted 
+                        ? 'bg-blue-500' 
+                        : isActive 
+                          ? 'border-2 border-blue-500 bg-background' 
+                          : themeMode === 'dark' 
+                            ? 'bg-slate-800 border border-white/10' 
+                            : 'bg-gray-100 border border-gray-200'
+                    )}
+                  >
+                    {isCompleted ? (
+                      <Check className="w-4 h-4 text-white" />
+                    ) : isActive ? (
+                      <div className="w-2 h-2 rounded-full bg-blue-500" />
+                    ) : (
+                      <div className={cn(
+                        "w-2 h-2 rounded-full",
+                        themeMode === 'dark' ? 'bg-white/20' : 'bg-gray-300'
+                      )} />
+                    )}
+                  </motion.div>
+
+                  {/* Step Label */}
+                  <span 
+                    className={cn(
+                      "text-sm font-medium transition-colors duration-300",
+                      isCompleted || isActive 
+                        ? themeMode === 'dark' ? 'text-white' : 'text-gray-900'
+                        : themeMode === 'dark' ? 'text-gray-500' : 'text-gray-400'
+                    )}
+                  >
+                    {step.label}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Theme Toggle at Bottom */}
+      <div className={cn(
+        "pt-6 border-t",
+        themeMode === 'dark' ? 'border-white/10' : 'border-gray-200'
+      )}>
+        <div className="flex items-center justify-between">
+          <span className={cn(
+            "text-sm font-medium",
+            themeMode === 'dark' ? 'text-gray-400' : 'text-gray-600'
+          )}>
+            Theme
+          </span>
+          <ThemeToggle />
+        </div>
+      </div>
+    </motion.aside>
+  );
+};
+
+// Mobile Step Progress (compact horizontal)
+const MobileStepProgress = ({ currentStep, themeMode }: { currentStep: number; themeMode: string }) => {
+  const steps = ['Fast Order', 'Categories', 'Service', 'Payment'];
+  
+  return (
+    <div className={cn(
+      "lg:hidden flex items-center justify-center gap-1 py-4 px-4 border-b",
+      themeMode === 'dark' 
+        ? 'bg-slate-900/80 border-white/10' 
+        : 'bg-white border-gray-200'
+    )}>
+      {steps.map((step, index) => {
+        const isCompleted = currentStep > index + 1;
+        const isActive = currentStep === index + 1;
+        
+        return (
+          <div key={index} className="flex items-center">
+            <div 
+              className={cn(
+                "flex items-center justify-center w-6 h-6 rounded-full text-xs font-medium transition-all",
+                isCompleted 
+                  ? 'bg-blue-500 text-white' 
+                  : isActive 
+                    ? 'border-2 border-blue-500 text-blue-500' 
+                    : themeMode === 'dark'
+                      ? 'bg-slate-800 text-gray-500'
+                      : 'bg-gray-100 text-gray-400'
+              )}
+            >
+              {isCompleted ? <Check className="w-3 h-3" /> : index + 1}
+            </div>
+            {index < steps.length - 1 && (
+              <div className={cn(
+                "w-4 sm:w-6 h-0.5 mx-1",
+                isCompleted ? 'bg-blue-500' : themeMode === 'dark' ? 'bg-white/10' : 'bg-gray-200'
+              )} />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 const FastOrderContent = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -46,6 +227,7 @@ const FastOrderContent = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentStep, setCurrentStep] = useState(1);
 
   // Resolve panelId: URL param > context > localStorage
   const resolvedPanelId = 
@@ -100,9 +282,18 @@ const FastOrderContent = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
-        <div className="container mx-auto px-4 py-8">
-          <Skeleton className="h-12 w-48 mb-8" />
+      <div className="min-h-screen bg-background flex">
+        <div className="hidden lg:block w-64 border-r border-border p-6">
+          <Skeleton className="h-10 w-32 mb-10" />
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="flex items-center gap-4 mb-8">
+              <Skeleton className="w-8 h-8 rounded-full" />
+              <Skeleton className="h-4 w-20" />
+            </div>
+          ))}
+        </div>
+        <div className="flex-1 p-6">
+          <Skeleton className="h-12 w-full max-w-md mb-8" />
           <Skeleton className="h-[500px] w-full" />
         </div>
       </div>
@@ -124,13 +315,6 @@ const FastOrderContent = () => {
   const customBranding = panel.custom_branding || {};
   const themeMode = customBranding.themeMode || 'dark';
 
-  const navItems = [
-    { label: 'New order', icon: Zap, href: '/fast-order', active: true },
-    { label: 'Blog', icon: FileText, href: '/blog', active: false },
-    { label: 'Registration', icon: UserPlus, href: '/auth?mode=register', active: false },
-    { label: 'Sign in', icon: LogIn, href: '/auth', active: false },
-  ];
-
   return (
     <>
       <Helmet>
@@ -142,84 +326,19 @@ const FastOrderContent = () => {
         "min-h-screen flex",
         themeMode === 'dark' ? 'bg-slate-950' : 'bg-gray-50'
       )}>
-        {/* Desktop Sidebar */}
-        <motion.aside
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className={cn(
-            "hidden lg:flex flex-col w-64 min-h-screen border-r p-6",
-            themeMode === 'dark' 
-              ? 'bg-slate-900/80 border-white/10' 
-              : 'bg-white border-gray-200'
-          )}
-        >
-          {/* Logo */}
-          <div className="flex items-center gap-3 mb-8">
-            {panel.logo_url ? (
-              <img 
-                src={panel.logo_url} 
-                alt={panel.name} 
-                className="h-10 w-auto object-contain"
-              />
-            ) : (
-              <div 
-                className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-lg"
-                style={{ backgroundColor: panel.primary_color || '#3b82f6' }}
-              >
-                {panel.name.charAt(0).toUpperCase()}
-              </div>
-            )}
-            <span className={cn(
-              "font-bold text-lg",
-              themeMode === 'dark' ? 'text-white' : 'text-gray-900'
-            )}>
-              {panel.name}
-            </span>
-          </div>
-
-          {/* Navigation */}
-          <nav className="flex-1 space-y-2">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.label}
-                  to={item.href}
-                  className={cn(
-                    "flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium",
-                    item.active
-                      ? "bg-blue-500 text-white shadow-lg shadow-blue-500/25"
-                      : themeMode === 'dark'
-                        ? "text-gray-400 hover:text-white hover:bg-white/5"
-                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                  )}
-                >
-                  <Icon className="w-5 h-5" />
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
-
-          {/* Theme Toggle */}
-          <div className={cn(
-            "pt-6 border-t",
-            themeMode === 'dark' ? 'border-white/10' : 'border-gray-200'
-          )}>
-            <div className="flex items-center justify-between">
-              <span className={cn(
-                "text-sm font-medium",
-                themeMode === 'dark' ? 'text-gray-400' : 'text-gray-600'
-              )}>
-                Theme
-              </span>
-              <ThemeToggle />
-            </div>
-          </div>
-        </motion.aside>
+        {/* Desktop Vertical Step Progress Sidebar */}
+        <VerticalStepProgress 
+          currentStep={currentStep} 
+          panelLogo={panel.logo_url}
+          panelName={panel.name}
+          themeMode={themeMode}
+        />
 
         {/* Main Content */}
         <div className="flex-1 flex flex-col">
+          {/* Mobile Step Progress */}
+          <MobileStepProgress currentStep={currentStep} themeMode={themeMode} />
+
           {/* Mobile Header */}
           <motion.header
             initial={{ opacity: 0, y: -20 }}
@@ -231,38 +350,25 @@ const FastOrderContent = () => {
                 : 'bg-white/80 border-gray-200'
             )}
           >
-            <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => navigate(-1)}
-                  className="shrink-0"
-                >
-                  <ArrowLeft className="w-5 h-5" />
-                </Button>
-                <div className="flex items-center gap-2">
-                  {panel.logo_url ? (
-                    <img 
-                      src={panel.logo_url} 
-                      alt={panel.name} 
-                      className="h-8 w-auto object-contain"
-                    />
-                  ) : (
-                    <div 
-                      className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold"
-                      style={{ backgroundColor: panel.primary_color || '#3b82f6' }}
-                    >
-                      {panel.name.charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                  <span className={cn(
-                    "font-semibold",
-                    themeMode === 'dark' ? 'text-white' : 'text-gray-900'
-                  )}>
-                    {panel.name}
-                  </span>
-                </div>
+            <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {panel.logo_url ? (
+                  <img 
+                    src={panel.logo_url} 
+                    alt={panel.name} 
+                    className="h-8 w-auto object-contain"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center text-white font-bold">
+                    {panel.name.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <span className={cn(
+                  "font-semibold",
+                  themeMode === 'dark' ? 'text-white' : 'text-gray-900'
+                )}>
+                  {panel.name}
+                </span>
               </div>
               <ThemeToggle />
             </div>
@@ -306,6 +412,7 @@ const FastOrderContent = () => {
                 primaryColor: panel.primary_color,
                 ...customBranding,
               }}
+              onStepChange={setCurrentStep}
             />
           </main>
         </div>

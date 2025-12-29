@@ -41,6 +41,7 @@ interface FastOrderSectionProps {
   panelId: string;
   panelName: string;
   customization?: any;
+  onStepChange?: (step: number) => void;
 }
 
 // Platform icons for step indicator
@@ -134,7 +135,7 @@ const StepIndicator = ({ currentStep, selectedCategory }: { currentStep: number;
   );
 };
 
-export const FastOrderSection = ({ services, panelId, panelName, customization }: FastOrderSectionProps) => {
+export const FastOrderSection = ({ services, panelId, panelName, customization, onStepChange }: FastOrderSectionProps) => {
   const { buyer, refreshBuyer, login } = useBuyerAuth();
   const navigate = useNavigate();
   
@@ -145,7 +146,13 @@ export const FastOrderSection = ({ services, panelId, panelName, customization }
   const inputBg = themeMode === 'dark' ? 'bg-slate-800/50 border-white/10' : 'bg-gray-50 border-gray-200';
   
   // Step state
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep, setCurrentStepInternal] = useState(1);
+  
+  // Wrapper to notify parent of step changes
+  const setCurrentStep = (step: number) => {
+    setCurrentStepInternal(step);
+    onStepChange?.(step);
+  };
   
   // Order form state
   const [selectedCategory, setSelectedCategory] = useState<string>('');
