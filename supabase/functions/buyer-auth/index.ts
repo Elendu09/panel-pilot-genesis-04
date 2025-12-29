@@ -294,9 +294,9 @@ async function handleSignup(supabaseAdmin: any, body: any) {
 
 // Handle guest order - creates account and prepares for order
 async function handleGuestOrder(supabaseAdmin: any, body: any) {
-  const { panelId, email, fullName } = body;
+  const { panelId, email, fullName, username } = body;
   
-  console.log(`Guest order attempt: email=${email}, panelId=${panelId}`);
+  console.log(`Guest order attempt: email=${email}, username=${username}, panelId=${panelId}`);
 
   if (!email) {
     return jsonResponse({ error: 'Email is required' });
@@ -341,12 +341,13 @@ async function handleGuestOrder(supabaseAdmin: any, body: any) {
   // Generate temporary password (user-friendly)
   const tempPassword = generateTempPassword();
 
-  // Create new buyer account
+  // Create new buyer account with auto-generated or provided username
   const { data: newUser, error: insertError } = await supabaseAdmin
     .from('client_users')
     .insert({
       email: normalizedEmail,
       full_name: fullName?.trim() || null,
+      username: username?.trim() || null,
       password_temp: tempPassword,
       panel_id: panelId,
       is_active: true,
@@ -372,13 +373,14 @@ async function handleGuestOrder(supabaseAdmin: any, body: any) {
 
   console.log('Guest account created:', newUser.id);
 
-  // Return user data with temp password (so user knows their password)
+  // Return user data with temp password and username (so user knows their credentials)
   const { password_hash, ...safeUser } = newUser;
   
   return jsonResponse({ 
     success: true, 
     user: { ...safeUser, password_temp: undefined },
     tempPassword: tempPassword,
+    username: newUser.username || normalizedEmail,
     isNewAccount: true,
     message: 'Account created! Add funds to place your order.'
   });
