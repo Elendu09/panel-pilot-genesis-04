@@ -18,7 +18,12 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { Zap, ArrowRight, Lock, Loader2, Mail, User, CheckCircle, Check, ChevronRight, Instagram, Youtube, Send, Twitter, Facebook, Linkedin, Music2, Globe, Copy, AlertTriangle, Eye, EyeOff } from 'lucide-react';
+import { 
+  Zap, ArrowRight, ArrowLeft, Lock, Loader2, Mail, User, CheckCircle, Check, 
+  ChevronRight, Instagram, Youtube, Send, Twitter, Facebook, Linkedin, 
+  Music2, Globe, Copy, AlertTriangle, Eye, EyeOff, CreditCard, Wallet,
+  DollarSign
+} from 'lucide-react';
 import { SOCIAL_ICONS_MAP, TikTokIcon } from '@/components/icons/SocialIcons';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -44,96 +49,12 @@ interface FastOrderSectionProps {
   onStepChange?: (step: number) => void;
 }
 
-// Platform icons for step indicator
-const PlatformStepIcon = ({ category, className }: { category?: string; className?: string }) => {
-  if (!category) return <Globe className={className} />;
-  
-  const iconMap: Record<string, React.ReactNode> = {
-    instagram: <Instagram className={className} />,
-    youtube: <Youtube className={className} />,
-    telegram: <Send className={className} />,
-    twitter: <Twitter className={className} />,
-    facebook: <Facebook className={className} />,
-    linkedin: <Linkedin className={className} />,
-    tiktok: <TikTokIcon className={className} size={20} />,
-  };
-  
-  return iconMap[category] || <Globe className={className} />;
-};
-
-// Step indicator with SVG icons and visual progress bar
-const StepIndicator = ({ currentStep, selectedCategory }: { currentStep: number; selectedCategory?: string }) => {
-  const steps = [
-    { num: 1, label: 'Platform', icon: 'platform' },
-    { num: 2, label: 'Service', icon: 'sparkles' },
-    { num: 3, label: 'Details', icon: 'edit' },
-    { num: 4, label: 'Order', icon: 'check' },
-  ];
-
-  const getStepIcon = (step: { num: number; icon: string }) => {
-    if (currentStep > step.num) {
-      return <Check className="w-5 h-5" />;
-    }
-    
-    switch (step.icon) {
-      case 'platform':
-        return <PlatformStepIcon category={selectedCategory} className="w-5 h-5" />;
-      case 'sparkles':
-        return <Zap className="w-5 h-5" />;
-      case 'edit':
-        return <Mail className="w-5 h-5" />;
-      case 'check':
-        return <CheckCircle className="w-5 h-5" />;
-      default:
-        return <Globe className="w-5 h-5" />;
-    }
-  };
-
-  return (
-    <div className="relative mb-8">
-      {/* Progress bar background */}
-      <div className="absolute top-5 left-[10%] right-[10%] h-1 bg-muted rounded-full" />
-      
-      {/* Active progress bar - Blue gradient */}
-      <motion.div 
-        className="absolute top-5 left-[10%] h-1 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full"
-        initial={{ width: '0%' }}
-        animate={{ width: `${Math.min((currentStep - 1) * 26.66, 80)}%` }}
-        transition={{ duration: 0.5, ease: 'easeOut' }}
-      />
-      
-      <div className="relative flex items-center justify-between px-4 sm:px-8">
-        {steps.map((step) => (
-          <div key={step.num} className="flex flex-col items-center z-10">
-            <motion.div
-              initial={{ scale: 0.8 }}
-              animate={{ 
-                scale: currentStep === step.num ? 1.15 : 1,
-                transition: { duration: 0.3, type: 'spring' }
-              }}
-              className={cn(
-                "flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full transition-all duration-300 shadow-lg",
-                currentStep > step.num 
-                  ? "bg-blue-500 text-white" 
-                  : currentStep === step.num 
-                    ? "bg-blue-500 text-white ring-4 ring-blue-500/30" 
-                    : "bg-muted text-muted-foreground"
-              )}
-            >
-              {getStepIcon(step)}
-            </motion.div>
-            <span className={cn(
-              "mt-2 text-xs font-medium transition-colors text-center",
-              currentStep >= step.num ? "text-foreground" : "text-muted-foreground"
-            )}>
-              {step.label}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
+// Payment methods
+const paymentMethods = [
+  { id: 'stripe', name: 'Credit Card', icon: CreditCard, color: 'bg-blue-500' },
+  { id: 'paypal', name: 'PayPal', icon: Wallet, color: 'bg-blue-600' },
+  { id: 'crypto', name: 'Crypto', icon: DollarSign, color: 'bg-orange-500' },
+];
 
 export const FastOrderSection = ({ services, panelId, panelName, customization, onStepChange }: FastOrderSectionProps) => {
   const { buyer, refreshBuyer, login } = useBuyerAuth();
@@ -145,7 +66,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
   const cardBg = themeMode === 'dark' ? 'bg-slate-900/80 border-white/10' : 'bg-white shadow-md border-gray-200';
   const inputBg = themeMode === 'dark' ? 'bg-slate-800/50 border-white/10' : 'bg-gray-50 border-gray-200';
   
-  // Step state
+  // Step state (1-5: Categories, Service, Details, Review, Payment)
   const [currentStep, setCurrentStepInternal] = useState(1);
   
   // Wrapper to notify parent of step changes
@@ -160,6 +81,10 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
   const [targetUrl, setTargetUrl] = useState('');
   const [quantity, setQuantity] = useState(1000);
   const [isOrdering, setIsOrdering] = useState(false);
+  
+  // Payment state
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('stripe');
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   
   // Guest signup modal state
   const [showGuestModal, setShowGuestModal] = useState(false);
@@ -235,6 +160,13 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
     } catch (err) {
       toast({ title: "Copy failed", variant: "destructive" });
     }
+  };
+
+  // Generate order number
+  const generateOrderNumber = () => {
+    const timestamp = Date.now().toString(36).toUpperCase();
+    const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+    return `ORD-${timestamp}-${random}`;
   };
 
   const handleGuestSignup = async () => {
@@ -321,20 +253,10 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
         setModalStep('email');
         toast({
           title: "Welcome back!",
-          description: "You can now place your order",
+          description: "Continue to payment",
         });
-        // Redirect to deposit after successful login
-        if (selectedService) {
-          localStorage.setItem('pending_order', JSON.stringify({
-            serviceId: selectedServiceId,
-            serviceName: selectedService.name,
-            quantity,
-            targetUrl,
-            price: totalPrice,
-            panelId,
-          }));
-        }
-        navigate('/deposit');
+        // Go to payment step after login
+        setCurrentStep(5);
       }
     } catch (error: any) {
       toast({
@@ -347,10 +269,17 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
     }
   };
 
+  // Continue to payment step after account creation
+  const handleContinueToPayment = () => {
+    setShowGuestModal(false);
+    setAccountCreated(false);
+    setModalStep('email');
+    setCurrentStep(5);
+  };
+
   // Reset modal state when closed
   const handleModalClose = (open: boolean) => {
     if (!open) {
-      // Reset all modal state when closing
       setAccountCreated(false);
       setShowLoginForm(false);
       setModalStep('email');
@@ -369,428 +298,585 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
       setShowGuestModal(true);
       return;
     }
+    // Authenticated user - go to payment step
+    setCurrentStep(5);
+  };
 
-    // Authenticated user - redirect to order page with pre-filled data
-    if (selectedService) {
-      const params = new URLSearchParams();
-      params.set('service', selectedServiceId);
-      if (quantity) params.set('quantity', quantity.toString());
-      if (targetUrl) params.set('url', encodeURIComponent(targetUrl));
-      navigate(`/new-order?${params.toString()}`);
-    } else {
-      navigate('/new-order');
+  // Process payment and create order
+  const handleProcessPayment = async () => {
+    if (!buyer || !selectedService) {
+      toast({ title: "Error", description: "Please complete previous steps", variant: "destructive" });
+      return;
+    }
+
+    setIsProcessingPayment(true);
+
+    try {
+      const orderNumber = generateOrderNumber();
+
+      // Create pending transaction
+      const { data: transaction, error: txError } = await supabase
+        .from('transactions')
+        .insert({
+          user_id: buyer.id,
+          amount: totalPrice,
+          type: 'payment',
+          payment_method: selectedPaymentMethod,
+          status: 'pending',
+          description: `Fast Order - ${selectedService.name}`,
+        })
+        .select()
+        .single();
+
+      if (txError) throw txError;
+
+      // Simulate payment processing (replace with real payment gateway)
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Update transaction to completed
+      await supabase
+        .from('transactions')
+        .update({ status: 'completed' })
+        .eq('id', transaction.id);
+
+      // Create the order
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          buyer_id: buyer.id,
+          panel_id: panelId,
+          service_id: selectedServiceId,
+          order_number: orderNumber,
+          quantity: quantity,
+          price: totalPrice,
+          target_url: targetUrl,
+          status: 'pending',
+          notes: `Fast Order via ${panelName}`,
+        })
+        .select()
+        .single();
+
+      if (orderError) throw orderError;
+
+      // Update buyer balance (deduct the amount)
+      const newBalance = Math.max(0, (buyer.balance || 0) - totalPrice);
+      await supabase
+        .from('client_users')
+        .update({ 
+          balance: newBalance,
+          total_spent: (buyer.total_spent || 0) + totalPrice 
+        })
+        .eq('id', buyer.id);
+
+      await refreshBuyer();
+
+      toast({
+        title: "Order Placed Successfully!",
+        description: `Order #${orderNumber} is now being processed.`,
+      });
+
+      // Redirect to orders page
+      navigate(`/orders?highlight=${order.id}`);
+
+    } catch (error: any) {
+      console.error('Payment error:', error);
+      toast({
+        title: "Payment Failed",
+        description: error.message || "Failed to process payment",
+        variant: "destructive"
+      });
+    } finally {
+      setIsProcessingPayment(false);
     }
   };
 
-  const handleContinueToDeposit = () => {
-    if (selectedService) {
-      localStorage.setItem('pending_order', JSON.stringify({
-        serviceId: selectedServiceId,
-        serviceName: selectedService.name,
-        quantity,
-        targetUrl,
-        price: totalPrice,
-        panelId,
-      }));
-    }
-    setShowGuestModal(false);
-    navigate('/deposit');
-  };
-
-  // Reset to step 1
-  const resetToStep = (step: number) => {
-    if (step < currentStep) {
-      setCurrentStep(step);
-      if (step < 2) {
-        setSelectedCategory('');
-        setSelectedServiceId('');
-      }
-      if (step < 3) {
-        setSelectedServiceId('');
-      }
+  // Back navigation
+  const handleBack = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
     }
   };
 
   // Show empty state if no services available
   if (services.length === 0 || categories.length === 0) {
     return (
-      <section className="py-16 md:py-24 relative overflow-hidden" id="fast-order">
-        <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent" />
-        <div className="container mx-auto px-4 relative z-10">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center"
-          >
-            <div className="max-w-md mx-auto">
-              <div className={`p-8 rounded-2xl border ${cardBg}`}>
-                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
-                  <Zap className="w-8 h-8 text-muted-foreground" />
-                </div>
-                <h3 className="text-xl font-bold mb-2" style={{ color: textColor }}>
-                  No Services Available Yet
-                </h3>
-                <p className="mb-6" style={{ color: textMuted }}>
-                  This panel hasn't added any services yet. Please check back later or contact support.
-                </p>
-                <Button 
-                  onClick={() => navigate('/')}
-                  variant="outline"
-                  className="w-full"
-                >
-                  Back to Storefront
-                </Button>
+      <section className="flex-1 flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center"
+        >
+          <div className="max-w-md mx-auto">
+            <div className={`p-8 rounded-2xl border ${cardBg}`}>
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
+                <Zap className="w-8 h-8 text-muted-foreground" />
               </div>
+              <h3 className="text-xl font-bold mb-2" style={{ color: textColor }}>
+                No Services Available Yet
+              </h3>
+              <p className="mb-6" style={{ color: textMuted }}>
+                This panel hasn't added any services yet. Please check back later.
+              </p>
+              <Button 
+                onClick={() => navigate('/')}
+                variant="outline"
+                className="w-full"
+              >
+                Back to Storefront
+              </Button>
             </div>
-          </motion.div>
-        </div>
+          </div>
+        </motion.div>
       </section>
     );
   }
 
   return (
     <>
-      <section className="py-16 md:py-24 relative overflow-hidden" id="fast-order">
-        {/* Background Effects */}
-        <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl" />
+      <section className="flex-1 p-4 lg:p-8" id="fast-order">
+        <div className="max-w-3xl mx-auto h-full">
+          <Card className={`border ${cardBg} h-full`}>
+            <CardContent className="p-4 md:p-6 lg:p-8">
+              {/* Back Button - Always visible after step 1 */}
+              {currentStep > 1 && (
+                <motion.div
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="mb-4"
+                >
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleBack}
+                    className="gap-2 text-muted-foreground hover:text-foreground"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    {currentStep === 2 && 'Back to Categories'}
+                    {currentStep === 3 && 'Back to Services'}
+                    {currentStep === 4 && 'Back to Details'}
+                    {currentStep === 5 && 'Back to Review'}
+                  </Button>
+                </motion.div>
+              )}
 
-        <div className="container mx-auto px-4 relative z-10">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-8"
-          >
-            <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">
-              <Zap className="w-3 h-3 mr-1" />
-              Fast Order
-            </Badge>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4" style={{ color: textColor }}>
-              Order in 4 Simple Steps
-            </h2>
-            <p className="max-w-2xl mx-auto" style={{ color: textMuted }}>
-              Select your platform, choose a service, and boost your social presence instantly
-            </p>
-          </motion.div>
-
-          {/* Step Indicator */}
-          <StepIndicator currentStep={currentStep} selectedCategory={selectedCategory} />
-
-          <div className="max-w-4xl mx-auto">
-            <Card className={`backdrop-blur-xl border ${cardBg}`}>
-              <CardContent className="p-6 md:p-8">
-                <AnimatePresence mode="wait">
-                  {/* Step 1: Select Category */}
-                  {currentStep === 1 && (
-                    <motion.div
-                      key="step1"
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
-                      className="space-y-6"
-                    >
-                      <div className="text-center">
-                        <h3 className="text-xl font-bold mb-2" style={{ color: textColor }}>
-                          Select a Category 👆
-                        </h3>
-                        <p className="text-sm" style={{ color: textMuted }}>
-                          Choose the platform you want to boost
-                        </p>
-                      </div>
-                      
-                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 md:gap-4">
-                        {categories.map((category) => {
-                          const categoryData = getCategoryIcon(category);
-                          const CategoryIcon = categoryData.icon;
-                          const serviceCount = services.filter(s => s.category === category).length;
-                          
-                          return (
-                            <motion.button
-                              key={category}
-                              whileHover={{ scale: 1.05, y: -2 }}
-                              whileTap={{ scale: 0.95 }}
-                              onClick={() => handleCategorySelect(category)}
-                              className={cn(
-                                "flex flex-col items-center gap-2 p-4 rounded-xl border transition-all duration-200",
-                                themeMode === 'dark'
-                                  ? "border-white/10 bg-slate-800/50 hover:bg-slate-800 hover:border-primary/50"
-                                  : "border-gray-200 bg-white hover:bg-gray-50 hover:border-primary/50 shadow-sm"
-                              )}
-                            >
-                              <div className={cn("p-3 rounded-xl", categoryData.bgColor)}>
-                                <CategoryIcon className="w-6 h-6 text-white" size={24} />
-                              </div>
-                              <span className="text-sm font-medium capitalize" style={{ color: textColor }}>
-                                {category}
-                              </span>
-                              <span className="text-xs" style={{ color: textMuted }}>
-                                {serviceCount} services
-                              </span>
-                            </motion.button>
-                          );
-                        })}
-                      </div>
-                    </motion.div>
-                  )}
-
-                  {/* Step 2: Select Service */}
-                  {currentStep === 2 && (
-                    <motion.div
-                      key="step2"
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
-                      className="space-y-6"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="text-xl font-bold mb-1" style={{ color: textColor }}>
-                            Choose a Service
-                          </h3>
-                          <p className="text-sm" style={{ color: textMuted }}>
-                            {categoryServices.length} services available for{' '}
-                            <span className="capitalize font-medium text-primary">{selectedCategory}</span>
-                          </p>
-                        </div>
-                        <Button variant="ghost" size="sm" onClick={() => resetToStep(1)}>
-                          Change Category
-                        </Button>
-                      </div>
-                      
-                      <Select value={selectedServiceId} onValueChange={handleServiceSelect}>
-                        <SelectTrigger className={cn("h-14 text-left", inputBg)}>
-                          <SelectValue placeholder="Select a service..." />
-                        </SelectTrigger>
-                        <SelectContent className="max-h-80">
-                          {categoryServices.map((service) => (
-                            <SelectItem key={service.id} value={service.id} className="py-3">
-                              <div className="flex flex-col">
-                                <span className="font-medium">{service.name}</span>
-                                <span className="text-xs text-muted-foreground">
-                                  ${service.price.toFixed(4)}/1K • Min: {service.min_quantity || 100}
-                                </span>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      
-                      {/* Quick service buttons */}
-                      <div className="grid grid-cols-2 gap-3">
-                        {categoryServices.slice(0, 4).map((service) => (
+              <AnimatePresence mode="wait">
+                {/* Step 1: Select Category */}
+                {currentStep === 1 && (
+                  <motion.div
+                    key="step1"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    className="space-y-6"
+                  >
+                    <div className="text-center">
+                      <Badge className="mb-3 bg-blue-500/10 text-blue-500 border-blue-500/20">
+                        Step 1 of 5
+                      </Badge>
+                      <h3 className="text-xl font-bold mb-2" style={{ color: textColor }}>
+                        Select a Category
+                      </h3>
+                      <p className="text-sm" style={{ color: textMuted }}>
+                        Choose the platform you want to boost
+                      </p>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                      {categories.map((category) => {
+                        const categoryData = getCategoryIcon(category);
+                        const CategoryIcon = categoryData.icon;
+                        const serviceCount = services.filter(s => s.category === category).length;
+                        
+                        return (
                           <motion.button
-                            key={service.id}
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            onClick={() => handleServiceSelect(service.id)}
+                            key={category}
+                            whileHover={{ scale: 1.03, y: -2 }}
+                            whileTap={{ scale: 0.97 }}
+                            onClick={() => handleCategorySelect(category)}
                             className={cn(
-                              "p-3 rounded-lg border text-left transition-all",
-                              selectedServiceId === service.id
-                                ? "border-primary bg-primary/10"
-                                : themeMode === 'dark'
-                                  ? "border-white/10 bg-slate-800/50 hover:border-primary/30"
-                                  : "border-gray-200 bg-gray-50 hover:border-primary/30"
+                              "flex flex-col items-center gap-2 p-4 rounded-xl border transition-all duration-200",
+                              themeMode === 'dark'
+                                ? "border-white/10 bg-slate-800/50 hover:bg-slate-800 hover:border-blue-500/50"
+                                : "border-gray-200 bg-white hover:bg-gray-50 hover:border-blue-500/50 shadow-sm"
                             )}
                           >
-                            <div className="flex justify-between items-start mb-1">
-                              <span className="text-lg font-bold text-primary">${service.price.toFixed(4)}</span>
-                              {selectedServiceId === service.id && <Check className="w-4 h-4 text-primary" />}
+                            <div className={cn("p-3 rounded-xl", categoryData.bgColor)}>
+                              <CategoryIcon className="w-6 h-6 text-white" size={24} />
                             </div>
-                            <p className="text-xs line-clamp-2" style={{ color: textMuted }}>
-                              {service.name}
-                            </p>
+                            <span className="text-sm font-medium capitalize" style={{ color: textColor }}>
+                              {category}
+                            </span>
+                            <span className="text-xs" style={{ color: textMuted }}>
+                              {serviceCount} services
+                            </span>
                           </motion.button>
+                        );
+                      })}
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Step 2: Select Service */}
+                {currentStep === 2 && (
+                  <motion.div
+                    key="step2"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    className="space-y-6"
+                  >
+                    <div className="text-center">
+                      <Badge className="mb-3 bg-blue-500/10 text-blue-500 border-blue-500/20">
+                        Step 2 of 5
+                      </Badge>
+                      <h3 className="text-xl font-bold mb-2" style={{ color: textColor }}>
+                        Choose a Service
+                      </h3>
+                      <p className="text-sm" style={{ color: textMuted }}>
+                        {categoryServices.length} services for{' '}
+                        <span className="capitalize font-medium text-blue-500">{selectedCategory}</span>
+                      </p>
+                    </div>
+                    
+                    <Select value={selectedServiceId} onValueChange={handleServiceSelect}>
+                      <SelectTrigger className={cn("h-14 text-left", inputBg)}>
+                        <SelectValue placeholder="Select a service..." />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-80">
+                        {categoryServices.map((service) => (
+                          <SelectItem key={service.id} value={service.id} className="py-3">
+                            <div className="flex flex-col">
+                              <span className="font-medium">{service.name}</span>
+                              <span className="text-xs text-muted-foreground">
+                                ${service.price.toFixed(4)}/1K • Min: {service.min_quantity || 100}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    
+                    {/* Quick service buttons */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {categoryServices.slice(0, 4).map((service) => (
+                        <motion.button
+                          key={service.id}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => handleServiceSelect(service.id)}
+                          className={cn(
+                            "p-4 rounded-xl border text-left transition-all",
+                            selectedServiceId === service.id
+                              ? "border-blue-500 bg-blue-500/10"
+                              : themeMode === 'dark'
+                                ? "border-white/10 bg-slate-800/50 hover:border-blue-500/30"
+                                : "border-gray-200 bg-gray-50 hover:border-blue-500/30"
+                          )}
+                        >
+                          <div className="flex justify-between items-start mb-2">
+                            <span className="text-lg font-bold text-blue-500">${service.price.toFixed(4)}</span>
+                            {selectedServiceId === service.id && <Check className="w-5 h-5 text-blue-500" />}
+                          </div>
+                          <p className="text-sm line-clamp-2" style={{ color: textMuted }}>
+                            {service.name}
+                          </p>
+                        </motion.button>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Step 3: Enter Details */}
+                {currentStep === 3 && (
+                  <motion.div
+                    key="step3"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    className="space-y-6"
+                  >
+                    <div className="text-center">
+                      <Badge className="mb-3 bg-blue-500/10 text-blue-500 border-blue-500/20">
+                        Step 3 of 5
+                      </Badge>
+                      <h3 className="text-xl font-bold mb-2" style={{ color: textColor }}>
+                        Enter Order Details
+                      </h3>
+                      <p className="text-sm truncate max-w-xs mx-auto" style={{ color: textMuted }}>
+                        {selectedService?.name}
+                      </p>
+                    </div>
+                    
+                    {/* Target URL */}
+                    <div className="space-y-2">
+                      <Label style={{ color: textColor }}>Link / Username *</Label>
+                      <Input
+                        placeholder="https://instagram.com/yourprofile"
+                        value={targetUrl}
+                        onChange={(e) => setTargetUrl(e.target.value)}
+                        className={cn("h-12", inputBg)}
+                      />
+                    </div>
+
+                    {/* Quantity */}
+                    <div className="space-y-2">
+                      <Label style={{ color: textColor }}>Quantity</Label>
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {quantityPresets.map((preset) => (
+                          <Button
+                            key={preset}
+                            type="button"
+                            variant={quantity === preset ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setQuantity(preset)}
+                            className="min-w-[60px]"
+                          >
+                            {preset >= 1000 ? `${preset / 1000}K` : preset}
+                          </Button>
                         ))}
                       </div>
-                    </motion.div>
-                  )}
-
-                  {/* Step 3: Enter Details */}
-                  {currentStep === 3 && (
-                    <motion.div
-                      key="step3"
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
-                      className="space-y-6"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="text-xl font-bold mb-1" style={{ color: textColor }}>
-                            Enter Order Details
-                          </h3>
-                          <p className="text-sm" style={{ color: textMuted }}>
-                            {selectedService?.name}
-                          </p>
-                        </div>
-                        <Button variant="ghost" size="sm" onClick={() => resetToStep(2)}>
-                          Change Service
-                        </Button>
-                      </div>
-                      
-                      {/* Target URL */}
-                      <div className="space-y-2">
-                        <Label style={{ color: textColor }}>Link / Username *</Label>
-                        <Input
-                          placeholder="https://instagram.com/yourprofile"
-                          value={targetUrl}
-                          onChange={(e) => setTargetUrl(e.target.value)}
-                          className={cn("h-12", inputBg)}
-                        />
-                      </div>
-
-                      {/* Quantity */}
-                      <div className="space-y-2">
-                        <Label style={{ color: textColor }}>Quantity</Label>
-                        <div className="flex flex-wrap gap-2 mb-2">
-                          {quantityPresets.map((preset) => (
-                            <Button
-                              key={preset}
-                              type="button"
-                              variant={quantity === preset ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => setQuantity(preset)}
-                              className="min-w-[60px]"
-                            >
-                              {preset >= 1000 ? `${preset / 1000}K` : preset}
-                            </Button>
-                          ))}
-                        </div>
-                        <Input
-                          type="number"
-                          value={quantity}
-                          onChange={(e) => setQuantity(parseInt(e.target.value) || 0)}
-                          min={selectedService?.min_quantity || 100}
-                          max={selectedService?.max_quantity || 100000}
-                          className={inputBg}
-                        />
-                        {selectedService && (
-                          <p className="text-xs" style={{ color: textMuted }}>
-                            Min: {selectedService.min_quantity || 100} | Max: {(selectedService.max_quantity || 10000).toLocaleString()}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Price Preview */}
-                      <div className={cn(
-                        "p-4 rounded-xl border",
-                        themeMode === 'dark' ? "bg-slate-800/50 border-white/10" : "bg-gray-50 border-gray-200"
-                      )}>
-                        <div className="flex justify-between items-center">
-                          <span style={{ color: textMuted }}>Estimated Total</span>
-                          <span className="text-2xl font-bold text-primary">${totalPrice.toFixed(2)}</span>
-                        </div>
-                      </div>
-
-                      <Button
-                        className="w-full h-12 gap-2"
-                        onClick={handleDetailsConfirmed}
-                        disabled={!targetUrl.trim()}
-                      >
-                        Continue to Order
-                        <ArrowRight className="w-4 h-4" />
-                      </Button>
-                    </motion.div>
-                  )}
-
-                  {/* Step 4: Review & Order */}
-                  {currentStep === 4 && (
-                    <motion.div
-                      key="step4"
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
-                      className="space-y-6"
-                    >
-                      <div className="text-center">
-                        <h3 className="text-xl font-bold mb-2" style={{ color: textColor }}>
-                          Review & Place Order ✨
-                        </h3>
-                        <p className="text-sm" style={{ color: textMuted }}>
-                          Confirm your order details below
-                        </p>
-                      </div>
-                      
-                      {/* Order Summary */}
-                      <div className={cn(
-                        "p-5 rounded-xl border space-y-4",
-                        themeMode === 'dark' ? "bg-slate-800/50 border-white/10" : "bg-gray-50 border-gray-200"
-                      )}>
-                        <div className="flex justify-between items-start">
-                          <span style={{ color: textMuted }}>Service</span>
-                          <span className="text-right font-medium max-w-[200px] truncate" style={{ color: textColor }}>
-                            {selectedService?.name}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-start">
-                          <span style={{ color: textMuted }}>Category</span>
-                          <span className="capitalize font-medium" style={{ color: textColor }}>
-                            {selectedCategory}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-start">
-                          <span style={{ color: textMuted }}>Link</span>
-                          <span className="text-right font-medium max-w-[200px] truncate text-primary">
-                            {targetUrl}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span style={{ color: textMuted }}>Quantity</span>
-                          <span className="font-medium" style={{ color: textColor }}>
-                            {quantity.toLocaleString()}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span style={{ color: textMuted }}>Price per 1K</span>
-                          <span className="font-medium" style={{ color: textColor }}>
-                            ${selectedService?.price.toFixed(4)}
-                          </span>
-                        </div>
-                        <div className="pt-3 border-t border-dashed flex justify-between items-center">
-                          <span className="font-semibold" style={{ color: textColor }}>Total</span>
-                          <span className="text-3xl font-bold text-primary">${totalPrice.toFixed(2)}</span>
-                        </div>
-                      </div>
-
-                      <div className="flex gap-3">
-                        <Button
-                          variant="outline"
-                          className="flex-1"
-                          onClick={() => resetToStep(3)}
-                        >
-                          Edit Details
-                        </Button>
-                        <Button
-                          className="flex-1 gap-2"
-                          size="lg"
-                          onClick={handlePlaceOrder}
-                          disabled={isOrdering}
-                        >
-                          {isOrdering ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <Lock className="w-4 h-4" />
-                          )}
-                          {buyer ? 'Place Order' : 'Checkout'}
-                        </Button>
-                      </div>
-                      
-                      {!buyer && (
-                        <p className="text-xs text-center" style={{ color: textMuted }}>
-                          Quick signup - no password required to get started
+                      <Input
+                        type="number"
+                        value={quantity}
+                        onChange={(e) => setQuantity(parseInt(e.target.value) || 0)}
+                        min={selectedService?.min_quantity || 100}
+                        max={selectedService?.max_quantity || 100000}
+                        className={inputBg}
+                      />
+                      {selectedService && (
+                        <p className="text-xs" style={{ color: textMuted }}>
+                          Min: {selectedService.min_quantity || 100} | Max: {(selectedService.max_quantity || 10000).toLocaleString()}
                         </p>
                       )}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </CardContent>
-            </Card>
-          </div>
+                    </div>
+
+                    {/* Price Preview */}
+                    <div className={cn(
+                      "p-4 rounded-xl border",
+                      themeMode === 'dark' ? "bg-slate-800/50 border-white/10" : "bg-gray-50 border-gray-200"
+                    )}>
+                      <div className="flex justify-between items-center">
+                        <span style={{ color: textMuted }}>Estimated Total</span>
+                        <span className="text-2xl font-bold text-blue-500">${totalPrice.toFixed(2)}</span>
+                      </div>
+                    </div>
+
+                    <Button
+                      className="w-full h-12 gap-2 bg-blue-500 hover:bg-blue-600"
+                      onClick={handleDetailsConfirmed}
+                      disabled={!targetUrl.trim()}
+                    >
+                      Continue to Review
+                      <ArrowRight className="w-4 h-4" />
+                    </Button>
+                  </motion.div>
+                )}
+
+                {/* Step 4: Review Order */}
+                {currentStep === 4 && (
+                  <motion.div
+                    key="step4"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    className="space-y-6"
+                  >
+                    <div className="text-center">
+                      <Badge className="mb-3 bg-blue-500/10 text-blue-500 border-blue-500/20">
+                        Step 4 of 5
+                      </Badge>
+                      <h3 className="text-xl font-bold mb-2" style={{ color: textColor }}>
+                        Review Your Order
+                      </h3>
+                      <p className="text-sm" style={{ color: textMuted }}>
+                        Confirm your order details
+                      </p>
+                    </div>
+                    
+                    {/* Order Summary */}
+                    <div className={cn(
+                      "p-5 rounded-xl border space-y-4",
+                      themeMode === 'dark' ? "bg-slate-800/50 border-white/10" : "bg-gray-50 border-gray-200"
+                    )}>
+                      <div className="flex justify-between items-start">
+                        <span style={{ color: textMuted }}>Service</span>
+                        <span className="text-right font-medium max-w-[200px] truncate" style={{ color: textColor }}>
+                          {selectedService?.name}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-start">
+                        <span style={{ color: textMuted }}>Category</span>
+                        <span className="capitalize font-medium" style={{ color: textColor }}>
+                          {selectedCategory}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-start">
+                        <span style={{ color: textMuted }}>Link</span>
+                        <span className="text-right font-medium max-w-[200px] truncate text-blue-500">
+                          {targetUrl}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span style={{ color: textMuted }}>Quantity</span>
+                        <span className="font-medium" style={{ color: textColor }}>
+                          {quantity.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span style={{ color: textMuted }}>Price per 1K</span>
+                        <span className="font-medium" style={{ color: textColor }}>
+                          ${selectedService?.price.toFixed(4)}
+                        </span>
+                      </div>
+                      <div className="pt-3 border-t border-dashed flex justify-between items-center">
+                        <span className="font-semibold" style={{ color: textColor }}>Total</span>
+                        <span className="text-3xl font-bold text-blue-500">${totalPrice.toFixed(2)}</span>
+                      </div>
+                    </div>
+
+                    <Button
+                      className="w-full h-12 gap-2 bg-blue-500 hover:bg-blue-600"
+                      size="lg"
+                      onClick={handlePlaceOrder}
+                      disabled={isOrdering}
+                    >
+                      {isOrdering ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : buyer ? (
+                        <>
+                          Continue to Payment
+                          <ArrowRight className="w-4 h-4" />
+                        </>
+                      ) : (
+                        <>
+                          <Lock className="w-4 h-4" />
+                          Checkout
+                        </>
+                      )}
+                    </Button>
+                    
+                    {!buyer && (
+                      <p className="text-xs text-center" style={{ color: textMuted }}>
+                        Quick signup - no password required to get started
+                      </p>
+                    )}
+                  </motion.div>
+                )}
+
+                {/* Step 5: Payment */}
+                {currentStep === 5 && (
+                  <motion.div
+                    key="step5"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    className="space-y-6"
+                  >
+                    <div className="text-center">
+                      <Badge className="mb-3 bg-green-500/10 text-green-500 border-green-500/20">
+                        Step 5 of 5
+                      </Badge>
+                      <h3 className="text-xl font-bold mb-2" style={{ color: textColor }}>
+                        Complete Payment
+                      </h3>
+                      <p className="text-sm" style={{ color: textMuted }}>
+                        Select a payment method to complete your order
+                      </p>
+                    </div>
+
+                    {/* Order Total */}
+                    <div className={cn(
+                      "p-4 rounded-xl border text-center",
+                      themeMode === 'dark' ? "bg-slate-800/50 border-white/10" : "bg-blue-50 border-blue-200"
+                    )}>
+                      <p className="text-sm mb-1" style={{ color: textMuted }}>Order Total</p>
+                      <p className="text-4xl font-bold text-blue-500">${totalPrice.toFixed(2)}</p>
+                      <p className="text-xs mt-2" style={{ color: textMuted }}>
+                        {selectedService?.name} • {quantity.toLocaleString()} units
+                      </p>
+                    </div>
+
+                    {/* Payment Methods */}
+                    <div className="space-y-3">
+                      <Label style={{ color: textColor }}>Payment Method</Label>
+                      {paymentMethods.map((method) => {
+                        const MethodIcon = method.icon;
+                        return (
+                          <motion.button
+                            key={method.id}
+                            whileHover={{ scale: 1.01 }}
+                            whileTap={{ scale: 0.99 }}
+                            onClick={() => setSelectedPaymentMethod(method.id)}
+                            className={cn(
+                              "w-full flex items-center gap-4 p-4 rounded-xl border transition-all",
+                              selectedPaymentMethod === method.id
+                                ? "border-blue-500 bg-blue-500/10"
+                                : themeMode === 'dark'
+                                  ? "border-white/10 bg-slate-800/50 hover:border-blue-500/30"
+                                  : "border-gray-200 bg-white hover:border-blue-500/30"
+                            )}
+                          >
+                            <div className={cn("p-2 rounded-lg", method.color)}>
+                              <MethodIcon className="w-5 h-5 text-white" />
+                            </div>
+                            <span className="font-medium" style={{ color: textColor }}>
+                              {method.name}
+                            </span>
+                            {selectedPaymentMethod === method.id && (
+                              <Check className="w-5 h-5 text-blue-500 ml-auto" />
+                            )}
+                          </motion.button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Balance Info */}
+                    {buyer && (
+                      <div className={cn(
+                        "p-3 rounded-lg border",
+                        themeMode === 'dark' ? "bg-slate-800/30 border-white/5" : "bg-gray-50 border-gray-100"
+                      )}>
+                        <div className="flex justify-between text-sm">
+                          <span style={{ color: textMuted }}>Your Balance:</span>
+                          <span className="font-medium" style={{ color: textColor }}>
+                            ${(buyer.balance || 0).toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Pay Button */}
+                    <Button
+                      className="w-full h-14 gap-2 text-lg bg-green-500 hover:bg-green-600"
+                      size="lg"
+                      onClick={handleProcessPayment}
+                      disabled={isProcessingPayment}
+                    >
+                      {isProcessingPayment ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          <Lock className="w-5 h-5" />
+                          Pay ${totalPrice.toFixed(2)} Now
+                        </>
+                      )}
+                    </Button>
+
+                    <p className="text-xs text-center" style={{ color: textMuted }}>
+                      Secure payment • Order will be processed immediately
+                    </p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </CardContent>
+          </Card>
         </div>
       </section>
 
-      {/* Guest Signup Modal with Progress */}
+      {/* Guest Signup Modal */}
       <Dialog open={showGuestModal} onOpenChange={handleModalClose}>
         <DialogContent className="sm:max-w-md">
           {/* Modal Progress Indicator */}
@@ -798,7 +884,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
             <div className={cn(
               "flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold transition-all",
               modalStep === 'email' 
-                ? "bg-primary text-primary-foreground ring-2 ring-primary/30" 
+                ? "bg-blue-500 text-white ring-2 ring-blue-500/30" 
                 : accountCreated 
                   ? "bg-green-500 text-white" 
                   : "bg-muted text-muted-foreground"
@@ -807,12 +893,12 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
             </div>
             <div className={cn(
               "w-8 h-0.5 transition-all",
-              accountCreated ? "bg-green-500" : modalStep !== 'email' ? "bg-primary" : "bg-muted"
+              accountCreated ? "bg-green-500" : modalStep !== 'email' ? "bg-blue-500" : "bg-muted"
             )} />
             <div className={cn(
               "flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold transition-all",
               modalStep === 'credentials'
-                ? "bg-primary text-primary-foreground ring-2 ring-primary/30"
+                ? "bg-blue-500 text-white ring-2 ring-blue-500/30"
                 : accountCreated
                   ? "bg-green-500 text-white"
                   : "bg-muted text-muted-foreground"
@@ -821,7 +907,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
             </div>
             <div className={cn(
               "w-8 h-0.5 transition-all",
-              accountCreated ? "bg-primary" : "bg-muted"
+              accountCreated ? "bg-blue-500" : "bg-muted"
             )} />
             <div className={cn(
               "flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold transition-all",
@@ -831,9 +917,9 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
             </div>
           </div>
           <div className="flex justify-center gap-8 text-xs text-muted-foreground mb-4">
-            <span className={modalStep === 'email' && !accountCreated ? 'text-primary font-medium' : ''}>Email</span>
-            <span className={modalStep === 'credentials' || accountCreated ? 'text-primary font-medium' : ''}>Credentials</span>
-            <span>Deposit</span>
+            <span className={modalStep === 'email' && !accountCreated ? 'text-blue-500 font-medium' : ''}>Email</span>
+            <span className={modalStep === 'credentials' || accountCreated ? 'text-blue-500 font-medium' : ''}>Credentials</span>
+            <span>Payment</span>
           </div>
 
           <DialogHeader>
@@ -850,17 +936,17 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                 </>
               ) : (
                 <>
-                  <Zap className="w-5 h-5 text-primary" />
+                  <Zap className="w-5 h-5 text-blue-500" />
                   Quick Checkout
                 </>
               )}
             </DialogTitle>
             <DialogDescription>
               {accountCreated 
-                ? "Save your credentials below. You'll need them to login."
+                ? "Save your credentials below, then continue to payment."
                 : showLoginForm
                   ? "Enter your password to login"
-                  : "Enter your email to create an account and place your order"
+                  : "Enter your email to create an account"
               }
             </DialogDescription>
           </DialogHeader>
@@ -868,7 +954,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
           <div className="space-y-4 py-4">
             {accountCreated ? (
               <>
-                {/* Credentials Display with Copy Buttons */}
+                {/* Credentials Display */}
                 <div className="p-4 bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-xl">
                   <div className="flex items-center gap-2 mb-3">
                     <CheckCircle className="w-5 h-5 text-green-500" />
@@ -932,12 +1018,12 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                 <div className="flex items-start gap-2 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
                   <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
                   <p className="text-xs text-amber-700 dark:text-amber-400">
-                    <strong>Important:</strong> Save these credentials! You'll need them to login and check your order status.
+                    <strong>Important:</strong> Save these credentials! You'll need them to login later.
                   </p>
                 </div>
 
-                <Button className="w-full h-12 text-base" onClick={handleContinueToDeposit}>
-                  <span>Add Funds to Order</span>
+                <Button className="w-full h-12 text-base bg-blue-500 hover:bg-blue-600" onClick={handleContinueToPayment}>
+                  <span>Continue to Payment</span>
                   <ArrowRight className="w-5 h-5 ml-2" />
                 </Button>
               </>
@@ -1032,13 +1118,13 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                     </div>
                     <div className="flex justify-between text-sm mt-1 pt-1 border-t">
                       <span className="text-muted-foreground">Total:</span>
-                      <span className="font-bold text-primary">${totalPrice.toFixed(2)}</span>
+                      <span className="font-bold text-blue-500">${totalPrice.toFixed(2)}</span>
                     </div>
                   </div>
                 )}
 
                 <Button 
-                  className="w-full" 
+                  className="w-full bg-blue-500 hover:bg-blue-600" 
                   onClick={handleGuestSignup}
                   disabled={isGuestSignup || !guestEmail}
                 >
@@ -1047,12 +1133,12 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                   ) : (
                     <Zap className="w-4 h-4 mr-2" />
                   )}
-                  Create Account & Order
+                  Create Account & Continue
                 </Button>
                 <p className="text-xs text-center text-muted-foreground">
                   Already have an account?{' '}
                   <button 
-                    className="text-primary hover:underline"
+                    className="text-blue-500 hover:underline"
                     onClick={() => {
                       setShowLoginForm(true);
                       setModalStep('login');
