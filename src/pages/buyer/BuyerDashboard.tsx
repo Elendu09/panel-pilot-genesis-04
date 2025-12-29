@@ -20,7 +20,10 @@ import {
   ExternalLink,
   Activity,
   ChevronRight,
-  AlertTriangle
+  AlertTriangle,
+  Mail,
+  X,
+  BadgeCheck
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -278,33 +281,49 @@ const BuyerDashboard = () => {
         animate="visible"
         className="space-y-4 md:space-y-6"
       >
+        {/* Compact Email Verification Banner - Blue theme */}
         {showVerifyBanner && (
           <motion.div
             variants={itemVariants}
-            className="rounded-lg border border-amber-300 bg-amber-50 text-amber-900 px-4 py-3 flex flex-col md:flex-row md:items-center md:justify-between gap-2"
+            className="rounded-xl bg-blue-500/10 border border-blue-500/20 px-4 py-2.5 flex items-center justify-between gap-3"
           >
-            <div>
-              <p className="font-medium text-sm">Verify your email when you’re ready</p>
-              <p className="text-xs text-amber-800">
-                You can continue placing orders without verification, but verifying your email helps secure your account and receive important updates.
-              </p>
+            <div className="flex items-center gap-3">
+              <div className="p-1.5 rounded-lg bg-blue-500/20">
+                <Mail className="w-4 h-4 text-blue-500" />
+              </div>
+              <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                Verify your email
+              </span>
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={handleSendVerification}>
-                Send Verification Email
+            <div className="flex items-center gap-2">
+              <Button 
+                size="sm" 
+                onClick={handleSendVerification}
+                className="h-7 px-3 bg-blue-500 hover:bg-blue-600 text-white text-xs"
+              >
+                Send
               </Button>
-              <Button variant="ghost" size="sm" onClick={handleDismissVerifyBanner}>
-                Not now
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={handleDismissVerifyBanner}
+                className="h-7 w-7 text-blue-500 hover:text-blue-600 hover:bg-blue-500/10"
+              >
+                <X className="w-4 h-4" />
               </Button>
             </div>
           </motion.div>
         )}
 
-        {/* Welcome Header */}
+        {/* Welcome Header with Verified Badge */}
         <motion.div variants={itemVariants} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h1 className="text-xl md:text-2xl lg:text-3xl font-bold">
+            <h1 className="text-xl md:text-2xl lg:text-3xl font-bold flex items-center gap-2">
               Welcome back{buyer?.full_name ? `, ${buyer.full_name.split(' ')[0]}` : ''}! 👋
+              {/* Facebook-style blue checkmark for verified users */}
+              {!showVerifyBanner && (
+                <BadgeCheck className="w-5 h-5 md:w-6 md:h-6 text-blue-500 fill-blue-500/20" />
+              )}
             </h1>
             <p className="text-sm text-muted-foreground">Here's your account overview</p>
           </div>
