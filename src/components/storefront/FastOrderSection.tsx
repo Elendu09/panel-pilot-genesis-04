@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTheme } from '@/hooks/use-theme';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -61,7 +62,12 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
   const { buyer, refreshBuyer, login } = useBuyerAuth();
   const navigate = useNavigate();
   
-  const themeMode = customization?.themeMode || 'dark';
+  // Use actual theme from context instead of customization
+  const { theme } = useTheme();
+  const themeMode = theme === 'system' 
+    ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+    : theme;
+  
   const textColor = customization?.textColor || (themeMode === 'dark' ? '#FFFFFF' : '#111827');
   const textMuted = customization?.textMuted || (themeMode === 'dark' ? '#9CA3AF' : '#6B7280');
   

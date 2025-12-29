@@ -55,9 +55,9 @@ export const StorefrontFooter = ({
   return (
     <footer className={`py-12 px-4 ${isDark ? 'bg-slate-900 text-white' : 'bg-white text-slate-900 border-t'}`}>
       <div className="max-w-6xl mx-auto">
-        <div className="grid md:grid-cols-4 gap-8 mb-8">
-          {/* Brand Column */}
-          <div className="md:col-span-1">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 sm:gap-8 mb-8">
+          {/* Brand Column - full width on mobile */}
+          <div className="col-span-2 sm:col-span-3 md:col-span-1">
             <h3 className="font-bold text-lg mb-4">{panelName}</h3>
             <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
               {footerAbout || 'Professional social media marketing services with high-quality results.'}
