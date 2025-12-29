@@ -289,7 +289,7 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
                       e.preventDefault();
                       // Logged-in buyers go to buyer order page
                       if (buyer) {
-                        navigate('/buyer/new-order');
+                        navigate('/new-order');
                         return;
                       }
                       // Guests always go to the dedicated Fast Order page
