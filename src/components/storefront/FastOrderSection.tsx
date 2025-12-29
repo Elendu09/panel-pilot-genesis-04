@@ -61,16 +61,21 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
   const navigate = useNavigate();
   
   const themeMode = customization?.themeMode || 'dark';
-  const textColor = customization?.textColor || (themeMode === 'dark' ? '#FFFFFF' : '#1F2937');
+  const textColor = customization?.textColor || (themeMode === 'dark' ? '#FFFFFF' : '#111827');
   const textMuted = customization?.textMuted || (themeMode === 'dark' ? '#9CA3AF' : '#6B7280');
   
-  // Enhanced card styles
+  // True dark/light mode card styles
   const cardBg = themeMode === 'dark' 
-    ? 'bg-slate-900/60 backdrop-blur-xl border-white/10 shadow-2xl shadow-black/20' 
-    : 'bg-white/80 backdrop-blur-xl shadow-xl shadow-gray-200/50 border-gray-200/80';
+    ? 'bg-gray-900/80 backdrop-blur-xl border-gray-800 shadow-2xl shadow-black/30' 
+    : 'bg-white backdrop-blur-xl shadow-xl shadow-gray-200/60 border-gray-200';
   const inputBg = themeMode === 'dark' 
-    ? 'bg-slate-800/60 border-white/10 focus:border-blue-500/50' 
-    : 'bg-gray-50/80 border-gray-200 focus:border-blue-500/50';
+    ? 'bg-gray-800 border-gray-700 focus:border-blue-500/50 focus:ring-blue-500/20' 
+    : 'bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-500/20 shadow-sm';
+  
+  // Blue glow button style for light mode
+  const glowButtonClass = themeMode === 'dark'
+    ? 'bg-blue-500 hover:bg-blue-600 shadow-lg shadow-blue-500/30'
+    : 'bg-blue-500 hover:bg-blue-600 shadow-[0_0_20px_rgba(59,130,246,0.4)] hover:shadow-[0_0_28px_rgba(59,130,246,0.5)]';
   
   // Step state (1-5: Categories, Service, Order, Review, Payment)
   const [currentStep, setCurrentStepInternal] = useState(1);
@@ -424,7 +429,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
             <div className={cn("p-8 rounded-3xl border", cardBg)}>
               <div className={cn(
                 "w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center",
-                themeMode === 'dark' ? 'bg-slate-800' : 'bg-gray-100'
+                themeMode === 'dark' ? 'bg-gray-800' : 'bg-gray-100'
               )}>
                 <Zap className="w-8 h-8 text-muted-foreground" />
               </div>
@@ -526,8 +531,8 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                             className={cn(
                               "relative flex flex-col items-center gap-3 p-4 rounded-2xl border transition-all duration-300 group overflow-hidden",
                               themeMode === 'dark'
-                                ? "border-white/10 bg-slate-800/40 hover:bg-slate-800/80 hover:border-blue-500/50"
-                                : "border-gray-200 bg-white hover:bg-gray-50 hover:border-blue-500/50 shadow-sm hover:shadow-md"
+                                ? "border-gray-700 bg-gray-800/60 hover:bg-gray-800 hover:border-blue-500/50"
+                                : "border-gray-200 bg-white hover:bg-blue-50/50 hover:border-blue-400 shadow-sm hover:shadow-lg hover:shadow-blue-500/10"
                             )}
                           >
                             {/* Glow effect on hover */}
@@ -629,10 +634,10 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                             selectedServiceId === service.id
                               ? themeMode === 'dark'
                                 ? "border-blue-500 bg-blue-500/10 ring-1 ring-blue-500/30"
-                                : "border-blue-500 bg-blue-50 ring-1 ring-blue-500/30"
+                                : "border-blue-500 bg-blue-50 ring-2 ring-blue-500/30 shadow-lg shadow-blue-500/10"
                               : themeMode === 'dark'
-                                ? "border-white/10 bg-slate-800/40 hover:border-blue-500/30"
-                                : "border-gray-200 bg-gray-50 hover:border-blue-500/30"
+                                ? "border-gray-700 bg-gray-800/60 hover:border-blue-500/40"
+                                : "border-gray-200 bg-white hover:border-blue-400 hover:shadow-md"
                           )}
                         >
                           <div className="flex justify-between items-start mb-2">
@@ -748,7 +753,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                       "p-5 rounded-2xl border",
                       themeMode === 'dark' 
                         ? "bg-gradient-to-br from-blue-500/10 to-purple-500/10 border-blue-500/20" 
-                        : "bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200"
+                        : "bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 shadow-lg shadow-blue-500/10"
                     )}>
                       <div className="flex justify-between items-center">
                         <div>
@@ -770,7 +775,10 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                     </div>
 
                     <Button
-                      className="w-full h-12 gap-2 rounded-xl bg-blue-500 hover:bg-blue-600 font-semibold text-base"
+                      className={cn(
+                        "w-full h-12 gap-2 rounded-xl font-semibold text-base text-white transition-all",
+                        glowButtonClass
+                      )}
                       onClick={handleDetailsConfirmed}
                       disabled={!targetUrl.trim()}
                     >
@@ -810,8 +818,8 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                     <div className={cn(
                       "p-5 rounded-2xl border space-y-4",
                       themeMode === 'dark' 
-                        ? "bg-slate-800/40 border-white/10" 
-                        : "bg-gray-50 border-gray-200"
+                        ? "bg-gray-800/60 border-gray-700" 
+                        : "bg-gray-50 border-gray-200 shadow-sm"
                     )}>
                       {/* Category & Service with Icon */}
                       <div className="flex items-start gap-3">
@@ -835,7 +843,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                       
                       <div className={cn(
                         "h-px",
-                        themeMode === 'dark' ? 'bg-white/5' : 'bg-gray-200'
+                        themeMode === 'dark' ? 'bg-gray-700' : 'bg-gray-200'
                       )} />
                       
                       <div className="flex justify-between items-start">
@@ -859,7 +867,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                       
                       <div className={cn(
                         "pt-4 border-t border-dashed flex justify-between items-center",
-                        themeMode === 'dark' ? 'border-white/10' : 'border-gray-300'
+                        themeMode === 'dark' ? 'border-gray-600' : 'border-gray-300'
                       )}>
                         <span className="font-semibold" style={{ color: textColor }}>Total</span>
                         <span className="text-3xl font-bold tabular-nums text-blue-500">${totalPrice.toFixed(2)}</span>
@@ -867,7 +875,10 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                     </div>
 
                     <Button
-                      className="w-full h-12 gap-2 rounded-xl bg-blue-500 hover:bg-blue-600 font-semibold text-base"
+                      className={cn(
+                        "w-full h-12 gap-2 rounded-xl font-semibold text-base text-white transition-all",
+                        glowButtonClass
+                      )}
                       size="lg"
                       onClick={handlePlaceOrder}
                       disabled={isOrdering}
@@ -926,7 +937,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                       "p-5 rounded-2xl border text-center",
                       themeMode === 'dark' 
                         ? "bg-gradient-to-br from-green-500/10 to-emerald-500/10 border-green-500/20" 
-                        : "bg-gradient-to-br from-green-50 to-emerald-50 border-green-200"
+                        : "bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 shadow-lg shadow-green-500/10"
                     )}>
                       <p className="text-xs uppercase tracking-wider font-semibold mb-1" style={{ color: textMuted }}>
                         Order Total
@@ -963,10 +974,10 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                               selectedPaymentMethod === method.id
                                 ? themeMode === 'dark'
                                   ? "border-blue-500 bg-blue-500/10 ring-1 ring-blue-500/30"
-                                  : "border-blue-500 bg-blue-50 ring-1 ring-blue-500/30"
+                                  : "border-blue-500 bg-blue-50 ring-2 ring-blue-500/30 shadow-lg shadow-blue-500/10"
                                 : themeMode === 'dark'
-                                  ? "border-white/10 bg-slate-800/40 hover:border-blue-500/30"
-                                  : "border-gray-200 bg-white hover:border-blue-500/30"
+                                  ? "border-gray-700 bg-gray-800/60 hover:border-blue-500/40"
+                                  : "border-gray-200 bg-white hover:border-blue-400 hover:shadow-md"
                             )}
                           >
                             <div className={cn("p-2.5 rounded-xl shadow-lg", method.color)}>
@@ -993,7 +1004,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                     {buyer && (
                       <div className={cn(
                         "p-3 rounded-xl border",
-                        themeMode === 'dark' ? "bg-slate-800/30 border-white/5" : "bg-gray-50 border-gray-100"
+                        themeMode === 'dark' ? "bg-gray-800/50 border-gray-700" : "bg-gray-50 border-gray-200"
                       )}>
                         <div className="flex justify-between text-sm">
                           <span style={{ color: textMuted }}>Your Balance:</span>
@@ -1004,9 +1015,14 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                       </div>
                     )}
 
-                    {/* Pay Button */}
+                    {/* Pay Button with glow in light mode */}
                     <Button
-                      className="w-full h-14 gap-2 text-lg rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 font-semibold shadow-lg shadow-green-500/25"
+                      className={cn(
+                        "w-full h-14 gap-2 text-lg rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 font-semibold text-white transition-all",
+                        themeMode === 'dark' 
+                          ? "shadow-lg shadow-green-500/25"
+                          : "shadow-[0_0_24px_rgba(34,197,94,0.4)] hover:shadow-[0_0_32px_rgba(34,197,94,0.5)]"
+                      )}
                       size="lg"
                       onClick={handleProcessPayment}
                       disabled={isProcessingPayment}
