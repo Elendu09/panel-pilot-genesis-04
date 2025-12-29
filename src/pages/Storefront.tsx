@@ -6,7 +6,6 @@ import { ThemeTwo } from '@/components/themes/ThemeTwo';
 import { ThemeThree } from '@/components/themes/ThemeThree';
 import { ThemeFour } from '@/components/themes/ThemeFour';
 import { FloatingChatWidget } from '@/components/storefront/FloatingChatWidget';
-import { LiveChatWidget } from '@/components/support/LiveChatWidget';
 import { FastOrderSection } from '@/components/storefront/FastOrderSection';
 import { supabase } from '@/integrations/supabase/client';
 import { AlertTriangle } from 'lucide-react';
@@ -38,29 +37,7 @@ const ErrorFallback = ({ error, panelName }: { error: string; panelName?: string
 const Storefront = () => {
   const { panel, loading: tenantLoading, error: tenantError } = useTenant();
   const { services } = useTenantServices(panel?.id);
-  const [liveChatEnabled, setLiveChatEnabled] = useState(false);
   const [renderError, setRenderError] = useState<string | null>(null);
-
-  // Check if live chat is enabled for this panel
-  useEffect(() => {
-    const checkLiveChat = async () => {
-      if (!panel?.id) return;
-      
-      try {
-        const { data } = await supabase
-          .from('panel_settings')
-          .select('floating_chat_enabled')
-          .eq('panel_id', panel.id)
-          .single();
-        
-        setLiveChatEnabled(true);
-      } catch (err) {
-        console.log('Live chat check failed:', err);
-      }
-    };
-
-    checkLiveChat();
-  }, [panel?.id]);
 
   // Debug logging
   useEffect(() => {
@@ -163,15 +140,8 @@ const Storefront = () => {
         {panel.logo_url && <meta property="og:image" content={panel.logo_url} />}
       </Helmet>
       {renderTheme()}
-      {/* Floating Chat Widget (WhatsApp/Telegram) */}
-      <FloatingChatWidget panelId={panel?.id} />
-      {/* Live Chat Widget */}
-      {liveChatEnabled && panel?.id && (
-        <LiveChatWidget 
-          panelId={panel.id} 
-          panelName={panel.name}
-        />
-      )}
+      {/* Floating Chat Widget - Consolidated chat with AI, WhatsApp, Telegram, etc. */}
+      <FloatingChatWidget panelId={panel?.id} panelName={panel?.name} />
     </>
   );
 };

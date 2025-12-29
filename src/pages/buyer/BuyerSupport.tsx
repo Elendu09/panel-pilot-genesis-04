@@ -43,6 +43,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useBuyerAuth } from "@/contexts/BuyerAuthContext";
 import { useTenant } from "@/hooks/useTenant";
 import BuyerLayout from "./BuyerLayout";
+import { FloatingChatWidget } from "@/components/storefront/FloatingChatWidget";
 
 interface Ticket {
   id: string;
@@ -532,6 +533,16 @@ const BuyerSupport = () => {
           </DialogContent>
         </Dialog>
       </div>
+      
+      {/* Live Chat Widget for instant AI support */}
+      {panel?.id && (
+        <FloatingChatWidget 
+          panelId={panel.id} 
+          panelName={panel.name}
+          pageContext="Buyer Support Page"
+          enableAI={true}
+        />
+      )}
     </BuyerLayout>
   );
 };

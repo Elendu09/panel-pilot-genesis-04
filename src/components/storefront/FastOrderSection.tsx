@@ -18,9 +18,9 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { Zap, ArrowRight, Lock, Loader2, Mail, User, CheckCircle, Upload, X } from 'lucide-react';
+import { Zap, ArrowRight, Lock, Loader2, Mail, User, CheckCircle, Check, ChevronRight } from 'lucide-react';
 import { SOCIAL_ICONS_MAP } from '@/components/icons/SocialIcons';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { useBuyerAuth } from '@/contexts/BuyerAuthContext';
@@ -36,26 +36,64 @@ interface Service {
   max_quantity?: number;
 }
 
-interface RecentTarget {
-  target_url: string;
-  service_id: string | null;
-  quantity: number | null;
-}
-
-interface OrderProfile {
-  id: string;
-  name: string;
-  target_url: string;
-  service_id: string | null;
-  quantity: number;
-}
-
 interface FastOrderSectionProps {
   services: Service[];
   panelId: string;
   panelName: string;
   customization?: any;
 }
+
+// Step indicator component
+const StepIndicator = ({ currentStep, totalSteps }: { currentStep: number; totalSteps: number }) => {
+  const steps = [
+    { num: 1, label: 'Category' },
+    { num: 2, label: 'Service' },
+    { num: 3, label: 'Details' },
+    { num: 4, label: 'Order' },
+  ];
+
+  return (
+    <div className="flex items-center justify-center gap-1 sm:gap-2 mb-8">
+      {steps.slice(0, totalSteps).map((step, index) => (
+        <div key={step.num} className="flex items-center">
+          <motion.div
+            initial={{ scale: 0.8 }}
+            animate={{ 
+              scale: currentStep === step.num ? 1.1 : 1,
+              transition: { duration: 0.2 }
+            }}
+            className={cn(
+              "flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full text-sm font-semibold transition-all duration-300",
+              currentStep > step.num 
+                ? "bg-green-500 text-white" 
+                : currentStep === step.num 
+                  ? "bg-primary text-primary-foreground ring-4 ring-primary/20" 
+                  : "bg-muted text-muted-foreground"
+            )}
+          >
+            {currentStep > step.num ? (
+              <Check className="w-4 h-4" />
+            ) : (
+              step.num
+            )}
+          </motion.div>
+          <span className={cn(
+            "hidden sm:block ml-2 text-xs font-medium transition-colors",
+            currentStep >= step.num ? "text-foreground" : "text-muted-foreground"
+          )}>
+            {step.label}
+          </span>
+          {index < totalSteps - 1 && (
+            <ChevronRight className={cn(
+              "w-4 h-4 mx-1 sm:mx-2 transition-colors",
+              currentStep > step.num ? "text-green-500" : "text-muted-foreground"
+            )} />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+};
 
 export const FastOrderSection = ({ services, panelId, panelName, customization }: FastOrderSectionProps) => {
   const themeMode = customization?.themeMode || 'dark';
@@ -66,16 +104,15 @@ export const FastOrderSection = ({ services, panelId, panelName, customization }
   const navigate = useNavigate();
   const { buyer, refreshBuyer, login } = useBuyerAuth();
   
+  // Step state
+  const [currentStep, setCurrentStep] = useState(1);
+  
   // Order form state
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedServiceId, setSelectedServiceId] = useState<string>('');
   const [targetUrl, setTargetUrl] = useState('');
   const [quantity, setQuantity] = useState(1000);
   const [isOrdering, setIsOrdering] = useState(false);
-  const [orderAttachment, setOrderAttachment] = useState<File | null>(null);
-  
-  const [recentTargets, setRecentTargets] = useState<RecentTarget[]>([]);
-  const [favoriteServices, setFavoriteServices] = useState<Service[]>([]);
-  const [profiles, setProfiles] = useState<OrderProfile[]>([]);
   
   // Guest signup modal state
   const [showGuestModal, setShowGuestModal] = useState(false);
@@ -87,8 +124,14 @@ export const FastOrderSection = ({ services, panelId, panelName, customization }
   const [accountCreated, setAccountCreated] = useState(false);
   const [tempPassword, setTempPassword] = useState('');
 
-  // Get top 8 popular services (sorted by price or just take first 8)
-  const popularServices = services.slice(0, 8);
+  // Get unique categories from services
+  const categories = [...new Set(services.map(s => s.category))];
+  
+  // Get services for selected category
+  const categoryServices = selectedCategory 
+    ? services.filter(s => s.category === selectedCategory)
+    : [];
+  
   const selectedService = services.find(s => s.id === selectedServiceId);
   const totalPrice = selectedService ? (selectedService.price * quantity) / 1000 : 0;
 
@@ -96,128 +139,35 @@ export const FastOrderSection = ({ services, panelId, panelName, customization }
     return SOCIAL_ICONS_MAP[category] || SOCIAL_ICONS_MAP.other;
   };
 
-  useEffect(() => {
-    if (!buyer?.id || !panelId) return;
+  // Quantity presets
+  const quantityPresets = [100, 500, 1000, 5000, 10000];
 
-    const fetchData = async () => {
-      try {
-        const [{ data: orders }, { data: favorites }] = await Promise.all([
-          supabase
-            .from('orders')
-            .select('service_id, target_url, quantity, created_at')
-            .eq('buyer_id', buyer.id)
-            .eq('panel_id', panelId)
-            .not('target_url', 'is', null)
-            .order('created_at', { ascending: false })
-            .limit(30),
-          supabase
-            .from('buyer_favorites')
-            .select('service_id')
-            .eq('buyer_id', buyer.id)
-            .eq('panel_id', panelId),
-        ]);
-
-        if (orders) {
-          const byUrl: Record<string, RecentTarget> = {};
-          for (const o of orders as any[]) {
-            if (!o.target_url) continue;
-            if (!byUrl[o.target_url]) {
-              byUrl[o.target_url] = {
-                target_url: o.target_url,
-                service_id: o.service_id ?? null,
-                quantity: o.quantity ?? null,
-              };
-            }
-          }
-          setRecentTargets(Object.values(byUrl).slice(0, 5));
-        }
-
-        if (favorites) {
-          const favIds = (favorites as any[]).map(f => f.service_id).filter(Boolean);
-          const fav = services.filter(s => favIds.includes(s.id));
-          setFavoriteServices(fav);
-        }
-      } catch (err) {
-        console.error('FastOrder favorites/recent error', err);
-      }
-    };
-
-    fetchData();
-  }, [buyer?.id, panelId, services]);
-
-  useEffect(() => {
-    if (buyer) return;
-    const key = `fast_order_recent_${panelId}`;
-    const stored = localStorage.getItem(key);
-    if (!stored) return;
-    try {
-      const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed)) {
-        setRecentTargets(parsed.slice(0, 5));
-      }
-    } catch {
-      // ignore
-    }
-  }, [buyer, panelId]);
-
-  useEffect(() => {
-    const key = `fast_order_profiles_${panelId}`;
-    const stored = localStorage.getItem(key);
-    if (!stored) return;
-    try {
-      const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed)) {
-        setProfiles(parsed);
-      }
-    } catch {
-      // ignore
-    }
-  }, [panelId]);
-
-  const saveGuestRecent = () => {
-    if (!targetUrl) return;
-    const entry: RecentTarget = {
-      target_url: targetUrl,
-      service_id: selectedServiceId || null,
-      quantity,
-    };
-    const key = `fast_order_recent_${panelId}`;
-    try {
-      const existing = JSON.parse(localStorage.getItem(key) || '[]');
-      const filtered = existing.filter((e: any) => e.target_url !== targetUrl);
-      const updated = [entry, ...filtered].slice(0, 5);
-      localStorage.setItem(key, JSON.stringify(updated));
-    } catch {
-      localStorage.setItem(key, JSON.stringify([entry]));
-    }
+  // Handle category selection
+  const handleCategorySelect = (category: string) => {
+    setSelectedCategory(category);
+    setSelectedServiceId('');
+    setCurrentStep(2);
   };
 
-  const saveProfile = () => {
-    if (!targetUrl) return;
-    const name = window.prompt('Profile name');
-    if (!name) return;
-    const profile: OrderProfile = {
-      id: `${Date.now()}`,
-      name,
-      target_url: targetUrl,
-      service_id: selectedServiceId || null,
-      quantity,
-    };
-    const key = `fast_order_profiles_${panelId}`;
-    const updated = [profile, ...profiles].slice(0, 10);
-    setProfiles(updated);
-    try {
-      localStorage.setItem(key, JSON.stringify(updated));
-    } catch {
-      // ignore
+  // Handle service selection
+  const handleServiceSelect = (serviceId: string) => {
+    setSelectedServiceId(serviceId);
+    const service = services.find(s => s.id === serviceId);
+    if (service?.min_quantity) {
+      setQuantity(service.min_quantity);
     }
+    setCurrentStep(3);
   };
 
-  const applyProfile = (profile: OrderProfile) => {
-    setTargetUrl(profile.target_url);
-    if (profile.service_id) setSelectedServiceId(profile.service_id);
-    if (profile.quantity) setQuantity(profile.quantity);
+  // Handle details confirmed
+  const handleDetailsConfirmed = () => {
+    if (!targetUrl.trim()) {
+      toast({ title: "Please enter a link", variant: "destructive" });
+      return;
+    }
+    setCurrentStep(4);
   };
+
   const handleGuestSignup = async () => {
     if (!guestEmail) {
       toast({ title: "Email is required", variant: "destructive" });
@@ -239,7 +189,6 @@ export const FastOrderSection = ({ services, panelId, panelName, customization }
 
       if (data.error) {
         if (data.needsLogin) {
-          // Account exists, show login form
           setShowLoginForm(true);
           toast({
             title: "Account Found",
@@ -252,17 +201,14 @@ export const FastOrderSection = ({ services, panelId, panelName, customization }
       }
 
       if (data.success && data.user) {
-        // Account created successfully
         setTempPassword(data.tempPassword);
         setAccountCreated(true);
         
-        // Store buyer session - use consistent key format
         localStorage.setItem('buyer_session', JSON.stringify({
           buyerId: data.user.id,
           panelId,
         }));
         
-        // Refresh buyer context
         await refreshBuyer();
         
         toast({
@@ -282,7 +228,6 @@ export const FastOrderSection = ({ services, panelId, panelName, customization }
     }
   };
 
-  // Handle login for existing account
   const handleGuestLogin = async () => {
     if (!guestEmail || !guestPassword) {
       toast({ title: "Email and password are required", variant: "destructive" });
@@ -311,9 +256,8 @@ export const FastOrderSection = ({ services, panelId, panelName, customization }
     }
   };
 
-  const handleQuickOrder = async () => {
+  const handlePlaceOrder = async () => {
     if (!buyer) {
-      // Show guest signup modal
       setShowGuestModal(true);
       return;
     }
@@ -331,7 +275,6 @@ export const FastOrderSection = ({ services, panelId, panelName, customization }
   };
 
   const handleContinueToDeposit = () => {
-    // Save pending order to localStorage
     if (selectedService) {
       localStorage.setItem('pending_order', JSON.stringify({
         serviceId: selectedServiceId,
@@ -341,10 +284,23 @@ export const FastOrderSection = ({ services, panelId, panelName, customization }
         price: totalPrice,
         panelId,
       }));
-      saveGuestRecent();
     }
     setShowGuestModal(false);
     navigate('/deposit');
+  };
+
+  // Reset to step 1
+  const resetToStep = (step: number) => {
+    if (step < currentStep) {
+      setCurrentStep(step);
+      if (step < 2) {
+        setSelectedCategory('');
+        setSelectedServiceId('');
+      }
+      if (step < 3) {
+        setSelectedServiceId('');
+      }
+    }
   };
 
   if (services.length === 0) return null;
@@ -361,268 +317,332 @@ export const FastOrderSection = ({ services, panelId, panelName, customization }
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-center mb-12"
+            className="text-center mb-8"
           >
             <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">
               <Zap className="w-3 h-3 mr-1" />
               Fast Order
             </Badge>
             <h2 className="text-3xl md:text-4xl font-bold mb-4" style={{ color: textColor }}>
-              Quick Order in Seconds
+              Order in 4 Simple Steps
             </h2>
             <p className="max-w-2xl mx-auto" style={{ color: textMuted }}>
-              Select a service, enter your link, and boost your social presence instantly
+              Select your platform, choose a service, and boost your social presence instantly
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-5xl mx-auto">
-            {/* Popular Services Grid */}
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                className="space-y-4"
-              >
-                {buyer && favoriteServices.length > 0 && (
-                  <div className="mb-2 space-y-2">
-                    <h4 className="text-sm font-semibold" style={{ color: textColor }}>My Favorites</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {favoriteServices.map(service => (
-                        <Button
-                          key={service.id}
-                          variant={selectedServiceId === service.id ? "default" : "outline"}
-                          size="sm"
-                          className="text-xs"
-                          onClick={() => setSelectedServiceId(service.id)}
-                        >
-                          {service.name}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                <h3 className="text-lg font-semibold mb-4" style={{ color: textColor }}>Popular Services</h3>
-              <div className="grid grid-cols-2 gap-3">
-                {popularServices.map((service) => {
-                  const categoryData = getCategoryIcon(service.category);
-                  const CategoryIcon = categoryData.icon;
-                  const isSelected = selectedServiceId === service.id;
+          {/* Step Indicator */}
+          <StepIndicator currentStep={currentStep} totalSteps={4} />
 
-                  return (
-                    <motion.button
-                      key={service.id}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => setSelectedServiceId(service.id)}
-                      className={cn(
-                        "p-4 rounded-xl border text-left transition-all",
-                        isSelected
-                          ? "border-primary bg-primary/10 ring-2 ring-primary/20"
-                          : themeMode === 'dark' 
-                            ? "border-white/10 bg-slate-800/50 hover:bg-slate-800 hover:border-primary/30"
-                            : "border-gray-200 bg-white hover:bg-gray-50 hover:border-primary/30 shadow-sm"
-                      )}
+          <div className="max-w-4xl mx-auto">
+            <Card className={`backdrop-blur-xl border ${cardBg}`}>
+              <CardContent className="p-6 md:p-8">
+                <AnimatePresence mode="wait">
+                  {/* Step 1: Select Category */}
+                  {currentStep === 1 && (
+                    <motion.div
+                      key="step1"
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      className="space-y-6"
                     >
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className={cn("p-2 rounded-lg", categoryData.bgColor)}>
-                          <CategoryIcon className="w-4 h-4 text-white" size={16} />
-                        </div>
-                        <span className="text-lg font-bold" style={{ color: textColor }}>${service.price}</span>
+                      <div className="text-center">
+                        <h3 className="text-xl font-bold mb-2" style={{ color: textColor }}>
+                          Select a Category 👆
+                        </h3>
+                        <p className="text-sm" style={{ color: textMuted }}>
+                          Choose the platform you want to boost
+                        </p>
                       </div>
-                      <p className="text-sm line-clamp-2" style={{ color: textMuted }}>
-                        {service.name}
-                      </p>
-                    </motion.button>
-                  );
-                })}
-              </div>
-            </motion.div>
-
-            {/* Order Form */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-            >
-              <Card className={`backdrop-blur-xl border ${cardBg}`}>
-                <CardContent className="p-6 space-y-5">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="p-3 rounded-xl bg-gradient-to-br from-primary to-primary/60">
-                      <Zap className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold" style={{ color: textColor }}>Place Your Order</h3>
-                      <p className="text-sm" style={{ color: textMuted }}>Fast & secure delivery</p>
-                    </div>
-                  </div>
-
-                  {/* Service Selector */}
-                  <div className="space-y-2">
-                    <Label style={{ color: textColor }}>Service</Label>
-                    <Select value={selectedServiceId} onValueChange={setSelectedServiceId}>
-                      <SelectTrigger className={inputBg}>
-                        <SelectValue placeholder="Select a service" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {services.map((service) => (
-                          <SelectItem key={service.id} value={service.id}>
-                            {service.name} - ${service.price}/1K
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Target URL */}
-                  <div className="space-y-2">
-                    <Label style={{ color: textColor }}>Link / Username</Label>
-                    <Input
-                      placeholder="https://instagram.com/yourprofile"
-                      value={targetUrl}
-                      onChange={(e) => setTargetUrl(e.target.value)}
-                      className={inputBg}
-                    />
-                  </div>
-
-                  {/* Quantity */}
-                  <div className="space-y-2">
-                    <Label style={{ color: textColor }}>Quantity</Label>
-                    <Input
-                      type="number"
-                      value={quantity}
-                      onChange={(e) => setQuantity(parseInt(e.target.value) || 0)}
-                      min={selectedService?.min_quantity || 100}
-                      max={selectedService?.max_quantity || 100000}
-                      className={inputBg}
-                    />
-                    {selectedService && (
-                      <p className="text-xs" style={{ color: textMuted }}>
-                        Min: {selectedService.min_quantity || 100} | Max: {(selectedService.max_quantity || 10000).toLocaleString()}
-                      </p>
-                    )}
-                  </div>
-
-                  {recentTargets.length > 0 && (
-                    <div className="mt-2 space-y-1">
-                      <Label className="text-xs" style={{ color: textMuted }}>
-                        Frequently used links {buyer ? '' : '(this device)'}
-                      </Label>
-                      <div className="flex flex-wrap gap-2">
-                        {recentTargets.map(item => {
-                          const label = (() => {
-                            try {
-                              const u = new URL(item.target_url);
-                              return u.hostname;
-                            } catch {
-                              return item.target_url.length > 22
-                                ? item.target_url.slice(0, 22) + '…'
-                                : item.target_url;
-                            }
-                          })();
-
+                      
+                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 md:gap-4">
+                        {categories.map((category) => {
+                          const categoryData = getCategoryIcon(category);
+                          const CategoryIcon = categoryData.icon;
+                          const serviceCount = services.filter(s => s.category === category).length;
+                          
                           return (
-                            <button
-                              key={item.target_url}
-                              type="button"
-                              onClick={() => {
-                                setTargetUrl(item.target_url);
-                                if (item.service_id) setSelectedServiceId(item.service_id);
-                                if (item.quantity) setQuantity(item.quantity);
-                              }}
-                              className="px-2 py-1 rounded-full border text-xs bg-primary/5 border-primary/30 text-primary hover:bg-primary/10 transition-colors"
+                            <motion.button
+                              key={category}
+                              whileHover={{ scale: 1.05, y: -2 }}
+                              whileTap={{ scale: 0.95 }}
+                              onClick={() => handleCategorySelect(category)}
+                              className={cn(
+                                "flex flex-col items-center gap-2 p-4 rounded-xl border transition-all duration-200",
+                                themeMode === 'dark'
+                                  ? "border-white/10 bg-slate-800/50 hover:bg-slate-800 hover:border-primary/50"
+                                  : "border-gray-200 bg-white hover:bg-gray-50 hover:border-primary/50 shadow-sm"
+                              )}
                             >
-                              {label}
-                            </button>
+                              <div className={cn("p-3 rounded-xl", categoryData.bgColor)}>
+                                <CategoryIcon className="w-6 h-6 text-white" size={24} />
+                              </div>
+                              <span className="text-sm font-medium capitalize" style={{ color: textColor }}>
+                                {category}
+                              </span>
+                              <span className="text-xs" style={{ color: textMuted }}>
+                                {serviceCount} services
+                              </span>
+                            </motion.button>
                           );
                         })}
                       </div>
-                    </div>
+                    </motion.div>
                   )}
 
-                  {profiles.length > 0 && (
-                    <div className="mt-3 space-y-1">
-                      <Label className="text-xs" style={{ color: textMuted }}>
-                        Saved profiles
-                      </Label>
-                      <div className="flex flex-wrap gap-2">
-                        {profiles.map(profile => (
-                          <button
-                            key={profile.id}
-                            type="button"
-                            onClick={() => applyProfile(profile)}
-                            className="px-2 py-1 rounded-full border text-xs bg-secondary/10 border-secondary/30 text-secondary-foreground/90 hover:bg-secondary/20 transition-colors"
+                  {/* Step 2: Select Service */}
+                  {currentStep === 2 && (
+                    <motion.div
+                      key="step2"
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      className="space-y-6"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="text-xl font-bold mb-1" style={{ color: textColor }}>
+                            Choose a Service
+                          </h3>
+                          <p className="text-sm" style={{ color: textMuted }}>
+                            {categoryServices.length} services available for{' '}
+                            <span className="capitalize font-medium text-primary">{selectedCategory}</span>
+                          </p>
+                        </div>
+                        <Button variant="ghost" size="sm" onClick={() => resetToStep(1)}>
+                          Change Category
+                        </Button>
+                      </div>
+                      
+                      <Select value={selectedServiceId} onValueChange={handleServiceSelect}>
+                        <SelectTrigger className={cn("h-14 text-left", inputBg)}>
+                          <SelectValue placeholder="Select a service..." />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-80">
+                          {categoryServices.map((service) => (
+                            <SelectItem key={service.id} value={service.id} className="py-3">
+                              <div className="flex flex-col">
+                                <span className="font-medium">{service.name}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  ${service.price.toFixed(4)}/1K • Min: {service.min_quantity || 100}
+                                </span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      
+                      {/* Quick service buttons */}
+                      <div className="grid grid-cols-2 gap-3">
+                        {categoryServices.slice(0, 4).map((service) => (
+                          <motion.button
+                            key={service.id}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => handleServiceSelect(service.id)}
+                            className={cn(
+                              "p-3 rounded-lg border text-left transition-all",
+                              selectedServiceId === service.id
+                                ? "border-primary bg-primary/10"
+                                : themeMode === 'dark'
+                                  ? "border-white/10 bg-slate-800/50 hover:border-primary/30"
+                                  : "border-gray-200 bg-gray-50 hover:border-primary/30"
+                            )}
                           >
-                            {profile.name}
-                          </button>
+                            <div className="flex justify-between items-start mb-1">
+                              <span className="text-lg font-bold text-primary">${service.price.toFixed(4)}</span>
+                              {selectedServiceId === service.id && <Check className="w-4 h-4 text-primary" />}
+                            </div>
+                            <p className="text-xs line-clamp-2" style={{ color: textMuted }}>
+                              {service.name}
+                            </p>
+                          </motion.button>
                         ))}
                       </div>
-                    </div>
+                    </motion.div>
                   )}
 
-                  {/* Attachment Upload */}
-                  <div className="space-y-2">
-                    <Label style={{ color: textColor }}>Attachment (Optional)</Label>
-                    <div className="relative">
-                      <Input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => setOrderAttachment(e.target.files?.[0] || null)}
-                        className={cn(inputBg, "file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-sm file:bg-primary/10 file:text-primary")}
-                      />
-                      {orderAttachment && (
-                        <div className="flex items-center gap-2 mt-2">
-                          <Upload className="w-4 h-4" style={{ color: textMuted }} />
-                          <span className="text-xs flex-1 truncate" style={{ color: textMuted }}>
-                            {orderAttachment.name}
-                          </span>
-                          <button
-                            onClick={() => setOrderAttachment(null)}
-                            className="p-1 hover:bg-destructive/20 rounded"
-                          >
-                            <X className="w-3 h-3 text-destructive" />
-                          </button>
+                  {/* Step 3: Enter Details */}
+                  {currentStep === 3 && (
+                    <motion.div
+                      key="step3"
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      className="space-y-6"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="text-xl font-bold mb-1" style={{ color: textColor }}>
+                            Enter Order Details
+                          </h3>
+                          <p className="text-sm" style={{ color: textMuted }}>
+                            {selectedService?.name}
+                          </p>
                         </div>
-                      )}
-                    </div>
-                  </div>
+                        <Button variant="ghost" size="sm" onClick={() => resetToStep(2)}>
+                          Change Service
+                        </Button>
+                      </div>
+                      
+                      {/* Target URL */}
+                      <div className="space-y-2">
+                        <Label style={{ color: textColor }}>Link / Username *</Label>
+                        <Input
+                          placeholder="https://instagram.com/yourprofile"
+                          value={targetUrl}
+                          onChange={(e) => setTargetUrl(e.target.value)}
+                          className={cn("h-12", inputBg)}
+                        />
+                      </div>
 
-                  {/* Total */}
-                  <div className={`pt-4 border-t ${themeMode === 'dark' ? 'border-white/10' : 'border-gray-200'}`}>
-                    <div className="flex justify-between items-center mb-4">
-                      <span style={{ color: textMuted }}>Total</span>
-                      <span className="text-2xl font-bold text-primary">${totalPrice.toFixed(2)}</span>
-                    </div>
-
-                    {buyer ? (
-                      <Button
-                        className="w-full gap-2"
-                        size="lg"
-                        onClick={handleQuickOrder}
-                        disabled={!selectedService || isOrdering}
-                      >
-                        {isOrdering ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Zap className="w-4 h-4" />
+                      {/* Quantity */}
+                      <div className="space-y-2">
+                        <Label style={{ color: textColor }}>Quantity</Label>
+                        <div className="flex flex-wrap gap-2 mb-2">
+                          {quantityPresets.map((preset) => (
+                            <Button
+                              key={preset}
+                              type="button"
+                              variant={quantity === preset ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setQuantity(preset)}
+                              className="min-w-[60px]"
+                            >
+                              {preset >= 1000 ? `${preset / 1000}K` : preset}
+                            </Button>
+                          ))}
+                        </div>
+                        <Input
+                          type="number"
+                          value={quantity}
+                          onChange={(e) => setQuantity(parseInt(e.target.value) || 0)}
+                          min={selectedService?.min_quantity || 100}
+                          max={selectedService?.max_quantity || 100000}
+                          className={inputBg}
+                        />
+                        {selectedService && (
+                          <p className="text-xs" style={{ color: textMuted }}>
+                            Min: {selectedService.min_quantity || 100} | Max: {(selectedService.max_quantity || 10000).toLocaleString()}
+                          </p>
                         )}
-                        {isOrdering ? 'Processing...' : 'Place Order'}
-                      </Button>
-                    ) : (
+                      </div>
+
+                      {/* Price Preview */}
+                      <div className={cn(
+                        "p-4 rounded-xl border",
+                        themeMode === 'dark' ? "bg-slate-800/50 border-white/10" : "bg-gray-50 border-gray-200"
+                      )}>
+                        <div className="flex justify-between items-center">
+                          <span style={{ color: textMuted }}>Estimated Total</span>
+                          <span className="text-2xl font-bold text-primary">${totalPrice.toFixed(2)}</span>
+                        </div>
+                      </div>
+
                       <Button
-                        className="w-full gap-2"
-                        size="lg"
-                        onClick={() => setShowGuestModal(true)}
-                        disabled={!selectedService}
+                        className="w-full h-12 gap-2"
+                        onClick={handleDetailsConfirmed}
+                        disabled={!targetUrl.trim()}
                       >
-                        <Zap className="w-4 h-4" />
-                        Quick Order
+                        Continue to Order
                         <ArrowRight className="w-4 h-4" />
                       </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
+                    </motion.div>
+                  )}
+
+                  {/* Step 4: Review & Order */}
+                  {currentStep === 4 && (
+                    <motion.div
+                      key="step4"
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      className="space-y-6"
+                    >
+                      <div className="text-center">
+                        <h3 className="text-xl font-bold mb-2" style={{ color: textColor }}>
+                          Review & Place Order ✨
+                        </h3>
+                        <p className="text-sm" style={{ color: textMuted }}>
+                          Confirm your order details below
+                        </p>
+                      </div>
+                      
+                      {/* Order Summary */}
+                      <div className={cn(
+                        "p-5 rounded-xl border space-y-4",
+                        themeMode === 'dark' ? "bg-slate-800/50 border-white/10" : "bg-gray-50 border-gray-200"
+                      )}>
+                        <div className="flex justify-between items-start">
+                          <span style={{ color: textMuted }}>Service</span>
+                          <span className="text-right font-medium max-w-[200px] truncate" style={{ color: textColor }}>
+                            {selectedService?.name}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-start">
+                          <span style={{ color: textMuted }}>Category</span>
+                          <span className="capitalize font-medium" style={{ color: textColor }}>
+                            {selectedCategory}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-start">
+                          <span style={{ color: textMuted }}>Link</span>
+                          <span className="text-right font-medium max-w-[200px] truncate text-primary">
+                            {targetUrl}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span style={{ color: textMuted }}>Quantity</span>
+                          <span className="font-medium" style={{ color: textColor }}>
+                            {quantity.toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span style={{ color: textMuted }}>Price per 1K</span>
+                          <span className="font-medium" style={{ color: textColor }}>
+                            ${selectedService?.price.toFixed(4)}
+                          </span>
+                        </div>
+                        <div className="pt-3 border-t border-dashed flex justify-between items-center">
+                          <span className="font-semibold" style={{ color: textColor }}>Total</span>
+                          <span className="text-3xl font-bold text-primary">${totalPrice.toFixed(2)}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-3">
+                        <Button
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => resetToStep(3)}
+                        >
+                          Edit Details
+                        </Button>
+                        <Button
+                          className="flex-1 gap-2"
+                          size="lg"
+                          onClick={handlePlaceOrder}
+                          disabled={isOrdering}
+                        >
+                          {isOrdering ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Lock className="w-4 h-4" />
+                          )}
+                          {buyer ? 'Place Order' : 'Checkout'}
+                        </Button>
+                      </div>
+                      
+                      {!buyer && (
+                        <p className="text-xs text-center" style={{ color: textMuted }}>
+                          Quick signup - no password required to get started
+                        </p>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </section>

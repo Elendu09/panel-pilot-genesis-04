@@ -206,15 +206,15 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
       )}
 
       {/* Main Content */}
-      <div className="container mx-auto px-4 text-center relative z-10 pt-16 sm:pt-20 lg:pt-32">
+      <div className="container mx-auto px-4 text-center relative z-10 pt-24 sm:pt-24 lg:pt-32">
         <motion.div 
           className="max-w-4xl mx-auto"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
         >
-          {/* Badge */}
-          <motion.div 
+          {/* Badge - Added top margin for mobile to avoid menu overlap */}
+          <motion.div
             className={`inline-flex items-center space-x-1.5 sm:space-x-2 ${cardBg} backdrop-blur-xl border ${borderStyle} rounded-full px-4 sm:px-6 py-2 sm:py-2.5 mb-6 sm:mb-8`}
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
