@@ -32,6 +32,7 @@ import Tutorial from "./pages/Tutorial";
 import Blog from "./pages/Blog";
 import Auth from "./pages/Auth";
 import SEOSettings from "./pages/panel/SEOSettings";
+import FastOrder from "./pages/FastOrder";
 
 // Enhanced QueryClient with caching for faster page loads
 const queryClient = new QueryClient({
@@ -68,6 +69,7 @@ const App = () => (
                 <Route path="/docs" element={<Documentation />} />
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/new-order" element={<NewOrder />} />
+                <Route path="/fast-order" element={<FastOrder />} />
                 <Route path="/orders" element={<OrderManagement />} />
                 <Route path="/user-home" element={<UserHome />} />
                 

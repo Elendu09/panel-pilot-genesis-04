@@ -18,7 +18,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { Zap, ArrowRight, Lock, Loader2, Mail, User, CheckCircle, Check, ChevronRight, Instagram, Youtube, Send, Twitter, Facebook, Linkedin, Music2, Globe } from 'lucide-react';
+import { Zap, ArrowRight, Lock, Loader2, Mail, User, CheckCircle, Check, ChevronRight, Instagram, Youtube, Send, Twitter, Facebook, Linkedin, Music2, Globe, Copy, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import { SOCIAL_ICONS_MAP, TikTokIcon } from '@/components/icons/SocialIcons';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -168,6 +168,10 @@ export const FastOrderSection = ({ services, panelId, panelName, customization }
   const [showLoginForm, setShowLoginForm] = useState(false);
   const [accountCreated, setAccountCreated] = useState(false);
   const [tempPassword, setTempPassword] = useState('');
+  const [autoUsername, setAutoUsername] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [modalStep, setModalStep] = useState<'email' | 'credentials' | 'login'>('email');
+  const [copiedField, setCopiedField] = useState<string | null>(null);
 
   // Get unique categories from services
   const categories = [...new Set(services.map(s => s.category))];
@@ -213,6 +217,24 @@ export const FastOrderSection = ({ services, panelId, panelName, customization }
     setCurrentStep(4);
   };
 
+  // Generate username for guest signup
+  const generateUsername = () => {
+    const randomStr = Math.random().toString(36).substring(2, 8);
+    return `user_${randomStr}`;
+  };
+
+  // Copy to clipboard helper
+  const copyToClipboard = async (text: string, field: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedField(field);
+      setTimeout(() => setCopiedField(null), 2000);
+      toast({ title: "Copied!", description: `${field} copied to clipboard` });
+    } catch (err) {
+      toast({ title: "Copy failed", variant: "destructive" });
+    }
+  };
+
   const handleGuestSignup = async () => {
     if (!guestEmail) {
       toast({ title: "Email is required", variant: "destructive" });
@@ -220,6 +242,11 @@ export const FastOrderSection = ({ services, panelId, panelName, customization }
     }
 
     setIsGuestSignup(true);
+    
+    // Generate auto username
+    const generatedUsername = generateUsername();
+    setAutoUsername(generatedUsername);
+    
     try {
       const { data, error } = await supabase.functions.invoke('buyer-auth', {
         body: {
@@ -227,6 +254,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization }
           action: 'guest-order',
           email: guestEmail,
           fullName: guestName,
+          username: generatedUsername,
         }
       });
 
@@ -234,6 +262,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization }
 
       if (data.error) {
         if (data.needsLogin) {
+          setModalStep('login');
           setShowLoginForm(true);
           toast({
             title: "Account Found",
@@ -247,7 +276,9 @@ export const FastOrderSection = ({ services, panelId, panelName, customization }
 
       if (data.success && data.user) {
         setTempPassword(data.tempPassword);
+        setAutoUsername(data.username || generatedUsername);
         setAccountCreated(true);
+        setModalStep('credentials');
         
         localStorage.setItem('buyer_session', JSON.stringify({
           buyerId: data.user.id,
@@ -258,7 +289,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization }
         
         toast({
           title: "Account Created!",
-          description: `Your password is: ${data.tempPassword}. Save it!`,
+          description: "Save your credentials below.",
         });
       }
     } catch (error: any) {
@@ -285,10 +316,23 @@ export const FastOrderSection = ({ services, panelId, panelName, customization }
       if (success) {
         setShowGuestModal(false);
         setShowLoginForm(false);
+        setModalStep('email');
         toast({
           title: "Welcome back!",
           description: "You can now place your order",
         });
+        // Redirect to deposit after successful login
+        if (selectedService) {
+          localStorage.setItem('pending_order', JSON.stringify({
+            serviceId: selectedServiceId,
+            serviceName: selectedService.name,
+            quantity,
+            targetUrl,
+            price: totalPrice,
+            panelId,
+          }));
+        }
+        navigate('/deposit');
       }
     } catch (error: any) {
       toast({
@@ -299,6 +343,23 @@ export const FastOrderSection = ({ services, panelId, panelName, customization }
     } finally {
       setIsGuestSignup(false);
     }
+  };
+
+  // Reset modal state when closed
+  const handleModalClose = (open: boolean) => {
+    if (!open) {
+      // Reset all modal state when closing
+      setAccountCreated(false);
+      setShowLoginForm(false);
+      setModalStep('email');
+      setGuestEmail('');
+      setGuestName('');
+      setGuestPassword('');
+      setTempPassword('');
+      setAutoUsername('');
+      setCopiedField(null);
+    }
+    setShowGuestModal(open);
   };
 
   const handlePlaceOrder = async () => {
@@ -692,9 +753,52 @@ export const FastOrderSection = ({ services, panelId, panelName, customization }
         </div>
       </section>
 
-      {/* Guest Signup Modal */}
-      <Dialog open={showGuestModal} onOpenChange={setShowGuestModal}>
+      {/* Guest Signup Modal with Progress */}
+      <Dialog open={showGuestModal} onOpenChange={handleModalClose}>
         <DialogContent className="sm:max-w-md">
+          {/* Modal Progress Indicator */}
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <div className={cn(
+              "flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold transition-all",
+              modalStep === 'email' 
+                ? "bg-primary text-primary-foreground ring-2 ring-primary/30" 
+                : accountCreated 
+                  ? "bg-green-500 text-white" 
+                  : "bg-muted text-muted-foreground"
+            )}>
+              {accountCreated || modalStep !== 'email' ? <Check className="w-4 h-4" /> : '1'}
+            </div>
+            <div className={cn(
+              "w-8 h-0.5 transition-all",
+              accountCreated ? "bg-green-500" : modalStep !== 'email' ? "bg-primary" : "bg-muted"
+            )} />
+            <div className={cn(
+              "flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold transition-all",
+              modalStep === 'credentials'
+                ? "bg-primary text-primary-foreground ring-2 ring-primary/30"
+                : accountCreated
+                  ? "bg-green-500 text-white"
+                  : "bg-muted text-muted-foreground"
+            )}>
+              {accountCreated ? <Check className="w-4 h-4" /> : '2'}
+            </div>
+            <div className={cn(
+              "w-8 h-0.5 transition-all",
+              accountCreated ? "bg-primary" : "bg-muted"
+            )} />
+            <div className={cn(
+              "flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold transition-all",
+              "bg-muted text-muted-foreground"
+            )}>
+              3
+            </div>
+          </div>
+          <div className="flex justify-center gap-8 text-xs text-muted-foreground mb-4">
+            <span className={modalStep === 'email' && !accountCreated ? 'text-primary font-medium' : ''}>Email</span>
+            <span className={modalStep === 'credentials' || accountCreated ? 'text-primary font-medium' : ''}>Credentials</span>
+            <span>Deposit</span>
+          </div>
+
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {accountCreated ? (
@@ -716,7 +820,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization }
             </DialogTitle>
             <DialogDescription>
               {accountCreated 
-                ? "Your account has been created. Add funds to complete your order."
+                ? "Save your credentials below. You'll need them to login."
                 : showLoginForm
                   ? "Enter your password to login"
                   : "Enter your email to create an account and place your order"
@@ -727,18 +831,77 @@ export const FastOrderSection = ({ services, panelId, panelName, customization }
           <div className="space-y-4 py-4">
             {accountCreated ? (
               <>
-                <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
-                  <p className="text-sm font-medium mb-2">Your temporary password:</p>
-                  <code className="text-lg font-bold text-green-600 bg-green-500/10 px-3 py-1 rounded">
-                    {tempPassword}
-                  </code>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Save this password! You'll need it to login next time.
+                {/* Credentials Display with Copy Buttons */}
+                <div className="p-4 bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-xl">
+                  <div className="flex items-center gap-2 mb-3">
+                    <CheckCircle className="w-5 h-5 text-green-500" />
+                    <span className="font-semibold text-green-600">Your Login Credentials</span>
+                  </div>
+                  
+                  {/* Username */}
+                  <div className="mb-3">
+                    <Label className="text-xs text-muted-foreground mb-1 block">Username</Label>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 text-sm font-mono font-bold bg-background/80 px-3 py-2 rounded-lg border">
+                        {autoUsername}
+                      </code>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="shrink-0"
+                        onClick={() => copyToClipboard(autoUsername, 'Username')}
+                      >
+                        {copiedField === 'Username' ? (
+                          <Check className="w-4 h-4 text-green-500" />
+                        ) : (
+                          <Copy className="w-4 h-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Password */}
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-1 block">Password</Label>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 text-sm font-mono font-bold bg-background/80 px-3 py-2 rounded-lg border">
+                        {showPassword ? tempPassword : '••••••••'}
+                      </code>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="shrink-0"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="shrink-0"
+                        onClick={() => copyToClipboard(tempPassword, 'Password')}
+                      >
+                        {copiedField === 'Password' ? (
+                          <Check className="w-4 h-4 text-green-500" />
+                        ) : (
+                          <Copy className="w-4 h-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Warning */}
+                <div className="flex items-start gap-2 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                  <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                  <p className="text-xs text-amber-700 dark:text-amber-400">
+                    <strong>Important:</strong> Save these credentials! You'll need them to login and check your order status.
                   </p>
                 </div>
-                <Button className="w-full" onClick={handleContinueToDeposit}>
-                  Add Funds to Order
-                  <ArrowRight className="w-4 h-4 ml-2" />
+
+                <Button className="w-full h-12 text-base" onClick={handleContinueToDeposit}>
+                  <span>Add Funds to Order</span>
+                  <ArrowRight className="w-5 h-5 ml-2" />
                 </Button>
               </>
             ) : showLoginForm ? (
@@ -783,7 +946,10 @@ export const FastOrderSection = ({ services, panelId, panelName, customization }
                 <Button 
                   variant="ghost" 
                   className="w-full"
-                  onClick={() => setShowLoginForm(false)}
+                  onClick={() => {
+                    setShowLoginForm(false);
+                    setModalStep('email');
+                  }}
                 >
                   Use Different Email
                 </Button>
@@ -850,7 +1016,10 @@ export const FastOrderSection = ({ services, panelId, panelName, customization }
                   Already have an account?{' '}
                   <button 
                     className="text-primary hover:underline"
-                    onClick={() => navigate('/auth')}
+                    onClick={() => {
+                      setShowLoginForm(true);
+                      setModalStep('login');
+                    }}
                   >
                     Login here
                   </button>
