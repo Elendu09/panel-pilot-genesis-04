@@ -42,18 +42,17 @@ const VerticalStepProgress = ({
   themeMode: string;
 }) => {
   const steps = [
-    { id: 1, label: 'Fast Order' },
-    { id: 2, label: 'Categories' },
-    { id: 3, label: 'Service' },
-    { id: 4, label: 'Payment' },
+    { id: 1, label: 'Categories' },
+    { id: 2, label: 'Service' },
+    { id: 3, label: 'Details' },
+    { id: 4, label: 'Review' },
+    { id: 5, label: 'Payment' },
   ];
 
   return (
-    <motion.aside
-      initial={{ opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
+    <aside
       className={cn(
-        "hidden lg:flex flex-col w-64 min-h-screen border-r p-6",
+        "hidden lg:flex flex-col w-64 h-full border-r p-6 flex-shrink-0",
         themeMode === 'dark' 
           ? 'bg-slate-900/80 border-white/10' 
           : 'bg-white border-gray-200'
@@ -86,15 +85,14 @@ const VerticalStepProgress = ({
           {steps.map((step, index) => {
             const isCompleted = currentStep > step.id;
             const isActive = currentStep === step.id;
-            const isPending = currentStep < step.id;
 
             return (
-              <div key={step.id} className="relative mb-8 last:mb-0">
+              <div key={step.id} className="relative mb-6 last:mb-0">
                 {/* Connecting Line */}
                 {index < steps.length - 1 && (
                   <div 
                     className={cn(
-                      "absolute left-0 top-8 w-0.5 h-10 -translate-x-1/2 transition-colors duration-500",
+                      "absolute left-0 top-8 w-0.5 h-8 -translate-x-1/2 transition-colors duration-500",
                       isCompleted ? 'bg-blue-500' : themeMode === 'dark' ? 'bg-white/10' : 'bg-gray-200'
                     )}
                   />
@@ -162,20 +160,20 @@ const VerticalStepProgress = ({
           <ThemeToggle />
         </div>
       </div>
-    </motion.aside>
+    </aside>
   );
 };
 
-// Mobile Step Progress (compact horizontal)
+// Mobile Step Progress (compact horizontal) - always visible sticky
 const MobileStepProgress = ({ currentStep, themeMode }: { currentStep: number; themeMode: string }) => {
-  const steps = ['Fast Order', 'Categories', 'Service', 'Payment'];
+  const steps = ['Categories', 'Service', 'Details', 'Review', 'Payment'];
   
   return (
     <div className={cn(
-      "lg:hidden flex items-center justify-center gap-1 py-4 px-4 border-b",
+      "lg:hidden sticky top-0 z-50 flex items-center justify-center gap-1 py-3 px-2 border-b",
       themeMode === 'dark' 
-        ? 'bg-slate-900/80 border-white/10' 
-        : 'bg-white border-gray-200'
+        ? 'bg-slate-900/95 backdrop-blur-xl border-white/10' 
+        : 'bg-white/95 backdrop-blur-xl border-gray-200'
     )}>
       {steps.map((step, index) => {
         const isCompleted = currentStep > index + 1;
@@ -199,7 +197,7 @@ const MobileStepProgress = ({ currentStep, themeMode }: { currentStep: number; t
             </div>
             {index < steps.length - 1 && (
               <div className={cn(
-                "w-4 sm:w-6 h-0.5 mx-1",
+                "w-3 sm:w-4 h-0.5 mx-0.5",
                 isCompleted ? 'bg-blue-500' : themeMode === 'dark' ? 'bg-white/10' : 'bg-gray-200'
               )} />
             )}
@@ -282,17 +280,17 @@ const FastOrderContent = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex">
-        <div className="hidden lg:block w-64 border-r border-border p-6">
+      <div className="h-screen h-[100dvh] bg-background flex overflow-hidden">
+        <div className="hidden lg:block w-64 border-r border-border p-6 flex-shrink-0">
           <Skeleton className="h-10 w-32 mb-10" />
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="flex items-center gap-4 mb-8">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="flex items-center gap-4 mb-6">
               <Skeleton className="w-8 h-8 rounded-full" />
               <Skeleton className="h-4 w-20" />
             </div>
           ))}
         </div>
-        <div className="flex-1 p-6">
+        <div className="flex-1 p-6 overflow-auto">
           <Skeleton className="h-12 w-full max-w-md mb-8" />
           <Skeleton className="h-[500px] w-full" />
         </div>
@@ -302,7 +300,7 @@ const FastOrderContent = () => {
 
   if (error || !panel) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="h-screen h-[100dvh] bg-background flex items-center justify-center overflow-hidden">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">Panel Not Found</h1>
           <p className="text-muted-foreground mb-6">{error || 'Unable to load panel data'}</p>
@@ -323,7 +321,7 @@ const FastOrderContent = () => {
       </Helmet>
 
       <div className={cn(
-        "min-h-screen flex",
+        "h-screen h-[100dvh] flex flex-col lg:flex-row overflow-hidden",
         themeMode === 'dark' ? 'bg-slate-950' : 'bg-gray-50'
       )}>
         {/* Desktop Vertical Step Progress Sidebar */}
@@ -335,22 +333,19 @@ const FastOrderContent = () => {
         />
 
         {/* Main Content */}
-        <div className="flex-1 flex flex-col">
-          {/* Mobile Step Progress */}
-          <MobileStepProgress currentStep={currentStep} themeMode={themeMode} />
-
-          {/* Mobile Header */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Mobile Header with Logo */}
           <motion.header
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             className={cn(
-              "lg:hidden sticky top-0 z-50 backdrop-blur-xl border-b",
+              "lg:hidden sticky top-0 z-40 backdrop-blur-xl border-b",
               themeMode === 'dark' 
                 ? 'bg-slate-900/80 border-white/10' 
                 : 'bg-white/80 border-gray-200'
             )}
           >
-            <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+            <div className="px-4 py-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 {panel.logo_url ? (
                   <img 
@@ -374,10 +369,13 @@ const FastOrderContent = () => {
             </div>
           </motion.header>
 
-          {/* Main Content Area */}
-          <main className="flex-1 pb-16">
-            {/* Search Bar - Desktop */}
-            <div className="hidden lg:block px-8 pt-8">
+          {/* Mobile Step Progress - Sticky */}
+          <MobileStepProgress currentStep={currentStep} themeMode={themeMode} />
+
+          {/* Main Content Area - Scrollable */}
+          <main className="flex-1 overflow-auto">
+            {/* Search Bar - Desktop Only */}
+            <div className="hidden lg:block px-8 pt-6">
               <div className="relative max-w-2xl mx-auto">
                 <div className="absolute right-4 top-1/2 -translate-y-1/2">
                   <Sparkles className="w-5 h-5 text-blue-400" />
