@@ -11,7 +11,9 @@ import {
   Zap,
   ChevronRight,
   LayoutDashboard,
-  Filter
+  Filter,
+  Package,
+  ShoppingCart as ShoppingCartIcon
 } from "lucide-react";
 import { SOCIAL_ICONS_MAP } from "@/components/icons/SocialIcons";
 import { motion, AnimatePresence } from "framer-motion";
@@ -295,7 +297,7 @@ const BuyerServices = () => {
         </div>
 
         {/* Services List - Grouped by Category */}
-        <div className="space-y-6 pb-24">
+        <div className="space-y-6 pb-32 md:pb-24">
           {loading ? (
             <div className="space-y-3">
               {[1, 2, 3, 4].map(i => (
@@ -422,6 +424,50 @@ const BuyerServices = () => {
           )}
         </div>
       </div>
+
+      {/* Bottom Navigation for authenticated users only */}
+      {buyer && (
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-background/95 backdrop-blur-xl border-t border-border/50 safe-area-bottom">
+          <div className="flex items-center justify-around py-2 px-1">
+            <Link
+              to="/dashboard"
+              className={cn(
+                "flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-colors",
+                location.pathname === '/dashboard' ? "text-primary" : "text-muted-foreground"
+              )}
+            >
+              <LayoutDashboard className="w-5 h-5" />
+              <span className="text-[10px] font-medium">Dashboard</span>
+            </Link>
+            <Link
+              to="/services"
+              className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl text-primary"
+            >
+              <Package className="w-5 h-5" />
+              <span className="text-[10px] font-medium">Services</span>
+            </Link>
+            <Link to="/new-order" className="relative -mt-6">
+              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/30">
+                <Zap className="w-6 h-6 text-primary-foreground" />
+              </div>
+            </Link>
+            <Link
+              to="/support"
+              className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl text-muted-foreground"
+            >
+              <Filter className="w-5 h-5" />
+              <span className="text-[10px] font-medium">Support</span>
+            </Link>
+            <Link
+              to="/orders"
+              className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl text-muted-foreground"
+            >
+              <ShoppingCartIcon className="w-5 h-5" />
+              <span className="text-[10px] font-medium">Orders</span>
+            </Link>
+          </div>
+        </nav>
+      )}
     </BuyerLayout>
   );
 };

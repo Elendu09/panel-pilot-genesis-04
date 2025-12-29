@@ -25,9 +25,14 @@ import BuyerDeposit from './buyer/BuyerDeposit';
 import BuyerSupport from './buyer/BuyerSupport';
 import BuyerPublicServices from './buyer/BuyerPublicServices';
 import BuyerFavorites from './buyer/BuyerFavorites';
+import BuyerPrivacy from './buyer/BuyerPrivacy';
+import BuyerTerms from './buyer/BuyerTerms';
+import BuyerAPI from './buyer/BuyerAPI';
+import BuyerContact from './buyer/BuyerContact';
 import Storefront from './Storefront';
 import StorefrontBlog from './storefront/StorefrontBlog';
 import FastOrder from './FastOrder';
+import TrackOrder from './TrackOrder';
 
 const queryClient = new QueryClient();
 
@@ -130,6 +135,11 @@ const TenantRouter = () => {
                         <Route path="/auth" element={<BuyerAuth />} />
                         <Route path="/services" element={<BuyerPublicServices />} />
                         <Route path="/fast-order" element={<FastOrder />} />
+                        <Route path="/track-order" element={<TrackOrder />} />
+                        <Route path="/privacy" element={<BuyerPrivacy />} />
+                        <Route path="/terms" element={<BuyerTerms />} />
+                        <Route path="/api" element={<BuyerAPI />} />
+                        <Route path="/contact" element={<BuyerContact />} />
 
                         {/* Tenant blog route */}
                         <Route path="/blog" element={<StorefrontBlog />} />

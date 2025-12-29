@@ -1114,10 +1114,12 @@ export type Database = {
           maintenance_message: string | null
           maintenance_mode: boolean | null
           panel_id: string | null
+          privacy_policy: string | null
           seo_description: string | null
           seo_keywords: string | null
           seo_title: string | null
           social_links: Json | null
+          terms_of_service: string | null
           updated_at: string | null
         }
         Insert: {
@@ -1141,10 +1143,12 @@ export type Database = {
           maintenance_message?: string | null
           maintenance_mode?: boolean | null
           panel_id?: string | null
+          privacy_policy?: string | null
           seo_description?: string | null
           seo_keywords?: string | null
           seo_title?: string | null
           social_links?: Json | null
+          terms_of_service?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -1168,10 +1172,12 @@ export type Database = {
           maintenance_message?: string | null
           maintenance_mode?: boolean | null
           panel_id?: string | null
+          privacy_policy?: string | null
           seo_description?: string | null
           seo_keywords?: string | null
           seo_title?: string | null
           social_links?: Json | null
+          terms_of_service?: string | null
           updated_at?: string | null
         }
         Relationships: [
