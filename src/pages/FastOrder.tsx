@@ -52,10 +52,10 @@ const VerticalStepProgress = ({
   return (
     <aside
       className={cn(
-        "hidden lg:flex flex-col w-64 h-full border-r p-6 flex-shrink-0",
+        "hidden lg:flex flex-col w-64 h-full border-r p-6 flex-shrink-0 transition-colors duration-300",
         themeMode === 'dark' 
-          ? 'bg-slate-900/80 border-white/10' 
-          : 'bg-white border-gray-200'
+          ? 'bg-gradient-to-b from-slate-900 via-slate-900/95 to-slate-950 border-white/5 shadow-xl shadow-black/20' 
+          : 'bg-gradient-to-b from-white via-gray-50/50 to-gray-100/30 border-gray-200/80 shadow-lg shadow-gray-200/50'
       )}
     >
       {/* Panel Logo */}
@@ -67,7 +67,12 @@ const VerticalStepProgress = ({
             className="h-10 w-auto object-contain"
           />
         ) : (
-          <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center text-white font-bold text-lg">
+          <div className={cn(
+            "w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-lg",
+            themeMode === 'dark' 
+              ? 'bg-gradient-to-br from-blue-500 to-blue-600 shadow-blue-500/30'
+              : 'bg-gradient-to-br from-blue-500 to-blue-600 shadow-blue-500/40'
+          )}>
             {panelName.charAt(0).toUpperCase()}
           </div>
         )}
@@ -92,8 +97,10 @@ const VerticalStepProgress = ({
                 {index < steps.length - 1 && (
                   <div 
                     className={cn(
-                      "absolute left-0 top-8 w-0.5 h-8 -translate-x-1/2 transition-colors duration-500",
-                      isCompleted ? 'bg-blue-500' : themeMode === 'dark' ? 'bg-white/10' : 'bg-gray-200'
+                      "absolute left-0 top-8 w-0.5 h-8 -translate-x-1/2 transition-all duration-500",
+                      isCompleted 
+                        ? 'bg-gradient-to-b from-blue-500 to-blue-400' 
+                        : themeMode === 'dark' ? 'bg-white/10' : 'bg-gray-200'
                     )}
                   />
                 )}
@@ -107,18 +114,23 @@ const VerticalStepProgress = ({
                     className={cn(
                       "relative z-10 flex items-center justify-center w-8 h-8 rounded-full -ml-4 transition-all duration-300",
                       isCompleted 
-                        ? 'bg-blue-500' 
+                        ? 'bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/40' 
                         : isActive 
-                          ? 'border-2 border-blue-500 bg-background' 
+                          ? themeMode === 'dark'
+                            ? 'border-2 border-blue-400 bg-slate-800 shadow-lg shadow-blue-500/20'
+                            : 'border-2 border-blue-500 bg-white shadow-lg shadow-blue-500/30'
                           : themeMode === 'dark' 
-                            ? 'bg-slate-800 border border-white/10' 
+                            ? 'bg-slate-800/80 border border-white/10' 
                             : 'bg-gray-100 border border-gray-200'
                     )}
                   >
                     {isCompleted ? (
                       <Check className="w-4 h-4 text-white" />
                     ) : isActive ? (
-                      <div className="w-2 h-2 rounded-full bg-blue-500" />
+                      <div className={cn(
+                        "w-2 h-2 rounded-full",
+                        themeMode === 'dark' ? 'bg-blue-400' : 'bg-blue-500'
+                      )} />
                     ) : (
                       <div className={cn(
                         "w-2 h-2 rounded-full",
@@ -131,9 +143,11 @@ const VerticalStepProgress = ({
                   <span 
                     className={cn(
                       "text-sm font-medium transition-colors duration-300",
-                      isCompleted || isActive 
-                        ? themeMode === 'dark' ? 'text-white' : 'text-gray-900'
-                        : themeMode === 'dark' ? 'text-gray-500' : 'text-gray-400'
+                      isCompleted 
+                        ? themeMode === 'dark' ? 'text-blue-400' : 'text-blue-600'
+                        : isActive 
+                          ? themeMode === 'dark' ? 'text-white' : 'text-gray-900'
+                          : themeMode === 'dark' ? 'text-gray-500' : 'text-gray-400'
                     )}
                   >
                     {step.label}
@@ -148,9 +162,12 @@ const VerticalStepProgress = ({
       {/* Theme Toggle at Bottom */}
       <div className={cn(
         "pt-6 border-t",
-        themeMode === 'dark' ? 'border-white/10' : 'border-gray-200'
+        themeMode === 'dark' ? 'border-white/5' : 'border-gray-200/80'
       )}>
-        <div className="flex items-center justify-between">
+        <div className={cn(
+          "flex items-center justify-between p-3 rounded-xl transition-colors",
+          themeMode === 'dark' ? 'bg-slate-800/50' : 'bg-gray-100/80'
+        )}>
           <span className={cn(
             "text-sm font-medium",
             themeMode === 'dark' ? 'text-gray-400' : 'text-gray-600'
@@ -170,10 +187,10 @@ const MobileStepProgress = ({ currentStep, themeMode }: { currentStep: number; t
   
   return (
     <div className={cn(
-      "lg:hidden sticky top-0 z-50 flex items-center justify-center gap-1 py-3 px-2 border-b",
+      "lg:hidden sticky top-0 z-50 flex items-center justify-center gap-1.5 py-4 px-3 border-b transition-colors duration-300",
       themeMode === 'dark' 
-        ? 'bg-slate-900/95 backdrop-blur-xl border-white/10' 
-        : 'bg-white/95 backdrop-blur-xl border-gray-200'
+        ? 'bg-slate-900/98 backdrop-blur-xl border-white/5 shadow-lg shadow-black/20' 
+        : 'bg-white/98 backdrop-blur-xl border-gray-200/80 shadow-md shadow-gray-200/50'
     )}>
       {steps.map((step, index) => {
         const isCompleted = currentStep > index + 1;
@@ -181,24 +198,29 @@ const MobileStepProgress = ({ currentStep, themeMode }: { currentStep: number; t
         
         return (
           <div key={index} className="flex items-center">
-            <div 
+            <motion.div 
+              animate={{ scale: isActive ? 1.1 : 1 }}
               className={cn(
-                "flex items-center justify-center w-6 h-6 rounded-full text-xs font-medium transition-all",
+                "flex items-center justify-center w-7 h-7 rounded-full text-xs font-semibold transition-all duration-300",
                 isCompleted 
-                  ? 'bg-blue-500 text-white' 
+                  ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-md shadow-blue-500/40' 
                   : isActive 
-                    ? 'border-2 border-blue-500 text-blue-500' 
+                    ? themeMode === 'dark'
+                      ? 'border-2 border-blue-400 text-blue-400 bg-slate-800/80 shadow-md shadow-blue-500/20'
+                      : 'border-2 border-blue-500 text-blue-600 bg-white shadow-md shadow-blue-500/30'
                     : themeMode === 'dark'
-                      ? 'bg-slate-800 text-gray-500'
-                      : 'bg-gray-100 text-gray-400'
+                      ? 'bg-slate-800/60 text-gray-500 border border-white/5'
+                      : 'bg-gray-100 text-gray-400 border border-gray-200/80'
               )}
             >
-              {isCompleted ? <Check className="w-3 h-3" /> : index + 1}
-            </div>
+              {isCompleted ? <Check className="w-3.5 h-3.5" /> : index + 1}
+            </motion.div>
             {index < steps.length - 1 && (
               <div className={cn(
-                "w-3 sm:w-4 h-0.5 mx-0.5",
-                isCompleted ? 'bg-blue-500' : themeMode === 'dark' ? 'bg-white/10' : 'bg-gray-200'
+                "w-4 sm:w-6 h-0.5 mx-1 rounded-full transition-all duration-500",
+                isCompleted 
+                  ? 'bg-gradient-to-r from-blue-500 to-blue-400' 
+                  : themeMode === 'dark' ? 'bg-white/10' : 'bg-gray-200'
               )} />
             )}
           </div>
@@ -321,8 +343,10 @@ const FastOrderContent = () => {
       </Helmet>
 
       <div className={cn(
-        "h-screen h-[100dvh] flex flex-col lg:flex-row overflow-hidden",
-        themeMode === 'dark' ? 'bg-slate-950' : 'bg-gray-50'
+        "h-screen h-[100dvh] flex flex-col lg:flex-row overflow-hidden transition-colors duration-300",
+        themeMode === 'dark' 
+          ? 'bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950' 
+          : 'bg-gradient-to-br from-gray-50 via-white to-gray-100/50'
       )}>
         {/* Desktop Vertical Step Progress Sidebar */}
         <VerticalStepProgress 
