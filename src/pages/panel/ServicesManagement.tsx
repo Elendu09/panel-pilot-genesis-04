@@ -115,7 +115,7 @@ import { ServiceEditSheet } from "@/components/services/ServiceEditSheet";
 import { ServiceViewDialog } from "@/components/services/ServiceViewDialog";
 import { MobileServiceView } from "@/components/services/MobileServiceView";
 import { FloatingUndoButton } from "@/components/services/FloatingUndoButton";
-import { useUndoHistory } from "@/hooks/use-undo-history";
+import { useUndoRedoHistory } from "@/hooks/use-undo-redo-history";
 import { ServiceTips } from "@/components/services/ServiceTips";
 import { SmartCategorizeDialog } from "@/components/services/SmartCategorizeDialog";
 import { ServiceAnalytics } from "@/components/services/ServiceAnalytics";
@@ -182,8 +182,8 @@ const ServicesManagement = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [services, setServices] = useState<ServiceItem[]>([]);
   
-  // Undo history for bulk operations
-  const { pushUndo, undoStack, undoOperation } = useUndoHistory(() => fetchServices());
+  // Undo/Redo history for bulk operations with keyboard shortcuts
+  const { pushUndo, undoStack, redoStack, undoOperation, redo, canRedo } = useUndoRedoHistory(() => fetchServices());
   
   // Drag and drop toggle
   const [isDragEnabled, setIsDragEnabled] = useState(() => {
@@ -2561,10 +2561,12 @@ const ServicesManagement = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      {/* Floating Undo Button */}
+      {/* Floating Undo/Redo Button */}
       <FloatingUndoButton 
         undoStack={undoStack}
+        redoStack={redoStack}
         onUndo={undoOperation}
+        onRedo={redo}
         maxVisible={5}
       />
 

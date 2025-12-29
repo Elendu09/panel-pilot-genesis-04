@@ -163,14 +163,6 @@ const Storefront = () => {
         {panel.logo_url && <meta property="og:image" content={panel.logo_url} />}
       </Helmet>
       {renderTheme()}
-      {/* Fast Order Section - only show if enabled */}
-      {enableFastOrder && services.length > 0 && panel && (
-        <FastOrderSection 
-          services={services} 
-          panelId={panel.id} 
-          panelName={panel.name} 
-        />
-      )}
       {/* Floating Chat Widget (WhatsApp/Telegram) */}
       <FloatingChatWidget panelId={panel?.id} />
       {/* Live Chat Widget */}

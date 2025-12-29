@@ -6,60 +6,70 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   RotateCcw, 
+  RotateCw,
   X, 
   Power, 
   Trash2, 
   Palette, 
   Layers, 
   Sparkles,
-  Clock 
+  Clock,
+  Edit3
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { UndoOperation } from "@/hooks/use-undo-history";
+import { UndoRedoOperation } from "@/hooks/use-undo-redo-history";
 import { formatDistanceToNow } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface FloatingUndoButtonProps {
-  undoStack: UndoOperation[];
-  onUndo: (operation: UndoOperation) => Promise<boolean>;
+  undoStack: UndoRedoOperation[];
+  redoStack?: UndoRedoOperation[];
+  onUndo: (operation: UndoRedoOperation) => Promise<boolean>;
+  onRedo?: () => Promise<boolean>;
   maxVisible?: number;
 }
 
-const getOperationIcon = (type: UndoOperation['type']) => {
+const getOperationIcon = (type: UndoRedoOperation['type']) => {
   switch (type) {
     case 'status': return Power;
     case 'delete': return Trash2;
     case 'icon': return Palette;
     case 'category': return Layers;
     case 'markup': return Sparkles;
+    case 'edit': return Edit3;
     default: return RotateCcw;
   }
 };
 
-const getOperationColor = (type: UndoOperation['type']) => {
+const getOperationColor = (type: UndoRedoOperation['type']) => {
   switch (type) {
     case 'status': return 'text-green-500 bg-green-500/10';
     case 'delete': return 'text-red-500 bg-red-500/10';
     case 'icon': return 'text-purple-500 bg-purple-500/10';
     case 'category': return 'text-blue-500 bg-blue-500/10';
     case 'markup': return 'text-amber-500 bg-amber-500/10';
+    case 'edit': return 'text-cyan-500 bg-cyan-500/10';
     default: return 'text-primary bg-primary/10';
   }
 };
 
 export const FloatingUndoButton = ({ 
   undoStack, 
+  redoStack = [],
   onUndo,
+  onRedo,
   maxVisible = 5 
 }: FloatingUndoButtonProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [undoingId, setUndoingId] = useState<string | null>(null);
+  const [isRedoing, setIsRedoing] = useState(false);
   const isMobile = useIsMobile();
 
   const visibleOperations = undoStack.slice(0, maxVisible);
   const hasOperations = undoStack.length > 0;
+  const hasRedoOperations = redoStack.length > 0;
 
-  const handleUndo = async (operation: UndoOperation) => {
+  const handleUndo = async (operation: UndoRedoOperation) => {
     setUndoingId(operation.id);
     try {
       await onUndo(operation);
@@ -68,7 +78,17 @@ export const FloatingUndoButton = ({
     }
   };
 
-  if (!hasOperations) return null;
+  const handleRedo = async () => {
+    if (!onRedo) return;
+    setIsRedoing(true);
+    try {
+      await onRedo();
+    } finally {
+      setIsRedoing(false);
+    }
+  };
+
+  if (!hasOperations && !hasRedoOperations) return null;
 
   return (
     <>
@@ -106,14 +126,28 @@ export const FloatingUndoButton = ({
                     <RotateCcw className="w-4 h-4" />
                     Recent Actions
                   </CardTitle>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-8 w-8"
-                    onClick={() => setIsExpanded(false)}
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    {hasRedoOperations && onRedo && (
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="h-8 gap-1"
+                        onClick={handleRedo}
+                        disabled={isRedoing}
+                      >
+                        <RotateCw className="w-3 h-3" />
+                        Redo
+                      </Button>
+                    )}
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8"
+                      onClick={() => setIsExpanded(false)}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent className="pb-4">
                   <ScrollArea className={isMobile ? "max-h-[30vh]" : "max-h-80"}>
@@ -171,6 +205,11 @@ export const FloatingUndoButton = ({
                       + {undoStack.length - maxVisible} more actions in history
                     </p>
                   )}
+                  
+                  <p className="text-xs text-muted-foreground text-center mt-3 border-t border-border/50 pt-3">
+                    <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px] font-mono">Ctrl+Z</kbd> Undo · 
+                    <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px] font-mono ml-1">Ctrl+Y</kbd> Redo
+                  </p>
                 </CardContent>
               </Card>
             </motion.div>
@@ -180,23 +219,43 @@ export const FloatingUndoButton = ({
               initial={{ opacity: 0, scale: 0.5 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.5 }}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+              className="flex gap-2"
             >
-              <Button
-                size="lg"
-                className="h-12 w-12 md:h-14 md:w-14 rounded-full shadow-lg shadow-primary/25 relative"
-                onClick={() => setIsExpanded(true)}
-              >
-                <RotateCcw className="w-4 h-4 md:w-5 md:h-5" />
-                <Badge 
-                  className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs"
-                  variant="destructive"
+              {hasRedoOperations && onRedo && (
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                 >
-                  {Math.min(undoStack.length, 9)}
-                  {undoStack.length > 9 ? '+' : ''}
-                </Badge>
-              </Button>
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="h-12 w-12 md:h-14 md:w-14 rounded-full shadow-lg"
+                    onClick={handleRedo}
+                    disabled={isRedoing}
+                  >
+                    <RotateCw className="w-4 h-4 md:w-5 md:h-5" />
+                  </Button>
+                </motion.div>
+              )}
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Button
+                  size="lg"
+                  className="h-12 w-12 md:h-14 md:w-14 rounded-full shadow-lg shadow-primary/25 relative"
+                  onClick={() => setIsExpanded(true)}
+                >
+                  <RotateCcw className="w-4 h-4 md:w-5 md:h-5" />
+                  <Badge 
+                    className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs"
+                    variant="destructive"
+                  >
+                    {Math.min(undoStack.length, 9)}
+                    {undoStack.length > 9 ? '+' : ''}
+                  </Badge>
+                </Button>
+              </motion.div>
             </motion.div>
           )}
         </AnimatePresence>

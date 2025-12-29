@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,6 +43,7 @@ interface CartItem {
 const CART_STORAGE_KEY = (panelId: string) => `buyer_cart_${panelId}`;
 
 const BuyerServices = () => {
+  const navigate = useNavigate();
   const { panel } = useTenant();
   const { buyer, refreshBuyer } = useBuyerAuth();
   const { services, loading } = useTenantServices(panel?.id);
@@ -511,7 +512,7 @@ const BuyerServices = () => {
                             isSelected && "ring-2 ring-primary",
                             isInCart && "border-green-500/30"
                           )}
-                          onClick={() => setSelectedService(service)}
+                          onClick={() => navigate(`/new-order?service=${service.id}`)}
                         >
                           <CardContent className="p-3 md:p-4">
                             <div className="flex items-start gap-3 md:gap-4">
