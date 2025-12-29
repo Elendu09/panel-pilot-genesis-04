@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, X, Send, Loader2 } from "lucide-react";
+import { MessageCircle, X, Send, Loader2, RotateCcw, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -73,6 +73,7 @@ export const FloatingChatWidget = ({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [hasPreviousSession, setHasPreviousSession] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [settings, setSettings] = useState({
     enabled: false,
@@ -85,6 +86,87 @@ export const FloatingChatWidget = ({
     position: position,
     message: message
   });
+
+  // Storage key for chat history
+  const storageKey = `chat_history_${panelId || 'default'}`;
+
+  // Load previous session on mount
+  useEffect(() => {
+    try {
+      const savedMessages = localStorage.getItem(storageKey);
+      if (savedMessages) {
+        const parsed = JSON.parse(savedMessages);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setHasPreviousSession(true);
+        }
+      }
+    } catch {
+      // Ignore parse errors
+    }
+  }, [storageKey]);
+
+  // Save messages to localStorage when they change
+  useEffect(() => {
+    if (messages.length > 0) {
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(messages));
+      } catch {
+        // Ignore storage errors
+      }
+    }
+  }, [messages, storageKey]);
+
+  // Add AI greeting when opening chat
+  useEffect(() => {
+    if (showAIChat && messages.length === 0 && !hasPreviousSession) {
+      // Immediate AI greeting
+      setMessages([{
+        role: 'assistant',
+        content: `Hi! 👋 Welcome to ${panelName || 'our panel'}! How can I help you today? I can assist with orders, services, pricing, and account questions.`
+      }]);
+    }
+  }, [showAIChat, messages.length, hasPreviousSession, panelName]);
+
+  // Continue previous session
+  const continuePreviousSession = () => {
+    try {
+      const savedMessages = localStorage.getItem(storageKey);
+      if (savedMessages) {
+        const parsed = JSON.parse(savedMessages);
+        if (Array.isArray(parsed)) {
+          setMessages(parsed);
+        }
+      }
+    } catch {
+      // Start fresh if error
+      setMessages([{
+        role: 'assistant',
+        content: `Hi! 👋 Welcome back to ${panelName || 'our panel'}! How can I help you today?`
+      }]);
+    }
+    setHasPreviousSession(false);
+    setShowAIChat(true);
+  };
+
+  // Start new session
+  const startNewSession = () => {
+    localStorage.removeItem(storageKey);
+    setMessages([{
+      role: 'assistant',
+      content: `Hi! 👋 Welcome to ${panelName || 'our panel'}! How can I help you today? I can assist with orders, services, pricing, and account questions.`
+    }]);
+    setHasPreviousSession(false);
+    setShowAIChat(true);
+  };
+
+  // Clear chat history
+  const clearHistory = () => {
+    localStorage.removeItem(storageKey);
+    setMessages([{
+      role: 'assistant',
+      content: `Chat cleared! How can I help you today?`
+    }]);
+  };
 
   // Fetch settings from database if panelId is provided
   useEffect(() => {
@@ -231,12 +313,23 @@ export const FloatingChatWidget = ({
                   <MessageCircle className="w-5 h-5" />
                   <span className="font-semibold">{showAIChat ? 'AI Assistant' : 'Chat with us'}</span>
                 </div>
-                <button 
-                  onClick={() => { setIsOpen(false); setShowAIChat(false); }}
-                  className="p-1 hover:bg-white/20 rounded-full transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-1">
+                  {showAIChat && messages.length > 1 && (
+                    <button 
+                      onClick={clearHistory}
+                      className="p-1 hover:bg-white/20 rounded-full transition-colors"
+                      title="Clear chat"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                  <button 
+                    onClick={() => { setIsOpen(false); setShowAIChat(false); }}
+                    className="p-1 hover:bg-white/20 rounded-full transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
               <p className="text-sm text-white/80 mt-1">{settings.message}</p>
             </div>
@@ -246,11 +339,6 @@ export const FloatingChatWidget = ({
               <div className="flex flex-col h-80">
                 <ScrollArea ref={scrollRef} className="flex-1 p-3">
                   <div className="space-y-3">
-                    {messages.length === 0 && (
-                      <div className="text-center text-sm text-muted-foreground py-4">
-                        👋 Hi! How can I help you today?
-                      </div>
-                    )}
                     {messages.map((msg, i) => (
                       <div
                         key={i}
@@ -303,11 +391,41 @@ export const FloatingChatWidget = ({
             ) : (
               /* Chat options */
               <div className="p-4 space-y-3 max-h-80 overflow-y-auto">
-                {enableAI && (
+                {/* Previous Session Banner */}
+                {enableAI && hasPreviousSession && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="p-3 bg-primary/10 border border-primary/20 rounded-xl"
+                  >
+                    <p className="text-sm font-medium text-foreground mb-2">
+                      Continue previous conversation?
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        onClick={continuePreviousSession}
+                        className="flex-1 gap-1"
+                      >
+                        <RotateCcw className="w-3 h-3" /> Continue
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={startNewSession}
+                        className="flex-1"
+                      >
+                        New Chat
+                      </Button>
+                    </div>
+                  </motion.div>
+                )}
+
+                {enableAI && !hasPreviousSession && (
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    onClick={() => setShowAIChat(true)}
+                    onClick={startNewSession}
                     className="w-full flex items-center gap-3 p-3 bg-gradient-to-r from-primary to-primary/80 text-white rounded-xl transition-colors"
                   >
                     <MessageCircle className="w-6 h-6" />
@@ -388,7 +506,7 @@ export const FloatingChatWidget = ({
                     <MessageCircle className="w-6 h-6" />
                     <div className="text-left">
                       <p className="font-semibold">{settings.customLabel}</p>
-                      <p className="text-xs text-white/80">Start conversation</p>
+                      <p className="text-xs text-white/80">Open chat</p>
                     </div>
                   </motion.button>
                 )}
@@ -398,14 +516,12 @@ export const FloatingChatWidget = ({
         )}
       </AnimatePresence>
 
-      {/* Floating button */}
+      {/* Floating Button */}
       <motion.button
         whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
+        whileTap={{ scale: 0.95 }}
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-white transition-all ${
-          isOpen ? 'bg-slate-600' : getPrimaryColor()
-        }`}
+        className={`p-4 rounded-full text-white shadow-lg ${getPrimaryColor()} transition-colors relative`}
       >
         <AnimatePresence mode="wait">
           {isOpen ? (
@@ -419,7 +535,7 @@ export const FloatingChatWidget = ({
             </motion.div>
           ) : (
             <motion.div
-              key="chat"
+              key="open"
               initial={{ rotate: 90, opacity: 0 }}
               animate={{ rotate: 0, opacity: 1 }}
               exit={{ rotate: -90, opacity: 0 }}
@@ -428,15 +544,14 @@ export const FloatingChatWidget = ({
             </motion.div>
           )}
         </AnimatePresence>
+        
+        {/* Pulse animation when closed */}
+        {!isOpen && (
+          <span className="absolute inset-0 rounded-full animate-ping opacity-30 bg-current" />
+        )}
       </motion.button>
-
-      {/* Pulse animation */}
-      {!isOpen && (
-        <span className="absolute -top-1 -right-1 flex h-4 w-4">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-          <span className="relative inline-flex rounded-full h-4 w-4 bg-green-500"></span>
-        </span>
-      )}
     </div>
   );
 };
+
+export default FloatingChatWidget;
