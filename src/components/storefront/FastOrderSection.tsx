@@ -22,7 +22,7 @@ import {
   Zap, ArrowRight, ArrowLeft, Lock, Loader2, Mail, User, CheckCircle, Check, 
   ChevronRight, Instagram, Youtube, Send, Twitter, Facebook, Linkedin, 
   Music2, Globe, Copy, AlertTriangle, Eye, EyeOff, CreditCard, Wallet,
-  DollarSign
+  DollarSign, Sparkles, Star
 } from 'lucide-react';
 import { SOCIAL_ICONS_MAP, TikTokIcon } from '@/components/icons/SocialIcons';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -51,9 +51,9 @@ interface FastOrderSectionProps {
 
 // Payment methods
 const paymentMethods = [
-  { id: 'stripe', name: 'Credit Card', icon: CreditCard, color: 'bg-blue-500' },
-  { id: 'paypal', name: 'PayPal', icon: Wallet, color: 'bg-blue-600' },
-  { id: 'crypto', name: 'Crypto', icon: DollarSign, color: 'bg-orange-500' },
+  { id: 'stripe', name: 'Credit Card', icon: CreditCard, color: 'bg-gradient-to-br from-blue-500 to-blue-600' },
+  { id: 'paypal', name: 'PayPal', icon: Wallet, color: 'bg-gradient-to-br from-blue-600 to-indigo-600' },
+  { id: 'crypto', name: 'Crypto', icon: DollarSign, color: 'bg-gradient-to-br from-orange-500 to-amber-500' },
 ];
 
 export const FastOrderSection = ({ services, panelId, panelName, customization, onStepChange }: FastOrderSectionProps) => {
@@ -62,11 +62,17 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
   
   const themeMode = customization?.themeMode || 'dark';
   const textColor = customization?.textColor || (themeMode === 'dark' ? '#FFFFFF' : '#1F2937');
-  const textMuted = customization?.textMuted || (themeMode === 'dark' ? '#A1A1AA' : '#4B5563');
-  const cardBg = themeMode === 'dark' ? 'bg-slate-900/80 border-white/10' : 'bg-white shadow-md border-gray-200';
-  const inputBg = themeMode === 'dark' ? 'bg-slate-800/50 border-white/10' : 'bg-gray-50 border-gray-200';
+  const textMuted = customization?.textMuted || (themeMode === 'dark' ? '#9CA3AF' : '#6B7280');
   
-  // Step state (1-5: Categories, Service, Details, Review, Payment)
+  // Enhanced card styles
+  const cardBg = themeMode === 'dark' 
+    ? 'bg-slate-900/60 backdrop-blur-xl border-white/10 shadow-2xl shadow-black/20' 
+    : 'bg-white/80 backdrop-blur-xl shadow-xl shadow-gray-200/50 border-gray-200/80';
+  const inputBg = themeMode === 'dark' 
+    ? 'bg-slate-800/60 border-white/10 focus:border-blue-500/50' 
+    : 'bg-gray-50/80 border-gray-200 focus:border-blue-500/50';
+  
+  // Step state (1-5: Categories, Service, Order, Review, Payment)
   const [currentStep, setCurrentStepInternal] = useState(1);
   
   // Wrapper to notify parent of step changes
@@ -112,7 +118,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
   const totalPrice = selectedService ? (selectedService.price * quantity) / 1000 : 0;
 
   const getCategoryIcon = (category: string) => {
-    return SOCIAL_ICONS_MAP[category] || SOCIAL_ICONS_MAP.other;
+    return SOCIAL_ICONS_MAP[category.toLowerCase()] || SOCIAL_ICONS_MAP.other;
   };
 
   // Quantity presets
@@ -402,6 +408,9 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
     }
   };
 
+  // Get category data for display
+  const selectedCategoryData = selectedCategory ? getCategoryIcon(selectedCategory) : null;
+
   // Show empty state if no services available
   if (services.length === 0 || categories.length === 0) {
     return (
@@ -412,14 +421,17 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
           className="text-center"
         >
           <div className="max-w-md mx-auto">
-            <div className={`p-8 rounded-2xl border ${cardBg}`}>
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
+            <div className={cn("p-8 rounded-3xl border", cardBg)}>
+              <div className={cn(
+                "w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center",
+                themeMode === 'dark' ? 'bg-slate-800' : 'bg-gray-100'
+              )}>
                 <Zap className="w-8 h-8 text-muted-foreground" />
               </div>
-              <h3 className="text-xl font-bold mb-2" style={{ color: textColor }}>
+              <h3 className="text-xl font-bold mb-2 tracking-tight" style={{ color: textColor }}>
                 No Services Available Yet
               </h3>
-              <p className="mb-6" style={{ color: textMuted }}>
+              <p className="mb-6 text-sm" style={{ color: textMuted }}>
                 This panel hasn't added any services yet. Please check back later.
               </p>
               <Button 
@@ -440,7 +452,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
     <>
       <section className="flex-1 p-4 lg:p-8" id="fast-order">
         <div className="max-w-3xl mx-auto h-full">
-          <Card className={`border ${cardBg} h-full`}>
+          <Card className={cn("border rounded-3xl overflow-hidden", cardBg)}>
             <CardContent className="p-4 md:p-6 lg:p-8">
               {/* Back Button - Always visible after step 1 */}
               {currentStep > 1 && (
@@ -453,12 +465,17 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                     variant="ghost"
                     size="sm"
                     onClick={handleBack}
-                    className="gap-2 text-muted-foreground hover:text-foreground"
+                    className={cn(
+                      "gap-2 transition-colors",
+                      themeMode === 'dark' 
+                        ? 'text-gray-400 hover:text-white hover:bg-white/5' 
+                        : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
+                    )}
                   >
                     <ArrowLeft className="w-4 h-4" />
                     {currentStep === 2 && 'Back to Categories'}
                     {currentStep === 3 && 'Back to Services'}
-                    {currentStep === 4 && 'Back to Details'}
+                    {currentStep === 4 && 'Back to Order'}
                     {currentStep === 5 && 'Back to Review'}
                   </Button>
                 </motion.div>
@@ -475,11 +492,16 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                     className="space-y-6"
                   >
                     <div className="text-center">
-                      <Badge className="mb-3 bg-blue-500/10 text-blue-500 border-blue-500/20">
+                      <Badge className={cn(
+                        "mb-3 font-semibold",
+                        themeMode === 'dark' 
+                          ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' 
+                          : 'bg-blue-50 text-blue-600 border-blue-200'
+                      )}>
                         Step 1 of 5
                       </Badge>
-                      <h3 className="text-xl font-bold mb-2" style={{ color: textColor }}>
-                        Select a Category
+                      <h3 className="text-2xl font-bold mb-2 tracking-tight" style={{ color: textColor }}>
+                        Select a Platform
                       </h3>
                       <p className="text-sm" style={{ color: textMuted }}>
                         Choose the platform you want to boost
@@ -487,7 +509,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                     </div>
                     
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                      {categories.map((category) => {
+                      {categories.map((category, index) => {
                         const categoryData = getCategoryIcon(category);
                         const CategoryIcon = categoryData.icon;
                         const serviceCount = services.filter(s => s.category === category).length;
@@ -495,25 +517,40 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                         return (
                           <motion.button
                             key={category}
-                            whileHover={{ scale: 1.03, y: -2 }}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: index * 0.05 }}
+                            whileHover={{ scale: 1.03, y: -4 }}
                             whileTap={{ scale: 0.97 }}
                             onClick={() => handleCategorySelect(category)}
                             className={cn(
-                              "flex flex-col items-center gap-2 p-4 rounded-xl border transition-all duration-200",
+                              "relative flex flex-col items-center gap-3 p-4 rounded-2xl border transition-all duration-300 group overflow-hidden",
                               themeMode === 'dark'
-                                ? "border-white/10 bg-slate-800/50 hover:bg-slate-800 hover:border-blue-500/50"
-                                : "border-gray-200 bg-white hover:bg-gray-50 hover:border-blue-500/50 shadow-sm"
+                                ? "border-white/10 bg-slate-800/40 hover:bg-slate-800/80 hover:border-blue-500/50"
+                                : "border-gray-200 bg-white hover:bg-gray-50 hover:border-blue-500/50 shadow-sm hover:shadow-md"
                             )}
                           >
-                            <div className={cn("p-3 rounded-xl", categoryData.bgColor)}>
+                            {/* Glow effect on hover */}
+                            <div className={cn(
+                              "absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300",
+                              categoryData.bgColor,
+                              "blur-2xl"
+                            )} style={{ opacity: 0.1 }} />
+                            
+                            <div className={cn(
+                              "relative p-3.5 rounded-xl shadow-lg transition-transform group-hover:scale-110",
+                              categoryData.bgColor
+                            )}>
                               <CategoryIcon className="w-6 h-6 text-white" size={24} />
                             </div>
-                            <span className="text-sm font-medium capitalize" style={{ color: textColor }}>
-                              {category}
-                            </span>
-                            <span className="text-xs" style={{ color: textMuted }}>
-                              {serviceCount} services
-                            </span>
+                            <div className="text-center relative">
+                              <span className="text-sm font-semibold capitalize block tracking-tight" style={{ color: textColor }}>
+                                {category}
+                              </span>
+                              <span className="text-xs" style={{ color: textMuted }}>
+                                {serviceCount} service{serviceCount !== 1 ? 's' : ''}
+                              </span>
+                            </div>
                           </motion.button>
                         );
                       })}
@@ -531,20 +568,35 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                     className="space-y-6"
                   >
                     <div className="text-center">
-                      <Badge className="mb-3 bg-blue-500/10 text-blue-500 border-blue-500/20">
+                      <Badge className={cn(
+                        "mb-3 font-semibold",
+                        themeMode === 'dark' 
+                          ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' 
+                          : 'bg-blue-50 text-blue-600 border-blue-200'
+                      )}>
                         Step 2 of 5
                       </Badge>
-                      <h3 className="text-xl font-bold mb-2" style={{ color: textColor }}>
+                      
+                      {/* Category Icon Display */}
+                      {selectedCategoryData && (
+                        <div className="flex items-center justify-center gap-2 mb-3">
+                          <div className={cn("p-2 rounded-lg", selectedCategoryData.bgColor)}>
+                            <selectedCategoryData.icon className="w-5 h-5 text-white" size={20} />
+                          </div>
+                          <span className="capitalize font-semibold text-blue-500">{selectedCategory}</span>
+                        </div>
+                      )}
+                      
+                      <h3 className="text-2xl font-bold mb-2 tracking-tight" style={{ color: textColor }}>
                         Choose a Service
                       </h3>
                       <p className="text-sm" style={{ color: textMuted }}>
-                        {categoryServices.length} services for{' '}
-                        <span className="capitalize font-medium text-blue-500">{selectedCategory}</span>
+                        {categoryServices.length} services available
                       </p>
                     </div>
                     
                     <Select value={selectedServiceId} onValueChange={handleServiceSelect}>
-                      <SelectTrigger className={cn("h-14 text-left", inputBg)}>
+                      <SelectTrigger className={cn("h-14 text-left rounded-xl", inputBg)}>
                         <SelectValue placeholder="Select a service..." />
                       </SelectTrigger>
                       <SelectContent className="max-h-80">
@@ -563,27 +615,45 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                     
                     {/* Quick service buttons */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {categoryServices.slice(0, 4).map((service) => (
+                      {categoryServices.slice(0, 4).map((service, index) => (
                         <motion.button
                           key={service.id}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.1 }}
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
                           onClick={() => handleServiceSelect(service.id)}
                           className={cn(
                             "p-4 rounded-xl border text-left transition-all",
                             selectedServiceId === service.id
-                              ? "border-blue-500 bg-blue-500/10"
+                              ? themeMode === 'dark'
+                                ? "border-blue-500 bg-blue-500/10 ring-1 ring-blue-500/30"
+                                : "border-blue-500 bg-blue-50 ring-1 ring-blue-500/30"
                               : themeMode === 'dark'
-                                ? "border-white/10 bg-slate-800/50 hover:border-blue-500/30"
+                                ? "border-white/10 bg-slate-800/40 hover:border-blue-500/30"
                                 : "border-gray-200 bg-gray-50 hover:border-blue-500/30"
                           )}
                         >
                           <div className="flex justify-between items-start mb-2">
-                            <span className="text-lg font-bold text-blue-500">${service.price.toFixed(4)}</span>
-                            {selectedServiceId === service.id && <Check className="w-5 h-5 text-blue-500" />}
+                            <span className="text-xl font-bold tabular-nums text-blue-500">
+                              ${service.price.toFixed(4)}
+                            </span>
+                            {selectedServiceId === service.id && (
+                              <motion.div
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center"
+                              >
+                                <Check className="w-3 h-3 text-white" />
+                              </motion.div>
+                            )}
                           </div>
                           <p className="text-sm line-clamp-2" style={{ color: textMuted }}>
                             {service.name}
+                          </p>
+                          <p className="text-xs mt-1" style={{ color: textMuted }}>
+                            Min: {service.min_quantity || 100}
                           </p>
                         </motion.button>
                       ))}
@@ -591,7 +661,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                   </motion.div>
                 )}
 
-                {/* Step 3: Enter Details */}
+                {/* Step 3: Enter Order Details */}
                 {currentStep === 3 && (
                   <motion.div
                     key="step3"
@@ -601,11 +671,26 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                     className="space-y-6"
                   >
                     <div className="text-center">
-                      <Badge className="mb-3 bg-blue-500/10 text-blue-500 border-blue-500/20">
+                      <Badge className={cn(
+                        "mb-3 font-semibold",
+                        themeMode === 'dark' 
+                          ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' 
+                          : 'bg-blue-50 text-blue-600 border-blue-200'
+                      )}>
                         Step 3 of 5
                       </Badge>
-                      <h3 className="text-xl font-bold mb-2" style={{ color: textColor }}>
-                        Enter Order Details
+                      
+                      {/* Category Icon Display */}
+                      {selectedCategoryData && (
+                        <div className="flex items-center justify-center gap-2 mb-3">
+                          <div className={cn("p-2 rounded-lg", selectedCategoryData.bgColor)}>
+                            <selectedCategoryData.icon className="w-5 h-5 text-white" size={20} />
+                          </div>
+                        </div>
+                      )}
+                      
+                      <h3 className="text-2xl font-bold mb-2 tracking-tight" style={{ color: textColor }}>
+                        Order Details
                       </h3>
                       <p className="text-sm truncate max-w-xs mx-auto" style={{ color: textMuted }}>
                         {selectedService?.name}
@@ -614,18 +699,18 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                     
                     {/* Target URL */}
                     <div className="space-y-2">
-                      <Label style={{ color: textColor }}>Link / Username *</Label>
+                      <Label className="font-semibold" style={{ color: textColor }}>Link / Username *</Label>
                       <Input
                         placeholder="https://instagram.com/yourprofile"
                         value={targetUrl}
                         onChange={(e) => setTargetUrl(e.target.value)}
-                        className={cn("h-12", inputBg)}
+                        className={cn("h-12 rounded-xl", inputBg)}
                       />
                     </div>
 
                     {/* Quantity */}
                     <div className="space-y-2">
-                      <Label style={{ color: textColor }}>Quantity</Label>
+                      <Label className="font-semibold" style={{ color: textColor }}>Quantity</Label>
                       <div className="flex flex-wrap gap-2 mb-2">
                         {quantityPresets.map((preset) => (
                           <Button
@@ -634,7 +719,10 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                             variant={quantity === preset ? "default" : "outline"}
                             size="sm"
                             onClick={() => setQuantity(preset)}
-                            className="min-w-[60px]"
+                            className={cn(
+                              "min-w-[60px] rounded-lg font-semibold tabular-nums",
+                              quantity === preset && "bg-blue-500 hover:bg-blue-600"
+                            )}
                           >
                             {preset >= 1000 ? `${preset / 1000}K` : preset}
                           </Button>
@@ -646,7 +734,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                         onChange={(e) => setQuantity(parseInt(e.target.value) || 0)}
                         min={selectedService?.min_quantity || 100}
                         max={selectedService?.max_quantity || 100000}
-                        className={inputBg}
+                        className={cn("rounded-xl tabular-nums", inputBg)}
                       />
                       {selectedService && (
                         <p className="text-xs" style={{ color: textMuted }}>
@@ -657,17 +745,32 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
 
                     {/* Price Preview */}
                     <div className={cn(
-                      "p-4 rounded-xl border",
-                      themeMode === 'dark' ? "bg-slate-800/50 border-white/10" : "bg-gray-50 border-gray-200"
+                      "p-5 rounded-2xl border",
+                      themeMode === 'dark' 
+                        ? "bg-gradient-to-br from-blue-500/10 to-purple-500/10 border-blue-500/20" 
+                        : "bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200"
                     )}>
                       <div className="flex justify-between items-center">
-                        <span style={{ color: textMuted }}>Estimated Total</span>
-                        <span className="text-2xl font-bold text-blue-500">${totalPrice.toFixed(2)}</span>
+                        <div>
+                          <span className="text-xs uppercase tracking-wider font-semibold" style={{ color: textMuted }}>
+                            Estimated Total
+                          </span>
+                          <div className="flex items-baseline gap-1 mt-1">
+                            <span className="text-3xl font-bold tabular-nums text-blue-500">
+                              ${totalPrice.toFixed(2)}
+                            </span>
+                            <span className="text-sm" style={{ color: textMuted }}>USD</span>
+                          </div>
+                        </div>
+                        <Sparkles className={cn(
+                          "w-8 h-8",
+                          themeMode === 'dark' ? 'text-blue-400' : 'text-blue-500'
+                        )} />
                       </div>
                     </div>
 
                     <Button
-                      className="w-full h-12 gap-2 bg-blue-500 hover:bg-blue-600"
+                      className="w-full h-12 gap-2 rounded-xl bg-blue-500 hover:bg-blue-600 font-semibold text-base"
                       onClick={handleDetailsConfirmed}
                       disabled={!targetUrl.trim()}
                     >
@@ -687,10 +790,15 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                     className="space-y-6"
                   >
                     <div className="text-center">
-                      <Badge className="mb-3 bg-blue-500/10 text-blue-500 border-blue-500/20">
+                      <Badge className={cn(
+                        "mb-3 font-semibold",
+                        themeMode === 'dark' 
+                          ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' 
+                          : 'bg-blue-50 text-blue-600 border-blue-200'
+                      )}>
                         Step 4 of 5
                       </Badge>
-                      <h3 className="text-xl font-bold mb-2" style={{ color: textColor }}>
+                      <h3 className="text-2xl font-bold mb-2 tracking-tight" style={{ color: textColor }}>
                         Review Your Order
                       </h3>
                       <p className="text-sm" style={{ color: textMuted }}>
@@ -700,21 +808,36 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                     
                     {/* Order Summary */}
                     <div className={cn(
-                      "p-5 rounded-xl border space-y-4",
-                      themeMode === 'dark' ? "bg-slate-800/50 border-white/10" : "bg-gray-50 border-gray-200"
+                      "p-5 rounded-2xl border space-y-4",
+                      themeMode === 'dark' 
+                        ? "bg-slate-800/40 border-white/10" 
+                        : "bg-gray-50 border-gray-200"
                     )}>
-                      <div className="flex justify-between items-start">
-                        <span style={{ color: textMuted }}>Service</span>
-                        <span className="text-right font-medium max-w-[200px] truncate" style={{ color: textColor }}>
-                          {selectedService?.name}
-                        </span>
+                      {/* Category & Service with Icon */}
+                      <div className="flex items-start gap-3">
+                        {selectedCategoryData && (
+                          <div className={cn("p-2.5 rounded-xl shrink-0", selectedCategoryData.bgColor)}>
+                            <selectedCategoryData.icon className="w-5 h-5 text-white" size={20} />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <span className="text-xs uppercase tracking-wider font-semibold" style={{ color: textMuted }}>
+                            Service
+                          </span>
+                          <p className="font-semibold truncate" style={{ color: textColor }}>
+                            {selectedService?.name}
+                          </p>
+                          <p className="text-sm capitalize" style={{ color: textMuted }}>
+                            {selectedCategory}
+                          </p>
+                        </div>
                       </div>
-                      <div className="flex justify-between items-start">
-                        <span style={{ color: textMuted }}>Category</span>
-                        <span className="capitalize font-medium" style={{ color: textColor }}>
-                          {selectedCategory}
-                        </span>
-                      </div>
+                      
+                      <div className={cn(
+                        "h-px",
+                        themeMode === 'dark' ? 'bg-white/5' : 'bg-gray-200'
+                      )} />
+                      
                       <div className="flex justify-between items-start">
                         <span style={{ color: textMuted }}>Link</span>
                         <span className="text-right font-medium max-w-[200px] truncate text-blue-500">
@@ -723,24 +846,28 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                       </div>
                       <div className="flex justify-between">
                         <span style={{ color: textMuted }}>Quantity</span>
-                        <span className="font-medium" style={{ color: textColor }}>
+                        <span className="font-semibold tabular-nums" style={{ color: textColor }}>
                           {quantity.toLocaleString()}
                         </span>
                       </div>
                       <div className="flex justify-between">
                         <span style={{ color: textMuted }}>Price per 1K</span>
-                        <span className="font-medium" style={{ color: textColor }}>
+                        <span className="font-medium tabular-nums" style={{ color: textColor }}>
                           ${selectedService?.price.toFixed(4)}
                         </span>
                       </div>
-                      <div className="pt-3 border-t border-dashed flex justify-between items-center">
+                      
+                      <div className={cn(
+                        "pt-4 border-t border-dashed flex justify-between items-center",
+                        themeMode === 'dark' ? 'border-white/10' : 'border-gray-300'
+                      )}>
                         <span className="font-semibold" style={{ color: textColor }}>Total</span>
-                        <span className="text-3xl font-bold text-blue-500">${totalPrice.toFixed(2)}</span>
+                        <span className="text-3xl font-bold tabular-nums text-blue-500">${totalPrice.toFixed(2)}</span>
                       </div>
                     </div>
 
                     <Button
-                      className="w-full h-12 gap-2 bg-blue-500 hover:bg-blue-600"
+                      className="w-full h-12 gap-2 rounded-xl bg-blue-500 hover:bg-blue-600 font-semibold text-base"
                       size="lg"
                       onClick={handlePlaceOrder}
                       disabled={isOrdering}
@@ -778,10 +905,15 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                     className="space-y-6"
                   >
                     <div className="text-center">
-                      <Badge className="mb-3 bg-green-500/10 text-green-500 border-green-500/20">
+                      <Badge className={cn(
+                        "mb-3 font-semibold",
+                        themeMode === 'dark' 
+                          ? 'bg-green-500/10 text-green-400 border-green-500/20' 
+                          : 'bg-green-50 text-green-600 border-green-200'
+                      )}>
                         Step 5 of 5
                       </Badge>
-                      <h3 className="text-xl font-bold mb-2" style={{ color: textColor }}>
+                      <h3 className="text-2xl font-bold mb-2 tracking-tight" style={{ color: textColor }}>
                         Complete Payment
                       </h3>
                       <p className="text-sm" style={{ color: textMuted }}>
@@ -791,44 +923,66 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
 
                     {/* Order Total */}
                     <div className={cn(
-                      "p-4 rounded-xl border text-center",
-                      themeMode === 'dark' ? "bg-slate-800/50 border-white/10" : "bg-blue-50 border-blue-200"
+                      "p-5 rounded-2xl border text-center",
+                      themeMode === 'dark' 
+                        ? "bg-gradient-to-br from-green-500/10 to-emerald-500/10 border-green-500/20" 
+                        : "bg-gradient-to-br from-green-50 to-emerald-50 border-green-200"
                     )}>
-                      <p className="text-sm mb-1" style={{ color: textMuted }}>Order Total</p>
-                      <p className="text-4xl font-bold text-blue-500">${totalPrice.toFixed(2)}</p>
-                      <p className="text-xs mt-2" style={{ color: textMuted }}>
-                        {selectedService?.name} • {quantity.toLocaleString()} units
+                      <p className="text-xs uppercase tracking-wider font-semibold mb-1" style={{ color: textMuted }}>
+                        Order Total
                       </p>
+                      <p className="text-4xl font-bold tabular-nums text-green-500">${totalPrice.toFixed(2)}</p>
+                      <div className="flex items-center justify-center gap-2 mt-3">
+                        {selectedCategoryData && (
+                          <div className={cn("p-1.5 rounded-lg", selectedCategoryData.bgColor)}>
+                            <selectedCategoryData.icon className="w-4 h-4 text-white" size={16} />
+                          </div>
+                        )}
+                        <p className="text-xs" style={{ color: textMuted }}>
+                          {selectedService?.name} • {quantity.toLocaleString()} units
+                        </p>
+                      </div>
                     </div>
 
                     {/* Payment Methods */}
                     <div className="space-y-3">
-                      <Label style={{ color: textColor }}>Payment Method</Label>
-                      {paymentMethods.map((method) => {
+                      <Label className="font-semibold" style={{ color: textColor }}>Payment Method</Label>
+                      {paymentMethods.map((method, index) => {
                         const MethodIcon = method.icon;
                         return (
                           <motion.button
                             key={method.id}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: index * 0.1 }}
                             whileHover={{ scale: 1.01 }}
                             whileTap={{ scale: 0.99 }}
                             onClick={() => setSelectedPaymentMethod(method.id)}
                             className={cn(
                               "w-full flex items-center gap-4 p-4 rounded-xl border transition-all",
                               selectedPaymentMethod === method.id
-                                ? "border-blue-500 bg-blue-500/10"
+                                ? themeMode === 'dark'
+                                  ? "border-blue-500 bg-blue-500/10 ring-1 ring-blue-500/30"
+                                  : "border-blue-500 bg-blue-50 ring-1 ring-blue-500/30"
                                 : themeMode === 'dark'
-                                  ? "border-white/10 bg-slate-800/50 hover:border-blue-500/30"
+                                  ? "border-white/10 bg-slate-800/40 hover:border-blue-500/30"
                                   : "border-gray-200 bg-white hover:border-blue-500/30"
                             )}
                           >
-                            <div className={cn("p-2 rounded-lg", method.color)}>
+                            <div className={cn("p-2.5 rounded-xl shadow-lg", method.color)}>
                               <MethodIcon className="w-5 h-5 text-white" />
                             </div>
-                            <span className="font-medium" style={{ color: textColor }}>
+                            <span className="font-semibold" style={{ color: textColor }}>
                               {method.name}
                             </span>
                             {selectedPaymentMethod === method.id && (
-                              <Check className="w-5 h-5 text-blue-500 ml-auto" />
+                              <motion.div
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center ml-auto"
+                              >
+                                <Check className="w-3 h-3 text-white" />
+                              </motion.div>
                             )}
                           </motion.button>
                         );
@@ -838,12 +992,12 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                     {/* Balance Info */}
                     {buyer && (
                       <div className={cn(
-                        "p-3 rounded-lg border",
+                        "p-3 rounded-xl border",
                         themeMode === 'dark' ? "bg-slate-800/30 border-white/5" : "bg-gray-50 border-gray-100"
                       )}>
                         <div className="flex justify-between text-sm">
                           <span style={{ color: textMuted }}>Your Balance:</span>
-                          <span className="font-medium" style={{ color: textColor }}>
+                          <span className="font-semibold tabular-nums" style={{ color: textColor }}>
                             ${(buyer.balance || 0).toFixed(2)}
                           </span>
                         </div>
@@ -852,7 +1006,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
 
                     {/* Pay Button */}
                     <Button
-                      className="w-full h-14 gap-2 text-lg bg-green-500 hover:bg-green-600"
+                      className="w-full h-14 gap-2 text-lg rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 font-semibold shadow-lg shadow-green-500/25"
                       size="lg"
                       onClick={handleProcessPayment}
                       disabled={isProcessingPayment}
@@ -870,7 +1024,8 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                       )}
                     </Button>
 
-                    <p className="text-xs text-center" style={{ color: textMuted }}>
+                    <p className="text-xs text-center flex items-center justify-center gap-1.5" style={{ color: textMuted }}>
+                      <Lock className="w-3 h-3" />
                       Secure payment • Order will be processed immediately
                     </p>
                   </motion.div>
@@ -1119,11 +1274,11 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                     </div>
                     <div className="flex justify-between text-sm mt-1">
                       <span className="text-muted-foreground">Quantity:</span>
-                      <span className="font-medium">{quantity.toLocaleString()}</span>
+                      <span className="font-medium tabular-nums">{quantity.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between text-sm mt-1 pt-1 border-t">
                       <span className="text-muted-foreground">Total:</span>
-                      <span className="font-bold text-blue-500">${totalPrice.toFixed(2)}</span>
+                      <span className="font-bold text-blue-500 tabular-nums">${totalPrice.toFixed(2)}</span>
                     </div>
                   </div>
                 )}
