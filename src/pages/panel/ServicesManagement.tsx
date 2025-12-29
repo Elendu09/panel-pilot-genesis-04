@@ -1486,7 +1486,7 @@ const ServicesManagement = () => {
             </DialogContent>
           </Dialog>
 
-          {/* Import Dropdown - Choose from Provider or File */}
+          {/* Import from Provider Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button 
@@ -1499,24 +1499,25 @@ const ServicesManagement = () => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56 bg-popover border border-border shadow-lg z-50">
-              <DropdownMenuItem onClick={() => setIsImportDialogOpen(true)}>
-                <Upload className="w-4 h-4 mr-2" /> Import from File
-              </DropdownMenuItem>
-              {providers.length > 0 && (
-                <>
-                  <DropdownMenuSeparator />
-                  <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
-                    Import from Provider
-                  </div>
-                  {providers.map(provider => (
-                    <DropdownMenuItem 
-                      key={provider.id} 
-                      onClick={() => setIsImportDialogOpen(true)}
-                    >
-                      <Package className="w-4 h-4 mr-2" /> {provider.name}
-                    </DropdownMenuItem>
-                  ))}
-                </>
+              <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                Import from Provider
+              </div>
+              <DropdownMenuSeparator />
+              {providers.length > 0 ? (
+                providers.map(provider => (
+                  <DropdownMenuItem 
+                    key={provider.id} 
+                    onClick={() => setIsImportDialogOpen(true)}
+                  >
+                    <Package className="w-4 h-4 mr-2" /> {provider.name}
+                  </DropdownMenuItem>
+                ))
+              ) : (
+                <div className="px-3 py-3 text-center text-sm text-muted-foreground">
+                  No providers added yet.
+                  <br />
+                  <span className="text-xs">Go to Provider Management to add one.</span>
+                </div>
               )}
             </DropdownMenuContent>
           </DropdownMenu>
