@@ -31,6 +31,7 @@ import { useNavigate } from 'react-router-dom';
 import { useBuyerAuth } from '@/contexts/BuyerAuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { LiveOrderTracker } from '@/components/order/LiveOrderTracker';
 
 interface Service {
   id: string;
@@ -77,7 +78,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
     ? 'bg-blue-500 hover:bg-blue-600 shadow-lg shadow-blue-500/30'
     : 'bg-blue-500 hover:bg-blue-600 shadow-[0_0_20px_rgba(59,130,246,0.4)] hover:shadow-[0_0_28px_rgba(59,130,246,0.5)]';
   
-  // Step state (1-5: Categories, Service, Order, Review, Payment)
+  // Step state (1-6: Categories, Service, Order, Review, Payment, Tracking)
   const [currentStep, setCurrentStepInternal] = useState(1);
   
   // Wrapper to notify parent of step changes
@@ -96,6 +97,10 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
   // Payment state
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('stripe');
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  
+  // Order tracking state
+  const [placedOrderId, setPlacedOrderId] = useState<string | null>(null);
+  const [placedOrderNumber, setPlacedOrderNumber] = useState<string | null>(null);
   
   // Guest signup modal state
   const [showGuestModal, setShowGuestModal] = useState(false);
@@ -381,9 +386,13 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
 
       await refreshBuyer();
 
+      // Store order info for tracking
+      setPlacedOrderId(order.id);
+      setPlacedOrderNumber(orderNumber);
+
       toast({
         title: "Order Placed Successfully!",
-        description: `Order #${orderNumber} is now being processed. Track it at /track-order`,
+        description: `Order #${orderNumber} is now being processed.`,
       });
 
       // Copy order number to clipboard for easy tracking
@@ -391,8 +400,8 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
         await navigator.clipboard.writeText(orderNumber);
       } catch {}
 
-      // Redirect to orders page
-      navigate(`/orders?highlight=${order.id}`);
+      // Go to tracking step instead of redirecting
+      setCurrentStep(6);
 
     } catch (error: any) {
       console.error('Payment error:', error);
@@ -459,8 +468,8 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
         <div className="max-w-3xl mx-auto h-full">
           <Card className={cn("border rounded-3xl overflow-hidden", cardBg)}>
             <CardContent className="p-4 md:p-6 lg:p-8">
-              {/* Back Button - Always visible after step 1 */}
-              {currentStep > 1 && (
+              {/* Back Button - Visible after step 1, hidden on step 6 (tracking) */}
+              {currentStep > 1 && currentStep < 6 && (
                 <motion.div
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -503,7 +512,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                           ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' 
                           : 'bg-blue-50 text-blue-600 border-blue-200'
                       )}>
-                        Step 1 of 5
+                        Step 1 of 6
                       </Badge>
                       <h3 className="text-2xl font-bold mb-2 tracking-tight" style={{ color: textColor }}>
                         Select a Platform
@@ -579,7 +588,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                           ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' 
                           : 'bg-blue-50 text-blue-600 border-blue-200'
                       )}>
-                        Step 2 of 5
+                        Step 2 of 6
                       </Badge>
                       
                       {/* Category Icon Display */}
@@ -682,7 +691,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                           ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' 
                           : 'bg-blue-50 text-blue-600 border-blue-200'
                       )}>
-                        Step 3 of 5
+                        Step 3 of 6
                       </Badge>
                       
                       {/* Category Icon Display */}
@@ -804,7 +813,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                           ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' 
                           : 'bg-blue-50 text-blue-600 border-blue-200'
                       )}>
-                        Step 4 of 5
+                        Step 4 of 6
                       </Badge>
                       <h3 className="text-2xl font-bold mb-2 tracking-tight" style={{ color: textColor }}>
                         Review Your Order
@@ -922,7 +931,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                           ? 'bg-green-500/10 text-green-400 border-green-500/20' 
                           : 'bg-green-50 text-green-600 border-green-200'
                       )}>
-                        Step 5 of 5
+                        Step 5 of 6
                       </Badge>
                       <h3 className="text-2xl font-bold mb-2 tracking-tight" style={{ color: textColor }}>
                         Complete Payment
@@ -1044,6 +1053,34 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                       <Lock className="w-3 h-3" />
                       Secure payment • Order will be processed immediately
                     </p>
+                  </motion.div>
+                )}
+
+                {/* Step 6: Live Order Tracking */}
+                {currentStep === 6 && placedOrderId && placedOrderNumber && (
+                  <motion.div
+                    key="step6"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                  >
+                    <LiveOrderTracker
+                      orderId={placedOrderId}
+                      orderNumber={placedOrderNumber}
+                      themeMode={themeMode}
+                      onTrackAnother={() => {
+                        // Reset all state for new order
+                        setCurrentStep(1);
+                        setSelectedCategory('');
+                        setSelectedServiceId('');
+                        setTargetUrl('');
+                        setQuantity(1000);
+                        setPlacedOrderId(null);
+                        setPlacedOrderNumber(null);
+                      }}
+                      onViewAllOrders={() => navigate('/orders')}
+                    />
                   </motion.div>
                 )}
               </AnimatePresence>
