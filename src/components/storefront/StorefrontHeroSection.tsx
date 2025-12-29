@@ -292,14 +292,9 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
                         navigate('/buyer/new-order');
                         return;
                       }
-                      // Guests use Fast Order section (or the dedicated page fallback)
-                      const section = document.getElementById('fast-order');
-                      if (section) {
-                        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                      } else {
-                        const panelId = panel?.id;
-                        navigate(panelId ? `/fast-order?panel=${panelId}` : '/fast-order');
-                      }
+                      // Guests always go to the dedicated Fast Order page
+                      const panelId = panel?.id;
+                      navigate(panelId ? `/fast-order?panel=${panelId}` : '/fast-order');
                     }}
                   >
                     <Zap className="mr-2 w-4 h-4 sm:w-5 sm:h-5" /> Fast Order
