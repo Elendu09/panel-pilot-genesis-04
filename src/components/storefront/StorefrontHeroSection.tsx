@@ -287,17 +287,18 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
                     }}
                     onClick={(e) => {
                       e.preventDefault();
-                      // Logged-in users go to proper order page
+                      // Logged-in buyers go to buyer order page
                       if (buyer) {
-                        navigate('/new-order');
+                        navigate('/buyer/new-order');
                         return;
                       }
-                      // Guests use Fast Order section
+                      // Guests use Fast Order section (or the dedicated page fallback)
                       const section = document.getElementById('fast-order');
                       if (section) {
                         section.scrollIntoView({ behavior: 'smooth', block: 'start' });
                       } else {
-                        navigate('/new-order');
+                        const panelId = panel?.id;
+                        navigate(panelId ? `/fast-order?panel=${panelId}` : '/fast-order');
                       }
                     }}
                   >
