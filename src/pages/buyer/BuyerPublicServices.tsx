@@ -13,7 +13,10 @@ import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { useBuyerAuth } from "@/contexts/BuyerAuthContext";
+import { useCurrency } from "@/contexts/CurrencyContext";
 import { toast } from "@/hooks/use-toast";
+import { LanguageSelector } from "@/components/buyer/LanguageSelector";
+import { CurrencySelector } from "@/components/buyer/CurrencySelector";
 import {
   Dialog,
   DialogContent,
@@ -48,6 +51,7 @@ const platformColors: Record<string, string> = {
 
 const BuyerPublicServices = () => {
   const { panelId, buyer } = useBuyerAuth();
+  const { formatPrice } = useCurrency();
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -149,7 +153,9 @@ const BuyerPublicServices = () => {
               </Button>
               <h1 className="text-xl font-bold text-gray-900 dark:text-white">Our Services</h1>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <LanguageSelector />
+              <CurrencySelector />
               <ThemeToggle />
               {buyer ? (
                 <Button asChild size="sm">
@@ -274,7 +280,7 @@ const BuyerPublicServices = () => {
                                 {service.name}
                               </CardTitle>
                               <Badge variant="secondary" className="shrink-0">
-                                ${service.price.toFixed(2)}
+                                {formatPrice(service.price)}
                               </Badge>
                             </div>
                           </CardHeader>

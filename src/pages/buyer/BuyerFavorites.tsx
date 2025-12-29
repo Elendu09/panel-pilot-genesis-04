@@ -147,10 +147,10 @@ const BuyerFavorites = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <motion.div 
-              className="p-3 rounded-xl bg-red-500/10"
+              className="p-3 rounded-xl bg-blue-500/10 shadow-[0_0_15px_rgba(59,130,246,0.3)]"
               whileHover={{ scale: 1.05 }}
             >
-              <Heart className="w-6 h-6 text-red-500 fill-red-500" />
+              <Heart className="w-6 h-6 text-blue-500 fill-blue-500" />
             </motion.div>
             <div>
               <h1 className="text-2xl font-bold">My Favorites</h1>
@@ -252,7 +252,7 @@ const BuyerFavorites = () => {
                         <Button
                           variant="outline"
                           size="icon"
-                          className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20"
+                          className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                           onClick={() => removeFavorite(favorite.id)}
                           disabled={removingId === favorite.id}
                         >

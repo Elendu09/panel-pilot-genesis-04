@@ -22,6 +22,7 @@ import {
   RefreshCw
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import BuyerLayout from "./BuyerLayout";
 import { useBuyerAuth } from "@/contexts/BuyerAuthContext";
@@ -190,47 +191,74 @@ const BuyerProfile = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Account Details */}
           <motion.div variants={itemVariants}>
-            <Card className="glass-card h-full">
-              <CardHeader>
+            <Card className={cn(
+              "glass-card h-full transition-all duration-300",
+              isEditing && "ring-2 ring-primary shadow-lg shadow-primary/10"
+            )}>
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
                   <User className="w-5 h-5" />
                   Account Details
                 </CardTitle>
+                {isEditing && (
+                  <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 animate-pulse">
+                    Editing
+                  </Badge>
+                )}
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Full Name</Label>
+                  <Label className="flex items-center gap-2">
+                    Full Name
+                    {isEditing && <span className="text-xs text-primary">(editable)</span>}
+                  </Label>
                   <Input 
                     value={profileData.name} 
                     readOnly={!isEditing}
-                    className="bg-background/50"
+                    className={cn(
+                      "transition-all duration-300",
+                      isEditing 
+                        ? "bg-background border-primary/50 focus:ring-2 focus:ring-primary/20" 
+                        : "bg-muted/30 border-transparent cursor-not-allowed"
+                    )}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Email</Label>
+                  <Label className="flex items-center gap-2">
+                    Email
+                    <Badge variant="outline" className="text-[10px] h-4">Read-only</Badge>
+                  </Label>
                   <Input 
                     value={profileData.email} 
                     readOnly
-                    className="bg-background/50"
+                    className="bg-muted/30 border-transparent cursor-not-allowed"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Username</Label>
+                  <Label className="flex items-center gap-2">
+                    Username
+                    <Badge variant="outline" className="text-[10px] h-4">Read-only</Badge>
+                  </Label>
                   <Input 
                     value={profileData.username} 
                     readOnly
-                    className="bg-background/50"
+                    className="bg-muted/30 border-transparent cursor-not-allowed"
                   />
                 </div>
                 <div className="space-y-2">
                   <Label>Member Since</Label>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground p-3 bg-muted/30 rounded-lg">
                     <Calendar className="w-4 h-4" />
                     {new Date(profileData.joinedAt).toLocaleDateString()}
                   </div>
                 </div>
                 {isEditing && (
-                  <Button className="w-full">Save Changes</Button>
+                  <div className="flex gap-2 pt-2">
+                    <Button variant="outline" className="flex-1" onClick={() => setIsEditing(false)}>
+                      Cancel
+                    </Button>
+                    <Button className="flex-1">Save Changes</Button>
+                  </div>
                 )}
               </CardContent>
             </Card>
