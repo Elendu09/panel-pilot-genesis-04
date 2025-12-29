@@ -61,7 +61,7 @@ export const DomainConfigWizard = ({ domain, onComplete }: DomainConfigWizardPro
         <AlertDescription className="text-emerald-600 dark:text-emerald-400">
           <strong>Your Panel Subdomain Works Automatically!</strong><br />
           <span className="text-sm">
-            Subdomains like <code className="bg-muted px-1 rounded">yourpanel.smmpilot.online</code> require 
+            Subdomains like <code className="bg-muted px-1 rounded">yourpanel.homeofsmm.com</code> require 
             no DNS configuration. They work instantly via our wildcard DNS setup.
           </span>
         </AlertDescription>

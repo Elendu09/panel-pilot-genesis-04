@@ -50,14 +50,14 @@ export const HOSTING_PROVIDERS: Record<HostingProvider, HostingProviderConfig> =
     notes: [
       '⚠️ RECOMMENDED: Use Vercel nameservers for automatic wildcard SSL',
       'Point nameservers to ns1.vercel-dns.com and ns2.vercel-dns.com',
-      'Add apex domain (smmpilot.online) in Vercel dashboard',
-      'Add wildcard domain (*.smmpilot.online) in Vercel dashboard',
+      'Add apex domain (homeofsmm.com) in Vercel dashboard',
+      'Add wildcard domain (*.homeofsmm.com) in Vercel dashboard',
       'Vercel auto-provisions SSL certificates for each subdomain',
     ],
   },
   lovable: {
     id: 'lovable',
-    name: 'Lovable / SMMPilot',
+    name: 'Lovable / HomeOfSMM',
     icon: '💜',
     description: 'Default hosting on Lovable infrastructure',
     dnsType: 'A',

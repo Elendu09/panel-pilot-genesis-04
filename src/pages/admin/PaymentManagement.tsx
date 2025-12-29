@@ -214,7 +214,7 @@ const PaymentManagement = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       <Helmet>
-        <title>Payment Management | SMMPilot</title>
+        <title>Payment Management | HomeOfSMM</title>
         <meta name="description" content="Configure gateways, global payment methods, fees, test mode, and payouts." />
         <meta name="robots" content="noindex,nofollow" />
         <link rel="canonical" href={canonicalUrl} />

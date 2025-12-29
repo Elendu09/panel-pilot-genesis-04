@@ -14,7 +14,7 @@ const SecuritySettings = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       <Helmet>
-        <title>Admin Security Settings | SMMPilot</title>
+        <title>Admin Security Settings | HomeOfSMM</title>
         <meta name="description" content="Configure authentication, 2FA, sessions, IP rules and audit logs." />
         <meta name="robots" content="noindex,nofollow" />
         <link rel="canonical" href={canonicalUrl} />

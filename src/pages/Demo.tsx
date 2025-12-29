@@ -18,7 +18,7 @@ export default function Demo() {
               Live Demo
             </Badge>
             <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent mb-6">
-              Experience SMMPilot
+              Experience HomeOfSMM
               <br />in Action
             </h1>
             <p className="text-xl text-muted-foreground mb-8">
@@ -63,7 +63,7 @@ export default function Demo() {
               <div className="text-center">
                 <Play className="w-24 h-24 text-primary mx-auto mb-4" />
                 <h3 className="text-2xl font-bold mb-2">Interactive Demo Loading...</h3>
-                <p className="text-muted-foreground">Click to start exploring SMMPilot features</p>
+                <p className="text-muted-foreground">Click to start exploring HomeOfSMM features</p>
               </div>
             </Card>
           </div>

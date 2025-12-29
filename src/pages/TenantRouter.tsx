@@ -41,9 +41,9 @@ const queryClient = new QueryClient();
  * based on the current domain and tenant detection.
  * 
  * DOMAIN ROUTING LOGIC:
- * 1. Platform domains (smmpilot.online, www.smmpilot.online) → Main App
+ * 1. Platform domains (homeofsmm.com, www.homeofsmm.com) → Main App
  * 2. Development/preview domains (*.lovableproject.com, localhost) → Main App
- * 3. Tenant subdomains (*.smmpilot.online) → Buyer Dashboard
+ * 3. Tenant subdomains (*.homeofsmm.com) → Buyer Dashboard
  * 4. Custom domains (verified in panel_domains) → Buyer Dashboard
  * 5. External hosting domains (*.netlify.app, etc.) → Buyer Dashboard (if configured)
  */
@@ -240,7 +240,7 @@ const TenantRouter = () => {
                     {requestedSubdomain}
                   </h1>
                   <p className="text-xl text-slate-400 mb-2 font-medium">
-                    .smmpilot.online
+                    .homeofsmm.com
                   </p>
                   <p className="text-slate-500 mb-10 leading-relaxed">
                     This subdomain is not yet configured. Be the first to claim it and start your SMM business today.
@@ -248,23 +248,23 @@ const TenantRouter = () => {
                   
                   <div className="space-y-4">
                     <button 
-                      onClick={() => window.location.href = `https://smmpilot.online/auth?subdomain=${requestedSubdomain}`}
+                      onClick={() => window.location.href = `https://homeofsmm.com/auth?subdomain=${requestedSubdomain}`}
                       className="flex items-center justify-center gap-3 w-full px-8 py-4 bg-white text-slate-900 font-semibold rounded-xl hover:bg-slate-100 hover:-translate-y-0.5 transition-all duration-300 group"
                     >
                       <span className="text-xl group-hover:scale-110 transition-transform">✨</span>
                       Claim This Subdomain
                     </button>
                     <button 
-                      onClick={() => window.location.href = `https://${requestedSubdomain}.smmpilot.online`}
+                      onClick={() => window.location.href = `https://${requestedSubdomain}.homeofsmm.com`}
                       className="flex items-center justify-center gap-2 w-full px-8 py-4 border border-slate-700 text-slate-400 font-medium rounded-xl hover:bg-white/5 hover:border-slate-600 hover:text-slate-300 transition-all duration-300"
                     >
-                      Visit {requestedSubdomain}.smmpilot.online
+                      Visit {requestedSubdomain}.homeofsmm.com
                     </button>
                   </div>
                   
                   <div className="mt-12 pt-8 border-t border-slate-800/50">
                     <p className="text-sm text-slate-600">
-                      Powered by <span className="text-slate-400 font-medium hover:text-slate-300 transition-colors cursor-pointer">SMMPilot</span> — The #1 SMM Panel Platform
+                      Powered by <span className="text-slate-400 font-medium hover:text-slate-300 transition-colors cursor-pointer">HomeOfSMM</span> — The #1 SMM Panel Platform
                     </p>
                   </div>
                 </div>

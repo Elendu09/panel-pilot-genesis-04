@@ -325,7 +325,7 @@ const PanelOnboarding = () => {
                 <RadioGroupItem value="subdomain" id="subdomain" />
                 <div className="flex-1">
                   <Label htmlFor="subdomain" className="font-medium cursor-pointer">Free Subdomain</Label>
-                  <p className="text-sm text-muted-foreground">yourname.smmpilot.online</p>
+                  <p className="text-sm text-muted-foreground">yourname.homeofsmm.com</p>
                 </div>
                 <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-500">Free</Badge>
               </div>
@@ -352,7 +352,7 @@ const PanelOnboarding = () => {
                     placeholder="mysmm"
                     className="bg-background/50"
                   />
-                  <span className="text-sm text-muted-foreground whitespace-nowrap">.smmpilot.online</span>
+                  <span className="text-sm text-muted-foreground whitespace-nowrap">.homeofsmm.com</span>
                 </div>
                 {checkingSubdomain && (
                   <p className="text-sm text-muted-foreground flex items-center gap-2">
@@ -511,7 +511,7 @@ const PanelOnboarding = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-secondary/10 flex items-center justify-center p-4">
       <Helmet>
-        <title>Setup Your Panel - SMMPilot</title>
+        <title>Setup Your Panel - HomeOfSMM</title>
         <meta name="robots" content="noindex,nofollow" />
       </Helmet>
       
