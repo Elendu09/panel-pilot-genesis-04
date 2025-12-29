@@ -10,6 +10,7 @@ import { AnimatedText } from "@/components/ui/animated-text";
 import { motion } from "framer-motion";
 import { TikTokIcon } from "@/components/icons/SocialIcons";
 import { useDeviceKey, defaultHeroShowFloatingCards, defaultHeroShowCategories } from "@/hooks/use-device-key";
+import { useBuyerAuth } from "@/contexts/BuyerAuthContext";
 
 interface StorefrontHeroSectionProps {
   panel?: any;
@@ -101,6 +102,7 @@ const paymentIcons = [
 export const StorefrontHeroSection = ({ panel, services = [], customization = {} }: StorefrontHeroSectionProps) => {
   const navigate = useNavigate();
   const deviceKey = useDeviceKey();
+  const { buyer } = useBuyerAuth();
   
   const panelName = customization.companyName || panel?.name || 'SMM Panel';
   const heroTitle = customization.heroTitle || 'Boost Your Social Media';
@@ -285,11 +287,17 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
                     }}
                     onClick={(e) => {
                       e.preventDefault();
+                      // Logged-in users go to proper order page
+                      if (buyer) {
+                        navigate('/new-order');
+                        return;
+                      }
+                      // Guests use Fast Order section
                       const section = document.getElementById('fast-order');
                       if (section) {
                         section.scrollIntoView({ behavior: 'smooth', block: 'start' });
                       } else {
-                        navigate('/services');
+                        navigate('/new-order');
                       }
                     }}
                   >

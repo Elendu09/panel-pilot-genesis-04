@@ -135,13 +135,19 @@ const StepIndicator = ({ currentStep, selectedCategory }: { currentStep: number;
 };
 
 export const FastOrderSection = ({ services, panelId, panelName, customization }: FastOrderSectionProps) => {
+  const { buyer, refreshBuyer, login } = useBuyerAuth();
+  
+  // Hide Fast Order section for logged-in users - they should use the proper order page
+  if (buyer) {
+    return null;
+  }
+  
   const themeMode = customization?.themeMode || 'dark';
   const textColor = customization?.textColor || (themeMode === 'dark' ? '#FFFFFF' : '#1F2937');
   const textMuted = customization?.textMuted || (themeMode === 'dark' ? '#A1A1AA' : '#4B5563');
   const cardBg = themeMode === 'dark' ? 'bg-slate-900/80 border-white/10' : 'bg-white shadow-md border-gray-200';
   const inputBg = themeMode === 'dark' ? 'bg-slate-800/50 border-white/10' : 'bg-gray-50 border-gray-200';
   const navigate = useNavigate();
-  const { buyer, refreshBuyer, login } = useBuyerAuth();
   
   // Step state
   const [currentStep, setCurrentStep] = useState(1);
@@ -301,15 +307,15 @@ export const FastOrderSection = ({ services, panelId, panelName, customization }
       return;
     }
 
-    // Authenticated user - redirect to services/order page with pre-filled data
+    // Authenticated user - redirect to order page with pre-filled data
     if (selectedService) {
       const params = new URLSearchParams();
       params.set('service', selectedServiceId);
       if (quantity) params.set('quantity', quantity.toString());
       if (targetUrl) params.set('url', encodeURIComponent(targetUrl));
-      navigate(`/services?${params.toString()}`);
+      navigate(`/new-order?${params.toString()}`);
     } else {
-      navigate('/services');
+      navigate('/new-order');
     }
   };
 
