@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Helmet } from 'react-helmet-async';
-import { ArrowLeft, Zap } from 'lucide-react';
+import { ArrowLeft, Zap, ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { FastOrderSection } from '@/components/storefront/FastOrderSection';
-import { useBuyerAuth, BuyerAuthProvider } from '@/contexts/BuyerAuthContext';
+import { useBuyerAuth } from '@/contexts/BuyerAuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -29,25 +29,34 @@ interface Service {
 const FastOrderContent = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { buyer } = useBuyerAuth();
+  
+  // Try to get buyer context - may be undefined if not wrapped
+  let buyerContext: { buyer: any; panelId?: string } | null = null;
+  try {
+    buyerContext = useBuyerAuth();
+  } catch {
+    // Not wrapped in BuyerAuthProvider - that's okay
+  }
   
   const [panel, setPanel] = useState<Panel | null>(null);
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Get panelId from URL or localStorage
-  const panelId = searchParams.get('panel') || localStorage.getItem('current_panel_id');
+  // Resolve panelId: URL param > context > localStorage
+  const resolvedPanelId = 
+    searchParams.get('panel') || 
+    buyerContext?.panelId || 
+    localStorage.getItem('current_panel_id');
 
   useEffect(() => {
-    // If user is logged in, redirect to proper order page
-    if (buyer) {
-      navigate('/new-order');
-      return;
+    // Store resolved panelId for future use
+    if (resolvedPanelId) {
+      localStorage.setItem('current_panel_id', resolvedPanelId);
     }
 
     const fetchData = async () => {
-      if (!panelId) {
+      if (!resolvedPanelId) {
         setError('No panel specified');
         setLoading(false);
         return;
@@ -58,7 +67,7 @@ const FastOrderContent = () => {
         const { data: panelData, error: panelError } = await supabase
           .from('panels')
           .select('id, name, logo_url, primary_color, custom_branding')
-          .eq('id', panelId)
+          .eq('id', resolvedPanelId)
           .single();
 
         if (panelError) throw panelError;
@@ -68,7 +77,7 @@ const FastOrderContent = () => {
         const { data: servicesData, error: servicesError } = await supabase
           .from('services')
           .select('id, name, price, category, min_quantity, max_quantity')
-          .eq('panel_id', panelId)
+          .eq('panel_id', resolvedPanelId)
           .eq('is_active', true)
           .order('display_order', { ascending: true });
 
@@ -83,7 +92,7 @@ const FastOrderContent = () => {
     };
 
     fetchData();
-  }, [panelId, buyer, navigate]);
+  }, [resolvedPanelId]);
 
   if (loading) {
     return (
@@ -186,16 +195,5 @@ const FastOrderContent = () => {
   );
 };
 
-// Wrap with BuyerAuthProvider if not already provided
-const FastOrder = () => {
-  const [searchParams] = useSearchParams();
-  const panelId = searchParams.get('panel') || localStorage.getItem('current_panel_id') || '';
-
-  return (
-    <BuyerAuthProvider panelId={panelId}>
-      <FastOrderContent />
-    </BuyerAuthProvider>
-  );
-};
-
-export default FastOrder;
+// Export directly - BuyerAuthProvider is provided by TenantRouter on tenant domains
+export default FastOrderContent;
