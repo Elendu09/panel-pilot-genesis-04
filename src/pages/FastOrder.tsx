@@ -29,25 +29,53 @@ interface Service {
   max_quantity?: number;
 }
 
-// Grid Background Pattern Component
-const GridPattern = ({ themeMode }: { themeMode: string }) => (
+// Enhanced Grid Background Pattern Component with multiple layers
+const EnhancedGridPattern = ({ themeMode }: { themeMode: string }) => (
   <div className="absolute inset-0 pointer-events-none overflow-hidden">
+    {/* Primary grid - 60px with theme-aware colors */}
     <div 
       className={cn(
         "absolute inset-0",
         "bg-[linear-gradient(to_right,var(--grid-color)_1px,transparent_1px),linear-gradient(to_bottom,var(--grid-color)_1px,transparent_1px)]",
         "bg-[size:60px_60px]",
         themeMode === 'dark' 
-          ? '[--grid-color:rgba(255,255,255,0.03)]' 
-          : '[--grid-color:rgba(0,0,0,0.04)]'
+          ? '[--grid-color:rgba(255,255,255,0.035)]' 
+          : '[--grid-color:rgba(59,130,246,0.08)]'
       )}
     />
+    
+    {/* Secondary larger grid - 120px for depth */}
+    <div 
+      className={cn(
+        "absolute inset-0",
+        "bg-[linear-gradient(to_right,var(--grid-color-lg)_1px,transparent_1px),linear-gradient(to_bottom,var(--grid-color-lg)_1px,transparent_1px)]",
+        "bg-[size:120px_120px]",
+        themeMode === 'dark' 
+          ? '[--grid-color-lg:rgba(255,255,255,0.02)]' 
+          : '[--grid-color-lg:rgba(59,130,246,0.05)]'
+      )}
+    />
+    
+    {/* Corner gradient accents */}
+    <div className={cn(
+      "absolute -top-32 -left-32 w-96 h-96 rounded-full blur-3xl",
+      themeMode === 'dark' ? 'bg-blue-500/5' : 'bg-blue-400/15'
+    )} />
+    <div className={cn(
+      "absolute -bottom-32 -right-32 w-96 h-96 rounded-full blur-3xl",
+      themeMode === 'dark' ? 'bg-purple-500/5' : 'bg-indigo-400/10'
+    )} />
+    <div className={cn(
+      "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full blur-3xl",
+      themeMode === 'dark' ? 'bg-blue-500/3' : 'bg-blue-300/10'
+    )} />
+    
     {/* Gradient fade at edges */}
     <div className={cn(
       "absolute inset-0",
       themeMode === 'dark'
-        ? 'bg-gradient-to-b from-slate-950/50 via-transparent to-slate-950/80'
-        : 'bg-gradient-to-b from-white/30 via-transparent to-gray-100/50'
+        ? 'bg-gradient-to-b from-gray-950/60 via-transparent to-gray-950/80'
+        : 'bg-gradient-to-b from-white/40 via-transparent to-gray-50/60'
     )} />
   </div>
 );
@@ -79,14 +107,18 @@ const VerticalStepProgress = ({
       className={cn(
         "hidden lg:flex flex-col w-72 h-full border-r p-6 flex-shrink-0 transition-colors duration-300 relative overflow-hidden",
         themeMode === 'dark' 
-          ? 'bg-gradient-to-b from-slate-900 via-slate-900/95 to-slate-950 border-white/5' 
-          : 'bg-gradient-to-b from-white via-gray-50/50 to-gray-100/30 border-gray-200/80'
+          ? 'bg-gray-950 border-white/[0.06]' 
+          : 'bg-white border-gray-200'
       )}
     >
       {/* Subtle glow effect */}
       <div className={cn(
-        "absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl opacity-20",
-        themeMode === 'dark' ? 'bg-blue-500' : 'bg-blue-400'
+        "absolute top-0 right-0 w-40 h-40 rounded-full blur-3xl",
+        themeMode === 'dark' ? 'bg-blue-500/10' : 'bg-blue-400/20'
+      )} />
+      <div className={cn(
+        "absolute bottom-20 left-0 w-32 h-32 rounded-full blur-2xl",
+        themeMode === 'dark' ? 'bg-purple-500/5' : 'bg-indigo-400/10'
       )} />
 
       {/* Panel Logo */}
@@ -99,10 +131,10 @@ const VerticalStepProgress = ({
           />
         ) : (
           <div className={cn(
-            "w-11 h-11 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-lg",
+            "w-11 h-11 rounded-xl flex items-center justify-center text-white font-bold text-lg",
             themeMode === 'dark' 
-              ? 'bg-gradient-to-br from-blue-500 to-blue-600 shadow-blue-500/30'
-              : 'bg-gradient-to-br from-blue-500 to-blue-600 shadow-blue-500/40'
+              ? 'bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/30'
+              : 'bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/40'
           )}>
             {panelName.charAt(0).toUpperCase()}
           </div>
@@ -116,7 +148,7 @@ const VerticalStepProgress = ({
           </span>
           <span className={cn(
             "text-xs font-medium",
-            themeMode === 'dark' ? 'text-gray-500' : 'text-gray-400'
+            themeMode === 'dark' ? 'text-gray-500' : 'text-gray-500'
           )}>
             Fast Order
           </span>
@@ -128,7 +160,7 @@ const VerticalStepProgress = ({
         <div className="flex items-center justify-between text-xs mb-2">
           <span className={cn(
             "font-semibold uppercase tracking-wider",
-            themeMode === 'dark' ? 'text-gray-400' : 'text-gray-500'
+            themeMode === 'dark' ? 'text-gray-500' : 'text-gray-500'
           )}>
             Progress
           </span>
@@ -141,10 +173,15 @@ const VerticalStepProgress = ({
         </div>
         <div className={cn(
           "h-1.5 rounded-full overflow-hidden",
-          themeMode === 'dark' ? 'bg-slate-800' : 'bg-gray-200'
+          themeMode === 'dark' ? 'bg-gray-800' : 'bg-gray-200'
         )}>
           <motion.div 
-            className="h-full bg-gradient-to-r from-blue-500 to-blue-400 rounded-full"
+            className={cn(
+              "h-full rounded-full",
+              themeMode === 'dark' 
+                ? 'bg-gradient-to-r from-blue-500 to-blue-400'
+                : 'bg-gradient-to-r from-blue-500 to-blue-600 shadow-[0_0_12px_rgba(59,130,246,0.5)]'
+            )}
             initial={{ width: 0 }}
             animate={{ width: `${progressPercent}%` }}
             transition={{ duration: 0.5, ease: "easeOut" }}
@@ -158,12 +195,17 @@ const VerticalStepProgress = ({
           {/* Background connecting line */}
           <div className={cn(
             "absolute left-[11px] top-4 bottom-4 w-0.5",
-            themeMode === 'dark' ? 'bg-white/5' : 'bg-gray-200'
+            themeMode === 'dark' ? 'bg-gray-800' : 'bg-gray-200'
           )} />
           
           {/* Animated progress line */}
           <motion.div 
-            className="absolute left-[11px] top-4 w-0.5 bg-gradient-to-b from-blue-500 to-blue-400"
+            className={cn(
+              "absolute left-[11px] top-4 w-0.5",
+              themeMode === 'dark' 
+                ? 'bg-gradient-to-b from-blue-500 to-blue-400'
+                : 'bg-gradient-to-b from-blue-500 to-blue-600'
+            )}
             initial={{ height: 0 }}
             animate={{ height: `${Math.min(100, ((currentStep - 1) / (steps.length - 1)) * 100)}%` }}
             transition={{ duration: 0.5, ease: "easeOut" }}
@@ -189,8 +231,8 @@ const VerticalStepProgress = ({
                       scale: isActive ? 1.15 : 1,
                       boxShadow: isActive 
                         ? themeMode === 'dark' 
-                          ? '0 0 20px rgba(59, 130, 246, 0.5)' 
-                          : '0 0 20px rgba(59, 130, 246, 0.3)'
+                          ? '0 0 20px rgba(59, 130, 246, 0.6)' 
+                          : '0 0 24px rgba(59, 130, 246, 0.5)'
                         : 'none'
                     }}
                     className={cn(
@@ -199,11 +241,11 @@ const VerticalStepProgress = ({
                         ? 'bg-gradient-to-br from-blue-500 to-blue-600' 
                         : isActive 
                           ? themeMode === 'dark'
-                            ? 'border-2 border-blue-400 bg-slate-900'
+                            ? 'border-2 border-blue-400 bg-gray-950'
                             : 'border-2 border-blue-500 bg-white'
                           : themeMode === 'dark' 
-                            ? 'bg-slate-800/80 border border-white/10' 
-                            : 'bg-gray-100 border border-gray-200'
+                            ? 'bg-gray-800 border border-gray-700' 
+                            : 'bg-gray-100 border border-gray-300'
                     )}
                   >
                     {isCompleted ? (
@@ -220,13 +262,13 @@ const VerticalStepProgress = ({
                           "w-2 h-2 rounded-full",
                           themeMode === 'dark' ? 'bg-blue-400' : 'bg-blue-500'
                         )}
-                        animate={{ scale: [1, 1.2, 1] }}
+                        animate={{ scale: [1, 1.3, 1] }}
                         transition={{ duration: 1.5, repeat: Infinity }}
                       />
                     ) : (
                       <div className={cn(
                         "w-1.5 h-1.5 rounded-full",
-                        themeMode === 'dark' ? 'bg-white/20' : 'bg-gray-300'
+                        themeMode === 'dark' ? 'bg-gray-600' : 'bg-gray-400'
                       )} />
                     )}
                   </motion.div>
@@ -249,7 +291,7 @@ const VerticalStepProgress = ({
                       className={cn(
                         "text-xs transition-colors duration-300",
                         isActive 
-                          ? themeMode === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                          ? themeMode === 'dark' ? 'text-gray-400' : 'text-gray-600'
                           : themeMode === 'dark' ? 'text-gray-600' : 'text-gray-400'
                       )}
                     >
@@ -266,11 +308,11 @@ const VerticalStepProgress = ({
       {/* Theme Toggle at Bottom */}
       <div className={cn(
         "pt-6 border-t relative z-10",
-        themeMode === 'dark' ? 'border-white/5' : 'border-gray-200/80'
+        themeMode === 'dark' ? 'border-gray-800' : 'border-gray-200'
       )}>
         <div className={cn(
           "flex items-center justify-between p-3 rounded-xl transition-colors",
-          themeMode === 'dark' ? 'bg-slate-800/50' : 'bg-gray-100/80'
+          themeMode === 'dark' ? 'bg-gray-900' : 'bg-gray-100'
         )}>
           <span className={cn(
             "text-sm font-medium",
@@ -293,16 +335,21 @@ const MobileStepProgress = ({ currentStep, themeMode }: { currentStep: number; t
     <div className={cn(
       "lg:hidden sticky top-0 z-50 border-b transition-colors duration-300",
       themeMode === 'dark' 
-        ? 'bg-slate-900/98 backdrop-blur-xl border-white/5' 
-        : 'bg-white/98 backdrop-blur-xl border-gray-200/80'
+        ? 'bg-gray-950/98 backdrop-blur-xl border-gray-800' 
+        : 'bg-white/98 backdrop-blur-xl border-gray-200'
     )}>
       {/* Progress bar */}
       <div className={cn(
         "h-1 w-full",
-        themeMode === 'dark' ? 'bg-slate-800' : 'bg-gray-200'
+        themeMode === 'dark' ? 'bg-gray-800' : 'bg-gray-200'
       )}>
         <motion.div 
-          className="h-full bg-gradient-to-r from-blue-500 to-blue-400"
+          className={cn(
+            "h-full",
+            themeMode === 'dark' 
+              ? 'bg-gradient-to-r from-blue-500 to-blue-400'
+              : 'bg-gradient-to-r from-blue-500 to-blue-600 shadow-[0_0_10px_rgba(59,130,246,0.5)]'
+          )}
           initial={{ width: 0 }}
           animate={{ width: `${((currentStep - 1) / (steps.length - 1)) * 100}%` }}
           transition={{ duration: 0.3 }}
@@ -322,8 +369,8 @@ const MobileStepProgress = ({ currentStep, themeMode }: { currentStep: number; t
                     scale: isActive ? 1.1 : 1,
                     boxShadow: isActive 
                       ? themeMode === 'dark' 
-                        ? '0 0 12px rgba(59, 130, 246, 0.5)' 
-                        : '0 0 12px rgba(59, 130, 246, 0.3)'
+                        ? '0 0 16px rgba(59, 130, 246, 0.6)' 
+                        : '0 0 20px rgba(59, 130, 246, 0.5)'
                       : 'none'
                   }}
                   className={cn(
@@ -332,11 +379,11 @@ const MobileStepProgress = ({ currentStep, themeMode }: { currentStep: number; t
                       ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white' 
                       : isActive 
                         ? themeMode === 'dark'
-                          ? 'border-2 border-blue-400 text-blue-400 bg-slate-800/80'
+                          ? 'border-2 border-blue-400 text-blue-400 bg-gray-900'
                           : 'border-2 border-blue-500 text-blue-600 bg-white'
                         : themeMode === 'dark'
-                          ? 'bg-slate-800/60 text-gray-500 border border-white/5'
-                          : 'bg-gray-100 text-gray-400 border border-gray-200/80'
+                          ? 'bg-gray-800 text-gray-500 border border-gray-700'
+                          : 'bg-gray-100 text-gray-400 border border-gray-300'
                   )}
                 >
                   {isCompleted ? <Check className="w-3.5 h-3.5" /> : index + 1}
@@ -346,7 +393,7 @@ const MobileStepProgress = ({ currentStep, themeMode }: { currentStep: number; t
                   isActive 
                     ? themeMode === 'dark' ? 'text-blue-400' : 'text-blue-600'
                     : isCompleted
-                      ? themeMode === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                      ? themeMode === 'dark' ? 'text-gray-400' : 'text-gray-600'
                       : themeMode === 'dark' ? 'text-gray-600' : 'text-gray-400'
                 )}>
                   {step}
@@ -356,8 +403,10 @@ const MobileStepProgress = ({ currentStep, themeMode }: { currentStep: number; t
                 <div className={cn(
                   "w-4 sm:w-6 h-0.5 mx-0.5 rounded-full transition-all duration-500",
                   isCompleted 
-                    ? 'bg-gradient-to-r from-blue-500 to-blue-400' 
-                    : themeMode === 'dark' ? 'bg-white/10' : 'bg-gray-200'
+                    ? themeMode === 'dark'
+                      ? 'bg-gradient-to-r from-blue-500 to-blue-400' 
+                      : 'bg-gradient-to-r from-blue-500 to-blue-600'
+                    : themeMode === 'dark' ? 'bg-gray-800' : 'bg-gray-200'
                 )} />
               )}
             </div>
@@ -487,11 +536,11 @@ const FastOrderContent = () => {
       <div className={cn(
         "h-screen h-[100dvh] flex flex-col lg:flex-row overflow-hidden transition-colors duration-300 relative",
         themeMode === 'dark' 
-          ? 'bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950' 
-          : 'bg-gradient-to-br from-gray-50 via-white to-gray-100/50'
+          ? 'bg-gray-950' 
+          : 'bg-gray-50'
       )}>
-        {/* Grid Background Pattern */}
-        <GridPattern themeMode={themeMode} />
+        {/* Enhanced Grid Background Pattern */}
+        <EnhancedGridPattern themeMode={themeMode} />
 
         {/* Desktop Vertical Step Progress Sidebar */}
         <VerticalStepProgress 
@@ -510,8 +559,8 @@ const FastOrderContent = () => {
             className={cn(
               "lg:hidden sticky top-0 z-40 backdrop-blur-xl border-b",
               themeMode === 'dark' 
-                ? 'bg-slate-900/80 border-white/10' 
-                : 'bg-white/80 border-gray-200'
+                ? 'bg-gray-950/90 border-gray-800' 
+                : 'bg-white/90 border-gray-200'
             )}
           >
             <div className="px-4 py-3 flex items-center justify-between">
@@ -523,7 +572,12 @@ const FastOrderContent = () => {
                     className="h-8 w-auto object-contain"
                   />
                 ) : (
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold">
+                  <div className={cn(
+                    "w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold",
+                    themeMode === 'dark'
+                      ? 'bg-gradient-to-br from-blue-500 to-blue-600'
+                      : 'bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/30'
+                  )}>
                     {panel.name.charAt(0).toUpperCase()}
                   </div>
                 )}
@@ -553,17 +607,20 @@ const FastOrderContent = () => {
                   )} />
                 </div>
                 <div className="absolute left-4 top-1/2 -translate-y-1/2">
-                  <Search className="w-5 h-5 text-muted-foreground" />
+                  <Search className={cn(
+                    "w-5 h-5",
+                    themeMode === 'dark' ? 'text-gray-500' : 'text-gray-400'
+                  )} />
                 </div>
                 <Input
                   placeholder="Search services..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className={cn(
-                    "h-14 pl-12 pr-12 rounded-2xl text-base font-medium",
+                    "h-14 pl-12 pr-12 rounded-2xl text-base font-medium transition-all",
                     themeMode === 'dark'
-                      ? 'bg-slate-800/50 border-white/10 placeholder:text-gray-500'
-                      : 'bg-white border-gray-200 shadow-sm placeholder:text-gray-400'
+                      ? 'bg-gray-900 border-gray-800 placeholder:text-gray-500 focus:border-blue-500/50 focus:ring-blue-500/20'
+                      : 'bg-white border-gray-200 shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:ring-blue-500/20 focus:shadow-[0_0_20px_rgba(59,130,246,0.15)]'
                   )}
                 />
               </div>
