@@ -9,7 +9,7 @@ interface ProtectedRouteProps {
   redirectTo?: string;
 }
 
-const LAST_PANEL_ROUTE_KEY = 'smmpilot_last_panel_route';
+const LAST_PANEL_ROUTE_KEY = 'homeofsmm_last_panel_route';
 
 export function ProtectedRoute({ 
   children, 

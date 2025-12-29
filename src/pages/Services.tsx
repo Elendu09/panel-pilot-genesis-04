@@ -183,7 +183,7 @@ const Services = () => {
   return (
     <div className="min-h-screen bg-gradient-hero">
       <Helmet>
-        <title>Top SMM Services | SMMPilot Platform</title>
+        <title>Top SMM Services | HomeOfSMM Platform</title>
         <meta name="description" content="Discover the best SMM panel services with high quality providers, competitive pricing, and reliable delivery for Instagram, YouTube, TikTok and more." />
         <meta name="keywords" content="SMM services, social media marketing, instagram followers, youtube subscribers, tiktok likes, best SMM panel" />
         <link rel="canonical" href={`${typeof window !== 'undefined' ? window.location.origin : ''}/services`} />

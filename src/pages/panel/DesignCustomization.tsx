@@ -1308,7 +1308,7 @@ export default function DesignCustomization() {
                     const storefrontUrl = panelCustomDomain 
                       ? `https://${panelCustomDomain}`
                       : panelSubdomain 
-                        ? `https://${panelSubdomain}.smmpilot.online`
+                        ? `https://${panelSubdomain}.homeofsmm.com`
                         : null;
                     if (storefrontUrl) {
                       window.open(storefrontUrl, '_blank');
@@ -1327,7 +1327,7 @@ export default function DesignCustomization() {
                 {panelCustomDomain 
                   ? `Opens ${panelCustomDomain} in new tab` 
                   : panelSubdomain 
-                    ? `Opens ${panelSubdomain}.smmpilot.online in new tab`
+                    ? `Opens ${panelSubdomain}.homeofsmm.com in new tab`
                     : 'Configure your subdomain first'}
               </TooltipContent>
             </Tooltip>
@@ -2301,7 +2301,7 @@ export default function DesignCustomization() {
                     <ExternalLink className="w-2 h-2 sm:w-2.5 sm:h-2.5 text-primary" />
                   </div>
                   <span className="text-[10px] sm:text-xs text-muted-foreground font-mono truncate">
-                    {customization.companyName?.toLowerCase().replace(/\s+/g, '') || 'yourpanel'}.smmpilot.online
+                    {customization.companyName?.toLowerCase().replace(/\s+/g, '') || 'yourpanel'}.homeofsmm.com
                   </span>
                 </div>
               </div>

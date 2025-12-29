@@ -195,7 +195,7 @@ const PanelOwnerDashboard = () => {
   return (
     <div className="min-h-screen bg-background flex w-full">
       <Helmet>
-        <title>Panel Dashboard | SMMPilot</title>
+        <title>Panel Dashboard | HomeOfSMM</title>
         <meta name="description" content="Manage services, clients, payments, domains, and panel settings." />
         <meta name="robots" content="noindex,nofollow" />
         <link rel="canonical" href={canonicalUrl} />

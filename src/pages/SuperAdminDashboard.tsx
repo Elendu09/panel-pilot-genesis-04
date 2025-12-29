@@ -118,7 +118,7 @@ const SuperAdminDashboard = () => {
   return (
     <div className="min-h-screen bg-background flex">
       <Helmet>
-        <title>Admin Dashboard | SMMPilot Platform</title>
+        <title>Admin Dashboard | HomeOfSMM Platform</title>
         <meta name="description" content="Super Admin console to manage panels, users, revenue and platform settings." />
         <meta name="robots" content="noindex,nofollow" />
         <link rel="canonical" href={canonicalUrl} />

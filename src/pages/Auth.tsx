@@ -12,7 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import EmailVerificationKanban from '@/components/auth/EmailVerificationKanban';
 
-const LAST_PANEL_ROUTE_KEY = 'smmpilot_last_panel_route';
+const LAST_PANEL_ROUTE_KEY = 'homeofsmm_last_panel_route';
 
 const Auth = () => {
   const [email, setEmail] = useState('');
@@ -164,15 +164,15 @@ const Auth = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-secondary/10 flex items-center justify-center p-4">
       <Helmet>
-        <title>Sign In - SMMPilot Platform</title>
-        <meta name="description" content="Sign in to your SMMPilot account or create a new panel to start your SMM business." />
+        <title>Sign In - HomeOfSMM Platform</title>
+        <meta name="description" content="Sign in to your HomeOfSMM account or create a new panel to start your SMM business." />
         <meta name="robots" content="noindex,nofollow" />
       </Helmet>
       
       <Card className="w-full max-w-md bg-card/80 backdrop-blur-sm border-border shadow-card">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-            SMMPilot
+            HomeOfSMM
           </CardTitle>
           <CardDescription>
             Access your account or create a new one

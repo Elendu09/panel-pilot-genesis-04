@@ -81,7 +81,7 @@ export default function About() {
           <div className="text-center max-w-4xl mx-auto">
             <Badge className="mb-6 bg-gradient-primary text-primary-foreground">
               <Users className="w-4 h-4 mr-2" />
-              About SMMPilot
+              About HomeOfSMM
             </Badge>
             <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent mb-6">
               Empowering SMM
@@ -121,7 +121,7 @@ export default function About() {
                 <h2 className="text-4xl font-bold mb-6">Our Story</h2>
                 <div className="space-y-4 text-muted-foreground">
                   <p>
-                    SMMPilot was born from a simple observation: the social media marketing industry 
+                    HomeOfSMM was born from a simple observation: the social media marketing industry 
                     was dominated by complex, expensive platforms that were out of reach for most entrepreneurs.
                   </p>
                   <p>
@@ -135,7 +135,7 @@ export default function About() {
                     for our community of panel owners.
                   </p>
                   <p>
-                    Today, SMMPilot stands as the industry leader in white-label SMM solutions, 
+                    Today, HomeOfSMM stands as the industry leader in white-label SMM solutions, 
                     trusted by businesses in over 100 countries worldwide.
                   </p>
                 </div>
@@ -190,7 +190,7 @@ export default function About() {
           <div className="text-center mb-12">
             <h2 className="text-4xl font-bold mb-4">Meet Our Team</h2>
             <p className="text-xl text-muted-foreground">
-              The passionate people behind SMMPilot
+              The passionate people behind HomeOfSMM
             </p>
           </div>
           

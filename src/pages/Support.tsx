@@ -39,8 +39,8 @@ export default function Support() {
           a: "We accept all major credit cards, PayPal, Bitcoin, and bank transfers. For enterprise clients, we also offer custom payment arrangements and invoicing."
         },
         {
-          q: "Do I need technical knowledge to use SMMPilot?",
-          a: "Not at all! SMMPilot is designed for users of all technical levels. Our intuitive interface and comprehensive documentation make it easy for anyone to start and manage their SMM panel."
+          q: "Do I need technical knowledge to use HomeOfSMM?",
+          a: "Not at all! HomeOfSMM is designed for users of all technical levels. Our intuitive interface and comprehensive documentation make it easy for anyone to start and manage their SMM panel."
         }
       ]
     },
@@ -87,7 +87,7 @@ export default function Support() {
         },
         {
           q: "Is there API documentation available?",
-          a: "Comprehensive API documentation is available in your dashboard and at docs.smmpilot.online. It includes code examples, testing tools, and integration guides."
+          a: "Comprehensive API documentation is available in your dashboard and at docs.homeofsmm.com. It includes code examples, testing tools, and integration guides."
         },
         {
           q: "Can I connect multiple panels to one account?",
@@ -348,7 +348,7 @@ export default function Support() {
               <h3 className="text-xl font-semibold">All Systems Operational</h3>
             </div>
             <p className="text-muted-foreground mb-6">
-              All SMMPilot services are running smoothly. Check our status page for real-time updates.
+              All HomeOfSMM services are running smoothly. Check our status page for real-time updates.
             </p>
             <Button variant="outline">
               View Status Page

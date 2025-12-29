@@ -14,26 +14,26 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       <Helmet>
-        <title>SMMPilot - Professional SMM Panel Platform</title>
+        <title>HomeOfSMM - Professional SMM Panel Platform</title>
         <meta 
           name="description" 
-          content="Create and manage your own SMM panel with SMMPilot. Offer social media marketing services with custom branding, multiple payment methods, and powerful analytics." 
+          content="Create and manage your own SMM panel with HomeOfSMM. Offer social media marketing services with custom branding, multiple payment methods, and powerful analytics." 
         />
         <meta 
           name="keywords" 
           content="SMM panel, social media marketing, instagram followers, youtube views, tiktok likes, SMM reseller panel"
         />
         <link rel="canonical" href={canonicalUrl} />
-        <meta property="og:title" content="SMMPilot - Professional SMM Panel Platform" />
+        <meta property="og:title" content="HomeOfSMM - Professional SMM Panel Platform" />
         <meta 
           property="og:description" 
-          content="Create and manage your own SMM panel with SMMPilot. Offer social media marketing services with custom branding, multiple payment methods, and powerful analytics." 
+          content="Create and manage your own SMM panel with HomeOfSMM. Offer social media marketing services with custom branding, multiple payment methods, and powerful analytics." 
         />
         <meta property="og:type" content="website" />
         <meta property="og:url" content={canonicalUrl} />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="SMMPilot - Professional SMM Panel Platform" />
-        <meta name="twitter:description" content="Create and manage your own SMM panel with SMMPilot." />
+        <meta name="twitter:title" content="HomeOfSMM - Professional SMM Panel Platform" />
+        <meta name="twitter:description" content="Create and manage your own SMM panel with HomeOfSMM." />
       </Helmet>
       <Navigation />
       <main>
