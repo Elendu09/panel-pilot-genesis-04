@@ -182,8 +182,8 @@ const GeneralSettings = () => {
           minOrderAmount: generalSettings.minOrderAmount || "1.00",
           maxOrderAmount: generalSettings.maxOrderAmount || "100000.00",
           supportEmail: contactInfo.email || "",
-          termsOfService: generalSettings.termsOfService || "",
-          privacyPolicy: generalSettings.privacyPolicy || "",
+          termsOfService: panelSettings?.terms_of_service || generalSettings.termsOfService || "",
+          privacyPolicy: panelSettings?.privacy_policy || generalSettings.privacyPolicy || "",
           
           // SEO Settings
           seoTitle: panelSettings?.seo_title || seoSettings.title || "",
@@ -303,6 +303,8 @@ const GeneralSettings = () => {
           seo_title: settings.seoTitle,
           seo_description: settings.seoDescription,
           seo_keywords: settings.seoKeywords,
+          privacy_policy: settings.privacyPolicy,
+          terms_of_service: settings.termsOfService,
         }, {
           onConflict: 'panel_id',
         });
@@ -1170,29 +1172,74 @@ const GeneralSettings = () => {
             </div>
           </AccordionTrigger>
           <AccordionContent className="px-6 pb-6">
-            <div className="space-y-4 pt-2">
+            <div className="space-y-6 pt-2">
+              <div className="p-4 rounded-lg bg-info/10 border border-info/20">
+                <p className="text-sm text-info">
+                  These pages are displayed to your customers. Use clear, professional language. 
+                  Markdown formatting is supported (headings, lists, bold text).
+                </p>
+              </div>
               <div className="space-y-2">
-                <Label htmlFor="termsOfService">Terms of Service</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="termsOfService">Terms of Service</Label>
+                  <Badge variant="outline" className="text-xs">
+                    {settings.termsOfService.length} characters
+                  </Badge>
+                </div>
                 <Textarea
                   id="termsOfService"
                   value={settings.termsOfService}
                   onChange={(e) =>
                     setSettings({ ...settings, termsOfService: e.target.value })
                   }
-                  rows={6}
-                  placeholder="Enter your terms of service content..."
+                  rows={12}
+                  placeholder="Enter your terms of service content...
+
+Example:
+# Terms of Service
+
+Welcome to our platform. By using our services, you agree to these terms.
+
+## Service Description
+We provide social media marketing services including followers, likes, views, and engagement.
+
+## User Responsibilities
+- Provide accurate account information
+- Use services in compliance with platform terms
+..."
+                  className="font-mono text-sm"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="privacyPolicy">Privacy Policy</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="privacyPolicy">Privacy Policy</Label>
+                  <Badge variant="outline" className="text-xs">
+                    {settings.privacyPolicy.length} characters
+                  </Badge>
+                </div>
                 <Textarea
                   id="privacyPolicy"
                   value={settings.privacyPolicy}
                   onChange={(e) =>
                     setSettings({ ...settings, privacyPolicy: e.target.value })
                   }
-                  rows={6}
-                  placeholder="Enter your privacy policy content..."
+                  rows={12}
+                  placeholder="Enter your privacy policy content...
+
+Example:
+# Privacy Policy
+
+We respect your privacy and are committed to protecting your personal data.
+
+## Information We Collect
+- Account information (email, username)
+- Transaction history and order details
+
+## How We Use Your Information
+- To process your orders and transactions
+- To provide customer support
+..."
+                  className="font-mono text-sm"
                 />
               </div>
             </div>

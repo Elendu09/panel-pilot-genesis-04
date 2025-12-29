@@ -28,12 +28,20 @@ import { useTenant } from "@/hooks/useTenant";
 import BuyerLayout from "./BuyerLayout";
 import { Link } from "react-router-dom";
 
-const paymentMethods = [
+const defaultPaymentMethods = [
   { id: "stripe", name: "Card", icon: CreditCard, color: "from-blue-500 to-blue-600", badge: "Instant" },
   { id: "paypal", name: "PayPal", icon: DollarSign, color: "from-blue-400 to-blue-500", badge: "Instant" },
   { id: "crypto", name: "Crypto", icon: Sparkles, color: "from-orange-500 to-yellow-500", badge: "5-30 min" },
   { id: "perfectmoney", name: "Perfect Money", icon: Shield, color: "from-green-500 to-emerald-500", badge: "Instant" },
 ];
+
+interface PaymentMethod {
+  id: string;
+  name: string;
+  icon: any;
+  color: string;
+  badge: string;
+}
 
 const quickAmounts = [10, 25, 50, 100, 250, 500];
 
@@ -53,6 +61,46 @@ const BuyerDeposit = () => {
   const [processing, setProcessing] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>(defaultPaymentMethods);
+  const [loadingMethods, setLoadingMethods] = useState(true);
+
+  // Fetch enabled payment methods from panel settings
+  useEffect(() => {
+    const fetchPaymentMethods = async () => {
+      if (!panel?.id) {
+        setLoadingMethods(false);
+        return;
+      }
+      
+      try {
+        const { data: panelData } = await supabase
+          .from('panels')
+          .select('settings')
+          .eq('id', panel.id)
+          .single();
+        
+        const panelSettings = panelData?.settings as Record<string, any> || {};
+        const paymentSettings = panelSettings.payments || {};
+        const enabledMethods = paymentSettings.enabledMethods || [];
+        
+        if (enabledMethods.length > 0) {
+          // Filter to only show enabled methods
+          const filteredMethods = defaultPaymentMethods.filter(m => 
+            enabledMethods.includes(m.id)
+          );
+          if (filteredMethods.length > 0) {
+            setPaymentMethods(filteredMethods);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching payment methods:', error);
+      } finally {
+        setLoadingMethods(false);
+      }
+    };
+
+    fetchPaymentMethods();
+  }, [panel?.id]);
 
   // Fetch transaction history on mount
   useEffect(() => {
@@ -278,42 +326,55 @@ const BuyerDeposit = () => {
         {/* Payment Methods */}
         <motion.div variants={itemVariants} className="space-y-2 md:space-y-3">
           <Label className="text-sm md:text-base font-semibold">Select Payment Method</Label>
-          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-            {paymentMethods.map((method, index) => (
-              <motion.button
-                key={method.id}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.2 + index * 0.05 }}
-                onClick={() => setSelectedMethod(method.id)}
-                className={cn(
-                  "p-3 md:p-4 rounded-xl border-2 transition-all duration-200 text-left relative overflow-hidden group",
-                  selectedMethod === method.id
-                    ? "border-primary bg-primary/10 shadow-lg shadow-primary/20"
-                    : "border-border/50 bg-card/50 hover:border-primary/50"
-                )}
-              >
-                <div className="flex flex-col items-center md:flex-row md:items-center gap-2 md:gap-3">
-                  <div className={cn(
-                    "p-2 md:p-3 rounded-xl bg-gradient-to-br transition-transform group-hover:scale-110 shrink-0",
-                    method.color
-                  )}>
-                    <method.icon className="w-5 h-5 md:w-6 md:h-6 text-white" />
+          {loadingMethods ? (
+            <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="p-4 rounded-xl border-2 border-border/50 bg-card/50 animate-pulse">
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="w-12 h-12 rounded-xl bg-muted" />
+                    <div className="h-4 w-16 bg-muted rounded" />
                   </div>
-                  <div className="text-center md:text-left flex-1">
-                    <p className="font-semibold text-sm md:text-base">{method.name}</p>
-                    <Badge variant="secondary" className="text-[10px] md:text-xs mt-1">
-                      <Clock className="w-2.5 h-2.5 md:w-3 md:h-3 mr-1" />
-                      {method.badge}
-                    </Badge>
-                  </div>
-                  {selectedMethod === method.id && (
-                    <CheckCircle className="w-4 h-4 md:w-5 md:h-5 text-primary absolute top-2 right-2 md:static" />
-                  )}
                 </div>
-              </motion.button>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+              {paymentMethods.map((method, index) => (
+                <motion.button
+                  key={method.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.2 + index * 0.05 }}
+                  onClick={() => setSelectedMethod(method.id)}
+                  className={cn(
+                    "p-3 md:p-4 rounded-xl border-2 transition-all duration-200 text-left relative overflow-hidden group",
+                    selectedMethod === method.id
+                      ? "border-primary bg-primary/10 shadow-lg shadow-primary/20"
+                      : "border-border/50 bg-card/50 hover:border-primary/50"
+                  )}
+                >
+                  <div className="flex flex-col items-center md:flex-row md:items-center gap-2 md:gap-3">
+                    <div className={cn(
+                      "p-2 md:p-3 rounded-xl bg-gradient-to-br transition-transform group-hover:scale-110 shrink-0",
+                      method.color
+                    )}>
+                      <method.icon className="w-5 h-5 md:w-6 md:h-6 text-white" />
+                    </div>
+                    <div className="text-center md:text-left flex-1">
+                      <p className="font-semibold text-sm md:text-base">{method.name}</p>
+                      <Badge variant="secondary" className="text-[10px] md:text-xs mt-1">
+                        <Clock className="w-2.5 h-2.5 md:w-3 md:h-3 mr-1" />
+                        {method.badge}
+                      </Badge>
+                    </div>
+                    {selectedMethod === method.id && (
+                      <CheckCircle className="w-4 h-4 md:w-5 md:h-5 text-primary absolute top-2 right-2 md:static" />
+                    )}
+                  </div>
+                </motion.button>
+              ))}
+            </div>
+          )}
         </motion.div>
 
         {/* Deposit Button */}
