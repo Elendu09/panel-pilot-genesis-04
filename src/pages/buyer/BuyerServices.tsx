@@ -4,7 +4,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { 
@@ -13,25 +12,26 @@ import {
   ShoppingCart as CartIcon,
   Clock,
   Zap,
-  Loader2,
   Plus,
   Check,
   ChevronRight,
   Filter,
-  X,
   Sparkles
 } from "lucide-react";
 import { SOCIAL_ICONS_MAP } from "@/components/icons/SocialIcons";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useTenant, useTenantServices } from "@/hooks/useTenant";
 import { useBuyerAuth } from "@/contexts/BuyerAuthContext";
+import { useCurrency } from "@/contexts/CurrencyContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import BuyerLayout from "./BuyerLayout";
 import ShoppingCart from "@/components/buyer/ShoppingCart";
 import { FavoriteButton } from "@/components/buyer/FavoriteButton";
 import { ServiceRating } from "@/components/buyer/ServiceRating";
+import { LanguageSelector } from "@/components/buyer/LanguageSelector";
+import { CurrencySelector } from "@/components/buyer/CurrencySelector";
 
 interface CartItem {
   service: any;
@@ -46,14 +46,11 @@ const BuyerServices = () => {
   const navigate = useNavigate();
   const { panel } = useTenant();
   const { buyer, refreshBuyer } = useBuyerAuth();
+  const { formatPrice } = useCurrency();
   const { services, loading } = useTenantServices(panel?.id);
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const [selectedService, setSelectedService] = useState<any>(null);
-  const [quantity, setQuantity] = useState(1000);
-  const [targetUrl, setTargetUrl] = useState("");
-  const [orderLoading, setOrderLoading] = useState(false);
   const [customPrices, setCustomPrices] = useState<Map<string, number>>(new Map());
   const [cart, setCart] = useState<CartItem[]>([]);
   const [quickAddService, setQuickAddService] = useState<string | null>(null);
@@ -120,7 +117,7 @@ const BuyerServices = () => {
     }
   }, [buyer?.id, panel?.id, services]);
 
-  // Handle Fast Order URL parameters
+  // Handle Fast Order URL parameters - redirect to new-order page
   useEffect(() => {
     if (!services.length || fastOrderApplied) return;
     
@@ -131,21 +128,15 @@ const BuyerServices = () => {
     if (serviceId) {
       const service = services.find((s: any) => s.id === serviceId);
       if (service) {
-        setSelectedService(service);
-        if (quantityParam) setQuantity(parseInt(quantityParam) || 1000);
-        if (urlParam) setTargetUrl(decodeURIComponent(urlParam));
         setFastOrderApplied(true);
-        
-        // Clear URL params after applying
-        setSearchParams({}, { replace: true });
-        
-        toast({
-          title: "Fast Order Ready",
-          description: `${service.name} has been pre-selected. Complete your order below.`,
-        });
+        // Redirect to dedicated order page
+        const params = new URLSearchParams({ service: serviceId });
+        if (quantityParam) params.append('quantity', quantityParam);
+        if (urlParam) params.append('url', urlParam);
+        navigate(`/new-order?${params.toString()}`);
       }
     }
-  }, [buyer?.id, panel?.id, services]);
+  }, [services, searchParams, navigate, fastOrderApplied]);
 
   // Get effective price for a service (custom or default)
   const getEffectivePrice = (service: any) => {
@@ -210,90 +201,6 @@ const BuyerServices = () => {
     }, 200);
   };
 
-  const handleOrder = async () => {
-    if (!selectedService || !buyer || !panel) {
-      toast({ title: "Please select a service", variant: "destructive" });
-      return;
-    }
-    if (!targetUrl) {
-      toast({ title: "Please enter a target URL", variant: "destructive" });
-      return;
-    }
-    if (quantity < (selectedService.min_quantity || 1)) {
-      toast({ title: `Minimum quantity is ${selectedService.min_quantity || 1}`, variant: "destructive" });
-      return;
-    }
-
-    const effectivePrice = getEffectivePrice(selectedService);
-    const totalPrice = (effectivePrice * quantity) / 1000;
-    
-    // Check balance
-    if ((buyer.balance || 0) < totalPrice) {
-      toast({ 
-        title: "Insufficient Balance", 
-        description: `You need $${totalPrice.toFixed(2)} but only have $${(buyer.balance || 0).toFixed(2)}`,
-        variant: "destructive" 
-      });
-      return;
-    }
-
-    setOrderLoading(true);
-    try {
-      // Generate order number
-      const orderNumber = `ORD${Date.now()}`;
-
-      // Create order
-      const { error: orderError } = await supabase
-        .from('orders')
-        .insert({
-          order_number: orderNumber,
-          panel_id: panel.id,
-          buyer_id: buyer.id,
-          service_id: selectedService.id,
-          target_url: targetUrl,
-          quantity,
-          price: totalPrice,
-          status: 'pending',
-          progress: 0,
-        });
-
-      if (orderError) throw orderError;
-
-      // Deduct balance
-      const newBalance = (buyer.balance || 0) - totalPrice;
-      const { error: balanceError } = await supabase
-        .from('client_users')
-        .update({ 
-          balance: newBalance,
-          total_spent: (buyer.total_spent || 0) + totalPrice,
-        })
-        .eq('id', buyer.id);
-
-      if (balanceError) throw balanceError;
-
-      // Refresh buyer data
-      await refreshBuyer();
-
-      toast({
-        title: "Order Placed!",
-        description: `Your order for ${quantity.toLocaleString()} ${selectedService.name} has been placed. Total: $${totalPrice.toFixed(2)}`,
-      });
-
-      setSelectedService(null);
-      setTargetUrl("");
-      setQuantity(1000);
-    } catch (error) {
-      console.error('Error placing order:', error);
-      toast({ 
-        title: "Order Failed", 
-        description: "Failed to place order. Please try again.",
-        variant: "destructive" 
-      });
-    } finally {
-      setOrderLoading(false);
-    }
-  };
-
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: { opacity: 1, transition: { staggerChildren: 0.05 } }
@@ -303,10 +210,6 @@ const BuyerServices = () => {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0 }
   };
-
-  const effectivePrice = selectedService ? getEffectivePrice(selectedService) : 0;
-  const totalPrice = selectedService ? (effectivePrice * quantity) / 1000 : 0;
-  const hasEnoughBalance = (buyer?.balance || 0) >= totalPrice;
 
   const selectedCategoryData = categoriesWithCounts.find(c => c.id === selectedCategory);
 
@@ -325,6 +228,10 @@ const BuyerServices = () => {
             <p className="text-sm text-muted-foreground">Browse and order SMM services</p>
           </div>
           <div className="flex items-center gap-2">
+            <div className="hidden sm:flex items-center gap-1">
+              <LanguageSelector />
+              <CurrencySelector />
+            </div>
             <ShoppingCart
               cart={cart}
               setCart={setCart}
@@ -476,12 +383,14 @@ const BuyerServices = () => {
           </motion.div>
 
           {/* Services List */}
-          <motion.div variants={itemVariants} className="lg:col-span-2">
+          <motion.div variants={itemVariants} className="lg:col-span-3">
             <div className="space-y-3">
               {loading ? (
-                [1, 2, 3, 4].map(i => (
-                  <div key={i} className="h-24 bg-muted rounded-xl animate-pulse" />
-                ))
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {[1, 2, 3, 4].map(i => (
+                    <div key={i} className="h-24 bg-muted rounded-xl animate-pulse" />
+                  ))}
+                </div>
               ) : filteredServices.length === 0 ? (
                 <Card className="glass-card">
                   <CardContent className="p-8 text-center">
@@ -490,11 +399,10 @@ const BuyerServices = () => {
                   </CardContent>
                 </Card>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {filteredServices.map((service: any) => {
                     const categoryData = getCategoryData(service.category);
                     const CategoryIcon = categoryData.icon;
-                    const isSelected = selectedService?.id === service.id;
                     const serviceEffectivePrice = getEffectivePrice(service);
                     const hasCustomPrice = customPrices.has(service.id);
                     const isQuickAdding = quickAddService === service.id;
@@ -509,7 +417,6 @@ const BuyerServices = () => {
                         <Card 
                           className={cn(
                             "glass-card-hover cursor-pointer transition-all group",
-                            isSelected && "ring-2 ring-primary",
                             isInCart && "border-green-500/30"
                           )}
                           onClick={() => navigate(`/new-order?service=${service.id}`)}
@@ -596,117 +503,6 @@ const BuyerServices = () => {
                 </div>
               )}
             </div>
-          </motion.div>
-
-          {/* Order Panel */}
-          <motion.div variants={itemVariants} className="lg:col-span-1">
-            <Card className="glass-card sticky top-4">
-              <CardContent className="p-4 space-y-4">
-                <h3 className="font-semibold">Quick Order</h3>
-
-                {selectedService ? (
-                  <>
-                    <div className="p-3 bg-muted/50 rounded-xl">
-                      <div className="flex items-center gap-3">
-                        {(() => {
-                          const catData = getCategoryData(selectedService.category);
-                          const CatIcon = catData.icon;
-                          return (
-                            <div className={cn("p-2 rounded-lg", catData.bgColor)}>
-                              <CatIcon className="w-4 h-4 text-white" />
-                            </div>
-                          );
-                        })()}
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm truncate">{selectedService.name}</p>
-                          <p className="text-xs text-muted-foreground">${effectivePrice.toFixed(2)} per 1K</p>
-                        </div>
-                        <Button 
-                          size="icon" 
-                          variant="ghost" 
-                          className="h-7 w-7" 
-                          onClick={() => setSelectedService(null)}
-                        >
-                          <X className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div className="space-y-3">
-                      <div className="space-y-2">
-                        <Label className="text-xs">Target URL</Label>
-                        <Input
-                          placeholder="https://..."
-                          value={targetUrl}
-                          onChange={(e) => setTargetUrl(e.target.value)}
-                          className="bg-background/50 text-sm"
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label className="text-xs">Quantity</Label>
-                        <Input
-                          type="number"
-                          value={quantity}
-                          onChange={(e) => setQuantity(parseInt(e.target.value) || 0)}
-                          min={selectedService.min_quantity || 1}
-                          max={selectedService.max_quantity || 1000000}
-                          className="bg-background/50 text-sm"
-                        />
-                        <p className="text-[10px] text-muted-foreground">
-                          Min: {selectedService.min_quantity || 1} | Max: {selectedService.max_quantity || '1M'}
-                        </p>
-                      </div>
-
-                      <div className="p-3 bg-primary/5 rounded-xl space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Price per 1K</span>
-                          <span>${effectivePrice.toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Quantity</span>
-                          <span>{quantity.toLocaleString()}</span>
-                        </div>
-                        <div className="border-t pt-2 flex justify-between font-semibold">
-                          <span>Total</span>
-                          <span className={cn(!hasEnoughBalance && "text-red-500")}>
-                            ${totalPrice.toFixed(2)}
-                          </span>
-                        </div>
-                        {!hasEnoughBalance && (
-                          <p className="text-[10px] text-red-500">
-                            Insufficient balance (${(buyer?.balance || 0).toFixed(2)})
-                          </p>
-                        )}
-                      </div>
-
-                      <Button 
-                        className="w-full gap-2" 
-                        onClick={handleOrder}
-                        disabled={orderLoading || !hasEnoughBalance || !targetUrl}
-                      >
-                        {orderLoading ? (
-                          <>
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                            Processing...
-                          </>
-                        ) : (
-                          <>
-                            <Zap className="w-4 h-4" />
-                            Place Order
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  </>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Package className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                    <p className="text-sm">Select a service to order</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
           </motion.div>
         </div>
       </motion.div>

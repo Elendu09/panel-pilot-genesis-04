@@ -61,17 +61,31 @@ export const CurrencyProvider = ({ children }: { children: ReactNode }) => {
     const converted = convertPrice(usdAmount);
     const config = currencies[currency];
     
-    // Format based on currency - show more decimals for very low prices
+    // High-value currencies (no decimals needed)
     if (currency === 'NGN' || currency === 'INR' || currency === 'RUB') {
       return `${config.symbol}${converted.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
     }
     
-    // For low prices (less than 0.01), show 3 decimal places
+    // For very low prices (< 0.01), show 4 decimal places
     if (converted < 0.01 && converted > 0) {
-      return `${config.symbol}${converted.toLocaleString(undefined, { minimumFractionDigits: 3, maximumFractionDigits: 4 })}`;
+      return `${config.symbol}${converted.toLocaleString(undefined, { 
+        minimumFractionDigits: 4, 
+        maximumFractionDigits: 4 
+      })}`;
     }
     
-    return `${config.symbol}${converted.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    // For low prices (< 0.10), show 3 decimal places
+    if (converted < 0.10 && converted > 0) {
+      return `${config.symbol}${converted.toLocaleString(undefined, { 
+        minimumFractionDigits: 3, 
+        maximumFractionDigits: 3 
+      })}`;
+    }
+    
+    return `${config.symbol}${converted.toLocaleString(undefined, { 
+      minimumFractionDigits: 2, 
+      maximumFractionDigits: 2 
+    })}`;
   };
 
   const currencyConfig = currencies[currency];

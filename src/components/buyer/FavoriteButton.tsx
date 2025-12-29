@@ -88,8 +88,9 @@ export const FavoriteButton = ({ serviceId, className, size = "icon" }: Favorite
       variant="ghost"
       size={size}
       className={cn(
-        "relative transition-colors",
-        isFavorite && "text-red-500 hover:text-red-600",
+        "relative transition-all duration-300",
+        isFavorite && "text-blue-500 hover:text-blue-600",
+        isFavorite && "shadow-[0_0_12px_rgba(59,130,246,0.5)]",
         className
       )}
       onClick={toggleFavorite}
@@ -99,13 +100,16 @@ export const FavoriteButton = ({ serviceId, className, size = "icon" }: Favorite
         <motion.div
           key={isFavorite ? "filled" : "empty"}
           initial={{ scale: 0.8 }}
-          animate={{ scale: animating ? [1, 1.3, 1] : 1 }}
+          animate={{ 
+            scale: animating ? [1, 1.3, 1] : 1,
+          }}
           transition={{ duration: 0.3 }}
+          className={cn(isFavorite && "animate-pulse")}
         >
           <Heart
             className={cn(
               "w-4 h-4 transition-all",
-              isFavorite && "fill-current"
+              isFavorite && "fill-blue-500 text-blue-500"
             )}
           />
         </motion.div>
