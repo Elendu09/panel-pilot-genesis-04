@@ -43,54 +43,61 @@ interface FastOrderSectionProps {
   customization?: any;
 }
 
-// Step indicator component
-const StepIndicator = ({ currentStep, totalSteps }: { currentStep: number; totalSteps: number }) => {
+// Step indicator with visual progress bar
+const StepIndicator = ({ currentStep, selectedCategory }: { currentStep: number; selectedCategory?: string }) => {
   const steps = [
-    { num: 1, label: 'Category' },
-    { num: 2, label: 'Service' },
-    { num: 3, label: 'Details' },
-    { num: 4, label: 'Order' },
+    { num: 1, label: 'Category', icon: '📱' },
+    { num: 2, label: 'Service', icon: '⚡' },
+    { num: 3, label: 'Details', icon: '📝' },
+    { num: 4, label: 'Order', icon: '✨' },
   ];
 
   return (
-    <div className="flex items-center justify-center gap-1 sm:gap-2 mb-8">
-      {steps.slice(0, totalSteps).map((step, index) => (
-        <div key={step.num} className="flex items-center">
-          <motion.div
-            initial={{ scale: 0.8 }}
-            animate={{ 
-              scale: currentStep === step.num ? 1.1 : 1,
-              transition: { duration: 0.2 }
-            }}
-            className={cn(
-              "flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full text-sm font-semibold transition-all duration-300",
-              currentStep > step.num 
-                ? "bg-green-500 text-white" 
-                : currentStep === step.num 
-                  ? "bg-primary text-primary-foreground ring-4 ring-primary/20" 
-                  : "bg-muted text-muted-foreground"
-            )}
-          >
-            {currentStep > step.num ? (
-              <Check className="w-4 h-4" />
-            ) : (
-              step.num
-            )}
-          </motion.div>
-          <span className={cn(
-            "hidden sm:block ml-2 text-xs font-medium transition-colors",
-            currentStep >= step.num ? "text-foreground" : "text-muted-foreground"
-          )}>
-            {step.label}
-          </span>
-          {index < totalSteps - 1 && (
-            <ChevronRight className={cn(
-              "w-4 h-4 mx-1 sm:mx-2 transition-colors",
-              currentStep > step.num ? "text-green-500" : "text-muted-foreground"
-            )} />
-          )}
-        </div>
-      ))}
+    <div className="relative mb-8">
+      {/* Progress bar background */}
+      <div className="absolute top-5 left-[10%] right-[10%] h-1 bg-muted rounded-full" />
+      
+      {/* Active progress bar */}
+      <motion.div 
+        className="absolute top-5 left-[10%] h-1 bg-gradient-to-r from-primary to-green-500 rounded-full"
+        initial={{ width: '0%' }}
+        animate={{ width: `${Math.min((currentStep - 1) * 26.66, 80)}%` }}
+        transition={{ duration: 0.5, ease: 'easeOut' }}
+      />
+      
+      <div className="relative flex items-center justify-between px-4 sm:px-8">
+        {steps.map((step) => (
+          <div key={step.num} className="flex flex-col items-center z-10">
+            <motion.div
+              initial={{ scale: 0.8 }}
+              animate={{ 
+                scale: currentStep === step.num ? 1.15 : 1,
+                transition: { duration: 0.3, type: 'spring' }
+              }}
+              className={cn(
+                "flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full text-lg transition-all duration-300 shadow-lg",
+                currentStep > step.num 
+                  ? "bg-green-500 text-white" 
+                  : currentStep === step.num 
+                    ? "bg-primary text-primary-foreground ring-4 ring-primary/30" 
+                    : "bg-muted text-muted-foreground"
+              )}
+            >
+              {currentStep > step.num ? (
+                <Check className="w-5 h-5" />
+              ) : (
+                <span>{step.icon}</span>
+              )}
+            </motion.div>
+            <span className={cn(
+              "mt-2 text-xs font-medium transition-colors text-center",
+              currentStep >= step.num ? "text-foreground" : "text-muted-foreground"
+            )}>
+              {step.label}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
@@ -332,7 +339,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization }
           </motion.div>
 
           {/* Step Indicator */}
-          <StepIndicator currentStep={currentStep} totalSteps={4} />
+          <StepIndicator currentStep={currentStep} selectedCategory={selectedCategory} />
 
           <div className="max-w-4xl mx-auto">
             <Card className={`backdrop-blur-xl border ${cardBg}`}>
