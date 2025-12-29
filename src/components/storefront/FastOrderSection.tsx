@@ -93,9 +93,9 @@ const StepIndicator = ({ currentStep, selectedCategory }: { currentStep: number;
       {/* Progress bar background */}
       <div className="absolute top-5 left-[10%] right-[10%] h-1 bg-muted rounded-full" />
       
-      {/* Active progress bar */}
+      {/* Active progress bar - Blue gradient */}
       <motion.div 
-        className="absolute top-5 left-[10%] h-1 bg-gradient-to-r from-primary to-green-500 rounded-full"
+        className="absolute top-5 left-[10%] h-1 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full"
         initial={{ width: '0%' }}
         animate={{ width: `${Math.min((currentStep - 1) * 26.66, 80)}%` }}
         transition={{ duration: 0.5, ease: 'easeOut' }}
@@ -113,9 +113,9 @@ const StepIndicator = ({ currentStep, selectedCategory }: { currentStep: number;
               className={cn(
                 "flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full transition-all duration-300 shadow-lg",
                 currentStep > step.num 
-                  ? "bg-green-500 text-white" 
+                  ? "bg-blue-500 text-white" 
                   : currentStep === step.num 
-                    ? "bg-primary text-primary-foreground ring-4 ring-primary/30" 
+                    ? "bg-blue-500 text-white ring-4 ring-blue-500/30" 
                     : "bg-muted text-muted-foreground"
               )}
             >
