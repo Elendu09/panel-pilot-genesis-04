@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Slider } from "@/components/ui/slider";
+import { Progress } from "@/components/ui/progress";
 import {
   Dialog,
   DialogContent,
@@ -89,6 +90,13 @@ export const ServiceImportDialog = ({
   const [showEducation, setShowEducation] = useState(true);
   const [hideAlreadyImported, setHideAlreadyImported] = useState(true);
   const [existingServiceIds, setExistingServiceIds] = useState<Set<number>>(new Set());
+  
+  // Import progress state
+  const [importProgress, setImportProgress] = useState<{
+    importing: boolean;
+    current: number;
+    total: number;
+  }>({ importing: false, current: 0, total: 0 });
   
   // Provider balance state
   const [providerBalance, setProviderBalance] = useState<number | null>(null);
@@ -259,10 +267,39 @@ export const ServiceImportDialog = ({
     return service.price * (1 + markup / 100);
   };
 
-  const handleImport = () => {
+  const handleImport = async () => {
     const selectedServiceData = fetchedServices.filter(s => selectedServices.includes(s.id));
-    onImport(selectedServiceData, { ...serviceMarkups });
-    reset();
+    const total = selectedServiceData.length;
+    
+    if (total === 0) {
+      toast({ title: "No services selected", variant: "destructive" });
+      return;
+    }
+    
+    setImportProgress({ importing: true, current: 0, total });
+    
+    try {
+      // Import in chunks with progress
+      const chunkSize = 50;
+      for (let i = 0; i < total; i += chunkSize) {
+        const chunk = selectedServiceData.slice(i, i + chunkSize);
+        const chunkMarkups: Record<number, number> = {};
+        chunk.forEach(s => {
+          chunkMarkups[s.id] = serviceMarkups[s.id] ?? globalMarkup;
+        });
+        
+        await onImport(chunk, chunkMarkups);
+        setImportProgress({ importing: true, current: Math.min(i + chunkSize, total), total });
+      }
+      
+      toast({ title: `${total} services imported successfully!` });
+    } catch (error) {
+      console.error('Import error:', error);
+      toast({ title: "Import failed", variant: "destructive" });
+    } finally {
+      setImportProgress({ importing: false, current: 0, total: 0 });
+      reset();
+    }
   };
 
   const reset = () => {
@@ -278,7 +315,13 @@ export const ServiceImportDialog = ({
     setFetchError(null);
     setExistingServiceIds(new Set());
     setHideAlreadyImported(true);
+    setImportProgress({ importing: false, current: 0, total: 0 });
   };
+
+  // Calculate import percentage
+  const importPercentage = importProgress.total > 0 
+    ? Math.round((importProgress.current / importProgress.total) * 100) 
+    : 0;
 
   return (
     <Dialog open={open} onOpenChange={(open) => !open && reset()}>
@@ -639,18 +682,43 @@ export const ServiceImportDialog = ({
               </div>
             </ScrollArea>
 
-            <DialogFooter className="flex-col sm:flex-row gap-2">
-              <Button variant="outline" onClick={() => setStep("select")} className="w-full sm:w-auto">
-                Back
-              </Button>
-              <Button
-                onClick={handleImport}
-                disabled={selectedServices.length === 0}
-                className="bg-gradient-to-r from-primary to-primary/80 w-full sm:w-auto"
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Import {selectedServices.length} Services
-              </Button>
+            <DialogFooter className="flex-col gap-3">
+              {/* Import Progress */}
+              {importProgress.importing && (
+                <div className="w-full space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Importing services...</span>
+                    <span className="font-medium">{importProgress.current} / {importProgress.total}</span>
+                  </div>
+                  <Progress value={importPercentage} className="h-2" />
+                </div>
+              )}
+              
+              <div className="flex flex-col sm:flex-row gap-2 w-full">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setStep("select")} 
+                  className="w-full sm:w-auto"
+                  disabled={importProgress.importing}
+                >
+                  Back
+                </Button>
+                <Button
+                  onClick={handleImport}
+                  disabled={selectedServices.length === 0 || importProgress.importing}
+                  className="bg-gradient-to-r from-primary to-primary/80 w-full sm:w-auto"
+                >
+                  {importProgress.importing ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4 mr-2" />
+                  )}
+                  {importProgress.importing 
+                    ? `Importing ${importPercentage}%...` 
+                    : `Import ${selectedServices.length} Services`
+                  }
+                </Button>
+              </div>
             </DialogFooter>
           </div>
         )}

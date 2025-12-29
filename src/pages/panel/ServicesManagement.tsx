@@ -3,7 +3,8 @@ import { useSearchParams } from "react-router-dom";
 import { 
   Package, 
   Plus, 
-  Search, 
+  Search,
+  X,
   Filter, 
   Edit, 
   Trash2,
@@ -123,6 +124,7 @@ import { ServiceKanbanCard } from "@/components/services/ServiceKanbanCard";
 import { ServiceToolsCards } from "@/components/services/ServiceToolsCards";
 import { ServiceHealthCheck } from "@/components/services/ServiceHealthCheck";
 import { BulkProgressModal } from "@/components/services/BulkProgressModal";
+import { AutoFixProgressDialog, AutoFixProgress } from "@/components/services/AutoFixProgressDialog";
 import { BulkOperationHistory } from "@/components/services/BulkOperationHistory";
 import { CategoryManagementDialog, CategoryPreset } from "@/components/services/CategoryManagementDialog";
 import { AdvancedFiltersSheet, ServiceFilters, countActiveFilters } from "@/components/services/AdvancedFiltersSheet";
@@ -235,6 +237,14 @@ const ServicesManagement = () => {
     newIcon: string;
     willChange: boolean;
   }>>([]);
+  
+  // Auto-Fix Progress Dialog
+  const [showAutoFixProgress, setShowAutoFixProgress] = useState(false);
+  const [autoFixProgress, setAutoFixProgress] = useState<AutoFixProgress>({
+    phase: 'idle',
+    current: 0,
+    total: 0,
+  });
   
   // Smart Categorize Dialog
   const [isSmartCategorizeOpen, setIsSmartCategorizeOpen] = useState(false);
@@ -462,14 +472,17 @@ const ServicesManagement = () => {
     }
   };
 
-  // Debounce search query
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(searchQuery);
-      setCurrentPage(1);
-    }, 300);
-    return () => clearTimeout(timer);
+  // Manual search handler - no more auto-debounce
+  const handleSearchSubmit = useCallback(() => {
+    setDebouncedSearch(searchQuery);
+    setCurrentPage(1);
   }, [searchQuery]);
+
+  const handleClearSearch = useCallback(() => {
+    setSearchQuery('');
+    setDebouncedSearch('');
+    setCurrentPage(1);
+  }, []);
 
   // Reset page when filters change
   useEffect(() => {
@@ -1028,22 +1041,68 @@ const ServicesManagement = () => {
       toast({ title: 'Failed to change category', variant: 'destructive' });
     }
   };
-  // Generate Auto-Fix Preview
+  // Generate Auto-Fix Preview with progress tracking for ALL services
   const generateAutoFixPreview = async () => {
     if (!panel?.id) return;
     
     setIsAutoFixingIcons(true);
+    setShowAutoFixProgress(true);
+    setAutoFixProgress({ phase: 'fetching', current: 0, total: 0, message: 'Starting...' });
     
     try {
-      // Fetch ALL services for preview (not just current page)
-      const { data: allServices, error } = await supabase
+      // First get total count
+      const { count } = await supabase
         .from('services')
-        .select('id, name, category, image_url')
+        .select('*', { count: 'exact', head: true })
         .eq('panel_id', panel.id);
-
-      if (error) throw error;
-
-      const previewData = (allServices || []).map((service) => {
+      
+      const totalServices = count || 0;
+      setAutoFixProgress({ phase: 'fetching', current: 0, total: totalServices, message: 'Fetching services...' });
+      
+      // Paginated fetch ALL services (up to 10,000)
+      const pageSize = 1000;
+      const allServices: Array<{ id: string; name: string; category: string; image_url: string | null }> = [];
+      let page = 0;
+      let hasMore = true;
+      
+      while (hasMore && allServices.length < SERVICE_LIMIT) {
+        const { data, error } = await supabase
+          .from('services')
+          .select('id, name, category, image_url')
+          .eq('panel_id', panel.id)
+          .range(page * pageSize, (page + 1) * pageSize - 1);
+        
+        if (error) throw error;
+        
+        if (!data || data.length === 0) {
+          hasMore = false;
+        } else {
+          allServices.push(...data);
+          page++;
+          setAutoFixProgress({ 
+            phase: 'fetching', 
+            current: allServices.length, 
+            total: totalServices,
+            message: `Fetched ${allServices.length.toLocaleString()} services...`
+          });
+          if (data.length < pageSize) hasMore = false;
+        }
+      }
+      
+      // Analysis phase with progress
+      setAutoFixProgress({ phase: 'analyzing', current: 0, total: allServices.length, message: 'Analyzing services...' });
+      
+      const previewData = allServices.map((service, index) => {
+        // Update progress every 100 items
+        if (index % 100 === 0) {
+          setAutoFixProgress({ 
+            phase: 'analyzing', 
+            current: index, 
+            total: allServices.length,
+            message: `Analyzing ${index.toLocaleString()} of ${allServices.length.toLocaleString()}...`
+          });
+        }
+        
         const detectedCategory = detectPlatform(service.name);
         const newIcon = `icon:${detectedCategory}`;
         const currentIcon = service.image_url || '';
@@ -1059,18 +1118,27 @@ const ServicesManagement = () => {
           willChange,
         };
       });
-
-      setAutoFixPreviewData(previewData);
-      setIsAutoFixPreviewOpen(true);
+      
+      setAutoFixProgress({ phase: 'completed', current: allServices.length, total: allServices.length, message: 'Analysis complete!' });
+      
+      // Close progress dialog after a brief delay
+      setTimeout(() => {
+        setShowAutoFixProgress(false);
+        setAutoFixProgress({ phase: 'idle', current: 0, total: 0 });
+        setAutoFixPreviewData(previewData);
+        setIsAutoFixPreviewOpen(true);
+      }, 500);
+      
     } catch (error) {
       console.error('Error generating preview:', error);
+      setAutoFixProgress({ phase: 'error', current: 0, total: 0, message: 'Failed to analyze services' });
       toast({ title: 'Failed to generate preview', variant: 'destructive' });
     } finally {
       setIsAutoFixingIcons(false);
     }
   };
 
-  // Apply Auto-Fix from Preview
+  // Apply Auto-Fix from Preview with progress tracking
   const applyAutoFix = async () => {
     const changesToApply = autoFixPreviewData.filter(p => p.willChange);
     
@@ -1080,7 +1148,10 @@ const ServicesManagement = () => {
       return;
     }
 
+    setIsAutoFixPreviewOpen(false);
     setIsAutoFixingIcons(true);
+    setShowAutoFixProgress(true);
+    setAutoFixProgress({ phase: 'applying', current: 0, total: changesToApply.length, message: 'Applying changes...' });
     
     try {
       // Store previous state for undo
@@ -1089,10 +1160,18 @@ const ServicesManagement = () => {
         [item.id]: { category: item.currentCategory, image_url: item.currentIcon }
       }), {});
       
-      // Batch update in chunks of 100
+      // Batch update in chunks of 100 with progress
       const chunkSize = 100;
       for (let i = 0; i < changesToApply.length; i += chunkSize) {
         const chunk = changesToApply.slice(i, i + chunkSize);
+        
+        setAutoFixProgress({ 
+          phase: 'applying', 
+          current: i, 
+          total: changesToApply.length,
+          message: `Updating ${i.toLocaleString()} of ${changesToApply.length.toLocaleString()} services...`
+        });
+        
         await Promise.all(
           chunk.map((update) =>
             supabase
@@ -1102,6 +1181,8 @@ const ServicesManagement = () => {
           )
         );
       }
+      
+      setAutoFixProgress({ phase: 'completed', current: changesToApply.length, total: changesToApply.length, message: 'All changes applied!' });
 
       // Update local state for current page
       setServices((prev) =>
@@ -1122,10 +1203,17 @@ const ServicesManagement = () => {
       });
 
       toast({ title: `Auto-fixed icons for ${changesToApply.length} services` });
-      setIsAutoFixPreviewOpen(false);
       fetchCategoryCounts();
+      
+      // Close progress dialog after a brief delay
+      setTimeout(() => {
+        setShowAutoFixProgress(false);
+        setAutoFixProgress({ phase: 'idle', current: 0, total: 0 });
+      }, 1500);
+      
     } catch (error) {
       console.error('Auto-fix error:', error);
+      setAutoFixProgress({ phase: 'error', current: 0, total: 0, message: 'Failed to apply changes' });
       toast({ title: 'Failed to auto-fix icons', variant: 'destructive' });
     } finally {
       setIsAutoFixingIcons(false);
@@ -1900,14 +1988,31 @@ const ServicesManagement = () => {
         <div className="flex-1 space-y-4">
           {/* Search and Filters */}
           <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Search services..."
-                className="pl-9 bg-card/50"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+            <div className="relative flex-1 flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search services..."
+                  className="pl-9 pr-9 bg-card/50"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearchSubmit()}
+                />
+                {searchQuery && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                    onClick={handleClearSearch}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
+              <Button onClick={handleSearchSubmit} size="sm" className="h-10 px-4">
+                <Search className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Search</span>
+              </Button>
             </div>
             
             {/* Mobile Category Select */}
@@ -2656,6 +2761,14 @@ const ServicesManagement = () => {
           console.log('Retry job:', job);
           toast({ title: "Retry functionality coming soon" });
         }}
+      />
+
+      {/* Auto-Fix Progress Dialog */}
+      <AutoFixProgressDialog
+        open={showAutoFixProgress}
+        onOpenChange={setShowAutoFixProgress}
+        progress={autoFixProgress}
+        title="Auto-Fix Icons"
       />
     </div>
   );

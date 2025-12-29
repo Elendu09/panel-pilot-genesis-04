@@ -4,93 +4,122 @@
 export const PLATFORM_KEYWORDS: Record<string, string[]> = {
   instagram: [
     "instagram", "ig", "insta", "igtv", "reels", "reel",
+    "igram", "instafollow", "instalike", "instavideo",
+    "instastory", "story", "stories", "ig followers",
+    "ig likes", "ig views", "ig comments", "ig saves",
+    "instagram real", "instagram premium", "instagram hq",
   ],
   facebook: [
-    "facebook", "fb", "meta",
+    "facebook", "fb", "meta", "fb likes", "fb followers",
+    "fb page", "fb group", "fb video", "fb post",
+    "facebook page", "facebook group", "facebook video",
   ],
   twitter: [
-    "twitter", "tweet", "x.com", "x ", " x",
+    "twitter", "tweet", "x.com", "x ", " x", "tweets",
+    "retweet", "twitter followers", "twitter likes",
+    "twitter retweets", "twitter views", "x followers",
   ],
   youtube: [
     "youtube", "yt", "youtuber", "shorts", "youtube shorts",
+    "yt subscribers", "yt views", "yt likes", "yt comments",
+    "youtube subscribers", "youtube views", "youtube likes",
+    "youtube watch", "youtube hours", "youtube monetization",
   ],
   tiktok: [
     "tiktok", "tik tok", "tik-tok", "tt ", " tt",
+    "tiktok followers", "tiktok likes", "tiktok views",
+    "tiktok shares", "tiktok saves", "tiktok comments",
+    "tt followers", "tt likes", "tt views",
   ],
   linkedin: [
-    "linkedin", "linked in", "linked-in",
+    "linkedin", "linked in", "linked-in", "linkedin followers",
+    "linkedin connections", "linkedin likes", "linkedin post",
   ],
   telegram: [
-    "telegram", "tg ", " tg", "telgram",
+    "telegram", "tg ", " tg", "telgram", "telegram members",
+    "telegram views", "telegram post", "telegram channel",
+    "telegram group", "tg members", "tg views",
   ],
   snapchat: [
-    "snapchat", "snap", "snpchat",
+    "snapchat", "snap", "snpchat", "snapchat followers",
+    "snapchat views", "snap followers", "snap score",
   ],
   pinterest: [
-    "pinterest", "pin", "pins",
+    "pinterest", "pin", "pins", "pinterest followers",
+    "pinterest repins", "pinterest saves", "pinterest boards",
   ],
   spotify: [
-    "spotify", "spoti",
+    "spotify", "spoti", "spotify plays", "spotify followers",
+    "spotify streams", "spotify monthly", "spotify listeners",
+    "spotify saves", "spotify playlist",
   ],
   soundcloud: [
-    "soundcloud", "sound cloud", "sc ",
+    "soundcloud", "sound cloud", "sc ", "soundcloud plays",
+    "soundcloud followers", "soundcloud likes", "soundcloud reposts",
   ],
   audiomack: [
-    "audiomack", "audio mack", "am ",
+    "audiomack", "audio mack", "am ", "audiomack plays",
+    "audiomack followers", "audiomack downloads",
   ],
   discord: [
-    "discord", "disc",
+    "discord", "disc", "discord members", "discord server",
+    "discord online", "discord boost", "discord nitro",
   ],
   twitch: [
-    "twitch", "twtich",
+    "twitch", "twtich", "twitch followers", "twitch viewers",
+    "twitch subs", "twitch subscribers", "twitch views",
   ],
   reddit: [
-    "reddit", "subreddit",
+    "reddit", "subreddit", "reddit upvotes", "reddit karma",
+    "reddit followers", "reddit subscribers", "reddit post",
   ],
   quora: [
-    "quora",
+    "quora", "quora followers", "quora upvotes", "quora views",
   ],
   clubhouse: [
-    "clubhouse", "club house",
+    "clubhouse", "club house", "clubhouse followers",
   ],
   vk: [
-    "vkontakte", "vk ", " vk",
+    "vkontakte", "vk ", " vk", "vk followers", "vk likes",
+    "vk friends", "vk group", "vk members",
   ],
   threads: [
-    "threads", "thread",
+    "threads", "thread", "threads followers", "threads likes",
+    "threads reposts", "threads views",
   ],
   whatsapp: [
-    "whatsapp", "whats app", "wa ", " wa",
+    "whatsapp", "whats app", "wa ", " wa", "whatsapp group",
+    "whatsapp members", "whatsapp channel",
   ],
   deezer: [
-    "deezer",
+    "deezer", "deezer plays", "deezer followers", "deezer fans",
   ],
   shazam: [
-    "shazam",
+    "shazam", "shazam plays", "shazam count",
   ],
   reverbnation: [
-    "reverbnation", "reverb nation",
+    "reverbnation", "reverb nation", "reverbnation plays",
   ],
   mixcloud: [
-    "mixcloud", "mix cloud",
+    "mixcloud", "mix cloud", "mixcloud plays", "mixcloud followers",
   ],
   tidal: [
-    "tidal",
+    "tidal", "tidal plays", "tidal streams",
   ],
   napster: [
-    "napster",
+    "napster", "napster plays",
   ],
   tumblr: [
-    "tumblr",
+    "tumblr", "tumblr followers", "tumblr reblogs", "tumblr likes",
   ],
   likee: [
-    "likee",
+    "likee", "likee followers", "likee likes", "likee views",
   ],
   kwai: [
-    "kwai",
+    "kwai", "kwai followers", "kwai likes", "kwai views",
   ],
   trovo: [
-    "trovo",
+    "trovo", "trovo followers", "trovo views",
   ],
 };
 
@@ -146,20 +175,33 @@ export const QUALITY_KEYWORDS: Record<string, string[]> = {
 };
 
 /**
- * Detects the platform/category from a service name
+ * Detects the platform/category from a service name with confidence scoring
  */
-export const detectPlatform = (serviceName: string): string => {
+export const detectPlatformWithConfidence = (serviceName: string): { platform: string; confidence: number } => {
   const lowerName = serviceName.toLowerCase();
+  let bestMatch = { platform: 'other', confidence: 0 };
   
   for (const [platform, keywords] of Object.entries(PLATFORM_KEYWORDS)) {
     for (const keyword of keywords) {
       if (lowerName.includes(keyword)) {
-        return platform;
+        // Calculate confidence based on keyword length relative to service name
+        // Longer, more specific keywords get higher confidence
+        const confidence = Math.min((keyword.length / lowerName.length) * 3, 1);
+        if (confidence > bestMatch.confidence) {
+          bestMatch = { platform, confidence };
+        }
       }
     }
   }
   
-  return "other";
+  return bestMatch;
+};
+
+/**
+ * Detects the platform/category from a service name
+ */
+export const detectPlatform = (serviceName: string): string => {
+  return detectPlatformWithConfidence(serviceName).platform;
 };
 
 /**
