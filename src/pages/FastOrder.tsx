@@ -11,6 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { useTheme } from '@/hooks/use-theme';
 
 interface Panel {
   id: string;
@@ -422,6 +423,12 @@ const FastOrderContent = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   
+  // Get actual theme from context instead of database branding
+  const { theme } = useTheme();
+  const resolvedTheme = theme === 'system' 
+    ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+    : theme;
+  
   // Try to get buyer context - may be undefined if not wrapped
   let buyerContext: { buyer: any; panelId?: string } | null = null;
   try {
@@ -525,7 +532,8 @@ const FastOrderContent = () => {
   }
 
   const customBranding = panel.custom_branding || {};
-  const themeMode = customBranding.themeMode || 'dark';
+  // Use resolved theme from context instead of database branding
+  const themeMode = resolvedTheme;
 
   return (
     <>
