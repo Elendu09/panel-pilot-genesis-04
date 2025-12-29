@@ -26,6 +26,100 @@ interface ChatMessage {
   content: string;
 }
 
+// FormattedMessage component to render markdown-like formatting
+const FormattedMessage = ({ content }: { content: string }) => {
+  const parseContent = (text: string) => {
+    const elements: JSX.Element[] = [];
+    const lines = text.split('\n');
+    let currentList: { type: 'ol' | 'ul'; items: string[] } | null = null;
+    let listKey = 0;
+
+    const parseInlineFormatting = (line: string, key: number) => {
+      // Parse bold text (**text** or __text__)
+      const parts = line.split(/(\*\*[^*]+\*\*|__[^_]+__)/g);
+      return (
+        <span key={key}>
+          {parts.map((part, i) => {
+            if (part.startsWith('**') && part.endsWith('**')) {
+              return <strong key={i} className="font-semibold">{part.slice(2, -2)}</strong>;
+            }
+            if (part.startsWith('__') && part.endsWith('__')) {
+              return <strong key={i} className="font-semibold">{part.slice(2, -2)}</strong>;
+            }
+            return part;
+          })}
+        </span>
+      );
+    };
+
+    const flushList = () => {
+      if (currentList) {
+        const ListTag = currentList.type === 'ol' ? 'ol' : 'ul';
+        elements.push(
+          <ListTag
+            key={`list-${listKey++}`}
+            className={currentList.type === 'ol' ? 'list-decimal pl-4 space-y-1 my-2' : 'list-disc pl-4 space-y-1 my-2'}
+          >
+            {currentList.items.map((item, i) => (
+              <li key={i} className="text-sm">{parseInlineFormatting(item, i)}</li>
+            ))}
+          </ListTag>
+        );
+        currentList = null;
+      }
+    };
+
+    lines.forEach((line, index) => {
+      const trimmedLine = line.trim();
+      
+      // Check for numbered list (1. 2. 3. etc)
+      const numberedMatch = trimmedLine.match(/^(\d+)\.\s+(.+)$/);
+      if (numberedMatch) {
+        if (!currentList || currentList.type !== 'ol') {
+          flushList();
+          currentList = { type: 'ol', items: [] };
+        }
+        currentList.items.push(numberedMatch[2]);
+        return;
+      }
+
+      // Check for bullet list (- or *)
+      const bulletMatch = trimmedLine.match(/^[-*•]\s+(.+)$/);
+      if (bulletMatch) {
+        if (!currentList || currentList.type !== 'ul') {
+          flushList();
+          currentList = { type: 'ul', items: [] };
+        }
+        currentList.items.push(bulletMatch[1]);
+        return;
+      }
+
+      // Not a list item, flush any current list
+      flushList();
+
+      // Empty line = paragraph break
+      if (trimmedLine === '') {
+        elements.push(<div key={`break-${index}`} className="h-2" />);
+        return;
+      }
+
+      // Regular text
+      elements.push(
+        <p key={`p-${index}`} className="text-sm leading-relaxed">
+          {parseInlineFormatting(trimmedLine, index)}
+        </p>
+      );
+    });
+
+    // Flush any remaining list
+    flushList();
+
+    return elements;
+  };
+
+  return <div className="space-y-1">{parseContent(content)}</div>;
+};
+
 // WhatsApp SVG Icon
 const WhatsAppIcon = () => (
   <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current">
@@ -74,6 +168,7 @@ export const FloatingChatWidget = ({
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [hasPreviousSession, setHasPreviousSession] = useState(false);
+  const [sessionChecked, setSessionChecked] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [settings, setSettings] = useState({
     enabled: false,
@@ -87,42 +182,76 @@ export const FloatingChatWidget = ({
     message: message
   });
 
-  // Storage key for chat history
+  // Storage key for chat history - use global key for cross-page persistence
   const storageKey = `chat_history_${panelId || 'default'}`;
+  const sessionTimestampKey = `chat_session_time_${panelId || 'default'}`;
 
-  // Load previous session on mount
+  // Check for previous session on mount - BEFORE rendering options
   useEffect(() => {
     try {
       const savedMessages = localStorage.getItem(storageKey);
+      const sessionTime = localStorage.getItem(sessionTimestampKey);
+      
       if (savedMessages) {
         const parsed = JSON.parse(savedMessages);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setHasPreviousSession(true);
+          // Check if session is less than 24 hours old
+          const sessionAge = sessionTime ? Date.now() - parseInt(sessionTime) : Infinity;
+          const isRecentSession = sessionAge < 24 * 60 * 60 * 1000; // 24 hours
+          
+          if (isRecentSession) {
+            setHasPreviousSession(true);
+          } else {
+            // Clear old session
+            localStorage.removeItem(storageKey);
+            localStorage.removeItem(sessionTimestampKey);
+          }
         }
       }
     } catch {
       // Ignore parse errors
     }
-  }, [storageKey]);
+    setSessionChecked(true);
+  }, [storageKey, sessionTimestampKey]);
 
   // Save messages to localStorage when they change
   useEffect(() => {
     if (messages.length > 0) {
       try {
         localStorage.setItem(storageKey, JSON.stringify(messages));
+        localStorage.setItem(sessionTimestampKey, Date.now().toString());
       } catch {
         // Ignore storage errors
       }
     }
-  }, [messages, storageKey]);
+  }, [messages, storageKey, sessionTimestampKey]);
 
-  // Add AI greeting when opening chat
+  // Auto-restore previous session when widget opens if recent
+  useEffect(() => {
+    if (isOpen && hasPreviousSession && messages.length === 0) {
+      // Auto-restore the previous session
+      try {
+        const savedMessages = localStorage.getItem(storageKey);
+        if (savedMessages) {
+          const parsed = JSON.parse(savedMessages);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setMessages(parsed);
+            setShowAIChat(true);
+          }
+        }
+      } catch {
+        // Start fresh if error
+      }
+    }
+  }, [isOpen, hasPreviousSession, messages.length, storageKey]);
+
+  // Add AI greeting when opening chat (only for new sessions)
   useEffect(() => {
     if (showAIChat && messages.length === 0 && !hasPreviousSession) {
       // Immediate AI greeting
       setMessages([{
         role: 'assistant',
-        content: `Hi! 👋 Welcome to ${panelName || 'our panel'}! How can I help you today? I can assist with orders, services, pricing, and account questions.`
+        content: `Hi! 👋 Welcome to **${panelName || 'our panel'}**!\n\nHow can I help you today? I can assist with:\n\n1. **Orders** - placing new orders or checking status\n2. **Services** - finding the right service for your needs\n3. **Pricing** - understanding our competitive rates\n4. **Account** - deposits, balance, and settings`
       }]);
     }
   }, [showAIChat, messages.length, hasPreviousSession, panelName]);
@@ -141,7 +270,7 @@ export const FloatingChatWidget = ({
       // Start fresh if error
       setMessages([{
         role: 'assistant',
-        content: `Hi! 👋 Welcome back to ${panelName || 'our panel'}! How can I help you today?`
+        content: `Hi! 👋 Welcome back to **${panelName || 'our panel'}**!\n\nHow can I help you today?`
       }]);
     }
     setHasPreviousSession(false);
@@ -151,9 +280,10 @@ export const FloatingChatWidget = ({
   // Start new session
   const startNewSession = () => {
     localStorage.removeItem(storageKey);
+    localStorage.removeItem(sessionTimestampKey);
     setMessages([{
       role: 'assistant',
-      content: `Hi! 👋 Welcome to ${panelName || 'our panel'}! How can I help you today? I can assist with orders, services, pricing, and account questions.`
+      content: `Hi! 👋 Welcome to **${panelName || 'our panel'}**!\n\nHow can I help you today? I can assist with:\n\n1. **Orders** - placing new orders or checking status\n2. **Services** - finding the right service for your needs\n3. **Pricing** - understanding our competitive rates\n4. **Account** - deposits, balance, and settings`
     }]);
     setHasPreviousSession(false);
     setShowAIChat(true);
@@ -162,6 +292,7 @@ export const FloatingChatWidget = ({
   // Clear chat history
   const clearHistory = () => {
     localStorage.removeItem(storageKey);
+    localStorage.removeItem(sessionTimestampKey);
     setMessages([{
       role: 'assistant',
       content: `Chat cleared! How can I help you today?`
@@ -273,7 +404,7 @@ export const FloatingChatWidget = ({
       console.error('AI chat error:', error);
       setMessages(prev => [...prev, { 
         role: 'assistant', 
-        content: 'Sorry, I\'m having trouble responding right now. Please try again or use one of our other contact options.' 
+        content: "Sorry, I'm having trouble responding right now. Please try again or use one of our other contact options." 
       }]);
     } finally {
       setIsLoading(false);
@@ -331,7 +462,9 @@ export const FloatingChatWidget = ({
                   </button>
                 </div>
               </div>
-              <p className="text-sm text-white/80 mt-1">{settings.message}</p>
+              <p className="text-sm text-white/80 mt-1">
+                {showAIChat && hasPreviousSession ? 'Continuing previous conversation' : settings.message}
+              </p>
             </div>
 
             {showAIChat ? (
@@ -345,13 +478,17 @@ export const FloatingChatWidget = ({
                         className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                       >
                         <div
-                          className={`max-w-[85%] px-3 py-2 rounded-xl text-sm ${
+                          className={`max-w-[85%] px-3 py-2 rounded-xl ${
                             msg.role === 'user'
                               ? 'bg-primary text-white rounded-br-sm'
                               : 'bg-slate-100 dark:bg-slate-700 text-foreground rounded-bl-sm'
                           }`}
                         >
-                          {msg.content}
+                          {msg.role === 'assistant' ? (
+                            <FormattedMessage content={msg.content} />
+                          ) : (
+                            <p className="text-sm">{msg.content}</p>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -391,8 +528,8 @@ export const FloatingChatWidget = ({
             ) : (
               /* Chat options */
               <div className="p-4 space-y-3 max-h-80 overflow-y-auto">
-                {/* Previous Session Banner */}
-                {enableAI && hasPreviousSession && (
+                {/* Previous Session Banner - Always show if there's a previous session */}
+                {enableAI && hasPreviousSession && sessionChecked && (
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -545,8 +682,13 @@ export const FloatingChatWidget = ({
           )}
         </AnimatePresence>
         
+        {/* Notification dot when there's a previous session */}
+        {!isOpen && hasPreviousSession && (
+          <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
+        )}
+        
         {/* Pulse animation when closed */}
-        {!isOpen && (
+        {!isOpen && !hasPreviousSession && (
           <span className="absolute inset-0 rounded-full animate-ping opacity-30 bg-current" />
         )}
       </motion.button>

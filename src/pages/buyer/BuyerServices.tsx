@@ -228,7 +228,7 @@ const BuyerServices = () => {
             <p className="text-sm text-muted-foreground">Browse and order SMM services</p>
           </div>
           <div className="flex items-center gap-2">
-            <div className="hidden sm:flex items-center gap-1">
+            <div className="flex items-center gap-1">
               <LanguageSelector />
               <CurrencySelector />
             </div>
