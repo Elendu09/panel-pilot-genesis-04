@@ -372,8 +372,13 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
 
       toast({
         title: "Order Placed Successfully!",
-        description: `Order #${orderNumber} is now being processed.`,
+        description: `Order #${orderNumber} is now being processed. Track it at /track-order`,
       });
+
+      // Copy order number to clipboard for easy tracking
+      try {
+        await navigator.clipboard.writeText(orderNumber);
+      } catch {}
 
       // Redirect to orders page
       navigate(`/orders?highlight=${order.id}`);

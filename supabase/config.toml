@@ -83,3 +83,6 @@ verify_jwt = false
 
 [functions.ai-chat-reply]
 verify_jwt = false
+
+[functions.track-order]
+verify_jwt = false
