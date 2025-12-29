@@ -413,7 +413,7 @@ const BuyerNewOrder = () => {
                           <motion.div whileHover={{ scale: 1.005 }} whileTap={{ scale: 0.995 }}>
                             <Button 
                               variant="ghost" 
-                              className="w-full justify-between h-auto py-3 px-4 bg-muted/50 hover:bg-muted"
+                              className="w-full justify-between h-auto py-3 px-4 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/50 dark:hover:bg-blue-900/50 text-foreground border border-blue-200/50 dark:border-blue-800/50"
                             >
                               <div className="flex items-center gap-2">
                                 <Info className="w-4 h-4" />

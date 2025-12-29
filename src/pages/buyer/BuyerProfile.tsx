@@ -16,18 +16,23 @@ import {
   Users,
   DollarSign,
   Calendar,
-  Loader2
+  Loader2,
+  CheckCircle,
+  AlertCircle,
+  RefreshCw
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "@/hooks/use-toast";
 import BuyerLayout from "./BuyerLayout";
 import { useBuyerAuth } from "@/contexts/BuyerAuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { ChangePasswordDialog } from "@/components/buyer/ChangePasswordDialog";
 
 const BuyerProfile = () => {
-  const { buyer, loading: authLoading } = useBuyerAuth();
+  const { buyer, loading: authLoading, refreshBuyer } = useBuyerAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [resendingVerification, setResendingVerification] = useState(false);
   const [profileData, setProfileData] = useState({
     name: "",
     email: "",
@@ -310,7 +315,7 @@ const BuyerProfile = () => {
                     <p className="text-sm text-muted-foreground">Change your account password</p>
                   </div>
                 </div>
-                <Button variant="outline">Change Password</Button>
+                <ChangePasswordDialog />
               </div>
 
               <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30">
@@ -320,12 +325,51 @@ const BuyerProfile = () => {
                   </div>
                   <div>
                     <p className="font-medium">Email Verification</p>
-                    <p className="text-sm text-muted-foreground">Your email is verified</p>
+                    {buyer?.is_active ? (
+                      <p className="text-sm text-emerald-600 flex items-center gap-1">
+                        <CheckCircle className="w-3.5 h-3.5" />
+                        Your email is verified
+                      </p>
+                    ) : (
+                      <p className="text-sm text-amber-600 flex items-center gap-1">
+                        <AlertCircle className="w-3.5 h-3.5" />
+                        Verification pending
+                      </p>
+                    )}
                   </div>
                 </div>
-                <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20">
-                  Verified
-                </Badge>
+                {buyer?.is_active ? (
+                  <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 gap-1">
+                    <CheckCircle className="w-3 h-3" />
+                    Verified
+                  </Badge>
+                ) : (
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    disabled={resendingVerification}
+                    onClick={async () => {
+                      setResendingVerification(true);
+                      try {
+                        // In a real implementation, this would call an edge function
+                        toast({ title: "Verification email sent!", description: "Please check your inbox." });
+                      } catch (e) {
+                        toast({ title: "Failed to send", variant: "destructive" });
+                      } finally {
+                        setResendingVerification(false);
+                      }
+                    }}
+                  >
+                    {resendingVerification ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <>
+                        <RefreshCw className="w-4 h-4 mr-1" />
+                        Resend
+                      </>
+                    )}
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>

@@ -2,7 +2,8 @@ import { motion } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { SpeedGauge } from './SpeedGauge';
-import { Shield, Star, Zap, Award, Clock, CheckCircle } from 'lucide-react';
+import { FavoriteButton } from './FavoriteButton';
+import { Shield, Star, Zap, Award, Clock, CheckCircle, Heart } from 'lucide-react';
 
 interface ServiceInfoPanelProps {
   service: {
@@ -15,9 +16,10 @@ interface ServiceInfoPanelProps {
     max_quantity?: number;
   } | null;
   className?: string;
+  showFavorite?: boolean;
 }
 
-export const ServiceInfoPanel = ({ service, className = '' }: ServiceInfoPanelProps) => {
+export const ServiceInfoPanel = ({ service, className = '', showFavorite = true }: ServiceInfoPanelProps) => {
   if (!service) {
     return (
       <Card className={`p-4 bg-muted/30 border-dashed ${className}`}>
@@ -45,12 +47,17 @@ export const ServiceInfoPanel = ({ service, className = '' }: ServiceInfoPanelPr
       className={className}
     >
       <Card className="p-4 space-y-4 bg-gradient-to-br from-background to-muted/20">
-        {/* Service ID */}
+        {/* Service ID & Favorite */}
         <div className="flex items-center justify-between">
           <span className="text-xs text-muted-foreground">Service ID</span>
-          <Badge variant="outline" className="font-mono text-xs">
-            #{service.id.slice(0, 8).toUpperCase()}
-          </Badge>
+          <div className="flex items-center gap-2">
+            {showFavorite && (
+              <FavoriteButton serviceId={service.id} size="sm" />
+            )}
+            <Badge variant="outline" className="font-mono text-xs">
+              #{service.id.slice(0, 8).toUpperCase()}
+            </Badge>
+          </div>
         </div>
 
         {/* Speed Gauge */}

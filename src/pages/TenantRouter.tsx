@@ -24,6 +24,7 @@ import BuyerAuth from './buyer/BuyerAuth';
 import BuyerDeposit from './buyer/BuyerDeposit';
 import BuyerSupport from './buyer/BuyerSupport';
 import BuyerPublicServices from './buyer/BuyerPublicServices';
+import BuyerFavorites from './buyer/BuyerFavorites';
 import Storefront from './Storefront';
 import StorefrontBlog from './storefront/StorefrontBlog';
 
@@ -165,6 +166,11 @@ const TenantRouter = () => {
                         <Route path="/support" element={
                           <BuyerProtectedRoute>
                             <BuyerSupport />
+                          </BuyerProtectedRoute>
+                        } />
+                        <Route path="/favorites" element={
+                          <BuyerProtectedRoute>
+                            <BuyerFavorites />
                           </BuyerProtectedRoute>
                         } />
                         

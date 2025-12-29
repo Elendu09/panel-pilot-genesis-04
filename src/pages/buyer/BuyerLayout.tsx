@@ -89,7 +89,7 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Services', href: '/services', icon: Package },
     { name: 'My Orders', href: '/orders', icon: ShoppingCart },
-    { name: 'Favorites', href: '/services?favorites=true', icon: Heart },
+    { name: 'Favorites', href: '/favorites', icon: Heart },
     { name: 'Add Funds', href: '/deposit', icon: Wallet },
     { name: 'Support', href: '/support', icon: MessageSquare },
     { name: 'Profile', href: '/profile', icon: User },
@@ -278,9 +278,14 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
           <span className="font-bold text-sm">{panel?.name || 'Panel'}</span>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-xs px-2 py-1">
-            ${userBalance.toFixed(2)}
-          </Badge>
+          <Link to="/deposit" className="flex items-center gap-1.5 hover:scale-105 transition-transform">
+            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-xs px-2 py-1 cursor-pointer hover:bg-primary/20">
+              ${userBalance.toFixed(2)}
+            </Badge>
+            <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
+              <Plus className="w-3.5 h-3.5 text-primary" />
+            </div>
+          </Link>
           <BuyerNotifications />
           <ThemeToggle />
         </div>
