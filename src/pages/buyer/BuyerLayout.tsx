@@ -17,10 +17,13 @@ import {
   Heart,
   BookOpen,
   Code,
-  Star,
   Phone,
   FileText,
-  Layers
+  Layers,
+  Search,
+  Shield,
+  Globe,
+  DollarSign
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -95,6 +98,7 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Services', href: '/services', icon: Package },
     { name: 'My Orders', href: '/orders', icon: ShoppingCart },
+    { name: 'Track Order', href: '/track-order', icon: Search },
     { name: 'Favorites', href: '/favorites', icon: Heart },
     { name: 'Add Funds', href: '/deposit', icon: Wallet },
     { name: 'Support', href: '/support', icon: MessageSquare },
@@ -283,15 +287,16 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
           )}
           <span className="font-bold text-sm">{panel?.name || 'Panel'}</span>
         </div>
-        <div className="flex items-center gap-2">
-          <Link to="/deposit" className="flex items-center gap-1.5 hover:scale-105 transition-transform">
-            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-xs px-2 py-1 cursor-pointer hover:bg-primary/20">
-              ${userBalance.toFixed(2)}
-            </Badge>
-            <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
-              <Plus className="w-3.5 h-3.5 text-primary" />
+        <div className="flex items-center gap-1.5">
+          {/* Balance + Add Funds Button - Matching reference image */}
+          <Link to="/deposit" className="flex items-center gap-1 px-2 py-1 rounded-full bg-slate-800/90 dark:bg-slate-800/90 hover:bg-slate-700/90 transition-all">
+            <span className="text-xs font-semibold text-white">${userBalance.toFixed(2)}</span>
+            <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+              <Plus className="w-3 h-3 text-primary-foreground" />
             </div>
           </Link>
+          <LanguageSelector />
+          <CurrencySelector />
           <BuyerNotifications />
           <ThemeToggle />
         </div>
@@ -414,15 +419,33 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
                       {/* Divider */}
                       <div className="border-t border-border/50 my-3" />
 
+                      {/* Preferences Section */}
+                      <div className="mb-4">
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 px-3">Preferences</p>
+                        <div className="flex items-center gap-2 px-3 py-2">
+                          <Globe className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm flex-1">Language</span>
+                          <LanguageSelector />
+                        </div>
+                        <div className="flex items-center gap-2 px-3 py-2">
+                          <DollarSign className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm flex-1">Currency</span>
+                          <CurrencySelector />
+                        </div>
+                      </div>
+
+                      {/* Divider */}
+                      <div className="border-t border-border/50 my-3" />
+
                       {/* Secondary Links */}
                       <div className="space-y-1">
                         <Link
-                          to="/reviews"
+                          to="/track-order"
                           onClick={() => setMobileMenuOpen(false)}
                           className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-all"
                         >
-                          <Star className="w-5 h-5 text-yellow-500" />
-                          <span className="font-medium">Reviews</span>
+                          <Search className="w-5 h-5 text-blue-500" />
+                          <span className="font-medium">Track Order</span>
                         </Link>
                         <Link
                           to="/contact"
@@ -430,7 +453,7 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
                           className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-all"
                         >
                           <Phone className="w-5 h-5 text-cyan-500" />
-                          <span className="font-medium">Contacts</span>
+                          <span className="font-medium">Contact Us</span>
                         </Link>
                         <Link
                           to="/terms"
@@ -439,6 +462,14 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
                         >
                           <FileText className="w-5 h-5 text-gray-500" />
                           <span className="font-medium">Terms of Service</span>
+                        </Link>
+                        <Link
+                          to="/privacy"
+                          onClick={() => setMobileMenuOpen(false)}
+                          className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-all"
+                        >
+                          <Shield className="w-5 h-5 text-green-500" />
+                          <span className="font-medium">Privacy Policy</span>
                         </Link>
                       </div>
 
