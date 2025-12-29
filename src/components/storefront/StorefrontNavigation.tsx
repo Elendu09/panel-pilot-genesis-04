@@ -1,9 +1,10 @@
 import { useState, useMemo, useCallback, memo } from "react";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Zap, LogIn, Sun, Moon, LayoutDashboard, LogOut } from "lucide-react";
+import { Menu, X, Zap, LogIn, Sun, Moon, LayoutDashboard, LogOut, Globe } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useBuyerAuth } from "@/contexts/BuyerAuthContext";
+import { LanguageSelector } from "@/components/buyer/LanguageSelector";
 
 interface StorefrontNavigationProps {
   panel?: any;
@@ -164,6 +165,9 @@ export const StorefrontNavigation = memo(({ panel, customization = {} }: Storefr
 
           {/* Desktop Actions */}
           <div className="hidden md:flex items-center space-x-3">
+            {/* Language Selector */}
+            <LanguageSelector />
+            
             {/* Theme Mode Toggle */}
             {setThemeMode && (
               <motion.button
@@ -251,6 +255,9 @@ export const StorefrontNavigation = memo(({ panel, customization = {} }: Storefr
 
           {/* Mobile Header Icons - VISIBLE BESIDE HAMBURGER */}
           <div className="md:hidden flex items-center gap-2">
+            {/* Language Selector on Mobile */}
+            <LanguageSelector />
+            
             {setThemeMode && (
               <motion.button
                 onClick={toggleThemeMode}
