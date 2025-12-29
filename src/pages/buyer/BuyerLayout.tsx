@@ -95,13 +95,13 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
     { name: 'Profile', href: '/profile', icon: User },
   ];
 
-  // Bottom nav items matching reference: Orders, Support, +New Order (center), Services, Menu
+  // Bottom nav items: Dashboard, Services, New Order (center), Support, More
   const bottomNavItems = [
-    { name: 'Orders', href: '/orders', icon: ClipboardList },
-    { name: 'Support', href: '/support', icon: HeadphonesIcon },
-    { name: 'New Order', href: '/services', icon: Plus, isCenter: true },
+    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Services', href: '/services', icon: Package, badge: cartCount > 0 ? cartCount : undefined },
-    { name: 'Menu', href: '#menu', icon: Menu, isMenu: true },
+    { name: 'New Order', href: '/new-order', icon: Plus, isCenter: true },
+    { name: 'Support', href: '/support', icon: HeadphonesIcon },
+    { name: 'More', href: '#menu', icon: Menu, isMenu: true },
   ];
 
   const isActive = (path: string) => location.pathname === path;

@@ -16,6 +16,7 @@ import App from '../App';
 // Buyer pages
 import BuyerDashboard from './buyer/BuyerDashboard';
 import BuyerServices from './buyer/BuyerServices';
+import BuyerNewOrder from './buyer/BuyerNewOrder';
 import BuyerOrders from './buyer/BuyerOrders';
 import BuyerOrderTracking from './buyer/BuyerOrderTracking';
 import BuyerProfile from './buyer/BuyerProfile';
@@ -134,6 +135,11 @@ const TenantRouter = () => {
                         <Route path="/dashboard" element={
                           <BuyerProtectedRoute>
                             <BuyerDashboard />
+                          </BuyerProtectedRoute>
+                        } />
+                        <Route path="/new-order" element={
+                          <BuyerProtectedRoute>
+                            <BuyerNewOrder />
                           </BuyerProtectedRoute>
                         } />
                         <Route path="/orders" element={
