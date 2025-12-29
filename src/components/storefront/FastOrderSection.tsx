@@ -18,8 +18,8 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { Zap, ArrowRight, Lock, Loader2, Mail, User, CheckCircle, Check, ChevronRight } from 'lucide-react';
-import { SOCIAL_ICONS_MAP } from '@/components/icons/SocialIcons';
+import { Zap, ArrowRight, Lock, Loader2, Mail, User, CheckCircle, Check, ChevronRight, Instagram, Youtube, Send, Twitter, Facebook, Linkedin, Music2, Globe } from 'lucide-react';
+import { SOCIAL_ICONS_MAP, TikTokIcon } from '@/components/icons/SocialIcons';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
@@ -43,14 +43,50 @@ interface FastOrderSectionProps {
   customization?: any;
 }
 
-// Step indicator with visual progress bar
+// Platform icons for step indicator
+const PlatformStepIcon = ({ category, className }: { category?: string; className?: string }) => {
+  if (!category) return <Globe className={className} />;
+  
+  const iconMap: Record<string, React.ReactNode> = {
+    instagram: <Instagram className={className} />,
+    youtube: <Youtube className={className} />,
+    telegram: <Send className={className} />,
+    twitter: <Twitter className={className} />,
+    facebook: <Facebook className={className} />,
+    linkedin: <Linkedin className={className} />,
+    tiktok: <TikTokIcon className={className} size={20} />,
+  };
+  
+  return iconMap[category] || <Globe className={className} />;
+};
+
+// Step indicator with SVG icons and visual progress bar
 const StepIndicator = ({ currentStep, selectedCategory }: { currentStep: number; selectedCategory?: string }) => {
   const steps = [
-    { num: 1, label: 'Category', icon: '📱' },
-    { num: 2, label: 'Service', icon: '⚡' },
-    { num: 3, label: 'Details', icon: '📝' },
-    { num: 4, label: 'Order', icon: '✨' },
+    { num: 1, label: 'Platform', icon: 'platform' },
+    { num: 2, label: 'Service', icon: 'sparkles' },
+    { num: 3, label: 'Details', icon: 'edit' },
+    { num: 4, label: 'Order', icon: 'check' },
   ];
+
+  const getStepIcon = (step: { num: number; icon: string }) => {
+    if (currentStep > step.num) {
+      return <Check className="w-5 h-5" />;
+    }
+    
+    switch (step.icon) {
+      case 'platform':
+        return <PlatformStepIcon category={selectedCategory} className="w-5 h-5" />;
+      case 'sparkles':
+        return <Zap className="w-5 h-5" />;
+      case 'edit':
+        return <Mail className="w-5 h-5" />;
+      case 'check':
+        return <CheckCircle className="w-5 h-5" />;
+      default:
+        return <Globe className="w-5 h-5" />;
+    }
+  };
 
   return (
     <div className="relative mb-8">
@@ -75,7 +111,7 @@ const StepIndicator = ({ currentStep, selectedCategory }: { currentStep: number;
                 transition: { duration: 0.3, type: 'spring' }
               }}
               className={cn(
-                "flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full text-lg transition-all duration-300 shadow-lg",
+                "flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full transition-all duration-300 shadow-lg",
                 currentStep > step.num 
                   ? "bg-green-500 text-white" 
                   : currentStep === step.num 
@@ -83,11 +119,7 @@ const StepIndicator = ({ currentStep, selectedCategory }: { currentStep: number;
                     : "bg-muted text-muted-foreground"
               )}
             >
-              {currentStep > step.num ? (
-                <Check className="w-5 h-5" />
-              ) : (
-                <span>{step.icon}</span>
-              )}
+              {getStepIcon(step)}
             </motion.div>
             <span className={cn(
               "mt-2 text-xs font-medium transition-colors text-center",

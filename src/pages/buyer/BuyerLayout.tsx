@@ -14,7 +14,13 @@ import {
   Plus,
   ClipboardList,
   HeadphonesIcon,
-  Heart
+  Heart,
+  BookOpen,
+  Code,
+  Star,
+  Phone,
+  FileText,
+  Layers
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -330,11 +336,11 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
                       <span className="text-[10px] font-medium">{item.name}</span>
                     </button>
                   </SheetTrigger>
-                  <SheetContent side="bottom" className="h-auto max-h-[80vh] rounded-t-3xl">
+                  <SheetContent side="bottom" className="h-auto max-h-[85vh] rounded-t-3xl">
                     <SheetHeader className="pb-4">
                       <SheetTitle>Menu</SheetTitle>
                     </SheetHeader>
-                    <div className="space-y-2 pb-6">
+                    <div className="space-y-2 pb-6 overflow-y-auto max-h-[65vh]">
                       {/* User Info */}
                       <div className="flex items-center gap-3 p-4 rounded-xl bg-muted/50 mb-4">
                         <Avatar className="w-12 h-12 border-2 border-primary/20">
@@ -351,28 +357,98 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
                         </Badge>
                       </div>
 
-                      {/* Navigation Links */}
-                      {navigation.map((navItem) => (
+                      {/* Primary Actions - Matching reference image */}
+                      <div className="grid grid-cols-3 gap-3 mb-4">
                         <Link
-                          key={navItem.name}
-                          to={navItem.href}
+                          to="/new-order"
                           onClick={() => setMobileMenuOpen(false)}
-                          className={cn(
-                            "flex items-center gap-3 p-4 rounded-xl transition-all",
-                            isActive(navItem.href) 
-                              ? "bg-primary text-primary-foreground" 
-                              : "hover:bg-muted"
-                          )}
+                          className="flex flex-col items-center gap-2 p-4 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 hover:from-primary/20 hover:to-primary/10 transition-all border border-primary/10"
                         >
-                          <navItem.icon className="w-5 h-5" />
-                          <span className="font-medium">{navItem.name}</span>
+                          <div className="p-2 rounded-lg bg-primary/20">
+                            <Layers className="w-5 h-5 text-primary" />
+                          </div>
+                          <span className="text-xs font-medium text-center">Bulk Order</span>
                         </Link>
-                      ))}
+                        <Link
+                          to="/blog"
+                          onClick={() => setMobileMenuOpen(false)}
+                          className="flex flex-col items-center gap-2 p-4 rounded-xl bg-muted/50 hover:bg-muted transition-all border border-border/50"
+                        >
+                          <div className="p-2 rounded-lg bg-blue-500/10">
+                            <BookOpen className="w-5 h-5 text-blue-500" />
+                          </div>
+                          <span className="text-xs font-medium text-center">Blog</span>
+                        </Link>
+                        <Link
+                          to="/api"
+                          onClick={() => setMobileMenuOpen(false)}
+                          className="flex flex-col items-center gap-2 p-4 rounded-xl bg-muted/50 hover:bg-muted transition-all border border-border/50"
+                        >
+                          <div className="p-2 rounded-lg bg-purple-500/10">
+                            <Code className="w-5 h-5 text-purple-500" />
+                          </div>
+                          <span className="text-xs font-medium text-center">API</span>
+                        </Link>
+                      </div>
+
+                      {/* Navigation Links */}
+                      <div className="space-y-1">
+                        <Link
+                          to="/support"
+                          onClick={() => setMobileMenuOpen(false)}
+                          className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-all"
+                        >
+                          <HelpCircle className="w-5 h-5 text-green-500" />
+                          <span className="font-medium">Help</span>
+                        </Link>
+                        <Link
+                          to="/profile"
+                          onClick={() => setMobileMenuOpen(false)}
+                          className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-all"
+                        >
+                          <User className="w-5 h-5 text-orange-500" />
+                          <span className="font-medium">Profile</span>
+                        </Link>
+                      </div>
+
+                      {/* Divider */}
+                      <div className="border-t border-border/50 my-3" />
+
+                      {/* Secondary Links */}
+                      <div className="space-y-1">
+                        <Link
+                          to="/reviews"
+                          onClick={() => setMobileMenuOpen(false)}
+                          className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-all"
+                        >
+                          <Star className="w-5 h-5 text-yellow-500" />
+                          <span className="font-medium">Reviews</span>
+                        </Link>
+                        <Link
+                          to="/contact"
+                          onClick={() => setMobileMenuOpen(false)}
+                          className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-all"
+                        >
+                          <Phone className="w-5 h-5 text-cyan-500" />
+                          <span className="font-medium">Contacts</span>
+                        </Link>
+                        <Link
+                          to="/terms"
+                          onClick={() => setMobileMenuOpen(false)}
+                          className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-all"
+                        >
+                          <FileText className="w-5 h-5 text-gray-500" />
+                          <span className="font-medium">Terms of Service</span>
+                        </Link>
+                      </div>
+
+                      {/* Divider */}
+                      <div className="border-t border-border/50 my-3" />
 
                       {/* Sign Out */}
                       <button 
                         onClick={() => { handleSignOut(); setMobileMenuOpen(false); }}
-                        className="w-full flex items-center gap-3 p-4 rounded-xl text-destructive hover:bg-destructive/10 transition-all"
+                        className="w-full flex items-center gap-3 p-3 rounded-xl text-destructive hover:bg-destructive/10 transition-all"
                       >
                         <LogOut className="w-5 h-5" />
                         <span className="font-medium">Sign Out</span>
