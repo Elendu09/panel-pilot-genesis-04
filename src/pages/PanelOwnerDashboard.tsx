@@ -28,6 +28,7 @@ import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { BottomNav } from "@/components/ui/bottom-nav";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 import { OnboardingTour } from "@/components/onboarding/OnboardingTour";
 import { useOnboardingTour } from "@/contexts/OnboardingTourContext";
@@ -268,89 +269,83 @@ const PanelOwnerDashboard = () => {
           </AnimatePresence>
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 p-3 space-y-6 overflow-y-auto">
-          {/* Main */}
-          <div className="space-y-1">
-            {sidebarOpen && (
-              <p className="px-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                Main
-              </p>
-            )}
-            {mainNavigation.map((item) => (
-              <NavItem key={item.name} item={item} collapsed={!sidebarOpen} />
-            ))}
-          </div>
+        {/* Navigation with ScrollArea */}
+        <ScrollArea className="flex-1">
+          <nav className="p-3 space-y-6">
+            {/* Main */}
+            <div className="space-y-1">
+              {sidebarOpen && (
+                <p className="px-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                  Main
+                </p>
+              )}
+              {mainNavigation.map((item) => (
+                <NavItem key={item.name} item={item} collapsed={!sidebarOpen} />
+              ))}
+            </div>
 
-          {/* Settings */}
-          <div className="space-y-1">
-            {sidebarOpen && (
-              <p className="px-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                Configuration
-              </p>
-            )}
-            {settingsNavigation.map((item) => (
-              <NavItem key={item.name} item={item} collapsed={!sidebarOpen} />
-            ))}
-          </div>
+            {/* Settings */}
+            <div className="space-y-1">
+              {sidebarOpen && (
+                <p className="px-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                  Configuration
+                </p>
+              )}
+              {settingsNavigation.map((item) => (
+                <NavItem key={item.name} item={item} collapsed={!sidebarOpen} />
+              ))}
+            </div>
 
-          {/* Support */}
-          <div className="space-y-1">
-            {sidebarOpen && (
-              <p className="px-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                Help
-              </p>
-            )}
-            {supportNavigation.map((item) => (
-              <NavItem key={item.name} item={item} collapsed={!sidebarOpen} />
-            ))}
-          </div>
-        </nav>
+            {/* Support */}
+            <div className="space-y-1">
+              {sidebarOpen && (
+                <p className="px-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                  Help
+                </p>
+              )}
+              {supportNavigation.map((item) => (
+                <NavItem key={item.name} item={item} collapsed={!sidebarOpen} />
+              ))}
+            </div>
+          </nav>
+        </ScrollArea>
 
-        {/* Sticky Footer */}
-        <div className="mt-auto p-2 border-t border-sidebar-border/50 space-y-2 bg-sidebar/95 backdrop-blur-sm sticky bottom-0">
-          {/* Quick Stats */}
-          <AnimatePresence>
-            {sidebarOpen && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                className="glass-card p-2 space-y-1"
-              >
-                <div className="flex justify-between items-center text-[10px]">
-                  <span className="text-muted-foreground">Today's Revenue</span>
-                  <span className="font-semibold text-primary">${sidebarStats.todayRevenue.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between items-center text-[10px]">
-                  <span className="text-muted-foreground">Active Orders</span>
-                  <span className="font-semibold">{sidebarStats.activeOrders}</span>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* User Card */}
+        {/* Compact Footer */}
+        <div className="p-2 border-t border-sidebar-border/50 bg-sidebar/95 backdrop-blur-sm">
+          {/* User + Stats Row */}
           <div className={cn(
-            "flex items-center gap-2 p-1.5 rounded-lg bg-sidebar-accent/30 hover:bg-sidebar-accent/50 transition-colors cursor-pointer",
-            !sidebarOpen && "justify-center p-2"
+            "flex items-center gap-2",
+            !sidebarOpen && "justify-center"
           )}>
-            <Avatar className="w-7 h-7 border border-primary/20">
+            <Avatar className="w-7 h-7 shrink-0 border border-primary/20">
               <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
                 {profile?.full_name?.charAt(0) || 'P'}
               </AvatarFallback>
             </Avatar>
+            
             {sidebarOpen && (
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium truncate">{profile?.full_name || 'Panel Owner'}</p>
-                <p className="text-[9px] text-muted-foreground truncate">{profile?.email}</p>
-              </div>
+              <>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium truncate">{profile?.full_name || 'Panel Owner'}</p>
+                  <p className="text-[9px] text-muted-foreground truncate">{profile?.email}</p>
+                </div>
+                
+                {/* Inline Stats Badges */}
+                <div className="flex items-center gap-1">
+                  <span className="px-1.5 py-0.5 rounded text-[9px] bg-primary/10 text-primary font-medium">
+                    ${sidebarStats.todayRevenue.toFixed(0)}
+                  </span>
+                  <span className="px-1.5 py-0.5 rounded text-[9px] bg-muted text-muted-foreground">
+                    {sidebarStats.activeOrders}
+                  </span>
+                </div>
+              </>
             )}
           </div>
-
-          {/* Actions */}
+          
+          {/* Action Icons Row */}
           <div className={cn(
-            "flex items-center gap-1",
+            "flex items-center gap-1 mt-1.5",
             !sidebarOpen && "flex-col"
           )}>
             <NotificationCenter />
