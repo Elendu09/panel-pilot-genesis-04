@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { useTenant } from '@/hooks/useTenant';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { HelmetProvider } from "react-helmet-async";
+import { HelmetProvider, Helmet } from "react-helmet-async";
 import { ThemeProvider } from "@/hooks/use-theme";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -130,9 +130,10 @@ const TenantRouter = () => {
               <CurrencyProvider>
                 <Toaster />
                 <Sonner />
-                {/* Default panel favicon for all tenant pages */}
-                <link rel="icon" type="image/png" href={faviconUrl} />
-                <link rel="apple-touch-icon" href={faviconUrl} />
+                <Helmet>
+                  <link rel="icon" type="image/png" href={faviconUrl} />
+                  <link rel="apple-touch-icon" href={faviconUrl} />
+                </Helmet>
                 <LanguageProvider>
                   <BuyerAuthProvider panelId={panel.id}>
                     <BrowserRouter>
@@ -219,6 +220,10 @@ const TenantRouter = () => {
             <TooltipProvider>
               <Toaster />
               <Sonner />
+              <Helmet>
+                <link rel="icon" type="image/png" href="/default-panel-favicon.png" />
+                <title>{requestedSubdomain}.homeofsmm.com - Claim This Subdomain</title>
+              </Helmet>
               <div className="min-h-screen flex items-center justify-center bg-[#0d0d12] relative overflow-hidden">
                 {/* Grid pattern background - blue-gray subtle */}
                 <div 
