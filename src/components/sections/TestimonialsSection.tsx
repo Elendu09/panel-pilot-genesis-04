@@ -1,5 +1,6 @@
 import { Star, Quote } from "lucide-react";
 import { motion } from "framer-motion";
+import { BackgroundEffects } from "@/components/effects/BackgroundEffects";
 
 export const TestimonialsSection = () => {
   const testimonials = [
@@ -52,6 +53,9 @@ export const TestimonialsSection = () => {
 
   return (
     <section className="py-24 bg-background relative overflow-hidden">
+      {/* Grid, Bubbles & Particles */}
+      <BackgroundEffects variant="section" showGrid showBubbles showParticles bubbleCount={3} particleCount={8} />
+      
       {/* Background effects */}
       <div className="absolute inset-0">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
