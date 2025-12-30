@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { Json } from '@/integrations/supabase/types';
 import { useToast } from '@/hooks/use-toast';
 import { useDesignHistory } from '@/hooks/use-design-history';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useIsMobile, useIsTablet } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -159,6 +159,14 @@ const defaultCustomization = {
   enableFeatures: true,
   enableTestimonials: true,
   enableFAQs: true,
+
+  // Feature Cards (editable features for features grid)
+  featureCards: [
+    { title: 'Fast Delivery', description: 'Get your orders delivered quickly', icon: 'Zap' },
+    { title: '24/7 Support', description: 'We are here to help you anytime', icon: 'Headphones' },
+    { title: 'Secure Payments', description: 'Your transactions are protected', icon: 'Shield' },
+    { title: 'Best Quality', description: 'Only real and high-quality services', icon: 'Award' },
+  ] as Array<{ title: string; description: string; icon: string }>,
 
   // Homepage layout order
   homepageLayout: ['hero', 'platform', 'stats', 'features', 'testimonials', 'faqs'],
@@ -651,6 +659,7 @@ function LivePreviewRenderer({ customization }: { customization: any }) {
       panel={mockPanel}
       services={[]}
       customization={customization}
+      isPreview={true}
     />
   );
 }
@@ -667,6 +676,8 @@ export default function DesignCustomization() {
   const [showAllPresets, setShowAllPresets] = useState(false);
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const isTablet = useIsTablet();
+  const useMobileLayout = isMobile || isTablet;
 
   const togglePreviewTheme = () => {
     setPreviewThemeMode(prev => prev === 'dark' ? 'light' : 'dark');
@@ -1467,9 +1478,31 @@ export default function DesignCustomization() {
               <span className="font-medium">Show Features Grid</span>
               <Switch checked={customization.enableFeatures} onCheckedChange={(c) => updateCustomization('enableFeatures', c)} />
             </div>
-            <p className="text-xs text-muted-foreground">
-              The features grid shows payment methods, dashboard preview, platforms, discounts, support, and other features.
+            <p className="text-xs text-muted-foreground mb-3">
+              Manage the feature cards shown on your storefront.
             </p>
+            {(customization.featureCards || []).map((feature: any, index: number) => (
+              <Card key={index} className="p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Feature {index + 1}</span>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeArrayItem('featureCards', index)}>
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+                <Input placeholder="Title" value={feature.title} onChange={(e) => updateNestedArray('featureCards', index, 'title', e.target.value)} />
+                <Textarea placeholder="Description" value={feature.description} onChange={(e) => updateNestedArray('featureCards', index, 'description', e.target.value)} rows={2} />
+                <select 
+                  className="w-full h-10 rounded-md border bg-background px-3"
+                  value={feature.icon}
+                  onChange={(e) => updateNestedArray('featureCards', index, 'icon', e.target.value)}
+                >
+                  {iconOptions.map(icon => <option key={icon} value={icon}>{icon}</option>)}
+                </select>
+              </Card>
+            ))}
+            <Button variant="outline" className="w-full" onClick={() => addArrayItem('featureCards', { title: 'New Feature', description: 'Feature description', icon: 'Star' })}>
+              <Plus className="w-4 h-4 mr-2" /> Add Feature
+            </Button>
           </div>
         );
 
@@ -1604,8 +1637,8 @@ export default function DesignCustomization() {
     { id: 'advanced', title: 'Advanced', icon: Code },
   ];
 
-  // Mobile view uses the MobileDesignSlider component
-  if (isMobile) {
+  // Mobile and tablet views use the MobileDesignSlider component
+  if (useMobileLayout) {
     return (
       <MobileDesignSlider
         previewDevice={previewDevice}
@@ -2784,7 +2817,7 @@ export default function DesignCustomization() {
                     maxHeight: 'calc(100vh - 160px)',
                   }}
                 >
-                  <LivePreviewRenderer customization={customization} />
+                  <LivePreviewRenderer customization={{ ...customization, themeMode: previewThemeMode }} />
                 </div>
               </div>
             </div>
