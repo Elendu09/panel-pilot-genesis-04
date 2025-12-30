@@ -7,12 +7,14 @@ import { FeaturesSection } from "@/components/sections/FeaturesSection";
 import { TestimonialsSection } from "@/components/sections/TestimonialsSection";
 import { FAQSection } from "@/components/sections/FAQSection";
 import { Footer } from "@/components/layout/Footer";
+import { CursorEffects } from "@/components/effects/CursorEffects";
 
 const Index = () => {
   const canonicalUrl = typeof window !== 'undefined' ? window.location.origin : '';
   
   return (
     <div className="min-h-screen bg-background">
+      <CursorEffects />
       <Helmet>
         <title>HomeOfSMM - Professional SMM Panel Platform</title>
         <meta 
