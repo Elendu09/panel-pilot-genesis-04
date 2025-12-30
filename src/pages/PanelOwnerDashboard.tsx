@@ -308,7 +308,7 @@ const PanelOwnerDashboard = () => {
         </nav>
 
         {/* Sticky Footer */}
-        <div className="mt-auto p-3 border-t border-sidebar-border/50 space-y-3 bg-sidebar/95 backdrop-blur-sm sticky bottom-0">
+        <div className="mt-auto p-2 border-t border-sidebar-border/50 space-y-2 bg-sidebar/95 backdrop-blur-sm sticky bottom-0">
           {/* Quick Stats */}
           <AnimatePresence>
             {sidebarOpen && (
@@ -316,13 +316,13 @@ const PanelOwnerDashboard = () => {
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
                 exit={{ opacity: 0, height: 0 }}
-                className="glass-card p-3 space-y-2"
+                className="glass-card p-2 space-y-1"
               >
-                <div className="flex justify-between items-center text-xs">
+                <div className="flex justify-between items-center text-[10px]">
                   <span className="text-muted-foreground">Today's Revenue</span>
                   <span className="font-semibold text-primary">${sidebarStats.todayRevenue.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between items-center text-xs">
+                <div className="flex justify-between items-center text-[10px]">
                   <span className="text-muted-foreground">Active Orders</span>
                   <span className="font-semibold">{sidebarStats.activeOrders}</span>
                 </div>
@@ -332,25 +332,25 @@ const PanelOwnerDashboard = () => {
 
           {/* User Card */}
           <div className={cn(
-            "flex items-center gap-3 p-2 rounded-xl bg-sidebar-accent/30 hover:bg-sidebar-accent/50 transition-colors cursor-pointer",
-            !sidebarOpen && "justify-center p-3"
+            "flex items-center gap-2 p-1.5 rounded-lg bg-sidebar-accent/30 hover:bg-sidebar-accent/50 transition-colors cursor-pointer",
+            !sidebarOpen && "justify-center p-2"
           )}>
-            <Avatar className="w-9 h-9 border-2 border-primary/20">
-              <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
+            <Avatar className="w-7 h-7 border border-primary/20">
+              <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
                 {profile?.full_name?.charAt(0) || 'P'}
               </AvatarFallback>
             </Avatar>
             {sidebarOpen && (
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{profile?.full_name || 'Panel Owner'}</p>
-                <p className="text-[10px] text-muted-foreground truncate">{profile?.email}</p>
+                <p className="text-xs font-medium truncate">{profile?.full_name || 'Panel Owner'}</p>
+                <p className="text-[9px] text-muted-foreground truncate">{profile?.email}</p>
               </div>
             )}
           </div>
 
           {/* Actions */}
           <div className={cn(
-            "flex items-center gap-2",
+            "flex items-center gap-1",
             !sidebarOpen && "flex-col"
           )}>
             <NotificationCenter />
@@ -359,26 +359,26 @@ const PanelOwnerDashboard = () => {
               variant="ghost"
               size="icon"
               onClick={restartTour}
-              className="h-9 w-9 text-muted-foreground hover:text-foreground"
+              className="h-7 w-7 text-muted-foreground hover:text-foreground"
               title="Restart Tour"
             >
-              <HelpCircle className="w-4 h-4" />
+              <HelpCircle className="w-3.5 h-3.5" />
             </Button>
             <Button
               variant="ghost"
               size="icon"
               onClick={handleSignOut}
-              className="h-9 w-9 text-muted-foreground hover:text-foreground"
+              className="h-7 w-7 text-muted-foreground hover:text-foreground"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="w-3.5 h-3.5" />
             </Button>
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="h-9 w-9 text-muted-foreground hover:text-foreground ml-auto"
+              className="h-7 w-7 text-muted-foreground hover:text-foreground ml-auto"
             >
-              {sidebarOpen ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+              {sidebarOpen ? <ChevronLeft className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
             </Button>
           </div>
         </div>
