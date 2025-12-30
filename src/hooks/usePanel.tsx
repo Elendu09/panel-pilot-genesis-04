@@ -17,6 +17,7 @@ interface Panel {
   secondary_color: string;
   logo_url: string | null;
   onboarding_completed: boolean;
+  settings?: any;
 }
 
 export function usePanel() {
