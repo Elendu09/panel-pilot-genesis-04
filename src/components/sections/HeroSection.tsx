@@ -157,7 +157,7 @@ export const HeroSection = () => {
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.98 }}>
               <Button asChild variant="outline" size="lg" className="text-lg px-8 py-6 border-primary/30 hover:bg-primary/10 rounded-full backdrop-blur-sm">
                 <Link to="/services">
-                  Best SMM services
+                  Service Tools
                 </Link>
               </Button>
             </motion.div>
