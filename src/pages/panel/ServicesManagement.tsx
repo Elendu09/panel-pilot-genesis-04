@@ -646,11 +646,43 @@ const ServicesManagement = () => {
   // Pagination (server-side - services are already paginated)
   const totalPages = Math.ceil(totalCount / itemsPerPage);
 
-  // Stats
+  // Stats with accurate counts from DB
   const totalServices = totalCount;
-  const activeServices = categoryCounts.all || 0;
+  const [activeServicesCount, setActiveServicesCount] = useState(0);
+  const [totalAvgPrice, setTotalAvgPrice] = useState('0.00');
+  
+  // Fetch accurate stats (average price & active count) from all services
+  useEffect(() => {
+    const fetchAccurateStats = async () => {
+      if (!panel?.id) return;
+      
+      // Get accurate active services count
+      const { count: activeCount } = await supabase
+        .from('services')
+        .select('*', { count: 'exact', head: true })
+        .eq('panel_id', panel.id)
+        .eq('is_active', true);
+      
+      // Get all prices to calculate accurate average
+      const { data: priceData } = await supabase
+        .from('services')
+        .select('price')
+        .eq('panel_id', panel.id);
+      
+      setActiveServicesCount(activeCount || 0);
+      
+      if (priceData && priceData.length > 0) {
+        const avg = priceData.reduce((acc, s) => acc + Number(s.price), 0) / priceData.length;
+        setTotalAvgPrice(avg.toFixed(2));
+      }
+    };
+    
+    fetchAccurateStats();
+  }, [panel?.id, totalCount]);
+  
+  const activeServices = activeServicesCount;
   const totalOrders = 0; // Server-side would need separate query
-  const avgPrice = services.length > 0 ? (services.reduce((acc, s) => acc + s.price, 0) / services.length).toFixed(2) : '0.00';
+  const avgPrice = totalAvgPrice;
 
   // Category icon getter - now uses SOCIAL_ICONS_MAP
   const getCategoryIcon = (category: string) => {

@@ -100,9 +100,10 @@ const PanelOverview = () => {
             .select('*')
             .eq('panel_id', panel.id);
 
-          const { data: services } = await supabase
+          // Use count query for accurate active services count (avoids 1000 row limit)
+          const { count: activeServicesCount } = await supabase
             .from('services')
-            .select('*')
+            .select('*', { count: 'exact', head: true })
             .eq('panel_id', panel.id)
             .eq('is_active', true);
 
@@ -137,14 +138,14 @@ const PanelOverview = () => {
           setChanges({
             orders: { value: orderChange.value, trend: orderChange.trend },
             revenue: { value: revenueChange.value, trend: revenueChange.trend },
-            services: { value: `+${services?.length || 0}`, trend: 'up' },
+            services: { value: `+${activeServicesCount || 0}`, trend: 'up' },
             customers: { value: orderChange.value, trend: orderChange.trend },
           });
 
           setStats({
             totalOrders: orders?.length || 0,
             totalRevenue,
-            activeServices: services?.length || 0,
+            activeServices: activeServicesCount || 0,
             totalCustomers: uniqueCustomers
           });
         }
@@ -729,7 +730,7 @@ const PanelOverview = () => {
           </CardContent>
         </Card>
 
-        {/* Performance Overview Card */}
+        {/* Performance Overview Card - Enhanced */}
         <Card className="glass-card">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center gap-2">
@@ -739,9 +740,25 @@ const PanelOverview = () => {
             <CardDescription>Key metrics overview</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Quick Stats Grid */}
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div className="p-3 rounded-xl bg-accent/30 border border-border/50">
+                <span className="text-xs text-muted-foreground">Avg Order Value</span>
+                <p className="text-lg font-bold">${(stats.totalRevenue / Math.max(stats.totalOrders, 1)).toFixed(2)}</p>
+              </div>
+              <div className="p-3 rounded-xl bg-accent/30 border border-border/50">
+                <span className="text-xs text-muted-foreground">Revenue Growth</span>
+                <p className="text-lg font-bold flex items-center gap-1">
+                  {changes.revenue.trend === 'up' ? <TrendingUp className="w-4 h-4 text-emerald-500" /> : <ArrowDownRight className="w-4 h-4 text-red-500" />}
+                  {changes.revenue.value}
+                </p>
+              </div>
+            </div>
+            
+            {/* Progress Bars */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-muted-foreground">Order Completion</span>
+                <span className="text-sm text-muted-foreground">Order Completion Rate</span>
                 <span className="text-sm font-semibold">
                   {stats.totalOrders > 0 ? Math.round((liveOrders.filter(o => o.status === 'completed').length / Math.max(liveOrders.length, 1)) * 100) : 0}%
                 </span>
@@ -756,19 +773,19 @@ const PanelOverview = () => {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm text-muted-foreground">Active Services</span>
-                <span className="text-sm font-semibold">{stats.activeServices}</span>
+                <span className="text-sm font-semibold">{stats.activeServices.toLocaleString()}</span>
               </div>
               <div className="h-2 bg-accent rounded-full overflow-hidden">
                 <div 
                   className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full" 
-                  style={{ width: `${Math.min(stats.activeServices * 5, 100)}%` }} 
+                  style={{ width: `${Math.min((stats.activeServices / 100) * 10, 100)}%` }} 
                 />
               </div>
             </div>
             <div>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-muted-foreground">Customers</span>
-                <span className="text-sm font-semibold">{stats.totalCustomers}</span>
+                <span className="text-sm text-muted-foreground">Customer Base</span>
+                <span className="text-sm font-semibold">{stats.totalCustomers.toLocaleString()}</span>
               </div>
               <div className="h-2 bg-accent rounded-full overflow-hidden">
                 <div 
