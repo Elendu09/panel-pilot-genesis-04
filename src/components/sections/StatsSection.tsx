@@ -1,6 +1,7 @@
 import { Users, ShoppingBag, Globe, Zap } from "lucide-react";
 import { motion } from "framer-motion";
 import { usePlatformStats } from "@/hooks/useServiceStats";
+import { BackgroundEffects } from "@/components/effects/BackgroundEffects";
 
 export const StatsSection = () => {
   const { totalPanels, totalOrders, totalServices, loading } = usePlatformStats();
@@ -58,6 +59,9 @@ export const StatsSection = () => {
 
   return (
     <section className="py-24 bg-background relative overflow-hidden">
+      {/* Grid, Bubbles & Particles */}
+      <BackgroundEffects variant="section" showGrid showBubbles showParticles bubbleCount={4} particleCount={8} />
+      
       {/* Background decoration */}
       <div className="absolute inset-0 bg-mesh opacity-50" />
       

@@ -6,6 +6,7 @@ import { Link } from "react-router-dom";
 import { AnimatedText } from "@/components/ui/animated-text";
 import { motion } from "framer-motion";
 import { TelegramIcon, VoteIcon, ViewsIcon, HeartIcon } from "@/components/icons/SocialIcons";
+import { BackgroundEffects } from "@/components/effects/BackgroundEffects";
 
 // Floating feature cards data
 const leftCards = [
@@ -29,6 +30,9 @@ const showcaseServices = [
 export const HeroSection = () => {
   return (
     <section className="relative min-h-screen bg-gradient-hero overflow-hidden perspective-1000">
+      {/* Grid, Bubbles & Particles */}
+      <BackgroundEffects variant="hero" showGrid showBubbles showParticles bubbleCount={8} particleCount={15} />
+      
       {/* Enhanced Background Effects */}
       <div className="absolute inset-0 opacity-20">
         <motion.div 

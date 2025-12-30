@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { PayPalIcon, StripeIcon, BitcoinIcon, RazorpayIcon } from "@/components/payment/PaymentIcons";
+import { BackgroundEffects } from "@/components/effects/BackgroundEffects";
 
 export const FeaturesSection = () => {
   const containerVariants = {
@@ -55,6 +56,9 @@ export const FeaturesSection = () => {
 
   return (
     <section className="py-24 bg-background relative overflow-hidden">
+      {/* Grid, Bubbles & Particles */}
+      <BackgroundEffects variant="section" showGrid showBubbles showParticles bubbleCount={6} particleCount={12} />
+      
       {/* Background decoration */}
       <div className="absolute inset-0 bg-mesh opacity-30" />
 

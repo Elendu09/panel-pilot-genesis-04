@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ChevronDown, HelpCircle, Sparkles, Rocket, Scale, DollarSign, CreditCard, Globe, Target } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { BackgroundEffects } from "@/components/effects/BackgroundEffects";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -80,6 +81,9 @@ export const FAQSection = () => {
 
   return (
     <section className="py-24 relative overflow-hidden">
+      {/* Grid, Bubbles & Particles */}
+      <BackgroundEffects variant="section" showGrid showBubbles showParticles bubbleCount={4} particleCount={10} />
+      
       {/* Background Elements */}
       <div className="absolute inset-0 bg-gradient-to-b from-background via-accent/10 to-background" />
       <div className="absolute top-20 left-10 w-72 h-72 bg-primary/5 rounded-full blur-3xl" />

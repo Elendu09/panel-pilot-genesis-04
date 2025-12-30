@@ -1,6 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Zap, Users, Globe, BarChart3 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
+import { BackgroundEffects } from "@/components/effects/BackgroundEffects";
 
 export const PlatformFeaturesSection = () => {
   const features = [
@@ -31,8 +33,11 @@ export const PlatformFeaturesSection = () => {
   ];
 
   return (
-    <section className="py-24 bg-card/50 border-t border-border">
-      <div className="container mx-auto px-4">
+    <section className="py-24 bg-card/50 border-t border-border relative overflow-hidden">
+      {/* Grid, Bubbles & Particles */}
+      <BackgroundEffects variant="section" showGrid showBubbles showParticles bubbleCount={5} particleCount={10} />
+      
+      <div className="container mx-auto px-4 relative z-10">
         <div className="grid lg:grid-cols-2 gap-16 items-start">
           {/* Left Content */}
           <div className="space-y-8">
@@ -64,14 +69,26 @@ export const PlatformFeaturesSection = () => {
             {features.map((feature, index) => {
               const Icon = feature.icon;
               return (
-                <div 
+                <motion.div 
                   key={index}
-                  className={`p-8 rounded-2xl bg-gradient-to-br ${feature.gradient} border border-border/50 hover:border-primary/30 transition-all duration-300 hover:shadow-lg group`}
+                  className={`p-8 rounded-2xl bg-gradient-to-br ${feature.gradient} border border-border/50 hover:border-primary/30 transition-all duration-300 hover:shadow-lg group relative overflow-hidden`}
+                  whileHover={{ y: -5, scale: 1.02 }}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.1 }}
                 >
-                  <div className="mb-6">
-                    <div className="w-12 h-12 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
+                  {/* Hover glow effect */}
+                  <motion.div 
+                    className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity"
+                  />
+                  <div className="mb-6 relative z-10">
+                    <motion.div 
+                      className="w-12 h-12 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors"
+                      whileHover={{ rotate: [0, -5, 5, 0], scale: 1.1 }}
+                    >
                       <Icon className="w-6 h-6 text-primary" />
-                    </div>
+                    </motion.div>
                     <h3 className="text-xl font-semibold mb-3">
                       {feature.title}
                     </h3>
@@ -79,7 +96,7 @@ export const PlatformFeaturesSection = () => {
                       {feature.description}
                     </p>
                   </div>
-                </div>
+                </motion.div>
               );
             })}
           </div>
