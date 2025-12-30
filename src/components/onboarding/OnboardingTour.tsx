@@ -273,6 +273,7 @@ interface OnboardingTourProps {
 }
 
 // Hook to detect screen size - aligned with CSS md: breakpoint (768px) for sidebar visibility
+// Includes device rotation detection for responsive tour
 const useScreenSize = (): ScreenSize => {
   const [screenSize, setScreenSize] = useState<ScreenSize>('desktop');
   
@@ -291,9 +292,27 @@ const useScreenSize = (): ScreenSize => {
       }
     };
     
+    // Debounce to prevent rapid-fire updates
+    let timeoutId: ReturnType<typeof setTimeout>;
+    const debouncedUpdate = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(updateScreenSize, 100);
+    };
+    
+    // Handle orientation change with delay to wait for orientation to settle
+    const handleOrientationChange = () => {
+      setTimeout(updateScreenSize, 150);
+    };
+    
     updateScreenSize();
-    window.addEventListener('resize', updateScreenSize);
-    return () => window.removeEventListener('resize', updateScreenSize);
+    window.addEventListener('resize', debouncedUpdate);
+    window.addEventListener('orientationchange', handleOrientationChange);
+    
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('resize', debouncedUpdate);
+      window.removeEventListener('orientationchange', handleOrientationChange);
+    };
   }, []);
   
   return screenSize;

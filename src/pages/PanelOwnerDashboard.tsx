@@ -202,10 +202,12 @@ const PanelOwnerDashboard = () => {
       </Helmet>
 
       {/* Glassmorphic Sidebar */}
-      <aside className={cn(
-        "hidden md:flex flex-col glass-sidebar transition-all duration-300 relative z-20",
-        sidebarOpen ? "w-64" : "w-20"
-      )}>
+      <aside 
+        data-tour="sidebar"
+        className={cn(
+          "hidden md:flex flex-col glass-sidebar transition-all duration-300 relative z-20",
+          sidebarOpen ? "w-64" : "w-20"
+        )}>
         {/* Ambient Glow */}
         <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />
 
@@ -305,8 +307,8 @@ const PanelOwnerDashboard = () => {
           </div>
         </nav>
 
-        {/* Footer */}
-        <div className="p-3 border-t border-sidebar-border/50 space-y-3">
+        {/* Sticky Footer */}
+        <div className="mt-auto p-3 border-t border-sidebar-border/50 space-y-3 bg-sidebar/95 backdrop-blur-sm sticky bottom-0">
           {/* Quick Stats */}
           <AnimatePresence>
             {sidebarOpen && (

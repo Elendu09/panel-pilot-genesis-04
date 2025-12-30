@@ -55,6 +55,10 @@ const navigationItems: SearchResult[] = [
   { id: "blog", type: "page", title: "Blog", href: "/panel/blog", icon: FileText },
   { id: "security", type: "page", title: "Security", href: "/panel/security", icon: Shield },
   { id: "support", type: "page", title: "Support Center", href: "/panel/support", icon: HelpCircle },
+  { id: "billing", type: "page", title: "Billing", href: "/panel/billing", icon: CreditCard },
+  { id: "integrations", type: "page", title: "Integrations", href: "/panel/integrations", icon: Plug },
+  { id: "team", type: "page", title: "Team Management", href: "/panel/team", icon: Users },
+  { id: "more", type: "page", title: "More Menu", href: "/panel/more", icon: LayoutDashboard },
 ];
 
 interface PanelSearchCommandProps {

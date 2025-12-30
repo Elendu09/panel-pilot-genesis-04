@@ -17,7 +17,9 @@ import {
   Sparkles,
   LayoutGrid,
   Wrench,
-  FileEdit
+  FileEdit,
+  BookOpen,
+  HeadphonesIcon
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -40,6 +42,7 @@ const menuGroups = [
       { name: "Payments", href: "/panel/payments", icon: CreditCard, color: "text-green-500", bgColor: "bg-green-500/10" },
       { name: "Billing", href: "/panel/billing", icon: Sparkles, color: "text-amber-500", bgColor: "bg-amber-500/10" },
       { name: "Integrations", href: "/panel/integrations", icon: Plug, color: "text-teal-500", bgColor: "bg-teal-500/10" },
+      { name: "Team", href: "/panel/team", icon: Users, color: "text-violet-500", bgColor: "bg-violet-500/10" },
     ]
   },
   {
@@ -60,7 +63,15 @@ const menuGroups = [
       { name: "API", href: "/panel/api", icon: Code, color: "text-orange-500", bgColor: "bg-orange-500/10" },
       { name: "Security", href: "/panel/security", icon: Shield, color: "text-red-500", bgColor: "bg-red-500/10" },
       { name: "Settings", href: "/panel/settings", icon: Settings, color: "text-muted-foreground", bgColor: "bg-muted" },
-      { name: "Support", href: "/panel/support", icon: MessageSquare, color: "text-indigo-500", bgColor: "bg-indigo-500/10" },
+    ]
+  },
+  {
+    title: "Help & Support",
+    icon: HelpCircle,
+    color: "from-indigo-500 to-indigo-600",
+    items: [
+      { name: "Knowledge Base", href: "/panel/support", icon: BookOpen, color: "text-indigo-500", bgColor: "bg-indigo-500/10" },
+      { name: "Support Center", href: "/panel/support", icon: HeadphonesIcon, color: "text-blue-500", bgColor: "bg-blue-500/10" },
     ]
   },
 ];
@@ -93,6 +104,26 @@ const MoreMenu = () => {
       <motion.div variants={itemVariants} className="text-center pt-2">
         <h1 className="text-2xl font-bold">More</h1>
         <p className="text-muted-foreground text-sm">Quick access to all features</p>
+      </motion.div>
+
+      {/* Help Center Quick Access */}
+      <motion.div variants={itemVariants}>
+        <Link to="/panel/support">
+          <Card className="glass-stat-card overflow-hidden hover:bg-accent/50 transition-colors cursor-pointer">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600">
+                  <BookOpen className="w-5 h-5 text-white" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-base">Help Center</h3>
+                  <p className="text-xs text-muted-foreground">FAQs, guides & support resources</p>
+                </div>
+                <ChevronRight className="w-5 h-5 text-muted-foreground" />
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
       </motion.div>
 
       {/* User Profile Card */}
