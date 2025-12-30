@@ -37,7 +37,11 @@ import {
   CheckCircle,
   XCircle,
   Loader2,
-  CalendarIcon
+  CalendarIcon,
+  Star,
+  Crown,
+  Package,
+  Percent
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
@@ -98,11 +102,24 @@ const Analytics = () => {
   const [revenueData, setRevenueData] = useState<any[]>([]);
   const [customerGrowth, setCustomerGrowth] = useState<any[]>([]);
   const [serviceDistribution, setServiceDistribution] = useState<any[]>([]);
+  const [topDepositors, setTopDepositors] = useState<any[]>([]);
+  const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
+  const [paymentMethodStats, setPaymentMethodStats] = useState<any[]>([]);
+  const [customerStats, setCustomerStats] = useState({
+    vipCount: 0,
+    customPricingCount: 0,
+    avgDiscount: 0,
+    totalBalance: 0,
+  });
+  const [liveOrdersWithService, setLiveOrdersWithService] = useState<any[]>([]);
   const [stats, setStats] = useState({
     totalRevenue: 0,
     totalOrders: 0,
     activeUsers: 0,
     conversionRate: 0,
+    totalDeposits: 0,
+    successfulTxns: 0,
+    failedTxns: 0,
   });
   const [changes, setChanges] = useState<{
     revenue: { value: string; trend: 'up' | 'down' | 'neutral' };
@@ -139,10 +156,10 @@ const Analytics = () => {
         startDate.setDate(startDate.getDate() - daysAgo);
       }
 
-      // Fetch orders
+      // Fetch orders with service names
       const { data: orders } = await supabase
         .from('orders')
-        .select('*')
+        .select('*, services(name, category)')
         .eq('panel_id', panel.id)
         .gte('created_at', startDate.toISOString());
 
@@ -151,6 +168,104 @@ const Analytics = () => {
         .from('client_users')
         .select('*')
         .eq('panel_id', panel.id);
+
+      // Fetch transactions for payment analytics
+      const { data: transactions } = await supabase
+        .from('transactions')
+        .select('*')
+        .gte('created_at', startDate.toISOString())
+        .order('created_at', { ascending: false });
+
+      // Fetch custom pricing data
+      const { data: customPrices } = await supabase
+        .from('client_custom_prices')
+        .select('*, client_users(full_name, email)')
+        .eq('panel_id', panel.id);
+
+      // Fetch recent live orders with service names
+      const { data: liveOrders } = await supabase
+        .from('orders')
+        .select('*, services(name, category)')
+        .eq('panel_id', panel.id)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      setLiveOrdersWithService(liveOrders?.map(o => ({
+        ...o,
+        serviceName: (o.services as any)?.name || 'Unknown Service',
+        serviceCategory: (o.services as any)?.category || 'other'
+      })) || []);
+
+      // Calculate transaction stats
+      const completedTxns = transactions?.filter(t => t.status === 'completed') || [];
+      const failedTxns = transactions?.filter(t => t.status === 'failed') || [];
+      const totalDeposits = completedTxns
+        .filter(t => t.type === 'deposit')
+        .reduce((sum, t) => sum + (t.amount || 0), 0);
+
+      // Top depositors from transactions
+      const depositorMap = new Map<string, { name: string; amount: number; method: string }>();
+      for (const tx of completedTxns.filter(t => t.type === 'deposit')) {
+        const customer = customers?.find(c => c.id === tx.user_id);
+        const key = tx.user_id || 'unknown';
+        const existing = depositorMap.get(key) || { 
+          name: customer?.full_name || customer?.email?.split('@')[0] || 'Anonymous', 
+          amount: 0, 
+          method: tx.payment_method || 'Unknown' 
+        };
+        existing.amount += tx.amount || 0;
+        depositorMap.set(key, existing);
+      }
+      setTopDepositors(
+        Array.from(depositorMap.values())
+          .sort((a, b) => b.amount - a.amount)
+          .slice(0, 5)
+      );
+
+      // Recent transactions
+      setRecentTransactions(
+        (transactions || []).slice(0, 5).map(tx => {
+          const customer = customers?.find(c => c.id === tx.user_id);
+          return {
+            ...tx,
+            userName: customer?.full_name || customer?.email?.split('@')[0] || 'User'
+          };
+        })
+      );
+
+      // Payment method usage stats
+      const methodMap = new Map<string, number>();
+      completedTxns.forEach(tx => {
+        const method = tx.payment_method || 'other';
+        methodMap.set(method, (methodMap.get(method) || 0) + 1);
+      });
+      const totalMethodTxns = completedTxns.length || 1;
+      setPaymentMethodStats(
+        Array.from(methodMap.entries())
+          .map(([method, count]) => ({
+            method: method.charAt(0).toUpperCase() + method.slice(1),
+            percent: Math.round((count / totalMethodTxns) * 100),
+            color: method === 'stripe' ? 'bg-[#635BFF]' : 
+                   method === 'paypal' ? 'bg-[#003087]' : 
+                   method === 'crypto' ? 'bg-[#F7931A]' : 'bg-muted-foreground'
+          }))
+          .sort((a, b) => b.percent - a.percent)
+      );
+
+      // Customer stats
+      const vipCustomers = customers?.filter(c => c.is_vip) || [];
+      const customPricingCustomers = new Set(customPrices?.map(cp => cp.client_id)).size;
+      const avgDiscount = customPrices?.length 
+        ? customPrices.reduce((sum, cp) => sum + (cp.discount_percent || 0), 0) / customPrices.length 
+        : 0;
+      const totalBalance = customers?.reduce((sum, c) => sum + (c.balance || 0), 0) || 0;
+
+      setCustomerStats({
+        vipCount: vipCustomers.length,
+        customPricingCount: customPricingCustomers,
+        avgDiscount: Math.round(avgDiscount * 10) / 10,
+        totalBalance
+      });
 
       // Calculate stats
       const totalRevenue = orders?.reduce((sum, o) => sum + (o.price || 0), 0) || 0;
@@ -175,7 +290,7 @@ const Analytics = () => {
       // Calculate real changes
       const revenueChange = calculateChange(totalRevenue, prevRevenue);
       const orderChange = calculateChange(totalOrders, prevOrderCount);
-      const userChange = calculateChange(activeUsers, Math.max(1, activeUsers - 2)); // Approximate previous
+      const userChange = calculateChange(activeUsers, Math.max(1, activeUsers - 2));
       const convChange = calculateChange(conversionRate, Math.max(0, conversionRate - 1.5));
 
       setChanges({
@@ -190,6 +305,9 @@ const Analytics = () => {
         totalOrders,
         activeUsers,
         conversionRate: Math.min(conversionRate, 100),
+        totalDeposits,
+        successfulTxns: completedTxns.length,
+        failedTxns: failedTxns.length,
       });
 
       // Order trends by day
@@ -403,14 +521,22 @@ const Analytics = () => {
 
       {/* Analytics Tabs */}
       <Tabs value={analyticsTab} onValueChange={setAnalyticsTab} className="space-y-6">
-        <TabsList className="bg-background/60 backdrop-blur-sm border border-border/50">
+        <TabsList className="bg-background/60 backdrop-blur-sm border border-border/50 flex-wrap h-auto gap-1">
           <TabsTrigger value="overview" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
             <LayoutGrid className="w-4 h-4 mr-2" />
             Overview
           </TabsTrigger>
           <TabsTrigger value="payments" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
             <CreditCard className="w-4 h-4 mr-2" />
-            Payment Analytics
+            Payments
+          </TabsTrigger>
+          <TabsTrigger value="customers" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+            <Users className="w-4 h-4 mr-2" />
+            Customers
+          </TabsTrigger>
+          <TabsTrigger value="orders" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+            <Package className="w-4 h-4 mr-2" />
+            Live Orders
           </TabsTrigger>
         </TabsList>
 
@@ -655,10 +781,10 @@ const Analytics = () => {
         <TabsContent value="payments" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
-              { title: "Total Deposits", value: stats.totalRevenue, prefix: "$", icon: Wallet, trend: "up" },
-              { title: "Successful Txns", value: stats.totalOrders, icon: CheckCircle, trend: "up" },
-              { title: "Failed Txns", value: 0, icon: XCircle, trend: "down" },
-              { title: "Avg. Transaction", value: stats.totalOrders > 0 ? stats.totalRevenue / stats.totalOrders : 0, prefix: "$", icon: CreditCard, trend: "up" },
+              { title: "Total Deposits", value: stats.totalDeposits, prefix: "$", icon: Wallet, trend: "up" },
+              { title: "Successful Txns", value: stats.successfulTxns, icon: CheckCircle, trend: "up" },
+              { title: "Failed Txns", value: stats.failedTxns, icon: XCircle, trend: stats.failedTxns > 0 ? "down" : "up" },
+              { title: "Avg. Transaction", value: stats.successfulTxns > 0 ? stats.totalDeposits / stats.successfulTxns : 0, prefix: "$", icon: CreditCard, trend: "up" },
             ].map((stat, index) => (
               <motion.div
                 key={index}
@@ -685,7 +811,100 @@ const Analytics = () => {
             ))}
           </div>
 
-          {/* Payment Trends */}
+          {/* Payment Statistics Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Top Depositors */}
+            <Card className="glass-card">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <TrendingUp className="w-4 h-4 text-green-500" />
+                  Top Depositors
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {topDepositors.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">No deposits yet</p>
+                  ) : (
+                    topDepositors.map((user, i) => (
+                      <div key={i} className="flex items-center justify-between p-2 bg-muted/30 rounded-lg backdrop-blur-sm">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-muted-foreground">#{i+1}</span>
+                          <span className="font-medium text-sm truncate max-w-[100px]">{user.name}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-bold text-green-500">${user.amount.toFixed(2)}</span>
+                          <p className="text-xs text-muted-foreground">{user.method}</p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Payment Method Usage */}
+            <Card className="glass-card">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <CreditCard className="w-4 h-4 text-blue-500" />
+                  Method Usage
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {paymentMethodStats.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">No transactions yet</p>
+                  ) : (
+                    paymentMethodStats.map((item) => (
+                      <div key={item.method} className="space-y-1">
+                        <div className="flex justify-between text-sm">
+                          <span>{item.method}</span>
+                          <span className="font-medium">{item.percent}%</span>
+                        </div>
+                        <div className="h-2 bg-muted rounded-full overflow-hidden">
+                          <div className={`h-full rounded-full ${item.color}`} style={{ width: `${item.percent}%` }} />
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Recent Transactions */}
+            <Card className="glass-card">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Activity className="w-4 h-4 text-purple-500" />
+                  Recent Transactions
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {recentTransactions.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">No transactions yet</p>
+                  ) : (
+                    recentTransactions.map((tx, i) => (
+                      <div key={i} className="flex items-center justify-between p-2 bg-muted/30 rounded-lg backdrop-blur-sm">
+                        <span className="text-sm truncate max-w-[100px]">{tx.userName}</span>
+                        <div className="text-right">
+                          <span className={`font-medium ${tx.type === 'deposit' ? 'text-green-500' : 'text-red-500'}`}>
+                            {tx.type === 'deposit' ? '+' : '-'}${tx.amount?.toFixed(2)}
+                          </span>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(tx.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Transaction Volume Chart */}
           <Card className="glass-card">
             <CardHeader>
               <CardTitle>Transaction Volume</CardTitle>
@@ -720,6 +939,127 @@ const Analytics = () => {
                   />
                 </AreaChart>
               </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Customers Tab */}
+        <TabsContent value="customers" className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              { title: "VIP Customers", value: customerStats.vipCount, icon: Crown, color: "text-yellow-500", bg: "bg-yellow-500/20" },
+              { title: "Custom Pricing", value: customerStats.customPricingCount, icon: Percent, color: "text-blue-500", bg: "bg-blue-500/20" },
+              { title: "Avg. Discount", value: customerStats.avgDiscount, suffix: "%", icon: Star, color: "text-purple-500", bg: "bg-purple-500/20" },
+              { title: "Total Balance", value: customerStats.totalBalance, prefix: "$", icon: Wallet, color: "text-green-500", bg: "bg-green-500/20" },
+            ].map((stat, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+              >
+                <Card className="glass-stat-card p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <span className="text-sm font-medium text-muted-foreground">{stat.title}</span>
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${stat.bg}`}>
+                      <stat.icon className={`w-5 h-5 ${stat.color}`} />
+                    </div>
+                  </div>
+                  <p className="text-3xl font-bold">
+                    {stat.prefix || ""}{typeof stat.value === 'number' ? stat.value.toFixed(stat.suffix ? 1 : 0) : stat.value}{stat.suffix || ""}
+                  </p>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+
+          {/* Customer Growth Chart */}
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="w-5 h-5 text-blue-500" />
+                Customer Growth & Activity
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={customerGrowth}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'hsl(var(--card))', 
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px'
+                    }}
+                  />
+                  <Legend />
+                  <Line type="monotone" dataKey="new" stroke="hsl(217, 91%, 60%)" strokeWidth={2} name="New Customers" />
+                  <Line type="monotone" dataKey="total" stroke="hsl(var(--primary))" strokeWidth={2} name="Total Customers" />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Live Orders Tab */}
+        <TabsContent value="orders" className="space-y-6">
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="w-5 h-5 text-primary" />
+                Recent Orders with Service Details
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {liveOrdersWithService.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Package className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                    <p>No orders yet</p>
+                  </div>
+                ) : (
+                  liveOrdersWithService.map((order) => (
+                    <div key={order.id} className="p-4 rounded-xl bg-muted/30 border border-border/50">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-lg ${
+                            order.status === 'completed' ? 'bg-green-500/20' :
+                            order.status === 'in_progress' ? 'bg-blue-500/20' :
+                            order.status === 'pending' ? 'bg-yellow-500/20' : 'bg-red-500/20'
+                          }`}>
+                            <Package className={`w-4 h-4 ${
+                              order.status === 'completed' ? 'text-green-500' :
+                              order.status === 'in_progress' ? 'text-blue-500' :
+                              order.status === 'pending' ? 'text-yellow-500' : 'text-red-500'
+                            }`} />
+                          </div>
+                          <div>
+                            <p className="font-semibold">{order.order_number}</p>
+                            <p className="text-sm text-muted-foreground">{order.serviceName}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold">${Number(order.price).toFixed(2)}</p>
+                          <Badge variant="outline" className={
+                            order.status === 'completed' ? 'bg-green-500/10 text-green-500' :
+                            order.status === 'in_progress' ? 'bg-blue-500/10 text-blue-500' :
+                            order.status === 'pending' ? 'bg-yellow-500/10 text-yellow-500' : 'bg-red-500/10 text-red-500'
+                          }>
+                            {order.status?.replace('_', ' ')}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between text-xs text-muted-foreground mt-2 pt-2 border-t border-border/30">
+                        <span>Qty: {order.quantity}</span>
+                        <span className="truncate max-w-[200px]">{order.target_url}</span>
+                        <span>{new Date(order.created_at).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

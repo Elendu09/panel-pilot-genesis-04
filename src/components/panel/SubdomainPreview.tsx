@@ -26,6 +26,7 @@ interface SubdomainPreviewProps {
   panelName: string;
   primaryColor?: string;
   secondaryColor?: string;
+  panelStatus?: 'active' | 'pending' | 'suspended';
   status?: 'active' | 'pending' | 'checking';
   onRefresh?: () => void;
 }
@@ -35,6 +36,7 @@ const SubdomainPreview = ({
   panelName,
   primaryColor = '#3b82f6',
   secondaryColor = '#1e40af',
+  panelStatus,
   status = 'checking',
   onRefresh
 }: SubdomainPreviewProps) => {
@@ -54,6 +56,12 @@ const SubdomainPreview = ({
   }, [subdomain]);
 
   const checkReachability = async () => {
+    // If panel is active, assume it's reachable - don't show pending DNS
+    if (panelStatus === 'active') {
+      setIsReachable(true);
+      return;
+    }
+
     setChecking(true);
     try {
       // Try to call the domain health check function
@@ -64,16 +72,36 @@ const SubdomainPreview = ({
       if (!error && data) {
         setIsReachable(data.https?.reachable || data.http?.reachable || false);
       } else {
-        // Fallback: assume reachable if we can't check
+        // Fallback: assume reachable
         setIsReachable(true);
       }
     } catch (err) {
-      // If the function doesn't exist or fails, assume the subdomain works
+      // If the function doesn't exist or fails, assume reachable
       setIsReachable(true);
     } finally {
       setChecking(false);
     }
   };
+
+  // Determine the actual display status based on panel status and reachability
+  const getDisplayStatus = () => {
+    // If panel is active in the database, show as Live
+    if (panelStatus === 'active') {
+      return 'live';
+    }
+    // If panel is suspended
+    if (panelStatus === 'suspended') {
+      return 'suspended';
+    }
+    // If still checking
+    if (checking) {
+      return 'checking';
+    }
+    // If panel is pending or reachability check failed
+    return 'pending';
+  };
+
+  const displayStatus = getDisplayStatus();
 
   const deviceSizes = {
     desktop: { width: '100%', height: '400px' },
@@ -253,20 +281,25 @@ const SubdomainPreview = ({
           </div>
           <div className="flex items-center gap-2">
             {/* Status Badge */}
-            {checking ? (
+            {displayStatus === 'checking' ? (
               <Badge variant="outline" className="bg-blue-500/10 text-blue-500">
                 <Loader2 className="w-3 h-3 mr-1 animate-spin" />
                 Checking
               </Badge>
-            ) : isReachable ? (
+            ) : displayStatus === 'live' ? (
               <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500">
                 <CheckCircle className="w-3 h-3 mr-1" />
                 Live
               </Badge>
+            ) : displayStatus === 'suspended' ? (
+              <Badge variant="outline" className="bg-red-500/10 text-red-500">
+                <AlertTriangle className="w-3 h-3 mr-1" />
+                Suspended
+              </Badge>
             ) : (
               <Badge variant="outline" className="bg-amber-500/10 text-amber-500">
                 <AlertTriangle className="w-3 h-3 mr-1" />
-                Pending DNS
+                Pending Setup
               </Badge>
             )}
             
