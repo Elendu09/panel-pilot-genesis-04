@@ -13,6 +13,7 @@ interface ThemeOneProps {
   panel?: any;
   services?: any[];
   customization?: any;
+  isPreview?: boolean;
 }
 
 // Theme One Color Palettes - Cosmic Purple (Enhanced for better contrast)
@@ -46,26 +47,34 @@ const lightPalette = {
   cardBorder: 'rgba(0, 0, 0, 0.1)',
 };
 
-export const ThemeOne = ({ panel, services = [], customization = {} }: ThemeOneProps) => {
-  const [themeMode, setThemeMode] = useState<'dark' | 'light'>('dark');
+export const ThemeOne = ({ panel, services = [], customization = {}, isPreview = false }: ThemeOneProps) => {
+  // Use passed themeMode if in preview mode, otherwise use internal state
+  const passedThemeMode = customization?.themeMode;
+  const [internalThemeMode, setInternalThemeMode] = useState<'dark' | 'light'>('dark');
   
-  // Detect system preference or use saved preference
+  // Detect system preference or use saved preference (only for non-preview)
   useEffect(() => {
+    if (passedThemeMode) return; // Skip if preview mode controls theme
     const saved = localStorage.getItem('storefront-theme-mode');
     if (saved === 'light' || saved === 'dark') {
-      setThemeMode(saved);
+      setInternalThemeMode(saved);
     } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
-      setThemeMode('light');
+      setInternalThemeMode('light');
     }
-  }, []);
+  }, [passedThemeMode]);
 
-  // Save preference when changed + sync with document class
+  // Use passed theme mode (preview) or internal state (live)
+  const themeMode = passedThemeMode || internalThemeMode;
+  const setThemeMode = passedThemeMode ? undefined : setInternalThemeMode;
+
+  // Save preference when changed + sync with document class (only for non-preview)
   useEffect(() => {
-    localStorage.setItem('storefront-theme-mode', themeMode);
+    if (passedThemeMode) return; // Don't save or sync classes in preview mode
+    localStorage.setItem('storefront-theme-mode', internalThemeMode);
     // Sync with document class for shadcn/tailwind components
     document.documentElement.classList.remove('light', 'dark');
-    document.documentElement.classList.add(themeMode);
-  }, [themeMode]);
+    document.documentElement.classList.add(internalThemeMode);
+  }, [internalThemeMode, passedThemeMode]);
 
   const palette = themeMode === 'dark' ? darkPalette : lightPalette;
 
@@ -222,8 +231,8 @@ export const ThemeOne = ({ panel, services = [], customization = {} }: ThemeOneP
         />
       </div>
 
-      {/* Navigation */}
-      <StorefrontNavigation panel={panel} customization={mergedCustomization} />
+      {/* Navigation - Hidden in preview mode */}
+      {!isPreview && <StorefrontNavigation panel={panel} customization={mergedCustomization} />}
 
       {/* Main Content */}
       <main className="relative z-10">
