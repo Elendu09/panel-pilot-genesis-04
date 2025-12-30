@@ -26,28 +26,8 @@ export const Navigation = () => {
   };
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border overflow-hidden">
-      {/* Grid pattern overlay */}
-      <div 
-        className="absolute inset-0 opacity-[0.03] pointer-events-none"
-        style={{
-          backgroundImage: `linear-gradient(hsl(var(--primary)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--primary)) 1px, transparent 1px)`,
-          backgroundSize: '30px 30px'
-        }}
-      />
-      
-      {/* Floating bubbles */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-2 left-[10%] w-2 h-2 rounded-full bg-primary/20 animate-pulse" />
-        <div className="absolute top-4 left-[25%] w-1.5 h-1.5 rounded-full bg-primary/15 animate-pulse" style={{ animationDelay: '0.5s' }} />
-        <div className="absolute top-1 left-[40%] w-1 h-1 rounded-full bg-primary/25 animate-pulse" style={{ animationDelay: '1s' }} />
-        <div className="absolute top-3 left-[55%] w-2 h-2 rounded-full bg-primary/10 animate-pulse" style={{ animationDelay: '0.3s' }} />
-        <div className="absolute top-2 left-[70%] w-1.5 h-1.5 rounded-full bg-primary/20 animate-pulse" style={{ animationDelay: '0.7s' }} />
-        <div className="absolute top-4 left-[85%] w-1 h-1 rounded-full bg-primary/15 animate-pulse" style={{ animationDelay: '1.2s' }} />
-        <div className="absolute top-1 right-[5%] w-2 h-2 rounded-full bg-primary/20 animate-pulse" style={{ animationDelay: '0.9s' }} />
-      </div>
-
-      <div className="container mx-auto px-4 relative z-10">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
+      <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <Link to="/" className="flex items-center space-x-2">
             <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
