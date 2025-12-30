@@ -18,7 +18,7 @@ const Services = () => {
         <ComingSoon 
           title="Service Tools"
           description="We're building powerful service tools to help you manage and optimize your SMM services. Stay tuned for advanced analytics, bulk operations, and more."
-          estimatedTime="Q1 2025"
+          estimatedTime="Q1 2026"
           showBackButton={true}
           backTo="/"
         />
