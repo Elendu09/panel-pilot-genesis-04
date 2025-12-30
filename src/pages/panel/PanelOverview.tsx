@@ -58,7 +58,10 @@ const PanelOverview = () => {
     totalOrders: 0,
     totalRevenue: 0,
     activeServices: 0,
-    totalCustomers: 0
+    totalCustomers: 0,
+    todayOrders: 0,
+    todayRevenue: 0,
+    topServiceToday: ''
   });
   const [changes, setChanges] = useState<{
     orders: { value: string; trend: 'up' | 'down' | 'neutral' };
@@ -120,6 +123,38 @@ const PanelOverview = () => {
           const uniqueCustomers = new Set(orders?.map(o => o.buyer_id) || []).size;
           const totalRevenue = orders?.reduce((sum, order) => sum + Number(order.price), 0) || 0;
 
+          // Fetch today's orders
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const { data: todayOrders } = await supabase
+            .from('orders')
+            .select('price, service_id')
+            .eq('panel_id', panel.id)
+            .gte('created_at', today.toISOString());
+          
+          const todayOrderCount = todayOrders?.length || 0;
+          const todayRevenueTotal = todayOrders?.reduce((sum, o) => sum + Number(o.price), 0) || 0;
+          
+          // Find top service today
+          let topService = '';
+          if (todayOrders && todayOrders.length > 0) {
+            const serviceCounts: Record<string, number> = {};
+            todayOrders.forEach(o => {
+              if (o.service_id) {
+                serviceCounts[o.service_id] = (serviceCounts[o.service_id] || 0) + 1;
+              }
+            });
+            const topServiceId = Object.entries(serviceCounts).sort((a, b) => b[1] - a[1])[0]?.[0];
+            if (topServiceId) {
+              const { data: serviceData } = await supabase
+                .from('services')
+                .select('name')
+                .eq('id', topServiceId)
+                .single();
+              topService = serviceData?.name || '';
+            }
+          }
+
           // Fetch previous period data
           const { startDate: prevStart, endDate: prevEnd } = getPreviousPeriodRange(30);
           const { data: prevOrders } = await supabase
@@ -146,7 +181,10 @@ const PanelOverview = () => {
             totalOrders: orders?.length || 0,
             totalRevenue,
             activeServices: activeServicesCount || 0,
-            totalCustomers: uniqueCustomers
+            totalCustomers: uniqueCustomers,
+            todayOrders: todayOrderCount,
+            todayRevenue: todayRevenueTotal,
+            topServiceToday: topService
           });
         }
       } catch (error) {
@@ -740,8 +778,16 @@ const PanelOverview = () => {
             <CardDescription>Key metrics overview</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Quick Stats Grid */}
+            {/* Quick Stats Grid - Enhanced */}
             <div className="grid grid-cols-2 gap-3 mb-4">
+              <div className="p-3 rounded-xl bg-accent/30 border border-border/50">
+                <span className="text-xs text-muted-foreground">Today's Orders</span>
+                <p className="text-lg font-bold">{stats.todayOrders.toLocaleString()}</p>
+              </div>
+              <div className="p-3 rounded-xl bg-accent/30 border border-border/50">
+                <span className="text-xs text-muted-foreground">Today's Revenue</span>
+                <p className="text-lg font-bold text-emerald-500">${stats.todayRevenue.toFixed(2)}</p>
+              </div>
               <div className="p-3 rounded-xl bg-accent/30 border border-border/50">
                 <span className="text-xs text-muted-foreground">Avg Order Value</span>
                 <p className="text-lg font-bold">${(stats.totalRevenue / Math.max(stats.totalOrders, 1)).toFixed(2)}</p>
@@ -754,6 +800,14 @@ const PanelOverview = () => {
                 </p>
               </div>
             </div>
+            
+            {/* Top Service Today */}
+            {stats.topServiceToday && (
+              <div className="p-3 rounded-xl bg-primary/10 border border-primary/20 mb-4">
+                <span className="text-xs text-muted-foreground">Top Service Today</span>
+                <p className="text-sm font-semibold text-primary truncate">{stats.topServiceToday}</p>
+              </div>
+            )}
             
             {/* Progress Bars */}
             <div>
