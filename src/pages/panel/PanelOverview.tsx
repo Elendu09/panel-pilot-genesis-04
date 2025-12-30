@@ -789,7 +789,7 @@ const PanelOverview = () => {
             panelName={panelData.name || 'Your Panel'}
             primaryColor={panelData.primary_color}
             secondaryColor={panelData.secondary_color}
-            status={panelData.status === 'active' ? 'active' : 'pending'}
+            panelStatus={panelData.status as 'active' | 'pending' | 'suspended'}
             onRefresh={handleManualRefresh}
           />
         </motion.div>

@@ -61,8 +61,9 @@ const BuyerDeposit = () => {
   const [processing, setProcessing] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>(defaultPaymentMethods);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loadingMethods, setLoadingMethods] = useState(true);
+  const [noPaymentGateway, setNoPaymentGateway] = useState(false);
 
   // Fetch enabled payment methods from panel settings
   useEffect(() => {
@@ -84,16 +85,28 @@ const BuyerDeposit = () => {
         const enabledMethods = paymentSettings.enabledMethods || [];
         
         if (enabledMethods.length > 0) {
-          // Filter to only show enabled methods
+          // Filter to only show enabled methods that match configured gateways
           const filteredMethods = defaultPaymentMethods.filter(m => 
-            enabledMethods.includes(m.id)
+            enabledMethods.some((em: any) => 
+              (typeof em === 'string' ? em === m.id : em.id === m.id) && 
+              (typeof em === 'string' || em.enabled !== false)
+            )
           );
           if (filteredMethods.length > 0) {
             setPaymentMethods(filteredMethods);
+            setNoPaymentGateway(false);
+          } else {
+            setPaymentMethods([]);
+            setNoPaymentGateway(true);
           }
+        } else {
+          // No payment methods configured
+          setPaymentMethods([]);
+          setNoPaymentGateway(true);
         }
       } catch (error) {
         console.error('Error fetching payment methods:', error);
+        setNoPaymentGateway(true);
       } finally {
         setLoadingMethods(false);
       }
@@ -337,6 +350,22 @@ const BuyerDeposit = () => {
                 </div>
               ))}
             </div>
+          ) : noPaymentGateway ? (
+            <Card className="border-amber-500/30 bg-amber-500/5">
+              <CardContent className="p-6 text-center">
+                <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No Payment Gateway Available</h3>
+                <p className="text-muted-foreground mb-4 text-sm">
+                  Payment methods are currently being configured. Please contact support for assistance.
+                </p>
+                <Button asChild variant="outline">
+                  <Link to="/support" className="gap-2">
+                    <AlertTriangle className="w-4 h-4" />
+                    Contact Support
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
               {paymentMethods.map((method, index) => (
