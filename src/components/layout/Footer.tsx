@@ -21,8 +21,16 @@ export const Footer = () => {
   };
 
   return (
-    <footer className="bg-card border-t border-border">
-      <div className="container mx-auto px-4 py-6 sm:py-8">
+    <footer className="bg-card border-t border-border relative overflow-hidden">
+      {/* Grid pattern overlay */}
+      <div 
+        className="absolute inset-0 opacity-[0.03] pointer-events-none"
+        style={{
+          backgroundImage: `linear-gradient(hsl(var(--primary)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--primary)) 1px, transparent 1px)`,
+          backgroundSize: '40px 40px'
+        }}
+      />
+      <div className="container mx-auto px-4 py-6 sm:py-8 relative z-10">
         <div className="grid grid-cols-3 md:grid-cols-4 gap-4 sm:gap-6">
           {/* Brand */}
           <div className="col-span-3 md:col-span-1 space-y-2 sm:space-y-3 mb-3 md:mb-0">
