@@ -5,6 +5,7 @@ import { ThemeOne } from '@/components/themes/ThemeOne';
 import { ThemeTwo } from '@/components/themes/ThemeTwo';
 import { ThemeThree } from '@/components/themes/ThemeThree';
 import { ThemeFour } from '@/components/themes/ThemeFour';
+import { ThemeFive } from '@/components/themes/ThemeFive';
 import { FloatingChatWidget } from '@/components/storefront/FloatingChatWidget';
 import { FastOrderSection } from '@/components/storefront/FastOrderSection';
 import { supabase } from '@/integrations/supabase/client';
@@ -93,27 +94,34 @@ const Storefront = () => {
 
       console.log('Rendering theme:', selectedTheme, 'with props:', { panelName: panel?.name, servicesCount: services?.length });
 
-      // ThemeOne is the default and recommended theme
+      // Theme selection based on selectedTheme value
       switch (selectedTheme) {
+        case 'theme_two':
         case 'professional':
         case 'light_minimal':
         case 'corporate':
         case 'ocean_blue':
           return <ThemeTwo {...themeProps} />;
+        case 'theme_three':
         case 'vibrant':
         case 'neon_glow':
         case 'sunset_orange':
         case 'royal_purple':
           return <ThemeThree {...themeProps} />;
+        case 'theme_four':
         case 'grace':
         case 'grace_cometh':
         case 'forest_earth':
           return <ThemeFour {...themeProps} />;
-        // ThemeOne is the default for all other cases
+        case 'theme_five':
+        case 'tech_futuristic':
+          return <ThemeFive {...themeProps} />;
+        // ThemeOne is the default for all other cases (default, theme_one, dark_gradient, etc.)
+        case 'default':
+        case 'theme_one':
         case 'dark_gradient':
         case 'cosmic_purple':
         default:
-          // ThemeOne is always the fallback/default theme
           return <ThemeOne {...themeProps} />;
       }
     } catch (err: any) {

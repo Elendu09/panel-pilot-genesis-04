@@ -258,9 +258,10 @@ const layoutSections = [
 
 const themes = [
   { 
-    id: 'dark_gradient', 
-    name: 'Dark Gradient', 
+    id: 'default', 
+    name: 'Default Theme', 
     colors: ['#0F172A', '#6366F1', '#8B5CF6'],
+    description: 'Your primary default layout',
     sections: {
       enablePlatformFeatures: true,
       enableStats: true,
@@ -270,9 +271,23 @@ const themes = [
     },
   },
   { 
-    id: 'ocean_blue', 
-    name: 'Ocean Blue', 
+    id: 'theme_one', 
+    name: 'Theme 1 - Cosmic Purple', 
+    colors: ['#0A0A12', '#8B5CF6', '#EC4899'],
+    description: 'Deep purple gradients with vibrant accents',
+    sections: {
+      enablePlatformFeatures: true,
+      enableStats: true,
+      enableFeatures: true,
+      enableTestimonials: true,
+      enableFAQs: true,
+    },
+  },
+  { 
+    id: 'theme_two', 
+    name: 'Theme 2 - Ocean Blue', 
     colors: ['#0C4A6E', '#0EA5E9', '#38BDF8'],
+    description: 'Cool blues with cyan highlights',
     sections: {
       enablePlatformFeatures: true,
       enableStats: true,
@@ -282,9 +297,10 @@ const themes = [
     },
   },
   { 
-    id: 'forest_green', 
-    name: 'Forest Green', 
-    colors: ['#14532D', '#22C55E', '#4ADE80'],
+    id: 'theme_three', 
+    name: 'Theme 3 - Sunset Orange', 
+    colors: ['#1A1310', '#F97316', '#EAB308'],
+    description: 'Warm and vibrant orange tones',
     sections: {
       enablePlatformFeatures: true,
       enableStats: true,
@@ -294,33 +310,23 @@ const themes = [
     },
   },
   { 
-    id: 'professional', 
-    name: 'Professional', 
-    colors: ['#FFFFFF', '#3B82F6', '#1E40AF'],
+    id: 'theme_four', 
+    name: 'Theme 4 - Forest Earth', 
+    colors: ['#0D1912', '#22C55E', '#84CC16'],
+    description: 'Natural green with earthy accents',
     sections: {
       enablePlatformFeatures: true,
       enableStats: true,
-      enableFeatures: true,
-      enableTestimonials: false,
-      enableFAQs: false,
-    },
-  },
-  { 
-    id: 'vibrant', 
-    name: 'Vibrant', 
-    colors: ['#FFF7ED', '#F97316', '#F59E0B'],
-    sections: {
-      enablePlatformFeatures: true,
-      enableStats: false,
       enableFeatures: true,
       enableTestimonials: true,
       enableFAQs: true,
     },
   },
   { 
-    id: 'midnight', 
-    name: 'Midnight', 
-    colors: ['#020617', '#7C3AED', '#A855F7'],
+    id: 'theme_five', 
+    name: 'Theme 5 - Tech Futuristic', 
+    colors: ['#0F1419', '#00D4FF', '#7C3AED'],
+    description: 'Modern AI/tech inspired design',
     sections: {
       enablePlatformFeatures: true,
       enableStats: true,
