@@ -1247,6 +1247,338 @@ export default function DesignCustomization() {
             </div>
           </div>
         );
+      
+      case 'spacing':
+        return (
+          <div className="space-y-4">
+            <div>
+              <div className="flex justify-between mb-2">
+                <Label>Section Padding Y</Label>
+                <span className="text-sm text-muted-foreground">{customization.sectionPaddingY}px</span>
+              </div>
+              <Slider value={[customization.sectionPaddingY]} onValueChange={([v]) => updateCustomization('sectionPaddingY', v)} min={40} max={160} step={8} />
+            </div>
+            <div>
+              <div className="flex justify-between mb-2">
+                <Label>Container Max Width</Label>
+                <span className="text-sm text-muted-foreground">{customization.containerMaxWidth}px</span>
+              </div>
+              <Slider value={[customization.containerMaxWidth]} onValueChange={([v]) => updateCustomization('containerMaxWidth', v)} min={960} max={1536} step={64} />
+            </div>
+            <div>
+              <div className="flex justify-between mb-2">
+                <Label>Card Spacing</Label>
+                <span className="text-sm text-muted-foreground">{customization.cardSpacing}px</span>
+              </div>
+              <Slider value={[customization.cardSpacing]} onValueChange={([v]) => updateCustomization('cardSpacing', v)} min={8} max={48} step={4} />
+            </div>
+            <div>
+              <div className="flex justify-between mb-2">
+                <Label>Card Radius</Label>
+                <span className="text-sm text-muted-foreground">{customization.cardRadius}px</span>
+              </div>
+              <Slider value={[customization.cardRadius]} onValueChange={([v]) => updateCustomization('cardRadius', v)} min={0} max={32} step={2} />
+            </div>
+          </div>
+        );
+
+      case 'animations':
+        return (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-3 rounded-lg bg-accent/30">
+              <span className="font-medium">Enable Animations</span>
+              <Switch checked={customization.enableAnimations} onCheckedChange={(c) => updateCustomization('enableAnimations', c)} />
+            </div>
+            <div>
+              <Label>Animation Style</Label>
+              <select className="w-full h-10 rounded-md border bg-background px-3 mt-1" value={customization.animationStyle} onChange={(e) => updateCustomization('animationStyle', e.target.value)}>
+                <option value="fade">Fade In</option>
+                <option value="slide">Slide Up</option>
+                <option value="zoom">Zoom In</option>
+                <option value="bounce">Bounce</option>
+                <option value="none">None</option>
+              </select>
+            </div>
+            <div>
+              <div className="flex justify-between mb-2">
+                <Label>Animation Duration</Label>
+                <span className="text-sm text-muted-foreground">{customization.animationDuration}ms</span>
+              </div>
+              <Slider value={[customization.animationDuration]} onValueChange={([v]) => updateCustomization('animationDuration', v)} min={200} max={1000} step={50} />
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-lg bg-accent/30">
+              <span className="font-medium">Scroll Reveal</span>
+              <Switch checked={customization.scrollReveal} onCheckedChange={(c) => updateCustomization('scrollReveal', c)} />
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-lg bg-accent/30">
+              <span className="font-medium">Parallax Effects</span>
+              <Switch checked={customization.enableParallax} onCheckedChange={(c) => updateCustomization('enableParallax', c)} />
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-lg bg-accent/30">
+              <span className="font-medium">Glow Effects</span>
+              <Switch checked={customization.glowEffects} onCheckedChange={(c) => updateCustomization('glowEffects', c)} />
+            </div>
+          </div>
+        );
+
+      case 'backgrounds':
+        return (
+          <div className="space-y-4">
+            <div>
+              <Label>Background Pattern</Label>
+              <select className="w-full h-10 rounded-md border bg-background px-3 mt-1" value={customization.backgroundPattern} onChange={(e) => updateCustomization('backgroundPattern', e.target.value)}>
+                <option value="none">None</option>
+                <option value="grid">Grid Lines</option>
+                <option value="dots">Dots</option>
+                <option value="diagonal">Diagonal Lines</option>
+                <option value="waves">Waves</option>
+              </select>
+            </div>
+            <div>
+              <div className="flex justify-between mb-2">
+                <Label>Pattern Opacity</Label>
+                <span className="text-sm text-muted-foreground">{Math.round(customization.patternOpacity * 100)}%</span>
+              </div>
+              <Slider value={[customization.patternOpacity * 100]} onValueChange={([v]) => updateCustomization('patternOpacity', v / 100)} min={1} max={20} step={1} />
+            </div>
+            <div className="flex items-center gap-3">
+              <input type="color" value={customization.patternColor} onChange={(e) => updateCustomization('patternColor', e.target.value)} className="w-10 h-10 rounded-lg border-0 cursor-pointer" />
+              <div className="flex-1">
+                <Label className="text-xs">Pattern Color</Label>
+                <Input value={customization.patternColor} onChange={(e) => updateCustomization('patternColor', e.target.value)} className="h-8 text-xs font-mono" />
+              </div>
+            </div>
+            <div>
+              <div className="flex justify-between mb-2">
+                <Label>Gradient Angle</Label>
+                <span className="text-sm text-muted-foreground">{customization.gradientAngle}°</span>
+              </div>
+              <Slider value={[customization.gradientAngle]} onValueChange={([v]) => updateCustomization('gradientAngle', v)} min={0} max={360} step={15} />
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-lg bg-accent/30">
+              <span className="font-medium">Background Blur</span>
+              <Switch checked={customization.enableBackgroundBlur} onCheckedChange={(c) => updateCustomization('enableBackgroundBlur', c)} />
+            </div>
+          </div>
+        );
+
+      case 'buttons':
+        return (
+          <div className="space-y-4">
+            <div>
+              <Label className="mb-2 block">Button Style</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {['solid', 'outline', 'ghost'].map(style => (
+                  <button key={style} onClick={() => updateCustomization('buttonStyle', style)} className={`p-3 rounded-lg border-2 text-sm capitalize transition-all ${customization.buttonStyle === style ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/50'}`}>
+                    {style}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <Label className="mb-2 block">Button Size</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {[{ id: 'sm', label: 'Small' }, { id: 'md', label: 'Medium' }, { id: 'lg', label: 'Large' }].map(size => (
+                  <button key={size.id} onClick={() => updateCustomization('buttonSize', size.id)} className={`p-3 rounded-lg border-2 text-sm transition-all ${customization.buttonSize === size.id ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/50'}`}>
+                    {size.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div className="flex justify-between mb-2">
+                <Label>Border Radius</Label>
+                <span className="text-sm text-muted-foreground">{customization.buttonRadius}px</span>
+              </div>
+              <Slider value={[customization.buttonRadius]} onValueChange={([v]) => updateCustomization('buttonRadius', v)} min={0} max={50} step={2} />
+            </div>
+            <div>
+              <Label>Hover Effect</Label>
+              <select className="w-full h-10 rounded-md border bg-background px-3 mt-1" value={customization.buttonHoverEffect} onChange={(e) => updateCustomization('buttonHoverEffect', e.target.value)}>
+                <option value="glow">Glow</option>
+                <option value="scale">Scale Up</option>
+                <option value="slide">Background Slide</option>
+                <option value="none">None</option>
+              </select>
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-lg bg-accent/30">
+              <span className="font-medium">Button Shadow</span>
+              <Switch checked={customization.buttonShadow} onCheckedChange={(c) => updateCustomization('buttonShadow', c)} />
+            </div>
+          </div>
+        );
+
+      case 'platform':
+        return (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-3 rounded-lg bg-accent/30">
+              <span className="font-medium">Show Platform Features</span>
+              <Switch checked={customization.enablePlatformFeatures} onCheckedChange={(c) => updateCustomization('enablePlatformFeatures', c)} />
+            </div>
+            {customization.platformFeatures.map((feature: PlatformFeature, index: number) => (
+              <Card key={index} className="p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Feature {index + 1}</span>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeArrayItem('platformFeatures', index)}>
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+                <Input placeholder="Title" value={feature.title} onChange={(e) => updateNestedArray('platformFeatures', index, 'title', e.target.value)} />
+                <Input placeholder="Description" value={feature.description} onChange={(e) => updateNestedArray('platformFeatures', index, 'description', e.target.value)} />
+              </Card>
+            ))}
+            <Button variant="outline" className="w-full" onClick={() => addArrayItem('platformFeatures', { title: 'New Feature', description: 'Description', icon: 'Star', gradient: 'from-blue-500 to-cyan-500' })}>
+              <Plus className="w-4 h-4 mr-2" /> Add Feature
+            </Button>
+          </div>
+        );
+
+      case 'stats':
+        return (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-3 rounded-lg bg-accent/30">
+              <span className="font-medium">Show Statistics</span>
+              <Switch checked={customization.enableStats} onCheckedChange={(c) => updateCustomization('enableStats', c)} />
+            </div>
+            {customization.stats.map((stat: Stat, index: number) => (
+              <Card key={index} className="p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Stat {index + 1}</span>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeArrayItem('stats', index)}>
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Input placeholder="Value" value={stat.value} onChange={(e) => updateNestedArray('stats', index, 'value', e.target.value)} />
+                  <Input placeholder="Label" value={stat.label} onChange={(e) => updateNestedArray('stats', index, 'label', e.target.value)} />
+                </div>
+              </Card>
+            ))}
+            <Button variant="outline" className="w-full" onClick={() => addArrayItem('stats', { icon: 'Star', value: '100+', label: 'New Stat', gradient: 'from-blue-500 to-cyan-500' })}>
+              <Plus className="w-4 h-4 mr-2" /> Add Stat
+            </Button>
+          </div>
+        );
+
+      case 'features':
+        return (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-3 rounded-lg bg-accent/30">
+              <span className="font-medium">Show Features Grid</span>
+              <Switch checked={customization.enableFeatures} onCheckedChange={(c) => updateCustomization('enableFeatures', c)} />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              The features grid shows payment methods, dashboard preview, platforms, discounts, support, and other features.
+            </p>
+          </div>
+        );
+
+      case 'testimonials':
+        return (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-3 rounded-lg bg-accent/30">
+              <span className="font-medium">Show Testimonials</span>
+              <Switch checked={customization.enableTestimonials} onCheckedChange={(c) => updateCustomization('enableTestimonials', c)} />
+            </div>
+            {customization.testimonials.map((testimonial: Testimonial, index: number) => (
+              <Card key={index} className="p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Review {index + 1}</span>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeArrayItem('testimonials', index)}>
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+                <Input placeholder="Customer Name" value={testimonial.name} onChange={(e) => updateNestedArray('testimonials', index, 'name', e.target.value)} />
+                <Textarea placeholder="Review text" value={testimonial.text} onChange={(e) => updateNestedArray('testimonials', index, 'text', e.target.value)} rows={2} />
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4, 5].map(star => (
+                    <button key={star} type="button" onClick={() => updateNestedArray('testimonials', index, 'rating', star)} className={`p-1 ${testimonial.rating >= star ? 'text-yellow-500' : 'text-muted-foreground'}`}>
+                      <Star className="w-4 h-4 fill-current" />
+                    </button>
+                  ))}
+                </div>
+              </Card>
+            ))}
+            <Button variant="outline" className="w-full" onClick={() => addArrayItem('testimonials', { name: 'Customer', text: 'Great service!', rating: 5 })}>
+              <Plus className="w-4 h-4 mr-2" /> Add Review
+            </Button>
+          </div>
+        );
+
+      case 'faqs':
+        return (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-3 rounded-lg bg-accent/30">
+              <span className="font-medium">Show FAQ Section</span>
+              <Switch checked={customization.enableFAQs} onCheckedChange={(c) => updateCustomization('enableFAQs', c)} />
+            </div>
+            {customization.faqs.map((faq: FAQ, index: number) => (
+              <Card key={index} className="p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">FAQ {index + 1}</span>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeArrayItem('faqs', index)}>
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+                <Input placeholder="Question" value={faq.question} onChange={(e) => updateNestedArray('faqs', index, 'question', e.target.value)} />
+                <Textarea placeholder="Answer" value={faq.answer} onChange={(e) => updateNestedArray('faqs', index, 'answer', e.target.value)} rows={2} />
+              </Card>
+            ))}
+            <Button variant="outline" className="w-full" onClick={() => addArrayItem('faqs', { question: 'New Question?', answer: 'Answer here...' })}>
+              <Plus className="w-4 h-4 mr-2" /> Add FAQ
+            </Button>
+          </div>
+        );
+
+      case 'footer':
+        return (
+          <div className="space-y-4">
+            <div>
+              <Label>Footer About Text</Label>
+              <Textarea value={customization.footerAbout} onChange={(e) => updateCustomization('footerAbout', e.target.value)} rows={2} placeholder="Brief description of your panel..." />
+            </div>
+            <div>
+              <Label>Copyright Text</Label>
+              <Input value={customization.footerText} onChange={(e) => updateCustomization('footerText', e.target.value)} placeholder="© 2024 Your Panel. All rights reserved." />
+            </div>
+            <div className="space-y-2">
+              <Label>Social Links</Label>
+              {['facebook', 'twitter', 'instagram', 'telegram', 'discord'].map(social => (
+                <Input 
+                  key={social} 
+                  placeholder={`${social.charAt(0).toUpperCase() + social.slice(1)} URL`} 
+                  value={(customization.socialLinks as any)?.[social] || ''} 
+                  onChange={(e) => updateCustomization('socialLinks', { ...customization.socialLinks, [social]: e.target.value })} 
+                />
+              ))}
+            </div>
+          </div>
+        );
+
+      case 'advanced':
+        return (
+          <div className="space-y-4">
+            <div>
+              <Label>Shadow Intensity</Label>
+              <select className="w-full h-10 rounded-md border bg-background px-3 mt-1" value={customization.shadowIntensity} onChange={(e) => updateCustomization('shadowIntensity', e.target.value)}>
+                <option value="none">None</option>
+                <option value="light">Light</option>
+                <option value="medium">Medium</option>
+                <option value="heavy">Heavy</option>
+              </select>
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-lg bg-accent/30">
+              <span className="font-medium">Card Borders</span>
+              <Switch checked={customization.cardBorder} onCheckedChange={(c) => updateCustomization('cardBorder', c)} />
+            </div>
+            <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+              <p className="text-sm text-yellow-200">
+                These advanced settings affect the overall look and feel of your storefront.
+              </p>
+            </div>
+          </div>
+        );
+
       default:
         return <p className="text-sm text-muted-foreground">Configure {sectionId} settings</p>;
     }

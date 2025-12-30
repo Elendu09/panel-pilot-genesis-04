@@ -197,18 +197,24 @@ export function MobileDesignSlider({
         )}
 
         <div className="flex items-center gap-2">
-          {/* Preview Theme Toggle */}
-          {onTogglePreviewTheme && viewMode === 'preview' && (
+        {/* Preview Theme Toggle - Always visible */}
+          {onTogglePreviewTheme && (
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7"
+              className={cn(
+                "h-7 w-7 transition-colors",
+                previewThemeMode === 'dark' 
+                  ? "bg-slate-800 hover:bg-slate-700" 
+                  : "bg-amber-100 hover:bg-amber-200"
+              )}
               onClick={onTogglePreviewTheme}
+              title={previewThemeMode === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             >
               {previewThemeMode === 'dark' ? (
                 <Sun className="w-3.5 h-3.5 text-yellow-400" />
               ) : (
-                <Moon className="w-3.5 h-3.5 text-slate-400" />
+                <Moon className="w-3.5 h-3.5 text-slate-600" />
               )}
             </Button>
           )}
