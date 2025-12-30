@@ -80,6 +80,7 @@ export function MobileDesignSlider({
 }: MobileDesignSliderProps) {
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(1);
+  const [viewMode, setViewMode] = useState<'preview' | 'controls'>('preview');
 
   const devices = [
     { key: 'mobile' as const, icon: Smartphone, label: 'Mobile' },
@@ -113,69 +114,91 @@ export function MobileDesignSlider({
     <div className="flex flex-col h-screen bg-slate-950 overflow-hidden">
       {/* Top Bar */}
       <div className="flex items-center justify-between px-3 py-2 bg-slate-900/80 backdrop-blur-xl border-b border-white/10">
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5">
-            <div 
-              className="w-3 h-3 rounded-full" 
-              style={{ backgroundColor: primaryColor || '#8B5CF6' }} 
-            />
-            <div 
-              className="w-3 h-3 rounded-full" 
-              style={{ backgroundColor: secondaryColor || '#EC4899' }} 
-            />
-          </div>
-          <span className="text-xs font-medium text-white/70 truncate max-w-[80px]">
-            {currentTheme || 'Custom'}
-          </span>
+        {/* View Mode Toggle */}
+        <div className="flex items-center gap-1 px-1 py-0.5 bg-slate-800/60 rounded-full">
+          <button
+            onClick={() => setViewMode('preview')}
+            className={cn(
+              "px-3 py-1 rounded-full text-xs font-medium transition-all",
+              viewMode === 'preview' 
+                ? "bg-primary text-primary-foreground" 
+                : "text-white/60 hover:text-white/80"
+            )}
+          >
+            Preview
+          </button>
+          <button
+            onClick={() => setViewMode('controls')}
+            className={cn(
+              "px-3 py-1 rounded-full text-xs font-medium transition-all",
+              viewMode === 'controls' 
+                ? "bg-primary text-primary-foreground" 
+                : "text-white/60 hover:text-white/80"
+            )}
+          >
+            Controls
+          </button>
         </div>
 
-        {/* Device Selector */}
-        <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7"
-            onClick={() => handleDeviceSwipe('right')}
-            disabled={currentPreviewIndex === 0}
-          >
-            <ChevronLeft className="w-3 h-3" />
-          </Button>
-          <div className="flex gap-1">
-            {devices.map((device, idx) => {
-              const Icon = device.icon;
-              return (
-                <button
-                  key={device.key}
-                  onClick={() => {
-                    setCurrentPreviewIndex(idx);
-                    setPreviewDevice(device.key);
-                  }}
-                  className={cn(
-                    "p-1 rounded-lg transition-all",
-                    currentPreviewIndex === idx 
-                      ? "bg-primary/20 text-primary" 
-                      : "text-white/40 hover:text-white/60"
-                  )}
-                >
-                  <Icon className="w-3.5 h-3.5" />
-                </button>
-              );
-            })}
+        {/* Device Selector - Only show in preview mode */}
+        {viewMode === 'preview' && (
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => handleDeviceSwipe('right')}
+              disabled={currentPreviewIndex === 0}
+            >
+              <ChevronLeft className="w-3 h-3" />
+            </Button>
+            <div className="flex gap-1">
+              {devices.map((device, idx) => {
+                const Icon = device.icon;
+                return (
+                  <button
+                    key={device.key}
+                    onClick={() => {
+                      setCurrentPreviewIndex(idx);
+                      setPreviewDevice(device.key);
+                    }}
+                    className={cn(
+                      "p-1 rounded-lg transition-all",
+                      currentPreviewIndex === idx 
+                        ? "bg-primary/20 text-primary" 
+                        : "text-white/40 hover:text-white/60"
+                    )}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                  </button>
+                );
+              })}
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => handleDeviceSwipe('left')}
+              disabled={currentPreviewIndex === 2}
+            >
+              <ChevronRight className="w-3 h-3" />
+            </Button>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7"
-            onClick={() => handleDeviceSwipe('left')}
-            disabled={currentPreviewIndex === 2}
-          >
-            <ChevronRight className="w-3 h-3" />
-          </Button>
-        </div>
+        )}
+
+        {/* Section info - Only show in controls mode */}
+        {viewMode === 'controls' && (
+          <div className="flex items-center gap-2">
+            <div className={cn("p-1 rounded-lg bg-gradient-to-br", currentSection.color)}>
+              <currentSection.icon className="w-3 h-3 text-white" />
+            </div>
+            <span className="text-xs font-medium text-white">{currentSection.title}</span>
+          </div>
+        )}
 
         <div className="flex items-center gap-2">
           {/* Preview Theme Toggle */}
-          {onTogglePreviewTheme && (
+          {onTogglePreviewTheme && viewMode === 'preview' && (
             <Button
               variant="ghost"
               size="icon"
@@ -201,143 +224,158 @@ export function MobileDesignSlider({
         </div>
       </div>
 
-      {/* Preview Area */}
-      <motion.div 
-        className="flex-1 overflow-hidden relative"
-        drag="x"
-        dragConstraints={{ left: 0, right: 0 }}
-        dragElastic={0.1}
-        onDragEnd={(_, info) => {
-          if (info.offset.x < -50) handleDeviceSwipe('left');
-          if (info.offset.x > 50) handleDeviceSwipe('right');
-        }}
-      >
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={previewDevice}
-            initial={{ opacity: 0, x: 50 }}
+      {/* Main Content Area */}
+      <AnimatePresence mode="wait">
+        {viewMode === 'preview' ? (
+          <motion.div 
+            key="preview"
+            initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -50 }}
+            exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.2 }}
-            className="absolute inset-0 p-2 flex items-start justify-center overflow-auto"
-          >
-            <div 
-              className={cn(
-                "rounded-xl overflow-hidden shadow-2xl ring-1 ring-white/10 transition-all",
-                previewThemeMode === 'dark' ? 'bg-slate-900' : 'bg-white',
-                previewDevice === 'mobile' && "w-full max-w-[320px]",
-                previewDevice === 'tablet' && "w-full max-w-[480px]",
-                previewDevice === 'desktop' && "w-full max-w-[900px]"
-              )}
-              style={{ 
-                height: previewDevice === 'mobile' ? 'min(580px, calc(100vh - 280px))' : 'calc(100vh - 280px)',
-                maxHeight: 'calc(100vh - 280px)'
-              }}
-            >
-              <div className="w-full h-full overflow-auto">
-                {children}
-              </div>
-            </div>
-          </motion.div>
-        </AnimatePresence>
-
-        {/* Device indicator dots */}
-        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
-          {devices.map((_, idx) => (
-            <div
-              key={idx}
-              className={cn(
-                "w-1.5 h-1.5 rounded-full transition-all",
-                currentPreviewIndex === idx ? "bg-primary w-3" : "bg-white/30"
-              )}
-            />
-          ))}
-        </div>
-      </motion.div>
-
-      {/* Section Slider */}
-      <div className="bg-slate-900/90 backdrop-blur-xl border-t border-white/10">
-        {/* Section Header with swipe */}
-        <div className="flex items-center justify-between px-3 py-2 border-b border-white/5">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => handleSectionSwipe('right')}
-            disabled={currentSectionIndex === 0}
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          
-          <div className="flex items-center gap-2">
-            <div className={cn("p-1.5 rounded-lg bg-gradient-to-br", currentSection.color)}>
-              <currentSection.icon className="w-4 h-4 text-white" />
-            </div>
-            <span className="text-sm font-medium text-white">{currentSection.title}</span>
-            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-              {currentSectionIndex + 1}/{sections.length}
-            </Badge>
-          </div>
-
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => handleSectionSwipe('left')}
-            disabled={currentSectionIndex === sections.length - 1}
-          >
-            <ChevronRight className="w-4 h-4" />
-          </Button>
-        </div>
-
-        {/* Section dots */}
-        <div className="flex justify-center gap-1 py-1.5 px-3 overflow-x-auto">
-          {sections.map((section, idx) => (
-            <button
-              key={section.id}
-              onClick={() => setCurrentSectionIndex(idx)}
-              className={cn(
-                "w-2 h-2 rounded-full transition-all flex-shrink-0",
-                currentSectionIndex === idx ? "bg-primary w-4" : "bg-white/20 hover:bg-white/40"
-              )}
-            />
-          ))}
-        </div>
-
-        {/* Section Content */}
-        <ScrollArea className="h-[200px]">
-          <motion.div
+            className="flex-1 overflow-hidden relative"
             drag="x"
             dragConstraints={{ left: 0, right: 0 }}
             dragElastic={0.1}
             onDragEnd={(_, info) => {
-              if (info.offset.x < -50) handleSectionSwipe('left');
-              if (info.offset.x > 50) handleSectionSwipe('right');
+              if (info.offset.x < -50) handleDeviceSwipe('left');
+              if (info.offset.x > 50) handleDeviceSwipe('right');
             }}
           >
             <AnimatePresence mode="wait">
               <motion.div
-                key={currentSection.id}
-                initial={{ opacity: 0, x: 30 }}
+                key={previewDevice}
+                initial={{ opacity: 0, x: 50 }}
                 animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -30 }}
-                transition={{ duration: 0.15 }}
-                className="p-3"
+                exit={{ opacity: 0, x: -50 }}
+                transition={{ duration: 0.2 }}
+                className="absolute inset-0 p-2 flex items-start justify-center overflow-auto"
               >
-                {renderSection(currentSection.id)}
+                <div 
+                  className={cn(
+                    "rounded-xl overflow-hidden shadow-2xl ring-1 ring-white/10 transition-all",
+                    previewThemeMode === 'dark' ? 'bg-slate-900' : 'bg-white',
+                    previewDevice === 'mobile' && "w-full max-w-[320px]",
+                    previewDevice === 'tablet' && "w-full max-w-[480px]",
+                    previewDevice === 'desktop' && "w-full max-w-[900px]"
+                  )}
+                  style={{ 
+                    height: previewDevice === 'mobile' ? 'min(580px, calc(100vh - 120px))' : 'calc(100vh - 120px)',
+                    maxHeight: 'calc(100vh - 120px)'
+                  }}
+                >
+                  <div className="w-full h-full overflow-auto">
+                    {children}
+                  </div>
+                </div>
               </motion.div>
             </AnimatePresence>
-          </motion.div>
-        </ScrollArea>
 
-        {/* Unsaved changes indicator */}
-        {hasUnsavedChanges && (
-          <div className="flex items-center justify-center gap-2 py-2 bg-amber-500/10 border-t border-amber-500/20">
-            <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-            <span className="text-xs text-amber-400">Unsaved changes</span>
-          </div>
+            {/* Device indicator dots */}
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
+              {devices.map((_, idx) => (
+                <div
+                  key={idx}
+                  className={cn(
+                    "w-1.5 h-1.5 rounded-full transition-all",
+                    currentPreviewIndex === idx ? "bg-primary w-3" : "bg-white/30"
+                  )}
+                />
+              ))}
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div 
+            key="controls"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            transition={{ duration: 0.2 }}
+            className="flex-1 flex flex-col overflow-hidden"
+          >
+            {/* Section Navigation */}
+            <div className="flex items-center justify-between px-3 py-2 bg-slate-900/50 border-b border-white/5">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => handleSectionSwipe('right')}
+                disabled={currentSectionIndex === 0}
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              
+              <div className="flex items-center gap-2">
+                <div className={cn("p-1.5 rounded-lg bg-gradient-to-br", currentSection.color)}>
+                  <currentSection.icon className="w-4 h-4 text-white" />
+                </div>
+                <span className="text-sm font-medium text-white">{currentSection.title}</span>
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                  {currentSectionIndex + 1}/{sections.length}
+                </Badge>
+              </div>
+
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => handleSectionSwipe('left')}
+                disabled={currentSectionIndex === sections.length - 1}
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+
+            {/* Section dots */}
+            <div className="flex justify-center gap-1 py-2 px-3 overflow-x-auto bg-slate-900/30">
+              {sections.map((section, idx) => (
+                <button
+                  key={section.id}
+                  onClick={() => setCurrentSectionIndex(idx)}
+                  className={cn(
+                    "w-2 h-2 rounded-full transition-all flex-shrink-0",
+                    currentSectionIndex === idx ? "bg-primary w-4" : "bg-white/20 hover:bg-white/40"
+                  )}
+                />
+              ))}
+            </div>
+
+            {/* Section Content - Full Height */}
+            <ScrollArea className="flex-1">
+              <motion.div
+                drag="x"
+                dragConstraints={{ left: 0, right: 0 }}
+                dragElastic={0.1}
+                onDragEnd={(_, info) => {
+                  if (info.offset.x < -50) handleSectionSwipe('left');
+                  if (info.offset.x > 50) handleSectionSwipe('right');
+                }}
+              >
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={currentSection.id}
+                    initial={{ opacity: 0, x: 30 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -30 }}
+                    transition={{ duration: 0.15 }}
+                    className="p-4"
+                  >
+                    {renderSection(currentSection.id)}
+                  </motion.div>
+                </AnimatePresence>
+              </motion.div>
+            </ScrollArea>
+          </motion.div>
         )}
-      </div>
+      </AnimatePresence>
+
+      {/* Unsaved changes indicator - Always visible at bottom */}
+      {hasUnsavedChanges && (
+        <div className="flex items-center justify-center gap-2 py-2 bg-amber-500/10 border-t border-amber-500/20">
+          <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+          <span className="text-xs text-amber-400">Unsaved changes</span>
+        </div>
+      )}
     </div>
   );
 }

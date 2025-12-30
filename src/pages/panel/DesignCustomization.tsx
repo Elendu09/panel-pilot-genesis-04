@@ -13,7 +13,8 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Save, ExternalLink, Smartphone, Tablet, Monitor, ChevronDown, Palette, Image, Layout, Zap, BarChart3, HelpCircle, MessageSquare, Loader2, Sparkles, Settings, Users, Star, Plus, Trash2, GripVertical, Shield, Headphones, Award, Clock, ShoppingCart, TrendingUp, CheckCircle, Heart, ThumbsUp, Undo2, Redo2, Wand2, Type, Maximize, Layers, MousePointer, Code, ChevronRight, Info, Sun, Moon } from 'lucide-react';
+import { Save, ExternalLink, Smartphone, Tablet, Monitor, ChevronDown, Palette, Image, Layout, Zap, BarChart3, HelpCircle, MessageSquare, Loader2, Sparkles, Settings, Users, Star, Plus, Trash2, GripVertical, Shield, Headphones, Award, Clock, ShoppingCart, TrendingUp, CheckCircle, Heart, ThumbsUp, Undo2, Redo2, Wand2, Type, Maximize, Layers, MousePointer, Code, ChevronRight, Info, Sun, Moon, RotateCcw } from 'lucide-react';
+import { ImageUpload } from '@/components/panel/ImageUpload';
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -1073,15 +1074,105 @@ export default function DesignCustomization() {
         );
       case 'branding':
         return (
-          <div className="space-y-4">
-            <div>
-              <Label>Logo URL</Label>
-              <Input value={customization.logoUrl} onChange={(e) => updateCustomization('logoUrl', e.target.value)} placeholder="https://..." />
+          <div className="space-y-5">
+            {/* Favicon Section */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="flex items-center gap-2">
+                  <span>Favicon</span>
+                  <Badge variant="outline" className="text-[10px]">32x32</Badge>
+                </Label>
+              </div>
+              
+              {/* Favicon Preview Card */}
+              <div className="p-4 rounded-xl bg-muted/50 border border-border/50">
+                <div className="flex flex-col gap-4">
+                  {/* Browser Tab Preview */}
+                  <div className="flex-shrink-0">
+                    <p className="text-xs text-muted-foreground mb-2">Browser tab preview</p>
+                    <div className="w-full max-w-[220px] bg-slate-800 rounded-t-lg p-1.5">
+                      <div className="flex items-center gap-2 bg-slate-700 rounded px-2 py-1.5">
+                        <img 
+                          src={customization.faviconUrl || '/default-panel-favicon.png'} 
+                          alt="Favicon" 
+                          className="w-4 h-4 object-contain"
+                        />
+                        <span className="text-xs text-white/70 truncate">
+                          {customization.companyName || 'Your Panel'}
+                        </span>
+                        <div className="ml-auto w-3 h-3 rounded-full bg-slate-600" />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Current favicon preview */}
+                  <div className="flex items-center gap-3">
+                    <div className="w-14 h-14 rounded-lg bg-background border-2 border-dashed border-border flex items-center justify-center overflow-hidden">
+                      <img 
+                        src={customization.faviconUrl || '/default-panel-favicon.png'} 
+                        alt="Current favicon"
+                        className="w-10 h-10 object-contain"
+                      />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">
+                        {customization.faviconUrl ? 'Custom Favicon' : 'Default Favicon'}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        PNG or ICO, 32x32px recommended
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Upload Component */}
+              <ImageUpload
+                label="Upload Custom Favicon"
+                value={customization.faviconUrl}
+                onChange={(url) => updateCustomization('faviconUrl', url)}
+                panelId={panelId || ''}
+                folder="favicon"
+                placeholder="Upload favicon (PNG, ICO, 32x32 recommended)"
+                aspectRatio="square"
+                maxSizeMB={1}
+              />
+              
+              {/* Reset to default button */}
+              {customization.faviconUrl && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => updateCustomization('faviconUrl', '')}
+                  className="w-full gap-2"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  Reset to Default Favicon
+                </Button>
+              )}
             </div>
+            
+            {/* Divider */}
+            <div className="border-t border-border/50" />
+            
+            {/* Logo Upload */}
+            <ImageUpload
+              label="Logo"
+              value={customization.logoUrl}
+              onChange={(url) => updateCustomization('logoUrl', url)}
+              panelId={panelId || ''}
+              folder="logos"
+              placeholder="Upload your panel logo"
+              aspectRatio="wide"
+            />
+            
+            {/* Company Name */}
             <div>
               <Label>Company Name</Label>
               <Input value={customization.companyName} onChange={(e) => updateCustomization('companyName', e.target.value)} />
             </div>
+            
+            {/* Tagline */}
             <div>
               <Label>Tagline</Label>
               <Input value={customization.tagline} onChange={(e) => updateCustomization('tagline', e.target.value)} />
