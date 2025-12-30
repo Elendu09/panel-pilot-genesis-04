@@ -39,8 +39,15 @@ import {
   CopyPlus,
   BarChart2,
   Tag,
-  Star
+  Star,
+  Info
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -650,8 +657,9 @@ const ServicesManagement = () => {
   const totalServices = totalCount;
   const [activeServicesCount, setActiveServicesCount] = useState(0);
   const [totalAvgPrice, setTotalAvgPrice] = useState('0.00');
+  const [totalServiceOrders, setTotalServiceOrders] = useState(0);
   
-  // Fetch accurate stats (average price & active count) from all services
+  // Fetch accurate stats (average price, active count, total orders) from all services
   useEffect(() => {
     const fetchAccurateStats = async () => {
       if (!panel?.id) return;
@@ -669,7 +677,14 @@ const ServicesManagement = () => {
         .select('price')
         .eq('panel_id', panel.id);
       
+      // Get total orders count for this panel
+      const { count: ordersCount } = await supabase
+        .from('orders')
+        .select('*', { count: 'exact', head: true })
+        .eq('panel_id', panel.id);
+      
       setActiveServicesCount(activeCount || 0);
+      setTotalServiceOrders(ordersCount || 0);
       
       if (priceData && priceData.length > 0) {
         const avg = priceData.reduce((acc, s) => acc + Number(s.price), 0) / priceData.length;
@@ -681,7 +696,7 @@ const ServicesManagement = () => {
   }, [panel?.id, totalCount]);
   
   const activeServices = activeServicesCount;
-  const totalOrders = 0; // Server-side would need separate query
+  const totalOrders = totalServiceOrders;
   const avgPrice = totalAvgPrice;
 
   // Category icon getter - now uses SOCIAL_ICONS_MAP
@@ -1761,36 +1776,72 @@ const ServicesManagement = () => {
         </div>
       </motion.div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-        {[
-          { label: "Total Services", value: totalServices, icon: Package, color: "primary" },
-          { label: "Active", value: activeServices, icon: Power, color: "green-500" },
-          { label: "Total Orders", value: totalOrders.toLocaleString(), icon: TrendingUp, color: "blue-500" },
-          { label: "Avg Price", value: `$${avgPrice}`, icon: DollarSign, color: "amber-500" },
-        ].map((stat, index) => (
-          <motion.div
-            key={stat.label}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-          >
-            <Card className="glass-card-hover overflow-hidden">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className={cn("p-2.5 rounded-xl", stat.color === "primary" ? "bg-primary/10" : `bg-${stat.color}/10`)}>
-                    <stat.icon className={cn("w-5 h-5", stat.color === "primary" ? "text-primary" : `text-${stat.color}`)} />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">{stat.label}</p>
-                    <p className="text-2xl font-bold">{stat.value}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        ))}
-      </div>
+      {/* Stats Cards with Tooltips */}
+      <TooltipProvider>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+          {[
+            { 
+              label: "Total Services", 
+              value: totalServices.toLocaleString(), 
+              icon: Package, 
+              color: "primary",
+              tooltip: `Total number of services in your panel (${totalServices} services)`
+            },
+            { 
+              label: "Active", 
+              value: activeServices.toLocaleString(), 
+              icon: Power, 
+              color: "green-500",
+              tooltip: `Services currently enabled and visible to customers (${activeServices} active)`
+            },
+            { 
+              label: "Total Orders", 
+              value: totalOrders.toLocaleString(), 
+              icon: TrendingUp, 
+              color: "blue-500",
+              tooltip: `Total orders placed across all services (${totalOrders} orders)`
+            },
+            { 
+              label: "Avg Price", 
+              value: `$${avgPrice}`, 
+              icon: DollarSign, 
+              color: "amber-500",
+              tooltip: `Mean price across all ${totalServices} services: Sum of all prices ÷ Number of services`
+            },
+          ].map((stat, index) => (
+            <motion.div
+              key={stat.label}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+            >
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Card className="glass-card-hover overflow-hidden cursor-help">
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className={cn("p-2.5 rounded-xl", stat.color === "primary" ? "bg-primary/10" : `bg-${stat.color}/10`)}>
+                          <stat.icon className={cn("w-5 h-5", stat.color === "primary" ? "text-primary" : `text-${stat.color}`)} />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-1">
+                            <p className="text-sm text-muted-foreground">{stat.label}</p>
+                            <Info className="w-3 h-3 text-muted-foreground/50" />
+                          </div>
+                          <p className="text-2xl font-bold">{stat.value}</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-xs">
+                  <p className="text-sm">{stat.tooltip}</p>
+                </TooltipContent>
+              </Tooltip>
+            </motion.div>
+          ))}
+        </div>
+      </TooltipProvider>
 
       {/* Service Tools Cards */}
       <ServiceToolsCards
