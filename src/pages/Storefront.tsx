@@ -126,8 +126,8 @@ const Storefront = () => {
   // Check if Fast Order is enabled
   const enableFastOrder = (design as any)?.enableFastOrder !== false;
 
-  // Get favicon URL - use panel's custom favicon or default panel favicon
-  const faviconUrl = customBranding?.faviconUrl || '/default-panel-favicon.png';
+  // Get favicon URL - use panel's custom favicon -> logo -> default
+  const faviconUrl = customBranding?.faviconUrl || panel.logo_url || '/default-panel-favicon.png';
   const appleTouchIconUrl = customBranding?.appleTouchIconUrl || faviconUrl;
 
   return (

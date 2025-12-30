@@ -39,6 +39,7 @@ import { BuyerNotifications } from "@/components/buyer/BuyerNotifications";
 import { LanguageSelector } from "@/components/buyer/LanguageSelector";
 import { CurrencySelector } from "@/components/buyer/CurrencySelector";
 import { useCurrency } from "@/contexts/CurrencyContext";
+import { TenantHead } from "@/components/tenant/TenantHead";
 
 interface BuyerLayoutProps {
   children?: React.ReactNode;
@@ -127,7 +128,9 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
   const whatsappNumber = panelSettings?.floating_chat_whatsapp;
 
   return (
-    <div className="min-h-screen bg-background">
+    <>
+      <TenantHead />
+      <div className="min-h-screen bg-background">
       {/* Apply panel theme colors */}
       <style>
         {`
@@ -538,7 +541,8 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
           })}
         </div>
       </nav>
-    </div>
+      </div>
+    </>
   );
 };
 
