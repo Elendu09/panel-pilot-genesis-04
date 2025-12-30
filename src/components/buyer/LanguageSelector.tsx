@@ -6,10 +6,11 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
-import { useLanguage, Language } from "@/contexts/LanguageContext";
-import { useBuyerAuth } from "@/contexts/BuyerAuthContext";
+import { LanguageContext, Language } from "@/contexts/LanguageContext";
+import { BuyerAuthContext } from "@/contexts/BuyerAuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { useContext, useState } from "react";
 
 const languages: { code: Language; name: string; nativeName: string; flag: string }[] = [
   { code: 'en', name: 'English', nativeName: 'English', flag: '🇺🇸' },
@@ -21,8 +22,15 @@ const languages: { code: Language; name: string; nativeName: string; flag: strin
 ];
 
 export const LanguageSelector = () => {
-  const { language, setLanguage } = useLanguage();
-  const { buyer, panelId } = useBuyerAuth();
+  const languageContext = useContext(LanguageContext);
+  const buyerAuthContext = useContext(BuyerAuthContext);
+  const [fallbackLanguage, setFallbackLanguage] = useState<Language>('en');
+  
+  // Use context values if available, otherwise use fallbacks
+  const language = languageContext?.language ?? fallbackLanguage;
+  const setLanguage = languageContext?.setLanguage ?? setFallbackLanguage;
+  const buyer = buyerAuthContext?.buyer ?? null;
+  const panelId = buyerAuthContext?.panelId ?? null;
 
   const currentLanguage = languages.find(l => l.code === language);
 

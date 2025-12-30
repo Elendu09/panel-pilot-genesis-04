@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useLanguage } from '@/contexts/LanguageContext';
+import { LanguageContext, Language } from '@/contexts/LanguageContext';
 
 interface BuyerUser {
   id: string;
@@ -37,7 +37,7 @@ interface BuyerAuthContextType {
   login: (identifier: string, password: string) => Promise<boolean>;
 }
 
-const BuyerAuthContext = createContext<BuyerAuthContextType | undefined>(undefined);
+export const BuyerAuthContext = createContext<BuyerAuthContextType | undefined>(undefined);
 
 const BUYER_STORAGE_KEY = 'buyer_session';
 
@@ -45,7 +45,7 @@ export function BuyerAuthProvider({ children, panelId }: { children: ReactNode; 
   const [buyer, setBuyer] = useState<BuyerUser | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-  const { setLanguage } = useLanguage();
+  const languageContext = useContext(LanguageContext);
 
   useEffect(() => {
     // Check for existing session
@@ -110,7 +110,7 @@ export function BuyerAuthProvider({ children, panelId }: { children: ReactNode; 
         const fetchedUser = data.user as BuyerUser;
         setBuyer(fetchedUser);
         if (fetchedUser.preferred_language && ['en','es','pt','ar','tr','ru'].includes(fetchedUser.preferred_language)) {
-          setLanguage(fetchedUser.preferred_language as any);
+          languageContext?.setLanguage(fetchedUser.preferred_language as Language);
         }
       } else {
         localStorage.removeItem(BUYER_STORAGE_KEY);
