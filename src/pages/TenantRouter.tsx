@@ -118,6 +118,10 @@ const TenantRouter = () => {
 
   // If this is a tenant domain and we found a panel, show PUBLIC storefront first
   if (isTenantDomain && panel) {
+    // Get favicon URL - use panel's custom favicon or default panel favicon
+    const customBranding = panel.custom_branding as any;
+    const faviconUrl = customBranding?.faviconUrl || '/default-panel-favicon.png';
+
     return (
       <QueryClientProvider client={queryClient}>
         <HelmetProvider>
@@ -126,6 +130,9 @@ const TenantRouter = () => {
               <CurrencyProvider>
                 <Toaster />
                 <Sonner />
+                {/* Default panel favicon for all tenant pages */}
+                <link rel="icon" type="image/png" href={faviconUrl} />
+                <link rel="apple-touch-icon" href={faviconUrl} />
                 <LanguageProvider>
                   <BuyerAuthProvider panelId={panel.id}>
                     <BrowserRouter>

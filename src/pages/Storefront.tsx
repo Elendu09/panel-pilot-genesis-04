@@ -126,6 +126,10 @@ const Storefront = () => {
   // Check if Fast Order is enabled
   const enableFastOrder = (design as any)?.enableFastOrder !== false;
 
+  // Get favicon URL - use panel's custom favicon or default panel favicon
+  const faviconUrl = customBranding?.faviconUrl || '/default-panel-favicon.png';
+  const appleTouchIconUrl = customBranding?.appleTouchIconUrl || faviconUrl;
+
   return (
     <>
       <Helmet>
@@ -133,6 +137,8 @@ const Storefront = () => {
         <meta name="description" content={(panel.settings as any)?.seo_description || `Professional social media marketing services from ${panel.name}`} />
         <meta name="keywords" content={(panel.settings as any)?.seo_keywords || 'social media marketing, instagram followers, youtube views'} />
         <link rel="canonical" href={canonicalUrl} />
+        <link rel="icon" type="image/png" href={faviconUrl} />
+        <link rel="apple-touch-icon" href={appleTouchIconUrl} />
         <meta property="og:title" content={(panel.settings as any)?.seo_title || `${panel.name} - SMM Panel`} />
         <meta property="og:description" content={(panel.settings as any)?.seo_description || `Professional social media marketing services`} />
         <meta property="og:type" content="website" />

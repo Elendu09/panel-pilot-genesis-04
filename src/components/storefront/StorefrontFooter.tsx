@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 import { Instagram, Facebook, Twitter, Youtube, MessageCircle, Send, Linkedin } from "lucide-react";
 import { TikTokIcon } from "@/components/icons/SocialIcons";
 
@@ -92,10 +93,10 @@ export const StorefrontFooter = ({
           <div>
             <h4 className="font-semibold mb-4">Services</h4>
             <ul className={`space-y-2 text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-              <li><a href="/services" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>Instagram</a></li>
-              <li><a href="/services" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>YouTube</a></li>
-              <li><a href="/services" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>TikTok</a></li>
-              <li><a href="/services" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>Twitter</a></li>
+              <li><Link to="/services" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>Instagram</Link></li>
+              <li><Link to="/services" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>YouTube</Link></li>
+              <li><Link to="/services" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>TikTok</Link></li>
+              <li><Link to="/services" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>Twitter</Link></li>
             </ul>
           </div>
           
@@ -103,9 +104,9 @@ export const StorefrontFooter = ({
           <div>
             <h4 className="font-semibold mb-4">Company</h4>
             <ul className={`space-y-2 text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-              <li><a href="#" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>About Us</a></li>
-              <li><a href="#" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>Contact</a></li>
-              <li><a href="#" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>Blog</a></li>
+              <li><Link to="/contact" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>About Us</Link></li>
+              <li><Link to="/contact" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>Contact</Link></li>
+              <li><Link to="/blog" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>Blog</Link></li>
             </ul>
           </div>
           
@@ -114,8 +115,8 @@ export const StorefrontFooter = ({
             <h4 className="font-semibold mb-4">Support</h4>
             <ul className={`space-y-2 text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
               <li><a href="#faq" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>FAQ</a></li>
-              <li><a href="#" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>Terms of Service</a></li>
-              <li><a href="#" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>Privacy Policy</a></li>
+              <li><Link to="/terms" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>Terms of Service</Link></li>
+              <li><Link to="/privacy" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>Privacy Policy</Link></li>
             </ul>
           </div>
         </div>
