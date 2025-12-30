@@ -118,9 +118,29 @@ const TenantRouter = () => {
 
   // If this is a tenant domain and we found a panel, show PUBLIC storefront first
   if (isTenantDomain && panel) {
-    // Get favicon URL - use panel's custom favicon or default panel favicon
+    // Get favicon URL - use panel's custom favicon -> logo -> default
     const customBranding = panel.custom_branding as any;
-    const faviconUrl = customBranding?.faviconUrl || '/default-panel-favicon.png';
+    const faviconUrl = customBranding?.faviconUrl || panel.logo_url || '/default-panel-favicon.png';
+    const appleTouchIconUrl = customBranding?.appleTouchIconUrl || faviconUrl;
+
+    // Force favicon update via DOM manipulation (overrides index.html)
+    if (typeof document !== 'undefined') {
+      // Remove existing favicons
+      document.querySelectorAll('link[rel*="icon"], link[rel="apple-touch-icon"]').forEach(el => el.remove());
+      
+      // Add new favicon
+      const favicon = document.createElement('link');
+      favicon.rel = 'icon';
+      favicon.type = faviconUrl.endsWith('.ico') ? 'image/x-icon' : 'image/png';
+      favicon.href = faviconUrl;
+      document.head.appendChild(favicon);
+      
+      // Add apple touch icon
+      const appleIcon = document.createElement('link');
+      appleIcon.rel = 'apple-touch-icon';
+      appleIcon.href = appleTouchIconUrl;
+      document.head.appendChild(appleIcon);
+    }
 
     return (
       <QueryClientProvider client={queryClient}>
@@ -132,7 +152,7 @@ const TenantRouter = () => {
                 <Sonner />
                 <Helmet>
                   <link rel="icon" type="image/png" href={faviconUrl} />
-                  <link rel="apple-touch-icon" href={faviconUrl} />
+                  <link rel="apple-touch-icon" href={appleTouchIconUrl} />
                 </Helmet>
                 <LanguageProvider>
                   <BuyerAuthProvider panelId={panel.id}>
