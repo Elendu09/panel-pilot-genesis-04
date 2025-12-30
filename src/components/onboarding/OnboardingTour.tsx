@@ -66,6 +66,7 @@ const tourSteps: TourStep[] = [
     id: "sidebar",
     title: "Navigation Sidebar",
     description: "This is your main navigation. Click any menu item to access different sections of your panel.",
+    tabletDescription: "This is your main navigation sidebar. Tap any menu item to access different sections.",
     icon: LayoutDashboard,
     target: "sidebar",
     selector: "[data-tour='sidebar']",
@@ -73,7 +74,6 @@ const tourSteps: TourStep[] = [
     fallbackSelector: "[data-tour='mobile-home']",
     position: "right",
     tabletPosition: "right",
-    desktopOnly: true,
     action: "Click menu items to navigate",
   },
   {
@@ -81,14 +81,11 @@ const tourSteps: TourStep[] = [
     title: "Bottom Navigation",
     description: "Use the bottom navigation bar to quickly access key features of your panel on mobile.",
     mobileDescription: "Your main navigation! Tap icons to switch between Dashboard, Services, Orders, Analytics, and More.",
-    tabletDescription: "Quick access bar at the bottom. Tap icons to navigate between main sections.",
     icon: Menu,
     target: "mobile-nav",
     mobileSelector: "[data-tour='mobile-home']",
-    tabletSelector: "[data-tour='mobile-home']",
     fallbackSelector: "[data-tour='sidebar']",
     mobilePosition: "top",
-    tabletPosition: "top",
     mobileOnly: true,
     action: "Tap icons to navigate",
     mobileAction: "Tap the icons below",
@@ -166,6 +163,7 @@ const tourSteps: TourStep[] = [
     title: "Analytics & Reports",
     description: "Detailed analytics showing revenue, orders, and customer activity trends over time.",
     mobileDescription: "View revenue trends and order stats. Swipe charts to see different time periods.",
+    tabletDescription: "View detailed analytics from the sidebar. Revenue, orders, and customer trends.",
     icon: BarChart3,
     target: "analytics",
     selector: "[data-tour='analytics']",
@@ -216,14 +214,11 @@ const tourSteps: TourStep[] = [
     title: "More Options",
     description: "Access additional settings like API management, domain configuration, and more from the menu.",
     mobileDescription: "Find extra features here: Providers, Payments, Design, Domain settings, and more!",
-    tabletDescription: "Access additional settings: API, Domain, Providers, Design customization and more.",
     icon: Menu,
     target: "more",
     mobileSelector: "[data-tour='mobile-more']",
-    tabletSelector: "[data-tour='mobile-more']",
     fallbackSelector: "[data-tour='sidebar']",
     mobilePosition: "top",
-    tabletPosition: "top",
     mobileOnly: true,
     action: "Tap for more options",
     mobileAction: "Tap the More icon",
@@ -277,14 +272,17 @@ interface OnboardingTourProps {
   isOpen: boolean;
 }
 
-// Hook to detect screen size
+// Hook to detect screen size - aligned with CSS md: breakpoint (768px) for sidebar visibility
 const useScreenSize = (): ScreenSize => {
   const [screenSize, setScreenSize] = useState<ScreenSize>('desktop');
   
   useEffect(() => {
     const updateScreenSize = () => {
       const width = window.innerWidth;
-      if (width < 640) {
+      // Mobile: < 768px (no sidebar, uses bottom nav)
+      // Tablet: 768px - 1024px (sidebar visible)
+      // Desktop: >= 1024px (sidebar visible)
+      if (width < 768) {
         setScreenSize('mobile');
       } else if (width < 1024) {
         setScreenSize('tablet');
@@ -420,20 +418,16 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
   const [clickPosition, setClickPosition] = useState<{ x: number; y: number } | null>(null);
   
   // Filter steps based on screen size
+  // Tablet (768px+) has sidebar visible, so treat it like desktop for navigation
   const filteredSteps = useMemo(() => {
     return tourSteps.filter(step => {
-      // Skip desktop-only steps on mobile
+      // Skip desktop-only steps on mobile only (tablet has sidebar)
       if (isMobile && step.desktopOnly) return false;
-      // Skip mobile-only steps on desktop
-      if (!isMobile && !isTablet && step.mobileOnly) return false;
-      // For tablet, include both desktop and mobile steps unless explicitly excluded
-      if (isTablet) {
-        if (step.desktopOnly && !step.tabletSelector) return false;
-        if (step.mobileOnly && !step.tabletSelector) return false;
-      }
+      // Skip mobile-only steps on tablet and desktop (they have sidebar)
+      if (!isMobile && step.mobileOnly) return false;
       return true;
     });
-  }, [isMobile, isTablet]);
+  }, [isMobile]);
   
   const step = filteredSteps[currentStep];
   const progress = ((currentStep + 1) / filteredSteps.length) * 100;
