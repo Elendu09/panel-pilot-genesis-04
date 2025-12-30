@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,7 +27,8 @@ import {
   Info,
   Lock,
   Loader2,
-  Network
+  Network,
+  ShoppingCart
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -36,6 +37,8 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { DomainDiagnostics } from "@/components/domain/DomainDiagnostics";
 import { DomainConfigWizard } from "@/components/domain/DomainConfigWizard";
+import { DomainPurchaseLinks } from "@/components/domain/DomainPurchaseLinks";
+import { DomainTransfer } from "@/components/domain/DomainTransfer";
 
 interface PanelDomain {
   id: string;
@@ -434,6 +437,7 @@ const DomainSettings = () => {
             <TabsTrigger value="diagnostics" className="text-xs md:text-sm"><Network className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" /> Diagnostics</TabsTrigger>
             <TabsTrigger value="dns" className="text-xs md:text-sm"><RefreshCw className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" /> DNS <span className="hidden sm:inline">Checker</span></TabsTrigger>
             <TabsTrigger value="ssl" className="text-xs md:text-sm"><Shield className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" /> SSL</TabsTrigger>
+            <TabsTrigger value="buy" className="text-xs md:text-sm"><ShoppingCart className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" /> Buy Domain</TabsTrigger>
           </TabsList>
         </div>
 
@@ -493,7 +497,7 @@ const DomainSettings = () => {
                             {domain.verified_at && ` • Verified ${new Date(domain.verified_at).toLocaleDateString()}`}
                           </p>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
                           {domain.verification_status === 'pending' && (
                             <Button 
                               variant="outline" 
@@ -515,6 +519,21 @@ const DomainSettings = () => {
                                 <ExternalLink className="w-4 h-4 mr-2" /> Visit
                               </a>
                             </Button>
+                          )}
+                          {/* Domain Transfer & Export */}
+                          {panel?.id && (
+                            <DomainTransfer 
+                              domain={{
+                                id: domain.id,
+                                domain: domain.domain,
+                                panel_id: panel.id,
+                                verification_status: domain.verification_status,
+                                ssl_status: domain.ssl_status,
+                                hosting_provider: domain.hosting_provider
+                              }}
+                              currentPanelId={panel.id}
+                              onTransferComplete={fetchData}
+                            />
                           )}
                           <Button 
                             variant="ghost" 
@@ -936,6 +955,13 @@ const DomainSettings = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Buy Domain Tab Content - add before closing div */}
+      {activeTab === 'buy' && (
+        <TabsContent value="buy" forceMount className="space-y-6">
+          <DomainPurchaseLinks />
+        </TabsContent>
+      )}
     </div>
   );
 };
