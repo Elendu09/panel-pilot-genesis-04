@@ -41,7 +41,10 @@ import {
   Star,
   Crown,
   Package,
-  Percent
+  Percent,
+  Layers,
+  Zap,
+  Target
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
@@ -112,6 +115,13 @@ const Analytics = () => {
     totalBalance: 0,
   });
   const [liveOrdersWithService, setLiveOrdersWithService] = useState<any[]>([]);
+  const [serviceStats, setServiceStats] = useState({
+    totalActive: 0,
+    totalInactive: 0,
+    topServices: [] as { name: string; orders: number; revenue: number; category: string }[],
+    categoryRevenue: [] as { name: string; value: number; color: string }[],
+    avgPrice: 0,
+  });
   const [stats, setStats] = useState({
     totalRevenue: 0,
     totalOrders: 0,
@@ -348,7 +358,7 @@ const Analytics = () => {
       // Service distribution from orders
       const { data: services } = await supabase
         .from('services')
-        .select('id, name, category')
+        .select('id, name, category, price, is_active')
         .eq('panel_id', panel.id);
 
       const serviceCount = new Map<string, number>();
@@ -365,6 +375,60 @@ const Analytics = () => {
           color: CHART_COLORS[i % CHART_COLORS.length],
         }))
       );
+
+      // Service analytics
+      const activeServices = services?.filter(s => s.is_active) || [];
+      const inactiveServices = services?.filter(s => !s.is_active) || [];
+      
+      // Top performing services
+      const serviceOrderMap = new Map<string, { name: string; orders: number; revenue: number; category: string }>();
+      orders?.forEach(order => {
+        const service = services?.find(s => s.id === order.service_id);
+        if (!service) return;
+        const key = order.service_id || 'unknown';
+        const existing = serviceOrderMap.get(key) || {
+          name: service.name,
+          orders: 0,
+          revenue: 0,
+          category: service.category || 'other'
+        };
+        existing.orders += 1;
+        existing.revenue += order.price || 0;
+        serviceOrderMap.set(key, existing);
+      });
+      
+      const topServices = Array.from(serviceOrderMap.values())
+        .sort((a, b) => b.revenue - a.revenue)
+        .slice(0, 5);
+      
+      // Category revenue
+      const categoryRevenueMap = new Map<string, number>();
+      orders?.forEach(order => {
+        const service = services?.find(s => s.id === order.service_id);
+        const category = service?.category || 'other';
+        categoryRevenueMap.set(category, (categoryRevenueMap.get(category) || 0) + (order.price || 0));
+      });
+      
+      const categoryRevenue = Array.from(categoryRevenueMap.entries())
+        .map(([name, value], i) => ({
+          name: name.charAt(0).toUpperCase() + name.slice(1),
+          value,
+          color: CHART_COLORS[i % CHART_COLORS.length]
+        }))
+        .sort((a, b) => b.value - a.value);
+      
+      // Average service price
+      const avgPrice = services?.length 
+        ? services.reduce((sum, s) => sum + (s.price || 0), 0) / services.length 
+        : 0;
+      
+      setServiceStats({
+        totalActive: activeServices.length,
+        totalInactive: inactiveServices.length,
+        topServices,
+        categoryRevenue,
+        avgPrice
+      });
 
     } catch (error) {
       console.error('Error fetching analytics:', error);
@@ -537,6 +601,10 @@ const Analytics = () => {
           <TabsTrigger value="orders" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
             <Package className="w-4 h-4 mr-2" />
             Live Orders
+          </TabsTrigger>
+          <TabsTrigger value="services" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+            <Layers className="w-4 h-4 mr-2" />
+            Services
           </TabsTrigger>
         </TabsList>
 
@@ -1062,6 +1130,116 @@ const Analytics = () => {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Services Tab */}
+        <TabsContent value="services" className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              { title: "Active Services", value: serviceStats.totalActive, icon: Zap, color: "text-green-500", bg: "bg-green-500/20" },
+              { title: "Inactive Services", value: serviceStats.totalInactive, icon: XCircle, color: "text-red-500", bg: "bg-red-500/20" },
+              { title: "Total Services", value: serviceStats.totalActive + serviceStats.totalInactive, icon: Layers, color: "text-blue-500", bg: "bg-blue-500/20" },
+              { title: "Avg. Service Price", value: serviceStats.avgPrice, prefix: "$", icon: Target, color: "text-purple-500", bg: "bg-purple-500/20" },
+            ].map((stat, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+              >
+                <Card className="glass-stat-card p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <span className="text-sm font-medium text-muted-foreground">{stat.title}</span>
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${stat.bg}`}>
+                      <stat.icon className={`w-5 h-5 ${stat.color}`} />
+                    </div>
+                  </div>
+                  <p className="text-3xl font-bold">
+                    {stat.prefix || ""}{typeof stat.value === 'number' ? stat.value.toFixed(stat.prefix ? 2 : 0) : stat.value}
+                  </p>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Top Performing Services */}
+            <Card className="glass-card">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <TrendingUp className="w-4 h-4 text-green-500" />
+                  Top Performing Services
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {serviceStats.topServices.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">No service data yet</p>
+                  ) : (
+                    serviceStats.topServices.map((service, i) => (
+                      <div key={i} className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-primary">#{i+1}</span>
+                            <span className="font-medium text-sm truncate max-w-[180px]">{service.name}</span>
+                          </div>
+                          <Badge variant="outline" className="text-xs">
+                            {service.category}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-muted-foreground mt-2">
+                          <span>{service.orders} orders</span>
+                          <span className="font-bold text-green-500">${service.revenue.toFixed(2)} revenue</span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Revenue by Category */}
+            <Card className="glass-card">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <DollarSign className="w-4 h-4 text-green-500" />
+                  Revenue by Category
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {serviceStats.categoryRevenue.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">No revenue data yet</p>
+                ) : (
+                  <ResponsiveContainer width="100%" height={250}>
+                    <PieChart>
+                      <Pie
+                        data={serviceStats.categoryRevenue}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={50}
+                        outerRadius={80}
+                        paddingAngle={5}
+                        dataKey="value"
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      >
+                        {serviceStats.categoryRevenue.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: 'hsl(var(--card))', 
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '8px'
+                        }}
+                        formatter={(value: number) => [`$${value.toFixed(2)}`, 'Revenue']}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

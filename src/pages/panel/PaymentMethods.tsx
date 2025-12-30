@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { StripeIcon, PayPalIcon, BitcoinIcon, CoinbaseIcon, RazorpayIcon, PaystackIcon, FlutterwaveIcon, SquareIcon, getPaymentIcon } from "@/components/payment/PaymentIcons";
 import PaymentAnalyticsChart from "@/components/payment/PaymentAnalyticsChart";
+import { usePanel } from "@/hooks/usePanel";
+import { supabase } from "@/integrations/supabase/client";
 
 // Worldwide payment gateways
 const paymentGateways = {
@@ -56,6 +58,7 @@ const categoryLabels: Record<keyof typeof paymentGateways, string> = {
 
 const PaymentMethods = () => {
   const { toast } = useToast();
+  const { panel, refreshPanel } = usePanel();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<keyof typeof paymentGateways>("cards");
   const [configuredGateways, setConfiguredGateways] = useState<Record<string, { enabled: boolean; apiKey: string; secretKey: string }>>({});
@@ -71,6 +74,115 @@ const PaymentMethods = () => {
   const [pendingRequests, setPendingRequests] = useState(0);
   const [syncing, setSyncing] = useState(false);
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
+  
+  // Real data from database
+  const [topDepositors, setTopDepositors] = useState<{ name: string; amount: number; method: string }[]>([]);
+  const [recentTransactions, setRecentTransactions] = useState<{ user: string; amount: number; time: string }[]>([]);
+  const [paymentMethodUsage, setPaymentMethodUsage] = useState<{ method: string; percent: number; color: string }[]>([]);
+  const [loadingStats, setLoadingStats] = useState(true);
+
+  // Load configured gateways from Supabase on mount
+  useEffect(() => {
+    if (panel?.id) {
+      loadConfiguredGateways();
+      fetchPaymentStats();
+    }
+  }, [panel?.id]);
+
+  const loadConfiguredGateways = () => {
+    const settings = panel?.settings as any;
+    if (settings?.payments?.enabledMethods) {
+      const methods = settings.payments.enabledMethods;
+      const loaded: Record<string, { enabled: boolean; apiKey: string; secretKey: string }> = {};
+      methods.forEach((m: any) => {
+        loaded[m.id] = { enabled: m.enabled ?? true, apiKey: m.apiKey || '', secretKey: m.secretKey || '' };
+      });
+      setConfiguredGateways(loaded);
+    }
+  };
+
+  const fetchPaymentStats = async () => {
+    if (!panel?.id) return;
+    setLoadingStats(true);
+    
+    try {
+      // Fetch transactions
+      const { data: transactions } = await supabase
+        .from('transactions')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      // Fetch customers
+      const { data: customers } = await supabase
+        .from('client_users')
+        .select('id, full_name, email')
+        .eq('panel_id', panel.id);
+      
+      // Calculate top depositors
+      const depositorMap = new Map<string, { name: string; amount: number; method: string }>();
+      const completedDeposits = transactions?.filter(t => t.status === 'completed' && t.type === 'deposit') || [];
+      
+      for (const tx of completedDeposits) {
+        const customer = customers?.find(c => c.id === tx.user_id);
+        const key = tx.user_id || 'unknown';
+        const existing = depositorMap.get(key) || { 
+          name: customer?.full_name || customer?.email?.split('@')[0] || 'Anonymous', 
+          amount: 0, 
+          method: tx.payment_method || 'Unknown' 
+        };
+        existing.amount += tx.amount || 0;
+        depositorMap.set(key, existing);
+      }
+      
+      setTopDepositors(
+        Array.from(depositorMap.values())
+          .sort((a, b) => b.amount - a.amount)
+          .slice(0, 3)
+      );
+      
+      // Recent transactions
+      const recent = (transactions || []).slice(0, 3).map(tx => {
+        const customer = customers?.find(c => c.id === tx.user_id);
+        const timeDiff = Date.now() - new Date(tx.created_at).getTime();
+        const minutes = Math.floor(timeDiff / 60000);
+        const timeStr = minutes < 60 ? `${minutes}m ago` : `${Math.floor(minutes / 60)}h ago`;
+        return {
+          user: customer?.full_name || customer?.email?.split('@')[0] || 'User',
+          amount: tx.amount || 0,
+          time: timeStr
+        };
+      });
+      setRecentTransactions(recent);
+      
+      // Payment method usage
+      const methodMap = new Map<string, number>();
+      completedDeposits.forEach(tx => {
+        const method = tx.payment_method || 'other';
+        methodMap.set(method, (methodMap.get(method) || 0) + 1);
+      });
+      const totalTxns = completedDeposits.length || 1;
+      const colorMap: Record<string, string> = {
+        stripe: 'bg-[#635BFF]',
+        paypal: 'bg-[#003087]',
+        crypto: 'bg-[#F7931A]',
+        coinbase: 'bg-[#F7931A]',
+        other: 'bg-muted-foreground'
+      };
+      setPaymentMethodUsage(
+        Array.from(methodMap.entries())
+          .map(([method, count]) => ({
+            method: method.charAt(0).toUpperCase() + method.slice(1),
+            percent: Math.round((count / totalTxns) * 100),
+            color: colorMap[method.toLowerCase()] || 'bg-muted-foreground'
+          }))
+          .sort((a, b) => b.percent - a.percent)
+      );
+    } catch (error) {
+      console.error('Error fetching payment stats:', error);
+    } finally {
+      setLoadingStats(false);
+    }
+  };
   
   // Platform-enabled gateways (simulating admin-enabled methods)
   const platformGateways = [
@@ -97,25 +209,91 @@ const PaymentMethods = () => {
     setConfigDialogOpen(true);
   };
 
-  const saveGatewayConfig = () => {
-    if (!selectedGateway || !formData.apiKey) {
+  const saveGatewayConfig = async () => {
+    if (!selectedGateway || !formData.apiKey || !panel?.id) {
       toast({ variant: "destructive", title: "API Key required" });
       return;
     }
-    setConfiguredGateways(prev => ({
-      ...prev,
+    
+    // Update local state
+    const updatedGateways = {
+      ...configuredGateways,
       [selectedGateway.id]: { enabled: true, apiKey: formData.apiKey, secretKey: formData.secretKey }
-    }));
-    setConfigDialogOpen(false);
-    toast({ title: `${selectedGateway.name} configured successfully` });
+    };
+    setConfiguredGateways(updatedGateways);
+    
+    // Persist to Supabase
+    try {
+      const enabledMethods = Object.entries(updatedGateways)
+        .filter(([_, config]) => config.enabled)
+        .map(([id, config]) => ({
+          id,
+          enabled: true,
+          apiKey: config.apiKey,
+          // Don't store secret key in plain text for security
+        }));
+      
+      const currentSettings = (panel?.settings as any) || {};
+      const updatedSettings = {
+        ...currentSettings,
+        payments: {
+          enabledMethods,
+          configuredAt: new Date().toISOString()
+        }
+      };
+      
+      await supabase
+        .from('panels')
+        .update({ settings: updatedSettings })
+        .eq('id', panel.id);
+      
+      refreshPanel();
+      setConfigDialogOpen(false);
+      toast({ title: `${selectedGateway.name} configured and saved!` });
+    } catch (error) {
+      console.error('Error saving gateway config:', error);
+      toast({ variant: "destructive", title: "Failed to save configuration" });
+    }
   };
 
-  const toggleGateway = (gatewayId: string) => {
-    setConfiguredGateways(prev => {
-      const current = prev[gatewayId];
-      if (!current) return prev;
-      return { ...prev, [gatewayId]: { ...current, enabled: !current.enabled } };
-    });
+  const toggleGateway = async (gatewayId: string) => {
+    const current = configuredGateways[gatewayId];
+    if (!current || !panel?.id) return;
+    
+    const updatedGateways = { 
+      ...configuredGateways, 
+      [gatewayId]: { ...current, enabled: !current.enabled } 
+    };
+    setConfiguredGateways(updatedGateways);
+    
+    // Persist to Supabase
+    try {
+      const enabledMethods = Object.entries(updatedGateways)
+        .filter(([_, config]) => config.apiKey) // Only include configured ones
+        .map(([id, config]) => ({
+          id,
+          enabled: config.enabled,
+          apiKey: config.apiKey,
+        }));
+      
+      const currentSettings = (panel?.settings as any) || {};
+      await supabase
+        .from('panels')
+        .update({ 
+          settings: { 
+            ...currentSettings, 
+            payments: { 
+              enabledMethods, 
+              configuredAt: new Date().toISOString() 
+            } 
+          } 
+        })
+        .eq('id', panel.id);
+      
+      refreshPanel();
+    } catch (error) {
+      console.error('Error toggling gateway:', error);
+    }
   };
 
   const [testResult, setTestResult] = useState<{ success: boolean; message: string; accountName?: string; mode?: string } | null>(null);
@@ -354,56 +532,67 @@ const PaymentMethods = () => {
             <div>
               <h4 className="font-medium mb-3 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-green-500" />Top Depositors</h4>
               <div className="space-y-2">
-                {[
-                  { name: "John A.", amount: 2450, method: "Stripe" },
-                  { name: "Alex T.", amount: 1820, method: "PayPal" },
-                  { name: "Maria G.", amount: 1540, method: "Stripe" },
-                ].map((user, i) => (
-                  <div key={i} className="flex items-center justify-between p-2 bg-muted/30 rounded-lg backdrop-blur-sm">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-muted-foreground">#{i+1}</span>
-                      <span className="font-medium text-sm">{user.name}</span>
-                    </div>
-                    <div className="text-right">
-                      <span className="font-bold text-green-500">${user.amount}</span>
-                      <p className="text-xs text-muted-foreground">{user.method}</p>
-                    </div>
+                {loadingStats ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
                   </div>
-                ))}
+                ) : topDepositors.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">No deposits yet</p>
+                ) : (
+                  topDepositors.map((user, i) => (
+                    <div key={i} className="flex items-center justify-between p-2 bg-muted/30 rounded-lg backdrop-blur-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-muted-foreground">#{i+1}</span>
+                        <span className="font-medium text-sm">{user.name}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="font-bold text-green-500">${user.amount.toFixed(2)}</span>
+                        <p className="text-xs text-muted-foreground">{user.method}</p>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
             <div>
               <h4 className="font-medium mb-3 flex items-center gap-2"><CreditCard className="w-4 h-4 text-blue-500" />Method Usage</h4>
               <div className="space-y-2">
-                {[
-                  { method: "Stripe", percent: 45, color: "bg-[#635BFF]" },
-                  { method: "PayPal", percent: 30, color: "bg-[#003087]" },
-                  { method: "Crypto", percent: 15, color: "bg-[#F7931A]" },
-                  { method: "Other", percent: 10, color: "bg-muted-foreground" },
-                ].map((item) => (
-                  <div key={item.method} className="space-y-1">
-                    <div className="flex justify-between text-sm"><span>{item.method}</span><span className="font-medium">{item.percent}%</span></div>
-                    <div className="h-2 bg-muted rounded-full overflow-hidden"><div className={cn("h-full rounded-full", item.color)} style={{ width: `${item.percent}%` }} /></div>
+                {loadingStats ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
                   </div>
-                ))}
+                ) : paymentMethodUsage.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">No data yet</p>
+                ) : (
+                  paymentMethodUsage.map((item) => (
+                    <div key={item.method} className="space-y-1">
+                      <div className="flex justify-between text-sm"><span>{item.method}</span><span className="font-medium">{item.percent}%</span></div>
+                      <div className="h-2 bg-muted rounded-full overflow-hidden"><div className={cn("h-full rounded-full", item.color)} style={{ width: `${item.percent}%` }} /></div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
             <div>
               <h4 className="font-medium mb-3 flex items-center gap-2"><Users className="w-4 h-4 text-purple-500" />Recent Transactions</h4>
               <div className="space-y-2">
-                {[
-                  { user: "Sarah M.", amount: 50, time: "2m ago" },
-                  { user: "Mike J.", amount: 25, time: "15m ago" },
-                  { user: "Emma W.", amount: 100, time: "1h ago" },
-                ].map((tx, i) => (
-                  <div key={i} className="flex items-center justify-between p-2 bg-muted/30 rounded-lg backdrop-blur-sm">
-                    <span className="text-sm">{tx.user}</span>
-                    <div className="text-right">
-                      <span className="font-medium text-green-500">+${tx.amount}</span>
-                      <p className="text-xs text-muted-foreground">{tx.time}</p>
-                    </div>
+                {loadingStats ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
                   </div>
-                ))}
+                ) : recentTransactions.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">No transactions yet</p>
+                ) : (
+                  recentTransactions.map((tx, i) => (
+                    <div key={i} className="flex items-center justify-between p-2 bg-muted/30 rounded-lg backdrop-blur-sm">
+                      <span className="text-sm">{tx.user}</span>
+                      <div className="text-right">
+                        <span className="font-medium text-green-500">+${tx.amount.toFixed(2)}</span>
+                        <p className="text-xs text-muted-foreground">{tx.time}</p>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>
