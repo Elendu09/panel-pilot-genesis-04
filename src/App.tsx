@@ -30,6 +30,7 @@ import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import Tutorial from "./pages/Tutorial";
 import Blog from "./pages/Blog";
+import BlogPost from "./pages/BlogPost";
 import Auth from "./pages/Auth";
 import SEOSettings from "./pages/panel/SEOSettings";
 import FastOrder from "./pages/FastOrder";
@@ -97,6 +98,7 @@ const App = () => (
                 <Route path="/privacy" element={<Privacy />} />
                 <Route path="/tutorial" element={<Tutorial />} />
                 <Route path="/blog" element={<Blog />} />
+                <Route path="/blog/:slug" element={<BlogPost />} />
                 
                 {/* Public storefront route */}
                 <Route path="/store" element={<Storefront />} />
