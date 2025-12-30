@@ -1097,45 +1097,45 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
 
       {/* Guest Signup Modal */}
       <Dialog open={showGuestModal} onOpenChange={handleModalClose}>
-        <DialogContent className="sm:max-w-md">
-          {/* Modal Progress Indicator */}
-          <div className="flex items-center justify-center gap-2 mb-2">
+        <DialogContent className="max-w-[95vw] sm:max-w-md overflow-hidden p-4 sm:p-6">
+          {/* Modal Progress Indicator - Compact on mobile */}
+          <div className="flex items-center justify-center gap-1.5 sm:gap-2 mb-2">
             <div className={cn(
-              "flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold transition-all",
+              "flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full text-[10px] sm:text-xs font-bold transition-all",
               modalStep === 'email' 
                 ? "bg-blue-500 text-white ring-2 ring-blue-500/30" 
                 : accountCreated 
                   ? "bg-green-500 text-white" 
                   : "bg-muted text-muted-foreground"
             )}>
-              {accountCreated || modalStep !== 'email' ? <Check className="w-4 h-4" /> : '1'}
+              {accountCreated || modalStep !== 'email' ? <Check className="w-3 h-3 sm:w-4 sm:h-4" /> : '1'}
             </div>
             <div className={cn(
-              "w-8 h-0.5 transition-all",
+              "w-4 sm:w-8 h-0.5 transition-all",
               accountCreated ? "bg-green-500" : modalStep !== 'email' ? "bg-blue-500" : "bg-muted"
             )} />
             <div className={cn(
-              "flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold transition-all",
+              "flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full text-[10px] sm:text-xs font-bold transition-all",
               modalStep === 'credentials'
                 ? "bg-blue-500 text-white ring-2 ring-blue-500/30"
                 : accountCreated
                   ? "bg-green-500 text-white"
                   : "bg-muted text-muted-foreground"
             )}>
-              {accountCreated ? <Check className="w-4 h-4" /> : '2'}
+              {accountCreated ? <Check className="w-3 h-3 sm:w-4 sm:h-4" /> : '2'}
             </div>
             <div className={cn(
-              "w-8 h-0.5 transition-all",
+              "w-4 sm:w-8 h-0.5 transition-all",
               accountCreated ? "bg-blue-500" : "bg-muted"
             )} />
             <div className={cn(
-              "flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold transition-all",
+              "flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full text-[10px] sm:text-xs font-bold transition-all",
               "bg-muted text-muted-foreground"
             )}>
               3
             </div>
           </div>
-          <div className="flex justify-center gap-8 text-xs text-muted-foreground mb-4">
+          <div className="flex justify-center gap-4 sm:gap-8 text-[10px] sm:text-xs text-muted-foreground mb-3 sm:mb-4">
             <span className={modalStep === 'email' && !accountCreated ? 'text-blue-500 font-medium' : ''}>Email</span>
             <span className={modalStep === 'credentials' || accountCreated ? 'text-blue-500 font-medium' : ''}>Credentials</span>
             <span>Payment</span>
@@ -1173,30 +1173,30 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
           <div className="space-y-4 py-4">
             {accountCreated ? (
               <>
-                {/* Credentials Display */}
-                <div className="p-4 bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-xl">
-                  <div className="flex items-center gap-2 mb-3">
-                    <CheckCircle className="w-5 h-5 text-green-500" />
-                    <span className="font-semibold text-green-600">Your Login Credentials</span>
+                {/* Credentials Display - Mobile responsive */}
+                <div className="p-3 sm:p-4 bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-xl">
+                  <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                    <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-500 shrink-0" />
+                    <span className="font-semibold text-green-600 text-sm sm:text-base">Your Login Credentials</span>
                   </div>
                   
                   {/* Username */}
-                  <div className="mb-3">
-                    <Label className="text-xs text-muted-foreground mb-1 block">Username</Label>
-                    <div className="flex items-center gap-2">
-                      <code className="flex-1 text-sm font-mono font-bold bg-background/80 px-3 py-2 rounded-lg border">
+                  <div className="mb-2 sm:mb-3">
+                    <Label className="text-[10px] sm:text-xs text-muted-foreground mb-1 block">Username</Label>
+                    <div className="flex items-center gap-1.5 sm:gap-2">
+                      <code className="flex-1 text-xs sm:text-sm font-mono font-bold bg-background/80 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg border break-all min-w-0">
                         {autoUsername}
                       </code>
                       <Button
                         variant="outline"
                         size="icon"
-                        className="shrink-0"
+                        className="shrink-0 h-8 w-8 sm:h-10 sm:w-10"
                         onClick={() => copyToClipboard(autoUsername, 'Username')}
                       >
                         {copiedField === 'Username' ? (
-                          <Check className="w-4 h-4 text-green-500" />
+                          <Check className="w-3 h-3 sm:w-4 sm:h-4 text-green-500" />
                         ) : (
-                          <Copy className="w-4 h-4" />
+                          <Copy className="w-3 h-3 sm:w-4 sm:h-4" />
                         )}
                       </Button>
                     </div>
@@ -1204,29 +1204,29 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
 
                   {/* Password */}
                   <div>
-                    <Label className="text-xs text-muted-foreground mb-1 block">Password</Label>
-                    <div className="flex items-center gap-2">
-                      <code className="flex-1 text-sm font-mono font-bold bg-background/80 px-3 py-2 rounded-lg border">
+                    <Label className="text-[10px] sm:text-xs text-muted-foreground mb-1 block">Password</Label>
+                    <div className="flex items-center gap-1.5 sm:gap-2">
+                      <code className="flex-1 text-xs sm:text-sm font-mono font-bold bg-background/80 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg border break-all min-w-0">
                         {showPassword ? tempPassword : '••••••••'}
                       </code>
                       <Button
                         variant="outline"
                         size="icon"
-                        className="shrink-0"
+                        className="shrink-0 h-8 w-8 sm:h-10 sm:w-10"
                         onClick={() => setShowPassword(!showPassword)}
                       >
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        {showPassword ? <EyeOff className="w-3 h-3 sm:w-4 sm:h-4" /> : <Eye className="w-3 h-3 sm:w-4 sm:h-4" />}
                       </Button>
                       <Button
                         variant="outline"
                         size="icon"
-                        className="shrink-0"
+                        className="shrink-0 h-8 w-8 sm:h-10 sm:w-10"
                         onClick={() => copyToClipboard(tempPassword, 'Password')}
                       >
                         {copiedField === 'Password' ? (
-                          <Check className="w-4 h-4 text-green-500" />
+                          <Check className="w-3 h-3 sm:w-4 sm:h-4 text-green-500" />
                         ) : (
-                          <Copy className="w-4 h-4" />
+                          <Copy className="w-3 h-3 sm:w-4 sm:h-4" />
                         )}
                       </Button>
                     </div>
