@@ -1,3 +1,4 @@
+import { useContext } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +11,7 @@ import { AnimatedText } from "@/components/ui/animated-text";
 import { motion } from "framer-motion";
 import { TikTokIcon } from "@/components/icons/SocialIcons";
 import { useDeviceKey, defaultHeroShowFloatingCards, defaultHeroShowCategories } from "@/hooks/use-device-key";
-import { useBuyerAuth } from "@/contexts/BuyerAuthContext";
+import { BuyerAuthContext } from "@/contexts/BuyerAuthContext";
 
 interface StorefrontHeroSectionProps {
   panel?: any;
@@ -102,7 +103,10 @@ const paymentIcons = [
 export const StorefrontHeroSection = ({ panel, services = [], customization = {} }: StorefrontHeroSectionProps) => {
   const navigate = useNavigate();
   const deviceKey = useDeviceKey();
-  const { buyer } = useBuyerAuth();
+  
+  // Safely access buyer auth context (may not be available in preview mode)
+  const buyerAuthContext = useContext(BuyerAuthContext);
+  const buyer = buyerAuthContext?.buyer ?? null;
   
   const panelName = customization.companyName || panel?.name || 'SMM Panel';
   const heroTitle = customization.heroTitle || 'Boost Your Social Media';
