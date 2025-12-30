@@ -695,12 +695,52 @@ const DomainSettings = () => {
           />
         </TabsContent>
 
+        {/* DNS Propagation Tab */}
         <TabsContent value="dns" className="space-y-6">
+          {/* Domain selector for propagation tracking */}
+          {domains.length > 0 ? (
+            <div className="space-y-4">
+              <div className="flex flex-wrap gap-2">
+                {domains.map((domain) => (
+                  <Button
+                    key={domain.id}
+                    variant={propagationDomain === domain.domain ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setPropagationDomain(domain.domain)}
+                  >
+                    {domain.domain}
+                  </Button>
+                ))}
+              </div>
+              {propagationDomain && (
+                <DNSPropagationTracker 
+                  domain={propagationDomain}
+                  autoRefresh={true}
+                  refreshInterval={30000}
+                />
+              )}
+            </div>
+          ) : (
+            <Card className="glass-card">
+              <CardContent className="py-12 text-center">
+                <Network className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
+                <h3 className="text-lg font-medium mb-2">No Domains to Track</h3>
+                <p className="text-muted-foreground text-sm mb-4">
+                  Add a custom domain first to track its DNS propagation
+                </p>
+                <Button onClick={handleStartWizard}>
+                  <Plus className="w-4 h-4 mr-2" /> Add Domain
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Manual domain check */}
           <Card className="glass-card">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Network className="w-5 h-5 text-primary" />
-                DNS Propagation Checker
+              <CardTitle className="flex items-center gap-2 text-base">
+                <RefreshCw className="w-4 h-4 text-primary" />
+                Check Any Domain
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -711,7 +751,7 @@ const DomainSettings = () => {
                   onChange={(e) => setPropagationDomain(e.target.value)}
                   className="flex-1"
                 />
-                <Button onClick={checkDnsPropagation} disabled={isCheckingPropagation}>
+                <Button onClick={checkDnsPropagation} disabled={isCheckingPropagation || !propagationDomain}>
                   {isCheckingPropagation ? (
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   ) : (
@@ -720,45 +760,6 @@ const DomainSettings = () => {
                   Check DNS
                 </Button>
               </div>
-
-              {propagationResults.length > 0 && (
-                <div className="space-y-2 mt-4">
-                  <h4 className="font-medium">Results from global DNS servers:</h4>
-                  {propagationResults.map((result, index) => (
-                    <div 
-                      key={index} 
-                      className={cn(
-                        "flex items-center justify-between p-3 rounded-lg",
-                        result.status === 'resolved' ? "bg-green-500/10" : "bg-muted/50"
-                      )}
-                    >
-                      <div className="flex items-center gap-3">
-                        <span>{result.flag}</span>
-                        <span className="font-medium">{result.server}</span>
-                        <span className="text-muted-foreground text-sm">{result.location}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {result.status === 'resolved' ? (
-                          <>
-                            <code className="text-sm text-green-500">{result.value}</code>
-                            <CheckCircle className="w-4 h-4 text-green-500" />
-                          </>
-                        ) : result.status === 'not_found' ? (
-                          <>
-                            <span className="text-sm text-muted-foreground">Not found</span>
-                            <AlertCircle className="w-4 h-4 text-yellow-500" />
-                          </>
-                        ) : (
-                          <>
-                            <span className="text-sm text-muted-foreground">Checking...</span>
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
             </CardContent>
           </Card>
 
@@ -778,53 +779,30 @@ const DomainSettings = () => {
 
         {/* SSL & Security Tab */}
         <TabsContent value="ssl" className="space-y-6">
-          <Card className="glass-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="w-5 h-5 text-primary" />
-                SSL Certificate Status
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Subdomain SSL */}
-              <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-                <div>
-                  <p className="font-medium">{panel?.subdomain}.smmpilot.online</p>
-                  <p className="text-sm text-muted-foreground">Managed by SMMPilot</p>
-                </div>
-                <Badge className="bg-green-500/10 text-green-500 border-green-500/20">
-                  <Lock className="w-3 h-3 mr-1" /> SSL Active
-                </Badge>
-              </div>
+          <SSLMonitoringDashboard 
+            panelId={panel?.id}
+            subdomain={panel?.subdomain}
+            domains={domains.map(d => ({
+              domain: d.domain,
+              ssl_status: d.ssl_status,
+              verification_status: d.verification_status,
+              verified_at: d.verified_at
+            }))}
+            onRefresh={fetchData}
+          />
+        </TabsContent>
 
-              {/* Custom Domain SSL */}
-              {domains.filter(d => d.verification_status === 'verified').map((domain) => (
-                <div key={domain.id} className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-                  <div>
-                    <p className="font-medium">{domain.domain}</p>
-                    <p className="text-sm text-muted-foreground">Let's Encrypt Certificate</p>
-                  </div>
-                  {domain.ssl_status === 'active' ? (
-                    <Badge className="bg-green-500/10 text-green-500 border-green-500/20">
-                      <Lock className="w-3 h-3 mr-1" /> SSL Active
-                    </Badge>
-                  ) : (
-                    <Badge className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">
-                      <Clock className="w-3 h-3 mr-1" /> Provisioning
-                    </Badge>
-                  )}
-                </div>
-              ))}
+        {/* Troubleshooting Tab */}
+        <TabsContent value="troubleshoot" className="space-y-6">
+          <DomainTroubleshootingGuide 
+            domain={domains.length > 0 ? domains[0].domain : undefined}
+            panelId={panel?.id}
+          />
+        </TabsContent>
 
-              <Alert>
-                <Info className="w-4 h-4" />
-                <AlertDescription>
-                  SSL certificates are automatically provisioned and renewed for all verified domains.
-                  This process may take a few minutes after DNS verification.
-                </AlertDescription>
-              </Alert>
-            </CardContent>
-          </Card>
+        {/* Buy Domain Tab */}
+        <TabsContent value="buy" className="space-y-6">
+          <DomainPurchaseLinks />
         </TabsContent>
       </Tabs>
 
