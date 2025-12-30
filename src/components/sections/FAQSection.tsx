@@ -66,7 +66,7 @@ export const FAQSection = () => {
     },
     {
       question: "Can I use my own domain name?",
-      answer: "Absolutely! You can connect your own custom domain or use a free subdomain (yourpanel.ourplatform.com). We provide SSL certificates and handle all the technical setup for you.",
+      answer: "Absolutely! You can connect your own custom domain or use a free subdomain (yourpanel.homeofsmm.com). We provide SSL certificates and handle all the technical setup for you.",
       iconKey: "globe",
       gradient: "from-blue-500 to-indigo-500"
     },
