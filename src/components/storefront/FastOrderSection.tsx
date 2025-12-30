@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { useTheme } from '@/hooks/use-theme';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,7 +29,7 @@ import { SOCIAL_ICONS_MAP, TikTokIcon } from '@/components/icons/SocialIcons';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
-import { useBuyerAuth } from '@/contexts/BuyerAuthContext';
+import { BuyerAuthContext } from '@/contexts/BuyerAuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { LiveOrderTracker } from '@/components/order/LiveOrderTracker';
@@ -59,7 +59,12 @@ const paymentMethods = [
 ];
 
 export const FastOrderSection = ({ services, panelId, panelName, customization, onStepChange }: FastOrderSectionProps) => {
-  const { buyer, refreshBuyer, login } = useBuyerAuth();
+  // Safely access buyer auth context (may not be available in preview mode)
+  const buyerAuthContext = useContext(BuyerAuthContext);
+  const buyer = buyerAuthContext?.buyer ?? null;
+  const refreshBuyer = buyerAuthContext?.refreshBuyer ?? (async () => {});
+  const login = buyerAuthContext?.login ?? (async () => false);
+  
   const navigate = useNavigate();
   
   // Use actual theme from context instead of customization
