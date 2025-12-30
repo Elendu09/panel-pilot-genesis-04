@@ -21,13 +21,16 @@ import {
   Loader2,
   Activity,
   Network,
-  Lock
+  Lock,
+  Eye
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
 import { SubdomainManager } from "@/components/domain/SubdomainManager";
 import { DomainPurchaseLinks } from "@/components/domain/DomainPurchaseLinks";
+import { SSLMonitoringDashboard } from "@/components/domain/SSLMonitoringDashboard";
+import { DomainTroubleshootingGuide } from "@/components/domain/DomainTroubleshootingGuide";
 import { VERCEL_NAMESERVERS, VERCEL_A_RECORDS, VERCEL_CNAME } from "@/lib/hosting-config";
 
 interface PanelData {
@@ -162,10 +165,11 @@ const DomainManagement = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="glass-card p-1">
+        <TabsList className="glass-card p-1 flex-wrap">
           <TabsTrigger value="overview"><Activity className="w-4 h-4 mr-2" /> Overview</TabsTrigger>
           <TabsTrigger value="subdomains"><Server className="w-4 h-4 mr-2" /> Subdomains</TabsTrigger>
           <TabsTrigger value="custom"><Globe className="w-4 h-4 mr-2" /> Custom Domains</TabsTrigger>
+          <TabsTrigger value="monitoring"><Eye className="w-4 h-4 mr-2" /> Monitoring</TabsTrigger>
           <TabsTrigger value="vercel"><Network className="w-4 h-4 mr-2" /> Vercel Setup</TabsTrigger>
           <TabsTrigger value="buy"><ShoppingCart className="w-4 h-4 mr-2" /> Buy Domains</TabsTrigger>
         </TabsList>
@@ -248,6 +252,21 @@ const DomainManagement = () => {
               <Button variant="outline" asChild><a href="https://vercel.com/docs/projects/domains" target="_blank"><ExternalLink className="w-4 h-4 mr-2" /> Vercel Docs</a></Button>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="monitoring" className="space-y-6">
+          <SSLMonitoringDashboard 
+            domains={domains.map(d => ({
+              domain: d.domain,
+              ssl_status: d.ssl_status,
+              verification_status: d.verification_status,
+              verified_at: d.verified_at
+            }))}
+            onRefresh={fetchData}
+          />
+          <DomainTroubleshootingGuide 
+            domain={domains.length > 0 ? domains[0].domain : undefined}
+          />
         </TabsContent>
 
         <TabsContent value="buy"><DomainPurchaseLinks /></TabsContent>
