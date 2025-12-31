@@ -228,7 +228,7 @@ const PanelOwnerDashboard = () => {
                     <Sparkles className="w-4 h-4 text-primary-foreground" />
                   </div>
                   <div className="overflow-hidden">
-                    <h2 className="text-sm font-bold text-foreground">SMMPilot</h2>
+                    <h2 className="text-sm font-bold text-foreground">HOME OF SMM</h2>
                     <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Panel Manager</p>
                   </div>
                 </motion.div>
@@ -397,7 +397,7 @@ const PanelOwnerDashboard = () => {
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center">
               <Sparkles className="w-4 h-4 text-primary-foreground" />
             </div>
-            <span className="font-bold">SMMPilot</span>
+            <span className="font-bold">HOME OF SMM</span>
           </div>
           <div className="flex items-center gap-2">
             <NotificationCenter variant="sheet" />
