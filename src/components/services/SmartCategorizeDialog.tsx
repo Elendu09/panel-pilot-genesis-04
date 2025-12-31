@@ -15,7 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
-import { detectPlatform, detectServiceType, getServiceIcon } from "@/lib/service-icon-detection";
+import { detectPlatform, detectPlatformWithConfidence, detectServiceType, getServiceIcon } from "@/lib/service-icon-detection";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Sparkles,
@@ -85,7 +85,7 @@ export const SmartCategorizeDialog = ({
   const analysisResult = useMemo(() => {
     const previews: ServicePreview[] = services.map((s) => {
       const { platform: detectedPlatform, confidence: detectionConfidence } = 
-        require("@/lib/service-icon-detection").detectPlatformWithConfidence(s.name);
+        detectPlatformWithConfidence(s.name);
       const serviceType = detectServiceType(s.name);
       const newIcon = getServiceIcon(s.name, detectedPlatform);
       
