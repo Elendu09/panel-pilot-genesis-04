@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -84,21 +84,16 @@ export const SmartCategorizeDialog = ({
   // Analyze services and generate preview
   const analysisResult = useMemo(() => {
     const previews: ServicePreview[] = services.map((s) => {
-      const detectedPlatform = detectPlatform(s.name);
+      const { platform: detectedPlatform, confidence: detectionConfidence } = 
+        require("@/lib/service-icon-detection").detectPlatformWithConfidence(s.name);
       const serviceType = detectServiceType(s.name);
       const newIcon = getServiceIcon(s.name, detectedPlatform);
       
-      // Calculate confidence
+      // Map numeric confidence to our categories
       let confidence: "high" | "medium" | "low" = "low";
-      const nameLower = s.name.toLowerCase();
-      
-      // High confidence: direct platform mention
-      if (nameLower.includes("instagram") || nameLower.includes("facebook") ||
-          nameLower.includes("tiktok") || nameLower.includes("youtube") ||
-          nameLower.includes("twitter") || nameLower.includes("linkedin")) {
+      if (detectionConfidence >= 0.7) {
         confidence = "high";
-      } else if (nameLower.includes("ig ") || nameLower.includes("fb ") || 
-                 nameLower.includes("yt ") || nameLower.includes("tt ")) {
+      } else if (detectionConfidence >= 0.4) {
         confidence = "medium";
       }
 
@@ -131,13 +126,15 @@ export const SmartCategorizeDialog = ({
     return { previews, groupedByPlatform, changingCount, highConfidenceCount };
   }, [services]);
 
-  // Initialize selected IDs with all changing services
-  useState(() => {
-    const changingIds = analysisResult.previews
-      .filter((p) => p.willChange)
-      .map((p) => p.id);
-    setSelectedIds(new Set(changingIds));
-  });
+  // Fix: Initialize selected IDs when dialog opens using useEffect
+  React.useEffect(() => {
+    if (open) {
+      const changingIds = analysisResult.previews
+        .filter((p) => p.willChange)
+        .map((p) => p.id);
+      setSelectedIds(new Set(changingIds));
+    }
+  }, [open, analysisResult.previews]);
 
   const togglePlatform = (platform: string) => {
     setExpandedPlatforms((prev) => {

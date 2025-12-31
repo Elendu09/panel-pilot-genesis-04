@@ -35,6 +35,13 @@ const mapCategory = (category: string): string => {
   if (categoryLower.includes('tiktok') || categoryLower.includes('tik tok')) return 'tiktok';
   if (categoryLower.includes('linkedin')) return 'linkedin';
   if (categoryLower.includes('telegram')) return 'telegram';
+  if (categoryLower.includes('spotify')) return 'spotify';
+  if (categoryLower.includes('discord')) return 'discord';
+  if (categoryLower.includes('twitch')) return 'twitch';
+  if (categoryLower.includes('pinterest')) return 'pinterest';
+  if (categoryLower.includes('snapchat')) return 'snapchat';
+  if (categoryLower.includes('threads')) return 'threads';
+  if (categoryLower.includes('soundcloud')) return 'soundcloud';
   return 'other';
 };
 
@@ -128,30 +135,36 @@ serve(async (req) => {
 
         console.log(`Found ${providerServices.length} services from ${provider.name}`);
 
-        // Get existing services for this panel from this provider
+        // Get existing services for this panel by matching provider_id pattern
+        // provider_id is stored as just the service ID from the provider
+        const providerServiceIds = providerServices.map(s => String(s.service));
+        
         const { data: existingServices } = await supabase
           .from('services')
           .select('*')
           .eq('panel_id', panelId)
-          .eq('provider_id', provider.id);
+          .in('provider_id', providerServiceIds);
 
+        // Map existing services by their provider_id (which is the provider's service ID)
         const existingByProviderServiceId = new Map(
           (existingServices || []).map(s => [s.provider_id, s])
         );
 
+        console.log(`Found ${existingServices?.length || 0} existing services to potentially update`);
+
         // Process each service from provider
         for (const providerService of providerServices) {
           const serviceId = String(providerService.service);
-          const providerServiceKey = `${provider.id}_${serviceId}`;
-          const existing = existingByProviderServiceId.get(providerServiceKey);
+          const existing = existingByProviderServiceId.get(serviceId);
           
+          // Provider rate is already per 1K - no division needed
           const providerRate = parseFloat(String(providerService.rate)) || 0;
           const markupMultiplier = 1 + (markupPercent / 100);
           const finalPrice = providerRate * markupMultiplier;
 
           const serviceData = {
             panel_id: panelId,
-            provider_id: providerServiceKey,
+            provider_id: serviceId, // Store just the provider's service ID
             name: providerService.name || `Service ${serviceId}`,
             description: providerService.desc || null,
             category: mapCategory(providerService.category || providerService.type || 'other'),
@@ -163,9 +176,10 @@ serve(async (req) => {
           };
 
           if (existing) {
-            // Check if price changed
+            // Check if price changed significantly (more than 0.001)
             if (Math.abs(existing.price - finalPrice) > 0.001) {
               result.pricesChanged++;
+              console.log(`Price change for service ${serviceId}: ${existing.price} -> ${finalPrice}`);
             }
 
             // Update existing service
@@ -229,8 +243,9 @@ serve(async (req) => {
 
     const totalNew = results.reduce((sum, r) => sum + r.newServices, 0);
     const totalUpdated = results.reduce((sum, r) => sum + r.servicesUpdated, 0);
+    const totalPriceChanges = results.reduce((sum, r) => sum + r.pricesChanged, 0);
 
-    console.log(`Sync completed: ${totalNew} new, ${totalUpdated} updated`);
+    console.log(`Sync completed: ${totalNew} new, ${totalUpdated} updated, ${totalPriceChanges} price changes`);
 
     return new Response(
       JSON.stringify({ 
@@ -239,6 +254,7 @@ serve(async (req) => {
         summary: {
           totalNew,
           totalUpdated,
+          totalPriceChanges,
           totalProviders: results.length,
         },
         syncedAt: new Date().toISOString(),
