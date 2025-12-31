@@ -28,6 +28,7 @@ import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { BottomNav } from "@/components/ui/bottom-nav";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 import { OnboardingTour } from "@/components/onboarding/OnboardingTour";
 import { useOnboardingTour } from "@/contexts/OnboardingTourContext";
@@ -212,7 +213,7 @@ const PanelOwnerDashboard = () => {
         <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />
 
         {/* Header */}
-        <div className="p-4 border-b border-sidebar-border/50">
+        <div className="p-3 border-b border-sidebar-border/50">
           <div className="flex items-center justify-between">
             <AnimatePresence mode="wait">
               {sidebarOpen ? (
@@ -221,14 +222,14 @@ const PanelOwnerDashboard = () => {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="flex items-center gap-3"
+                  className="flex items-center gap-2"
                 >
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg shadow-primary/20">
-                    <Sparkles className="w-5 h-5 text-primary-foreground" />
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg shadow-primary/20">
+                    <Sparkles className="w-4 h-4 text-primary-foreground" />
                   </div>
                   <div className="overflow-hidden">
-                    <h2 className="text-base font-bold text-foreground">SMMPilot</h2>
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Panel Manager</p>
+                    <h2 className="text-sm font-bold text-foreground">SMMPilot</h2>
+                    <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Panel Manager</p>
                   </div>
                 </motion.div>
               ) : (
@@ -237,12 +238,22 @@ const PanelOwnerDashboard = () => {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg shadow-primary/20 mx-auto"
+                  className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg shadow-primary/20 mx-auto"
                 >
-                  <Sparkles className="w-5 h-5 text-primary-foreground" />
+                  <Sparkles className="w-4 h-4 text-primary-foreground" />
                 </motion.div>
               )}
             </AnimatePresence>
+            
+            {/* Collapse Toggle */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="h-6 w-6 text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/50"
+            >
+              {sidebarOpen ? <ChevronLeft className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+            </Button>
           </div>
 
           {/* Search */}
@@ -268,44 +279,46 @@ const PanelOwnerDashboard = () => {
           </AnimatePresence>
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 p-3 space-y-6 overflow-y-auto">
-          {/* Main */}
-          <div className="space-y-1">
-            {sidebarOpen && (
-              <p className="px-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                Main
-              </p>
-            )}
-            {mainNavigation.map((item) => (
-              <NavItem key={item.name} item={item} collapsed={!sidebarOpen} />
-            ))}
-          </div>
+        {/* Navigation with ScrollArea */}
+        <ScrollArea className="flex-1">
+          <nav className="p-2 space-y-4">
+            {/* Main */}
+            <div className="space-y-0.5">
+              {sidebarOpen && (
+                <p className="px-2 text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">
+                  Main
+                </p>
+              )}
+              {mainNavigation.map((item) => (
+                <NavItem key={item.name} item={item} collapsed={!sidebarOpen} />
+              ))}
+            </div>
 
-          {/* Settings */}
-          <div className="space-y-1">
-            {sidebarOpen && (
-              <p className="px-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                Configuration
-              </p>
-            )}
-            {settingsNavigation.map((item) => (
-              <NavItem key={item.name} item={item} collapsed={!sidebarOpen} />
-            ))}
-          </div>
+            {/* Settings */}
+            <div className="space-y-0.5">
+              {sidebarOpen && (
+                <p className="px-2 text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">
+                  Configuration
+                </p>
+              )}
+              {settingsNavigation.map((item) => (
+                <NavItem key={item.name} item={item} collapsed={!sidebarOpen} />
+              ))}
+            </div>
 
-          {/* Support */}
-          <div className="space-y-1">
-            {sidebarOpen && (
-              <p className="px-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                Help
-              </p>
-            )}
-            {supportNavigation.map((item) => (
-              <NavItem key={item.name} item={item} collapsed={!sidebarOpen} />
-            ))}
-          </div>
-        </nav>
+            {/* Support */}
+            <div className="space-y-0.5">
+              {sidebarOpen && (
+                <p className="px-2 text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">
+                  Help
+                </p>
+              )}
+              {supportNavigation.map((item) => (
+                <NavItem key={item.name} item={item} collapsed={!sidebarOpen} />
+              ))}
+            </div>
+          </nav>
+        </ScrollArea>
 
         {/* Sticky Footer */}
         <div className="mt-auto p-2 border-t border-sidebar-border/50 space-y-2 bg-sidebar/95 backdrop-blur-sm sticky bottom-0">
@@ -371,14 +384,6 @@ const PanelOwnerDashboard = () => {
               className="h-7 w-7 text-muted-foreground hover:text-foreground"
             >
               <LogOut className="w-3.5 h-3.5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="h-7 w-7 text-muted-foreground hover:text-foreground ml-auto"
-            >
-              {sidebarOpen ? <ChevronLeft className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
             </Button>
           </div>
         </div>
