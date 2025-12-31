@@ -98,7 +98,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
 import { usePanel } from "@/hooks/usePanel";
 import { SOCIAL_ICONS_MAP } from "@/components/icons/SocialIcons";
-import { detectPlatform, getServiceIcon, autoAssignIconsAndCategories, detectServiceType } from "@/lib/service-icon-detection";
+import { detectPlatform, getServiceIcon, autoAssignIconsAndCategories } from "@/lib/service-icon-detection";
 
 // DnD Kit
 import {
@@ -125,7 +125,7 @@ import { MobileServiceView } from "@/components/services/MobileServiceView";
 import { FloatingUndoButton } from "@/components/services/FloatingUndoButton";
 import { useUndoRedoHistory } from "@/hooks/use-undo-redo-history";
 import { ServiceTips } from "@/components/services/ServiceTips";
-import { SmartOrganizeDialog } from "@/components/services/SmartOrganizeDialog";
+import { SmartCategorizeDialog } from "@/components/services/SmartCategorizeDialog";
 import { ServiceAnalytics } from "@/components/services/ServiceAnalytics";
 import { ServiceKanbanCard } from "@/components/services/ServiceKanbanCard";
 import { ServiceToolsCards } from "@/components/services/ServiceToolsCards";
@@ -277,8 +277,8 @@ const ServicesManagement = () => {
     total: 0,
   });
   
-  // Smart Organize Dialog (combined Auto-Fix + Smart Categorize)
-  const [isSmartOrganizeOpen, setIsSmartOrganizeOpen] = useState(false);
+  // Smart Categorize Dialog
+  const [isSmartCategorizeOpen, setIsSmartCategorizeOpen] = useState(false);
   
   // Service Tips dismissible state
   const [showTips, setShowTips] = useState(() => {
@@ -1881,7 +1881,8 @@ const ServicesManagement = () => {
 
       {/* Service Tools Cards */}
       <ServiceToolsCards
-        onSmartOrganize={() => setIsSmartOrganizeOpen(true)}
+        onAutoFix={generateAutoFixPreview}
+        onSmartCategorize={() => setIsSmartCategorizeOpen(true)}
         onAutoArrange={(option) => {
           switch (option) {
             case "name-asc":
@@ -1889,23 +1890,14 @@ const ServicesManagement = () => {
               toast({ title: "Services arranged alphabetically (A-Z)" });
               break;
             case "name-desc":
+              // For desc, we'll handle in the sort logic
+              setSortOption("name");
               setServices(prev => [...prev].sort((a, b) => b.name.localeCompare(a.name)));
               toast({ title: "Services arranged alphabetically (Z-A)" });
               break;
             case "category":
               setServices(prev => [...prev].sort((a, b) => a.category.localeCompare(b.category)));
               toast({ title: "Services grouped by category" });
-              break;
-            case "category-type":
-              // Sort by category first, then by service type within category
-              setServices(prev => [...prev].sort((a, b) => {
-                const catCompare = a.category.localeCompare(b.category);
-                if (catCompare !== 0) return catCompare;
-                const aType = detectServiceType(a.name);
-                const bType = detectServiceType(b.name);
-                return aType.localeCompare(bType);
-              }));
-              toast({ title: "Services grouped by category & type" });
               break;
             case "price-high":
               setSortOption("price-high");
@@ -1920,13 +1912,14 @@ const ServicesManagement = () => {
               toast({ title: "Services arranged by popularity" });
               break;
             case "recent":
+              // Sort by display_order descending (newer services have higher order)
               setServices(prev => [...prev].sort((a, b) => (b.displayOrder || 0) - (a.displayOrder || 0)));
               toast({ title: "Services arranged by newest first" });
               break;
           }
         }}
         onHealthCheck={() => setIsHealthCheckOpen(true)}
-        isOrganizing={isAutoFixingIcons}
+        isAutoFixing={isAutoFixingIcons}
         totalServices={totalCount}
         healthIssues={healthIssueCount}
       />
@@ -2802,16 +2795,21 @@ const ServicesManagement = () => {
         maxVisible={5}
       />
 
-      {/* Smart Organize Dialog */}
-      {panel?.id && (
-        <SmartOrganizeDialog
-          open={isSmartOrganizeOpen}
-          onOpenChange={setIsSmartOrganizeOpen}
-          panelId={panel.id}
-          onComplete={() => fetchServices()}
-          onRefreshCounts={fetchCategoryCounts}
-        />
-      )}
+      {/* Smart Categorize Dialog */}
+      <SmartCategorizeDialog
+        open={isSmartCategorizeOpen}
+        onOpenChange={setIsSmartCategorizeOpen}
+        services={services.map(s => ({
+          id: s.id,
+          name: s.name,
+          category: s.category,
+          imageUrl: s.imageUrl,
+        }))}
+        onApply={() => {
+          fetchServices();
+          fetchCategoryCounts();
+        }}
+      />
 
       {/* Service View Dialog */}
       <ServiceViewDialog
