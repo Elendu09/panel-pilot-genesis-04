@@ -442,12 +442,39 @@ const PanelOverview = () => {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
               <div className="flex items-center gap-3 mb-2">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shadow-lg shadow-primary/20">
-                  <Sparkles className="w-6 h-6 text-primary-foreground" />
-                </div>
+                {(panelData?.custom_branding as any)?.faviconUrl || panelData?.logo_url ? (
+                  <div className="w-12 h-12 rounded-xl overflow-hidden shadow-lg shadow-primary/20">
+                    <img 
+                      src={(panelData?.custom_branding as any)?.faviconUrl || panelData?.logo_url} 
+                      alt="Panel Icon"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shadow-lg shadow-primary/20">
+                    <Sparkles className="w-6 h-6 text-primary-foreground" />
+                  </div>
+                )}
                 <div>
-                  <h1 className="text-xl md:text-2xl font-bold">
-                    Welcome back! 👋
+                  <h1 className="text-xl md:text-2xl font-bold flex items-center gap-2">
+                    Welcome back!
+                    <motion.div
+                      animate={{ 
+                        scale: [1, 1.15, 1],
+                        filter: ["brightness(1)", "brightness(1.4)", "brightness(1)"]
+                      }}
+                      transition={{ 
+                        duration: 2, 
+                        repeat: Infinity,
+                        ease: "easeInOut"
+                      }}
+                      className="relative"
+                    >
+                      <Sparkles className="w-6 h-6 text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.8)]" />
+                      <div className="absolute inset-0 animate-ping opacity-50">
+                        <Sparkles className="w-6 h-6 text-amber-400/50" />
+                      </div>
+                    </motion.div>
                   </h1>
                   <p className="text-sm text-muted-foreground">
                     Here's what's happening with <span className="font-semibold text-foreground">{panelData?.name || 'your panel'}</span>
