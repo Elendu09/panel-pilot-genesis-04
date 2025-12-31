@@ -318,8 +318,6 @@ const PanelOwnerDashboard = () => {
               ))}
             </div>
           </nav>
-          {/* Visible Scroll Track */}
-          <div className="absolute right-0.5 top-2 bottom-2 w-1.5 rounded-full bg-primary/20" />
         </ScrollArea>
 
         {/* Sticky Footer */}
