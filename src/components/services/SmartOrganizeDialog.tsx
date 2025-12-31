@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { detectPlatformWithConfidence, detectServiceType } from "@/lib/service-icon-detection";
+import { detectPlatformWithConfidence, detectServiceType, SERVICE_TYPE_PRIORITY } from "@/lib/service-icon-detection";
 import { toast } from "@/hooks/use-toast";
 import { SOCIAL_ICONS_MAP } from "@/components/icons/SocialIcons";
 import {
@@ -40,6 +40,7 @@ export type OrganizePhase =
   | 'analyzing' 
   | 'previewing'
   | 'applying' 
+  | 'organizing'
   | 'categorizing'
   | 'completed' 
   | 'error';
@@ -126,11 +127,12 @@ export const SmartOrganizeDialog = ({
     
     const phaseWeights: Record<OrganizePhase, { start: number; weight: number }> = {
       idle: { start: 0, weight: 0 },
-      fetching: { start: 0, weight: 20 },
-      analyzing: { start: 20, weight: 30 },
-      previewing: { start: 50, weight: 5 },
-      applying: { start: 55, weight: 40 },
-      categorizing: { start: 95, weight: 5 },
+      fetching: { start: 0, weight: 15 },
+      analyzing: { start: 15, weight: 25 },
+      previewing: { start: 40, weight: 5 },
+      applying: { start: 45, weight: 30 },
+      organizing: { start: 75, weight: 15 },
+      categorizing: { start: 90, weight: 10 },
       completed: { start: 100, weight: 0 },
       error: { start: 0, weight: 0 },
     };
@@ -347,15 +349,61 @@ export const SmartOrganizeDialog = ({
         );
       }
       
+      // Phase: Organizing - sort by category then service type
+      setProgress({ phase: 'organizing', current: 0, total: previewData.length, message: 'Organizing services by category and type...' });
+      
+      // Sort all services by category, then by service type priority
+      const sortedServices = [...previewData].sort((a, b) => {
+        // First by category (platform)
+        const catCompare = a.newCategory.localeCompare(b.newCategory);
+        if (catCompare !== 0) return catCompare;
+        
+        // Then by service type priority
+        const aTypeIndex = SERVICE_TYPE_PRIORITY.indexOf(a.serviceType) !== -1 
+          ? SERVICE_TYPE_PRIORITY.indexOf(a.serviceType) 
+          : SERVICE_TYPE_PRIORITY.length;
+        const bTypeIndex = SERVICE_TYPE_PRIORITY.indexOf(b.serviceType) !== -1 
+          ? SERVICE_TYPE_PRIORITY.indexOf(b.serviceType) 
+          : SERVICE_TYPE_PRIORITY.length;
+        return aTypeIndex - bTypeIndex;
+      });
+      
+      // Update display_order for all services
+      const orderUpdates = sortedServices.map((s, index) => ({
+        id: s.id,
+        display_order: index + 1,
+      }));
+      
+      // Apply display order updates in chunks
+      for (let i = 0; i < orderUpdates.length; i += chunkSize) {
+        const chunk = orderUpdates.slice(i, i + chunkSize);
+        
+        setProgress({ 
+          phase: 'organizing', 
+          current: i, 
+          total: orderUpdates.length,
+          message: `Organizing ${i.toLocaleString()} of ${orderUpdates.length.toLocaleString()} services...`
+        });
+        
+        await Promise.all(
+          chunk.map(update =>
+            supabase
+              .from('services')
+              .update({ display_order: update.display_order })
+              .eq('id', update.id)
+          )
+        );
+      }
+      
       // Phase: Categorizing - refresh counts
       setProgress({ phase: 'categorizing', current: 0, total: 1, message: 'Updating category counts...' });
       await onRefreshCounts();
       setProgress({ phase: 'categorizing', current: 1, total: 1, message: 'Category counts updated!' });
       
       // Complete
-      setProgress({ phase: 'completed', current: changesToApply.length, total: changesToApply.length, message: 'All changes applied!' });
+      setProgress({ phase: 'completed', current: changesToApply.length, total: changesToApply.length, message: 'All changes applied and organized!' });
       
-      toast({ title: `Smart Organized ${changesToApply.length} services` });
+      toast({ title: `AutoFixed & Organized ${changesToApply.length} services` });
       
       // Brief delay then close
       setTimeout(() => {
@@ -392,13 +440,14 @@ export const SmartOrganizeDialog = ({
     analyzing: 'Analyzing services...',
     previewing: 'Generating preview...',
     applying: 'Applying changes...',
+    organizing: 'Organizing by category & type...',
     categorizing: 'Updating categories...',
     completed: 'Completed!',
     error: 'Error occurred',
   };
 
   const showPreview = progress.phase === 'previewing' && !isProcessing;
-  const showProgress = ['fetching', 'analyzing', 'applying', 'categorizing'].includes(progress.phase) || 
+  const showProgress = ['fetching', 'analyzing', 'applying', 'organizing', 'categorizing'].includes(progress.phase) || 
                        (progress.phase === 'completed' && isProcessing);
 
   return (
@@ -416,7 +465,7 @@ export const SmartOrganizeDialog = ({
             ) : (
               <Wand2 className={cn("w-5 h-5 text-primary", isProcessing && "animate-pulse")} />
             )}
-            Smart Organize
+            AutoFix Icon + Smart Organize
           </DialogTitle>
           <DialogDescription>
             {showPreview 

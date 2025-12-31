@@ -169,12 +169,12 @@ export const ServiceKanbanCard = ({
           {/* Pricing */}
           <div className="flex items-center justify-between pt-2 border-t border-border/50">
             <div>
-              <span className="text-lg font-bold text-primary">${service.price.toFixed(2)}</span>
+              <span className="text-lg font-bold text-primary">${service.price.toFixed(4)}</span>
               <span className="text-xs text-muted-foreground ml-1">/ 1k</span>
             </div>
             <div className="flex items-center gap-1">
               <span className="text-xs text-muted-foreground line-through">
-                ${service.originalPrice.toFixed(2)}
+                ${service.originalPrice.toFixed(4)}
               </span>
               <Badge
                 variant="outline"

@@ -310,7 +310,7 @@ const MobileServiceCard = ({ service, emoji, index, onToggleStatus, onClick }: M
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span>{service.displayId || service.id.slice(0, 8)}</span>
           <span>•</span>
-          <span className="text-primary font-medium">${service.price.toFixed(2)}</span>
+          <span className="text-primary font-medium">${service.price.toFixed(4)}</span>
           <ChevronRight className="w-3 h-3 ml-auto" />
         </div>
       </div>

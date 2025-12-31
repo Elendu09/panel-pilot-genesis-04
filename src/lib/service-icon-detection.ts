@@ -236,6 +236,17 @@ export const PLATFORM_KEYWORDS: Record<string, string[]> = {
   ],
 };
 
+// Service type priority for sorting within categories
+export const SERVICE_TYPE_PRIORITY = [
+  'followers', 'subscribers', 'members',    // Audience growth
+  'likes', 'reactions', 'hearts',           // Engagement
+  'views', 'plays', 'streams', 'watch',     // Views/plays
+  'comments', 'replies',                    // Comments
+  'shares', 'reposts', 'retweets',          // Shares
+  'saves', 'bookmarks',                     // Saves
+  'general'                                 // Default fallback
+];
+
 export const SERVICE_TYPE_KEYWORDS: Record<string, string[]> = {
   followers: [
     "follower", "followers", "follow", "subs", "subscriber", "subscribers",

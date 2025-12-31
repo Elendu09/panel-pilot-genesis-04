@@ -69,7 +69,7 @@ interface ServiceImportDialogProps {
   onOpenChange: (open: boolean) => void;
   providers: Provider[];
   getCategoryIcon: (category: string) => React.ComponentType<{ className?: string }>;
-  onImport: (services: FetchedService[], markups: Record<number, number>) => void;
+  onImport: (services: FetchedService[], markups: Record<number, number>, providerId: string, providerName: string) => void;
 }
 
 export const ServiceImportDialog = ({
@@ -280,6 +280,11 @@ export const ServiceImportDialog = ({
     setImportProgress({ importing: true, current: 0, total });
     
     try {
+      // Get provider info for storing with services
+      const provider = providers.find(p => p.id === selectedProvider);
+      const providerId = selectedProvider;
+      const providerName = provider?.name || 'Unknown';
+      
       // Import in chunks with progress
       const chunkSize = 50;
       for (let i = 0; i < total; i += chunkSize) {
@@ -289,7 +294,7 @@ export const ServiceImportDialog = ({
           chunkMarkups[s.id] = serviceMarkups[s.id] ?? globalMarkup;
         });
         
-        await onImport(chunk, chunkMarkups);
+        await onImport(chunk, chunkMarkups, providerId, providerName);
         setImportProgress({ importing: true, current: Math.min(i + chunkSize, total), total });
       }
       
