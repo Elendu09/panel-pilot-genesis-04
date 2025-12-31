@@ -339,11 +339,24 @@ const ServicesManagement = () => {
   // Active filter count for badge
   const activeFilterCount = countActiveFilters(advancedFilters);
 
-  // Provider name lookup
-  const getProviderName = (providerId: string) => {
-    if (!providerId || providerId === 'Direct') return 'Direct';
+  // Provider name lookup - checks providers list and features JSON
+  const getProviderName = (providerId: string, features?: string | null) => {
+    // First try to get from features JSON (stored during import)
+    if (features) {
+      try {
+        const parsed = JSON.parse(features);
+        if (parsed.provider_name && parsed.provider_name !== 'Unknown') {
+          return parsed.provider_name;
+        }
+      } catch (e) {
+        // Ignore JSON parse errors
+      }
+    }
+    
+    // Then check provider list
+    if (!providerId || providerId === 'Direct' || providerId === 'direct') return 'Direct';
     const provider = providers.find(p => p.id === providerId);
-    return provider?.name || 'Unknown';
+    return provider?.name || 'Direct';
   };
 
   // Persist view mode
@@ -595,23 +608,38 @@ const ServicesManagement = () => {
 
       setTotalCount(count || 0);
 
-      const mappedServices: ServiceItem[] = (data || []).map((s, index) => ({
-        id: s.id,
-        displayId: from + index + 1,
-        name: s.name,
-        category: s.category,
-        provider: getProviderName(s.provider_id || ''),  // Pass provider NAME not ID
-        minQty: s.min_quantity || 100,
-        maxQty: s.max_quantity || 10000,
-        price: Number(s.price),
-        originalPrice: Number(s.price) * 0.8,
-        status: s.is_active ?? true,
-        orders: 0,
-        providerId: s.provider_id || '',
-        displayOrder: s.display_order || index + 1,
-        description: s.description,
-        imageUrl: s.image_url,
-      }));
+      const mappedServices: ServiceItem[] = (data || []).map((s, index) => {
+        // Extract provider rate from features if available
+        let originalPrice = Number(s.price) * 0.8;
+        if (s.features) {
+          try {
+            const features = JSON.parse(s.features as string);
+            if (features.provider_rate) {
+              originalPrice = Number(features.provider_rate);
+            }
+          } catch (e) {
+            // Ignore parse errors
+          }
+        }
+        
+        return {
+          id: s.id,
+          displayId: from + index + 1,
+          name: s.name,
+          category: s.category,
+          provider: getProviderName(s.provider_id || '', s.features as string | null),
+          minQty: s.min_quantity || 100,
+          maxQty: s.max_quantity || 10000,
+          price: Number(s.price),
+          originalPrice,
+          status: s.is_active ?? true,
+          orders: 0,
+          providerId: s.provider_id || '',
+          displayOrder: s.display_order || index + 1,
+          description: s.description,
+          imageUrl: s.image_url,
+        };
+      });
 
       setServices(mappedServices);
     } catch (error) {
@@ -1448,7 +1476,7 @@ const ServicesManagement = () => {
 
   // Import handler - applies markup ONCE and stores provider info for duplicate detection
   // NOTE: service.price is already the provider's rate per 1K from ServiceImportDialog
-  const handleImport = async (importedServices: any[], markups: Record<number, number>) => {
+  const handleImport = async (importedServices: any[], markups: Record<number, number>, providerId?: string, providerName?: string) => {
     if (!panel?.id) return;
     
     try {
@@ -1457,6 +1485,9 @@ const ServicesManagement = () => {
         const providerRate = Number(service.price) || 0;
         const finalPrice = providerRate * (1 + markupPercent / 100);
         
+        // Store both the actual provider UUID and the provider's service ID
+        // The provider_id field stores the actual provider UUID for lookup
+        // features stores the original service ID from provider for duplicate detection
         return {
           panel_id: panel.id,
           name: service.name,
@@ -1466,7 +1497,12 @@ const ServicesManagement = () => {
           max_quantity: service.maxQty || 10000,
           is_active: true,
           display_order: services.length + index + 1,
-          provider_id: String(service.id), // Store provider service ID for duplicate detection
+          provider_id: providerId || 'direct', // Store actual provider UUID
+          features: JSON.stringify({ 
+            original_service_id: service.id, 
+            provider_name: providerName || 'Direct',
+            provider_rate: providerRate,
+          }),
         };
       });
 
@@ -1891,21 +1927,6 @@ const ServicesManagement = () => {
             case "name-desc":
               setServices(prev => [...prev].sort((a, b) => b.name.localeCompare(a.name)));
               toast({ title: "Services arranged alphabetically (Z-A)" });
-              break;
-            case "category":
-              setServices(prev => [...prev].sort((a, b) => a.category.localeCompare(b.category)));
-              toast({ title: "Services grouped by category" });
-              break;
-            case "category-type":
-              // Sort by category first, then by service type within category
-              setServices(prev => [...prev].sort((a, b) => {
-                const catCompare = a.category.localeCompare(b.category);
-                if (catCompare !== 0) return catCompare;
-                const aType = detectServiceType(a.name);
-                const bType = detectServiceType(b.name);
-                return aType.localeCompare(bType);
-              }));
-              toast({ title: "Services grouped by category & type" });
               break;
             case "price-high":
               setSortOption("price-high");

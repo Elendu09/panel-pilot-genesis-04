@@ -30,8 +30,6 @@ import {
 export type ArrangeOption = 
   | "name-asc" 
   | "name-desc" 
-  | "category" 
-  | "category-type"
   | "price-high" 
   | "price-low" 
   | "popularity" 
@@ -59,8 +57,6 @@ export const ServiceToolsCards = ({
   const arrangeOptions: { value: ArrangeOption; label: string; icon: typeof ArrowUp; description: string }[] = [
     { value: "name-asc", label: "Name (A-Z)", icon: SortAsc, description: "Alphabetical order" },
     { value: "name-desc", label: "Name (Z-A)", icon: ArrowDown, description: "Reverse alphabetical" },
-    { value: "category", label: "By Category", icon: Layers, description: "Group by platform" },
-    { value: "category-type", label: "By Category & Type", icon: Layers, description: "Group by platform, then by service type" },
     { value: "price-high", label: "Price (High to Low)", icon: DollarSign, description: "Most expensive first" },
     { value: "price-low", label: "Price (Low to High)", icon: DollarSign, description: "Cheapest first" },
     { value: "popularity", label: "By Popularity", icon: TrendingUp, description: "Most ordered first" },
@@ -70,8 +66,8 @@ export const ServiceToolsCards = ({
   const tools = [
     {
       id: "smart-organize",
-      title: "Smart Organize",
-      description: "AI-powered icon detection and categorization in one step",
+      title: "AutoFix Icon + Smart Organize",
+      description: "AI-powered auto-fix icons and smart categorization with automatic organization",
       icon: Wand2,
       action: onSmartOrganize,
       loading: isOrganizing,
@@ -149,7 +145,7 @@ export const ServiceToolsCards = ({
                   <ArrowUpDown className="w-5 h-5" />
                 </div>
                 <Badge variant="secondary" className="text-xs">
-                  8 options
+                  6 options
                 </Badge>
               </div>
               <h3 className="font-semibold text-sm mb-1">Auto Arrange</h3>
