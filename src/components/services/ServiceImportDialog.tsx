@@ -188,11 +188,12 @@ export const ServiceImportDialog = ({
       }
       
       // Map the API response to our format
+      // NOTE: Provider rate is already "per 1K" - DO NOT divide by 1000!
       const mappedServices: FetchedService[] = data.services.map((s: any, index: number) => ({
         id: s.service || s.id || index + 1,
         name: s.name || `Service ${s.service || s.id}`,
         category: mapCategory(s.category || 'other'),
-        price: parseFloat(s.rate || s.price || 0) / 1000,
+        price: parseFloat(s.rate || s.price || 0), // Provider rate per 1K - no division
         minQty: parseInt(s.min || s.min_quantity || 100),
         maxQty: parseInt(s.max || s.max_quantity || 10000),
         description: s.description || s.name || '',
@@ -644,10 +645,10 @@ export const ServiceImportDialog = ({
                           <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/30">
                             <div className="flex items-center gap-1.5">
                               <span className="text-xs text-muted-foreground line-through">
-                                ${service.price.toFixed(2)}
+                                ${service.price < 1 ? service.price.toFixed(4) : service.price.toFixed(2)}
                               </span>
                               <span className="text-sm font-semibold text-primary">
-                                ${finalPrice.toFixed(2)}
+                                ${finalPrice < 1 ? finalPrice.toFixed(4) : finalPrice.toFixed(2)}
                               </span>
                             </div>
                             <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>

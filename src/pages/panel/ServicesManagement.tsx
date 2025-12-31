@@ -479,11 +479,15 @@ const ServicesManagement = () => {
     }
   };
 
-  // Manual search handler - no more auto-debounce
+  // Manual search handler - triggers search immediately
   const handleSearchSubmit = useCallback(() => {
     setDebouncedSearch(searchQuery);
     setCurrentPage(1);
-  }, [searchQuery]);
+    // Immediately trigger fetchServices for responsive feedback
+    if (panel?.id) {
+      fetchServices();
+    }
+  }, [searchQuery, panel?.id]);
 
   const handleClearSearch = useCallback(() => {
     setSearchQuery('');
@@ -536,9 +540,9 @@ const ServicesManagement = () => {
         query = query.eq('category', selectedCategory as any);
       }
 
-      // Search filter
+      // Search filter - search in both name and description
       if (debouncedSearch) {
-        query = query.ilike('name', `%${debouncedSearch}%`);
+        query = query.or(`name.ilike.%${debouncedSearch}%,description.ilike.%${debouncedSearch}%`);
       }
 
       // Sorting
@@ -1418,28 +1422,36 @@ const ServicesManagement = () => {
     }
   };
 
-  // Import handler - stores provider_id to prevent duplicates
+  // Import handler - applies markup ONCE and stores provider info for duplicate detection
+  // NOTE: service.price is already the provider's rate per 1K from ServiceImportDialog
   const handleImport = async (importedServices: any[], markups: Record<number, number>) => {
     if (!panel?.id) return;
     
     try {
-      const newServices = importedServices.map((service, index) => ({
-        panel_id: panel.id,
-        name: service.name,
-        category: service.category || 'other',
-        price: service.price * (1 + (markups[service.id] || 25) / 100),
-        min_quantity: service.minQty || 100,
-        max_quantity: service.maxQty || 10000,
-        is_active: true,
-        display_order: services.length + index + 1,
-        provider_id: String(service.id), // Store provider service ID for duplicate detection
-      }));
+      const newServices = importedServices.map((service, index) => {
+        const markupPercent = markups[service.id] ?? 25;
+        const providerRate = Number(service.price) || 0;
+        const finalPrice = providerRate * (1 + markupPercent / 100);
+        
+        return {
+          panel_id: panel.id,
+          name: service.name,
+          category: service.category || 'other',
+          price: finalPrice, // Final sale price per 1K (provider rate + markup)
+          min_quantity: service.minQty || 100,
+          max_quantity: service.maxQty || 10000,
+          is_active: true,
+          display_order: services.length + index + 1,
+          provider_id: String(service.id), // Store provider service ID for duplicate detection
+        };
+      });
 
       const { error } = await supabase.from('services').insert(newServices);
       if (error) throw error;
 
       toast({ title: `${importedServices.length} services imported successfully` });
       fetchServices();
+      fetchCategoryCounts();
     } catch (error) {
       console.error('Import error:', error);
       toast({ title: 'Import failed', variant: 'destructive' });

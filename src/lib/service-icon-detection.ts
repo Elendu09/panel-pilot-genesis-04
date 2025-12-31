@@ -175,18 +175,45 @@ export const QUALITY_KEYWORDS: Record<string, string[]> = {
 };
 
 /**
+ * Normalizes service name for better keyword matching
+ * Removes brackets, extra punctuation, and normalizes spacing
+ */
+const normalizeServiceName = (name: string): string => {
+  return name
+    .toLowerCase()
+    .replace(/[\[\]\(\)\{\}]/g, ' ') // Remove brackets
+    .replace(/[^\w\s]/g, ' ')         // Remove special chars except letters/numbers
+    .replace(/\s+/g, ' ')             // Collapse multiple spaces
+    .trim();
+};
+
+/**
  * Detects the platform/category from a service name with confidence scoring
+ * Uses word-boundary matching for better accuracy with abbreviations
  */
 export const detectPlatformWithConfidence = (serviceName: string): { platform: string; confidence: number } => {
-  const lowerName = serviceName.toLowerCase();
+  const normalizedName = normalizeServiceName(serviceName);
+  const words = normalizedName.split(' ');
   let bestMatch = { platform: 'other', confidence: 0 };
   
   for (const [platform, keywords] of Object.entries(PLATFORM_KEYWORDS)) {
     for (const keyword of keywords) {
-      if (lowerName.includes(keyword)) {
-        // Calculate confidence based on keyword length relative to service name
+      const normalizedKeyword = keyword.toLowerCase().trim();
+      
+      // Check for exact word match first (higher confidence)
+      const exactWordMatch = words.some(word => word === normalizedKeyword);
+      if (exactWordMatch) {
+        const confidence = 0.9; // High confidence for exact word match
+        if (confidence > bestMatch.confidence) {
+          bestMatch = { platform, confidence };
+        }
+        continue;
+      }
+      
+      // Check for substring match
+      if (normalizedName.includes(normalizedKeyword)) {
         // Longer, more specific keywords get higher confidence
-        const confidence = Math.min((keyword.length / lowerName.length) * 3, 1);
+        const confidence = Math.min((normalizedKeyword.length / normalizedName.length) * 3, 0.85);
         if (confidence > bestMatch.confidence) {
           bestMatch = { platform, confidence };
         }
