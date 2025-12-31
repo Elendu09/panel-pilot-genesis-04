@@ -280,8 +280,8 @@ const PanelOwnerDashboard = () => {
         </div>
 
         {/* Navigation with ScrollArea */}
-        <ScrollArea className="flex-1">
-          <nav className="p-2 space-y-4">
+        <ScrollArea className="flex-1 [&>[data-radix-scroll-area-viewport]]:pr-1">
+          <nav className="p-2 pr-3 space-y-4">
             {/* Main */}
             <div className="space-y-0.5">
               {sidebarOpen && (
@@ -318,6 +318,8 @@ const PanelOwnerDashboard = () => {
               ))}
             </div>
           </nav>
+          {/* Visible Scroll Track */}
+          <div className="absolute right-0.5 top-2 bottom-2 w-1.5 rounded-full bg-primary/20" />
         </ScrollArea>
 
         {/* Sticky Footer */}
