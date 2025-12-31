@@ -188,7 +188,7 @@ export const DraggableServiceItem = ({
         {/* Pricing & Stats */}
         <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/50">
           <div>
-            <span className="text-lg font-bold text-primary">${service.price.toFixed(4)}</span>
+            <span className="text-lg font-bold text-primary">${service.price.toFixed(2)}</span>
             <span className="text-xs text-muted-foreground ml-1">/ 1k</span>
             <Badge variant="outline" className={cn(
               "ml-2 text-xs",
@@ -280,9 +280,9 @@ export const DraggableServiceItem = ({
       {/* Price */}
       <td className="py-3 px-2">
         <div className="flex flex-col items-end">
-          <span className="font-semibold text-primary">${service.price.toFixed(4)}</span>
+          <span className="font-semibold text-primary">${service.price.toFixed(2)}</span>
           <div className="flex items-center gap-1">
-            <span className="text-xs text-muted-foreground line-through">${service.originalPrice.toFixed(4)}</span>
+            <span className="text-xs text-muted-foreground line-through">${service.originalPrice.toFixed(2)}</span>
             <Badge variant="outline" className={cn(
               "text-xs",
               Number(profitMargin) >= 25 ? "text-emerald-500 border-emerald-500/30" : 

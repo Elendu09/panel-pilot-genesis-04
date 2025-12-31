@@ -69,7 +69,7 @@ interface ServiceImportDialogProps {
   onOpenChange: (open: boolean) => void;
   providers: Provider[];
   getCategoryIcon: (category: string) => React.ComponentType<{ className?: string }>;
-  onImport: (services: FetchedService[], markups: Record<number, number>, providerId: string) => void;
+  onImport: (services: FetchedService[], markups: Record<number, number>) => void;
 }
 
 export const ServiceImportDialog = ({
@@ -277,11 +277,6 @@ export const ServiceImportDialog = ({
       return;
     }
     
-    if (!selectedProvider) {
-      toast({ title: "No provider selected", variant: "destructive" });
-      return;
-    }
-    
     setImportProgress({ importing: true, current: 0, total });
     
     try {
@@ -294,8 +289,7 @@ export const ServiceImportDialog = ({
           chunkMarkups[s.id] = serviceMarkups[s.id] ?? globalMarkup;
         });
         
-        // Pass the selectedProvider (actual provider UUID) to the parent
-        await onImport(chunk, chunkMarkups, selectedProvider);
+        await onImport(chunk, chunkMarkups);
         setImportProgress({ importing: true, current: Math.min(i + chunkSize, total), total });
       }
       
