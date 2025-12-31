@@ -164,6 +164,7 @@ const getCategoryColor = (categoryId: string) => {
 
 const categories = [
   { id: "all", name: "All Services", color: "#6B7280" },
+  // Major Social Platforms
   { id: "instagram", name: "Instagram", color: SOCIAL_ICONS_MAP.instagram.color },
   { id: "facebook", name: "Facebook", color: SOCIAL_ICONS_MAP.facebook.color },
   { id: "twitter", name: "Twitter/X", color: SOCIAL_ICONS_MAP.twitter.color },
@@ -171,13 +172,36 @@ const categories = [
   { id: "tiktok", name: "TikTok", color: SOCIAL_ICONS_MAP.tiktok.color },
   { id: "linkedin", name: "LinkedIn", color: SOCIAL_ICONS_MAP.linkedin.color },
   { id: "telegram", name: "Telegram", color: SOCIAL_ICONS_MAP.telegram.color },
-  { id: "spotify", name: "Spotify", color: SOCIAL_ICONS_MAP.spotify.color },
-  { id: "soundcloud", name: "SoundCloud", color: SOCIAL_ICONS_MAP.soundcloud.color },
+  { id: "threads", name: "Threads", color: SOCIAL_ICONS_MAP.threads.color },
+  { id: "snapchat", name: "Snapchat", color: SOCIAL_ICONS_MAP.snapchat.color },
+  { id: "pinterest", name: "Pinterest", color: SOCIAL_ICONS_MAP.pinterest.color },
+  { id: "whatsapp", name: "WhatsApp", color: SOCIAL_ICONS_MAP.whatsapp.color },
+  // Streaming & Video
   { id: "twitch", name: "Twitch", color: SOCIAL_ICONS_MAP.twitch.color },
   { id: "discord", name: "Discord", color: SOCIAL_ICONS_MAP.discord.color },
-  { id: "pinterest", name: "Pinterest", color: SOCIAL_ICONS_MAP.pinterest.color },
-  { id: "snapchat", name: "Snapchat", color: SOCIAL_ICONS_MAP.snapchat.color },
-  { id: "threads", name: "Threads", color: SOCIAL_ICONS_MAP.threads.color },
+  { id: "kick", name: "Kick", color: SOCIAL_ICONS_MAP.kick.color },
+  { id: "trovo", name: "Trovo", color: SOCIAL_ICONS_MAP.trovo.color },
+  { id: "rumble", name: "Rumble", color: SOCIAL_ICONS_MAP.rumble.color },
+  { id: "dailymotion", name: "Dailymotion", color: SOCIAL_ICONS_MAP.dailymotion.color },
+  // Music Platforms
+  { id: "spotify", name: "Spotify", color: SOCIAL_ICONS_MAP.spotify.color },
+  { id: "soundcloud", name: "SoundCloud", color: SOCIAL_ICONS_MAP.soundcloud.color },
+  { id: "audiomack", name: "Audiomack", color: SOCIAL_ICONS_MAP.audiomack.color },
+  { id: "deezer", name: "Deezer", color: SOCIAL_ICONS_MAP.deezer.color },
+  { id: "shazam", name: "Shazam", color: SOCIAL_ICONS_MAP.shazam.color },
+  { id: "tidal", name: "Tidal", color: SOCIAL_ICONS_MAP.tidal.color },
+  { id: "reverbnation", name: "ReverbNation", color: SOCIAL_ICONS_MAP.reverbnation.color },
+  { id: "mixcloud", name: "Mixcloud", color: SOCIAL_ICONS_MAP.mixcloud.color },
+  // Other Social
+  { id: "reddit", name: "Reddit", color: SOCIAL_ICONS_MAP.reddit.color },
+  { id: "quora", name: "Quora", color: SOCIAL_ICONS_MAP.quora.color },
+  { id: "tumblr", name: "Tumblr", color: SOCIAL_ICONS_MAP.tumblr.color },
+  { id: "vk", name: "VKontakte", color: SOCIAL_ICONS_MAP.vk.color },
+  { id: "clubhouse", name: "Clubhouse", color: SOCIAL_ICONS_MAP.clubhouse.color },
+  // Short Video
+  { id: "likee", name: "Likee", color: SOCIAL_ICONS_MAP.likee.color },
+  { id: "kwai", name: "Kwai", color: SOCIAL_ICONS_MAP.kwai.color },
+  // Other
   { id: "other", name: "Other", color: SOCIAL_ICONS_MAP.other.color },
 ];
 
