@@ -98,7 +98,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
 import { usePanel } from "@/hooks/usePanel";
 import { SOCIAL_ICONS_MAP } from "@/components/icons/SocialIcons";
-import { detectPlatform, getServiceIcon, autoAssignIconsAndCategories } from "@/lib/service-icon-detection";
+import { detectPlatform, getServiceIcon, autoAssignIconsAndCategories, detectServiceType } from "@/lib/service-icon-detection";
 
 // DnD Kit
 import {
@@ -125,7 +125,7 @@ import { MobileServiceView } from "@/components/services/MobileServiceView";
 import { FloatingUndoButton } from "@/components/services/FloatingUndoButton";
 import { useUndoRedoHistory } from "@/hooks/use-undo-redo-history";
 import { ServiceTips } from "@/components/services/ServiceTips";
-import { SmartCategorizeDialog } from "@/components/services/SmartCategorizeDialog";
+import { SmartOrganizeDialog } from "@/components/services/SmartOrganizeDialog";
 import { ServiceAnalytics } from "@/components/services/ServiceAnalytics";
 import { ServiceKanbanCard } from "@/components/services/ServiceKanbanCard";
 import { ServiceToolsCards } from "@/components/services/ServiceToolsCards";
@@ -277,9 +277,9 @@ const ServicesManagement = () => {
     total: 0,
   });
   
-  // Smart Categorize Dialog
-  const [isSmartCategorizeOpen, setIsSmartCategorizeOpen] = useState(false);
-  
+  // Smart Organize Dialog (combined Auto-Fix + Smart Categorize)
+  const [isSmartOrganizeOpen, setIsSmartOrganizeOpen] = useState(false);
+  const [isQuickOrganizeMode, setIsQuickOrganizeMode] = useState(false);
   // Service Tips dismissible state
   const [showTips, setShowTips] = useState(() => {
     return localStorage.getItem('services-tips-dismissed') !== 'true';
@@ -1448,8 +1448,12 @@ const ServicesManagement = () => {
 
   // Import handler - applies markup ONCE and stores provider info for duplicate detection
   // NOTE: service.price is already the provider's rate per 1K from ServiceImportDialog
-  const handleImport = async (importedServices: any[], markups: Record<number, number>) => {
+  const handleImport = async (importedServices: any[], markups: Record<number, number>, providerId: string) => {
     if (!panel?.id) return;
+    
+    // Get the provider name for display
+    const provider = providers.find(p => p.id === providerId);
+    const providerName = provider?.name || 'Unknown Provider';
     
     try {
       const newServices = importedServices.map((service, index) => {
@@ -1466,7 +1470,8 @@ const ServicesManagement = () => {
           max_quantity: service.maxQty || 10000,
           is_active: true,
           display_order: services.length + index + 1,
-          provider_id: String(service.id), // Store provider service ID for duplicate detection
+          provider_id: providerId, // Store actual provider UUID for lookup
+          description: `Provider: ${providerName} | Service #${service.id}`, // Store provider service ID in description
         };
       });
 
@@ -1881,8 +1886,14 @@ const ServicesManagement = () => {
 
       {/* Service Tools Cards */}
       <ServiceToolsCards
-        onAutoFix={generateAutoFixPreview}
-        onSmartCategorize={() => setIsSmartCategorizeOpen(true)}
+        onSmartOrganize={() => {
+          setIsQuickOrganizeMode(false);
+          setIsSmartOrganizeOpen(true);
+        }}
+        onQuickOrganize={() => {
+          setIsQuickOrganizeMode(true);
+          setIsSmartOrganizeOpen(true);
+        }}
         onAutoArrange={(option) => {
           switch (option) {
             case "name-asc":
@@ -1890,14 +1901,8 @@ const ServicesManagement = () => {
               toast({ title: "Services arranged alphabetically (A-Z)" });
               break;
             case "name-desc":
-              // For desc, we'll handle in the sort logic
-              setSortOption("name");
               setServices(prev => [...prev].sort((a, b) => b.name.localeCompare(a.name)));
               toast({ title: "Services arranged alphabetically (Z-A)" });
-              break;
-            case "category":
-              setServices(prev => [...prev].sort((a, b) => a.category.localeCompare(b.category)));
-              toast({ title: "Services grouped by category" });
               break;
             case "price-high":
               setSortOption("price-high");
@@ -1912,14 +1917,13 @@ const ServicesManagement = () => {
               toast({ title: "Services arranged by popularity" });
               break;
             case "recent":
-              // Sort by display_order descending (newer services have higher order)
               setServices(prev => [...prev].sort((a, b) => (b.displayOrder || 0) - (a.displayOrder || 0)));
               toast({ title: "Services arranged by newest first" });
               break;
           }
         }}
         onHealthCheck={() => setIsHealthCheckOpen(true)}
-        isAutoFixing={isAutoFixingIcons}
+        isOrganizing={isAutoFixingIcons}
         totalServices={totalCount}
         healthIssues={healthIssueCount}
       />
@@ -2795,21 +2799,20 @@ const ServicesManagement = () => {
         maxVisible={5}
       />
 
-      {/* Smart Categorize Dialog */}
-      <SmartCategorizeDialog
-        open={isSmartCategorizeOpen}
-        onOpenChange={setIsSmartCategorizeOpen}
-        services={services.map(s => ({
-          id: s.id,
-          name: s.name,
-          category: s.category,
-          imageUrl: s.imageUrl,
-        }))}
-        onApply={() => {
-          fetchServices();
-          fetchCategoryCounts();
-        }}
-      />
+      {/* Smart Organize Dialog */}
+      {panel?.id && (
+        <SmartOrganizeDialog
+          open={isSmartOrganizeOpen}
+          onOpenChange={(open) => {
+            setIsSmartOrganizeOpen(open);
+            if (!open) setIsQuickOrganizeMode(false);
+          }}
+          panelId={panel.id}
+          onComplete={() => fetchServices()}
+          onRefreshCounts={fetchCategoryCounts}
+          quickMode={isQuickOrganizeMode}
+        />
+      )}
 
       {/* Service View Dialog */}
       <ServiceViewDialog

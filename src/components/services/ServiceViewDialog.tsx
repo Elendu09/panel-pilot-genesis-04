@@ -175,7 +175,7 @@ export const ServiceViewDialog = ({
                 <DollarSign className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <p className="text-lg font-bold">${service.price.toFixed(2)}</p>
+                <p className="text-lg font-bold">${service.price.toFixed(4)}</p>
                 <p className="text-xs text-muted-foreground">Price per 1K</p>
               </div>
             </CardContent>

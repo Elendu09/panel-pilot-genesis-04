@@ -30,28 +30,29 @@ import {
 export type ArrangeOption = 
   | "name-asc" 
   | "name-desc" 
-  | "category" 
   | "price-high" 
   | "price-low" 
   | "popularity" 
   | "recent";
 
 interface ServiceToolsCardsProps {
-  onAutoFix: () => void;
-  onSmartCategorize: () => void;
+  onSmartOrganize: () => void;
+  onQuickOrganize: () => void;
   onAutoArrange: (option: ArrangeOption) => void;
   onHealthCheck: () => void;
-  isAutoFixing: boolean;
+  onSyncPrices?: () => void;
+  isOrganizing: boolean;
   totalServices: number;
   healthIssues?: number;
 }
 
 export const ServiceToolsCards = ({
-  onAutoFix,
-  onSmartCategorize,
+  onSmartOrganize,
+  onQuickOrganize,
   onAutoArrange,
   onHealthCheck,
-  isAutoFixing,
+  onSyncPrices,
+  isOrganizing,
   totalServices,
   healthIssues = 0,
 }: ServiceToolsCardsProps) => {
@@ -60,7 +61,6 @@ export const ServiceToolsCards = ({
   const arrangeOptions: { value: ArrangeOption; label: string; icon: typeof ArrowUp; description: string }[] = [
     { value: "name-asc", label: "Name (A-Z)", icon: SortAsc, description: "Alphabetical order" },
     { value: "name-desc", label: "Name (Z-A)", icon: ArrowDown, description: "Reverse alphabetical" },
-    { value: "category", label: "By Category", icon: Layers, description: "Group by platform" },
     { value: "price-high", label: "Price (High to Low)", icon: DollarSign, description: "Most expensive first" },
     { value: "price-low", label: "Price (Low to High)", icon: DollarSign, description: "Cheapest first" },
     { value: "popularity", label: "By Popularity", icon: TrendingUp, description: "Most ordered first" },
@@ -69,24 +69,24 @@ export const ServiceToolsCards = ({
 
   const tools = [
     {
-      id: "auto-fix",
-      title: "Auto-Fix Icons",
-      description: "Automatically detect and assign icons based on service names",
-      icon: Sparkles,
-      action: onAutoFix,
-      loading: isAutoFixing,
+      id: "smart-organize",
+      title: "AutoFix Icon + Smart Organize",
+      description: "AI-powered icon detection, categorization, and organization",
+      icon: Wand2,
+      action: onSmartOrganize,
+      loading: isOrganizing,
       color: "from-violet-500 to-purple-600",
       iconBg: "bg-violet-500/10 text-violet-500",
     },
     {
-      id: "smart-categorize",
-      title: "Smart Categorize",
-      description: "AI-powered categorization for your services",
-      icon: Wand2,
-      action: onSmartCategorize,
+      id: "quick-organize",
+      title: "Quick Organize",
+      description: "One-click auto-organize without preview - ideal for bulk imports",
+      icon: Sparkles,
+      action: onQuickOrganize,
       loading: false,
-      color: "from-blue-500 to-cyan-600",
-      iconBg: "bg-blue-500/10 text-blue-500",
+      color: "from-cyan-500 to-blue-600",
+      iconBg: "bg-cyan-500/10 text-cyan-500",
     },
     {
       id: "health-check",
@@ -158,10 +158,10 @@ export const ServiceToolsCards = ({
                 <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500">
                   <ArrowUpDown className="w-5 h-5" />
                 </div>
-                <Badge variant="secondary" className="text-xs">
-                  7 options
-                </Badge>
-              </div>
+              <Badge variant="secondary" className="text-xs">
+                6 options
+              </Badge>
+            </div>
               <h3 className="font-semibold text-sm mb-1">Auto Arrange</h3>
               <p className="text-xs text-muted-foreground line-clamp-2">
                 Sort services by name, category, price, or popularity
