@@ -279,7 +279,7 @@ const ServicesManagement = () => {
   
   // Smart Organize Dialog (combined Auto-Fix + Smart Categorize)
   const [isSmartOrganizeOpen, setIsSmartOrganizeOpen] = useState(false);
-  
+  const [isQuickOrganizeMode, setIsQuickOrganizeMode] = useState(false);
   // Service Tips dismissible state
   const [showTips, setShowTips] = useState(() => {
     return localStorage.getItem('services-tips-dismissed') !== 'true';
@@ -1448,8 +1448,12 @@ const ServicesManagement = () => {
 
   // Import handler - applies markup ONCE and stores provider info for duplicate detection
   // NOTE: service.price is already the provider's rate per 1K from ServiceImportDialog
-  const handleImport = async (importedServices: any[], markups: Record<number, number>) => {
+  const handleImport = async (importedServices: any[], markups: Record<number, number>, providerId: string) => {
     if (!panel?.id) return;
+    
+    // Get the provider name for display
+    const provider = providers.find(p => p.id === providerId);
+    const providerName = provider?.name || 'Unknown Provider';
     
     try {
       const newServices = importedServices.map((service, index) => {
@@ -1466,7 +1470,8 @@ const ServicesManagement = () => {
           max_quantity: service.maxQty || 10000,
           is_active: true,
           display_order: services.length + index + 1,
-          provider_id: String(service.id), // Store provider service ID for duplicate detection
+          provider_id: providerId, // Store actual provider UUID for lookup
+          description: `Provider: ${providerName} | Service #${service.id}`, // Store provider service ID in description
         };
       });
 
@@ -1881,7 +1886,14 @@ const ServicesManagement = () => {
 
       {/* Service Tools Cards */}
       <ServiceToolsCards
-        onSmartOrganize={() => setIsSmartOrganizeOpen(true)}
+        onSmartOrganize={() => {
+          setIsQuickOrganizeMode(false);
+          setIsSmartOrganizeOpen(true);
+        }}
+        onQuickOrganize={() => {
+          setIsQuickOrganizeMode(true);
+          setIsSmartOrganizeOpen(true);
+        }}
         onAutoArrange={(option) => {
           switch (option) {
             case "name-asc":
@@ -1891,21 +1903,6 @@ const ServicesManagement = () => {
             case "name-desc":
               setServices(prev => [...prev].sort((a, b) => b.name.localeCompare(a.name)));
               toast({ title: "Services arranged alphabetically (Z-A)" });
-              break;
-            case "category":
-              setServices(prev => [...prev].sort((a, b) => a.category.localeCompare(b.category)));
-              toast({ title: "Services grouped by category" });
-              break;
-            case "category-type":
-              // Sort by category first, then by service type within category
-              setServices(prev => [...prev].sort((a, b) => {
-                const catCompare = a.category.localeCompare(b.category);
-                if (catCompare !== 0) return catCompare;
-                const aType = detectServiceType(a.name);
-                const bType = detectServiceType(b.name);
-                return aType.localeCompare(bType);
-              }));
-              toast({ title: "Services grouped by category & type" });
               break;
             case "price-high":
               setSortOption("price-high");
@@ -2806,10 +2803,14 @@ const ServicesManagement = () => {
       {panel?.id && (
         <SmartOrganizeDialog
           open={isSmartOrganizeOpen}
-          onOpenChange={setIsSmartOrganizeOpen}
+          onOpenChange={(open) => {
+            setIsSmartOrganizeOpen(open);
+            if (!open) setIsQuickOrganizeMode(false);
+          }}
           panelId={panel.id}
           onComplete={() => fetchServices()}
           onRefreshCounts={fetchCategoryCounts}
+          quickMode={isQuickOrganizeMode}
         />
       )}
 

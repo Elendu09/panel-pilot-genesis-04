@@ -69,6 +69,7 @@ interface SmartOrganizeDialogProps {
   panelId: string;
   onComplete: () => void;
   onRefreshCounts: () => void;
+  quickMode?: boolean; // Skip preview, auto-apply all changes
 }
 
 const SERVICE_LIMIT = 10000;
@@ -79,6 +80,7 @@ export const SmartOrganizeDialog = ({
   panelId,
   onComplete,
   onRefreshCounts,
+  quickMode = false,
 }: SmartOrganizeDialogProps) => {
   const [progress, setProgress] = useState<OrganizeProgress>({
     phase: 'idle',
@@ -260,7 +262,12 @@ export const SmartOrganizeDialog = ({
       );
       setExpandedPlatforms(platformsWithChanges);
       
-      setIsProcessing(false);
+      // If quickMode, auto-apply all changes immediately
+      if (quickMode && changeIds.size > 0) {
+        await applyChangesInternal(analyzed, changeIds);
+      } else {
+        setIsProcessing(false);
+      }
       
     } catch (error) {
       console.error('Error in Smart Organize:', error);
@@ -312,15 +319,17 @@ export const SmartOrganizeDialog = ({
     setSelectedIds(new Set());
   };
 
-  const applyChanges = async () => {
-    const changesToApply = previewData.filter(s => selectedIds.has(s.id) && s.willChange);
+  // Internal apply function used by both manual and quick mode
+  const applyChangesInternal = async (data: ServicePreview[], ids: Set<string>) => {
+    const changesToApply = data.filter(s => ids.has(s.id) && s.willChange);
     
     if (changesToApply.length === 0) {
-      toast({ title: "No changes selected" });
+      toast({ title: "No changes to apply" });
+      setIsProcessing(false);
+      onOpenChange(false);
       return;
     }
 
-    setIsProcessing(true);
     setProgress({ phase: 'applying', current: 0, total: changesToApply.length, message: 'Applying changes...' });
     
     try {
@@ -355,7 +364,7 @@ export const SmartOrganizeDialog = ({
       // Complete
       setProgress({ phase: 'completed', current: changesToApply.length, total: changesToApply.length, message: 'All changes applied!' });
       
-      toast({ title: `Smart Organized ${changesToApply.length} services` });
+      toast({ title: `AutoFix + Smart Organized ${changesToApply.length} services` });
       
       // Brief delay then close
       setTimeout(() => {
@@ -369,6 +378,11 @@ export const SmartOrganizeDialog = ({
       toast({ title: 'Failed to apply changes', variant: 'destructive' });
       setIsProcessing(false);
     }
+  };
+
+  const applyChanges = async () => {
+    setIsProcessing(true);
+    await applyChangesInternal(previewData, selectedIds);
   };
 
   const getConfidenceBadge = (confidence: number) => {
@@ -416,12 +430,14 @@ export const SmartOrganizeDialog = ({
             ) : (
               <Wand2 className={cn("w-5 h-5 text-primary", isProcessing && "animate-pulse")} />
             )}
-            Smart Organize
+            AutoFix Icon + Smart Organize
           </DialogTitle>
           <DialogDescription>
-            {showPreview 
-              ? `Found ${stats.willChange} services to update across ${stats.platformCount} platforms`
-              : progress.message || phaseLabels[progress.phase]
+            {quickMode 
+              ? 'Auto-organizing all services...'
+              : showPreview 
+                ? `Found ${stats.willChange} services to update across ${stats.platformCount} platforms`
+                : progress.message || phaseLabels[progress.phase]
             }
           </DialogDescription>
         </DialogHeader>
