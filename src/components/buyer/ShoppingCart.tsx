@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   ShoppingCart as CartIcon, 
   Trash2, 
@@ -13,7 +14,9 @@ import {
   AlertCircle,
   Zap,
   X,
-  RefreshCw
+  RefreshCw,
+  Layers,
+  Repeat
 } from "lucide-react";
 import { SOCIAL_ICONS_MAP } from "@/components/icons/SocialIcons";
 import { motion, AnimatePresence } from "framer-motion";
@@ -21,6 +24,8 @@ import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { CartItem } from "@/hooks/use-buyer-cart";
+import { BulkAddForm } from "./BulkAddForm";
+import { QuickRepeatOrder } from "./QuickRepeatOrder";
 
 interface ShoppingCartProps {
   cart: CartItem[];
@@ -34,6 +39,8 @@ interface ShoppingCartProps {
   onRemoveItem: (itemId: string) => Promise<void>;
   onClearCart: () => Promise<void>;
   onCheckoutComplete: () => void;
+  services?: any[];
+  getEffectivePrice?: (service: any) => number;
 }
 
 const ShoppingCart = ({ 
@@ -47,12 +54,15 @@ const ShoppingCart = ({
   onUpdateItem,
   onRemoveItem,
   onClearCart,
-  onCheckoutComplete 
+  onCheckoutComplete,
+  services = [],
+  getEffectivePrice = (s) => s.price,
 }: ShoppingCartProps) => {
   const [open, setOpen] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutProgress, setCheckoutProgress] = useState(0);
   const [completedOrders, setCompletedOrders] = useState<string[]>([]);
+  const [activeTab, setActiveTab] = useState<string>("cart");
 
   const getCategoryData = (categoryId: string) => {
     return SOCIAL_ICONS_MAP[categoryId] || SOCIAL_ICONS_MAP.other;
@@ -160,6 +170,39 @@ const ShoppingCart = ({
     }
   };
 
+  // Handle bulk add from BulkAddForm or QuickRepeatOrder
+  const handleBulkAdd = async (items: { service: any; quantity: number; targetUrl: string; effectivePrice: number }[]) => {
+    if (!buyerId || !panelId) {
+      toast({ variant: 'destructive', title: 'Please log in to add items to cart' });
+      return;
+    }
+
+    try {
+      for (const item of items) {
+        await supabase
+          .from('buyer_cart')
+          .insert({
+            buyer_id: buyerId,
+            panel_id: panelId,
+            service_id: item.service.id,
+            quantity: item.quantity,
+            target_url: item.targetUrl,
+          });
+      }
+
+      toast({ 
+        title: 'Added to cart', 
+        description: `${items.length} item${items.length > 1 ? 's' : ''} added` 
+      });
+
+      // Switch to cart tab to show added items
+      setActiveTab("cart");
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      toast({ variant: 'destructive', title: 'Failed to add items to cart' });
+    }
+  };
+
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
@@ -176,8 +219,8 @@ const ShoppingCart = ({
           )}
         </Button>
       </SheetTrigger>
-      <SheetContent className="w-full sm:max-w-lg flex flex-col">
-        <SheetHeader>
+      <SheetContent className="w-full sm:max-w-lg flex flex-col p-0">
+        <SheetHeader className="p-6 pb-0">
           <SheetTitle className="flex items-center gap-2">
             <CartIcon className="w-5 h-5" />
             Shopping Cart
@@ -186,171 +229,222 @@ const ShoppingCart = ({
           </SheetTitle>
         </SheetHeader>
 
-        {cart.length === 0 ? (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center">
-              <CartIcon className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-              <p className="text-muted-foreground">Your cart is empty</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Add services to get started
-              </p>
-            </div>
-          </div>
-        ) : (
-          <>
-            <ScrollArea className="flex-1 -mx-6 px-6">
-              <AnimatePresence mode="popLayout">
-                <div className="space-y-4 py-4">
-                  {cart.map((item) => {
-                    const categoryData = getCategoryData(item.service.category);
-                    const CategoryIcon = categoryData.icon;
-                    const lineTotal = (item.effectivePrice * item.quantity) / 1000;
-                    const isCompleted = completedOrders.includes(item.service.id);
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
+          <TabsList className="mx-6 mt-4 grid grid-cols-3">
+            <TabsTrigger value="cart" className="gap-1.5 text-xs">
+              <CartIcon className="w-3.5 h-3.5" />
+              Cart ({cart.length})
+            </TabsTrigger>
+            <TabsTrigger value="bulk" className="gap-1.5 text-xs">
+              <Layers className="w-3.5 h-3.5" />
+              Bulk Add
+            </TabsTrigger>
+            <TabsTrigger value="repeat" className="gap-1.5 text-xs">
+              <Repeat className="w-3.5 h-3.5" />
+              Quick
+            </TabsTrigger>
+          </TabsList>
 
-                    return (
-                      <motion.div
-                        key={item.id || item.service.id}
-                        layout
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -20 }}
-                        className={cn(
-                          "p-4 rounded-xl border bg-card/50 transition-all",
-                          isCompleted && "border-green-500/50 bg-green-500/5"
-                        )}
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className={cn("p-2 rounded-lg shrink-0", categoryData.bgColor)}>
-                            <CategoryIcon className="w-4 h-4 text-white" size={16} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-2">
-                              <div>
-                                <p className="font-medium text-sm truncate">{item.service.name}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  {formatPrice(item.effectivePrice)}/1K
-                                </p>
-                              </div>
-                              {isCompleted ? (
-                                <CheckCircle className="w-5 h-5 text-green-500 shrink-0" />
-                              ) : (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-6 w-6 shrink-0 text-muted-foreground hover:text-destructive"
-                                  onClick={() => item.id && onRemoveItem(item.id)}
-                                  disabled={checkoutLoading || syncing}
-                                >
-                                  <X className="w-3 h-3" />
-                                </Button>
-                              )}
-                            </div>
-
-                            <div className="mt-3 space-y-2">
-                              <div className="space-y-1">
-                                <Label className="text-xs">Target URL</Label>
-                                <Input
-                                  placeholder="https://..."
-                                  value={item.targetUrl}
-                                  onChange={(e) => item.id && onUpdateItem(item.id, { targetUrl: e.target.value })}
-                                  className="h-8 text-sm bg-background/50"
-                                  disabled={checkoutLoading || syncing}
-                                />
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <div className="flex-1 space-y-1">
-                                  <Label className="text-xs">Quantity</Label>
-                                  <Input
-                                    type="number"
-                                    value={item.quantity}
-                                    onChange={(e) => item.id && onUpdateItem(item.id, { 
-                                      quantity: Math.max(item.service.min_quantity || 1, parseInt(e.target.value) || 0) 
-                                    })}
-                                    min={item.service.min_quantity || 1}
-                                    className="h-8 text-sm bg-background/50"
-                                    disabled={checkoutLoading || syncing}
-                                  />
-                                </div>
-                                <div className="text-right pt-5">
-                                  <p className="font-bold">{formatPrice(lineTotal)}</p>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                </div>
-              </AnimatePresence>
-            </ScrollArea>
-
-            <div className="border-t pt-4 space-y-4">
-              {checkoutLoading && (
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Processing orders...</span>
-                    <span>{Math.round(checkoutProgress)}%</span>
-                  </div>
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <motion.div 
-                      className="h-full bg-primary rounded-full"
-                      initial={{ width: 0 }}
-                      animate={{ width: `${checkoutProgress}%` }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Your Balance</span>
-                  <span className={cn(
-                    "font-medium",
-                    hasEnoughBalance ? "text-green-500" : "text-destructive"
-                  )}>
-                    {formatPrice(buyerBalance)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="font-medium">Total ({cart.length} items)</span>
-                  <span className="text-xl font-bold">{formatPrice(cartTotal)}</span>
+          {/* Cart Tab */}
+          <TabsContent value="cart" className="flex-1 flex flex-col m-0 data-[state=active]:flex">
+            {cart.length === 0 ? (
+              <div className="flex-1 flex items-center justify-center px-6">
+                <div className="text-center">
+                  <CartIcon className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                  <p className="text-muted-foreground">Your cart is empty</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Add services to get started
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="mt-4"
+                    onClick={() => setActiveTab("bulk")}
+                  >
+                    <Layers className="w-4 h-4 mr-2" />
+                    Bulk Add Services
+                  </Button>
                 </div>
               </div>
+            ) : (
+              <>
+                <ScrollArea className="flex-1 px-6">
+                  <AnimatePresence mode="popLayout">
+                    <div className="space-y-4 py-4">
+                      {cart.map((item) => {
+                        const categoryData = getCategoryData(item.service.category);
+                        const CategoryIcon = categoryData.icon;
+                        const lineTotal = (item.effectivePrice * item.quantity) / 1000;
+                        const isCompleted = completedOrders.includes(item.service.id);
 
-              {!hasEnoughBalance && (
-                <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>Insufficient balance. Please add {formatPrice(cartTotal - buyerBalance)} more.</span>
-                </div>
-              )}
+                        return (
+                          <motion.div
+                            key={item.id || item.service.id}
+                            layout
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -20 }}
+                            className={cn(
+                              "p-4 rounded-xl border bg-card/50 transition-all",
+                              isCompleted && "border-green-500/50 bg-green-500/5"
+                            )}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className={cn("p-2 rounded-lg shrink-0", categoryData.bgColor)}>
+                                <CategoryIcon className="w-4 h-4 text-white" size={16} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-start justify-between gap-2">
+                                  <div>
+                                    <p className="font-medium text-sm truncate">{item.service.name}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {formatPrice(item.effectivePrice)}/1K
+                                    </p>
+                                  </div>
+                                  {isCompleted ? (
+                                    <CheckCircle className="w-5 h-5 text-green-500 shrink-0" />
+                                  ) : (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-6 w-6 shrink-0 text-muted-foreground hover:text-destructive"
+                                      onClick={() => item.id && onRemoveItem(item.id)}
+                                      disabled={checkoutLoading || syncing}
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </Button>
+                                  )}
+                                </div>
 
-              <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  onClick={onClearCart}
-                  disabled={checkoutLoading || syncing}
-                  className="flex-1"
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Clear
-                </Button>
-                <Button 
-                  onClick={handleBulkCheckout}
-                  disabled={!hasEnoughBalance || checkoutLoading || syncing || cart.length === 0}
-                  className="flex-1 gap-2"
-                >
-                  {checkoutLoading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Zap className="w-4 h-4" />
+                                <div className="mt-3 space-y-2">
+                                  <div className="space-y-1">
+                                    <Label className="text-xs">Target URL</Label>
+                                    <Input
+                                      placeholder="https://..."
+                                      value={item.targetUrl}
+                                      onChange={(e) => item.id && onUpdateItem(item.id, { targetUrl: e.target.value })}
+                                      className="h-8 text-sm bg-background/50"
+                                      disabled={checkoutLoading || syncing}
+                                    />
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <div className="flex-1 space-y-1">
+                                      <Label className="text-xs">Quantity</Label>
+                                      <Input
+                                        type="number"
+                                        value={item.quantity}
+                                        onChange={(e) => item.id && onUpdateItem(item.id, { 
+                                          quantity: Math.max(item.service.min_quantity || 1, parseInt(e.target.value) || 0) 
+                                        })}
+                                        min={item.service.min_quantity || 1}
+                                        className="h-8 text-sm bg-background/50"
+                                        disabled={checkoutLoading || syncing}
+                                      />
+                                    </div>
+                                    <div className="text-right pt-5">
+                                      <p className="font-bold">{formatPrice(lineTotal)}</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                  </AnimatePresence>
+                </ScrollArea>
+
+                <div className="border-t p-6 space-y-4">
+                  {checkoutLoading && (
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span>Processing orders...</span>
+                        <span>{Math.round(checkoutProgress)}%</span>
+                      </div>
+                      <div className="h-2 bg-muted rounded-full overflow-hidden">
+                        <motion.div 
+                          className="h-full bg-primary rounded-full"
+                          initial={{ width: 0 }}
+                          animate={{ width: `${checkoutProgress}%` }}
+                        />
+                      </div>
+                    </div>
                   )}
-                  {checkoutLoading ? 'Processing...' : 'Checkout All'}
-                </Button>
-              </div>
-            </div>
-          </>
-        )}
+
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Your Balance</span>
+                      <span className={cn(
+                        "font-medium",
+                        hasEnoughBalance ? "text-green-500" : "text-destructive"
+                      )}>
+                        {formatPrice(buyerBalance)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium">Total ({cart.length} items)</span>
+                      <span className="text-xl font-bold">{formatPrice(cartTotal)}</span>
+                    </div>
+                  </div>
+
+                  {!hasEnoughBalance && (
+                    <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+                      <AlertCircle className="w-4 h-4 shrink-0" />
+                      <span>Insufficient balance. Please add {formatPrice(cartTotal - buyerBalance)} more.</span>
+                    </div>
+                  )}
+
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      onClick={onClearCart}
+                      disabled={checkoutLoading || syncing}
+                      className="flex-1"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Clear
+                    </Button>
+                    <Button 
+                      onClick={handleBulkCheckout}
+                      disabled={!hasEnoughBalance || checkoutLoading || syncing || cart.length === 0}
+                      className="flex-1 gap-2"
+                    >
+                      {checkoutLoading ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Zap className="w-4 h-4" />
+                      )}
+                      {checkoutLoading ? 'Processing...' : 'Checkout All'}
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
+          </TabsContent>
+
+          {/* Bulk Add Tab */}
+          <TabsContent value="bulk" className="flex-1 m-0 p-6 pt-4 overflow-auto">
+            <BulkAddForm
+              services={services}
+              getEffectivePrice={getEffectivePrice}
+              formatPrice={formatPrice}
+              onAddToCart={handleBulkAdd}
+              disabled={syncing}
+            />
+          </TabsContent>
+
+          {/* Quick Repeat Tab */}
+          <TabsContent value="repeat" className="flex-1 m-0 p-6 pt-4 overflow-auto">
+            <QuickRepeatOrder
+              services={services}
+              getEffectivePrice={getEffectivePrice}
+              formatPrice={formatPrice}
+              onAddToCart={handleBulkAdd}
+              disabled={syncing}
+            />
+          </TabsContent>
+        </Tabs>
       </SheetContent>
     </Sheet>
   );

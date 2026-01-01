@@ -463,6 +463,8 @@ const BuyerNewOrder = () => {
                 await refreshBuyer();
                 refreshCart();
               }}
+              services={services}
+              getEffectivePrice={getEffectivePrice}
             />
             <CurrencySelector />
             <LanguageSelector />
