@@ -19,15 +19,23 @@ import { motion } from "framer-motion";
 interface LiveStorefrontPreviewProps {
   panelId?: string;
   subdomain?: string;
+  customDomain?: string;
 }
 
-export const LiveStorefrontPreview = ({ panelId, subdomain }: LiveStorefrontPreviewProps) => {
+export const LiveStorefrontPreview = ({ panelId, subdomain, customDomain }: LiveStorefrontPreviewProps) => {
   const [device, setDevice] = useState<"desktop" | "tablet" | "mobile">("desktop");
   const [loading, setLoading] = useState(false);
   const [isReachable, setIsReachable] = useState<boolean | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  const storefrontUrl = subdomain ? `https://${subdomain}.smmpilot.online` : null;
+  // Prioritize custom domain over subdomain
+  const storefrontUrl = customDomain 
+    ? `https://${customDomain}` 
+    : subdomain 
+      ? `https://${subdomain}.smmpilot.online` 
+      : null;
+  
+  const displayDomain = customDomain || (subdomain ? `${subdomain}.smmpilot.online` : null);
 
   const deviceSizes = {
     desktop: { width: "100%", height: "100%" },
@@ -36,12 +44,12 @@ export const LiveStorefrontPreview = ({ panelId, subdomain }: LiveStorefrontPrev
   };
 
   const checkReachability = async () => {
-    if (!subdomain) return;
+    if (!displayDomain) return;
     
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('domain-health-check', {
-        body: { domain: `${subdomain}.smmpilot.online` }
+        body: { domain: displayDomain }
       });
 
       if (error) throw error;
@@ -56,21 +64,21 @@ export const LiveStorefrontPreview = ({ panelId, subdomain }: LiveStorefrontPrev
 
   useEffect(() => {
     checkReachability();
-  }, [subdomain]);
+  }, [subdomain, customDomain]);
 
   const handleRefresh = () => {
     setRefreshKey(prev => prev + 1);
     checkReachability();
   };
 
-  if (!subdomain) {
+  if (!subdomain && !customDomain) {
     return (
       <Card className="flex-1 flex items-center justify-center bg-muted/30 border-dashed">
         <div className="text-center p-8">
           <Globe className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
-          <h3 className="font-medium mb-2">No Subdomain Configured</h3>
+          <h3 className="font-medium mb-2">No Domain Configured</h3>
           <p className="text-sm text-muted-foreground">
-            Configure your panel subdomain to see the live preview.
+            Configure your panel subdomain or custom domain to see the live preview.
           </p>
         </div>
       </Card>

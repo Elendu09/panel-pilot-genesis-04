@@ -31,7 +31,18 @@ import {
   Globe,
   Layers,
   Package,
-  Plus
+  Plus,
+  Users,
+  Heart,
+  Eye,
+  MessageCircle,
+  Share2,
+  ThumbsUp,
+  Play,
+  UserPlus,
+  Star,
+  Bell,
+  Bookmark
 } from "lucide-react";
 import { SOCIAL_ICONS_MAP } from "@/components/icons/SocialIcons";
 import { motion, AnimatePresence } from "framer-motion";
@@ -194,6 +205,23 @@ const BuyerNewOrder = () => {
       .sort((a, b) => b.count - a.count);
   }, [services]);
 
+  // Helper function to get category icon based on category name
+  const getCategoryIcon = (categoryName: string) => {
+    const lower = categoryName.toLowerCase();
+    if (lower.includes('follower')) return Users;
+    if (lower.includes('like')) return Heart;
+    if (lower.includes('view')) return Eye;
+    if (lower.includes('comment')) return MessageCircle;
+    if (lower.includes('share')) return Share2;
+    if (lower.includes('subscriber')) return UserPlus;
+    if (lower.includes('watch')) return Play;
+    if (lower.includes('reaction')) return ThumbsUp;
+    if (lower.includes('save')) return Bookmark;
+    if (lower.includes('review') || lower.includes('rating')) return Star;
+    if (lower.includes('notification')) return Bell;
+    return Layers;
+  };
+
   // TIER 2: Group by Category (Sub-category within Network)
   const categories = useMemo(() => {
     if (!selectedNetwork) return [];
@@ -216,6 +244,7 @@ const BuyerNewOrder = () => {
         name,
         count: data.count,
         services: data.services,
+        icon: getCategoryIcon(name),
       }))
       .sort((a, b) => b.count - a.count);
   }, [selectedNetwork, services]);
@@ -503,21 +532,25 @@ const BuyerNewOrder = () => {
                       <SelectValue placeholder={selectedNetwork ? "Select a category (e.g., Followers, Likes)" : "Select a network first"} />
                     </SelectTrigger>
                     <SelectContent className="max-h-[300px]">
-                      {categories.map((category) => (
-                        <SelectItem key={category.id} value={category.id}>
-                          <div className="flex items-center gap-3 py-1">
-                            {selectedNetworkData && (
-                              <div className={cn("p-1.5 rounded-md", selectedNetworkData.bgColor)}>
-                                <selectedNetworkData.icon className="w-3 h-3 text-white" />
+                      {categories.map((category) => {
+                        const CategoryIcon = category.icon;
+                        return (
+                          <SelectItem key={category.id} value={category.id}>
+                            <div className="flex items-center gap-3 py-1">
+                              <div className={cn(
+                                "p-1.5 rounded-md",
+                                selectedNetworkData?.bgColor || "bg-primary/10"
+                              )}>
+                                <CategoryIcon className="w-3 h-3 text-white" />
                               </div>
-                            )}
-                            <span className="font-medium">{category.name}</span>
-                            <Badge variant="outline" className="ml-auto">
-                              {category.count}
-                            </Badge>
-                          </div>
-                        </SelectItem>
-                      ))}
+                              <span className="font-medium">{category.name}</span>
+                              <Badge variant="outline" className="ml-auto">
+                                {category.count}
+                              </Badge>
+                            </div>
+                          </SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                 </div>
@@ -543,11 +576,18 @@ const BuyerNewOrder = () => {
                       {filteredServices.map((service: any) => {
                         const price = getEffectivePrice(service);
                         const serviceType = detectServiceType(service.name);
+                        const ServiceTypeIcon = getCategoryIcon(selectedCategory);
                         return (
                           <SelectItem key={service.id} value={service.id}>
                             <div className="flex items-center gap-3 w-full py-1">
+                              <div className={cn(
+                                "p-1.5 rounded-md shrink-0",
+                                selectedNetworkData?.bgColor || "bg-primary/10"
+                              )}>
+                                <ServiceTypeIcon className="w-3 h-3 text-white" />
+                              </div>
                               <div className="flex-1 min-w-0">
-                                <span className="font-medium text-sm truncate block max-w-[200px]">
+                                <span className="font-medium text-sm truncate block max-w-[180px]">
                                   {service.name}
                                 </span>
                                 <div className="flex items-center gap-2 mt-0.5">

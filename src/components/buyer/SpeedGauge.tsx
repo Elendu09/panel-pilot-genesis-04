@@ -1,5 +1,7 @@
 import { motion } from 'framer-motion';
 import { useMemo } from 'react';
+import { Zap, Clock, AlertCircle } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface SpeedGaugeProps {
   estimatedTime?: string;
@@ -54,13 +56,51 @@ export const SpeedGauge = ({ estimatedTime, className = '' }: SpeedGaugeProps) =
     return 'hsl(var(--destructive))';
   }, [speedLevel]);
 
+  const speedColorClass = useMemo(() => {
+    if (speedLevel >= 80) return 'text-emerald-500';
+    if (speedLevel >= 50) return 'text-amber-500';
+    return 'text-red-500';
+  }, [speedLevel]);
+
+  const glowColorClass = useMemo(() => {
+    if (speedLevel >= 80) return 'bg-emerald-500';
+    if (speedLevel >= 50) return 'bg-amber-500';
+    return 'bg-red-500';
+  }, [speedLevel]);
+
   // Calculate needle rotation (-90 to 90 degrees)
   const needleRotation = -90 + (speedLevel / 100) * 180;
 
+  const SpeedIcon = useMemo(() => {
+    if (speedLevel >= 80) return Zap;
+    if (speedLevel >= 50) return Clock;
+    return AlertCircle;
+  }, [speedLevel]);
+
   return (
-    <div className={`flex flex-col items-center gap-2 ${className}`}>
-      <div className="relative w-24 h-14">
-        <svg viewBox="0 0 100 55" className="w-full h-full">
+    <div className={`flex flex-col items-center gap-3 ${className}`}>
+      {/* Gauge with glow effect */}
+      <div className="relative w-32 h-20">
+        {/* Background glow */}
+        <div className={cn(
+          "absolute inset-0 rounded-full blur-xl opacity-20",
+          glowColorClass
+        )} />
+        
+        {/* Fast service pulse effect */}
+        {speedLevel >= 80 && (
+          <motion.div
+            animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.1, 0.3] }}
+            transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+            className={cn(
+              "absolute inset-0 rounded-full",
+              glowColorClass,
+              "opacity-20"
+            )}
+          />
+        )}
+        
+        <svg viewBox="0 0 100 55" className="w-full h-full relative z-10">
           {/* Background arc */}
           <path
             d="M 10 50 A 40 40 0 0 1 90 50"
@@ -89,6 +129,13 @@ export const SpeedGauge = ({ estimatedTime, className = '' }: SpeedGaugeProps) =
             strokeDasharray={`${(speedLevel / 100) * 126} 126`}
           />
           
+          {/* Tick marks */}
+          <g className="text-muted-foreground">
+            <text x="8" y="48" fontSize="6" fill="currentColor" opacity="0.5">Low</text>
+            <text x="43" y="12" fontSize="6" fill="currentColor" opacity="0.5">Med</text>
+            <text x="78" y="48" fontSize="6" fill="currentColor" opacity="0.5">Fast</text>
+          </g>
+          
           {/* Needle */}
           <motion.g
             initial={{ rotate: -90 }}
@@ -110,18 +157,25 @@ export const SpeedGauge = ({ estimatedTime, className = '' }: SpeedGaugeProps) =
         </svg>
       </div>
       
-      <motion.span
+      {/* Speed label with icon */}
+      <motion.div
         key={speedLabel}
         initial={{ opacity: 0, y: 5 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-sm font-medium"
-        style={{ color: speedColor }}
+        className={cn(
+          "flex items-center gap-1.5 px-3 py-1 rounded-full",
+          speedLevel >= 80 ? "bg-emerald-500/10" : 
+          speedLevel >= 50 ? "bg-amber-500/10" : "bg-red-500/10"
+        )}
       >
-        {speedLabel}
-      </motion.span>
+        <SpeedIcon className={cn("w-4 h-4", speedColorClass)} />
+        <span className={cn("text-sm font-semibold", speedColorClass)}>
+          {speedLabel}
+        </span>
+      </motion.div>
       
       {estimatedTime && (
-        <span className="text-xs text-muted-foreground text-center">
+        <span className="text-xs text-muted-foreground text-center max-w-[120px]">
           {estimatedTime}
         </span>
       )}
