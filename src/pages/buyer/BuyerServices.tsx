@@ -31,15 +31,7 @@ import { CurrencySelector } from "@/components/buyer/CurrencySelector";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useBuyerRealtimeOrders } from "@/hooks/use-buyer-realtime-orders";
 import { detectServiceType, getSubCategory } from "@/lib/service-icon-detection";
-
-interface CartItem {
-  service: any;
-  quantity: number;
-  targetUrl: string;
-  effectivePrice: number;
-}
-
-const CART_STORAGE_KEY = (panelId: string) => `buyer_cart_${panelId}`;
+import { useBuyerCart } from "@/hooks/use-buyer-cart";
 
 // Service type colors for badges
 const SERVICE_TYPE_COLORS: Record<string, string> = {
@@ -79,38 +71,32 @@ const BuyerServices = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [customPrices, setCustomPrices] = useState<Map<string, number>>(new Map());
-  const [cart, setCart] = useState<CartItem[]>([]);
   const [fastOrderApplied, setFastOrderApplied] = useState(false);
 
   // Real-time order tracking
   useBuyerRealtimeOrders(buyer?.id, panel?.id);
 
-  // Load cart from localStorage on mount
-  useEffect(() => {
-    if (!panel?.id) return;
-    try {
-      const savedCart = localStorage.getItem(CART_STORAGE_KEY(panel.id));
-      if (savedCart) {
-        const parsed = JSON.parse(savedCart);
-        if (Array.isArray(parsed)) {
-          setCart(parsed);
-        }
-      }
-    } catch (e) {
-      console.error('Failed to load cart from localStorage:', e);
-    }
-  }, [panel?.id]);
+  // Get effective price for a service (custom or default)
+  const getEffectivePrice = useCallback((service: any) => {
+    return customPrices.get(service.id) ?? service.price;
+  }, [customPrices]);
 
-  // Save cart to localStorage whenever it changes
-  useEffect(() => {
-    if (!panel?.id) return;
-    try {
-      localStorage.setItem(CART_STORAGE_KEY(panel.id), JSON.stringify(cart));
-      window.dispatchEvent(new Event('cartUpdated'));
-    } catch (e) {
-      console.error('Failed to save cart to localStorage:', e);
-    }
-  }, [cart, panel?.id]);
+  // Supabase-backed cart
+  const {
+    cart,
+    cartTotal,
+    syncing: cartSyncing,
+    addToCart,
+    updateCartItem,
+    removeFromCart,
+    clearCart,
+    refreshCart,
+  } = useBuyerCart({
+    buyerId: buyer?.id || null,
+    panelId: panel?.id || null,
+    services,
+    getEffectivePrice,
+  });
 
   // Fetch custom prices for this buyer
   useEffect(() => {
@@ -164,10 +150,6 @@ const BuyerServices = () => {
     }
   }, [services, searchParams, navigate, fastOrderApplied]);
 
-  // Get effective price for a service
-  const getEffectivePrice = useCallback((service: any) => {
-    return customPrices.get(service.id) ?? service.price;
-  }, [customPrices]);
 
   // Get categories with counts
   const categoriesWithCounts = useMemo(() => {
@@ -252,11 +234,19 @@ const BuyerServices = () => {
               </Button>
               <ShoppingCart
                 cart={cart}
-                setCart={setCart}
+                cartTotal={cartTotal}
+                syncing={cartSyncing}
                 buyerBalance={buyer?.balance || 0}
                 buyerId={buyer?.id || ''}
                 panelId={panel?.id || ''}
-                onCheckoutComplete={refreshBuyer}
+                formatPrice={formatPrice}
+                onUpdateItem={updateCartItem}
+                onRemoveItem={removeFromCart}
+                onClearCart={clearCart}
+                onCheckoutComplete={async () => {
+                  await refreshBuyer();
+                  refreshCart();
+                }}
               />
             </div>
           </div>

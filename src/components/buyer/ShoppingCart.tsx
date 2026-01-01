@@ -5,7 +5,6 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { 
   ShoppingCart as CartIcon, 
   Trash2, 
@@ -13,36 +12,41 @@ import {
   CheckCircle,
   AlertCircle,
   Zap,
-  X
+  X,
+  RefreshCw
 } from "lucide-react";
 import { SOCIAL_ICONS_MAP } from "@/components/icons/SocialIcons";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-
-interface CartItem {
-  service: any;
-  quantity: number;
-  targetUrl: string;
-  effectivePrice: number;
-}
+import { CartItem } from "@/hooks/use-buyer-cart";
 
 interface ShoppingCartProps {
   cart: CartItem[];
-  setCart: React.Dispatch<React.SetStateAction<CartItem[]>>;
+  cartTotal: number;
+  syncing: boolean;
   buyerBalance: number;
   buyerId: string;
   panelId: string;
+  formatPrice: (amount: number) => string;
+  onUpdateItem: (itemId: string, updates: Partial<{ quantity: number; targetUrl: string }>) => Promise<void>;
+  onRemoveItem: (itemId: string) => Promise<void>;
+  onClearCart: () => Promise<void>;
   onCheckoutComplete: () => void;
 }
 
 const ShoppingCart = ({ 
   cart, 
-  setCart, 
+  cartTotal,
+  syncing,
   buyerBalance, 
   buyerId, 
   panelId,
+  formatPrice,
+  onUpdateItem,
+  onRemoveItem,
+  onClearCart,
   onCheckoutComplete 
 }: ShoppingCartProps) => {
   const [open, setOpen] = useState(false);
@@ -53,27 +57,6 @@ const ShoppingCart = ({
   const getCategoryData = (categoryId: string) => {
     return SOCIAL_ICONS_MAP[categoryId] || SOCIAL_ICONS_MAP.other;
   };
-
-  const updateCartItem = (serviceId: string, updates: Partial<CartItem>) => {
-    setCart(prev => prev.map(item => 
-      item.service.id === serviceId ? { ...item, ...updates } : item
-    ));
-  };
-
-  const removeFromCart = (serviceId: string) => {
-    setCart(prev => prev.filter(item => item.service.id !== serviceId));
-    toast({ title: "Removed from cart" });
-  };
-
-  const clearCart = () => {
-    setCart([]);
-    setCompletedOrders([]);
-    toast({ title: "Cart cleared" });
-  };
-
-  const cartTotal = cart.reduce((sum, item) => {
-    return sum + (item.effectivePrice * item.quantity) / 1000;
-  }, 0);
 
   const hasEnoughBalance = buyerBalance >= cartTotal;
 
@@ -105,7 +88,7 @@ const ShoppingCart = ({
       toast({ 
         variant: "destructive", 
         title: "Insufficient Balance", 
-        description: `You need $${cartTotal.toFixed(2)} but only have $${buyerBalance.toFixed(2)}` 
+        description: `You need ${formatPrice(cartTotal)} but only have ${formatPrice(buyerBalance)}` 
       });
       return;
     }
@@ -156,11 +139,11 @@ const ShoppingCart = ({
 
       toast({
         title: "Orders Placed Successfully!",
-        description: `${cart.length} orders placed. Total: $${totalPrice.toFixed(2)}`,
+        description: `${cart.length} orders placed. Total: ${formatPrice(totalPrice)}`,
       });
 
-      setTimeout(() => {
-        setCart([]);
+      setTimeout(async () => {
+        await onClearCart();
         setOpen(false);
         onCheckoutComplete();
       }, 1500);
@@ -180,13 +163,13 @@ const ShoppingCart = ({
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="outline" size="sm" className="relative gap-2">
+        <Button variant="outline" size="sm" className="relative gap-2 h-9">
           <CartIcon className="w-4 h-4" />
           <span className="hidden sm:inline">Cart</span>
           {cart.length > 0 && (
             <Badge 
               variant="default" 
-              className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs"
+              className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs animate-in zoom-in"
             >
               {cart.length}
             </Badge>
@@ -199,6 +182,7 @@ const ShoppingCart = ({
             <CartIcon className="w-5 h-5" />
             Shopping Cart
             <Badge variant="secondary" className="ml-2">{cart.length} items</Badge>
+            {syncing && <RefreshCw className="w-4 h-4 animate-spin text-muted-foreground" />}
           </SheetTitle>
         </SheetHeader>
 
@@ -225,7 +209,7 @@ const ShoppingCart = ({
 
                     return (
                       <motion.div
-                        key={item.service.id}
+                        key={item.id || item.service.id}
                         layout
                         initial={{ opacity: 0, x: 20 }}
                         animate={{ opacity: 1, x: 0 }}
@@ -244,7 +228,7 @@ const ShoppingCart = ({
                               <div>
                                 <p className="font-medium text-sm truncate">{item.service.name}</p>
                                 <p className="text-xs text-muted-foreground">
-                                  ${item.effectivePrice.toFixed(2)}/1K
+                                  {formatPrice(item.effectivePrice)}/1K
                                 </p>
                               </div>
                               {isCompleted ? (
@@ -254,8 +238,8 @@ const ShoppingCart = ({
                                   variant="ghost"
                                   size="icon"
                                   className="h-6 w-6 shrink-0 text-muted-foreground hover:text-destructive"
-                                  onClick={() => removeFromCart(item.service.id)}
-                                  disabled={checkoutLoading}
+                                  onClick={() => item.id && onRemoveItem(item.id)}
+                                  disabled={checkoutLoading || syncing}
                                 >
                                   <X className="w-3 h-3" />
                                 </Button>
@@ -268,9 +252,9 @@ const ShoppingCart = ({
                                 <Input
                                   placeholder="https://..."
                                   value={item.targetUrl}
-                                  onChange={(e) => updateCartItem(item.service.id, { targetUrl: e.target.value })}
+                                  onChange={(e) => item.id && onUpdateItem(item.id, { targetUrl: e.target.value })}
                                   className="h-8 text-sm bg-background/50"
-                                  disabled={checkoutLoading}
+                                  disabled={checkoutLoading || syncing}
                                 />
                               </div>
                               <div className="flex items-center gap-2">
@@ -279,16 +263,16 @@ const ShoppingCart = ({
                                   <Input
                                     type="number"
                                     value={item.quantity}
-                                    onChange={(e) => updateCartItem(item.service.id, { 
+                                    onChange={(e) => item.id && onUpdateItem(item.id, { 
                                       quantity: Math.max(item.service.min_quantity || 1, parseInt(e.target.value) || 0) 
                                     })}
                                     min={item.service.min_quantity || 1}
                                     className="h-8 text-sm bg-background/50"
-                                    disabled={checkoutLoading}
+                                    disabled={checkoutLoading || syncing}
                                   />
                                 </div>
                                 <div className="text-right pt-5">
-                                  <p className="font-bold">${lineTotal.toFixed(2)}</p>
+                                  <p className="font-bold">{formatPrice(lineTotal)}</p>
                                 </div>
                               </div>
                             </div>
@@ -325,27 +309,27 @@ const ShoppingCart = ({
                     "font-medium",
                     hasEnoughBalance ? "text-green-500" : "text-destructive"
                   )}>
-                    ${buyerBalance.toFixed(2)}
+                    {formatPrice(buyerBalance)}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="font-medium">Total ({cart.length} items)</span>
-                  <span className="text-xl font-bold">${cartTotal.toFixed(2)}</span>
+                  <span className="text-xl font-bold">{formatPrice(cartTotal)}</span>
                 </div>
               </div>
 
               {!hasEnoughBalance && (
                 <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
                   <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>Insufficient balance. Please add ${(cartTotal - buyerBalance).toFixed(2)} more.</span>
+                  <span>Insufficient balance. Please add {formatPrice(cartTotal - buyerBalance)} more.</span>
                 </div>
               )}
 
               <div className="flex gap-2">
                 <Button 
                   variant="outline" 
-                  onClick={clearCart}
-                  disabled={checkoutLoading}
+                  onClick={onClearCart}
+                  disabled={checkoutLoading || syncing}
                   className="flex-1"
                 >
                   <Trash2 className="w-4 h-4 mr-2" />
@@ -353,7 +337,7 @@ const ShoppingCart = ({
                 </Button>
                 <Button 
                   onClick={handleBulkCheckout}
-                  disabled={!hasEnoughBalance || checkoutLoading || cart.length === 0}
+                  disabled={!hasEnoughBalance || checkoutLoading || syncing || cart.length === 0}
                   className="flex-1 gap-2"
                 >
                   {checkoutLoading ? (

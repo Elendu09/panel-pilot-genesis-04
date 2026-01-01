@@ -354,6 +354,61 @@ export type Database = {
           },
         ]
       }
+      buyer_cart: {
+        Row: {
+          buyer_id: string
+          created_at: string
+          id: string
+          panel_id: string
+          quantity: number
+          service_id: string
+          target_url: string
+          updated_at: string
+        }
+        Insert: {
+          buyer_id: string
+          created_at?: string
+          id?: string
+          panel_id: string
+          quantity?: number
+          service_id: string
+          target_url: string
+          updated_at?: string
+        }
+        Update: {
+          buyer_id?: string
+          created_at?: string
+          id?: string
+          panel_id?: string
+          quantity?: number
+          service_id?: string
+          target_url?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "buyer_cart_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "client_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "buyer_cart_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "buyer_cart_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       buyer_favorites: {
         Row: {
           buyer_id: string | null

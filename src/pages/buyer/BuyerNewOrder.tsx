@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -50,6 +50,7 @@ import { LanguageSelector } from "@/components/buyer/LanguageSelector";
 import { OrderSuccessModal } from "@/components/buyer/OrderSuccessModal";
 import { detectServiceType, getSubCategory, ICON_CATEGORIES } from "@/lib/service-icon-detection";
 import ShoppingCart from "@/components/buyer/ShoppingCart";
+import { useBuyerCart } from "@/hooks/use-buyer-cart";
 
 interface PromoCode {
   id: string;
@@ -59,15 +60,6 @@ interface PromoCode {
   min_order_amount: number;
 }
 
-interface CartItem {
-  service: any;
-  quantity: number;
-  targetUrl: string;
-  effectivePrice: number;
-}
-
-const CART_STORAGE_KEY = 'buyer_cart';
-
 const BuyerNewOrder = () => {
   const navigate = useNavigate();
   const { panel } = useTenant();
@@ -75,6 +67,7 @@ const BuyerNewOrder = () => {
   const { services, loading } = useTenantServices(panel?.id);
   const { formatPrice, convertPrice } = useCurrency();
   const [searchParams] = useSearchParams();
+  const [customPrices, setCustomPrices] = useState<Map<string, number>>(new Map());
   
   // 3-Tier Selection State
   const [selectedNetwork, setSelectedNetwork] = useState<string>("");
@@ -84,12 +77,8 @@ const BuyerNewOrder = () => {
   const [quantity, setQuantity] = useState<number>(1000);
   const [targetUrl, setTargetUrl] = useState("");
   const [orderLoading, setOrderLoading] = useState(false);
-  const [customPrices, setCustomPrices] = useState<Map<string, number>>(new Map());
   const [descriptionOpen, setDescriptionOpen] = useState(false);
   const [appliedPromo, setAppliedPromo] = useState<PromoCode | null>(null);
-  
-  // Shopping Cart State
-  const [cart, setCart] = useState<CartItem[]>([]);
   
   // Success modal state
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -98,28 +87,27 @@ const BuyerNewOrder = () => {
   const [placedQuantity, setPlacedQuantity] = useState(0);
   const [placedTotalPrice, setPlacedTotalPrice] = useState("");
 
-  // Load cart from localStorage
-  useEffect(() => {
-    if (panel?.id) {
-      try {
-        const savedCart = localStorage.getItem(`${CART_STORAGE_KEY}_${panel.id}`);
-        if (savedCart) {
-          setCart(JSON.parse(savedCart));
-        }
-      } catch (e) {
-        console.error('Error loading cart:', e);
-      }
-    }
-  }, [panel?.id]);
+  // Get effective price for a service (custom or default)
+  const getEffectivePrice = useCallback((service: any) => {
+    return customPrices.get(service.id) ?? service.price;
+  }, [customPrices]);
 
-  // Save cart to localStorage
-  useEffect(() => {
-    if (panel?.id) {
-      localStorage.setItem(`${CART_STORAGE_KEY}_${panel.id}`, JSON.stringify(cart));
-      window.dispatchEvent(new Event('cartUpdated'));
-    }
-  }, [cart, panel?.id]);
-
+  // Supabase-backed cart
+  const {
+    cart,
+    cartTotal,
+    syncing: cartSyncing,
+    addToCart,
+    updateCartItem,
+    removeFromCart,
+    clearCart,
+    refreshCart,
+  } = useBuyerCart({
+    buyerId: buyer?.id || null,
+    panelId: panel?.id || null,
+    services,
+    getEffectivePrice,
+  });
   // Fetch custom prices for this buyer
   useEffect(() => {
     const fetchCustomPrices = async () => {
@@ -179,10 +167,6 @@ const BuyerNewOrder = () => {
     }
   }, [services, searchParams]);
 
-  // Get effective price for a service (custom or default)
-  const getEffectivePrice = (service: any) => {
-    return customPrices.get(service.id) ?? service.price;
-  };
 
   // TIER 1: Group by Network (Platform)
   const networks = useMemo(() => {
@@ -289,7 +273,7 @@ const BuyerNewOrder = () => {
   };
 
   // Add to cart
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     if (!selectedService) {
       toast({ title: "Please select a service", variant: "destructive" });
       return;
@@ -299,28 +283,12 @@ const BuyerNewOrder = () => {
       return;
     }
 
-    const existingIndex = cart.findIndex(item => item.service.id === selectedService.id);
-    if (existingIndex >= 0) {
-      // Update existing item
-      const newCart = [...cart];
-      newCart[existingIndex] = {
-        ...newCart[existingIndex],
-        quantity,
-        targetUrl,
-        effectivePrice: getEffectivePrice(selectedService),
-      };
-      setCart(newCart);
-      toast({ title: "Cart updated", description: `${selectedService.name} quantity updated` });
-    } else {
-      // Add new item
-      setCart([...cart, {
-        service: selectedService,
-        quantity,
-        targetUrl,
-        effectivePrice: getEffectivePrice(selectedService),
-      }]);
-      toast({ title: "Added to cart", description: selectedService.name });
-    }
+    await addToCart({
+      service: selectedService,
+      quantity,
+      targetUrl,
+      effectivePrice: getEffectivePrice(selectedService),
+    });
 
     // Reset form
     setSelectedServiceId("");
@@ -453,11 +421,19 @@ const BuyerNewOrder = () => {
           <div className="flex items-center gap-2">
             <ShoppingCart 
               cart={cart}
-              setCart={setCart}
+              cartTotal={cartTotal}
+              syncing={cartSyncing}
               buyerBalance={buyer?.balance || 0}
               buyerId={buyer?.id || ''}
               panelId={panel?.id || ''}
-              onCheckoutComplete={refreshBuyer}
+              formatPrice={formatPrice}
+              onUpdateItem={updateCartItem}
+              onRemoveItem={removeFromCart}
+              onClearCart={clearCart}
+              onCheckoutComplete={async () => {
+                await refreshBuyer();
+                refreshCart();
+              }}
             />
             <CurrencySelector />
             <LanguageSelector />
