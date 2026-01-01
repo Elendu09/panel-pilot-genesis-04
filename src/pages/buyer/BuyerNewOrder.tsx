@@ -43,6 +43,8 @@ import { PromoCodeInput } from "@/components/buyer/PromoCodeInput";
 import { ServiceInfoPanel } from "@/components/buyer/ServiceInfoPanel";
 import { CurrencySelector } from "@/components/buyer/CurrencySelector";
 import { LanguageSelector } from "@/components/buyer/LanguageSelector";
+import { OrderSuccessModal } from "@/components/buyer/OrderSuccessModal";
+import { detectServiceType } from "@/lib/service-icon-detection";
 
 interface PromoCode {
   id: string;
@@ -68,7 +70,13 @@ const BuyerNewOrder = () => {
   const [customPrices, setCustomPrices] = useState<Map<string, number>>(new Map());
   const [descriptionOpen, setDescriptionOpen] = useState(false);
   const [appliedPromo, setAppliedPromo] = useState<PromoCode | null>(null);
-  const [orderSuccess, setOrderSuccess] = useState(false);
+  
+  // Success modal state
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [placedOrderNumber, setPlacedOrderNumber] = useState("");
+  const [placedServiceName, setPlacedServiceName] = useState("");
+  const [placedQuantity, setPlacedQuantity] = useState(0);
+  const [placedTotalPrice, setPlacedTotalPrice] = useState("");
 
   // Fetch custom prices for this buyer
   useEffect(() => {
@@ -266,21 +274,17 @@ const BuyerNewOrder = () => {
 
       await refreshBuyer();
 
-      setOrderSuccess(true);
+      // Store order details for success modal
+      setPlacedOrderNumber(orderNumber);
+      setPlacedServiceName(selectedService.name);
+      setPlacedQuantity(quantity);
+      setPlacedTotalPrice(formatPrice(totalPrice));
+      setShowSuccessModal(true);
+      
       toast({
         title: "Order Placed Successfully!",
         description: `Order #${orderNumber} - ${quantity.toLocaleString()} ${selectedService.name}`,
       });
-
-      // Reset form after animation
-      setTimeout(() => {
-        setSelectedServiceId("");
-        setTargetUrl("");
-        setQuantity(1000);
-        setAppliedPromo(null);
-        setOrderSuccess(false);
-        navigate('/orders');
-      }, 1500);
     } catch (error) {
       console.error('Error placing order:', error);
       toast({ 
@@ -629,17 +633,7 @@ const BuyerNewOrder = () => {
                     onClick={handleOrder}
                   >
                     <AnimatePresence mode="wait">
-                      {orderSuccess ? (
-                        <motion.div
-                          key="success"
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          className="flex items-center gap-2"
-                        >
-                          <CheckCircle2 className="w-5 h-5" />
-                          Order Placed!
-                        </motion.div>
-                      ) : orderLoading ? (
+                      {orderLoading ? (
                         <motion.div
                           key="loading"
                           initial={{ opacity: 0 }}
@@ -675,6 +669,22 @@ const BuyerNewOrder = () => {
           </div>
         </div>
       </motion.div>
+
+      {/* Order Success Modal */}
+      <OrderSuccessModal
+        open={showSuccessModal}
+        onOpenChange={setShowSuccessModal}
+        orderNumber={placedOrderNumber}
+        serviceName={placedServiceName}
+        quantity={placedQuantity}
+        totalPrice={placedTotalPrice}
+        onNewOrder={() => {
+          setSelectedServiceId("");
+          setTargetUrl("");
+          setQuantity(1000);
+          setAppliedPromo(null);
+        }}
+      />
     </BuyerLayout>
   );
 };

@@ -33,6 +33,7 @@ import { BuyerAuthContext } from '@/contexts/BuyerAuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { LiveOrderTracker } from '@/components/order/LiveOrderTracker';
+import { Confetti } from '@/components/effects/Confetti';
 
 interface Service {
   id: string;
