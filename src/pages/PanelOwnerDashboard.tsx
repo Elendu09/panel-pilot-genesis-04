@@ -194,7 +194,7 @@ const PanelOwnerDashboard = () => {
   );
 
   return (
-    <div className="min-h-screen bg-background flex w-full">
+    <div className="min-h-screen bg-background w-full">
       <Helmet>
         <title>Panel Dashboard | HomeOfSMM</title>
         <meta name="description" content="Manage services, clients, payments, domains, and panel settings." />
@@ -206,7 +206,7 @@ const PanelOwnerDashboard = () => {
       <aside 
         data-tour="sidebar"
         className={cn(
-          "hidden md:flex flex-col glass-sidebar transition-all duration-300 relative z-20",
+          "hidden md:flex flex-col fixed left-0 top-0 h-screen glass-sidebar transition-all duration-300 z-20",
           sidebarOpen ? "w-64" : "w-20"
         )}>
         {/* Ambient Glow */}
@@ -390,7 +390,10 @@ const PanelOwnerDashboard = () => {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col min-h-screen overflow-hidden">
+      <main className={cn(
+        "flex-1 flex flex-col min-h-screen overflow-hidden transition-all duration-300",
+        sidebarOpen ? "md:ml-64" : "md:ml-20"
+      )}>
         {/* Mobile Header */}
         <header className="md:hidden glass border-b border-border/50 p-4 flex items-center justify-between sticky top-0 z-10">
           <div className="flex items-center gap-3">
@@ -406,7 +409,7 @@ const PanelOwnerDashboard = () => {
         </header>
 
         {/* Page Content */}
-        <div className="flex-1 p-4 md:p-6 lg:p-8 pb-24 md:pb-8 overflow-auto bg-mesh">
+        <div className="flex-1 p-4 md:p-6 lg:p-8 pb-24 md:pb-8 overflow-y-auto bg-mesh">
           <Routes>
             <Route index element={<PanelOverview />} />
             <Route path="services" element={<ServicesManagement />} />
