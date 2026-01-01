@@ -182,7 +182,7 @@ export const PLATFORM_SHORTFORMS: Record<string, string> = {
 // ============= COUNTRY/QUALITY PREFIXES TO SKIP =============
 // These are geo-targeting or quality prefixes, not platform names
 export const IGNORED_PREFIXES: string[] = [
-  // Country codes
+  // Country codes (ISO 3166-1 alpha-2)
   'fr', 'ca', 'us', 'uk', 'de', 'it', 'es', 'br', 'mx', 'ar',
   'au', 'nz', 'jp', 'kr', 'cn', 'in', 'ru', 'pl', 'nl', 'be',
   'se', 'no', 'dk', 'fi', 'at', 'ch', 'pt', 'ie', 'za', 'ng',
@@ -190,15 +190,23 @@ export const IGNORED_PREFIXES: string[] = [
   'hk', 'tw', 'pk', 'bd', 'lk', 'np', 'ua', 'cz', 'hu', 'ro',
   'gr', 'il', 'ke', 'gh', 'ma', 'dz', 'tn', 'cl', 'co', 'pe',
   've', 'ec', 'uy', 'py', 'bo', 'cr', 'pa', 'do', 'pr', 'jm',
-  'cu', 'ht', 'gt', 'hn', 'sv', 'ni', 
+  'cu', 'ht', 'gt', 'hn', 'sv', 'ni', 'kw', 'qa', 'bh', 'om',
+  'lb', 'jo', 'ps', 'iq', 'ly', 'sd', 'et', 'tz', 'ug', 'rw',
+  'zm', 'zw', 'bw', 'na', 'mz', 'ao', 'cd', 'cm', 'ci', 'sn',
+  'ml', 'bf', 'ne', 'tg', 'bj', 'gm', 'sl', 'lr', 'gn', 'mg',
   // Quality/speed modifiers
   'nr', 'hq', 'real', 'fast', 'slow', 'cheap', 'premium', 'instant',
   'best', 'top', 'super', 'ultra', 'mega', 'pro', 'vip', 'new',
   'hot', 'old', 'mixed', 'pure', 'safe', 'max', 'mini', 'low',
   'high', 'mid', 'std', 'basic', 'lite', 'plus', 'extra', 'bulk',
+  // Targeting modifiers
+  'targeted', 'organic', 'active', 'legit', 'quality', 'verified',
+  'authentic', 'genuine', 'original', 'exclusive', 'custom', 'special',
+  'niche', 'specific', 'selected', 'handpicked', 'curated',
   // Regional
   'worldwide', 'global', 'intl', 'international', 'local', 'native',
   'usa', 'europe', 'asia', 'africa', 'latam', 'mena', 'apac',
+  'regional', 'country', 'geo', 'location', 'based',
 ];
 
 // Negative keywords that should force the category to "other"

@@ -93,9 +93,9 @@ const tourSteps: TourStep[] = [
   {
     id: "dashboard",
     title: "Dashboard Overview",
-    description: "Your dashboard shows real-time stats, recent orders, and quick actions. Monitor everything at a glance.",
+    description: "Your real-time business intelligence hub! The dashboard displays key metrics including today's revenue, total orders, active customers, and service performance. Cards are interactive—click any stat to drill down into detailed reports. The 'Today's Revenue' widget at the bottom of the sidebar shows your earnings at a glance.",
     mobileDescription: "View your stats, orders, and revenue at a glance. Pull down to refresh.",
-    tabletDescription: "Your command center! Real-time stats, recent activity, and quick actions all in one view.",
+    tabletDescription: "Your command center showing real-time stats, recent activity, and quick actions. Tap any card for more details.",
     icon: LayoutDashboard,
     target: "overview",
     selector: "[data-tour='dashboard-stats']",
@@ -111,8 +111,9 @@ const tourSteps: TourStep[] = [
   {
     id: "services",
     title: "Services Management",
-    description: "Add and manage SMM services. Set prices, categories, and import services from providers.",
+    description: "The heart of your SMM business! Here you can add, edit, and organize services. Import services in bulk from providers with automatic markup calculation. Use drag-and-drop to reorder services, toggle visibility with one click, and set custom prices per category. The Kanban view helps you visualize services by status.",
     mobileDescription: "Manage your services here. Tap to add, edit prices, or import from providers.",
+    tabletDescription: "Manage your SMM services. Import from providers, set markups, organize by category, and toggle visibility.",
     icon: Package,
     target: "services",
     selector: "[data-tour='services']",
@@ -128,8 +129,9 @@ const tourSteps: TourStep[] = [
   {
     id: "orders",
     title: "Orders Management",
-    description: "View and manage customer orders. Track status, process refunds, and monitor delivery progress.",
+    description: "Complete order lifecycle management! Track order status from pending to completed, view detailed order information, process refunds, and monitor delivery progress. Filter orders by status, date range, or customer. Bulk actions let you manage multiple orders simultaneously. Real-time updates keep you informed.",
     mobileDescription: "Track all orders here. Swipe to see details, tap to manage refunds.",
+    tabletDescription: "Full order management: track status, process refunds, filter by date/status, and use bulk actions.",
     icon: ShoppingCart,
     target: "orders",
     selector: "[data-tour='orders']",
@@ -145,8 +147,9 @@ const tourSteps: TourStep[] = [
   {
     id: "providers",
     title: "Provider Integration",
-    description: "Connect to SMM providers, sync services, and manage API connections for automated order processing.",
+    description: "Connect to multiple SMM providers for automated order fulfillment! Add provider API credentials, check real-time balances, and sync their service catalogs with one click. When customers place orders, they're automatically forwarded to providers. Monitor provider status and switch between them as needed.",
     mobileDescription: "Connect SMM providers to automate order processing. Find this in More menu.",
+    tabletDescription: "Connect SMM providers for automated fulfillment. Add API credentials, check balances, and sync services.",
     icon: Users,
     target: "providers",
     selector: "[data-tour='providers']",
@@ -161,9 +164,9 @@ const tourSteps: TourStep[] = [
   {
     id: "analytics",
     title: "Analytics & Reports",
-    description: "Detailed analytics showing revenue, orders, and customer activity trends over time.",
+    description: "Deep insights into your business performance! View revenue trends, order volumes, and customer activity over customizable time periods. Interactive charts let you drill down by date range, service category, or customer segment. Export reports in multiple formats for accounting or analysis.",
     mobileDescription: "View revenue trends and order stats. Swipe charts to see different time periods.",
-    tabletDescription: "View detailed analytics from the sidebar. Revenue, orders, and customer trends.",
+    tabletDescription: "Business intelligence at your fingertips. Interactive charts, customizable date ranges, and exportable reports.",
     icon: BarChart3,
     target: "analytics",
     selector: "[data-tour='analytics']",
@@ -179,8 +182,9 @@ const tourSteps: TourStep[] = [
   {
     id: "payments",
     title: "Payment Methods",
-    description: "Configure payment gateways to accept payments from customers worldwide.",
+    description: "Configure how customers pay you! Integrate popular payment gateways like Stripe, PayPal, and cryptocurrency options. Each gateway can be enabled/disabled independently. Set minimum deposit amounts, configure automatic balance updates, and view payment transaction history with detailed logs.",
     mobileDescription: "Set up payment gateways. Access this from the More menu.",
+    tabletDescription: "Configure payment gateways: Stripe, PayPal, crypto, and more. Set minimum deposits and view transaction logs.",
     icon: CreditCard,
     target: "payment-methods",
     selector: "[data-tour='payments']",
@@ -195,9 +199,9 @@ const tourSteps: TourStep[] = [
   {
     id: "design",
     title: "Design Customization",
-    description: "Customize your panel's appearance with themes, colors, and branding. Use the device icons above the preview to switch between mobile, tablet, and desktop.",
+    description: "Make your panel uniquely yours! Choose from multiple themes, customize colors to match your brand, upload your logo, and configure the layout. Use the device preview tabs (Desktop, Tablet, Mobile) to see how your storefront looks on different devices. Changes are reflected in real-time on the live preview.",
     mobileDescription: "Change themes and colors. Use the bottom sheet and device icons to preview mobile, tablet, and desktop.",
-    tabletDescription: "Customize appearance with themes, colors, and device previews. Switch between mobile, tablet, and desktop modes at the top.",
+    tabletDescription: "Customize your brand: themes, colors, logo, and layout. Preview across all device sizes before publishing.",
     icon: Palette,
     target: "design",
     selector: "[data-tour='design']",
@@ -226,7 +230,8 @@ const tourSteps: TourStep[] = [
   {
     id: "api",
     title: "API Management",
-    description: "Generate API keys for customers to integrate with their own systems.",
+    description: "Empower your resellers with API access! Generate secure API keys for customers who want to integrate your services into their own systems. View API documentation, monitor usage statistics, and manage key permissions. Rate limiting protects your system while allowing legitimate high-volume users.",
+    tabletDescription: "Generate API keys for customers to integrate your services. View documentation and monitor usage.",
     icon: Code,
     target: "api",
     selector: "[data-tour='api']",
@@ -241,7 +246,8 @@ const tourSteps: TourStep[] = [
   {
     id: "domain",
     title: "Domain Settings",
-    description: "Connect your custom domain and configure SSL for a professional appearance.",
+    description: "Professional branding with your own domain! Connect a custom domain (e.g., panel.yourbrand.com) for a polished look. The setup wizard guides you through DNS configuration. SSL certificates are automatically provisioned for secure HTTPS connections. Monitor domain health and troubleshoot issues here.",
+    tabletDescription: "Connect your custom domain with guided DNS setup. Automatic SSL certificates for secure connections.",
     icon: Globe,
     target: "domains",
     selector: "[data-tour='domain']",
@@ -256,9 +262,9 @@ const tourSteps: TourStep[] = [
   {
     id: "complete",
     title: "You're All Set! ✨",
-    description: "You're ready to start managing your SMM panel. Explore all features and grow your business!",
+    description: "Congratulations! You're now ready to run your SMM panel like a pro. Remember: the sidebar provides quick access to all sections, and you can collapse it for more workspace. Need help? Visit the Support Center from the sidebar. Happy selling!",
     mobileDescription: "All done! Start managing your panel. Need help? Check the More menu for support.",
-    tabletDescription: "You're ready! Explore all features and grow your SMM business.",
+    tabletDescription: "You're ready! Use the sidebar for quick navigation. Visit Support Center if you need assistance.",
     icon: Sparkles,
     target: null,
     position: "center",
@@ -660,7 +666,9 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
 
   if (!isOpen || !step) return null;
 
-  const isCompact = isMobile || isTablet;
+  // Desktop gets a richer experience with larger cards
+  const isCompact = isMobile;
+  const isDesktop = screenSize === 'desktop';
 
   return (
     <AnimatePresence mode="wait">
@@ -703,14 +711,14 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: -20 }}
           transition={{ duration: 0.3 }}
-          className={`z-[101] ${isCompact ? 'w-auto' : 'w-full max-w-md mx-4'}`}
+          className={`z-[101] ${isCompact ? 'w-auto' : isDesktop ? 'w-full max-w-lg mx-4' : 'w-full max-w-md mx-4'}`}
           style={getCardPosition()}
         >
-          <Card className={`bg-card/95 backdrop-blur-xl border-primary/30 shadow-2xl ${isCompact ? 'p-4 space-y-3' : 'p-6 space-y-5'}`}>
+          <Card className={`bg-card/95 backdrop-blur-xl border-primary/30 shadow-2xl ${isCompact ? 'p-4 space-y-3' : isDesktop ? 'p-8 space-y-6' : 'p-6 space-y-5'}`}>
             {/* Header with close */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className={`px-2 py-1 text-xs font-medium bg-primary/10 text-primary rounded-full ${isCompact ? 'text-[10px]' : ''}`}>
+                <span className={`px-2 py-1 font-medium bg-primary/10 text-primary rounded-full ${isCompact ? 'text-[10px]' : 'text-xs'}`}>
                   Step {currentStep + 1} of {filteredSteps.length}
                 </span>
                 {step.action && !isCompact && (
@@ -719,9 +727,16 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
                     Interactive
                   </span>
                 )}
-                <span className={`px-2 py-0.5 font-medium bg-secondary/50 text-secondary-foreground rounded-full capitalize ${isCompact ? 'text-[10px]' : 'text-xs'}`}>
-                  {screenSize}
-                </span>
+                {isDesktop && (
+                  <span className="px-2 py-1 text-xs font-medium bg-emerald-500/10 text-emerald-600 rounded-full">
+                    Desktop Mode
+                  </span>
+                )}
+                {isTablet && (
+                  <span className="px-2 py-1 text-xs font-medium bg-blue-500/10 text-blue-600 rounded-full">
+                    Tablet Mode
+                  </span>
+                )}
               </div>
               <Button
                 variant="ghost"
@@ -734,27 +749,27 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
             </div>
 
             {/* Progress */}
-            <Progress value={progress} className="h-1.5" />
+            <Progress value={progress} className={isDesktop ? "h-2" : "h-1.5"} />
 
-            {/* Icon */}
+            {/* Icon - larger on desktop */}
             <div className="flex justify-center">
               <motion.div
                 initial={{ scale: 0, rotate: -180 }}
                 animate={{ scale: 1, rotate: 0 }}
                 transition={{ delay: 0.2, type: "spring", stiffness: 200, damping: 15 }}
-                className={`rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 ${isCompact ? 'p-3' : 'p-5'}`}
+                className={`rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 ${isCompact ? 'p-3' : isDesktop ? 'p-6' : 'p-5'}`}
               >
-                <step.icon className={`text-primary ${isCompact ? 'w-8 h-8' : 'w-10 h-10'}`} />
+                <step.icon className={`text-primary ${isCompact ? 'w-8 h-8' : isDesktop ? 'w-14 h-14' : 'w-10 h-10'}`} />
               </motion.div>
             </div>
 
-            {/* Content */}
-            <div className="text-center space-y-1.5">
+            {/* Content - richer on desktop */}
+            <div className="text-center space-y-2">
               <motion.h2
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className={`font-bold ${isCompact ? 'text-lg' : 'text-xl'}`}
+                className={`font-bold ${isCompact ? 'text-lg' : isDesktop ? 'text-2xl' : 'text-xl'}`}
               >
                 {step.title}
               </motion.h2>
@@ -762,7 +777,7 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className={`text-muted-foreground leading-relaxed ${isCompact ? 'text-xs' : 'text-sm'}`}
+                className={`text-muted-foreground leading-relaxed ${isCompact ? 'text-xs' : isDesktop ? 'text-base' : 'text-sm'}`}
               >
                 {getDescription()}
               </motion.p>
