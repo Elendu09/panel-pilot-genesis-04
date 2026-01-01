@@ -107,43 +107,46 @@ export const ServiceKanbanCard = ({
           isDragging && "shadow-2xl z-50"
         )}
       >
-        <CardContent className="p-4 space-y-3">
+        <CardContent className="p-3 sm:p-4 space-y-2 sm:space-y-3">
           {/* Header */}
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex items-center gap-2">
+          <div className="flex items-start justify-between gap-1 sm:gap-2">
+            <div className="flex items-center gap-1 sm:gap-2">
               {showDragHandle && (
                 <button
                   {...attributes}
                   {...listeners}
-                  className="touch-none p-1 rounded hover:bg-accent cursor-grab active:cursor-grabbing"
+                  className="touch-none p-0.5 sm:p-1 rounded hover:bg-accent cursor-grab active:cursor-grabbing"
                 >
-                  <GripVertical className="w-4 h-4 text-muted-foreground" />
+                  <GripVertical className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
                 </button>
               )}
               <Checkbox
                 checked={isSelected}
                 onCheckedChange={() => onToggleSelect()}
+                className="h-4 w-4"
               />
-              <Badge variant="outline" className="text-xs font-mono">
+              <Badge variant="outline" className="text-[10px] sm:text-xs font-mono px-1.5 sm:px-2">
                 #{service.displayId}
               </Badge>
             </div>
             <Switch
               checked={service.status}
               onCheckedChange={() => onToggleStatus()}
-              className="scale-90"
+              className="scale-75 sm:scale-90"
             />
           </div>
 
           {/* Service Info */}
-          <div className="flex items-start gap-3" onClick={() => onView()}>
-            <ServiceIcon imageUrl={service.imageUrl} category={service.category} />
+          <div className="flex items-start gap-2 sm:gap-3" onClick={() => onView()}>
+            <div className="shrink-0">
+              <ServiceIcon imageUrl={service.imageUrl} category={service.category} />
+            </div>
             <div className="flex-1 min-w-0">
-              <h4 className="font-medium text-sm line-clamp-2 hover:text-primary transition-colors">
+              <h4 className="font-medium text-xs sm:text-sm line-clamp-2 hover:text-primary transition-colors">
                 {service.name}
               </h4>
-              <div className="flex items-center gap-2 mt-1">
-                <Badge variant="secondary" className="text-xs capitalize">
+              <div className="flex items-center gap-1 sm:gap-2 mt-1">
+                <Badge variant="secondary" className="text-[10px] sm:text-xs capitalize px-1.5 sm:px-2">
                   {service.category}
                 </Badge>
               </div>
@@ -151,16 +154,16 @@ export const ServiceKanbanCard = ({
           </div>
 
           {/* Provider */}
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <div className="flex items-center gap-1 sm:gap-2 text-[10px] sm:text-xs text-muted-foreground">
             <span>Provider:</span>
-            <span className="font-medium text-foreground">
+            <span className="font-medium text-foreground truncate">
               {providerName || (service.provider === 'Direct' ? 'Direct' : 'Unknown')}
             </span>
           </div>
 
           {/* Quantity Range */}
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-muted-foreground">Quantity:</span>
+          <div className="flex items-center justify-between text-[10px] sm:text-xs">
+            <span className="text-muted-foreground">Qty:</span>
             <span>
               {service.minQty.toLocaleString()} - {service.maxQty.toLocaleString()}
             </span>
@@ -168,18 +171,18 @@ export const ServiceKanbanCard = ({
 
           {/* Pricing */}
           <div className="flex items-center justify-between pt-2 border-t border-border/50">
-            <div>
-              <span className="text-lg font-bold text-primary">${service.price.toFixed(4)}</span>
-              <span className="text-xs text-muted-foreground ml-1">/ 1k</span>
+            <div className="flex flex-col sm:flex-row sm:items-baseline">
+              <span className="text-sm sm:text-lg font-bold text-primary">${service.price.toFixed(4)}</span>
+              <span className="text-[10px] sm:text-xs text-muted-foreground sm:ml-1">/ 1k</span>
             </div>
-            <div className="flex items-center gap-1">
-              <span className="text-xs text-muted-foreground line-through">
+            <div className="flex flex-col sm:flex-row items-end sm:items-center gap-0.5 sm:gap-1">
+              <span className="text-[10px] sm:text-xs text-muted-foreground line-through">
                 ${service.originalPrice.toFixed(4)}
               </span>
               <Badge
                 variant="outline"
                 className={cn(
-                  "text-xs",
+                  "text-[10px] sm:text-xs px-1 sm:px-1.5",
                   Number(profitMargin) >= 25
                     ? "text-emerald-500 border-emerald-500/30"
                     : Number(profitMargin) >= 10
@@ -192,30 +195,30 @@ export const ServiceKanbanCard = ({
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center gap-1 pt-2">
+          {/* Actions - Stack on very small screens */}
+          <div className="flex items-center gap-0.5 sm:gap-1 pt-2">
             <Button
               size="sm"
               variant="ghost"
-              className="flex-1 h-8"
+              className="flex-1 h-7 sm:h-8 text-[10px] sm:text-xs px-1 sm:px-2"
               onClick={() => onView()}
             >
-              <Eye className="w-3.5 h-3.5 mr-1" />
-              View
+              <Eye className="w-3 h-3 sm:w-3.5 sm:h-3.5 sm:mr-1" />
+              <span className="hidden xs:inline">View</span>
             </Button>
             <Button
               size="sm"
               variant="ghost"
-              className="flex-1 h-8"
+              className="flex-1 h-7 sm:h-8 text-[10px] sm:text-xs px-1 sm:px-2"
               onClick={() => onEdit()}
             >
-              <Edit className="w-3.5 h-3.5 mr-1" />
-              Edit
+              <Edit className="w-3 h-3 sm:w-3.5 sm:h-3.5 sm:mr-1" />
+              <span className="hidden xs:inline">Edit</span>
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
-                  <MoreVertical className="w-4 h-4" />
+                <Button size="sm" variant="ghost" className="h-7 sm:h-8 w-7 sm:w-8 p-0">
+                  <MoreVertical className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">

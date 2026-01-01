@@ -2564,6 +2564,8 @@ const ServicesManagement = () => {
         onImport={handleImport}
         providers={providers.length > 0 ? providers : [{ id: 'direct', name: 'Direct (No providers configured)' }]}
         getCategoryIcon={getCategoryIcon}
+        currentServiceCount={totalCount}
+        maxServiceLimit={SERVICE_LIMIT}
       />
 
       {/* Edit Sheet */}

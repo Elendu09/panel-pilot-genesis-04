@@ -508,6 +508,35 @@ export const QUALITY_KEYWORDS: Record<string, string[]> = {
   ],
 };
 
+// Quality priority for sorting (higher = better, appears first)
+export const QUALITY_PRIORITY: Record<string, number> = {
+  premium: 1,
+  fast: 2,
+  refill: 3,
+  standard: 4,
+  slow: 5,
+  cheap: 6,
+  noRefill: 7,
+};
+
+/**
+ * Detects the quality level of a service based on keywords
+ * Returns a number for sorting (lower = higher priority)
+ */
+export const getQualityOrder = (serviceName: string): number => {
+  const lowerName = serviceName.toLowerCase();
+  
+  for (const [quality, keywords] of Object.entries(QUALITY_KEYWORDS)) {
+    for (const keyword of keywords) {
+      if (lowerName.includes(keyword)) {
+        return QUALITY_PRIORITY[quality] || 99;
+      }
+    }
+  }
+  
+  return 50; // Default middle priority for unknown quality
+};
+
 /**
  * Normalizes service name for better keyword matching
  * Removes brackets, extra punctuation, and normalizes spacing

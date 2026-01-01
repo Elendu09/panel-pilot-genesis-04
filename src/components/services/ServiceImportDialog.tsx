@@ -70,6 +70,8 @@ interface ServiceImportDialogProps {
   providers: Provider[];
   getCategoryIcon: (category: string) => React.ComponentType<{ className?: string }>;
   onImport: (services: FetchedService[], markups: Record<number, number>, providerId: string, providerName: string) => void;
+  currentServiceCount?: number;
+  maxServiceLimit?: number;
 }
 
 export const ServiceImportDialog = ({
@@ -78,7 +80,13 @@ export const ServiceImportDialog = ({
   providers,
   getCategoryIcon,
   onImport,
+  currentServiceCount = 0,
+  maxServiceLimit = 10000,
 }: ServiceImportDialogProps) => {
+  // Service limit calculations
+  const remainingSlots = Math.max(0, maxServiceLimit - currentServiceCount);
+  const isAtLimit = currentServiceCount >= maxServiceLimit;
+  const isNearLimit = currentServiceCount >= maxServiceLimit * 0.9;
   const [step, setStep] = useState<"select" | "services">("select");
   const [selectedProvider, setSelectedProvider] = useState("");
   const [globalMarkup, setGlobalMarkup] = useState(25);
@@ -259,7 +267,16 @@ export const ServiceImportDialog = ({
     if (selectedServices.length === filteredServices.length) {
       setSelectedServices([]);
     } else {
-      setSelectedServices(filteredServices.map(s => s.id));
+      // Limit selection to remaining slots
+      const availableToSelect = filteredServices.slice(0, remainingSlots);
+      setSelectedServices(availableToSelect.map(s => s.id));
+      
+      if (filteredServices.length > remainingSlots) {
+        toast({ 
+          title: `Selected ${availableToSelect.length} services`, 
+          description: `Limited to ${remainingSlots.toLocaleString()} remaining slots.`,
+        });
+      }
     }
   };
 
@@ -269,7 +286,17 @@ export const ServiceImportDialog = ({
   };
 
   const handleImport = async () => {
-    const selectedServiceData = fetchedServices.filter(s => selectedServices.includes(s.id));
+    let selectedServiceData = fetchedServices.filter(s => selectedServices.includes(s.id));
+    
+    // Enforce limit
+    if (selectedServiceData.length > remainingSlots) {
+      selectedServiceData = selectedServiceData.slice(0, remainingSlots);
+      toast({ 
+        title: `Importing ${selectedServiceData.length} services`, 
+        description: `Limited to ${remainingSlots.toLocaleString()} remaining slots.`,
+      });
+    }
+    
     const total = selectedServiceData.length;
     
     if (total === 0) {
@@ -349,12 +376,37 @@ export const ServiceImportDialog = ({
 
         {step === "select" ? (
           <div className="space-y-4 py-4">
+            {/* Service Limit Warning */}
+            {isAtLimit && (
+              <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30">
+                <div className="flex items-start gap-2 text-sm text-red-500">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium">Maximum Service Limit Reached</p>
+                    <p className="text-xs mt-1">You have {currentServiceCount.toLocaleString()} / {maxServiceLimit.toLocaleString()} services. Delete some services to import more.</p>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {isNearLimit && !isAtLimit && (
+              <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30">
+                <div className="flex items-start gap-2 text-sm text-amber-500">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium">Approaching Service Limit</p>
+                    <p className="text-xs mt-1">You can import up to {remainingSlots.toLocaleString()} more services ({currentServiceCount.toLocaleString()} / {maxServiceLimit.toLocaleString()}).</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Provider Selection */}
             <div className="space-y-2">
               <Label>Select Provider</Label>
-              <Select value={selectedProvider} onValueChange={handleProviderChange}>
+              <Select value={selectedProvider} onValueChange={handleProviderChange} disabled={isAtLimit}>
                 <SelectTrigger className="bg-background/50">
-                  <SelectValue placeholder="Choose a provider" />
+                  <SelectValue placeholder={isAtLimit ? "Service limit reached" : "Choose a provider"} />
                 </SelectTrigger>
                 <SelectContent>
                   {providers.map(p => (
