@@ -674,9 +674,12 @@ const BuyerNewOrder = () => {
                     >
                       <QuantityPresets 
                         onSelect={setQuantity}
-                        min={selectedService.min_quantity || 100}
-                        max={selectedService.max_quantity || 100000}
-                        selected={quantity}
+                        selectedQuantity={quantity}
+                        pricePerUnit={effectivePrice}
+                        minQuantity={selectedService.min_quantity || 100}
+                        maxQuantity={selectedService.max_quantity || 100000}
+                        category={selectedService.category}
+                        formatPrice={formatPrice}
                       />
                     </motion.div>
                   )}
@@ -840,15 +843,11 @@ const BuyerNewOrder = () => {
       {/* Success Modal */}
       <OrderSuccessModal
         open={showSuccessModal}
-        onClose={() => setShowSuccessModal(false)}
+        onOpenChange={setShowSuccessModal}
         orderNumber={placedOrderNumber}
         serviceName={placedServiceName}
         quantity={placedQuantity}
         totalPrice={placedTotalPrice}
-        onViewOrders={() => {
-          setShowSuccessModal(false);
-          navigate('/orders');
-        }}
         onNewOrder={() => {
           setShowSuccessModal(false);
           setSelectedServiceId("");
