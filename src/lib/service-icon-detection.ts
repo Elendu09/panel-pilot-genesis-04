@@ -4,87 +4,178 @@
 // ============= PLATFORM SHORTFORMS =============
 // Common abbreviations used as first word in service names
 export const PLATFORM_SHORTFORMS: Record<string, string> = {
-  // Major Platforms - Primary abbreviations
+  // ============ MAJOR PLATFORMS ============
+  // Instagram
   'ig': 'instagram',
   'insta': 'instagram',
   'gram': 'instagram',
+  'igtv': 'instagram',
+  'reels': 'instagram',
+  'инстаграм': 'instagram', // Russian
+  'инста': 'instagram',
+  
+  // Facebook
   'fb': 'facebook',
+  'facebook': 'facebook',
+  'фейсбук': 'facebook', // Russian
+  
+  // Twitter/X
   'tw': 'twitter',
   'x': 'twitter',
+  'twtr': 'twitter',
+  'tweet': 'twitter',
+  'twitter': 'twitter',
+  'твиттер': 'twitter', // Russian
+  
+  // YouTube
   'yt': 'youtube',
   'tube': 'youtube',
+  'ytb': 'youtube',
+  'youtube': 'youtube',
+  'shorts': 'youtube',
+  'ютуб': 'youtube', // Russian
+  
+  // TikTok
   'tt': 'tiktok',
   'tok': 'tiktok',
+  'tiktok': 'tiktok',
+  'тикток': 'tiktok', // Russian
+  
+  // Telegram
   'tg': 'telegram',
   'telg': 'telegram',
+  'телеграм': 'telegram', // Russian
+  
+  // LinkedIn
   'li': 'linkedin',
   'ln': 'linkedin',
   'lkdn': 'linkedin',
+  'lnkd': 'linkedin',
+  
+  // Snapchat
   'sc': 'snapchat',
   'snap': 'snapchat',
+  
+  // Pinterest
   'pt': 'pinterest',
   'pin': 'pinterest',
-  'wa': 'whatsapp',
-  'dc': 'discord',
+  'pnt': 'pinterest',
   
-  // VK variations
+  // WhatsApp
+  'wa': 'whatsapp',
+  'whtsp': 'whatsapp',
+  'whatsapp': 'whatsapp',
+  
+  // Discord
+  'dc': 'discord',
+  'disc': 'discord',
+  
+  // ============ VK VARIATIONS ============
   'vk': 'vk',
   'vk.com': 'vk',
   'vkontakte': 'vk',
   'вк': 'vk', // Russian
+  'вконтакте': 'vk', // Russian full
   'vkcom': 'vk',
   
-  // Music Platforms
-  'sp': 'spotify',
-  'spfy': 'spotify',
-  'spot': 'spotify',
-  'am': 'audiomack',
-  'audio': 'audiomack',
-  'mack': 'audiomack',
-  'scl': 'soundcloud',
-  'scloud': 'soundcloud',
-  'dz': 'deezer',
-  'shz': 'shazam',
-  'td': 'tidal',
-  'rv': 'reverbnation',
-  'mc': 'mixcloud',
-  'np': 'napster',
-  'apm': 'applemusic',
-  'amz': 'amazonmusic',
-  'ih': 'iheart',
-  
-  // Streaming/Video
-  'twt': 'twitch',
-  'rb': 'rumble',
-  'dm': 'dailymotion',
-  'bb': 'bilibili',
-  'bili': 'bilibili',
-  'od': 'odysee',
-  'kk': 'kick',
-  'tv': 'trovo',
-  
-  // Other Social
+  // ============ THREADS ============
   'th': 'threads',
   'thrd': 'threads',
   'thread': 'threads',
-  'rd': 'reddit',
-  'qr': 'quora',
-  'tm': 'tumblr',
-  'md': 'medium',
-  'ptr': 'patreon',
-  'lk': 'likee',
-  'kw': 'kwai',
-  'ch': 'clubhouse',
-  'wb': 'weibo',
-  'br': 'bereal',
-  'l8': 'lemon8',
-  'ln8': 'line',
+  'threads': 'threads',
   
-  // Gaming
+  // ============ MUSIC PLATFORMS ============
+  // Spotify
+  'sp': 'spotify',
+  'spfy': 'spotify',
+  'spot': 'spotify',
+  'spc': 'spotify',
+  'spotify': 'spotify',
+  
+  // Audiomack
+  'am': 'audiomack',
+  'aud': 'audiomack',
+  'audio': 'audiomack',
+  'mack': 'audiomack',
+  'audiomack': 'audiomack',
+  
+  // SoundCloud
+  'scl': 'soundcloud',
+  'scloud': 'soundcloud',
+  'snc': 'soundcloud',
+  'soundcloud': 'soundcloud',
+  
+  // Other Music
+  'dz': 'deezer',
+  'deezer': 'deezer',
+  'shz': 'shazam',
+  'shazam': 'shazam',
+  'td': 'tidal',
+  'tidal': 'tidal',
+  'rv': 'reverbnation',
+  'reverb': 'reverbnation',
+  'mc': 'mixcloud',
+  'mixcloud': 'mixcloud',
+  'np': 'napster',
+  'napster': 'napster',
+  'apm': 'applemusic',
+  'apple': 'applemusic',
+  'amz': 'amazonmusic',
+  'amazon': 'amazonmusic',
+  'ih': 'iheart',
+  'iheart': 'iheart',
+  
+  // ============ STREAMING/VIDEO ============
+  'twt': 'twitch',
+  'twitch': 'twitch',
+  'rb': 'rumble',
+  'rumble': 'rumble',
+  'dm': 'dailymotion',
+  'daily': 'dailymotion',
+  'bb': 'bilibili',
+  'bili': 'bilibili',
+  'bilibili': 'bilibili',
+  'od': 'odysee',
+  'odysee': 'odysee',
+  'kk': 'kick',
+  'kick': 'kick',
+  'tv': 'trovo',
+  'trovo': 'trovo',
+  
+  // ============ OTHER SOCIAL ============
+  'rd': 'reddit',
+  'reddit': 'reddit',
+  'qr': 'quora',
+  'quora': 'quora',
+  'tm': 'tumblr',
+  'tumblr': 'tumblr',
+  'md': 'medium',
+  'medium': 'medium',
+  'ptr': 'patreon',
+  'patreon': 'patreon',
+  'lk': 'likee',
+  'likee': 'likee',
+  'kw': 'kwai',
+  'kwai': 'kwai',
+  'ch': 'clubhouse',
+  'clubhouse': 'clubhouse',
+  'wb': 'weibo',
+  'weibo': 'weibo',
+  'sina': 'weibo',
+  'br': 'bereal',
+  'bereal': 'bereal',
+  'l8': 'lemon8',
+  'lemon8': 'lemon8',
+  'ln8': 'line',
+  'line': 'line',
+  
+  // ============ GAMING ============
   'rx': 'roblox',
   'rbx': 'roblox',
   'rob': 'roblox',
+  'roblox': 'roblox',
   'stm': 'steam',
+  'steam': 'steam',
   'valve': 'steam',
 };
 
@@ -367,27 +458,29 @@ export const SERVICE_TYPE_PRIORITY = [
 export const SERVICE_TYPE_KEYWORDS: Record<string, string[]> = {
   followers: [
     "follower", "followers", "follow", "subs", "subscriber", "subscribers",
+    "fans", "fan", "audience", "connections", "friends",
   ],
   likes: [
-    "like", "likes", "heart", "hearts", "love", "reactions",
+    "like", "likes", "heart", "hearts", "love", "reactions", "upvote", "upvotes",
   ],
   views: [
-    "view", "views", "watch", "watches", "impressions", "reach",
+    "view", "views", "watch", "watches", "impressions", "reach", "visitors",
   ],
   comments: [
-    "comment", "comments", "reply", "replies", "respond",
+    "comment", "comments", "reply", "replies", "respond", "responses",
   ],
   shares: [
-    "share", "shares", "retweet", "repost", "reposts",
+    "share", "shares", "retweet", "retweets", "repost", "reposts", "reblog",
   ],
   saves: [
-    "save", "saves", "bookmark", "bookmarks",
+    "save", "saves", "bookmark", "bookmarks", "collection",
   ],
   members: [
-    "member", "members", "group member", "channel member",
+    "member", "members", "group member", "channel member", "join",
   ],
   plays: [
-    "play", "plays", "stream", "streams", "listen", "listens",
+    "play", "plays", "stream", "streams", "listen", "listens", 
+    "monthly listeners", "downloads", "download", "spins",
   ],
 };
 
