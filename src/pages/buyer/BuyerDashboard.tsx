@@ -34,6 +34,7 @@ import { useBuyerAuth } from "@/contexts/BuyerAuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import BuyerLayout from "./BuyerLayout";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Order {
   id: string;
@@ -52,6 +53,7 @@ const BuyerDashboard = () => {
   const { buyer, loading: authLoading } = useBuyerAuth();
   const { services, loading: servicesLoading } = useTenantServices(panel?.id);
   const { toast } = useToast();
+  const { t } = useLanguage();
   const [stats, setStats] = useState({
     totalOrders: 0,
     pendingOrders: 0,
@@ -143,7 +145,7 @@ const BuyerDashboard = () => {
         toast({ title: 'Could not send email', description: data?.error || 'Please try again later.', variant: 'destructive' });
         return;
       }
-      toast({ title: 'Verification email sent', description: 'Check your inbox to verify your email.' });
+      toast({ title: t('dashboard.verification_sent'), description: t('dashboard.check_inbox') });
     } catch (err: any) {
       console.error('Verification send error', err);
     }
@@ -183,30 +185,30 @@ const BuyerDashboard = () => {
 
   const statsCards = [
     { 
-      title: 'Balance', 
+      title: t('dashboard.balance'), 
       value: `$${balance.toFixed(2)}`, 
       icon: Wallet, 
       gradient: 'from-emerald-500 to-emerald-600', 
       bg: 'bg-emerald-500/10',
-      action: { label: 'Add Funds', href: '/deposit' }
+      action: { label: t('nav.deposit'), href: '/deposit' }
     },
     { 
-      title: 'Total Orders', 
+      title: t('dashboard.total_orders'), 
       value: stats.totalOrders, 
       icon: ShoppingCart, 
       gradient: 'from-blue-500 to-blue-600', 
       bg: 'bg-blue-500/10',
-      action: { label: 'View All', href: '/orders' }
+      action: { label: t('common.view_all'), href: '/orders' }
     },
     { 
-      title: 'Pending', 
+      title: t('dashboard.pending'), 
       value: stats.pendingOrders, 
       icon: Clock, 
       gradient: 'from-amber-500 to-amber-600', 
       bg: 'bg-amber-500/10' 
     },
     { 
-      title: 'Completed', 
+      title: t('dashboard.completed'), 
       value: stats.completedOrders, 
       icon: CheckCircle, 
       gradient: 'from-violet-500 to-violet-600', 
@@ -215,16 +217,16 @@ const BuyerDashboard = () => {
   ];
 
   const kanbanColumns = [
-    { title: 'Pending', status: 'pending', icon: Clock, gradient: 'from-amber-500 to-amber-600', bg: 'bg-amber-500/10', textColor: 'text-amber-500', borderColor: 'border-amber-500/30' },
-    { title: 'In Progress', status: 'in_progress', icon: Loader2, gradient: 'from-blue-500 to-blue-600', bg: 'bg-blue-500/10', textColor: 'text-blue-500', borderColor: 'border-blue-500/30' },
-    { title: 'Completed', status: 'completed', icon: CheckCircle, gradient: 'from-emerald-500 to-emerald-600', bg: 'bg-emerald-500/10', textColor: 'text-emerald-500', borderColor: 'border-emerald-500/30' },
+    { title: t('dashboard.pending'), status: 'pending', icon: Clock, gradient: 'from-amber-500 to-amber-600', bg: 'bg-amber-500/10', textColor: 'text-amber-500', borderColor: 'border-amber-500/30' },
+    { title: t('dashboard.in_progress'), status: 'in_progress', icon: Loader2, gradient: 'from-blue-500 to-blue-600', bg: 'bg-blue-500/10', textColor: 'text-blue-500', borderColor: 'border-blue-500/30' },
+    { title: t('dashboard.completed'), status: 'completed', icon: CheckCircle, gradient: 'from-emerald-500 to-emerald-600', bg: 'bg-emerald-500/10', textColor: 'text-emerald-500', borderColor: 'border-emerald-500/30' },
   ];
 
   const quickActions = [
-    { name: 'My Orders', icon: ClipboardList, href: '/orders', gradient: 'from-blue-500 to-blue-600' },
-    { name: 'New Order', icon: Package, href: '/services', gradient: 'from-violet-500 to-violet-600' },
-    { name: 'Add Funds', icon: CreditCard, href: '/deposit', gradient: 'from-emerald-500 to-emerald-600' },
-    { name: 'Support', icon: Zap, href: '/support', gradient: 'from-amber-500 to-amber-600' },
+    { name: t('nav.orders'), icon: ClipboardList, href: '/orders', gradient: 'from-blue-500 to-blue-600' },
+    { name: t('nav.new_order'), icon: Package, href: '/services', gradient: 'from-violet-500 to-violet-600' },
+    { name: t('nav.deposit'), icon: CreditCard, href: '/deposit', gradient: 'from-emerald-500 to-emerald-600' },
+    { name: t('nav.support'), icon: Zap, href: '/support', gradient: 'from-amber-500 to-amber-600' },
   ];
 
   // Show loading state while auth/panel is being determined
@@ -246,10 +248,10 @@ const BuyerDashboard = () => {
           <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
             <Wallet className="w-8 h-8 text-muted-foreground" />
           </div>
-          <h2 className="text-xl font-bold mb-2">Please Sign In</h2>
-          <p className="text-muted-foreground mb-6">You need to be logged in to view your dashboard</p>
+          <h2 className="text-xl font-bold mb-2">{t('auth.please_sign_in')}</h2>
+          <p className="text-muted-foreground mb-6">{t('auth.need_login')}</p>
           <Button asChild>
-            <Link to="/auth">Sign In</Link>
+            <Link to="/auth">{t('auth.sign_in')}</Link>
           </Button>
         </div>
       </BuyerLayout>
@@ -264,10 +266,10 @@ const BuyerDashboard = () => {
           <div className="w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-500/10 flex items-center justify-center mb-4">
             <AlertTriangle className="w-8 h-8 text-amber-500" />
           </div>
-          <h2 className="text-xl font-bold mb-2">Dashboard temporarily unavailable</h2>
+          <h2 className="text-xl font-bold mb-2">{t('error.dashboard_unavailable')}</h2>
           <p className="text-muted-foreground mb-4 text-sm max-w-md">{error}</p>
           <Button onClick={fetchBuyerData}>
-            Retry
+            {t('common.retry')}
           </Button>
         </div>
       </BuyerLayout>
@@ -293,7 +295,7 @@ const BuyerDashboard = () => {
                 <Mail className="w-4 h-4 text-blue-500" />
               </div>
               <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
-                Verify your email
+                {t('dashboard.verify_email')}
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -302,7 +304,7 @@ const BuyerDashboard = () => {
                 onClick={handleSendVerification}
                 className="h-7 px-3 bg-blue-500 hover:bg-blue-600 text-white text-xs"
               >
-                Send
+                {t('common.send')}
               </Button>
               <Button 
                 variant="ghost" 
@@ -320,25 +322,25 @@ const BuyerDashboard = () => {
         <motion.div variants={itemVariants} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h1 className="text-xl md:text-2xl lg:text-3xl font-bold flex items-center gap-2">
-              Welcome back{buyer?.full_name ? `, ${buyer.full_name.split(' ')[0]}` : ''}! 👋
+              {t('dashboard.welcome')}{buyer?.full_name ? `, ${buyer.full_name.split(' ')[0]}` : ''}! 👋
               {/* Facebook-style blue checkmark for verified users */}
               {!showVerifyBanner && (
                 <BadgeCheck className="w-5 h-5 md:w-6 md:h-6 text-blue-500 fill-blue-500/20" />
               )}
             </h1>
-            <p className="text-sm text-muted-foreground">Here's your account overview</p>
+            <p className="text-sm text-muted-foreground">{t('dashboard.overview')}</p>
           </div>
           <div className="flex items-center gap-2 self-start sm:self-auto">
             <Button variant="outline" size="sm" asChild className="gap-2">
               <Link to="/services">
                 <Package className="w-4 h-4" />
-                <span className="hidden sm:inline">New Order</span>
+                <span className="hidden sm:inline">{t('nav.new_order')}</span>
               </Link>
             </Button>
             <Button size="sm" asChild className="gap-2">
               <Link to="/orders">
                 <ClipboardList className="w-4 h-4" />
-                My Orders
+                {t('nav.orders')}
               </Link>
             </Button>
           </div>
@@ -418,11 +420,11 @@ const BuyerDashboard = () => {
           <div className="flex items-center justify-between mb-3 md:mb-4">
             <h2 className="text-lg md:text-xl font-bold flex items-center gap-2">
               <Activity className="w-4 h-4 md:w-5 md:h-5 text-primary" />
-              Recent Orders
+              {t('dashboard.recent_orders')}
             </h2>
             <Button variant="outline" size="sm" asChild className="text-xs md:text-sm">
               <Link to="/orders" className="gap-1 md:gap-2">
-                View All <ArrowRight className="w-3 h-3 md:w-4 md:h-4" />
+                {t('common.view_all')} <ArrowRight className="w-3 h-3 md:w-4 md:h-4" />
               </Link>
             </Button>
           </div>

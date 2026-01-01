@@ -35,6 +35,7 @@ import { BuyerNotifications } from "@/components/buyer/BuyerNotifications";
 import { LanguageSelector } from "@/components/buyer/LanguageSelector";
 import { CurrencySelector } from "@/components/buyer/CurrencySelector";
 import { TenantHead } from "@/components/tenant/TenantHead";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface BuyerLayoutProps {
   children?: React.ReactNode;
@@ -51,6 +52,7 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
   const location = useLocation();
   const { panel } = useTenant();
   const { buyer, signOut } = useBuyerAuth();
+  const { t } = useLanguage();
   const [panelSettings, setPanelSettings] = useState<PanelSettings | null>(null);
   const [cartCount, setCartCount] = useState(0);
 
@@ -92,23 +94,23 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
 
   // Desktop navigation - No "New Order" as separate item, "My Orders" is primary
   const navigation = [
-    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-    { name: 'Services', href: '/services', icon: Package },
-    { name: 'My Orders', href: '/orders', icon: ShoppingCart },
-    { name: 'Track Order', href: '/track-order', icon: Search },
-    { name: 'Favorites', href: '/favorites', icon: Heart },
-    { name: 'Add Funds', href: '/deposit', icon: Wallet },
-    { name: 'Support', href: '/support', icon: MessageSquare },
-    { name: 'Profile', href: '/profile', icon: User },
+    { name: t('nav.dashboard'), href: '/dashboard', icon: LayoutDashboard },
+    { name: t('nav.services'), href: '/services', icon: Package },
+    { name: t('nav.orders'), href: '/orders', icon: ShoppingCart },
+    { name: t('nav.track_order'), href: '/track-order', icon: Search },
+    { name: t('nav.favorites'), href: '/favorites', icon: Heart },
+    { name: t('nav.deposit'), href: '/deposit', icon: Wallet },
+    { name: t('nav.support'), href: '/support', icon: MessageSquare },
+    { name: t('nav.profile'), href: '/profile', icon: User },
   ];
 
   // Bottom nav items: Dashboard, Services, New Order (center, goes to services), Support, More
   const bottomNavItems = [
-    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-    { name: 'Services', href: '/services', icon: Package, badge: cartCount > 0 ? cartCount : undefined },
-    { name: 'New Order', href: '/services', icon: ShoppingCart, isCenter: true },
-    { name: 'Support', href: '/support', icon: HeadphonesIcon },
-    { name: 'More', href: '#menu', icon: Menu, isMenu: true },
+    { name: t('nav.dashboard'), href: '/dashboard', icon: LayoutDashboard },
+    { name: t('nav.services'), href: '/services', icon: Package, badge: cartCount > 0 ? cartCount : undefined },
+    { name: t('nav.new_order'), href: '/services', icon: ShoppingCart, isCenter: true },
+    { name: t('nav.support'), href: '/support', icon: HeadphonesIcon },
+    { name: t('nav.more'), href: '#menu', icon: Menu, isMenu: true },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -154,7 +156,7 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
             )}
             <div>
               <h2 className="text-base font-bold">{panel?.name || 'Panel'}</h2>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">SMM Services</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{t('nav.smm_services')}</p>
             </div>
           </div>
         </div>
@@ -167,14 +169,14 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
                 <Wallet className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Your Balance</p>
+                <p className="text-xs text-muted-foreground">{t('nav.your_balance')}</p>
                 <p className="text-xl font-bold">${userBalance.toFixed(2)}</p>
               </div>
             </div>
             <Button size="sm" className="w-full mt-3 gap-2" asChild>
               <Link to="/deposit">
                 <CreditCard className="w-4 h-4" />
-                Add Funds
+                {t('nav.deposit')}
               </Link>
             </Button>
           </div>
@@ -344,7 +346,7 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
                   </SheetTrigger>
                   <SheetContent side="bottom" className="h-auto max-h-[85vh] rounded-t-3xl">
                     <SheetHeader className="pb-4">
-                      <SheetTitle>Menu</SheetTitle>
+                      <SheetTitle>{t('nav.menu')}</SheetTitle>
                     </SheetHeader>
                     <div className="space-y-2 pb-6 overflow-y-auto max-h-[65vh]">
                       {/* User Info */}
@@ -373,7 +375,7 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
                           <div className="p-2 rounded-lg bg-primary/20">
                             <Layers className="w-5 h-5 text-primary" />
                           </div>
-                          <span className="text-xs font-medium text-center">Bulk Order</span>
+                          <span className="text-xs font-medium text-center">{t('nav.bulk_order')}</span>
                         </Link>
                         <Link
                           to="/blog"
@@ -383,7 +385,7 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
                           <div className="p-2 rounded-lg bg-blue-500/10">
                             <BookOpen className="w-5 h-5 text-blue-500" />
                           </div>
-                          <span className="text-xs font-medium text-center">Blog</span>
+                          <span className="text-xs font-medium text-center">{t('nav.blog')}</span>
                         </Link>
                         <Link
                           to="/api"
@@ -393,7 +395,7 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
                           <div className="p-2 rounded-lg bg-purple-500/10">
                             <Code className="w-5 h-5 text-purple-500" />
                           </div>
-                          <span className="text-xs font-medium text-center">API</span>
+                          <span className="text-xs font-medium text-center">{t('nav.api')}</span>
                         </Link>
                       </div>
 
