@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { detectPlatformEnhanced, detectServiceType, SERVICE_TYPE_PRIORITY, getSubCategory } from "@/lib/service-icon-detection";
+import { detectPlatformEnhanced, detectServiceType, SERVICE_TYPE_PRIORITY, getSubCategory, getQualityOrder } from "@/lib/service-icon-detection";
 import { toast } from "@/hooks/use-toast";
 import { SOCIAL_ICONS_MAP } from "@/components/icons/SocialIcons";
 
@@ -252,18 +252,25 @@ export const SmartOrganizeDialog = ({
       setProgress({ phase: 'organizing', current: 0, total: analyzed.length, message: 'Organizing by category & type...' });
       
       const sortedServices = [...analyzed].sort((a, b) => {
-        // First by category (platform)
+        // 1. Sort by category (platform)
         const catCompare = a.newCategory.localeCompare(b.newCategory);
         if (catCompare !== 0) return catCompare;
         
-        // Then by service type priority
+        // 2. Sort by service type priority (followers, likes, views, etc.)
         const aTypeIndex = SERVICE_TYPE_PRIORITY.indexOf(a.serviceType) !== -1 
           ? SERVICE_TYPE_PRIORITY.indexOf(a.serviceType) 
           : SERVICE_TYPE_PRIORITY.length;
         const bTypeIndex = SERVICE_TYPE_PRIORITY.indexOf(b.serviceType) !== -1 
           ? SERVICE_TYPE_PRIORITY.indexOf(b.serviceType) 
           : SERVICE_TYPE_PRIORITY.length;
-        return aTypeIndex - bTypeIndex;
+        if (aTypeIndex !== bTypeIndex) return aTypeIndex - bTypeIndex;
+        
+        // 3. Sort by quality (premium > fast > standard > cheap)
+        const qualityCompare = getQualityOrder(a.name) - getQualityOrder(b.name);
+        if (qualityCompare !== 0) return qualityCompare;
+        
+        // 4. Alphabetical fallback
+        return a.name.localeCompare(b.name);
       });
       
       // Update display_order for all services
@@ -356,7 +363,16 @@ export const SmartOrganizeDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent 
+        className="sm:max-w-md"
+        onEscapeKeyDown={(e) => {
+          if (['completed', 'error'].includes(progress.phase)) {
+            onOpenChange(false);
+          } else {
+            e.preventDefault(); // Prevent closing during processing
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {phaseIcons[progress.phase]}

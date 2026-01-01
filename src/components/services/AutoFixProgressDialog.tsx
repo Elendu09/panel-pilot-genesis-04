@@ -75,7 +75,16 @@ export const AutoFixProgressDialog = ({
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent 
+        className="sm:max-w-md"
+        onEscapeKeyDown={(e) => {
+          if (['completed', 'error'].includes(progress.phase)) {
+            onOpenChange(false);
+          } else {
+            e.preventDefault(); // Prevent closing during processing
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <div className={cn(

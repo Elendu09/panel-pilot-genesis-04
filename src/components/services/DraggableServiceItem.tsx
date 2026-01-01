@@ -138,47 +138,49 @@ export const DraggableServiceItem = ({
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         className={cn(
-          "glass-card p-4 rounded-xl transition-all",
+          "glass-card p-3 sm:p-4 rounded-xl transition-all",
           isSelected && "ring-2 ring-primary",
           isDragging && "shadow-2xl z-50"
         )}
       >
         {/* Header with drag handle and checkbox */}
-        <div className="flex items-center gap-3 mb-3">
+        <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
           <button
             {...attributes}
             {...listeners}
-            className="touch-none p-1 rounded hover:bg-accent cursor-grab active:cursor-grabbing"
+            className="touch-none p-0.5 sm:p-1 rounded hover:bg-accent cursor-grab active:cursor-grabbing"
           >
-            <GripVertical className="w-4 h-4 text-muted-foreground" />
+            <GripVertical className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
           </button>
           <Checkbox
             checked={isSelected}
             onCheckedChange={() => onToggleSelect(service.id)}
+            className="h-4 w-4"
           />
-          <Badge variant="outline" className="text-xs">
+          <Badge variant="outline" className="text-[10px] sm:text-xs px-1.5">
             #{service.displayId}
           </Badge>
           <div className="flex-1" />
           <Switch
             checked={service.status}
             onCheckedChange={() => onToggleStatus(service.id)}
+            className="scale-75 sm:scale-100"
           />
         </div>
 
         {/* Service Info */}
-        <div className="flex items-start gap-3">
-          <div className="p-2 rounded-lg bg-primary/10">
+        <div className="flex items-start gap-2 sm:gap-3">
+          <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10 shrink-0">
             <ServiceIcon imageUrl={service.imageUrl} category={service.category} size="medium" />
           </div>
           <div className="flex-1 min-w-0">
-            <h4 className="font-medium text-sm truncate">{service.name}</h4>
-            <p className="text-xs text-muted-foreground">{service.provider}</p>
-            <div className="flex items-center gap-2 mt-1">
-              <Badge variant="secondary" className="text-xs capitalize">
+            <h4 className="font-medium text-xs sm:text-sm line-clamp-2">{service.name}</h4>
+            <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{service.provider}</p>
+            <div className="flex flex-wrap items-center gap-1 sm:gap-2 mt-1">
+              <Badge variant="secondary" className="text-[10px] sm:text-xs capitalize px-1.5">
                 {service.category}
               </Badge>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-[10px] sm:text-xs text-muted-foreground">
                 {service.minQty.toLocaleString()} - {service.maxQty.toLocaleString()}
               </span>
             </div>
@@ -186,26 +188,26 @@ export const DraggableServiceItem = ({
         </div>
 
         {/* Pricing & Stats */}
-        <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/50">
-          <div>
-            <span className="text-lg font-bold text-primary">${service.price.toFixed(4)}</span>
-            <span className="text-xs text-muted-foreground ml-1">/ 1k</span>
+        <div className="flex items-center justify-between mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-border/50">
+          <div className="flex flex-col sm:flex-row sm:items-baseline">
+            <span className="text-sm sm:text-lg font-bold text-primary">${service.price.toFixed(4)}</span>
+            <span className="text-[10px] sm:text-xs text-muted-foreground sm:ml-1">/ 1k</span>
             <Badge variant="outline" className={cn(
-              "ml-2 text-xs",
+              "mt-0.5 sm:mt-0 sm:ml-2 text-[10px] sm:text-xs w-fit px-1",
               Number(profitMargin) >= 25 ? "text-emerald-500" : Number(profitMargin) >= 10 ? "text-amber-500" : "text-red-500"
             )}>
               +{profitMargin}%
             </Badge>
           </div>
-          <div className="flex items-center gap-1">
-            <Button size="icon" variant="ghost" onClick={() => onView(service)}>
-              <Eye className="w-4 h-4" />
+          <div className="flex items-center gap-0.5 sm:gap-1">
+            <Button size="icon" variant="ghost" className="h-7 w-7 sm:h-8 sm:w-8" onClick={() => onView(service)}>
+              <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </Button>
-            <Button size="icon" variant="ghost" onClick={() => onEdit(service)}>
-              <Edit className="w-4 h-4" />
+            <Button size="icon" variant="ghost" className="h-7 w-7 sm:h-8 sm:w-8" onClick={() => onEdit(service)}>
+              <Edit className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </Button>
-            <Button size="icon" variant="ghost" className="text-destructive" onClick={() => onDelete(service.id)}>
-              <Trash2 className="w-4 h-4" />
+            <Button size="icon" variant="ghost" className="h-7 w-7 sm:h-8 sm:w-8 text-destructive" onClick={() => onDelete(service.id)}>
+              <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </Button>
           </div>
         </div>
