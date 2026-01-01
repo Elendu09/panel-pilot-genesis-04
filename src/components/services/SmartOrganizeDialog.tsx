@@ -299,9 +299,18 @@ export const SmartOrganizeDialog = ({
         });
       }
       
-      // Phase 5: Update category counts
+      // Phase 5: Update category counts with delay to ensure DB propagation
       setProgress({ phase: 'categorizing', current: 0, total: 1, message: 'Updating category counts...' });
+      
+      // First refresh
       await onRefreshCounts();
+      
+      // Small delay to ensure Supabase has propagated all changes
+      await new Promise(r => setTimeout(r, 800));
+      
+      // Second refresh for accuracy
+      await onRefreshCounts();
+      
       setProgress({ phase: 'categorizing', current: 1, total: 1, message: 'Category counts updated!' });
       
       // Complete

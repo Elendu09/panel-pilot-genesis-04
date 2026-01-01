@@ -40,7 +40,6 @@ import AuditLogs from "./admin/AuditLogs";
 import AdminMoreMenu from "./admin/AdminMoreMenu";
 import WebhookManagement from "./admin/WebhookManagement";
 import SystemHealth from "./admin/SystemHealth";
-import ProviderManagement from "./admin/ProviderManagement";
 import PlatformProviderManagement from "./admin/PlatformProviderManagement";
 import AnnouncementsManagement from "./admin/AnnouncementsManagement";
 import ReportsExport from "./admin/ReportsExport";
@@ -70,7 +69,6 @@ const SuperAdminDashboard = () => {
         { name: 'Panels', href: '/admin/panels', icon: BarChart3 },
         { name: 'Users', href: '/admin/users', icon: Users },
         { name: 'Domains', href: '/admin/domains', icon: Globe },
-        { name: 'Panel Providers', href: '/admin/providers', icon: Server },
         { name: 'Platform Providers', href: '/admin/platform-providers', icon: Server },
       ]
     },
@@ -222,7 +220,6 @@ const SuperAdminDashboard = () => {
           <Route path="tickets" element={<SupportTickets />} />
           <Route path="webhooks" element={<WebhookManagement />} />
           <Route path="system" element={<SystemHealth />} />
-          <Route path="providers" element={<ProviderManagement />} />
           <Route path="platform-providers" element={<PlatformProviderManagement />} />
           <Route path="announcements" element={<AnnouncementsManagement />} />
           <Route path="reports" element={<ReportsExport />} />
