@@ -23,7 +23,8 @@ import {
   AlertTriangle,
   Mail,
   X,
-  BadgeCheck
+  BadgeCheck,
+  ClipboardList
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -220,8 +221,8 @@ const BuyerDashboard = () => {
   ];
 
   const quickActions = [
-    { name: 'New Order', icon: Package, href: '/services', gradient: 'from-blue-500 to-blue-600' },
-    { name: 'My Orders', icon: ShoppingCart, href: '/orders', gradient: 'from-violet-500 to-violet-600' },
+    { name: 'My Orders', icon: ClipboardList, href: '/orders', gradient: 'from-blue-500 to-blue-600' },
+    { name: 'New Order', icon: Package, href: '/services', gradient: 'from-violet-500 to-violet-600' },
     { name: 'Add Funds', icon: CreditCard, href: '/deposit', gradient: 'from-emerald-500 to-emerald-600' },
     { name: 'Support', icon: Zap, href: '/support', gradient: 'from-amber-500 to-amber-600' },
   ];
@@ -329,15 +330,15 @@ const BuyerDashboard = () => {
           </div>
           <div className="flex items-center gap-2 self-start sm:self-auto">
             <Button variant="outline" size="sm" asChild className="gap-2">
-              <Link to="/orders">
-                <History className="w-4 h-4" />
-                <span className="hidden sm:inline">History</span>
+              <Link to="/services">
+                <Package className="w-4 h-4" />
+                <span className="hidden sm:inline">New Order</span>
               </Link>
             </Button>
             <Button size="sm" asChild className="gap-2">
-              <Link to="/services">
-                <Package className="w-4 h-4" />
-                New Order
+              <Link to="/orders">
+                <ClipboardList className="w-4 h-4" />
+                My Orders
               </Link>
             </Button>
           </div>

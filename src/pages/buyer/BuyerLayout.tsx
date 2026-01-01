@@ -19,6 +19,7 @@ import {
   FileText,
   Layers,
   Search,
+  Plus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -101,11 +102,11 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
     { name: 'Profile', href: '/profile', icon: User },
   ];
 
-  // Bottom nav items: Dashboard, Services, My Order (center, goes to orders), Support, More
+  // Bottom nav items: Dashboard, Services, New Order (center, goes to services), Support, More
   const bottomNavItems = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Services', href: '/services', icon: Package, badge: cartCount > 0 ? cartCount : undefined },
-    { name: 'My Order', href: '/orders', icon: ClipboardList, isCenter: true },
+    { name: 'New Order', href: '/services', icon: ShoppingCart, isCenter: true },
     { name: 'Support', href: '/support', icon: HeadphonesIcon },
     { name: 'More', href: '#menu', icon: Menu, isMenu: true },
   ];
@@ -286,13 +287,15 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
           <span className="font-bold text-sm">{panel?.name || 'Panel'}</span>
         </div>
         <div className="flex items-center gap-1.5">
-          {/* Balance + Add Funds Button */}
-          <Link to="/deposit" className="flex items-center gap-1 px-2 py-1 rounded-full bg-slate-800/90 dark:bg-slate-800/90 hover:bg-slate-700/90 transition-all">
-            <span className="text-xs font-semibold text-white">${userBalance.toFixed(2)}</span>
-            <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-              <CreditCard className="w-3 h-3 text-primary-foreground" />
-            </div>
-          </Link>
+          {/* Balance + Add Funds Button - Enhanced for mobile */}
+          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+            <Link to="/deposit" className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-800/90 dark:bg-slate-800/90 hover:bg-slate-700/90 transition-all shadow-lg">
+              <span className="text-sm font-bold text-white">${userBalance.toFixed(2)}</span>
+              <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
+                <Plus className="w-4 h-4 text-primary-foreground" />
+              </div>
+            </Link>
+          </motion.div>
           <LanguageSelector />
           <CurrencySelector />
           <BuyerNotifications />
