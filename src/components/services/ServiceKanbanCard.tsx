@@ -170,19 +170,19 @@ export const ServiceKanbanCard = ({
           </div>
 
           {/* Pricing */}
-          <div className="flex items-center justify-between pt-2 border-t border-border/50">
-            <div className="flex flex-col sm:flex-row sm:items-baseline">
+          <div className="flex items-center justify-between pt-2 border-t border-border/50 overflow-hidden gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-baseline flex-shrink-0 min-w-0">
               <span className="text-sm sm:text-lg font-bold text-primary">${service.price.toFixed(4)}</span>
               <span className="text-[10px] sm:text-xs text-muted-foreground sm:ml-1">/ 1k</span>
             </div>
-            <div className="flex flex-col sm:flex-row items-end sm:items-center gap-0.5 sm:gap-1">
-              <span className="text-[10px] sm:text-xs text-muted-foreground line-through">
+            <div className="flex flex-col sm:flex-row items-end sm:items-center gap-0.5 sm:gap-1 flex-shrink-0">
+              <span className="text-[10px] sm:text-xs text-muted-foreground line-through whitespace-nowrap">
                 ${service.originalPrice.toFixed(4)}
               </span>
               <Badge
                 variant="outline"
                 className={cn(
-                  "text-[10px] sm:text-xs px-1 sm:px-1.5",
+                  "text-[10px] sm:text-xs px-1 sm:px-1.5 whitespace-nowrap flex-shrink-0",
                   Number(profitMargin) >= 25
                     ? "text-emerald-500 border-emerald-500/30"
                     : Number(profitMargin) >= 10

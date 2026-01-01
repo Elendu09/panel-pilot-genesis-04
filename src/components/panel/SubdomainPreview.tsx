@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { 
   Monitor, 
   Tablet, 
@@ -11,7 +12,8 @@ import {
   CheckCircle,
   Globe,
   AlertTriangle,
-  Loader2
+  Loader2,
+  ImageOff
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
@@ -39,6 +41,8 @@ const SubdomainPreview = ({
   const [device, setDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [checking, setChecking] = useState(false);
   const [isReachable, setIsReachable] = useState<boolean | null>(null);
+  const [iframeLoading, setIframeLoading] = useState(true);
+  const [iframeError, setIframeError] = useState(false);
 
   const storefrontUrl = `https://${subdomain}.smmpilot.online`;
 
@@ -199,19 +203,60 @@ const SubdomainPreview = ({
 
         {/* Preview Frame */}
         <motion.div
-          className="mx-auto border border-border rounded-lg overflow-hidden bg-background"
+          className="mx-auto border border-border rounded-lg overflow-hidden bg-background relative"
           style={{ 
             maxWidth: deviceSizes[device].width,
             height: deviceSizes[device].height 
           }}
           layout
         >
-          <iframe
-            key={`${subdomain}-${device}`}
-            src={storefrontUrl}
-            className="w-full h-full border-0"
-            title="Subdomain Preview"
-          />
+          {/* Loading Skeleton */}
+          {iframeLoading && !iframeError && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted/50 gap-4">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              <span className="text-sm text-muted-foreground">Loading preview...</span>
+            </div>
+          )}
+
+          {/* Error Fallback */}
+          {iframeError ? (
+            <div className="flex flex-col items-center justify-center h-full gap-4 p-8 bg-muted/20">
+              <div className="p-4 rounded-full bg-muted">
+                <ImageOff className="w-10 h-10 text-muted-foreground" />
+              </div>
+              <div className="text-center space-y-2">
+                <h4 className="font-medium text-foreground">Preview not available</h4>
+                <p className="text-sm text-muted-foreground max-w-xs">
+                  The preview cannot be displayed here due to security restrictions. Open in a new tab to view your storefront.
+                </p>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => window.open(storefrontUrl, '_blank')}
+                className="gap-2"
+              >
+                <ExternalLink className="w-4 h-4" />
+                Open in New Tab
+              </Button>
+            </div>
+          ) : (
+            <iframe
+              key={`${subdomain}-${device}`}
+              src={storefrontUrl}
+              className={cn(
+                "w-full h-full border-0 transition-opacity duration-300",
+                iframeLoading ? "opacity-0" : "opacity-100"
+              )}
+              title="Subdomain Preview"
+              sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+              onLoad={() => setIframeLoading(false)}
+              onError={() => {
+                setIframeLoading(false);
+                setIframeError(true);
+              }}
+            />
+          )}
         </motion.div>
       </CardContent>
     </Card>
