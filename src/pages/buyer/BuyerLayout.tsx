@@ -11,19 +11,14 @@ import {
   CreditCard,
   HelpCircle,
   Menu,
-  Plus,
   ClipboardList,
   HeadphonesIcon,
   Heart,
   BookOpen,
   Code,
-  Phone,
   FileText,
   Layers,
   Search,
-  Shield,
-  Globe,
-  DollarSign
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -38,7 +33,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { BuyerNotifications } from "@/components/buyer/BuyerNotifications";
 import { LanguageSelector } from "@/components/buyer/LanguageSelector";
 import { CurrencySelector } from "@/components/buyer/CurrencySelector";
-import { useCurrency } from "@/contexts/CurrencyContext";
 import { TenantHead } from "@/components/tenant/TenantHead";
 
 interface BuyerLayoutProps {
@@ -95,6 +89,7 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
     };
   }, [panel?.id]);
 
+  // Desktop navigation - No "New Order" as separate item, "My Orders" is primary
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Services', href: '/services', icon: Package },
@@ -106,11 +101,11 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
     { name: 'Profile', href: '/profile', icon: User },
   ];
 
-  // Bottom nav items: Dashboard, Services, New Order (center), Support, More
+  // Bottom nav items: Dashboard, Services, My Order (center, goes to orders), Support, More
   const bottomNavItems = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Services', href: '/services', icon: Package, badge: cartCount > 0 ? cartCount : undefined },
-    { name: 'New Order', href: '/new-order', icon: Plus, isCenter: true },
+    { name: 'My Order', href: '/orders', icon: ClipboardList, isCenter: true },
     { name: 'Support', href: '/support', icon: HeadphonesIcon },
     { name: 'More', href: '#menu', icon: Menu, isMenu: true },
   ];
@@ -291,11 +286,11 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
           <span className="font-bold text-sm">{panel?.name || 'Panel'}</span>
         </div>
         <div className="flex items-center gap-1.5">
-          {/* Balance + Add Funds Button - Matching reference image */}
+          {/* Balance + Add Funds Button */}
           <Link to="/deposit" className="flex items-center gap-1 px-2 py-1 rounded-full bg-slate-800/90 dark:bg-slate-800/90 hover:bg-slate-700/90 transition-all">
             <span className="text-xs font-semibold text-white">${userBalance.toFixed(2)}</span>
             <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-              <Plus className="w-3 h-3 text-primary-foreground" />
+              <CreditCard className="w-3 h-3 text-primary-foreground" />
             </div>
           </Link>
           <LanguageSelector />
@@ -365,7 +360,7 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
                         </Badge>
                       </div>
 
-                      {/* Primary Actions - Matching reference image */}
+                      {/* Primary Actions */}
                       <div className="grid grid-cols-3 gap-3 mb-4">
                         <Link
                           to="/new-order"
@@ -406,64 +401,39 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
                           onClick={() => setMobileMenuOpen(false)}
                           className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-all"
                         >
-                          <HelpCircle className="w-5 h-5 text-green-500" />
-                          <span className="font-medium">Help</span>
+                          <HeadphonesIcon className="w-5 h-5 text-muted-foreground" />
+                          <span className="font-medium">Support</span>
+                        </Link>
+                        <Link
+                          to="/favorites"
+                          onClick={() => setMobileMenuOpen(false)}
+                          className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-all"
+                        >
+                          <Heart className="w-5 h-5 text-muted-foreground" />
+                          <span className="font-medium">Favorites</span>
+                        </Link>
+                        <Link
+                          to="/track-order"
+                          onClick={() => setMobileMenuOpen(false)}
+                          className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-all"
+                        >
+                          <Search className="w-5 h-5 text-muted-foreground" />
+                          <span className="font-medium">Track Order</span>
                         </Link>
                         <Link
                           to="/profile"
                           onClick={() => setMobileMenuOpen(false)}
                           className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-all"
                         >
-                          <User className="w-5 h-5 text-orange-500" />
+                          <User className="w-5 h-5 text-muted-foreground" />
                           <span className="font-medium">Profile</span>
-                        </Link>
-                      </div>
-
-                      {/* Divider */}
-                      <div className="border-t border-border/50 my-3" />
-
-                      {/* Preferences Section */}
-                      <div className="mb-4">
-                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 px-3">Preferences</p>
-                        <div className="flex items-center gap-2 px-3 py-2">
-                          <Globe className="w-4 h-4 text-muted-foreground" />
-                          <span className="text-sm flex-1">Language</span>
-                          <LanguageSelector />
-                        </div>
-                        <div className="flex items-center gap-2 px-3 py-2">
-                          <DollarSign className="w-4 h-4 text-muted-foreground" />
-                          <span className="text-sm flex-1">Currency</span>
-                          <CurrencySelector />
-                        </div>
-                      </div>
-
-                      {/* Divider */}
-                      <div className="border-t border-border/50 my-3" />
-
-                      {/* Secondary Links */}
-                      <div className="space-y-1">
-                        <Link
-                          to="/track-order"
-                          onClick={() => setMobileMenuOpen(false)}
-                          className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-all"
-                        >
-                          <Search className="w-5 h-5 text-blue-500" />
-                          <span className="font-medium">Track Order</span>
-                        </Link>
-                        <Link
-                          to="/contact"
-                          onClick={() => setMobileMenuOpen(false)}
-                          className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-all"
-                        >
-                          <Phone className="w-5 h-5 text-cyan-500" />
-                          <span className="font-medium">Contact Us</span>
                         </Link>
                         <Link
                           to="/terms"
                           onClick={() => setMobileMenuOpen(false)}
                           className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-all"
                         >
-                          <FileText className="w-5 h-5 text-gray-500" />
+                          <FileText className="w-5 h-5 text-muted-foreground" />
                           <span className="font-medium">Terms of Service</span>
                         </Link>
                         <Link
@@ -471,28 +441,30 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
                           onClick={() => setMobileMenuOpen(false)}
                           className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-all"
                         >
-                          <Shield className="w-5 h-5 text-green-500" />
+                          <FileText className="w-5 h-5 text-muted-foreground" />
                           <span className="font-medium">Privacy Policy</span>
                         </Link>
                       </div>
 
-                      {/* Divider */}
-                      <div className="border-t border-border/50 my-3" />
-
                       {/* Sign Out */}
-                      <button 
-                        onClick={() => { handleSignOut(); setMobileMenuOpen(false); }}
-                        className="w-full flex items-center gap-3 p-3 rounded-xl text-destructive hover:bg-destructive/10 transition-all"
+                      <Button 
+                        variant="outline" 
+                        className="w-full mt-4 gap-2" 
+                        onClick={() => {
+                          handleSignOut();
+                          setMobileMenuOpen(false);
+                        }}
                       >
-                        <LogOut className="w-5 h-5" />
-                        <span className="font-medium">Sign Out</span>
-                      </button>
+                        <LogOut className="w-4 h-4" />
+                        Sign Out
+                      </Button>
                     </div>
                   </SheetContent>
                 </Sheet>
               );
             }
 
+            // Center button (My Order)
             if (item.isCenter) {
               return (
                 <Link
@@ -500,48 +472,53 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
                   to={item.href}
                   className="relative -mt-6"
                 >
-                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/30 hover:scale-105 transition-transform">
-                    <item.icon className="w-6 h-6 text-primary-foreground" />
-                  </div>
-                  <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] font-medium text-primary whitespace-nowrap">
+                  <motion.div 
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className={cn(
+                      "w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg transition-all",
+                      isActive(item.href) 
+                        ? "bg-primary text-primary-foreground shadow-primary/30" 
+                        : "bg-primary/90 text-primary-foreground shadow-primary/20"
+                    )}
+                  >
+                    <item.icon className="w-6 h-6" />
+                  </motion.div>
+                  <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] font-medium whitespace-nowrap">
                     {item.name}
                   </span>
                 </Link>
               );
             }
 
+            // Regular nav item
             return (
               <Link
                 key={item.name}
                 to={item.href}
                 className={cn(
-                  "flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-colors relative",
+                  "flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all relative",
                   isActive(item.href) 
                     ? "text-primary" 
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                <div className="relative">
-                  <item.icon className="w-5 h-5" />
-                  {item.badge && (
-                    <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-primary text-[10px] font-bold text-primary-foreground rounded-full flex items-center justify-center">
-                      {item.badge}
-                    </span>
-                  )}
-                </div>
+                <item.icon className="w-5 h-5" />
                 <span className="text-[10px] font-medium">{item.name}</span>
-                {isActive(item.href) && (
-                  <motion.div 
-                    layoutId="bottomNavIndicator"
-                    className="absolute -bottom-1 w-1 h-1 rounded-full bg-primary"
-                  />
+                {item.badge && (
+                  <Badge 
+                    variant="default" 
+                    className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-[9px]"
+                  >
+                    {item.badge}
+                  </Badge>
                 )}
               </Link>
             );
           })}
         </div>
       </nav>
-      </div>
+    </div>
     </>
   );
 };

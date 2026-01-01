@@ -18,7 +18,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { 
-  ShoppingCart,
+  ShoppingCart as ShoppingCartIcon,
   Link as LinkIcon,
   Hash,
   ChevronDown,
@@ -27,7 +27,11 @@ import {
   Zap,
   CheckCircle2,
   AlertCircle,
-  Sparkles
+  Sparkles,
+  Globe,
+  Layers,
+  Package,
+  Plus
 } from "lucide-react";
 import { SOCIAL_ICONS_MAP } from "@/components/icons/SocialIcons";
 import { motion, AnimatePresence } from "framer-motion";
@@ -44,7 +48,8 @@ import { ServiceInfoPanel } from "@/components/buyer/ServiceInfoPanel";
 import { CurrencySelector } from "@/components/buyer/CurrencySelector";
 import { LanguageSelector } from "@/components/buyer/LanguageSelector";
 import { OrderSuccessModal } from "@/components/buyer/OrderSuccessModal";
-import { detectServiceType } from "@/lib/service-icon-detection";
+import { detectServiceType, getSubCategory, ICON_CATEGORIES } from "@/lib/service-icon-detection";
+import ShoppingCart from "@/components/buyer/ShoppingCart";
 
 interface PromoCode {
   id: string;
@@ -54,6 +59,15 @@ interface PromoCode {
   min_order_amount: number;
 }
 
+interface CartItem {
+  service: any;
+  quantity: number;
+  targetUrl: string;
+  effectivePrice: number;
+}
+
+const CART_STORAGE_KEY = 'buyer_cart';
+
 const BuyerNewOrder = () => {
   const navigate = useNavigate();
   const { panel } = useTenant();
@@ -62,8 +76,11 @@ const BuyerNewOrder = () => {
   const { formatPrice, convertPrice } = useCurrency();
   const [searchParams] = useSearchParams();
   
+  // 3-Tier Selection State
+  const [selectedNetwork, setSelectedNetwork] = useState<string>("");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [selectedServiceId, setSelectedServiceId] = useState<string>("");
+  
   const [quantity, setQuantity] = useState<number>(1000);
   const [targetUrl, setTargetUrl] = useState("");
   const [orderLoading, setOrderLoading] = useState(false);
@@ -71,12 +88,37 @@ const BuyerNewOrder = () => {
   const [descriptionOpen, setDescriptionOpen] = useState(false);
   const [appliedPromo, setAppliedPromo] = useState<PromoCode | null>(null);
   
+  // Shopping Cart State
+  const [cart, setCart] = useState<CartItem[]>([]);
+  
   // Success modal state
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [placedOrderNumber, setPlacedOrderNumber] = useState("");
   const [placedServiceName, setPlacedServiceName] = useState("");
   const [placedQuantity, setPlacedQuantity] = useState(0);
   const [placedTotalPrice, setPlacedTotalPrice] = useState("");
+
+  // Load cart from localStorage
+  useEffect(() => {
+    if (panel?.id) {
+      try {
+        const savedCart = localStorage.getItem(`${CART_STORAGE_KEY}_${panel.id}`);
+        if (savedCart) {
+          setCart(JSON.parse(savedCart));
+        }
+      } catch (e) {
+        console.error('Error loading cart:', e);
+      }
+    }
+  }, [panel?.id]);
+
+  // Save cart to localStorage
+  useEffect(() => {
+    if (panel?.id) {
+      localStorage.setItem(`${CART_STORAGE_KEY}_${panel.id}`, JSON.stringify(cart));
+      window.dispatchEvent(new Event('cartUpdated'));
+    }
+  }, [cart, panel?.id]);
 
   // Fetch custom prices for this buyer
   useEffect(() => {
@@ -121,7 +163,9 @@ const BuyerNewOrder = () => {
     if (serviceId) {
       const service = services.find((s: any) => s.id === serviceId);
       if (service) {
-        setSelectedCategory(service.category);
+        setSelectedNetwork(service.category);
+        const subCat = getSubCategory(service.name);
+        setSelectedCategory(subCat);
         setSelectedServiceId(service.id);
         if (quantityParam) setQuantity(parseInt(quantityParam) || service.min_quantity || 1000);
         else setQuantity(service.min_quantity || 1000);
@@ -140,32 +184,64 @@ const BuyerNewOrder = () => {
     return customPrices.get(service.id) ?? service.price;
   };
 
-  // Group services by category
-  const categoriesWithServices = useMemo(() => {
-    const grouped: Record<string, any[]> = {};
-    services.forEach((s: any) => {
-      if (!grouped[s.category]) {
-        grouped[s.category] = [];
-      }
-      grouped[s.category].push(s);
-    });
+  // TIER 1: Group by Network (Platform)
+  const networks = useMemo(() => {
+    const networkMap = new Map<string, { services: any[]; count: number }>();
     
-    return Object.entries(grouped).map(([category, categoryServices]) => ({
-      id: category,
-      name: SOCIAL_ICONS_MAP[category]?.label || category.charAt(0).toUpperCase() + category.slice(1),
-      icon: SOCIAL_ICONS_MAP[category]?.icon || SOCIAL_ICONS_MAP.other.icon,
-      color: SOCIAL_ICONS_MAP[category]?.color || SOCIAL_ICONS_MAP.other.color,
-      bgColor: SOCIAL_ICONS_MAP[category]?.bgColor || SOCIAL_ICONS_MAP.other.bgColor,
-      services: categoryServices.sort((a, b) => a.name.localeCompare(b.name)),
-    })).sort((a, b) => a.name.localeCompare(b.name));
+    services.forEach((s: any) => {
+      const network = s.category || 'other';
+      if (!networkMap.has(network)) {
+        networkMap.set(network, { services: [], count: 0 });
+      }
+      networkMap.get(network)!.services.push(s);
+      networkMap.get(network)!.count++;
+    });
+
+    return Array.from(networkMap.entries())
+      .map(([id, data]) => ({
+        id,
+        name: SOCIAL_ICONS_MAP[id]?.label || id.charAt(0).toUpperCase() + id.slice(1),
+        icon: SOCIAL_ICONS_MAP[id]?.icon || SOCIAL_ICONS_MAP.other.icon,
+        color: SOCIAL_ICONS_MAP[id]?.color || SOCIAL_ICONS_MAP.other.color,
+        bgColor: SOCIAL_ICONS_MAP[id]?.bgColor || SOCIAL_ICONS_MAP.other.bgColor,
+        count: data.count,
+        services: data.services,
+      }))
+      .sort((a, b) => b.count - a.count);
   }, [services]);
 
-  // Get filtered services based on selected category
+  // TIER 2: Group by Category (Sub-category within Network)
+  const categories = useMemo(() => {
+    if (!selectedNetwork) return [];
+    
+    const networkServices = services.filter((s: any) => s.category === selectedNetwork);
+    const categoryMap = new Map<string, { services: any[]; count: number }>();
+    
+    networkServices.forEach((s: any) => {
+      const subCat = getSubCategory(s.name);
+      if (!categoryMap.has(subCat)) {
+        categoryMap.set(subCat, { services: [], count: 0 });
+      }
+      categoryMap.get(subCat)!.services.push(s);
+      categoryMap.get(subCat)!.count++;
+    });
+
+    return Array.from(categoryMap.entries())
+      .map(([name, data]) => ({
+        id: name,
+        name,
+        count: data.count,
+        services: data.services,
+      }))
+      .sort((a, b) => b.count - a.count);
+  }, [selectedNetwork, services]);
+
+  // TIER 3: Get filtered services based on Network + Category
   const filteredServices = useMemo(() => {
     if (!selectedCategory) return [];
-    const category = categoriesWithServices.find(c => c.id === selectedCategory);
-    return category?.services || [];
-  }, [selectedCategory, categoriesWithServices]);
+    const category = categories.find(c => c.id === selectedCategory);
+    return category?.services?.sort((a: any, b: any) => a.name.localeCompare(b.name)) || [];
+  }, [selectedCategory, categories]);
 
   // Get selected service
   const selectedService = useMemo(() => {
@@ -188,6 +264,14 @@ const BuyerNewOrder = () => {
   const totalPrice = baseTotal - promoDiscount;
   const hasEnoughBalance = (buyer?.balance || 0) >= totalPrice;
 
+  // Handle network change
+  const handleNetworkChange = (network: string) => {
+    setSelectedNetwork(network);
+    setSelectedCategory("");
+    setSelectedServiceId("");
+    setQuantity(1000);
+  };
+
   // Handle category change
   const handleCategoryChange = (category: string) => {
     setSelectedCategory(category);
@@ -202,6 +286,46 @@ const BuyerNewOrder = () => {
     if (service) {
       setQuantity(service.min_quantity || 1000);
     }
+  };
+
+  // Add to cart
+  const handleAddToCart = () => {
+    if (!selectedService) {
+      toast({ title: "Please select a service", variant: "destructive" });
+      return;
+    }
+    if (!targetUrl) {
+      toast({ title: "Please enter a target URL", variant: "destructive" });
+      return;
+    }
+
+    const existingIndex = cart.findIndex(item => item.service.id === selectedService.id);
+    if (existingIndex >= 0) {
+      // Update existing item
+      const newCart = [...cart];
+      newCart[existingIndex] = {
+        ...newCart[existingIndex],
+        quantity,
+        targetUrl,
+        effectivePrice: getEffectivePrice(selectedService),
+      };
+      setCart(newCart);
+      toast({ title: "Cart updated", description: `${selectedService.name} quantity updated` });
+    } else {
+      // Add new item
+      setCart([...cart, {
+        service: selectedService,
+        quantity,
+        targetUrl,
+        effectivePrice: getEffectivePrice(selectedService),
+      }]);
+      toast({ title: "Added to cart", description: selectedService.name });
+    }
+
+    // Reset form
+    setSelectedServiceId("");
+    setTargetUrl("");
+    setQuantity(1000);
   };
 
   // Handle order
@@ -301,6 +425,8 @@ const BuyerNewOrder = () => {
     return SOCIAL_ICONS_MAP[categoryId] || SOCIAL_ICONS_MAP.other;
   };
 
+  const selectedNetworkData = selectedNetwork ? getCategoryData(selectedNetwork) : null;
+
   return (
     <BuyerLayout>
       <motion.div
@@ -316,7 +442,7 @@ const BuyerNewOrder = () => {
               whileHover={{ scale: 1.05, rotate: 5 }}
               whileTap={{ scale: 0.95 }}
             >
-              <ShoppingCart className="w-6 h-6 text-primary" />
+              <ShoppingCartIcon className="w-6 h-6 text-primary" />
             </motion.div>
             <div>
               <h1 className="text-2xl font-bold">New Order</h1>
@@ -325,6 +451,14 @@ const BuyerNewOrder = () => {
           </div>
           
           <div className="flex items-center gap-2">
+            <ShoppingCart 
+              cart={cart}
+              setCart={setCart}
+              buyerBalance={buyer?.balance || 0}
+              buyerId={buyer?.id || ''}
+              panelId={panel?.id || ''}
+              onCheckoutComplete={refreshBuyer}
+            />
             <CurrencySelector />
             <LanguageSelector />
           </div>
@@ -334,33 +468,38 @@ const BuyerNewOrder = () => {
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Main Order Form - Left Column */}
           <div className="lg:col-span-2 space-y-6">
-            <Card className="overflow-hidden">
-              <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent">
+            <Card className="overflow-hidden border-0 shadow-lg">
+              <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b">
                 <CardTitle className="flex items-center gap-2">
                   <Zap className="w-5 h-5 text-primary" />
                   Order Details
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6 space-y-6">
-                {/* Category Selection */}
+                {/* TIER 1: Network Selection */}
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium">Category</Label>
-                  <Select value={selectedCategory} onValueChange={handleCategoryChange}>
-                    <SelectTrigger className="h-12">
-                      <SelectValue placeholder="Select a category" />
+                  <Label className="text-sm font-medium flex items-center gap-2">
+                    <Globe className="w-4 h-4 text-primary" />
+                    Network
+                  </Label>
+                  <Select value={selectedNetwork} onValueChange={handleNetworkChange}>
+                    <SelectTrigger className="h-14 bg-background/50 border-2 hover:border-primary/50 transition-colors">
+                      <SelectValue placeholder="Select a network (e.g., Instagram, Facebook)" />
                     </SelectTrigger>
-                    <SelectContent>
-                      {categoriesWithServices.map((category) => {
-                        const CategoryIcon = category.icon;
+                    <SelectContent className="max-h-[300px]">
+                      {networks.map((network) => {
+                        const NetworkIcon = network.icon;
                         return (
-                          <SelectItem key={category.id} value={category.id}>
-                            <div className="flex items-center gap-3">
-                              <div className={cn("p-1.5 rounded-md", category.bgColor)}>
-                                <CategoryIcon className="w-4 h-4 text-white" />
+                          <SelectItem key={network.id} value={network.id}>
+                            <div className="flex items-center gap-3 py-1">
+                              <div className={cn("p-2 rounded-lg", network.bgColor)}>
+                                <NetworkIcon className="w-4 h-4 text-white" />
                               </div>
-                              <span>{category.name}</span>
-                              <Badge variant="secondary" className="ml-auto">
-                                {category.services.length}
+                              <div className="flex-1">
+                                <span className="font-medium">{network.name}</span>
+                              </div>
+                              <Badge variant="secondary" className="ml-2">
+                                {network.count}
                               </Badge>
                             </div>
                           </SelectItem>
@@ -370,30 +509,82 @@ const BuyerNewOrder = () => {
                   </Select>
                 </div>
 
-                {/* Service Selection */}
+                {/* TIER 2: Category Selection */}
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium">Service</Label>
+                  <Label className="text-sm font-medium flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-primary" />
+                    Category
+                  </Label>
+                  <Select 
+                    value={selectedCategory} 
+                    onValueChange={handleCategoryChange}
+                    disabled={!selectedNetwork}
+                  >
+                    <SelectTrigger className={cn(
+                      "h-14 bg-background/50 border-2 transition-colors",
+                      selectedNetwork ? "hover:border-primary/50" : "opacity-60"
+                    )}>
+                      <SelectValue placeholder={selectedNetwork ? "Select a category (e.g., Followers, Likes)" : "Select a network first"} />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[300px]">
+                      {categories.map((category) => (
+                        <SelectItem key={category.id} value={category.id}>
+                          <div className="flex items-center gap-3 py-1">
+                            {selectedNetworkData && (
+                              <div className={cn("p-1.5 rounded-md", selectedNetworkData.bgColor)}>
+                                <selectedNetworkData.icon className="w-3 h-3 text-white" />
+                              </div>
+                            )}
+                            <span className="font-medium">{category.name}</span>
+                            <Badge variant="outline" className="ml-auto">
+                              {category.count}
+                            </Badge>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* TIER 3: Service Selection */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium flex items-center gap-2">
+                    <Package className="w-4 h-4 text-primary" />
+                    Service
+                  </Label>
                   <Select 
                     value={selectedServiceId} 
                     onValueChange={handleServiceChange}
                     disabled={!selectedCategory}
                   >
-                    <SelectTrigger className="h-12">
+                    <SelectTrigger className={cn(
+                      "h-14 bg-background/50 border-2 transition-colors",
+                      selectedCategory ? "hover:border-primary/50" : "opacity-60"
+                    )}>
                       <SelectValue placeholder={selectedCategory ? "Select a service" : "Select a category first"} />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="max-h-[300px]">
                       {filteredServices.map((service: any) => {
                         const price = getEffectivePrice(service);
-                        const catData = getCategoryData(service.category);
-                        const CatIcon = catData.icon;
+                        const serviceType = detectServiceType(service.name);
                         return (
                           <SelectItem key={service.id} value={service.id}>
-                            <div className="flex items-center gap-3 w-full">
-                              <div className={cn("p-1 rounded", catData.bgColor)}>
-                                <CatIcon className="w-3 h-3 text-white" />
+                            <div className="flex items-center gap-3 w-full py-1">
+                              <div className="flex-1 min-w-0">
+                                <span className="font-medium text-sm truncate block max-w-[200px]">
+                                  {service.name}
+                                </span>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                  <span className="text-xs text-muted-foreground">
+                                    Min: {(service.min_quantity || 100).toLocaleString()}
+                                  </span>
+                                  <span className="text-xs text-muted-foreground">•</span>
+                                  <span className="text-xs text-muted-foreground">
+                                    Max: {(service.max_quantity || 10000).toLocaleString()}
+                                  </span>
+                                </div>
                               </div>
-                              <span className="truncate max-w-[220px]">{service.name}</span>
-                              <Badge variant="outline" className="shrink-0 ml-auto">
+                              <Badge variant="outline" className="shrink-0 font-mono">
                                 {formatPrice(price)}/1k
                               </Badge>
                             </div>
@@ -439,35 +630,32 @@ const BuyerNewOrder = () => {
                             className="p-4 mt-2 rounded-lg bg-card border border-border space-y-3"
                           >
                             <div className="flex items-center gap-2">
-                              {(() => {
-                                const catData = getCategoryData(selectedService.category);
-                                const CatIcon = catData.icon;
-                                return (
-                                  <div className={cn("p-2 rounded-lg", catData.bgColor)}>
-                                    <CatIcon className="w-5 h-5 text-white" />
-                                  </div>
-                                );
-                              })()}
+                              {selectedNetworkData && (
+                                <div className={cn("p-2 rounded-lg", selectedNetworkData.bgColor)}>
+                                  <selectedNetworkData.icon className="w-5 h-5 text-white" />
+                                </div>
+                              )}
                               <div>
-                                <p className="font-semibold text-foreground">{selectedService.name}</p>
-                                <p className="text-xs text-muted-foreground capitalize">{selectedService.category}</p>
+                                <h4 className="font-semibold">{selectedService.name}</h4>
+                                <p className="text-xs text-muted-foreground">{selectedService.category}</p>
                               </div>
                             </div>
-                            <p className="text-sm text-foreground/80 leading-relaxed">
-                              {selectedService.description || "No description available for this service."}
+                            <p className="text-sm text-muted-foreground">
+                              {selectedService.description || "High-quality service with fast delivery and great results. Satisfaction guaranteed."}
                             </p>
-                            <div className="flex flex-wrap gap-2 pt-2">
-                              <Badge variant="secondary" className="gap-1">
-                                <span className="text-muted-foreground">Min:</span> {selectedService.min_quantity?.toLocaleString() || 1}
+                            <div className="flex flex-wrap gap-2">
+                              <Badge variant="outline" className="gap-1">
+                                <Hash className="w-3 h-3" />
+                                Min: {selectedService.min_quantity || 100}
+                              </Badge>
+                              <Badge variant="outline" className="gap-1">
+                                <Hash className="w-3 h-3" />
+                                Max: {selectedService.max_quantity || 10000}
                               </Badge>
                               <Badge variant="secondary" className="gap-1">
-                                <span className="text-muted-foreground">Max:</span> {selectedService.max_quantity?.toLocaleString() || 'No limit'}
+                                <Zap className="w-3 h-3" />
+                                Fast Delivery
                               </Badge>
-                              {selectedService.estimated_time && (
-                                <Badge variant="secondary" className="gap-1">
-                                  <span className="text-muted-foreground">Time:</span> {selectedService.estimated_time}
-                                </Badge>
-                              )}
                             </div>
                           </motion.div>
                         </CollapsibleContent>
@@ -476,209 +664,193 @@ const BuyerNewOrder = () => {
                   )}
                 </AnimatePresence>
 
-                {/* Quick Quantity Presets */}
-                {selectedService && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="space-y-3"
-                  >
-                    <Label className="text-sm font-medium flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-primary" />
-                      Quick Select
-                    </Label>
-                    <QuantityPresets
-                      onSelect={setQuantity}
-                      selectedQuantity={quantity}
-                      pricePerUnit={effectivePrice}
-                      minQuantity={selectedService.min_quantity}
-                      maxQuantity={selectedService.max_quantity}
-                      category={selectedService.category}
-                      formatPrice={formatPrice}
-                    />
-                  </motion.div>
-                )}
-
-                {/* Target URL */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium flex items-center gap-2">
-                    <LinkIcon className="w-4 h-4" />
-                    Target URL / Link
-                  </Label>
-                  <motion.div whileFocus={{ scale: 1.01 }}>
-                    <Input
-                      placeholder="https://instagram.com/your-profile"
-                      value={targetUrl}
-                      onChange={(e) => setTargetUrl(e.target.value)}
-                      className="h-12"
-                    />
-                  </motion.div>
-                </div>
-
-                {/* Custom Quantity */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm font-medium flex items-center gap-2">
-                      <Hash className="w-4 h-4" />
-                      Custom Quantity
-                    </Label>
-                    {selectedService && (
-                      <div className="flex gap-2">
-                        <Badge variant="outline" className="text-xs">
-                          Min: {selectedService.min_quantity?.toLocaleString() || 1}
-                        </Badge>
-                        <Badge variant="outline" className="text-xs">
-                          Max: {selectedService.max_quantity?.toLocaleString() || '∞'}
-                        </Badge>
-                      </div>
-                    )}
-                  </div>
-                  <Input
-                    type="number"
-                    placeholder="1000"
-                    value={quantity}
-                    onChange={(e) => setQuantity(parseInt(e.target.value) || 0)}
-                    min={selectedService?.min_quantity || 1}
-                    max={selectedService?.max_quantity || 1000000}
-                    className="h-12"
-                  />
-                </div>
-
-                {/* Promo Code */}
-                {panel?.id && (
-                  <PromoCodeInput
-                    panelId={panel.id}
-                    orderAmount={baseTotal}
-                    onApply={setAppliedPromo}
-                    appliedPromo={appliedPromo}
-                  />
-                )}
-
-                {/* Price Summary */}
-                <motion.div 
-                  className="p-4 rounded-xl bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20"
-                  layout
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-muted-foreground">Price per 1000</span>
-                    <span className="font-medium">{formatPrice(effectivePrice)}</span>
-                  </div>
-                  
-                  {promoDiscount > 0 && (
-                    <motion.div 
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      className="flex items-center justify-between mb-2 text-chart-2"
-                    >
-                      <span className="text-sm">Promo Discount</span>
-                      <span className="font-medium">-{formatPrice(promoDiscount)}</span>
-                    </motion.div>
-                  )}
-                  
-                  <div className="flex items-center justify-between text-lg font-bold">
-                    <span>Total</span>
-                    <motion.span 
-                      key={totalPrice}
-                      initial={{ scale: 1.2 }}
-                      animate={{ scale: 1 }}
-                      className="text-primary"
-                    >
-                      {formatPrice(totalPrice)}
-                    </motion.span>
-                  </div>
-                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/50">
-                    <span className="text-sm text-muted-foreground">Your Balance</span>
-                    <span className={cn(
-                      "font-medium",
-                      hasEnoughBalance ? "text-chart-2" : "text-destructive"
-                    )}>
-                      {formatPrice(buyer?.balance || 0)}
-                    </span>
-                  </div>
-                </motion.div>
-
-                {/* Insufficient Balance Warning */}
+                {/* Quantity Presets */}
                 <AnimatePresence>
-                  {selectedService && !hasEnoughBalance && (
+                  {selectedService && (
                     <motion.div
-                      initial={{ opacity: 0, y: -10 }}
+                      initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive"
+                      exit={{ opacity: 0, y: 10 }}
                     >
-                      <AlertCircle className="w-4 h-4 shrink-0" />
-                      <span className="text-sm">
-                        Insufficient balance. You need {formatPrice(totalPrice - (buyer?.balance || 0))} more.
-                      </span>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="ml-auto border-destructive/30 hover:bg-destructive/10"
-                        onClick={() => navigate('/deposit')}
-                      >
-                        Deposit
-                      </Button>
+                      <QuantityPresets 
+                        onSelect={setQuantity}
+                        min={selectedService.min_quantity || 100}
+                        max={selectedService.max_quantity || 100000}
+                        selected={quantity}
+                      />
                     </motion.div>
                   )}
                 </AnimatePresence>
 
-                {/* Order Button */}
-                <motion.div
-                  whileHover={{ scale: 1.01 }}
-                  whileTap={{ scale: 0.99 }}
-                >
-                  <Button 
-                    className="w-full h-14 text-lg font-semibold relative overflow-hidden"
-                    disabled={!selectedService || !targetUrl || orderLoading || !hasEnoughBalance}
-                    onClick={handleOrder}
-                  >
-                    <AnimatePresence mode="wait">
-                      {orderLoading ? (
-                        <motion.div
-                          key="loading"
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          className="flex items-center gap-2"
-                        >
-                          <Loader2 className="w-5 h-5 animate-spin" />
-                          Placing Order...
-                        </motion.div>
-                      ) : (
-                        <motion.div
-                          key="default"
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          className="flex items-center gap-2"
-                        >
-                          <ShoppingCart className="w-5 h-5" />
-                          Place Order - {formatPrice(totalPrice)}
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </Button>
-                </motion.div>
+                {/* Target URL */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium flex items-center gap-2">
+                    <LinkIcon className="w-4 h-4 text-primary" />
+                    Target URL
+                  </Label>
+                  <Input
+                    placeholder="https://instagram.com/username or post link"
+                    value={targetUrl}
+                    onChange={(e) => setTargetUrl(e.target.value)}
+                    className="h-12 bg-background/50 border-2 focus:border-primary"
+                  />
+                </div>
+
+                {/* Quantity */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium flex items-center gap-2">
+                    <Hash className="w-4 h-4 text-primary" />
+                    Quantity
+                  </Label>
+                  <Input
+                    type="number"
+                    value={quantity}
+                    onChange={(e) => setQuantity(parseInt(e.target.value) || 0)}
+                    min={selectedService?.min_quantity || 1}
+                    max={selectedService?.max_quantity || 1000000}
+                    className="h-12 bg-background/50 border-2 focus:border-primary font-mono"
+                  />
+                  {selectedService && (
+                    <p className="text-xs text-muted-foreground">
+                      Range: {(selectedService.min_quantity || 100).toLocaleString()} - {(selectedService.max_quantity || 100000).toLocaleString()}
+                    </p>
+                  )}
+                </div>
+
+                {/* Promo Code */}
+                <PromoCodeInput 
+                  panelId={panel?.id}
+                  orderAmount={baseTotal}
+                  onApply={setAppliedPromo}
+                  appliedPromo={appliedPromo}
+                />
               </CardContent>
             </Card>
           </div>
 
-          {/* Service Info Panel - Right Column */}
-          <div className="lg:col-span-1">
-            <div className="sticky top-4">
-              <ServiceInfoPanel service={selectedService} />
-            </div>
+          {/* Right Column - Price Summary */}
+          <div className="space-y-6">
+            <Card className="sticky top-4 overflow-hidden border-0 shadow-lg">
+              <CardHeader className="bg-gradient-to-br from-primary/10 to-primary/5 border-b">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Sparkles className="w-5 h-5 text-primary" />
+                  Order Summary
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6 space-y-4">
+                {selectedService ? (
+                  <>
+                    <div className="space-y-3">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Service</span>
+                        <span className="font-medium truncate max-w-[180px]">{selectedService.name}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Quantity</span>
+                        <span className="font-medium">{quantity.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Price/1K</span>
+                        <span className="font-medium">{formatPrice(effectivePrice)}</span>
+                      </div>
+                      {promoDiscount > 0 && (
+                        <div className="flex justify-between text-sm text-green-600">
+                          <span>Discount</span>
+                          <span>-{formatPrice(promoDiscount)}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="h-px bg-border" />
+
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium">Total</span>
+                      <span className="text-2xl font-bold text-primary">{formatPrice(totalPrice)}</span>
+                    </div>
+
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Your Balance</span>
+                      <span className={cn(
+                        "font-medium",
+                        hasEnoughBalance ? "text-green-600" : "text-destructive"
+                      )}>
+                        {formatPrice(buyer?.balance || 0)}
+                      </span>
+                    </div>
+
+                    {!hasEnoughBalance && (
+                      <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                        <div className="flex items-center gap-2 text-destructive text-sm">
+                          <AlertCircle className="w-4 h-4" />
+                          <span>Insufficient balance</span>
+                        </div>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="w-full mt-2"
+                          onClick={() => navigate('/deposit')}
+                        >
+                          Add Funds
+                        </Button>
+                      </div>
+                    )}
+
+                    <div className="space-y-2">
+                      <Button 
+                        onClick={handleOrder}
+                        disabled={!hasEnoughBalance || orderLoading || !targetUrl}
+                        className="w-full h-12 text-base font-medium gap-2"
+                      >
+                        {orderLoading ? (
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                        ) : (
+                          <CheckCircle2 className="w-5 h-5" />
+                        )}
+                        {orderLoading ? "Processing..." : "Place Order"}
+                      </Button>
+                      
+                      <Button 
+                        variant="outline"
+                        onClick={handleAddToCart}
+                        disabled={!selectedService || !targetUrl}
+                        className="w-full h-12 text-base font-medium gap-2"
+                      >
+                        <Plus className="w-5 h-5" />
+                        Add to Cart
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center py-8">
+                    <ShoppingCartIcon className="w-12 h-12 mx-auto text-muted-foreground/30 mb-3" />
+                    <p className="text-muted-foreground text-sm">
+                      Select a service to see pricing
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Service Info Panel */}
+            {selectedService && <ServiceInfoPanel service={selectedService} />}
           </div>
         </div>
       </motion.div>
 
-      {/* Order Success Modal */}
+      {/* Success Modal */}
       <OrderSuccessModal
         open={showSuccessModal}
-        onOpenChange={setShowSuccessModal}
+        onClose={() => setShowSuccessModal(false)}
         orderNumber={placedOrderNumber}
         serviceName={placedServiceName}
         quantity={placedQuantity}
         totalPrice={placedTotalPrice}
+        onViewOrders={() => {
+          setShowSuccessModal(false);
+          navigate('/orders');
+        }}
         onNewOrder={() => {
+          setShowSuccessModal(false);
           setSelectedServiceId("");
           setTargetUrl("");
           setQuantity(1000);
