@@ -90,7 +90,10 @@ export const ServiceKanbanCard = ({
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const profitMargin = ((service.price - service.originalPrice) / service.originalPrice * 100).toFixed(0);
+  const rawMargin = service.originalPrice > 0 
+    ? ((service.price - service.originalPrice) / service.originalPrice * 100) 
+    : 0;
+  const profitMargin = isFinite(rawMargin) ? rawMargin.toFixed(0) : "0";
 
   return (
     <motion.div
@@ -180,14 +183,13 @@ export const ServiceKanbanCard = ({
                 ${service.originalPrice.toFixed(4)}
               </span>
               <Badge
-                variant="outline"
                 className={cn(
-                  "text-[10px] sm:text-xs px-1 sm:px-1.5 whitespace-nowrap flex-shrink-0",
+                  "text-[10px] sm:text-xs px-1.5 sm:px-2 whitespace-nowrap flex-shrink-0 font-semibold border",
                   Number(profitMargin) >= 25
-                    ? "text-emerald-500 border-emerald-500/30"
+                    ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/40"
                     : Number(profitMargin) >= 10
-                    ? "text-amber-500 border-amber-500/30"
-                    : "text-red-500 border-red-500/30"
+                    ? "bg-amber-500/20 text-amber-400 border-amber-500/40"
+                    : "bg-red-500/20 text-red-400 border-red-500/40"
                 )}
               >
                 +{profitMargin}%

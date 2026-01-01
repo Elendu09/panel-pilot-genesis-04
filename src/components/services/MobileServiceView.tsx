@@ -8,7 +8,11 @@ import {
   ChevronRight,
   MoreVertical,
   Hand,
-  Package
+  Package,
+  Edit,
+  Copy,
+  Trash2,
+  Eye
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,11 +35,13 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { ServiceItem } from "./DraggableServiceItem";
+import { getIconByKey } from "@/components/icons/SocialIcons";
 
 // Emoji icons for service types
 const SERVICE_EMOJIS: Record<string, string> = {
@@ -64,6 +70,9 @@ interface MobileServiceViewProps {
   onAddService: () => void;
   onImportServices: () => void;
   onServiceClick: (service: ServiceItem) => void;
+  onEdit?: (service: ServiceItem) => void;
+  onDelete?: (id: string) => void;
+  onDuplicate?: (service: ServiceItem) => void;
 }
 
 export const MobileServiceView = ({
@@ -78,6 +87,9 @@ export const MobileServiceView = ({
   onAddService,
   onImportServices,
   onServiceClick,
+  onEdit,
+  onDelete,
+  onDuplicate,
 }: MobileServiceViewProps) => {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['all']));
 
@@ -247,6 +259,9 @@ export const MobileServiceView = ({
                           index={index}
                           onToggleStatus={() => onToggleStatus(service.id)}
                           onClick={() => onServiceClick(service)}
+                          onEdit={onEdit ? () => onEdit(service) : undefined}
+                          onDelete={onDelete ? () => onDelete(service.id) : undefined}
+                          onDuplicate={onDuplicate ? () => onDuplicate(service) : undefined}
                         />
                       ))}
                     </div>
@@ -266,6 +281,9 @@ export const MobileServiceView = ({
                 index={index}
                 onToggleStatus={() => onToggleStatus(service.id)}
                 onClick={() => onServiceClick(service)}
+                onEdit={onEdit ? () => onEdit(service) : undefined}
+                onDelete={onDelete ? () => onDelete(service.id) : undefined}
+                onDuplicate={onDuplicate ? () => onDuplicate(service) : undefined}
               />
             ))}
           </div>
@@ -288,40 +306,153 @@ interface MobileServiceCardProps {
   index: number;
   onToggleStatus: () => void;
   onClick: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
+  onDuplicate?: () => void;
 }
 
-const MobileServiceCard = ({ service, emoji, index, onToggleStatus, onClick }: MobileServiceCardProps) => {
+const ServiceIcon = ({ imageUrl, category }: { imageUrl?: string; category: string }) => {
+  if (imageUrl?.startsWith('icon:')) {
+    const iconKey = imageUrl.replace('icon:', '');
+    const iconData = getIconByKey(iconKey);
+    const IconComponent = iconData.icon;
+    return (
+      <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", iconData.bgColor)}>
+        <IconComponent className="text-white" size={18} />
+      </div>
+    );
+  }
+
+  if (imageUrl) {
+    return (
+      <img
+        src={imageUrl}
+        alt=""
+        className="w-10 h-10 rounded-xl object-cover"
+        onError={(e) => (e.currentTarget.style.display = "none")}
+      />
+    );
+  }
+
+  const categoryData = getIconByKey(category);
+  const CategoryIcon = categoryData.icon;
+  return (
+    <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", categoryData.bgColor)}>
+      <CategoryIcon className="text-white" size={18} />
+    </div>
+  );
+};
+
+const MobileServiceCard = ({ 
+  service, 
+  emoji, 
+  index, 
+  onToggleStatus, 
+  onClick,
+  onEdit,
+  onDelete,
+  onDuplicate,
+}: MobileServiceCardProps) => {
+  const rawMargin = service.originalPrice > 0 
+    ? ((service.price - service.originalPrice) / service.originalPrice * 100) 
+    : 0;
+  const profitMargin = isFinite(rawMargin) ? rawMargin.toFixed(0) : "0";
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.03 }}
-      className="flex items-center gap-3 p-3 rounded-xl bg-card/30 border border-border/30 active:bg-card/50"
-      onClick={onClick}
+      transition={{ delay: Math.min(index * 0.02, 0.3) }}
+      className="p-3 rounded-xl bg-card/30 border border-border/30 space-y-2"
     >
-      {/* Emoji Icon */}
-      <div className="w-10 h-10 rounded-xl bg-muted/50 flex items-center justify-center text-xl shrink-0">
-        {emoji}
+      {/* Row 1: Icon, Name, Category, Status */}
+      <div className="flex items-center gap-3" onClick={onClick}>
+        <ServiceIcon imageUrl={service.imageUrl} category={service.category} />
+        
+        <div className="flex-1 min-w-0">
+          <p className="font-medium text-sm truncate">{service.name}</p>
+          <div className="flex items-center gap-1.5 mt-0.5">
+            <Badge variant="secondary" className="text-[10px] capitalize px-1.5 py-0 h-4">
+              {service.category}
+            </Badge>
+            <span className="text-[10px] text-muted-foreground truncate">
+              {service.provider || 'Direct'}
+            </span>
+          </div>
+        </div>
+        
+        <Switch
+          checked={service.status}
+          onCheckedChange={() => onToggleStatus()}
+          onClick={(e) => e.stopPropagation()}
+          className="shrink-0 data-[state=checked]:bg-green-500"
+        />
       </div>
-
-      {/* Service Info */}
-      <div className="flex-1 min-w-0">
-        <p className="font-medium text-sm truncate">{service.name}</p>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span>{service.displayId || service.id.slice(0, 8)}</span>
-          <span>•</span>
-          <span className="text-primary font-medium">${service.price.toFixed(4)}</span>
-          <ChevronRight className="w-3 h-3 ml-auto" />
+      
+      {/* Row 2: Price, Margin, Qty Range, Actions */}
+      <div className="flex items-center justify-between pt-2 border-t border-border/30">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-bold text-primary">${service.price.toFixed(4)}</span>
+          <Badge
+            className={cn(
+              "text-[10px] px-1.5 py-0 h-4 font-semibold border",
+              Number(profitMargin) >= 25
+                ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/40"
+                : Number(profitMargin) >= 10
+                ? "bg-amber-500/20 text-amber-400 border-amber-500/40"
+                : "bg-red-500/20 text-red-400 border-red-500/40"
+            )}
+          >
+            +{profitMargin}%
+          </Badge>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] text-muted-foreground">
+            {service.minQty?.toLocaleString()} - {service.maxQty?.toLocaleString()}
+          </span>
+          
+          {(onEdit || onDelete || onDuplicate) && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                <Button variant="ghost" size="icon" className="h-7 w-7">
+                  <MoreVertical className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-popover">
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onClick(); }}>
+                  <Eye className="w-4 h-4 mr-2" />
+                  View Details
+                </DropdownMenuItem>
+                {onEdit && (
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(); }}>
+                    <Edit className="w-4 h-4 mr-2" />
+                    Edit
+                  </DropdownMenuItem>
+                )}
+                {onDuplicate && (
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDuplicate(); }}>
+                    <Copy className="w-4 h-4 mr-2" />
+                    Duplicate
+                  </DropdownMenuItem>
+                )}
+                {onDelete && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      onClick={(e) => { e.stopPropagation(); onDelete(); }} 
+                      className="text-destructive"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </div>
-
-      {/* Status Toggle */}
-      <Switch
-        checked={service.status}
-        onCheckedChange={() => onToggleStatus()}
-        onClick={(e) => e.stopPropagation()}
-        className="shrink-0 data-[state=checked]:bg-green-500"
-      />
     </motion.div>
   );
 };
