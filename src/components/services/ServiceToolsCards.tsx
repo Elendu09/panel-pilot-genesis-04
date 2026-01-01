@@ -67,7 +67,7 @@ export const ServiceToolsCards = ({
     {
       id: "smart-organize",
       title: "AutoFix Icon + Smart Organize",
-      description: "AI-powered auto-fix icons and smart categorization with automatic organization",
+      description: "Fully automatic: AI detects platforms, fixes icons & organizes all services instantly",
       icon: Wand2,
       action: onSmartOrganize,
       loading: isOrganizing,

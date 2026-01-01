@@ -4,50 +4,88 @@
 // ============= PLATFORM SHORTFORMS =============
 // Common abbreviations used as first word in service names
 export const PLATFORM_SHORTFORMS: Record<string, string> = {
-  // Major Platforms
+  // Major Platforms - Primary abbreviations
   'ig': 'instagram',
   'insta': 'instagram',
+  'gram': 'instagram',
   'fb': 'facebook',
   'tw': 'twitter',
   'x': 'twitter',
   'yt': 'youtube',
+  'tube': 'youtube',
   'tt': 'tiktok',
+  'tok': 'tiktok',
   'tg': 'telegram',
+  'telg': 'telegram',
   'li': 'linkedin',
   'ln': 'linkedin',
+  'lkdn': 'linkedin',
   'sc': 'snapchat',
   'snap': 'snapchat',
   'pt': 'pinterest',
   'pin': 'pinterest',
   'wa': 'whatsapp',
   'dc': 'discord',
+  
+  // VK variations
   'vk': 'vk',
   'vk.com': 'vk',
   'vkontakte': 'vk',
+  'вк': 'vk', // Russian
+  'vkcom': 'vk',
   
   // Music Platforms
   'sp': 'spotify',
+  'spfy': 'spotify',
+  'spot': 'spotify',
   'am': 'audiomack',
+  'audio': 'audiomack',
+  'mack': 'audiomack',
   'scl': 'soundcloud',
+  'scloud': 'soundcloud',
   'dz': 'deezer',
+  'shz': 'shazam',
+  'td': 'tidal',
+  'rv': 'reverbnation',
+  'mc': 'mixcloud',
+  'np': 'napster',
+  'apm': 'applemusic',
+  'amz': 'amazonmusic',
+  'ih': 'iheart',
   
   // Streaming/Video
   'twt': 'twitch',
   'rb': 'rumble',
   'dm': 'dailymotion',
   'bb': 'bilibili',
+  'bili': 'bilibili',
+  'od': 'odysee',
+  'kk': 'kick',
+  'tv': 'trovo',
   
   // Other Social
   'th': 'threads',
+  'thrd': 'threads',
+  'thread': 'threads',
   'rd': 'reddit',
   'qr': 'quora',
   'tm': 'tumblr',
   'md': 'medium',
   'ptr': 'patreon',
+  'lk': 'likee',
+  'kw': 'kwai',
+  'ch': 'clubhouse',
+  'wb': 'weibo',
+  'br': 'bereal',
+  'l8': 'lemon8',
+  'ln8': 'line',
   
   // Gaming
   'rx': 'roblox',
+  'rbx': 'roblox',
+  'rob': 'roblox',
   'stm': 'steam',
+  'valve': 'steam',
 };
 
 // ============= COUNTRY/QUALITY PREFIXES TO SKIP =============
@@ -586,6 +624,36 @@ export const detectServiceType = (serviceName: string): string => {
   }
   
   return "general";
+};
+
+/**
+ * Gets a sub-category label combining platform and service type
+ * Example: "Instagram - Followers", "Facebook - Likes", "Audiomack - Plays"
+ */
+export const getSubCategory = (serviceName: string): string => {
+  const platform = detectPlatform(serviceName);
+  const serviceType = detectServiceType(serviceName);
+  
+  if (platform === 'other') return 'Other Services';
+  
+  const typeLabels: Record<string, string> = {
+    followers: 'Followers',
+    subscribers: 'Subscribers',
+    members: 'Members',
+    likes: 'Likes',
+    views: 'Views',
+    comments: 'Comments',
+    shares: 'Shares',
+    saves: 'Saves',
+    plays: 'Plays',
+    general: '',
+  };
+  
+  // Get platform label from ICON_CATEGORIES or capitalize platform name
+  const platformLabel = platform.charAt(0).toUpperCase() + platform.slice(1);
+  const typeLabel = typeLabels[serviceType] || '';
+  
+  return typeLabel ? `${platformLabel} - ${typeLabel}` : platformLabel;
 };
 
 /**
