@@ -1486,7 +1486,7 @@ const ServicesManagement = () => {
 
   // Import handler - applies markup ONCE and stores provider info for duplicate detection
   // NOTE: service.price is already the provider's rate per 1K from ServiceImportDialog
-  // AI detection is now done in ServiceImportDialog, but we re-detect here for icon_url
+  // AI detection is done in ServiceImportDialog with pre-computed iconUrl
   const handleImport = async (importedServices: any[], markups: Record<number, number>, providerId?: string, providerName?: string) => {
     if (!panel?.id) return;
     
@@ -1496,9 +1496,12 @@ const ServicesManagement = () => {
         const providerRate = Number(service.price) || 0;
         const finalPrice = providerRate * (1 + markupPercent / 100);
         
-        // Use AI-detected category from import dialog, and generate matching icon
+        // Use pre-computed AI-detected category and icon from import dialog
         const detectedCategory = service.category || 'other';
-        const iconUrl = `icon:${detectedCategory}`;
+        // Use pre-computed iconUrl if available, otherwise generate from category
+        const iconUrl = service.iconUrl || `icon:${detectedCategory}`;
+        
+        console.log(`[Import] "${service.name}" → ${detectedCategory} → ${iconUrl}`);
         
         // Store both the actual provider UUID and the provider's service ID
         // The provider_id field stores the actual provider UUID for lookup
