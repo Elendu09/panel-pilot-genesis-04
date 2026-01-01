@@ -26,6 +26,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { CartItem } from "@/hooks/use-buyer-cart";
 import { BulkAddForm } from "./BulkAddForm";
 import { QuickRepeatOrder } from "./QuickRepeatOrder";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface ShoppingCartProps {
   cart: CartItem[];
@@ -58,6 +59,7 @@ const ShoppingCart = ({
   services = [],
   getEffectivePrice = (s) => s.price,
 }: ShoppingCartProps) => {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutProgress, setCheckoutProgress] = useState(0);
@@ -148,8 +150,8 @@ const ShoppingCart = ({
         .eq('id', buyerId);
 
       toast({
-        title: "Orders Placed Successfully!",
-        description: `${cart.length} orders placed. Total: ${formatPrice(totalPrice)}`,
+        title: t('cart.order_placed'),
+        description: `${cart.length} ${t('cart.items')}. ${t('common.total')}: ${formatPrice(totalPrice)}`,
       });
 
       setTimeout(async () => {
@@ -223,8 +225,8 @@ const ShoppingCart = ({
         <SheetHeader className="p-6 pb-0">
           <SheetTitle className="flex items-center gap-2">
             <CartIcon className="w-5 h-5" />
-            Shopping Cart
-            <Badge variant="secondary" className="ml-2">{cart.length} items</Badge>
+            {t('cart.title')}
+            <Badge variant="secondary" className="ml-2">{cart.length} {t('cart.items')}</Badge>
             {syncing && <RefreshCw className="w-4 h-4 animate-spin text-muted-foreground" />}
           </SheetTitle>
         </SheetHeader>
@@ -233,15 +235,15 @@ const ShoppingCart = ({
           <TabsList className="mx-6 mt-4 grid grid-cols-3">
             <TabsTrigger value="cart" className="gap-1.5 text-xs">
               <CartIcon className="w-3.5 h-3.5" />
-              Cart ({cart.length})
+              ({cart.length})
             </TabsTrigger>
             <TabsTrigger value="bulk" className="gap-1.5 text-xs">
               <Layers className="w-3.5 h-3.5" />
-              Bulk Add
+              {t('cart.bulk_add')}
             </TabsTrigger>
             <TabsTrigger value="repeat" className="gap-1.5 text-xs">
               <Repeat className="w-3.5 h-3.5" />
-              Quick
+              {t('cart.quick_repeat')}
             </TabsTrigger>
           </TabsList>
 
@@ -251,9 +253,9 @@ const ShoppingCart = ({
               <div className="flex-1 flex items-center justify-center px-6">
                 <div className="text-center">
                   <CartIcon className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                  <p className="text-muted-foreground">Your cart is empty</p>
+                  <p className="text-muted-foreground">{t('cart.empty')}</p>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Add services to get started
+                    {t('services.add_to_cart')}
                   </p>
                   <Button 
                     variant="outline" 
@@ -262,7 +264,7 @@ const ShoppingCart = ({
                     onClick={() => setActiveTab("bulk")}
                   >
                     <Layers className="w-4 h-4 mr-2" />
-                    Bulk Add Services
+                    {t('cart.bulk_add')}
                   </Button>
                 </div>
               </div>
@@ -316,9 +318,9 @@ const ShoppingCart = ({
                                   )}
                                 </div>
 
-                                <div className="mt-3 space-y-2">
+                                  <div className="mt-3 space-y-2">
                                   <div className="space-y-1">
-                                    <Label className="text-xs">Target URL</Label>
+                                    <Label className="text-xs">{t('orders.target_url')}</Label>
                                     <Input
                                       placeholder="https://..."
                                       value={item.targetUrl}
@@ -329,7 +331,7 @@ const ShoppingCart = ({
                                   </div>
                                   <div className="flex items-center gap-2">
                                     <div className="flex-1 space-y-1">
-                                      <Label className="text-xs">Quantity</Label>
+                                      <Label className="text-xs">{t('common.quantity')}</Label>
                                       <Input
                                         type="number"
                                         value={item.quantity}
@@ -359,7 +361,7 @@ const ShoppingCart = ({
                   {checkoutLoading && (
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
-                        <span>Processing orders...</span>
+                        <span>{t('cart.processing')}</span>
                         <span>{Math.round(checkoutProgress)}%</span>
                       </div>
                       <div className="h-2 bg-muted rounded-full overflow-hidden">
@@ -374,7 +376,7 @@ const ShoppingCart = ({
 
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Your Balance</span>
+                      <span className="text-muted-foreground">{t('nav.your_balance')}</span>
                       <span className={cn(
                         "font-medium",
                         hasEnoughBalance ? "text-green-500" : "text-destructive"
@@ -383,7 +385,7 @@ const ShoppingCart = ({
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="font-medium">Total ({cart.length} items)</span>
+                      <span className="font-medium">{t('common.total')} ({cart.length} {t('cart.items')})</span>
                       <span className="text-xl font-bold">{formatPrice(cartTotal)}</span>
                     </div>
                   </div>
@@ -403,7 +405,7 @@ const ShoppingCart = ({
                       className="flex-1"
                     >
                       <Trash2 className="w-4 h-4 mr-2" />
-                      Clear
+                      {t('cart.clear')}
                     </Button>
                     <Button 
                       onClick={handleBulkCheckout}
@@ -415,7 +417,7 @@ const ShoppingCart = ({
                       ) : (
                         <Zap className="w-4 h-4" />
                       )}
-                      {checkoutLoading ? 'Processing...' : 'Checkout All'}
+                      {checkoutLoading ? t('cart.processing') : t('cart.checkout')}
                     </Button>
                   </div>
                 </div>

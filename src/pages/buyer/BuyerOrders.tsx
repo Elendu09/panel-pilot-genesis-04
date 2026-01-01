@@ -32,6 +32,7 @@ import { useBuyerAuth } from "@/contexts/BuyerAuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import BuyerLayout from "./BuyerLayout";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Order {
   id: string;
@@ -48,6 +49,7 @@ interface Order {
 const BuyerOrders = () => {
   const { panel, loading: panelLoading } = useTenant();
   const { buyer, loading: authLoading } = useBuyerAuth();
+  const { t } = useLanguage();
   const [orders, setOrders] = useState<Order[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -100,11 +102,11 @@ const BuyerOrders = () => {
   };
 
   const statusConfig: Record<string, { label: string; icon: any; color: string; bgColor: string; spin?: boolean }> = {
-    pending: { label: 'Pending', icon: Clock, color: 'text-amber-500', bgColor: 'bg-amber-500/10 border-amber-500/20' },
-    in_progress: { label: 'In Progress', icon: Loader2, color: 'text-blue-500', bgColor: 'bg-blue-500/10 border-blue-500/20', spin: true },
-    completed: { label: 'Completed', icon: CheckCircle, color: 'text-emerald-500', bgColor: 'bg-emerald-500/10 border-emerald-500/20' },
-    partial: { label: 'Partial', icon: AlertCircle, color: 'text-orange-500', bgColor: 'bg-orange-500/10 border-orange-500/20' },
-    cancelled: { label: 'Cancelled', icon: XCircle, color: 'text-red-500', bgColor: 'bg-red-500/10 border-red-500/20' },
+    pending: { label: t('orders.pending'), icon: Clock, color: 'text-amber-500', bgColor: 'bg-amber-500/10 border-amber-500/20' },
+    in_progress: { label: t('orders.in_progress'), icon: Loader2, color: 'text-blue-500', bgColor: 'bg-blue-500/10 border-blue-500/20', spin: true },
+    completed: { label: t('orders.completed'), icon: CheckCircle, color: 'text-emerald-500', bgColor: 'bg-emerald-500/10 border-emerald-500/20' },
+    partial: { label: t('orders.partial'), icon: AlertCircle, color: 'text-orange-500', bgColor: 'bg-orange-500/10 border-orange-500/20' },
+    cancelled: { label: t('orders.cancelled'), icon: XCircle, color: 'text-red-500', bgColor: 'bg-red-500/10 border-red-500/20' },
   };
 
   const filteredOrders = orders.filter(order => {
@@ -115,14 +117,14 @@ const BuyerOrders = () => {
   });
 
   const kanbanColumns = [
-    { title: 'Pending', status: 'pending', icon: Clock, gradient: 'from-amber-500 to-amber-600', bg: 'bg-amber-500/10', textColor: 'text-amber-500', borderColor: 'border-amber-500/30' },
-    { title: 'In Progress', status: 'in_progress', icon: Loader2, gradient: 'from-blue-500 to-blue-600', bg: 'bg-blue-500/10', textColor: 'text-blue-500', borderColor: 'border-blue-500/30' },
-    { title: 'Completed', status: 'completed', icon: CheckCircle, gradient: 'from-emerald-500 to-emerald-600', bg: 'bg-emerald-500/10', textColor: 'text-emerald-500', borderColor: 'border-emerald-500/30' },
+    { title: t('orders.pending'), status: 'pending', icon: Clock, gradient: 'from-amber-500 to-amber-600', bg: 'bg-amber-500/10', textColor: 'text-amber-500', borderColor: 'border-amber-500/30' },
+    { title: t('orders.in_progress'), status: 'in_progress', icon: Loader2, gradient: 'from-blue-500 to-blue-600', bg: 'bg-blue-500/10', textColor: 'text-blue-500', borderColor: 'border-blue-500/30' },
+    { title: t('orders.completed'), status: 'completed', icon: CheckCircle, gradient: 'from-emerald-500 to-emerald-600', bg: 'bg-emerald-500/10', textColor: 'text-emerald-500', borderColor: 'border-emerald-500/30' },
   ];
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    toast({ title: "Copied!", description: "Order number copied to clipboard" });
+    toast({ title: t('common.copied'), description: t('orders.order_number') });
   };
 
   const containerVariants = {
@@ -154,10 +156,10 @@ const BuyerOrders = () => {
           <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
             <LogIn className="w-8 h-8 text-primary" />
           </div>
-          <h2 className="text-xl font-bold mb-2">Login Required</h2>
-          <p className="text-muted-foreground mb-4 text-sm">Please sign in to view your orders.</p>
+          <h2 className="text-xl font-bold mb-2">{t('orders.login_required')}</h2>
+          <p className="text-muted-foreground mb-4 text-sm">{t('orders.login_to_view')}</p>
           <Button asChild>
-            <a href="/auth">Sign In</a>
+            <a href="/auth">{t('auth.sign_in')}</a>
           </Button>
         </div>
       </BuyerLayout>
@@ -172,9 +174,9 @@ const BuyerOrders = () => {
           <div className="w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-500/10 flex items-center justify-center mb-4">
             <AlertTriangle className="w-8 h-8 text-amber-500" />
           </div>
-          <h2 className="text-xl font-bold mb-2">Something went wrong</h2>
+          <h2 className="text-xl font-bold mb-2">{t('error.something_wrong')}</h2>
           <p className="text-muted-foreground mb-4 text-sm">{error}</p>
-          <Button onClick={fetchOrders}>Try Again</Button>
+          <Button onClick={fetchOrders}>{t('common.retry')}</Button>
         </div>
       </BuyerLayout>
     );
@@ -191,12 +193,12 @@ const BuyerOrders = () => {
         {/* Header */}
         <motion.div variants={itemVariants} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h1 className="text-xl md:text-2xl lg:text-3xl font-bold">My Orders</h1>
-            <p className="text-sm text-muted-foreground">Track and manage your orders</p>
+            <h1 className="text-xl md:text-2xl lg:text-3xl font-bold">{t('orders.title')}</h1>
+            <p className="text-sm text-muted-foreground">{t('orders.subtitle')}</p>
           </div>
           <Button variant="outline" size="sm" onClick={fetchOrders} className="gap-2 self-start sm:self-auto">
             <RefreshCw className="w-4 h-4" />
-            <span className="hidden sm:inline">Refresh</span>
+            <span className="hidden sm:inline">{t('common.refresh')}</span>
           </Button>
         </motion.div>
 
@@ -234,7 +236,7 @@ const BuyerOrders = () => {
         <motion.div variants={itemVariants} className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Search by order ID or service..."
+            placeholder={t('orders.search_placeholder')}
             className="pl-9 bg-card/50"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -353,7 +355,7 @@ const BuyerOrders = () => {
         {/* Other status orders (cancelled, partial, refunded) */}
         {filteredOrders.filter(o => !['pending', 'in_progress', 'completed'].includes(o.status)).length > 0 && (
           <motion.div variants={itemVariants}>
-            <h3 className="text-lg font-semibold mb-3">Other Orders</h3>
+            <h3 className="text-lg font-semibold mb-3">{t('orders.other_orders')}</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {filteredOrders
                 .filter(o => !['pending', 'in_progress', 'completed'].includes(o.status))
@@ -377,13 +379,13 @@ const BuyerOrders = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Package className="w-5 h-5" />
-              Order Details
+              {t('common.details')}
             </DialogTitle>
           </DialogHeader>
           {selectedOrder && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Order Number</span>
+                <span className="text-sm text-muted-foreground">{t('orders.order_number')}</span>
                 <div className="flex items-center gap-2">
                   <code className="text-sm font-mono">{selectedOrder.order_number}</code>
                   <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => copyToClipboard(selectedOrder.order_number)}>
@@ -393,31 +395,31 @@ const BuyerOrders = () => {
               </div>
               
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Service</span>
+                <span className="text-sm text-muted-foreground">{t('orders.service')}</span>
                 <span className="font-medium">{selectedOrder.service?.name || 'Unknown'}</span>
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Status</span>
+                <span className="text-sm text-muted-foreground">{t('common.status')}</span>
                 <Badge variant="outline" className={statusConfig[selectedOrder.status]?.bgColor}>
                   {statusConfig[selectedOrder.status]?.label}
                 </Badge>
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Quantity</span>
+                <span className="text-sm text-muted-foreground">{t('common.quantity')}</span>
                 <span className="font-medium">{selectedOrder.quantity.toLocaleString()}</span>
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Price</span>
+                <span className="text-sm text-muted-foreground">{t('common.price')}</span>
                 <span className="font-bold text-lg">${selectedOrder.price.toFixed(2)}</span>
               </div>
 
               {selectedOrder.status === 'in_progress' && (
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Progress</span>
+                    <span className="text-muted-foreground">{t('orders.progress')}</span>
                     <span className="font-medium">{selectedOrder.progress}%</span>
                   </div>
                   <Progress value={selectedOrder.progress} className="h-2" />
