@@ -1,6 +1,77 @@
 // Comprehensive service icon and category detection based on service names
 // This maps keywords in service names to their appropriate icon identifiers
 
+// ============= PLATFORM SHORTFORMS =============
+// Common abbreviations used as first word in service names
+export const PLATFORM_SHORTFORMS: Record<string, string> = {
+  // Major Platforms
+  'ig': 'instagram',
+  'insta': 'instagram',
+  'fb': 'facebook',
+  'tw': 'twitter',
+  'x': 'twitter',
+  'yt': 'youtube',
+  'tt': 'tiktok',
+  'tg': 'telegram',
+  'li': 'linkedin',
+  'ln': 'linkedin',
+  'sc': 'snapchat',
+  'snap': 'snapchat',
+  'pt': 'pinterest',
+  'pin': 'pinterest',
+  'wa': 'whatsapp',
+  'dc': 'discord',
+  'vk': 'vk',
+  'vk.com': 'vk',
+  'vkontakte': 'vk',
+  
+  // Music Platforms
+  'sp': 'spotify',
+  'am': 'audiomack',
+  'scl': 'soundcloud',
+  'dz': 'deezer',
+  
+  // Streaming/Video
+  'twt': 'twitch',
+  'rb': 'rumble',
+  'dm': 'dailymotion',
+  'bb': 'bilibili',
+  
+  // Other Social
+  'th': 'threads',
+  'rd': 'reddit',
+  'qr': 'quora',
+  'tm': 'tumblr',
+  'md': 'medium',
+  'ptr': 'patreon',
+  
+  // Gaming
+  'rx': 'roblox',
+  'stm': 'steam',
+};
+
+// ============= COUNTRY/QUALITY PREFIXES TO SKIP =============
+// These are geo-targeting or quality prefixes, not platform names
+export const IGNORED_PREFIXES: string[] = [
+  // Country codes
+  'fr', 'ca', 'us', 'uk', 'de', 'it', 'es', 'br', 'mx', 'ar',
+  'au', 'nz', 'jp', 'kr', 'cn', 'in', 'ru', 'pl', 'nl', 'be',
+  'se', 'no', 'dk', 'fi', 'at', 'ch', 'pt', 'ie', 'za', 'ng',
+  'eg', 'ae', 'sa', 'tr', 'id', 'th', 'vn', 'ph', 'my', 'sg',
+  'hk', 'tw', 'pk', 'bd', 'lk', 'np', 'ua', 'cz', 'hu', 'ro',
+  'gr', 'il', 'ke', 'gh', 'ma', 'dz', 'tn', 'cl', 'co', 'pe',
+  've', 'ec', 'uy', 'py', 'bo', 'cr', 'pa', 'do', 'pr', 'jm',
+  'cu', 'ht', 'gt', 'hn', 'sv', 'ni', 
+  // Quality/speed modifiers
+  'nr', 'hq', 'real', 'fast', 'slow', 'cheap', 'premium', 'instant',
+  'best', 'top', 'super', 'ultra', 'mega', 'pro', 'vip', 'new',
+  'hot', 'old', 'mixed', 'pure', 'safe', 'max', 'mini', 'low',
+  'high', 'mid', 'std', 'basic', 'lite', 'plus', 'extra', 'bulk',
+  // Regional
+  'worldwide', 'global', 'intl', 'international', 'local', 'native',
+  'usa', 'europe', 'asia', 'africa', 'latam', 'mena', 'apac',
+];
+
 // Negative keywords that should force the category to "other"
 // These are generic/non-platform-specific services
 export const NEGATIVE_KEYWORDS: string[] = [
@@ -12,7 +83,15 @@ export const NEGATIVE_KEYWORDS: string[] = [
   "trustpilot", "tripadvisor", "google map", "google business",
   "captcha", "survey", "signups", "sign up", "registration",
   "referral", "ref link", "shortlink", "download", "software",
-  "forex", "binary", "betting", "promotion", "ads ", " ads"
+  "forex", "binary", "betting", "promotion", "ads ", " ads",
+  // Additional negative keywords
+  "vpn", "proxy", "email list", "email marketing", "bulk email",
+  "wordpress", "woocommerce", "shopify", "amazon product",
+  "fiverr", "upwork", "freelancer", "captcha solving",
+  "phone verified", "pva", "aged account", "old account",
+  "bot ", " bot", "automation", "script", "software license",
+  "hosting", "server", "domain name", "ssl certificate",
+  "sms", "phone number", "call ", " call", "voip",
 ];
 
 // Explicit regex patterns for high-confidence platform detection
@@ -23,8 +102,8 @@ export const EXPLICIT_PATTERNS: Record<string, RegExp[]> = {
   tiktok: [/\btiktok\b/i, /\btik\s*tok\b/i, /\btik-tok\b/i],
   twitter: [/\btwitter\b/i, /\bx\.com\b/i, /\btweet/i, /\bretweet/i],
   youtube: [/\byoutube\b/i, /\byt\b/i, /\byoutuber\b/i, /\bshorts\b/i],
-  facebook: [/\bfacebook\b/i, /\bfb\b/i, /\bmeta\b/i],
-  telegram: [/\btelegram\b/i, /\btg\b/i],
+  facebook: [/\bfacebook\b/i, /\bmeta\b/i],
+  telegram: [/\btelegram\b/i],
   linkedin: [/\blinkedin\b/i, /\blinked\s*in\b/i],
   spotify: [/\bspotify\b/i, /\bspoti\b/i],
   soundcloud: [/\bsoundcloud\b/i, /\bsound\s*cloud\b/i],
@@ -34,7 +113,7 @@ export const EXPLICIT_PATTERNS: Record<string, RegExp[]> = {
   reddit: [/\breddit\b/i, /\bsubreddit\b/i],
   quora: [/\bquora\b/i],
   clubhouse: [/\bclubhouse\b/i, /\bclub\s*house\b/i],
-  vk: [/\bvkontakte\b/i, /\bvk\b/i],
+  vk: [/\bvkontakte\b/i, /\bvk\.com\b/i, /\bvk\s/i, /^vk\b/i],
   whatsapp: [/\bwhatsapp\b/i, /\bwhats\s*app\b/i],
   deezer: [/\bdeezer\b/i],
   shazam: [/\bshazam\b/i],
@@ -324,83 +403,165 @@ const containsNegativeKeyword = (normalizedName: string): boolean => {
 };
 
 /**
- * Detects the platform/category from a service name with confidence scoring
- * Uses explicit regex patterns first, then falls back to keyword matching
+ * Enhanced platform detection with shortform recognition and intelligent full-text scanning
+ * Handles patterns like:
+ * - "IG Followers" → Instagram (shortform first word)
+ * - "FR Audiomack stream" → Audiomack (country code prefix, scan remaining text)
+ * - "VK.com Members" → VKontakte (shortform with domain)
+ * - "FB Facebook Likes" → Facebook (shortform matches)
  */
-export const detectPlatformWithConfidence = (serviceName: string): { 
-  platform: string; 
+export const detectPlatformEnhanced = (serviceName: string): {
+  platform: string;
   confidence: number;
-  matchedPattern?: string;
+  matchType: 'shortform' | 'explicit' | 'keyword' | 'fullscan' | 'none';
+  matchedTerm?: string;
 } => {
   const normalizedName = normalizeServiceName(serviceName);
+  const originalLower = serviceName.toLowerCase();
+  const words = normalizedName.split(/\s+/).filter(w => w.length > 0);
   
-  // Check negative keywords FIRST - these force "other" category
+  // Step 0: Check negative keywords FIRST
   if (containsNegativeKeyword(normalizedName)) {
-    return { platform: 'other', confidence: 1.0, matchedPattern: 'negative_keyword' };
+    return { platform: 'other', confidence: 1.0, matchType: 'none', matchedTerm: 'negative_keyword' };
   }
   
-  // Track best match
-  let bestMatch = { platform: 'other', confidence: 0, matchedPattern: undefined as string | undefined };
+  // Step 1: Check first word for shortform (highest priority)
+  const firstWord = words[0]?.toLowerCase();
+  if (firstWord && PLATFORM_SHORTFORMS[firstWord]) {
+    return {
+      platform: PLATFORM_SHORTFORMS[firstWord],
+      confidence: 0.98,
+      matchType: 'shortform',
+      matchedTerm: firstWord
+    };
+  }
   
-  // Priority order for platform checking (specific platforms first)
+  // Step 2: If first word is an ignored prefix (country code, quality modifier), analyze remaining text
+  if (firstWord && IGNORED_PREFIXES.includes(firstWord)) {
+    // Check second word for shortform
+    const secondWord = words[1]?.toLowerCase();
+    if (secondWord && PLATFORM_SHORTFORMS[secondWord]) {
+      return {
+        platform: PLATFORM_SHORTFORMS[secondWord],
+        confidence: 0.96,
+        matchType: 'shortform',
+        matchedTerm: secondWord
+      };
+    }
+    
+    // Check third word if second was also a prefix
+    if (secondWord && IGNORED_PREFIXES.includes(secondWord)) {
+      const thirdWord = words[2]?.toLowerCase();
+      if (thirdWord && PLATFORM_SHORTFORMS[thirdWord]) {
+        return {
+          platform: PLATFORM_SHORTFORMS[thirdWord],
+          confidence: 0.94,
+          matchType: 'shortform',
+          matchedTerm: thirdWord
+        };
+      }
+    }
+    
+    // Full scan remaining text for platform names
+    const remainingText = words.slice(1).join(' ');
+    for (const [platform, patterns] of Object.entries(EXPLICIT_PATTERNS)) {
+      for (const pattern of patterns) {
+        if (pattern.test(remainingText) || pattern.test(serviceName)) {
+          return {
+            platform,
+            confidence: 0.92,
+            matchType: 'fullscan',
+            matchedTerm: pattern.source
+          };
+        }
+      }
+    }
+  }
+  
+  // Step 3: Check for shortforms anywhere in first 3 words
+  for (let i = 0; i < Math.min(3, words.length); i++) {
+    const word = words[i]?.toLowerCase();
+    if (word && PLATFORM_SHORTFORMS[word] && !IGNORED_PREFIXES.includes(word)) {
+      return {
+        platform: PLATFORM_SHORTFORMS[word],
+        confidence: 0.95 - (i * 0.02), // Slightly lower confidence for later positions
+        matchType: 'shortform',
+        matchedTerm: word
+      };
+    }
+  }
+  
+  // Step 4: Explicit regex patterns (second highest priority)
   const priorityOrder = [
     'threads', 'kick', 'trovo', 'kwai', 'likee', 'rumble', 'odysee', 'bilibili',
     'lemon8', 'bereal', 'audiomack', 'mixcloud', 'reverbnation', 'shazam', 
     'deezer', 'tidal', 'napster', 'applemusic', 'amazonmusic', 'iheart',
     'clubhouse', 'quora', 'tumblr', 'medium', 'patreon', 'roblox', 'steam',
     'dailymotion', 'weibo', 'line', 'vk', 
-    // Then major platforms
     'instagram', 'facebook', 'twitter', 'youtube', 'tiktok', 
     'linkedin', 'telegram', 'spotify', 'soundcloud', 'discord', 
     'twitch', 'reddit', 'whatsapp', 'pinterest', 'snapchat'
   ];
   
-  // Check explicit regex patterns first (highest priority, confidence 0.95+)
   for (const platform of priorityOrder) {
     const patterns = EXPLICIT_PATTERNS[platform];
     if (patterns) {
       for (const pattern of patterns) {
         if (pattern.test(serviceName)) {
-          // For exact platform name matches, give highest confidence
-          const isExactPlatformMatch = serviceName.toLowerCase().includes(platform);
-          const confidence = isExactPlatformMatch ? 1.0 : 0.95;
+          const isExactMatch = originalLower.includes(platform);
+          return {
+            platform,
+            confidence: isExactMatch ? 1.0 : 0.95,
+            matchType: 'explicit',
+            matchedTerm: pattern.source
+          };
+        }
+      }
+    }
+  }
+  
+  // Step 5: Keyword matching (fallback)
+  let bestMatch: { platform: string; confidence: number; matchType: 'shortform' | 'explicit' | 'keyword' | 'fullscan' | 'none'; matchedTerm?: string } = { platform: 'other', confidence: 0, matchType: 'none', matchedTerm: undefined };
+  
+  for (const platform of priorityOrder) {
+    const keywords = PLATFORM_KEYWORDS[platform];
+    if (keywords) {
+      for (const keyword of keywords) {
+        const normalizedKeyword = keyword.toLowerCase().trim();
+        if (normalizedName.includes(normalizedKeyword)) {
+          const keywordScore = normalizedKeyword.length / 12;
+          const confidence = Math.min(0.85, 0.55 + keywordScore);
           
           if (confidence > bestMatch.confidence) {
-            bestMatch = { platform, confidence, matchedPattern: pattern.source };
-          }
-        }
-      }
-    }
-    
-    // If we found a high-confidence match, stop looking
-    if (bestMatch.confidence >= 0.95) {
-      return bestMatch;
-    }
-  }
-  
-  // Fall back to keyword matching if no regex match found
-  if (bestMatch.confidence < 0.8) {
-    for (const platform of priorityOrder) {
-      const keywords = PLATFORM_KEYWORDS[platform];
-      if (keywords) {
-        for (const keyword of keywords) {
-          const normalizedKeyword = keyword.toLowerCase().trim();
-          
-          if (normalizedName.includes(normalizedKeyword)) {
-            // Longer keywords = more specific = higher confidence
-            const keywordScore = normalizedKeyword.length / 10;
-            const confidence = Math.min(0.85, 0.6 + keywordScore);
-            
-            if (confidence > bestMatch.confidence) {
-              bestMatch = { platform, confidence, matchedPattern: keyword };
-            }
+            bestMatch = { platform, confidence, matchType: 'keyword', matchedTerm: keyword };
           }
         }
       }
     }
   }
   
-  return bestMatch;
+  if (bestMatch.confidence > 0.5) {
+    return bestMatch;
+  }
+  
+  return { platform: 'other', confidence: 0, matchType: 'none' };
+};
+
+/**
+ * Detects the platform/category from a service name with confidence scoring
+ * Uses enhanced detection with shortform recognition
+ */
+export const detectPlatformWithConfidence = (serviceName: string): { 
+  platform: string; 
+  confidence: number;
+  matchedPattern?: string;
+} => {
+  const result = detectPlatformEnhanced(serviceName);
+  return {
+    platform: result.platform,
+    confidence: result.confidence,
+    matchedPattern: result.matchedTerm
+  };
 };
 
 /**

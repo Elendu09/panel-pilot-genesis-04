@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { detectPlatformWithConfidence, detectServiceType, SERVICE_TYPE_PRIORITY } from "@/lib/service-icon-detection";
+import { detectPlatformEnhanced, detectServiceType, SERVICE_TYPE_PRIORITY } from "@/lib/service-icon-detection";
 import { toast } from "@/hooks/use-toast";
 import { SOCIAL_ICONS_MAP } from "@/components/icons/SocialIcons";
 import {
@@ -206,17 +206,18 @@ export const SmartOrganizeDialog = ({
         }
       }
       
-      // Phase 2: Analysis with progress
-      setProgress({ phase: 'analyzing', current: 0, total: allServices.length, message: 'Analyzing services...' });
+      // Phase 2: AI Analysis with enhanced detection
+      setProgress({ phase: 'analyzing', current: 0, total: allServices.length, message: 'AI analyzing services with enhanced detection...' });
       
       const analyzed: ServicePreview[] = [];
-      const batchSize = 100;
+      const batchSize = 200; // Increased batch size for better performance
       
       for (let i = 0; i < allServices.length; i += batchSize) {
         const batch = allServices.slice(i, i + batchSize);
         
         batch.forEach(service => {
-          const { platform, confidence } = detectPlatformWithConfidence(service.name);
+          // Use enhanced detection with shortform recognition
+          const { platform, confidence, matchType, matchedTerm } = detectPlatformEnhanced(service.name);
           const serviceType = detectServiceType(service.name);
           const newIcon = `icon:${platform}`;
           const currentIcon = service.image_url || '';
@@ -239,12 +240,12 @@ export const SmartOrganizeDialog = ({
           phase: 'analyzing', 
           current: Math.min(i + batchSize, allServices.length), 
           total: allServices.length,
-          message: `Analyzed ${Math.min(i + batchSize, allServices.length).toLocaleString()} of ${allServices.length.toLocaleString()}...`
+          message: `AI analyzed ${Math.min(i + batchSize, allServices.length).toLocaleString()} of ${allServices.length.toLocaleString()} services...`
         });
         
-        // Small delay to allow UI updates
-        if (i % 500 === 0) {
-          await new Promise(r => setTimeout(r, 10));
+        // Yield to UI with requestAnimationFrame pattern
+        if (i % 400 === 0) {
+          await new Promise(r => requestAnimationFrame(() => setTimeout(r, 5)));
         }
       }
       
@@ -475,50 +476,91 @@ export const SmartOrganizeDialog = ({
           </DialogDescription>
         </DialogHeader>
         
-        {/* Progress View */}
+        {/* Enhanced Progress View */}
         {showProgress && (
-          <div className="space-y-4 py-4">
+          <div className="space-y-5 py-4">
+            {/* Phase indicator with animated dots */}
             <div className="flex items-center justify-between text-sm">
-              <span className="font-medium text-primary">
-                {phaseLabels[progress.phase]}
-              </span>
-              <span className="text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-primary">
+                  {phaseLabels[progress.phase]}
+                </span>
+                <span className="flex gap-0.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
+                </span>
+              </div>
+              <span className="text-muted-foreground font-mono text-xs">
                 {progress.current.toLocaleString()} / {progress.total.toLocaleString()}
               </span>
             </div>
             
-            <Progress value={overallPercentage} className="h-3" />
-            
-            <div className="text-center text-2xl font-bold">
-              {overallPercentage}%
+            {/* Enhanced gradient progress bar */}
+            <div className="relative">
+              <div className="h-4 w-full overflow-hidden rounded-full bg-secondary">
+                <div 
+                  className="h-full transition-all duration-300 ease-out rounded-full bg-gradient-to-r from-blue-500 via-purple-500 to-green-500"
+                  style={{ width: `${overallPercentage}%` }}
+                />
+              </div>
+              {/* Shimmer effect */}
+              <div className="absolute inset-0 overflow-hidden rounded-full pointer-events-none">
+                <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+              </div>
             </div>
             
-            {/* Phase steps */}
-            <div className="flex items-center justify-between text-xs text-muted-foreground pt-2">
-              {(['fetching', 'analyzing', 'applying', 'categorizing', 'completed'] as OrganizePhase[]).map((phase, idx, arr) => {
-                const isActive = progress.phase === phase;
-                const isPast = arr.indexOf(progress.phase) > idx || progress.phase === 'completed';
-                const labels = ['Fetch', 'Analyze', 'Apply', 'Categorize', 'Done'];
-                
-                return (
-                  <div key={phase} className="flex items-center">
-                    <div className={cn(
-                      "flex items-center gap-1",
-                      isPast && "text-green-500",
-                      isActive && "text-primary font-medium"
-                    )}>
+            {/* Percentage with service count */}
+            <div className="text-center">
+              <div className="text-3xl font-bold bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">
+                {overallPercentage}%
+              </div>
+              {progress.total > 0 && (
+                <div className="text-xs text-muted-foreground mt-1">
+                  Processing {progress.total.toLocaleString()} services
+                </div>
+              )}
+            </div>
+            
+            {/* Phase steps with connecting lines */}
+            <div className="relative pt-4">
+              <div className="flex items-center justify-between">
+                {(['fetching', 'analyzing', 'applying', 'organizing', 'categorizing', 'completed'] as OrganizePhase[]).map((phase, idx, arr) => {
+                  const isActive = progress.phase === phase;
+                  const currentIdx = arr.indexOf(progress.phase);
+                  const isPast = currentIdx > idx || progress.phase === 'completed';
+                  const labels = ['Fetch', 'AI Analyze', 'Apply', 'Organize', 'Categorize', 'Done'];
+                  
+                  return (
+                    <div key={phase} className="flex flex-col items-center relative z-10">
                       <div className={cn(
-                        "w-2 h-2 rounded-full",
-                        isPast ? "bg-green-500" : isActive ? "bg-primary" : "bg-muted"
-                      )} />
-                      {labels[idx]}
+                        "w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-medium transition-all duration-300",
+                        isPast ? "bg-green-500 text-white" : 
+                        isActive ? "bg-primary text-primary-foreground scale-110 ring-2 ring-primary/30" : 
+                        "bg-muted text-muted-foreground"
+                      )}>
+                        {isPast ? <Check className="w-3 h-3" /> : idx + 1}
+                      </div>
+                      <span className={cn(
+                        "text-[9px] mt-1 font-medium whitespace-nowrap",
+                        isPast && "text-green-500",
+                        isActive && "text-primary"
+                      )}>
+                        {labels[idx]}
+                      </span>
                     </div>
-                    {idx < arr.length - 1 && (
-                      <div className="flex-1 h-px bg-border mx-2 w-8" />
-                    )}
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
+              {/* Connecting line */}
+              <div className="absolute top-[22px] left-2.5 right-2.5 h-0.5 bg-muted -z-0">
+                <div 
+                  className="h-full bg-green-500 transition-all duration-500"
+                  style={{ 
+                    width: `${Math.max(0, ((['fetching', 'analyzing', 'applying', 'organizing', 'categorizing', 'completed'] as OrganizePhase[]).indexOf(progress.phase) / 5) * 100)}%` 
+                  }}
+                />
+              </div>
             </div>
           </div>
         )}
