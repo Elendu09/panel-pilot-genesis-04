@@ -55,6 +55,7 @@ interface FetchedService {
   minQty: number;
   maxQty: number;
   description: string;
+  iconUrl?: string; // Pre-computed icon URL from AI detection
 }
 
 interface Provider {
@@ -201,18 +202,34 @@ export const ServiceImportDialog = ({
       // Use AI detection on service NAME (not provider category) for accurate classification
       const mappedServices: FetchedService[] = data.services.map((s: any, index: number) => {
         const serviceName = s.name || `Service ${s.service || s.id}`;
-        const { platform } = detectPlatformEnhanced(serviceName);
+        // Try provider category first, then fall back to service name detection
+        const providerCategory = s.category || s.network || '';
+        const { platform: nameDetected, confidence: nameConfidence } = detectPlatformEnhanced(serviceName);
+        const { platform: catDetected, confidence: catConfidence } = detectPlatformEnhanced(providerCategory);
+        
+        // Use whichever has higher confidence, prioritizing name detection
+        const detectedPlatform = nameConfidence >= catConfidence ? nameDetected : catDetected;
+        const iconUrl = `icon:${detectedPlatform}`;
         
         return {
           id: s.service || s.id || index + 1,
           name: serviceName,
-          category: platform, // AI-detected from service name (50+ platforms)
+          category: detectedPlatform, // AI-detected from service name + category (50+ platforms)
           price: parseFloat(s.rate || s.price || 0), // Provider rate per 1K - no division
           minQty: parseInt(s.min || s.min_quantity || 100),
           maxQty: parseInt(s.max || s.max_quantity || 10000),
           description: s.description || s.name || '',
+          iconUrl, // Pre-computed icon URL for import
         };
       });
+      
+      // Log detection results for debugging
+      console.log(`[Import] Detected platforms from ${mappedServices.length} services:`);
+      const platformCounts: Record<string, number> = {};
+      mappedServices.forEach(s => {
+        platformCounts[s.category] = (platformCounts[s.category] || 0) + 1;
+      });
+      console.log(platformCounts);
       
       // Check which services are already imported by matching provider_id
       const providerIds = mappedServices.map(s => String(s.id));
