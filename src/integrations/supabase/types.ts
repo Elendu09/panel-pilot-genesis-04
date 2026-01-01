@@ -1979,6 +1979,7 @@ export type Database = {
           panel_id: string | null
           price: number
           provider_id: string | null
+          provider_service_id: string | null
           updated_at: string
         }
         Insert: {
@@ -1997,6 +1998,7 @@ export type Database = {
           panel_id?: string | null
           price: number
           provider_id?: string | null
+          provider_service_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -2015,6 +2017,7 @@ export type Database = {
           panel_id?: string | null
           price?: number
           provider_id?: string | null
+          provider_service_id?: string | null
           updated_at?: string
         }
         Relationships: [

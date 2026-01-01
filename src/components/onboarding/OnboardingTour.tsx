@@ -594,8 +594,8 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
   const getCardPosition = () => {
     const position = getPosition();
     
-    // Mobile/Tablet: always position card in safe area
-    if (isMobile || isTablet) {
+    // MOBILE ONLY: Position at bottom since mobile uses bottom navigation bar
+    if (isMobile) {
       if (position === "top" && targetRect) {
         // Card above the bottom nav but below target
         return {
@@ -605,7 +605,7 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
           right: 16,
         };
       }
-      // Default mobile/tablet position - center or top area
+      // Default mobile position - bottom area to avoid blocking content
       return {
         position: "fixed" as const,
         top: position === "center" ? "50%" : 80,
@@ -615,7 +615,8 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
       };
     }
 
-    // Desktop positioning
+    // TABLET & DESKTOP: Center the modal (both have sidebars, no bottom nav)
+    // This provides a clean, focused experience on larger screens
     if (!targetRect || position === "center") {
       return { 
         position: "fixed" as const,
@@ -625,9 +626,10 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
       };
     }
 
-    const cardWidth = 400;
-    const cardHeight = 450;
-    const padding = 20;
+    // For targeted elements on tablet/desktop, position relative to target
+    const cardWidth = isTablet ? 380 : 450;
+    const cardHeight = isTablet ? 400 : 500;
+    const padding = 24;
 
     switch (position) {
       case "right":
@@ -655,6 +657,7 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
           left: Math.max(padding, Math.min(targetRect.left, window.innerWidth - cardWidth - padding)),
         };
       default:
+        // Default to centered for tablet/desktop
         return {
           position: "fixed" as const,
           top: "50%",

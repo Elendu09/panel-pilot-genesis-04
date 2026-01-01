@@ -119,6 +119,7 @@ import {
 
 import { DraggableServiceItem, ServiceItem } from "@/components/services/DraggableServiceItem";
 import { ServiceImportDialog } from "@/components/services/ServiceImportDialog";
+import { ServiceResyncDialog } from "@/components/services/ServiceResyncDialog";
 import { ServiceEditSheet } from "@/components/services/ServiceEditSheet";
 import { ServiceViewDialog } from "@/components/services/ServiceViewDialog";
 import { MobileServiceView } from "@/components/services/MobileServiceView";
@@ -323,6 +324,8 @@ const ServicesManagement = () => {
   // Bulk Operation History
   const [isBulkHistoryOpen, setIsBulkHistoryOpen] = useState(false);
   
+  // Re-sync Dialog
+  const [isResyncDialogOpen, setIsResyncDialogOpen] = useState(false);
   // Drag-and-drop order save state
   const [isSavingOrder, setIsSavingOrder] = useState(false);
   const [pendingOrderUpdates, setPendingOrderUpdates] = useState<Array<{ id: string; display_order: number }> | null>(null);
@@ -1517,6 +1520,7 @@ const ServicesManagement = () => {
           is_active: true,
           display_order: services.length + index + 1,
           provider_id: providerId || 'direct', // Store actual provider UUID
+          provider_service_id: String(service.id), // Store original provider service ID for re-sync
           features: JSON.stringify({ 
             original_service_id: service.id, 
             provider_name: providerName || 'Direct',
@@ -1707,6 +1711,18 @@ const ServicesManagement = () => {
           >
             <Clock className="w-4 h-4 mr-2" />
             <span className="hidden sm:inline">History</span>
+          </Button>
+          
+          {/* Re-sync from Provider Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="glass-card border-border/50"
+            onClick={() => setIsResyncDialogOpen(true)}
+            disabled={providers.length === 0}
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            <span className="hidden sm:inline">Re-sync</span>
           </Button>
 
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
@@ -2938,6 +2954,21 @@ const ServicesManagement = () => {
         progress={autoFixProgress}
         title="Auto-Fix Icons"
       />
+      
+      {/* Service Re-sync Dialog */}
+      {panel?.id && (
+        <ServiceResyncDialog
+          open={isResyncDialogOpen}
+          onOpenChange={setIsResyncDialogOpen}
+          providers={providers}
+          panelId={panel.id}
+          onComplete={() => {
+            fetchServices();
+            fetchCategoryCounts();
+          }}
+          onOpenSmartOrganize={() => setIsSmartOrganizeOpen(true)}
+        />
+      )}
     </div>
   );
 };
