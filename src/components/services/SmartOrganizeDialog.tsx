@@ -7,10 +7,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   Loader2, 
   Check, 
@@ -18,27 +14,20 @@ import {
   Download, 
   Sparkles, 
   Search,
-  ChevronDown,
-  ChevronRight,
   Layers,
-  Wand2
+  Wand2,
+  Zap
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { detectPlatformEnhanced, detectServiceType, SERVICE_TYPE_PRIORITY } from "@/lib/service-icon-detection";
+import { detectPlatformEnhanced, detectServiceType, SERVICE_TYPE_PRIORITY, getSubCategory } from "@/lib/service-icon-detection";
 import { toast } from "@/hooks/use-toast";
 import { SOCIAL_ICONS_MAP } from "@/components/icons/SocialIcons";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 
 export type OrganizePhase = 
   | 'idle' 
   | 'fetching' 
   | 'analyzing' 
-  | 'previewing'
   | 'applying' 
   | 'organizing'
   | 'categorizing'
@@ -50,18 +39,6 @@ export interface OrganizeProgress {
   current: number;
   total: number;
   message?: string;
-}
-
-interface ServicePreview {
-  id: string;
-  name: string;
-  currentCategory: string;
-  newCategory: string;
-  currentIcon: string;
-  newIcon: string;
-  confidence: number;
-  serviceType: string;
-  willChange: boolean;
 }
 
 interface SmartOrganizeDialogProps {
@@ -87,39 +64,14 @@ export const SmartOrganizeDialog = ({
     total: 0,
   });
   
-  const [previewData, setPreviewData] = useState<ServicePreview[]>([]);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [expandedPlatforms, setExpandedPlatforms] = useState<Set<string>>(new Set());
   const [isProcessing, setIsProcessing] = useState(false);
-
-  // Group preview data by platform
-  const groupedData = useMemo(() => {
-    const groups: Record<string, ServicePreview[]> = {};
-    previewData.forEach(item => {
-      const platform = item.newCategory;
-      if (!groups[platform]) groups[platform] = [];
-      groups[platform].push(item);
-    });
-    
-    // Sort groups by size (most services first)
-    return Object.entries(groups)
-      .sort((a, b) => b[1].length - a[1].length)
-      .map(([platform, services]) => ({
-        platform,
-        services,
-        changeCount: services.filter(s => s.willChange).length,
-        totalCount: services.length,
-      }));
-  }, [previewData]);
-
-  // Stats
-  const stats = useMemo(() => {
-    const totalServices = previewData.length;
-    const willChange = previewData.filter(s => s.willChange).length;
-    const highConfidence = previewData.filter(s => s.confidence >= 0.9).length;
-    const platformCount = new Set(previewData.map(s => s.newCategory)).size;
-    return { totalServices, willChange, highConfidence, platformCount };
-  }, [previewData]);
+  
+  // Live stats for automatic processing
+  const [liveStats, setLiveStats] = useState({
+    processed: 0,
+    applied: 0,
+    categories: new Set<string>(),
+  });
 
   // Calculate overall percentage
   const overallPercentage = useMemo(() => {
@@ -128,11 +80,10 @@ export const SmartOrganizeDialog = ({
     const phaseWeights: Record<OrganizePhase, { start: number; weight: number }> = {
       idle: { start: 0, weight: 0 },
       fetching: { start: 0, weight: 15 },
-      analyzing: { start: 15, weight: 25 },
-      previewing: { start: 40, weight: 5 },
-      applying: { start: 45, weight: 30 },
-      organizing: { start: 75, weight: 15 },
-      categorizing: { start: 90, weight: 10 },
+      analyzing: { start: 15, weight: 20 },
+      applying: { start: 35, weight: 30 },
+      organizing: { start: 65, weight: 20 },
+      categorizing: { start: 85, weight: 15 },
       completed: { start: 100, weight: 0 },
       error: { start: 0, weight: 0 },
     };
@@ -145,7 +96,7 @@ export const SmartOrganizeDialog = ({
   // Start the organize process when dialog opens
   useEffect(() => {
     if (open && progress.phase === 'idle') {
-      startOrganize();
+      startAutoOrganize();
     }
   }, [open]);
 
@@ -153,18 +104,17 @@ export const SmartOrganizeDialog = ({
   useEffect(() => {
     if (!open) {
       setProgress({ phase: 'idle', current: 0, total: 0 });
-      setPreviewData([]);
-      setSelectedIds(new Set());
-      setExpandedPlatforms(new Set());
       setIsProcessing(false);
+      setLiveStats({ processed: 0, applied: 0, categories: new Set() });
     }
   }, [open]);
 
-  const startOrganize = async () => {
+  const startAutoOrganize = async () => {
     if (!panelId) return;
     
     setIsProcessing(true);
-    setProgress({ phase: 'fetching', current: 0, total: 0, message: 'Starting...' });
+    setProgress({ phase: 'fetching', current: 0, total: 0, message: 'Starting automatic organization...' });
+    setLiveStats({ processed: 0, applied: 0, categories: new Set() });
     
     try {
       // Phase 1: Fetch total count
@@ -174,7 +124,7 @@ export const SmartOrganizeDialog = ({
         .eq('panel_id', panelId);
       
       const totalServices = count || 0;
-      setProgress({ phase: 'fetching', current: 0, total: totalServices, message: 'Fetching services...' });
+      setProgress({ phase: 'fetching', current: 0, total: totalServices, message: 'Fetching all services...' });
       
       // Paginated fetch ALL services (up to 10,000)
       const pageSize = 1000;
@@ -200,145 +150,83 @@ export const SmartOrganizeDialog = ({
             phase: 'fetching', 
             current: allServices.length, 
             total: totalServices,
-            message: `Fetched ${allServices.length.toLocaleString()} services...`
+            message: `Fetched ${allServices.length.toLocaleString()} of ${totalServices.toLocaleString()} services...`
           });
           if (data.length < pageSize) hasMore = false;
         }
       }
       
       // Phase 2: AI Analysis with enhanced detection
-      setProgress({ phase: 'analyzing', current: 0, total: allServices.length, message: 'AI analyzing services with enhanced detection...' });
+      setProgress({ phase: 'analyzing', current: 0, total: allServices.length, message: 'AI analyzing services...' });
       
-      const analyzed: ServicePreview[] = [];
-      const batchSize = 200; // Increased batch size for better performance
+      interface AnalyzedService {
+        id: string;
+        name: string;
+        currentCategory: string;
+        newCategory: string;
+        newIcon: string;
+        serviceType: string;
+        subCategory: string;
+        willChange: boolean;
+      }
+      
+      const analyzed: AnalyzedService[] = [];
+      const categoriesFound = new Set<string>();
+      const batchSize = 200;
       
       for (let i = 0; i < allServices.length; i += batchSize) {
         const batch = allServices.slice(i, i + batchSize);
         
         batch.forEach(service => {
-          // Use enhanced detection with shortform recognition
-          const { platform, confidence, matchType, matchedTerm } = detectPlatformEnhanced(service.name);
+          const { platform } = detectPlatformEnhanced(service.name);
           const serviceType = detectServiceType(service.name);
+          const subCategory = getSubCategory(service.name);
           const newIcon = `icon:${platform}`;
           const currentIcon = service.image_url || '';
           const willChange = service.category !== platform || currentIcon !== newIcon;
+          
+          categoriesFound.add(platform);
           
           analyzed.push({
             id: service.id,
             name: service.name,
             currentCategory: service.category,
             newCategory: platform,
-            currentIcon,
             newIcon,
-            confidence,
             serviceType,
+            subCategory,
             willChange,
           });
         });
+        
+        setLiveStats(prev => ({
+          ...prev,
+          processed: Math.min(i + batchSize, allServices.length),
+          categories: categoriesFound,
+        }));
         
         setProgress({ 
           phase: 'analyzing', 
           current: Math.min(i + batchSize, allServices.length), 
           total: allServices.length,
-          message: `AI analyzed ${Math.min(i + batchSize, allServices.length).toLocaleString()} of ${allServices.length.toLocaleString()} services...`
+          message: `Analyzed ${Math.min(i + batchSize, allServices.length).toLocaleString()} services...`
         });
         
-        // Yield to UI with requestAnimationFrame pattern
+        // Yield to UI
         if (i % 400 === 0) {
           await new Promise(r => requestAnimationFrame(() => setTimeout(r, 5)));
         }
       }
       
-      // Phase 3: Preview
-      setProgress({ phase: 'previewing', current: analyzed.length, total: analyzed.length, message: 'Generating preview...' });
-      setPreviewData(analyzed);
+      // Phase 3: Apply ALL changes automatically (no preview needed)
+      const changesToApply = analyzed.filter(s => s.willChange);
+      setProgress({ phase: 'applying', current: 0, total: changesToApply.length, message: 'Applying changes...' });
       
-      // Pre-select all services that will change
-      const changeIds = new Set(analyzed.filter(s => s.willChange).map(s => s.id));
-      setSelectedIds(changeIds);
-      
-      // Expand platforms with changes
-      const platformsWithChanges = new Set(
-        analyzed.filter(s => s.willChange).map(s => s.newCategory)
-      );
-      setExpandedPlatforms(platformsWithChanges);
-      
-      setIsProcessing(false);
-      
-    } catch (error) {
-      console.error('Error in Smart Organize:', error);
-      setProgress({ phase: 'error', current: 0, total: 0, message: 'Failed to analyze services' });
-      toast({ title: 'Failed to analyze services', variant: 'destructive' });
-      setIsProcessing(false);
-    }
-  };
-
-  const togglePlatform = (platform: string) => {
-    setExpandedPlatforms(prev => {
-      const next = new Set(prev);
-      if (next.has(platform)) next.delete(platform);
-      else next.add(platform);
-      return next;
-    });
-  };
-
-  const toggleService = (id: string) => {
-    setSelectedIds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  const togglePlatformServices = (platform: string, services: ServicePreview[]) => {
-    const changeableServices = services.filter(s => s.willChange);
-    const allSelected = changeableServices.every(s => selectedIds.has(s.id));
-    
-    setSelectedIds(prev => {
-      const next = new Set(prev);
-      if (allSelected) {
-        changeableServices.forEach(s => next.delete(s.id));
-      } else {
-        changeableServices.forEach(s => next.add(s.id));
-      }
-      return next;
-    });
-  };
-
-  const selectAll = () => {
-    const changeableIds = previewData.filter(s => s.willChange).map(s => s.id);
-    setSelectedIds(new Set(changeableIds));
-  };
-
-  const deselectAll = () => {
-    setSelectedIds(new Set());
-  };
-
-  const applyChanges = async () => {
-    const changesToApply = previewData.filter(s => selectedIds.has(s.id) && s.willChange);
-    
-    if (changesToApply.length === 0) {
-      toast({ title: "No changes selected" });
-      return;
-    }
-
-    setIsProcessing(true);
-    setProgress({ phase: 'applying', current: 0, total: changesToApply.length, message: 'Applying changes...' });
-    
-    try {
-      // Batch update in chunks
       const chunkSize = 100;
+      let appliedCount = 0;
       
       for (let i = 0; i < changesToApply.length; i += chunkSize) {
         const chunk = changesToApply.slice(i, i + chunkSize);
-        
-        setProgress({ 
-          phase: 'applying', 
-          current: i, 
-          total: changesToApply.length,
-          message: `Updating ${i.toLocaleString()} of ${changesToApply.length.toLocaleString()} services...`
-        });
         
         await Promise.all(
           chunk.map(update =>
@@ -348,13 +236,22 @@ export const SmartOrganizeDialog = ({
               .eq('id', update.id)
           )
         );
+        
+        appliedCount += chunk.length;
+        setLiveStats(prev => ({ ...prev, applied: appliedCount }));
+        
+        setProgress({ 
+          phase: 'applying', 
+          current: appliedCount, 
+          total: changesToApply.length,
+          message: `Updated ${appliedCount.toLocaleString()} of ${changesToApply.length.toLocaleString()} services...`
+        });
       }
       
-      // Phase: Organizing - sort by category then service type
-      setProgress({ phase: 'organizing', current: 0, total: previewData.length, message: 'Organizing services by category and type...' });
+      // Phase 4: Organize - sort by category then service type
+      setProgress({ phase: 'organizing', current: 0, total: analyzed.length, message: 'Organizing by category & type...' });
       
-      // Sort all services by category, then by service type priority
-      const sortedServices = [...previewData].sort((a, b) => {
+      const sortedServices = [...analyzed].sort((a, b) => {
         // First by category (platform)
         const catCompare = a.newCategory.localeCompare(b.newCategory);
         if (catCompare !== 0) return catCompare;
@@ -375,16 +272,8 @@ export const SmartOrganizeDialog = ({
         display_order: index + 1,
       }));
       
-      // Apply display order updates in chunks
       for (let i = 0; i < orderUpdates.length; i += chunkSize) {
         const chunk = orderUpdates.slice(i, i + chunkSize);
-        
-        setProgress({ 
-          phase: 'organizing', 
-          current: i, 
-          total: orderUpdates.length,
-          message: `Organizing ${i.toLocaleString()} of ${orderUpdates.length.toLocaleString()} services...`
-        });
         
         await Promise.all(
           chunk.map(update =>
@@ -394,39 +283,45 @@ export const SmartOrganizeDialog = ({
               .eq('id', update.id)
           )
         );
+        
+        setProgress({ 
+          phase: 'organizing', 
+          current: Math.min(i + chunkSize, orderUpdates.length), 
+          total: orderUpdates.length,
+          message: `Organized ${Math.min(i + chunkSize, orderUpdates.length).toLocaleString()} services...`
+        });
       }
       
-      // Phase: Categorizing - refresh counts
+      // Phase 5: Update category counts
       setProgress({ phase: 'categorizing', current: 0, total: 1, message: 'Updating category counts...' });
       await onRefreshCounts();
       setProgress({ phase: 'categorizing', current: 1, total: 1, message: 'Category counts updated!' });
       
       // Complete
-      setProgress({ phase: 'completed', current: changesToApply.length, total: changesToApply.length, message: 'All changes applied and organized!' });
+      setProgress({ 
+        phase: 'completed', 
+        current: changesToApply.length, 
+        total: changesToApply.length, 
+        message: `Successfully organized ${allServices.length.toLocaleString()} services!` 
+      });
       
-      toast({ title: `AutoFixed & Organized ${changesToApply.length} services` });
+      toast({ 
+        title: `AutoFix Complete!`,
+        description: `Organized ${allServices.length.toLocaleString()} services into ${categoriesFound.size} categories. Updated ${changesToApply.length.toLocaleString()} services.`,
+      });
       
       // Brief delay then close
       setTimeout(() => {
         onComplete();
         onOpenChange(false);
-      }, 1500);
+      }, 2000);
       
     } catch (error) {
-      console.error('Error applying changes:', error);
-      setProgress({ phase: 'error', current: 0, total: 0, message: 'Failed to apply changes' });
-      toast({ title: 'Failed to apply changes', variant: 'destructive' });
+      console.error('Error in Smart Organize:', error);
+      setProgress({ phase: 'error', current: 0, total: 0, message: 'Failed to organize services' });
+      toast({ title: 'Failed to organize services', variant: 'destructive' });
       setIsProcessing(false);
     }
-  };
-
-  const getConfidenceBadge = (confidence: number) => {
-    if (confidence >= 0.95) {
-      return <Badge variant="default" className="bg-green-500/20 text-green-600 text-xs">High</Badge>;
-    } else if (confidence >= 0.7) {
-      return <Badge variant="default" className="bg-amber-500/20 text-amber-600 text-xs">Medium</Badge>;
-    }
-    return <Badge variant="default" className="bg-red-500/20 text-red-600 text-xs">Low</Badge>;
   };
 
   const getPlatformIcon = (platform: string) => {
@@ -438,41 +333,37 @@ export const SmartOrganizeDialog = ({
   const phaseLabels: Record<OrganizePhase, string> = {
     idle: 'Preparing...',
     fetching: 'Fetching services...',
-    analyzing: 'Analyzing services...',
-    previewing: 'Generating preview...',
-    applying: 'Applying changes...',
+    analyzing: 'AI analyzing with enhanced detection...',
+    applying: 'Applying icon & category changes...',
     organizing: 'Organizing by category & type...',
     categorizing: 'Updating categories...',
     completed: 'Completed!',
     error: 'Error occurred',
   };
 
-  const showPreview = progress.phase === 'previewing' && !isProcessing;
-  const showProgress = ['fetching', 'analyzing', 'applying', 'organizing', 'categorizing'].includes(progress.phase) || 
-                       (progress.phase === 'completed' && isProcessing);
+  const phaseIcons: Record<OrganizePhase, React.ReactNode> = {
+    idle: <Loader2 className="w-5 h-5 animate-spin" />,
+    fetching: <Download className="w-5 h-5 animate-pulse" />,
+    analyzing: <Search className="w-5 h-5 animate-pulse" />,
+    applying: <Sparkles className="w-5 h-5 animate-pulse" />,
+    organizing: <Layers className="w-5 h-5 animate-pulse" />,
+    categorizing: <Wand2 className="w-5 h-5 animate-pulse" />,
+    completed: <Check className="w-5 h-5 text-green-500" />,
+    error: <AlertCircle className="w-5 h-5 text-destructive" />,
+  };
+
+  const showProgress = ['fetching', 'analyzing', 'applying', 'organizing', 'categorizing'].includes(progress.phase);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={cn(
-        "transition-all duration-300",
-        showPreview ? "sm:max-w-4xl max-h-[90vh]" : "sm:max-w-md"
-      )}>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            {progress.phase === 'completed' ? (
-              <Check className="w-5 h-5 text-green-500" />
-            ) : progress.phase === 'error' ? (
-              <AlertCircle className="w-5 h-5 text-destructive" />
-            ) : (
-              <Wand2 className={cn("w-5 h-5 text-primary", isProcessing && "animate-pulse")} />
-            )}
+            {phaseIcons[progress.phase]}
             AutoFix Icon + Smart Organize
           </DialogTitle>
           <DialogDescription>
-            {showPreview 
-              ? `Found ${stats.willChange} services to update across ${stats.platformCount} platforms`
-              : progress.message || phaseLabels[progress.phase]
-            }
+            {progress.message || phaseLabels[progress.phase]}
           </DialogDescription>
         </DialogHeader>
         
@@ -482,6 +373,7 @@ export const SmartOrganizeDialog = ({
             {/* Phase indicator with animated dots */}
             <div className="flex items-center justify-between text-sm">
               <div className="flex items-center gap-2">
+                <Zap className="w-4 h-4 text-primary animate-pulse" />
                 <span className="font-medium text-primary">
                   {phaseLabels[progress.phase]}
                 </span>
@@ -510,16 +402,27 @@ export const SmartOrganizeDialog = ({
               </div>
             </div>
             
-            {/* Percentage with service count */}
+            {/* Percentage with live stats */}
             <div className="text-center">
               <div className="text-3xl font-bold bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">
                 {overallPercentage}%
               </div>
-              {progress.total > 0 && (
-                <div className="text-xs text-muted-foreground mt-1">
-                  Processing {progress.total.toLocaleString()} services
-                </div>
-              )}
+            </div>
+            
+            {/* Live Stats Grid */}
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="bg-muted/50 rounded-lg p-3">
+                <div className="text-xl font-bold text-primary">{liveStats.processed.toLocaleString()}</div>
+                <div className="text-xs text-muted-foreground">Processed</div>
+              </div>
+              <div className="bg-muted/50 rounded-lg p-3">
+                <div className="text-xl font-bold text-green-500">{liveStats.applied.toLocaleString()}</div>
+                <div className="text-xs text-muted-foreground">Updated</div>
+              </div>
+              <div className="bg-muted/50 rounded-lg p-3">
+                <div className="text-xl font-bold text-amber-500">{liveStats.categories.size}</div>
+                <div className="text-xs text-muted-foreground">Categories</div>
+              </div>
             </div>
             
             {/* Phase steps with connecting lines */}
@@ -529,7 +432,7 @@ export const SmartOrganizeDialog = ({
                   const isActive = progress.phase === phase;
                   const currentIdx = arr.indexOf(progress.phase);
                   const isPast = currentIdx > idx || progress.phase === 'completed';
-                  const labels = ['Fetch', 'AI Analyze', 'Apply', 'Organize', 'Categorize', 'Done'];
+                  const labels = ['Fetch', 'Analyze', 'Apply', 'Organize', 'Categories', 'Done'];
                   
                   return (
                     <div key={phase} className="flex flex-col items-center relative z-10">
@@ -565,149 +468,51 @@ export const SmartOrganizeDialog = ({
           </div>
         )}
         
-        {/* Preview View */}
-        {showPreview && (
-          <div className="space-y-4">
-            {/* Stats bar */}
-            <div className="grid grid-cols-4 gap-2 text-center">
-              <div className="bg-muted/50 rounded-lg p-2">
-                <div className="text-lg font-bold">{stats.totalServices.toLocaleString()}</div>
-                <div className="text-xs text-muted-foreground">Total</div>
+        {/* Completed state */}
+        {progress.phase === 'completed' && (
+          <div className="space-y-4 py-4">
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center">
+                <Check className="w-8 h-8 text-green-500" />
               </div>
-              <div className="bg-muted/50 rounded-lg p-2">
-                <div className="text-lg font-bold text-amber-500">{stats.willChange.toLocaleString()}</div>
-                <div className="text-xs text-muted-foreground">To Update</div>
-              </div>
-              <div className="bg-muted/50 rounded-lg p-2">
-                <div className="text-lg font-bold text-green-500">{stats.highConfidence.toLocaleString()}</div>
-                <div className="text-xs text-muted-foreground">High Confidence</div>
-              </div>
-              <div className="bg-muted/50 rounded-lg p-2">
-                <div className="text-lg font-bold text-primary">{selectedIds.size.toLocaleString()}</div>
-                <div className="text-xs text-muted-foreground">Selected</div>
+              <div className="text-center">
+                <h3 className="font-semibold text-lg">All Done!</h3>
+                <p className="text-sm text-muted-foreground">{progress.message}</p>
               </div>
             </div>
             
-            {/* Select/Deselect buttons */}
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={selectAll}>
-                Select All Changes
-              </Button>
-              <Button variant="outline" size="sm" onClick={deselectAll}>
-                Deselect All
-              </Button>
-            </div>
-            
-            {/* Platform groups */}
-            <ScrollArea className="h-[400px] pr-4">
-              <div className="space-y-2">
-                {groupedData.map(({ platform, services, changeCount, totalCount }) => {
-                  const isExpanded = expandedPlatforms.has(platform);
-                  const changeableServices = services.filter(s => s.willChange);
-                  const allSelected = changeableServices.length > 0 && 
-                                     changeableServices.every(s => selectedIds.has(s.id));
-                  const someSelected = changeableServices.some(s => selectedIds.has(s.id));
-                  
-                  return (
-                    <Collapsible key={platform} open={isExpanded}>
-                      <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-                        <Checkbox
-                          checked={allSelected}
-                          onCheckedChange={() => togglePlatformServices(platform, services)}
-                          className={cn(!allSelected && someSelected && "data-[state=checked]:bg-primary/50")}
-                          disabled={changeCount === 0}
-                        />
-                        <CollapsibleTrigger 
-                          className="flex-1 flex items-center gap-2 cursor-pointer"
-                          onClick={() => togglePlatform(platform)}
-                        >
-                          {getPlatformIcon(platform)}
-                          <span className="font-medium capitalize">{platform}</span>
-                          <Badge variant="secondary" className="text-xs">
-                            {totalCount} services
-                          </Badge>
-                          {changeCount > 0 && (
-                            <Badge variant="default" className="text-xs bg-amber-500/20 text-amber-600">
-                              {changeCount} changes
-                            </Badge>
-                          )}
-                          <div className="flex-1" />
-                          {isExpanded ? (
-                            <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                          ) : (
-                            <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                          )}
-                        </CollapsibleTrigger>
-                      </div>
-                      
-                      <CollapsibleContent className="pl-8 space-y-1 mt-1">
-                        {services.slice(0, 50).map(service => (
-                          <div 
-                            key={service.id}
-                            className={cn(
-                              "flex items-center gap-2 p-1.5 rounded text-sm",
-                              service.willChange ? "bg-amber-500/5" : "opacity-60"
-                            )}
-                          >
-                            <Checkbox
-                              checked={selectedIds.has(service.id)}
-                              onCheckedChange={() => toggleService(service.id)}
-                              disabled={!service.willChange}
-                            />
-                            <span className="flex-1 truncate" title={service.name}>
-                              {service.name}
-                            </span>
-                            {service.willChange && (
-                              <>
-                                <span className="text-xs text-muted-foreground">
-                                  {service.currentCategory} → {service.newCategory}
-                                </span>
-                                {getConfidenceBadge(service.confidence)}
-                              </>
-                            )}
-                          </div>
-                        ))}
-                        {services.length > 50 && (
-                          <div className="text-xs text-muted-foreground py-1">
-                            + {services.length - 50} more services...
-                          </div>
-                        )}
-                      </CollapsibleContent>
-                    </Collapsible>
-                  );
-                })}
+            {/* Final Stats */}
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="bg-muted/50 rounded-lg p-3">
+                <div className="text-xl font-bold text-primary">{liveStats.processed.toLocaleString()}</div>
+                <div className="text-xs text-muted-foreground">Total Services</div>
               </div>
-            </ScrollArea>
-            
-            {/* Action buttons */}
-            <div className="flex gap-2 pt-2">
-              <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
-                Cancel
-              </Button>
-              <Button 
-                onClick={applyChanges} 
-                disabled={selectedIds.size === 0}
-                className="flex-1"
-              >
-                <Sparkles className="w-4 h-4 mr-2" />
-                Apply {selectedIds.size} Changes
-              </Button>
+              <div className="bg-muted/50 rounded-lg p-3">
+                <div className="text-xl font-bold text-green-500">{liveStats.applied.toLocaleString()}</div>
+                <div className="text-xs text-muted-foreground">Updated</div>
+              </div>
+              <div className="bg-muted/50 rounded-lg p-3">
+                <div className="text-xl font-bold text-amber-500">{liveStats.categories.size}</div>
+                <div className="text-xs text-muted-foreground">Categories</div>
+              </div>
             </div>
+            
+            <Button onClick={() => onOpenChange(false)} className="w-full">
+              Close
+            </Button>
           </div>
-        )}
-        
-        {/* Completed state with close button */}
-        {progress.phase === 'completed' && !isProcessing && (
-          <Button onClick={() => onOpenChange(false)} className="w-full">
-            Close
-          </Button>
         )}
         
         {/* Error state */}
         {progress.phase === 'error' && (
           <div className="space-y-4">
-            <div className="text-center text-destructive">
-              {progress.message}
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-16 h-16 rounded-full bg-destructive/20 flex items-center justify-center">
+                <AlertCircle className="w-8 h-8 text-destructive" />
+              </div>
+              <div className="text-center text-destructive">
+                {progress.message}
+              </div>
             </div>
             <Button variant="destructive" onClick={() => onOpenChange(false)} className="w-full">
               Close
