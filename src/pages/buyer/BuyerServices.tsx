@@ -30,6 +30,7 @@ import { LanguageSelector } from "@/components/buyer/LanguageSelector";
 import { CurrencySelector } from "@/components/buyer/CurrencySelector";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useBuyerRealtimeOrders } from "@/hooks/use-buyer-realtime-orders";
+import { detectServiceType, getSubCategory } from "@/lib/service-icon-detection";
 
 interface CartItem {
   service: any;
@@ -40,16 +41,30 @@ interface CartItem {
 
 const CART_STORAGE_KEY = (panelId: string) => `buyer_cart_${panelId}`;
 
-// Platform filter data with proper icons
+// Service type colors for badges
+const SERVICE_TYPE_COLORS: Record<string, string> = {
+  followers: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
+  likes: 'bg-pink-500/10 text-pink-600 border-pink-500/20',
+  views: 'bg-purple-500/10 text-purple-600 border-purple-500/20',
+  comments: 'bg-green-500/10 text-green-600 border-green-500/20',
+  shares: 'bg-orange-500/10 text-orange-600 border-orange-500/20',
+  plays: 'bg-cyan-500/10 text-cyan-600 border-cyan-500/20',
+  streams: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
+  subscribers: 'bg-red-500/10 text-red-600 border-red-500/20',
+  members: 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20',
+  general: 'bg-gray-500/10 text-gray-600 border-gray-500/20',
+};
+
+// Dynamically build platform filters from SOCIAL_ICONS_MAP
 const platformFilters = [
-  { id: 'all', name: 'All', icon: Filter },
-  { id: 'facebook', name: 'Facebook', ...SOCIAL_ICONS_MAP.facebook },
-  { id: 'instagram', name: 'Instagram', ...SOCIAL_ICONS_MAP.instagram },
-  { id: 'linkedin', name: 'LinkedIn', ...SOCIAL_ICONS_MAP.linkedin },
-  { id: 'telegram', name: 'Telegram', ...SOCIAL_ICONS_MAP.telegram },
-  { id: 'tiktok', name: 'TikTok', ...SOCIAL_ICONS_MAP.tiktok },
-  { id: 'twitter', name: 'Twitter', ...SOCIAL_ICONS_MAP.twitter },
-  { id: 'youtube', name: 'YouTube', ...SOCIAL_ICONS_MAP.youtube },
+  { id: 'all', name: 'All', icon: Filter, bgColor: 'bg-primary', color: 'text-primary' },
+  ...Object.entries(SOCIAL_ICONS_MAP)
+    .filter(([key]) => key !== 'other')
+    .map(([id, data]) => ({
+      id,
+      name: data.label || id.charAt(0).toUpperCase() + id.slice(1),
+      ...data,
+    })),
   { id: 'other', name: 'Other', ...SOCIAL_ICONS_MAP.other },
 ];
 
@@ -163,7 +178,7 @@ const BuyerServices = () => {
     return counts;
   }, [services]);
 
-  // Group services by category
+  // Group services by category and sub-category
   const groupedServices = useMemo(() => {
     const filtered = services.filter((service: any) => {
       const matchesCategory = selectedCategory === 'all' || service.category === selectedCategory;
@@ -171,17 +186,30 @@ const BuyerServices = () => {
       return matchesCategory && matchesSearch;
     });
 
-    // Group by category
-    const groups: Record<string, any[]> = {};
+    // Group by category, then by sub-category (service type)
+    const groups: Record<string, { subCategories: Record<string, any[]> }> = {};
+    
     filtered.forEach((service: any) => {
-      if (!groups[service.category]) {
-        groups[service.category] = [];
+      const category = service.category || 'other';
+      const serviceType = detectServiceType(service.name);
+      const subCategory = serviceType.charAt(0).toUpperCase() + serviceType.slice(1);
+      
+      if (!groups[category]) {
+        groups[category] = { subCategories: {} };
       }
-      groups[service.category].push(service);
+      if (!groups[category].subCategories[subCategory]) {
+        groups[category].subCategories[subCategory] = [];
+      }
+      groups[category].subCategories[subCategory].push(service);
     });
 
     return groups;
   }, [services, selectedCategory, searchQuery]);
+
+  // Calculate total services in grouped structure
+  const getTotalServicesInCategory = (categoryData: { subCategories: Record<string, any[]> }) => {
+    return Object.values(categoryData.subCategories).reduce((sum, arr) => sum + arr.length, 0);
+  };
 
   const getCategoryData = (categoryId: string) => {
     return SOCIAL_ICONS_MAP[categoryId] || SOCIAL_ICONS_MAP.other;
@@ -316,9 +344,10 @@ const BuyerServices = () => {
             </div>
           ) : (
             <AnimatePresence mode="wait">
-              {Object.entries(groupedServices).map(([category, categoryServices]) => {
-                const categoryData = getCategoryData(category);
-                const CategoryIcon = categoryData.icon;
+              {Object.entries(groupedServices).map(([category, categoryData]) => {
+                const categoryInfo = getCategoryData(category);
+                const CategoryIcon = categoryInfo.icon;
+                const totalServices = getTotalServicesInCategory(categoryData);
 
                 return (
                   <motion.div
@@ -326,97 +355,130 @@ const BuyerServices = () => {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
-                    className="space-y-3"
+                    className="space-y-4"
                   >
                     {/* Category Header */}
                     <div className="flex items-center gap-3 px-1">
-                      <div className={cn("p-2 rounded-lg", categoryData.bgColor)}>
+                      <div className={cn("p-2 rounded-lg", categoryInfo.bgColor)}>
                         <CategoryIcon className="w-5 h-5 text-white" />
                       </div>
                       <div>
                         <h2 className="font-semibold capitalize">{category}</h2>
                         <p className="text-xs text-muted-foreground">
-                          {categoryServices.length} services
+                          {totalServices} services
                         </p>
                       </div>
                     </div>
 
-                    {/* Service Cards */}
-                    <div className="space-y-2">
-                      {categoryServices.map((service: any) => {
-                        const effectivePrice = getEffectivePrice(service);
-                        const hasCustomPrice = customPrices.has(service.id);
-                        const isInstant = service.estimated_time?.toLowerCase().includes('instant') || 
-                                         service.estimated_time?.includes('0-1');
-
-                        return (
-                          <motion.div
-                            key={service.id}
-                            whileHover={{ scale: 1.005 }}
-                            whileTap={{ scale: 0.995 }}
+                    {/* Sub-categories (Service Types) */}
+                    {Object.entries(categoryData.subCategories).map(([subCategory, subServices]) => (
+                      <div key={`${category}-${subCategory}`} className="space-y-2">
+                        {/* Sub-category Header */}
+                        <div className="flex items-center gap-2 px-1">
+                          <Badge 
+                            variant="outline" 
                             className={cn(
-                              "bg-card rounded-xl border border-border/50 overflow-hidden",
-                              "hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 transition-all"
+                              "text-[10px] font-medium",
+                              SERVICE_TYPE_COLORS[subCategory.toLowerCase()] || SERVICE_TYPE_COLORS.general
                             )}
                           >
-                            <div className="p-4">
-                              {/* Service Info */}
-                              <div className="flex items-start justify-between gap-3 mb-3">
-                                <div className="flex-1 min-w-0">
-                                  <h3 className="font-medium text-sm leading-tight line-clamp-2 mb-1">
-                                    {service.name}
-                                  </h3>
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    {/* Price */}
-                                    <Badge 
-                                      variant="secondary" 
-                                      className={cn(
-                                        "text-xs",
-                                        hasCustomPrice && "bg-green-500/10 text-green-600 border-green-500/20"
-                                      )}
-                                    >
-                                      {formatPrice(effectivePrice)}/1K
-                                    </Badge>
-                                    
-                                    {/* Instant Badge */}
-                                    {isInstant && (
-                                      <Badge className="text-[10px] bg-amber-500/10 text-amber-600 border-amber-500/20">
-                                        <Zap className="w-3 h-3 mr-0.5" />
-                                        Instant
-                                      </Badge>
-                                    )}
+                            {subCategory}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {subServices.length} services
+                          </span>
+                        </div>
 
-                                    {/* VIP Discount */}
-                                    {hasCustomPrice && (
-                                      <Badge className="text-[10px] bg-purple-500/10 text-purple-600 border-purple-500/20">
-                                        VIP
-                                      </Badge>
-                                    )}
-                                  </div>
-                                </div>
+                        {/* Service Cards in this sub-category */}
+                        <div className="space-y-2 pl-2">
+                          {subServices.map((service: any) => {
+                            const effectivePrice = getEffectivePrice(service);
+                            const hasCustomPrice = customPrices.has(service.id);
+                            const isInstant = service.estimated_time?.toLowerCase().includes('instant') || 
+                                             service.estimated_time?.includes('0-1');
+                            const serviceType = detectServiceType(service.name);
 
-                                {/* Quantity Range */}
-                                <div className="text-right shrink-0">
-                                  <p className="text-[10px] text-muted-foreground">Quantity</p>
-                                  <p className="text-xs font-medium">
-                                    {service.min_quantity || 100} - {service.max_quantity?.toLocaleString() || '10K'}
-                                  </p>
-                                </div>
-                              </div>
-
-                              {/* Order Now Button */}
-                              <Button
-                                className="w-full h-10 text-sm font-medium gap-2"
-                                onClick={() => navigate(`/new-order?service=${service.id}`)}
+                            return (
+                              <motion.div
+                                key={service.id}
+                                whileHover={{ scale: 1.005 }}
+                                whileTap={{ scale: 0.995 }}
+                                className={cn(
+                                  "bg-card rounded-xl border border-border/50 overflow-hidden",
+                                  "hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 transition-all"
+                                )}
                               >
-                                {t('orderNow') || 'Order Now'}
-                                <ChevronRight className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </motion.div>
-                        );
-                      })}
-                    </div>
+                                <div className="p-3 sm:p-4">
+                                  {/* Service Info */}
+                                  <div className="flex items-start justify-between gap-2 sm:gap-3 mb-3">
+                                    <div className="flex-1 min-w-0">
+                                      <h3 className="font-medium text-xs sm:text-sm leading-tight line-clamp-2 mb-1.5">
+                                        {service.name}
+                                      </h3>
+                                      <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                                        {/* Service Type Badge */}
+                                        <Badge 
+                                          variant="outline" 
+                                          className={cn(
+                                            "text-[9px] sm:text-[10px]",
+                                            SERVICE_TYPE_COLORS[serviceType] || SERVICE_TYPE_COLORS.general
+                                          )}
+                                        >
+                                          {serviceType.charAt(0).toUpperCase() + serviceType.slice(1)}
+                                        </Badge>
+                                        
+                                        {/* Price */}
+                                        <Badge 
+                                          variant="secondary" 
+                                          className={cn(
+                                            "text-[10px] sm:text-xs",
+                                            hasCustomPrice && "bg-green-500/10 text-green-600 border-green-500/20"
+                                          )}
+                                        >
+                                          {formatPrice(effectivePrice)}/1K
+                                        </Badge>
+                                        
+                                        {/* Instant Badge */}
+                                        {isInstant && (
+                                          <Badge className="text-[9px] sm:text-[10px] bg-amber-500/10 text-amber-600 border-amber-500/20">
+                                            <Zap className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-0.5" />
+                                            Instant
+                                          </Badge>
+                                        )}
+
+                                        {/* VIP Discount */}
+                                        {hasCustomPrice && (
+                                          <Badge className="text-[9px] sm:text-[10px] bg-purple-500/10 text-purple-600 border-purple-500/20">
+                                            VIP
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    {/* Quantity Range */}
+                                    <div className="text-right shrink-0">
+                                      <p className="text-[9px] sm:text-[10px] text-muted-foreground">Qty</p>
+                                      <p className="text-[10px] sm:text-xs font-medium">
+                                        {(service.min_quantity || 100).toLocaleString()} - {(service.max_quantity || 10000).toLocaleString()}
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  {/* Order Now Button */}
+                                  <Button
+                                    className="w-full h-9 sm:h-10 text-xs sm:text-sm font-medium gap-2"
+                                    onClick={() => navigate(`/new-order?service=${service.id}`)}
+                                  >
+                                    {t('orderNow') || 'Order Now'}
+                                    <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                  </Button>
+                                </div>
+                              </motion.div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
                   </motion.div>
                 );
               })}
