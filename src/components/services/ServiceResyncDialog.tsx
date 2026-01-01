@@ -44,6 +44,7 @@ interface ResyncProgress {
   updated: number;
   skipped: number;
   newDetected: number;
+  priceAdjusted: number;
 }
 
 interface ServiceResyncDialogProps {
@@ -71,6 +72,7 @@ export const ServiceResyncDialog = ({
     updated: 0,
     skipped: 0,
     newDetected: 0,
+    priceAdjusted: 0,
   });
   const [isResyncing, setIsResyncing] = useState(false);
   const [providerBalance, setProviderBalance] = useState<number | null>(null);
@@ -104,7 +106,7 @@ export const ServiceResyncDialog = ({
 
   const handleProviderChange = (providerId: string) => {
     setSelectedProvider(providerId);
-    setProgress({ phase: 'idle', current: 0, total: 0, updated: 0, skipped: 0, newDetected: 0 });
+    setProgress({ phase: 'idle', current: 0, total: 0, updated: 0, skipped: 0, newDetected: 0, priceAdjusted: 0 });
     checkProviderBalance(providerId);
   };
 
@@ -121,7 +123,7 @@ export const ServiceResyncDialog = ({
     }
 
     setIsResyncing(true);
-    setProgress({ phase: 'fetching', current: 0, total: 0, updated: 0, skipped: 0, newDetected: 0 });
+    setProgress({ phase: 'fetching', current: 0, total: 0, updated: 0, skipped: 0, newDetected: 0, priceAdjusted: 0 });
 
     try {
       // Step 1: Fetch services from provider
@@ -142,7 +144,7 @@ export const ServiceResyncDialog = ({
       // Step 2: Get existing services from this provider in the database
       const { data: existingServices, error: dbError } = await supabase
         .from('services')
-        .select('id, name, category, image_url, provider_id, provider_service_id, features')
+        .select('id, name, category, image_url, provider_id, provider_service_id, features, price, provider_price, markup_percent')
         .eq('panel_id', panelId);
 
       if (dbError) throw dbError;
@@ -171,7 +173,15 @@ export const ServiceResyncDialog = ({
       let updated = 0;
       let skipped = 0;
       let newDetected = 0;
-      const updates: Array<{ id: string; category: string; image_url: string; provider_service_id: string }> = [];
+      let priceAdjusted = 0;
+      const updates: Array<{ 
+        id: string; 
+        category: string; 
+        image_url: string; 
+        provider_service_id: string;
+        price?: number;
+        provider_price?: number;
+      }> = [];
 
       for (let i = 0; i < providerServices.length; i++) {
         const ps = providerServices[i];
@@ -185,14 +195,39 @@ export const ServiceResyncDialog = ({
         const existing = existingMap.get(providerServiceId);
         
         if (existing) {
-          // Check if category/icon needs updating
-          if (existing.category !== detectedPlatform || existing.image_url !== newIconUrl) {
-            updates.push({
+          const categoryChanged = existing.category !== detectedPlatform;
+          const iconChanged = existing.image_url !== newIconUrl;
+          
+          // Check if provider price changed - auto-adjust selling price
+          const newProviderPrice = ps.rate;
+          const storedProviderPrice = existing.provider_price;
+          const markupPercent = existing.markup_percent ?? 0;
+          
+          let priceChanged = false;
+          let newPrice = existing.price;
+          
+          if (newProviderPrice !== undefined && newProviderPrice !== storedProviderPrice) {
+            // Recalculate price with stored markup
+            newPrice = newProviderPrice * (1 + markupPercent / 100);
+            priceChanged = true;
+          }
+          
+          // Check if anything needs updating
+          if (categoryChanged || iconChanged || priceChanged) {
+            const updateData: any = {
               id: existing.id,
               category: detectedPlatform as any,
               image_url: newIconUrl,
               provider_service_id: providerServiceId,
-            });
+            };
+            
+            if (priceChanged) {
+              updateData.price = newPrice;
+              updateData.provider_price = newProviderPrice;
+              priceAdjusted++;
+            }
+            
+            updates.push(updateData);
             updated++;
           } else {
             skipped++;
@@ -207,7 +242,8 @@ export const ServiceResyncDialog = ({
           current: i + 1, 
           updated, 
           skipped, 
-          newDetected 
+          newDetected,
+          priceAdjusted
         }));
       }
 
@@ -218,22 +254,31 @@ export const ServiceResyncDialog = ({
         
         // Update each service in the batch
         for (const update of batch) {
+          const updatePayload: any = {
+            category: update.category as any,
+            image_url: update.image_url,
+            provider_service_id: update.provider_service_id,
+          };
+          
+          // Include price updates if provider price changed
+          if (update.price !== undefined) {
+            updatePayload.price = update.price;
+            updatePayload.provider_price = update.provider_price;
+          }
+          
           await supabase
             .from('services')
-            .update({
-              category: update.category as any,
-              image_url: update.image_url,
-              provider_service_id: update.provider_service_id,
-            })
+            .update(updatePayload)
             .eq('id', update.id);
         }
       }
 
       setProgress(prev => ({ ...prev, phase: 'complete' }));
       
+      const priceMsg = priceAdjusted > 0 ? `, ${priceAdjusted} prices adjusted` : '';
       toast({ 
         title: "Re-sync Complete!", 
-        description: `Updated ${updated} services, ${skipped} unchanged, ${newDetected} new available`,
+        description: `Updated ${updated} services${priceMsg}, ${skipped} unchanged, ${newDetected} new available`,
       });
 
     } catch (error: any) {
@@ -252,7 +297,7 @@ export const ServiceResyncDialog = ({
   const handleClose = () => {
     if (!isResyncing) {
       setSelectedProvider("");
-      setProgress({ phase: 'idle', current: 0, total: 0, updated: 0, skipped: 0, newDetected: 0 });
+      setProgress({ phase: 'idle', current: 0, total: 0, updated: 0, skipped: 0, newDetected: 0, priceAdjusted: 0 });
       setProviderBalance(null);
       onOpenChange(false);
       if (progress.phase === 'complete') {
@@ -345,10 +390,14 @@ export const ServiceResyncDialog = ({
 
               {/* Results Summary */}
               {(progress.phase === 'updating' || progress.phase === 'complete') && (
-                <div className="grid grid-cols-3 gap-2 pt-2">
+                <div className="grid grid-cols-4 gap-2 pt-2">
                   <div className="text-center p-2 rounded-lg bg-green-500/10 border border-green-500/20">
                     <div className="text-lg font-bold text-green-500">{progress.updated}</div>
                     <div className="text-xs text-muted-foreground">Updated</div>
+                  </div>
+                  <div className="text-center p-2 rounded-lg bg-orange-500/10 border border-orange-500/20">
+                    <div className="text-lg font-bold text-orange-500">{progress.priceAdjusted}</div>
+                    <div className="text-xs text-muted-foreground">Prices Adjusted</div>
                   </div>
                   <div className="text-center p-2 rounded-lg bg-muted/50 border border-border/50">
                     <div className="text-lg font-bold">{progress.skipped}</div>
@@ -373,6 +422,7 @@ export const ServiceResyncDialog = ({
                   <ul className="mt-1 text-muted-foreground text-xs space-y-1">
                     <li>• Re-fetches service list from provider API</li>
                     <li>• Updates categories & icons using enhanced detection</li>
+                    <li>• <span className="text-orange-500 font-medium">Auto-adjusts prices</span> when provider rates change</li>
                     <li>• Does NOT duplicate or re-import existing services</li>
                     <li>• Shows count of new services available to import</li>
                   </ul>

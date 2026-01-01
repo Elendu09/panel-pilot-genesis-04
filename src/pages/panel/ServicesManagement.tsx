@@ -1515,6 +1515,8 @@ const ServicesManagement = () => {
           category: detectedCategory, // AI-detected category (50+ platforms)
           image_url: iconUrl, // Auto-set icon based on detected category
           price: finalPrice, // Final sale price per 1K (provider rate + markup)
+          provider_price: providerRate, // Store original provider rate for auto-adjustment
+          markup_percent: markupPercent, // Store markup % for price recalculation on resync
           min_quantity: service.minQty || 100,
           max_quantity: service.maxQty || 10000,
           is_active: true,

@@ -1973,12 +1973,14 @@ export type Database = {
           id: string
           image_url: string | null
           is_active: boolean | null
+          markup_percent: number | null
           max_quantity: number | null
           min_quantity: number | null
           name: string
           panel_id: string | null
           price: number
           provider_id: string | null
+          provider_price: number | null
           provider_service_id: string | null
           updated_at: string
         }
@@ -1992,12 +1994,14 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean | null
+          markup_percent?: number | null
           max_quantity?: number | null
           min_quantity?: number | null
           name: string
           panel_id?: string | null
           price: number
           provider_id?: string | null
+          provider_price?: number | null
           provider_service_id?: string | null
           updated_at?: string
         }
@@ -2011,12 +2015,14 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean | null
+          markup_percent?: number | null
           max_quantity?: number | null
           min_quantity?: number | null
           name?: string
           panel_id?: string | null
           price?: number
           provider_id?: string | null
+          provider_price?: number | null
           provider_service_id?: string | null
           updated_at?: string
         }
