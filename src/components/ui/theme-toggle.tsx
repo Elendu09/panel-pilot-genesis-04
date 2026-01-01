@@ -3,16 +3,44 @@ import { Button } from "@/components/ui/button"
 import { useTheme } from "@/hooks/use-theme"
 import { motion, AnimatePresence } from "framer-motion"
 import { cn } from "@/lib/utils"
+import { useState, useEffect, useCallback } from "react"
 
 export function ThemeToggle({ className }: { className?: string }) {
   const { theme, setTheme } = useTheme()
-  const isDark = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches)
+  const [isDark, setIsDark] = useState(false)
+
+  // Sync isDark state with theme - fixes double-click bug
+  useEffect(() => {
+    const updateIsDark = () => {
+      if (theme === "system") {
+        setIsDark(window.matchMedia("(prefers-color-scheme: dark)").matches)
+      } else {
+        setIsDark(theme === "dark")
+      }
+    }
+    
+    updateIsDark()
+    
+    // Listen for system theme changes when in system mode
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
+    if (theme === "system") {
+      mediaQuery.addEventListener("change", updateIsDark)
+      return () => mediaQuery.removeEventListener("change", updateIsDark)
+    }
+  }, [theme])
+
+  const handleToggle = useCallback(() => {
+    const newTheme = isDark ? "light" : "dark"
+    setTheme(newTheme)
+    // Immediately update local state for instant feedback
+    setIsDark(!isDark)
+  }, [isDark, setTheme])
 
   return (
     <Button
       variant="ghost"
       size="icon"
-      onClick={() => setTheme(isDark ? "light" : "dark")}
+      onClick={handleToggle}
       className={cn(
         "relative w-9 h-9 rounded-full overflow-hidden",
         "bg-muted/50 hover:bg-muted",

@@ -1,4 +1,4 @@
-import { Globe } from "lucide-react";
+import { Globe, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { 
   DropdownMenu, 
@@ -10,15 +10,20 @@ import { LanguageContext, Language } from "@/contexts/LanguageContext";
 import { BuyerAuthContext } from "@/contexts/BuyerAuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
-import { useContext, useState } from "react";
+import { useContext, useState, useCallback } from "react";
+import { toast } from "sonner";
 
 const languages: { code: Language; name: string; nativeName: string; flag: string }[] = [
   { code: 'en', name: 'English', nativeName: 'English', flag: '🇺🇸' },
   { code: 'es', name: 'Spanish', nativeName: 'Español', flag: '🇪🇸' },
   { code: 'pt', name: 'Portuguese', nativeName: 'Português', flag: '🇧🇷' },
+  { code: 'fr', name: 'French', nativeName: 'Français', flag: '🇫🇷' },
+  { code: 'de', name: 'German', nativeName: 'Deutsch', flag: '🇩🇪' },
   { code: 'ar', name: 'Arabic', nativeName: 'العربية', flag: '🇸🇦' },
   { code: 'tr', name: 'Turkish', nativeName: 'Türkçe', flag: '🇹🇷' },
   { code: 'ru', name: 'Russian', nativeName: 'Русский', flag: '🇷🇺' },
+  { code: 'zh', name: 'Chinese', nativeName: '中文', flag: '🇨🇳' },
+  { code: 'hi', name: 'Hindi', nativeName: 'हिन्दी', flag: '🇮🇳' },
 ];
 
 export const LanguageSelector = () => {
@@ -34,9 +39,18 @@ export const LanguageSelector = () => {
 
   const currentLanguage = languages.find(l => l.code === language);
 
-  const handleChangeLanguage = async (code: Language) => {
+  const handleChangeLanguage = useCallback(async (code: Language) => {
     setLanguage(code);
-    if (buyer) {
+    
+    // Show feedback
+    const selectedLang = languages.find(l => l.code === code);
+    toast.success(`${selectedLang?.flag} ${selectedLang?.nativeName}`, {
+      description: 'Language updated successfully',
+      duration: 2000,
+    });
+    
+    // Persist to database if logged in
+    if (buyer && panelId) {
       try {
         await supabase
           .from('client_users')
@@ -47,35 +61,41 @@ export const LanguageSelector = () => {
         console.error('Failed to update preferred language', e);
       }
     }
-  };
+  }, [buyer, panelId, setLanguage]);
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
-          <Globe className="w-5 h-5" />
+        <Button variant="ghost" size="icon" className="relative h-9 w-9">
+          <span className="text-base">{currentLanguage?.flag || '🌐'}</span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-48">
-        {languages.map((lang) => (
-          <DropdownMenuItem
-            key={lang.code}
-            onClick={() => handleChangeLanguage(lang.code)}
-            className={cn(
-              "flex items-center gap-3 cursor-pointer",
-              language === lang.code && "bg-primary/10"
-            )}
-          >
-            <span className="text-lg">{lang.flag}</span>
-            <div className="flex-1">
-              <p className="text-sm font-medium">{lang.nativeName}</p>
-              <p className="text-xs text-muted-foreground">{lang.name}</p>
-            </div>
-            {language === lang.code && (
-              <span className="w-2 h-2 rounded-full bg-primary" />
-            )}
-          </DropdownMenuItem>
-        ))}
+      <DropdownMenuContent align="end" className="w-56 max-h-80 overflow-y-auto">
+        <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+          Select Language
+        </div>
+        {languages.map((lang) => {
+          const isSelected = language === lang.code;
+          return (
+            <DropdownMenuItem
+              key={lang.code}
+              onClick={() => handleChangeLanguage(lang.code)}
+              className={cn(
+                "flex items-center gap-3 cursor-pointer py-2.5",
+                isSelected && "bg-primary/10"
+              )}
+            >
+              <span className="text-xl">{lang.flag}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium">{lang.nativeName}</p>
+                <p className="text-xs text-muted-foreground">{lang.name}</p>
+              </div>
+              {isSelected && (
+                <Check className="w-4 h-4 text-primary shrink-0" />
+              )}
+            </DropdownMenuItem>
+          );
+        })}
       </DropdownMenuContent>
     </DropdownMenu>
   );

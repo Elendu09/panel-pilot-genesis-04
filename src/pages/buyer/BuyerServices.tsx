@@ -10,10 +10,13 @@ import {
   Globe,
   Zap,
   ChevronRight,
+  ChevronLeft,
   LayoutDashboard,
   Filter,
   Package,
-  ShoppingCart as ShoppingCartIcon
+  ShoppingCart as ShoppingCartIcon,
+  Star,
+  Heart
 } from "lucide-react";
 import { SOCIAL_ICONS_MAP } from "@/components/icons/SocialIcons";
 import { motion, AnimatePresence } from "framer-motion";
@@ -32,6 +35,14 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useBuyerRealtimeOrders } from "@/hooks/use-buyer-realtime-orders";
 import { detectServiceType, getSubCategory } from "@/lib/service-icon-detection";
 import { useBuyerCart } from "@/hooks/use-buyer-cart";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
+import { Card, CardContent } from "@/components/ui/card";
 
 // Service type colors for badges
 const SERVICE_TYPE_COLORS: Record<string, string> = {
@@ -314,12 +325,19 @@ const BuyerServices = () => {
           </ScrollArea>
         </div>
 
-        {/* Services List - Grouped by Category */}
-        <div className="space-y-6 pb-32 md:pb-24">
+        {/* Services - Carousel Layout per Category */}
+        <div className="space-y-8 pb-32 md:pb-24">
           {loading ? (
-            <div className="space-y-3">
-              {[1, 2, 3, 4].map(i => (
-                <div key={i} className="h-20 bg-muted rounded-xl animate-pulse" />
+            <div className="space-y-6">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="space-y-3">
+                  <div className="h-6 w-32 bg-muted rounded animate-pulse" />
+                  <div className="flex gap-3 overflow-hidden">
+                    {[1, 2, 3].map(j => (
+                      <div key={j} className="w-64 h-40 bg-muted rounded-xl animate-pulse shrink-0" />
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
           ) : Object.keys(groupedServices).length === 0 ? (
@@ -327,9 +345,9 @@ const BuyerServices = () => {
               <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
                 <Search className="w-8 h-8 text-muted-foreground" />
               </div>
-              <h3 className="text-lg font-semibold mb-2">No services found</h3>
+              <h3 className="text-lg font-semibold mb-2">{t('orders.no_orders') || 'No services found'}</h3>
               <p className="text-muted-foreground text-sm">
-                Try adjusting your search or filter
+                {t('common.retry') || 'Try adjusting your search or filter'}
               </p>
             </div>
           ) : (
@@ -338,6 +356,9 @@ const BuyerServices = () => {
                 const categoryInfo = getCategoryData(category);
                 const CategoryIcon = categoryInfo.icon;
                 const totalServices = getTotalServicesInCategory(categoryData);
+                
+                // Flatten all services in this category for the carousel
+                const allCategoryServices = Object.values(categoryData.subCategories).flat();
 
                 return (
                   <motion.div
@@ -348,36 +369,117 @@ const BuyerServices = () => {
                     className="space-y-4"
                   >
                     {/* Category Header */}
-                    <div className="flex items-center gap-3 px-1">
-                      <div className={cn("p-2 rounded-lg", categoryInfo.bgColor)}>
-                        <CategoryIcon className="w-5 h-5 text-white" />
+                    <div className="flex items-center justify-between px-1">
+                      <div className="flex items-center gap-3">
+                        <div className={cn("p-2 rounded-lg", categoryInfo.bgColor)}>
+                          <CategoryIcon className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <h2 className="font-semibold capitalize">{category}</h2>
+                          <p className="text-xs text-muted-foreground">
+                            {totalServices} {t('services.title')?.toLowerCase() || 'services'}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <h2 className="font-semibold capitalize">{category}</h2>
-                        <p className="text-xs text-muted-foreground">
-                          {totalServices} services
-                        </p>
-                      </div>
+                      <Button variant="ghost" size="sm" className="gap-1 text-muted-foreground">
+                        {t('common.view_all')}
+                        <ChevronRight className="w-4 h-4" />
+                      </Button>
                     </div>
 
-                    {/* Sub-categories (Service Types) */}
-                    {Object.entries(categoryData.subCategories).map(([subCategory, subServices]) => (
-                      <div key={`${category}-${subCategory}`} className="space-y-2">
-                        {/* Sub-category Header */}
-                        <div className="flex items-center gap-2 px-1">
-                          <Badge 
-                            variant="outline" 
-                            className={cn(
-                              "text-[10px] font-medium",
-                              SERVICE_TYPE_COLORS[subCategory.toLowerCase()] || SERVICE_TYPE_COLORS.general
-                            )}
-                          >
-                            {subCategory}
-                          </Badge>
-                          <span className="text-xs text-muted-foreground">
-                            {subServices.length} services
-                          </span>
-                        </div>
+                    {/* Service Cards Carousel */}
+                    <Carousel
+                      opts={{
+                        align: "start",
+                        loop: false,
+                      }}
+                      className="w-full"
+                    >
+                      <CarouselContent className="-ml-2 md:-ml-3">
+                        {allCategoryServices.slice(0, 10).map((service: any) => {
+                          const effectivePrice = getEffectivePrice(service);
+                          const hasCustomPrice = customPrices.has(service.id);
+                          const isInstant = service.estimated_time?.toLowerCase().includes('instant') || 
+                                           service.estimated_time?.includes('0-1');
+                          const serviceType = detectServiceType(service.name);
+
+                          return (
+                            <CarouselItem key={service.id} className="pl-2 md:pl-3 basis-[280px] md:basis-[320px]">
+                              <motion.div
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                              >
+                                <Card className="bg-card border-border/50 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 transition-all h-full">
+                                  <CardContent className="p-4">
+                                    {/* Service Type & Price */}
+                                    <div className="flex items-center justify-between gap-2 mb-3">
+                                      <Badge 
+                                        variant="outline" 
+                                        className={cn(
+                                          "text-[10px]",
+                                          SERVICE_TYPE_COLORS[serviceType] || SERVICE_TYPE_COLORS.general
+                                        )}
+                                      >
+                                        {serviceType.charAt(0).toUpperCase() + serviceType.slice(1)}
+                                      </Badge>
+                                      <div className="flex items-center gap-1.5">
+                                        {isInstant && (
+                                          <Badge className="text-[10px] bg-amber-500/10 text-amber-600 border-amber-500/20">
+                                            <Zap className="w-2.5 h-2.5 mr-0.5" />
+                                            Instant
+                                          </Badge>
+                                        )}
+                                        {hasCustomPrice && (
+                                          <Badge className="text-[10px] bg-purple-500/10 text-purple-600 border-purple-500/20">
+                                            <Star className="w-2.5 h-2.5 mr-0.5" />
+                                            VIP
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    {/* Service Name */}
+                                    <h3 className="font-medium text-sm leading-tight line-clamp-2 mb-2 min-h-[2.5rem]">
+                                      {service.name}
+                                    </h3>
+
+                                    {/* Price & Quantity */}
+                                    <div className="flex items-center justify-between text-xs text-muted-foreground mb-3">
+                                      <span>{(service.min_quantity || 100).toLocaleString()} - {(service.max_quantity || 10000).toLocaleString()}</span>
+                                      <Badge 
+                                        variant="secondary" 
+                                        className={cn(
+                                          "font-mono text-xs",
+                                          hasCustomPrice && "bg-green-500/10 text-green-600 border-green-500/20"
+                                        )}
+                                      >
+                                        {formatPrice(effectivePrice)}/1K
+                                      </Badge>
+                                    </div>
+
+                                    {/* Order Button */}
+                                    <Button
+                                      className="w-full h-9 text-sm font-medium gap-2"
+                                      onClick={() => navigate(`/new-order?service=${service.id}`)}
+                                    >
+                                      {t('services.order_now') || 'Order Now'}
+                                      <ChevronRight className="w-4 h-4" />
+                                    </Button>
+                                  </CardContent>
+                                </Card>
+                              </motion.div>
+                            </CarouselItem>
+                          );
+                        })}
+                      </CarouselContent>
+                      <CarouselPrevious className="hidden md:flex -left-4" />
+                      <CarouselNext className="hidden md:flex -right-4" />
+                    </Carousel>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+          )}
 
                         {/* Service Cards in this sub-category */}
                         <div className="space-y-2 pl-2">

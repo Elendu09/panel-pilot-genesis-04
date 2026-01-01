@@ -27,9 +27,15 @@ export function ThemeProvider({
   storageKey = "smm-panel-theme",
   ...props
 }: ThemeProviderProps) {
-  const [theme, setThemeState] = useState<Theme>(
-    () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
-  )
+  const [theme, setThemeState] = useState<Theme>(() => {
+    const stored = localStorage.getItem(storageKey) as Theme
+    // If no stored preference, default to dark for buyer pages
+    if (!stored) {
+      localStorage.setItem(storageKey, defaultTheme)
+      return defaultTheme
+    }
+    return stored
+  })
   const [userId, setUserId] = useState<string | null>(null)
 
   // Listen for auth changes
