@@ -45,6 +45,7 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { MarkupEducation } from "./MarkupEducation";
 import { supabase } from "@/integrations/supabase/client";
+import { detectPlatformEnhanced, getServiceIcon } from "@/lib/service-icon-detection";
 
 interface FetchedService {
   id: number;
@@ -197,15 +198,21 @@ export const ServiceImportDialog = ({
       
       // Map the API response to our format
       // NOTE: Provider rate is already "per 1K" - DO NOT divide by 1000!
-      const mappedServices: FetchedService[] = data.services.map((s: any, index: number) => ({
-        id: s.service || s.id || index + 1,
-        name: s.name || `Service ${s.service || s.id}`,
-        category: mapCategory(s.category || 'other'),
-        price: parseFloat(s.rate || s.price || 0), // Provider rate per 1K - no division
-        minQty: parseInt(s.min || s.min_quantity || 100),
-        maxQty: parseInt(s.max || s.max_quantity || 10000),
-        description: s.description || s.name || '',
-      }));
+      // Use AI detection on service NAME (not provider category) for accurate classification
+      const mappedServices: FetchedService[] = data.services.map((s: any, index: number) => {
+        const serviceName = s.name || `Service ${s.service || s.id}`;
+        const { platform } = detectPlatformEnhanced(serviceName);
+        
+        return {
+          id: s.service || s.id || index + 1,
+          name: serviceName,
+          category: platform, // AI-detected from service name (50+ platforms)
+          price: parseFloat(s.rate || s.price || 0), // Provider rate per 1K - no division
+          minQty: parseInt(s.min || s.min_quantity || 100),
+          maxQty: parseInt(s.max || s.max_quantity || 10000),
+          description: s.description || s.name || '',
+        };
+      });
       
       // Check which services are already imported by matching provider_id
       const providerIds = mappedServices.map(s => String(s.id));
@@ -244,18 +251,8 @@ export const ServiceImportDialog = ({
     }
   };
 
-  // Helper to map provider categories to our enum
-  const mapCategory = (category: string): string => {
-    const lower = category.toLowerCase();
-    if (lower.includes('instagram') || lower.includes('ig')) return 'instagram';
-    if (lower.includes('facebook') || lower.includes('fb')) return 'facebook';
-    if (lower.includes('twitter') || lower.includes('x')) return 'twitter';
-    if (lower.includes('youtube') || lower.includes('yt')) return 'youtube';
-    if (lower.includes('tiktok') || lower.includes('tik')) return 'tiktok';
-    if (lower.includes('linkedin')) return 'linkedin';
-    if (lower.includes('telegram')) return 'telegram';
-    return 'other';
-  };
+  // NOTE: mapCategory is now replaced by detectPlatformEnhanced() which supports 50+ platforms
+  // Detection is done directly from service NAME (not provider category) for accuracy
 
   const toggleService = (id: number) => {
     setSelectedServices(prev =>

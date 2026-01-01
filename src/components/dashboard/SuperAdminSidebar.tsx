@@ -20,7 +20,6 @@ import {
   Shield,
   MessageSquare,
   Database,
-  Activity,
   Bell,
   FileText,
   Crown
@@ -33,7 +32,6 @@ const menuItems = [
   { title: "Revenue Analytics", url: "/admin/revenue", icon: DollarSign },
   { title: "Platform Settings", url: "/admin/settings", icon: Settings },
   { title: "Payment Gateways", url: "/admin/payments", icon: Database },
-  { title: "Provider Management", url: "/admin/providers", icon: Activity },
   { title: "Support System", url: "/admin/support", icon: MessageSquare },
   { title: "Security & Access", url: "/admin/security", icon: Shield },
   { title: "Reports", url: "/admin/reports", icon: FileText },

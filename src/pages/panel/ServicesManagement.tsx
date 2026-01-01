@@ -98,7 +98,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
 import { usePanel } from "@/hooks/usePanel";
 import { SOCIAL_ICONS_MAP } from "@/components/icons/SocialIcons";
-import { detectPlatform, getServiceIcon, autoAssignIconsAndCategories, detectServiceType } from "@/lib/service-icon-detection";
+import { detectPlatform, getServiceIcon, autoAssignIconsAndCategories, detectServiceType, detectPlatformEnhanced } from "@/lib/service-icon-detection";
 
 // DnD Kit
 import {
@@ -230,6 +230,8 @@ const ServicesManagement = () => {
   }, [isDragEnabled]);
   const [providers, setProviders] = useState<Array<{ id: string; name: string; api_endpoint?: string; api_key?: string }>>([]);
   const [loading, setLoading] = useState(true);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [isUpdating, setIsUpdating] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
@@ -564,7 +566,13 @@ const ServicesManagement = () => {
   const fetchServices = async () => {
     if (!panel?.id) return;
     
-    setLoading(true);
+    // Only show full shimmer on initial load, use subtle indicator for updates
+    if (isInitialLoad) {
+      setLoading(true);
+    } else {
+      setIsUpdating(true);
+    }
+    
     try {
       // Build query with server-side filtering
       let query = supabase
@@ -647,6 +655,8 @@ const ServicesManagement = () => {
       // Silently handle - empty state will show instead of toast
     } finally {
       setLoading(false);
+      setIsUpdating(false);
+      setIsInitialLoad(false);
     }
   };
 
@@ -1476,6 +1486,7 @@ const ServicesManagement = () => {
 
   // Import handler - applies markup ONCE and stores provider info for duplicate detection
   // NOTE: service.price is already the provider's rate per 1K from ServiceImportDialog
+  // AI detection is now done in ServiceImportDialog, but we re-detect here for icon_url
   const handleImport = async (importedServices: any[], markups: Record<number, number>, providerId?: string, providerName?: string) => {
     if (!panel?.id) return;
     
@@ -1485,13 +1496,18 @@ const ServicesManagement = () => {
         const providerRate = Number(service.price) || 0;
         const finalPrice = providerRate * (1 + markupPercent / 100);
         
+        // Use AI-detected category from import dialog, and generate matching icon
+        const detectedCategory = service.category || 'other';
+        const iconUrl = `icon:${detectedCategory}`;
+        
         // Store both the actual provider UUID and the provider's service ID
         // The provider_id field stores the actual provider UUID for lookup
         // features stores the original service ID from provider for duplicate detection
         return {
           panel_id: panel.id,
           name: service.name,
-          category: service.category || 'other',
+          category: detectedCategory, // AI-detected category (50+ platforms)
+          image_url: iconUrl, // Auto-set icon based on detected category
           price: finalPrice, // Final sale price per 1K (provider rate + markup)
           min_quantity: service.minQty || 100,
           max_quantity: service.maxQty || 10000,
@@ -1518,7 +1534,8 @@ const ServicesManagement = () => {
     }
   };
 
-  if (loading || panelLoading || urlParamLoading) {
+  // Only show full shimmer on initial load
+  if ((loading && isInitialLoad) || panelLoading || urlParamLoading) {
     return (
       <div className="space-y-6 animate-pulse">
         <div className="h-8 bg-muted rounded w-1/4"></div>
@@ -1536,7 +1553,10 @@ const ServicesManagement = () => {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6 overflow-x-hidden">
+    <div className={cn(
+      "space-y-4 sm:space-y-6 overflow-x-hidden transition-opacity duration-200",
+      isUpdating && "opacity-60"
+    )}>
       {/* Header */}
       <motion.div 
         initial={{ opacity: 0, y: -20 }}
