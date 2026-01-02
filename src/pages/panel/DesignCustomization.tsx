@@ -20,6 +20,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { MobileDesignSlider } from '@/components/design/MobileDesignSlider';
 import { ThemeOne } from '@/components/themes/ThemeOne';
+import { availableThemes, type BuyerThemeKey } from '@/components/buyer-themes';
 
 // Memoized preset button for performance
 const PresetButton = memo(({ preset, onApply }: { preset: any; onApply: (p: any) => void }) => (
@@ -1089,6 +1090,76 @@ export default function DesignCustomization() {
             </div>
           </div>
         );
+      case 'buyer-themes':
+        return (
+          <div className="space-y-4">
+            <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
+              <div className="flex items-center gap-2 mb-2">
+                <Users className="w-4 h-4 text-primary" />
+                <span className="text-sm font-medium">Buyer Homepage Theme</span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Choose a theme for your buyer's homepage. This affects the layout, colors, and fonts buyers see.
+              </p>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3">
+              {availableThemes.map((theme) => {
+                const isActive = (customization as any).buyerTheme === theme.key || 
+                  (!((customization as any).buyerTheme) && theme.key === 'default');
+                return (
+                  <button
+                    key={theme.key}
+                    onClick={() => {
+                      updateCustomization('buyerTheme', theme.key);
+                      // Also save to panels.buyer_theme
+                      if (panelId) {
+                        supabase.from('panels').update({ buyer_theme: theme.key }).eq('id', panelId);
+                      }
+                    }}
+                    className={cn(
+                      "p-4 rounded-xl border-2 transition-all text-left",
+                      isActive 
+                        ? "border-primary ring-2 ring-primary/20 bg-primary/5" 
+                        : "border-border hover:border-primary/50"
+                    )}
+                  >
+                    <div className="flex gap-1 mb-3">
+                      <div 
+                        className="w-6 h-6 rounded-lg" 
+                        style={{ backgroundColor: theme.colors.dark.background }}
+                      />
+                      <div 
+                        className="w-6 h-6 rounded-lg" 
+                        style={{ backgroundColor: theme.colors.dark.primary }}
+                      />
+                      <div 
+                        className="w-6 h-6 rounded-lg" 
+                        style={{ backgroundColor: theme.colors.dark.secondary }}
+                      />
+                    </div>
+                    <p className="text-sm font-semibold mb-1">{theme.name}</p>
+                    <p className="text-xs text-muted-foreground line-clamp-2">{theme.description}</p>
+                    <div className="mt-2 flex items-center gap-2">
+                      <Badge variant="outline" className="text-[10px]">
+                        {theme.fonts.heading}
+                      </Badge>
+                      {isActive && (
+                        <Badge variant="secondary" className="text-[10px]">Active</Badge>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+            
+            <div className="p-3 rounded-lg bg-muted/50 border border-border">
+              <p className="text-xs text-muted-foreground">
+                <strong>Tip:</strong> Each theme includes unique fonts, color schemes, and layout styles inspired by popular SMM panels.
+              </p>
+            </div>
+          </div>
+        );
       case 'branding':
         return (
           <div className="space-y-5">
@@ -1626,6 +1697,7 @@ export default function DesignCustomization() {
   const sections = [
     { id: 'presets', title: 'Design Presets', icon: Wand2 },
     { id: 'themes', title: 'Theme Gallery', icon: Palette },
+    { id: 'buyer-themes', title: 'Buyer Themes', icon: Users },
     { id: 'branding', title: 'Branding', icon: Image },
     { id: 'colors', title: 'Colors', icon: Sparkles },
     { id: 'typography', title: 'Typography', icon: Type },
