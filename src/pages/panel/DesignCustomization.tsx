@@ -550,7 +550,7 @@ export default function DesignCustomization() {
       
       const { data: panel } = await supabase
         .from('panels')
-        .select('id, name, custom_branding, theme_type, subdomain, custom_domain')
+        .select('id, name, custom_branding, theme_type, subdomain, custom_domain, buyer_theme')
         .eq('owner_id', profile.id)
         .single();
       
@@ -570,7 +570,8 @@ export default function DesignCustomization() {
       const loadedCustomization = { 
         ...defaultCustomization, 
         companyName: panelData.name || '', 
-        selectedTheme: branding.selectedTheme || panelData.theme_type || 'dark_gradient', 
+        selectedTheme: branding.selectedTheme || panelData.theme_type || 'dark_gradient',
+        buyerTheme: panelData.buyer_theme || 'default',
         ...branding 
       };
       resetHistory(loadedCustomization);
@@ -939,11 +940,15 @@ export default function DesignCustomization() {
                 return (
                   <button
                     key={theme.key}
-                    onClick={() => {
+                    onClick={async () => {
                       updateCustomization('buyerTheme', theme.key);
-                      // Also save to panels.buyer_theme
+                      // Save to panels.buyer_theme immediately
                       if (panelId) {
-                        supabase.from('panels').update({ buyer_theme: theme.key }).eq('id', panelId);
+                        const { error } = await supabase.from('panels').update({ buyer_theme: theme.key }).eq('id', panelId);
+                        if (!error) {
+                          queryClient.invalidateQueries({ queryKey: ['panel-design-settings'] });
+                          toast({ title: 'Buyer theme updated', description: `Applied "${theme.name}" theme` });
+                        }
                       }
                     }}
                     className={cn(
