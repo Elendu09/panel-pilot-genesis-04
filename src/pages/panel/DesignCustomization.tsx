@@ -259,22 +259,9 @@ const layoutSections = [
 
 const themes = [
   { 
-    id: 'default', 
-    name: 'Default Theme', 
+    id: 'dark_gradient', 
+    name: 'Dark Gradient', 
     colors: ['#0F172A', '#6366F1', '#8B5CF6'],
-    description: 'Your primary default layout',
-    sections: {
-      enablePlatformFeatures: true,
-      enableStats: true,
-      enableFeatures: true,
-      enableTestimonials: true,
-      enableFAQs: true,
-    },
-  },
-  { 
-    id: 'theme_one', 
-    name: 'Theme 1 - Cosmic Purple', 
-    colors: ['#0A0A12', '#8B5CF6', '#EC4899'],
     description: 'Deep purple gradients with vibrant accents',
     sections: {
       enablePlatformFeatures: true,
@@ -285,8 +272,8 @@ const themes = [
     },
   },
   { 
-    id: 'theme_two', 
-    name: 'Theme 2 - Ocean Blue', 
+    id: 'professional', 
+    name: 'Professional', 
     colors: ['#0C4A6E', '#0EA5E9', '#38BDF8'],
     description: 'Cool blues with cyan highlights',
     sections: {
@@ -298,8 +285,8 @@ const themes = [
     },
   },
   { 
-    id: 'theme_three', 
-    name: 'Theme 3 - Sunset Orange', 
+    id: 'vibrant', 
+    name: 'Vibrant', 
     colors: ['#1A1310', '#F97316', '#EAB308'],
     description: 'Warm and vibrant orange tones',
     sections: {
@@ -310,35 +297,9 @@ const themes = [
       enableFAQs: true,
     },
   },
-  { 
-    id: 'theme_four', 
-    name: 'Theme 4 - Forest Earth', 
-    colors: ['#0D1912', '#22C55E', '#84CC16'],
-    description: 'Natural green with earthy accents',
-    sections: {
-      enablePlatformFeatures: true,
-      enableStats: true,
-      enableFeatures: true,
-      enableTestimonials: true,
-      enableFAQs: true,
-    },
-  },
-  { 
-    id: 'theme_five', 
-    name: 'Theme 5 - Tech Futuristic', 
-    colors: ['#0F1419', '#00D4FF', '#7C3AED'],
-    description: 'Modern AI/tech inspired design',
-    sections: {
-      enablePlatformFeatures: true,
-      enableStats: true,
-      enableFeatures: true,
-      enableTestimonials: true,
-      enableFAQs: true,
-    },
-  },
 ];
 
-// Design Presets - One-click beautiful designs
+// Design Presets - One-click beautiful designs (deduplicated, valid theme_type values only)
 const designPresets = [
   {
     id: 'my_default_theme',
@@ -352,10 +313,6 @@ const designPresets = [
       textColor: defaultCustomization.textColor,
       surfaceColor: defaultCustomization.surfaceColor,
       selectedTheme: 'dark_gradient',
-      heroVariant: 'ali_panel',
-      faqVariant: 'glass_cards',
-      navVariant: 'floating_glass',
-      footerVariant: 'classic_columns',
     }
   },
   {
@@ -370,10 +327,6 @@ const designPresets = [
       textColor: '#FFFFFF',
       surfaceColor: '#1E293B',
       selectedTheme: 'dark_gradient',
-      heroVariant: 'ali_panel',
-      faqVariant: 'glass_cards',
-      navVariant: 'floating_glass',
-      footerVariant: 'classic_columns',
     }
   },
   {
@@ -387,11 +340,7 @@ const designPresets = [
       secondaryColor: '#38BDF8',
       textColor: '#FFFFFF',
       surfaceColor: '#0e5a82',
-      selectedTheme: 'ocean_blue',
-      heroVariant: 'professional_quick_order',
-      faqVariant: 'simple_accordion',
-      navVariant: 'solid',
-      footerVariant: 'compact_columns',
+      selectedTheme: 'professional',
     }
   },
   {
@@ -406,10 +355,6 @@ const designPresets = [
       textColor: '#FFFFFF',
       surfaceColor: '#2A1F1A',
       selectedTheme: 'vibrant',
-      heroVariant: 'promo_cards',
-      faqVariant: 'cards',
-      navVariant: 'floating_solid',
-      footerVariant: 'promo_columns',
     }
   },
   {
@@ -423,67 +368,7 @@ const designPresets = [
       secondaryColor: '#84CC16',
       textColor: '#FFFFFF',
       surfaceColor: '#162419',
-      selectedTheme: 'forest_green',
-      heroVariant: 'forest_split',
-      faqVariant: 'bordered_cards',
-      navVariant: 'solid_transparent',
-      footerVariant: 'earthy_columns',
-    }
-  },
-  {
-    id: 'dark_gradient_preset',
-    name: 'Dark Gradient',
-    description: 'Deep purple gradients with vibrant accents',
-    preview: ['#0F172A', '#6366F1', '#8B5CF6'],
-    customization: {
-      backgroundColor: '#0F172A',
-      primaryColor: '#6366F1',
-      secondaryColor: '#8B5CF6',
-      textColor: '#FFFFFF',
-      surfaceColor: '#1E293B',
-      selectedTheme: 'theme_one',
-    }
-  },
-  {
-    id: 'ocean_blue_preset',
-    name: 'Ocean Blue',
-    description: 'Cool blues with cyan highlights',
-    preview: ['#0C4A6E', '#0EA5E9', '#38BDF8'],
-    customization: {
-      backgroundColor: '#0C4A6E',
-      primaryColor: '#0EA5E9',
-      secondaryColor: '#38BDF8',
-      textColor: '#FFFFFF',
-      surfaceColor: '#0e5a82',
-      selectedTheme: 'theme_two',
-    }
-  },
-  {
-    id: 'sunset_orange_preset',
-    name: 'Sunset Orange',
-    description: 'Warm and vibrant orange tones',
-    preview: ['#1A1310', '#F97316', '#EAB308'],
-    customization: {
-      backgroundColor: '#1A1310',
-      primaryColor: '#F97316',
-      secondaryColor: '#EAB308',
-      textColor: '#FFFFFF',
-      surfaceColor: '#2A1F1A',
-      selectedTheme: 'theme_three',
-    }
-  },
-  {
-    id: 'forest_earth_preset',
-    name: 'Forest Earth',
-    description: 'Natural green with earthy accents',
-    preview: ['#0D1912', '#22C55E', '#84CC16'],
-    customization: {
-      backgroundColor: '#0D1912',
-      primaryColor: '#22C55E',
-      secondaryColor: '#84CC16',
-      textColor: '#FFFFFF',
-      surfaceColor: '#162419',
-      selectedTheme: 'theme_four',
+      selectedTheme: 'dark_gradient',
     }
   },
   {
@@ -497,63 +382,7 @@ const designPresets = [
       secondaryColor: '#EC4899',
       textColor: '#FFFFFF',
       surfaceColor: '#1a1a2e',
-      selectedTheme: 'theme_one',
-    }
-  },
-  {
-    id: 'ocean_breeze',
-    name: 'Ocean Breeze',
-    description: 'Cool blues with cyan highlights',
-    preview: ['#0C4A6E', '#0EA5E9', '#38BDF8'],
-    customization: {
-      backgroundColor: '#0C4A6E',
-      primaryColor: '#0EA5E9',
-      secondaryColor: '#38BDF8',
-      textColor: '#FFFFFF',
-      surfaceColor: '#0e5a82',
-      selectedTheme: 'theme_two',
-    }
-  },
-  {
-    id: 'sunset_glow',
-    name: 'Sunset Glow',
-    description: 'Warm oranges with light background',
-    preview: ['#FFF7ED', '#F97316', '#EF4444'],
-    customization: {
-      backgroundColor: '#FFF7ED',
-      primaryColor: '#F97316',
-      secondaryColor: '#EF4444',
-      textColor: '#1F2937',
-      surfaceColor: '#FFFFFF',
-      selectedTheme: 'theme_three',
-    }
-  },
-  {
-    id: 'forest_premium',
-    name: 'Forest Premium',
-    description: 'Natural greens with earthy tones',
-    preview: ['#14532D', '#22C55E', '#4ADE80'],
-    customization: {
-      backgroundColor: '#14532D',
-      primaryColor: '#22C55E',
-      secondaryColor: '#4ADE80',
-      textColor: '#FFFFFF',
-      surfaceColor: '#166534',
-      selectedTheme: 'theme_four',
-    }
-  },
-  {
-    id: 'royal_purple',
-    name: 'Royal Purple',
-    description: 'Elegant purple with violet accents',
-    preview: ['#1E1B4B', '#7C3AED', '#A855F7'],
-    customization: {
-      backgroundColor: '#1E1B4B',
-      primaryColor: '#7C3AED',
-      secondaryColor: '#A855F7',
-      textColor: '#FFFFFF',
-      surfaceColor: '#312e81',
-      selectedTheme: 'theme_one',
+      selectedTheme: 'dark_gradient',
     }
   },
   {
@@ -567,7 +396,7 @@ const designPresets = [
       secondaryColor: '#1E40AF',
       textColor: '#1F2937',
       surfaceColor: '#F8FAFC',
-      selectedTheme: 'theme_two',
+      selectedTheme: 'professional',
     }
   },
   {
@@ -581,7 +410,7 @@ const designPresets = [
       secondaryColor: '#EC4899',
       textColor: '#FFFFFF',
       surfaceColor: '#27272a',
-      selectedTheme: 'theme_three',
+      selectedTheme: 'vibrant',
     }
   },
   {
@@ -595,7 +424,7 @@ const designPresets = [
       secondaryColor: '#60A5FA',
       textColor: '#FFFFFF',
       surfaceColor: '#374151',
-      selectedTheme: 'theme_two',
+      selectedTheme: 'professional',
     }
   },
   {
@@ -609,7 +438,7 @@ const designPresets = [
       secondaryColor: '#22D3EE',
       textColor: '#E5E7EB',
       surfaceColor: '#020617',
-      selectedTheme: 'theme_two',
+      selectedTheme: 'professional',
     }
   },
   {
@@ -623,7 +452,7 @@ const designPresets = [
       secondaryColor: '#22C55E',
       textColor: '#F9FAFB',
       surfaceColor: '#020617',
-      selectedTheme: 'theme_one',
+      selectedTheme: 'dark_gradient',
     }
   },
   {
@@ -637,7 +466,7 @@ const designPresets = [
       secondaryColor: '#0F172A',
       textColor: '#0F172A',
       surfaceColor: '#FFFFFF',
-      selectedTheme: 'theme_two',
+      selectedTheme: 'professional',
     }
   },
 ];
