@@ -113,20 +113,36 @@ export function ThemeProvider({
   }, [theme])
 
   const setTheme = useCallback(async (t: Theme) => {
-    // Update local state and storage immediately
+    // IMMEDIATELY update DOM for instant visual feedback (before state update)
+    const root = window.document.documentElement
+    root.classList.remove("light", "dark")
+    
+    if (t === "system") {
+      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
+      root.classList.add(systemTheme)
+    } else {
+      root.classList.add(t)
+    }
+    
+    // Update local state and storage
     localStorage.setItem(storageKey, t)
     setThemeState(t)
+    
+    // Dispatch custom event for cross-component sync
+    window.dispatchEvent(new CustomEvent('theme-change', { detail: { theme: t } }))
 
-    // Persist to Supabase if user is logged in
+    // Persist to Supabase if user is logged in (fire and forget)
     if (userId) {
-      try {
-        await supabase
-          .from('profiles')
-          .update({ theme_preference: t })
-          .eq('user_id', userId)
-      } catch (error) {
-        console.error('Error saving theme preference:', error)
-      }
+      (async () => {
+        try {
+          await supabase
+            .from('profiles')
+            .update({ theme_preference: t })
+            .eq('user_id', userId)
+        } catch (error) {
+          console.error('Error saving theme preference:', error)
+        }
+      })()
     }
   }, [storageKey, userId])
 
