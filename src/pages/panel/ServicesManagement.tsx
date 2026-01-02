@@ -1937,9 +1937,9 @@ const ServicesManagement = () => {
                           <stat.icon className={cn("w-5 h-5", stat.color === "primary" ? "text-primary" : `text-${stat.color}`)} />
                         </div>
                         <div className="flex-1">
-                          <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1">
                             <p className="text-sm text-muted-foreground">{stat.label}</p>
-                            <Info className="w-3 h-3 text-muted-foreground/50" />
+                            <Info className="w-3 h-3 text-muted-foreground/50 hidden md:block" />
                           </div>
                           <p className="text-2xl font-bold">{stat.value}</p>
                         </div>

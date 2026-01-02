@@ -194,12 +194,12 @@ const defaultCustomization = {
     };
   }>,
 
-  // Platform Features
+  // Platform Features - Subtle light cards matching the clean design
   platformFeatures: [
-    { title: 'Lightning Fast', description: 'Orders start within seconds', icon: 'Zap', gradient: 'from-yellow-500 to-orange-500' },
-    { title: 'Secure Payments', description: 'Multiple payment methods', icon: 'Shield', gradient: 'from-green-500 to-emerald-500' },
-    { title: '24/7 Support', description: 'Always here to help', icon: 'Headphones', gradient: 'from-blue-500 to-cyan-500' },
-    { title: 'High Quality', description: 'Real engagement only', icon: 'Award', gradient: 'from-purple-500 to-pink-500' },
+    { title: 'Instant Delivery', description: 'Our automated system processes orders instantly. Most services start within minutes of placing your order.', icon: 'Zap', gradient: 'from-primary/20 to-primary/5' },
+    { title: 'High Quality Services', description: 'We provide only premium quality services with real engagement that helps grow your social media presence.', icon: 'BarChart3', gradient: 'from-accent/20 to-accent/5' },
+    { title: 'Best Prices Guaranteed', description: 'Compare our prices with any competitor. We offer the most competitive rates in the market.', icon: 'Users', gradient: 'from-secondary/20 to-secondary/5' },
+    { title: 'Global Coverage', description: 'Services available for all major social media platforms worldwide with multiple payment options.', icon: 'Globe', gradient: 'from-primary/15 to-primary/5' },
   ] as PlatformFeature[],
   
   // Stats - "Trusted by thousands of users"
@@ -257,6 +257,7 @@ const layoutSections = [
   { id: 'faqs', label: 'FAQ', description: 'Frequently asked questions' },
 ];
 
+// Color themes (now merged into Design Presets - kept for backward compatibility)
 const themes = [
   { 
     id: 'dark_gradient', 
@@ -883,117 +884,54 @@ export default function DesignCustomization() {
           </div>
         );
       case 'themes':
+        // Theme Gallery now contains buyer layout themes (FlySMM, SMMStay, etc.)
         return (
           <div className="space-y-4">
             <div className="p-3 rounded-lg bg-primary/10 border border-primary/20 mb-4">
               <div className="flex items-center gap-2 mb-2">
                 <Palette className="w-4 h-4 text-primary" />
-                <span className="text-sm font-medium">Current Theme</span>
+                <span className="text-sm font-medium">Homepage Layout Theme</span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="flex gap-1">
-                  <div className="w-4 h-4 rounded-full" style={{ backgroundColor: customization.backgroundColor }} />
-                  <div className="w-4 h-4 rounded-full" style={{ backgroundColor: customization.primaryColor }} />
-                  <div className="w-4 h-4 rounded-full" style={{ backgroundColor: customization.secondaryColor }} />
-                </div>
-                <span className="text-xs">{customization.selectedTheme || 'Custom'}</span>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              {themes.map(theme => (
-                <button 
-                  key={theme.id} 
-                  onClick={() => applyTheme(theme.id)} 
-                  className={`p-3 rounded-xl border-2 transition-all ${customization.selectedTheme === theme.id ? 'border-primary ring-2 ring-primary/20' : 'border-border hover:border-primary/50'}`}
-                >
-                  <div className="flex gap-1 mb-2">
-                    {theme.colors.map((c, i) => (
-                      <div key={i} className="w-5 h-5 rounded-full" style={{ backgroundColor: c }} />
-                    ))}
-                  </div>
-                  <p className="text-xs font-medium text-left">{theme.name}</p>
-                  {customization.selectedTheme === theme.id && (
-                    <Badge variant="secondary" className="mt-1 text-[10px]">Active</Badge>
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-        );
-      case 'buyer-themes':
-        return (
-          <div className="space-y-4">
-            <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
-              <div className="flex items-center gap-2 mb-2">
-                <Users className="w-4 h-4 text-primary" />
-                <span className="text-sm font-medium">Buyer Homepage Theme</span>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Choose a theme for your buyer's homepage. This affects the layout, colors, and fonts buyers see.
+              <p className="text-xs text-muted-foreground mb-2">
+                Controls your storefront's main structure, layout style, and fonts.
               </p>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="capitalize">
+                  {(customization as any).buyerTheme || 'default'}
+                </Badge>
+              </div>
             </div>
-            
             <div className="grid grid-cols-2 gap-3">
-              {availableThemes.map((theme) => {
-                const isActive = (customization as any).buyerTheme === theme.key || 
-                  (!((customization as any).buyerTheme) && theme.key === 'default');
+              {availableThemes.map(theme => {
+                const isActive = (customization as any).buyerTheme === theme.key;
                 return (
-                  <button
-                    key={theme.key}
-                    onClick={async () => {
+                  <button 
+                    key={theme.key} 
+                    onClick={() => {
                       updateCustomization('buyerTheme', theme.key);
-                      // Save to panels.buyer_theme immediately
-                      if (panelId) {
-                        const { error } = await supabase.from('panels').update({ buyer_theme: theme.key }).eq('id', panelId);
-                        if (!error) {
-                          queryClient.invalidateQueries({ queryKey: ['panel-design-settings'] });
-                          toast({ title: 'Buyer theme updated', description: `Applied "${theme.name}" theme` });
-                        }
-                      }
-                    }}
-                    className={cn(
-                      "p-4 rounded-xl border-2 transition-all text-left",
-                      isActive 
-                        ? "border-primary ring-2 ring-primary/20 bg-primary/5" 
-                        : "border-border hover:border-primary/50"
-                    )}
+                    }} 
+                    className={`p-3 rounded-xl border-2 transition-all text-left ${isActive ? 'border-primary ring-2 ring-primary/20' : 'border-border hover:border-primary/50'}`}
                   >
-                    <div className="flex gap-1 mb-3">
-                      <div 
-                        className="w-6 h-6 rounded-lg" 
-                        style={{ backgroundColor: theme.colors.dark.background }}
-                      />
-                      <div 
-                        className="w-6 h-6 rounded-lg" 
-                        style={{ backgroundColor: theme.colors.dark.primary }}
-                      />
-                      <div 
-                        className="w-6 h-6 rounded-lg" 
-                        style={{ backgroundColor: theme.colors.dark.secondary }}
-                      />
+                    <div className="flex gap-1 mb-2">
+                      <div className="w-5 h-5 rounded-full" style={{ backgroundColor: theme.colors.dark.primary }} />
+                      <div className="w-5 h-5 rounded-full" style={{ backgroundColor: theme.colors.dark.accent }} />
+                      <div className="w-5 h-5 rounded-full" style={{ backgroundColor: theme.colors.dark.background }} />
                     </div>
-                    <p className="text-sm font-semibold mb-1">{theme.name}</p>
-                    <p className="text-xs text-muted-foreground line-clamp-2">{theme.description}</p>
-                    <div className="mt-2 flex items-center gap-2">
-                      <Badge variant="outline" className="text-[10px]">
-                        {theme.fonts.heading}
-                      </Badge>
-                      {isActive && (
+                    <p className="text-xs font-semibold">{theme.name}</p>
+                    <p className="text-[10px] text-muted-foreground line-clamp-1">{theme.description}</p>
+                    {isActive && (
+                      <div className="flex gap-1 mt-1.5">
                         <Badge variant="secondary" className="text-[10px]">Active</Badge>
-                      )}
-                    </div>
+                        {hasUnsavedChanges && <Badge variant="outline" className="text-[10px] text-amber-500 border-amber-500/30">Unsaved</Badge>}
+                      </div>
+                    )}
                   </button>
                 );
               })}
             </div>
-            
-            <div className="p-3 rounded-lg bg-muted/50 border border-border">
-              <p className="text-xs text-muted-foreground">
-                <strong>Tip:</strong> Each theme includes unique fonts, color schemes, and layout styles inspired by popular SMM panels.
-              </p>
-            </div>
           </div>
         );
+      // buyer-themes section has been merged into 'themes' section above
       case 'branding':
         return (
           <div className="space-y-5">
@@ -1530,8 +1468,7 @@ export default function DesignCustomization() {
 
   const sections = [
     { id: 'presets', title: 'Design Presets', icon: Wand2 },
-    { id: 'themes', title: 'Theme Gallery', icon: Palette },
-    { id: 'buyer-themes', title: 'Buyer Themes', icon: Users },
+    { id: 'themes', title: 'Theme Gallery', icon: Palette }, // Now contains buyer layout themes (FlySMM, SMMStay, etc.)
     { id: 'branding', title: 'Branding', icon: Image },
     { id: 'colors', title: 'Colors', icon: Sparkles },
     { id: 'typography', title: 'Typography', icon: Type },
@@ -1603,7 +1540,13 @@ export default function DesignCustomization() {
                 <Button 
                   variant="outline" 
                   size="sm"
-                  onClick={() => setOpenSections(prev => ({ ...prev, themes: true, presets: true }))}
+                  onClick={() => {
+                    // Open Theme Gallery section and scroll to it
+                    setOpenSections(prev => ({ ...prev, themes: true, presets: true }));
+                    setTimeout(() => {
+                      document.querySelector('[data-section-id="themes"]')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 100);
+                  }}
                   className="gap-2 bg-gradient-to-r from-primary/10 to-secondary/10 hover:from-primary/20 hover:to-secondary/20 border-primary/30"
                 >
                   <Palette className="w-4 h-4" />
@@ -1615,7 +1558,7 @@ export default function DesignCustomization() {
                   <Info className="w-4 h-4 mt-0.5 text-primary shrink-0" />
                   <div>
                     <p className="font-medium">Where to change theme?</p>
-                    <p className="text-xs text-muted-foreground">Click here or scroll to "Theme Gallery" in the left panel to pick a new theme or preset.</p>
+                    <p className="text-xs text-muted-foreground">Click here or scroll to "Theme Gallery" in the left panel to pick homepage layout themes.</p>
                   </div>
                 </div>
               </TooltipContent>
@@ -1715,6 +1658,7 @@ export default function DesignCustomization() {
                 key={section.id} 
                 open={openSections[section.id]} 
                 onOpenChange={() => setOpenSections(prev => ({ ...prev, [section.id]: !prev[section.id] }))}
+                data-section-id={section.id}
               >
                 <CollapsibleTrigger className="w-full flex items-center justify-between p-3 rounded-lg bg-card hover:bg-accent/50 transition-colors">
                   <div className="flex items-center gap-3">

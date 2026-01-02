@@ -659,7 +659,16 @@ export const ServiceImportDialog = ({
             {/* Services List - Kanban Style Cards with Scroll */}
             <ScrollArea className="h-[40vh] sm:h-[50vh] max-h-[400px] rounded-lg border border-border/50">
               <div className="p-2 sm:p-3">
-                {/* Mobile: Vertical cards, Desktop: Horizontal scroll kanban */}
+                {/* Empty state */}
+                {filteredServices.length === 0 && (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <Search className="w-10 h-10 text-muted-foreground/30 mb-3" />
+                    <p className="text-sm text-muted-foreground">No services found matching your search</p>
+                    <p className="text-xs text-muted-foreground/70 mt-1">Try adjusting your search or filter criteria</p>
+                  </div>
+                )}
+                
+                {/* Mobile: Vertical cards, Desktop: Grid layout */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {filteredServices.map((service) => {
                     const isSelected = selectedServices.includes(service.id);
@@ -672,17 +681,18 @@ export const ServiceImportDialog = ({
                         key={service.id}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.2 }}
                         className={cn(
-                          "p-3 rounded-xl border transition-all cursor-pointer relative",
+                          "p-3 rounded-xl border transition-all cursor-pointer relative group",
                           existingServiceIds.has(service.id) && "opacity-60",
                           isSelected 
                             ? "border-primary bg-primary/5 shadow-sm shadow-primary/10" 
-                            : "border-border/30 hover:border-border/60 bg-background/30"
+                            : "border-border/30 hover:border-border/60 bg-background/30 hover:bg-background/50"
                         )}
                         onClick={() => toggleService(service.id)}
                       >
                         {existingServiceIds.has(service.id) && (
-                          <Badge className="absolute -top-2 -right-2 text-[9px] bg-amber-500/80">
+                          <Badge className="absolute -top-2 -right-2 text-[9px] bg-amber-500/80 shadow-sm">
                             Already Imported
                           </Badge>
                         )}
@@ -696,11 +706,16 @@ export const ServiceImportDialog = ({
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1.5 flex-wrap mb-1">
                               <CategoryIcon className="w-3.5 h-3.5 text-primary shrink-0" />
-                              <Badge variant="outline" className="text-[10px] capitalize px-1.5 py-0">
+                              <Badge variant="outline" className="text-[10px] capitalize px-1.5 py-0 truncate max-w-[80px]">
                                 {service.category}
                               </Badge>
+                              <Badge variant="secondary" className="text-[9px] px-1 py-0 opacity-60">
+                                ID: {service.id}
+                              </Badge>
                             </div>
-                            <p className="font-medium text-sm leading-tight line-clamp-2">{service.name}</p>
+                            <p className="font-medium text-sm leading-tight line-clamp-2" title={service.name}>
+                              {service.name}
+                            </p>
                           </div>
                         </div>
 
@@ -713,7 +728,7 @@ export const ServiceImportDialog = ({
                           </div>
                           
                           {/* Pricing Row */}
-                          <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/30">
+                          <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-border/30">
                             <div className="flex items-center gap-1.5">
                               <span className="text-xs text-muted-foreground line-through">
                                 ${service.price < 1 ? service.price.toFixed(4) : service.price.toFixed(2)}
@@ -740,11 +755,11 @@ export const ServiceImportDialog = ({
                           {/* Profit Badge */}
                           <Badge variant="outline" className={cn(
                             "text-[10px] w-full justify-center",
-                            markup >= 25 ? "text-emerald-500 border-emerald-500/30" : 
-                            markup >= 10 ? "text-amber-500 border-amber-500/30" : 
-                            "text-red-500 border-red-500/30"
+                            markup >= 25 ? "text-emerald-500 border-emerald-500/30 bg-emerald-500/5" : 
+                            markup >= 10 ? "text-amber-500 border-amber-500/30 bg-amber-500/5" : 
+                            "text-red-500 border-red-500/30 bg-red-500/5"
                           )}>
-                            Profit: +${(service.price * markup / 100).toFixed(2)}
+                            Profit: +${(service.price * markup / 100).toFixed(4)}
                           </Badge>
                         </div>
                       </motion.div>
