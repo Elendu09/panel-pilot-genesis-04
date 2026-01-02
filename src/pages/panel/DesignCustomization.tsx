@@ -161,12 +161,12 @@ const defaultCustomization = {
   enableTestimonials: true,
   enableFAQs: true,
 
-  // Feature Cards (editable features for features grid)
+  // Feature Cards (editable features for features grid) - "Why Choose Our Services?"
   featureCards: [
-    { title: 'Fast Delivery', description: 'Get your orders delivered quickly', icon: 'Zap' },
-    { title: '24/7 Support', description: 'We are here to help you anytime', icon: 'Headphones' },
-    { title: 'Secure Payments', description: 'Your transactions are protected', icon: 'Shield' },
-    { title: 'Best Quality', description: 'Only real and high-quality services', icon: 'Award' },
+    { title: 'Instant Delivery', description: 'Our automated system processes orders instantly. Most services start within minutes of placing your order.', icon: 'Zap' },
+    { title: 'High Quality Services', description: 'We provide only premium quality services with real engagement that helps grow your social media presence.', icon: 'BarChart3' },
+    { title: 'Best Prices Guaranteed', description: 'Compare our prices with any competitor. We offer the most competitive rates in the market.', icon: 'DollarSign' },
+    { title: 'Global Coverage', description: 'Services available for all major social media platforms worldwide with multiple payment options.', icon: 'Globe' },
   ] as Array<{ title: string; description: string; icon: string }>,
 
   // Homepage layout order
@@ -202,12 +202,12 @@ const defaultCustomization = {
     { title: 'High Quality', description: 'Real engagement only', icon: 'Award', gradient: 'from-purple-500 to-pink-500' },
   ] as PlatformFeature[],
   
-  // Stats
+  // Stats - "Trusted by thousands of users"
   stats: [
-    { icon: 'Users', value: '50K+', label: 'Active Users', gradient: 'from-blue-500 to-cyan-500' },
-    { icon: 'ShoppingCart', value: '2M+', label: 'Orders Completed', gradient: 'from-green-500 to-emerald-500' },
-    { icon: 'Clock', value: '0-1hr', label: 'Average Delivery', gradient: 'from-purple-500 to-pink-500' },
-    { icon: 'Star', value: '99.9%', label: 'Success Rate', gradient: 'from-yellow-500 to-orange-500' },
+    { icon: 'Users', value: '10K+', label: 'Happy Customers', gradient: 'from-blue-500 to-cyan-500' },
+    { icon: 'ShoppingCart', value: '1M+', label: 'Orders Completed', gradient: 'from-green-500 to-emerald-500' },
+    { icon: 'Zap', value: '500+', label: 'Services Available', gradient: 'from-purple-500 to-pink-500' },
+    { icon: 'CreditCard', value: '50+', label: 'Payment Methods', gradient: 'from-amber-500 to-orange-500' },
   ] as Stat[],
   
   // Testimonials
@@ -1761,14 +1761,13 @@ export default function DesignCustomization() {
                         variant="outline" 
                         className="w-full" 
                         onClick={() => {
-                          const defaultPreset = designPresets.find(p => p.id === 'my_default_theme') || designPresets[0];
-                          const merged = {
+                          // Use defaultCustomization directly (not merged with preset)
+                          resetHistory({
                             ...defaultCustomization,
-                            ...(defaultPreset?.customization || {}),
-                          };
-                          resetHistory(merged);
+                            companyName: panelData?.name || '',
+                          });
                           setHasUnsavedChanges(true);
-                          toast({ title: 'Reset to defaults' });
+                          toast({ title: 'Reset to defaults', description: 'Design restored to original settings' });
                         }}
                       >
                         Reset to Default
