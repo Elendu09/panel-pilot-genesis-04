@@ -513,6 +513,56 @@ export type Database = {
           },
         ]
       }
+      buyer_themes: {
+        Row: {
+          created_at: string | null
+          dark_palette: Json | null
+          font_family: string | null
+          heading_font: string | null
+          id: string
+          is_active: boolean | null
+          layout_config: Json | null
+          light_palette: Json | null
+          panel_id: string | null
+          theme_key: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          dark_palette?: Json | null
+          font_family?: string | null
+          heading_font?: string | null
+          id?: string
+          is_active?: boolean | null
+          layout_config?: Json | null
+          light_palette?: Json | null
+          panel_id?: string | null
+          theme_key?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          dark_palette?: Json | null
+          font_family?: string | null
+          heading_font?: string | null
+          id?: string
+          is_active?: boolean | null
+          layout_config?: Json | null
+          light_palette?: Json | null
+          panel_id?: string | null
+          theme_key?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "buyer_themes_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       canned_responses: {
         Row: {
           category: string | null
@@ -1387,6 +1437,7 @@ export type Database = {
         Row: {
           balance: number | null
           blog_enabled: boolean | null
+          buyer_theme: string | null
           commission_rate: number | null
           created_at: string
           custom_branding: Json | null
@@ -1419,6 +1470,7 @@ export type Database = {
         Insert: {
           balance?: number | null
           blog_enabled?: boolean | null
+          buyer_theme?: string | null
           commission_rate?: number | null
           created_at?: string
           custom_branding?: Json | null
@@ -1451,6 +1503,7 @@ export type Database = {
         Update: {
           balance?: number | null
           blog_enabled?: boolean | null
+          buyer_theme?: string | null
           commission_rate?: number | null
           created_at?: string
           custom_branding?: Json | null
