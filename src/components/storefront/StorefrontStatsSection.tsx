@@ -47,31 +47,12 @@ export const StorefrontStatsSection = ({ panel, customization = {} }: Storefront
   const sectionRef = useRef(null);
   const isInView = useInView(sectionRef, { once: true, margin: "-100px" });
   
+  // Default stats matching "Trusted by thousands of users" section
   const customStats = customization.stats || [
-    {
-      icon: Users,
-      value: "10K+",
-      label: "Happy Customers",
-      gradient: "from-blue-500 to-cyan-500"
-    },
-    {
-      icon: ShoppingBag,
-      value: "1M+",
-      label: "Orders Completed",
-      gradient: "from-green-500 to-emerald-500"
-    },
-    {
-      icon: Zap,
-      value: "500+",
-      label: "Services Available",
-      gradient: "from-purple-500 to-pink-500"
-    },
-    {
-      icon: Globe,
-      value: "50+",
-      label: "Payment Methods",
-      gradient: "from-amber-500 to-orange-500"
-    }
+    { icon: Users, value: "10K+", label: "Happy Customers", gradient: "from-blue-500 to-cyan-500" },
+    { icon: ShoppingBag, value: "1M+", label: "Orders Completed", gradient: "from-green-500 to-emerald-500" },
+    { icon: Zap, value: "500+", label: "Services Available", gradient: "from-purple-500 to-pink-500" },
+    { icon: Globe, value: "50+", label: "Payment Methods", gradient: "from-amber-500 to-orange-500" }
   ];
 
   const containerVariants = {
