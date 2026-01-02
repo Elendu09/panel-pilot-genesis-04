@@ -3,38 +3,20 @@ import { Button } from "@/components/ui/button"
 import { useTheme } from "@/hooks/use-theme"
 import { motion, AnimatePresence } from "framer-motion"
 import { cn } from "@/lib/utils"
-import { useState, useEffect, useCallback } from "react"
 
 export function ThemeToggle({ className }: { className?: string }) {
   const { theme, setTheme } = useTheme()
-  const [isDark, setIsDark] = useState(false)
+  
+  // Derive isDark directly from DOM class for instant accuracy
+  const isDark = typeof window !== 'undefined' 
+    ? document.documentElement.classList.contains('dark')
+    : theme === 'dark'
 
-  // Sync isDark state with theme - fixes double-click bug
-  useEffect(() => {
-    const updateIsDark = () => {
-      if (theme === "system") {
-        setIsDark(window.matchMedia("(prefers-color-scheme: dark)").matches)
-      } else {
-        setIsDark(theme === "dark")
-      }
-    }
-    
-    updateIsDark()
-    
-    // Listen for system theme changes when in system mode
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
-    if (theme === "system") {
-      mediaQuery.addEventListener("change", updateIsDark)
-      return () => mediaQuery.removeEventListener("change", updateIsDark)
-    }
-  }, [theme])
-
-  const handleToggle = useCallback(() => {
-    const newTheme = isDark ? "light" : "dark"
-    setTheme(newTheme)
-    // Immediately update local state for instant feedback
-    setIsDark(!isDark)
-  }, [isDark, setTheme])
+  const handleToggle = () => {
+    // Toggle based on current DOM state for reliability
+    const currentlyDark = document.documentElement.classList.contains('dark')
+    setTheme(currentlyDark ? "light" : "dark")
+  }
 
   return (
     <Button
@@ -56,7 +38,7 @@ export function ThemeToggle({ className }: { className?: string }) {
             initial={{ y: 20, opacity: 0, rotate: -90 }}
             animate={{ y: 0, opacity: 1, rotate: 0 }}
             exit={{ y: -20, opacity: 0, rotate: 90 }}
-            transition={{ duration: 0.2, ease: "easeInOut" }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
             className="absolute inset-0 flex items-center justify-center"
           >
             <Moon className="h-4 w-4 text-foreground" />
@@ -67,7 +49,7 @@ export function ThemeToggle({ className }: { className?: string }) {
             initial={{ y: -20, opacity: 0, rotate: 90 }}
             animate={{ y: 0, opacity: 1, rotate: 0 }}
             exit={{ y: 20, opacity: 0, rotate: -90 }}
-            transition={{ duration: 0.2, ease: "easeInOut" }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
             className="absolute inset-0 flex items-center justify-center"
           >
             <Sun className="h-4 w-4 text-foreground" />
