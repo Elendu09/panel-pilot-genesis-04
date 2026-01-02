@@ -19,6 +19,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "@/hooks/use-toast";
 import { LanguageSelector } from "@/components/buyer/LanguageSelector";
 import { CurrencySelector } from "@/components/buyer/CurrencySelector";
+import { BuyerThemeWrapper } from "@/components/buyer-themes";
 import {
   Dialog,
   DialogContent,
@@ -170,30 +171,33 @@ const BuyerPublicServices = () => {
   // If buyer is logged in, redirect to dashboard
   if (buyer) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Card className="max-w-md w-full mx-4">
-          <CardContent className="p-6 text-center">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
-              <CheckCircle className="w-8 h-8 text-primary" />
-            </div>
-            <h2 className="text-xl font-bold mb-2">{t('dashboard.welcome')}</h2>
-            <p className="text-muted-foreground mb-4">
-              You're already logged in. Go to your dashboard to place orders.
-            </p>
-            <Button asChild className="w-full">
-              <Link to="/dashboard">
-                <ShoppingCart className="w-4 h-4 mr-2" />
-                {t('nav.dashboard')}
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+      <BuyerThemeWrapper panelId={panelId}>
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <Card className="max-w-md w-full mx-4">
+            <CardContent className="p-6 text-center">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
+                <CheckCircle className="w-8 h-8 text-primary" />
+              </div>
+              <h2 className="text-xl font-bold mb-2">{t('dashboard.welcome')}</h2>
+              <p className="text-muted-foreground mb-4">
+                You're already logged in. Go to your dashboard to place orders.
+              </p>
+              <Button asChild className="w-full">
+                <Link to="/dashboard">
+                  <ShoppingCart className="w-4 h-4 mr-2" />
+                  {t('nav.dashboard')}
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </BuyerThemeWrapper>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <BuyerThemeWrapper panelId={panelId}>
+      <div className="min-h-screen bg-background">
       {/* Header - Guest Mode */}
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-xl border-b border-border">
         <div className="container mx-auto px-4 py-3">
@@ -498,7 +502,8 @@ const BuyerPublicServices = () => {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </BuyerThemeWrapper>
   );
 };
 
