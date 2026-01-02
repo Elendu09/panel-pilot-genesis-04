@@ -163,11 +163,11 @@ const defaultCustomization = {
 
   // Feature Cards (editable features for features grid) - "Why Choose Our Services?"
   featureCards: [
-    { title: 'Lightning Fast', description: 'Orders start within seconds', icon: 'Zap', gradient: 'from-amber-400 to-orange-500' },
-    { title: 'Secure Payments', description: 'Multiple payment methods', icon: 'Shield', gradient: 'from-green-400 to-emerald-500' },
-    { title: '24/7 Support', description: 'Always here to help', icon: 'Headphones', gradient: 'from-cyan-400 to-blue-500' },
-    { title: 'High Quality', description: 'Real engagement only', icon: 'BarChart3', gradient: 'from-pink-400 to-purple-500' },
-  ] as Array<{ title: string; description: string; icon: string; gradient?: string }>,
+    { title: 'Instant Delivery', description: 'Our automated system processes orders instantly. Most services start within minutes of placing your order.', icon: 'Zap' },
+    { title: 'High Quality Services', description: 'We provide only premium quality services with real engagement that helps grow your social media presence.', icon: 'BarChart3' },
+    { title: 'Best Prices Guaranteed', description: 'Compare our prices with any competitor. We offer the most competitive rates in the market.', icon: 'DollarSign' },
+    { title: 'Global Coverage', description: 'Services available for all major social media platforms worldwide with multiple payment options.', icon: 'Globe' },
+  ] as Array<{ title: string; description: string; icon: string }>,
 
   // Homepage layout order
   homepageLayout: ['hero', 'platform', 'stats', 'features', 'testimonials', 'faqs'],
