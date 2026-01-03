@@ -106,7 +106,7 @@ export const FloatingUndoButton = ({
 
       <div className={cn(
         "fixed z-50",
-        isMobile ? "bottom-28 right-4" : "bottom-6 right-6"
+        isMobile ? "bottom-28 left-4" : "bottom-6 right-6"
       )}>
         <AnimatePresence mode="wait">
           {isExpanded ? (

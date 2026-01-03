@@ -26,22 +26,64 @@ interface ProviderService {
   type?: string;
 }
 
-const mapCategory = (category: string): string => {
-  const categoryLower = category.toLowerCase();
-  if (categoryLower.includes('instagram')) return 'instagram';
-  if (categoryLower.includes('facebook') || categoryLower.includes('fb')) return 'facebook';
-  if (categoryLower.includes('twitter') || categoryLower.includes('x.com')) return 'twitter';
-  if (categoryLower.includes('youtube') || categoryLower.includes('yt')) return 'youtube';
-  if (categoryLower.includes('tiktok') || categoryLower.includes('tik tok')) return 'tiktok';
-  if (categoryLower.includes('linkedin')) return 'linkedin';
-  if (categoryLower.includes('telegram')) return 'telegram';
-  if (categoryLower.includes('spotify')) return 'spotify';
-  if (categoryLower.includes('discord')) return 'discord';
-  if (categoryLower.includes('twitch')) return 'twitch';
-  if (categoryLower.includes('pinterest')) return 'pinterest';
-  if (categoryLower.includes('snapchat')) return 'snapchat';
-  if (categoryLower.includes('threads')) return 'threads';
-  if (categoryLower.includes('soundcloud')) return 'soundcloud';
+const mapCategory = (category: string, serviceName: string = ''): string => {
+  const input = `${category} ${serviceName}`.toLowerCase();
+  
+  // Comprehensive platform detection matching frontend
+  const platforms: [string, string[]][] = [
+    ['instagram', ['instagram', 'insta', 'ig follower', 'ig like', 'ig view', 'reels']],
+    ['facebook', ['facebook', 'fb ', 'fb.com']],
+    ['twitter', ['twitter', 'x.com', 'tweet', 'x follower', 'x like']],
+    ['youtube', ['youtube', 'yt ', 'yt.com', 'shorts', 'youtube short']],
+    ['tiktok', ['tiktok', 'tik tok', 'tt follower', 'tt like']],
+    ['linkedin', ['linkedin', 'linked in']],
+    ['telegram', ['telegram', 'tg ', 'tg.me']],
+    ['threads', ['threads']],
+    ['snapchat', ['snapchat', 'snap ']],
+    ['pinterest', ['pinterest', 'pin ']],
+    ['whatsapp', ['whatsapp', 'whats app']],
+    ['twitch', ['twitch']],
+    ['discord', ['discord']],
+    ['spotify', ['spotify']],
+    ['soundcloud', ['soundcloud', 'sound cloud']],
+    ['audiomack', ['audiomack', 'audio mack']],
+    ['reddit', ['reddit']],
+    ['vk', ['vk.com', 'vkontakte', ' vk ']],
+    ['kick', ['kick.com', ' kick ']],
+    ['rumble', ['rumble']],
+    ['dailymotion', ['dailymotion', 'daily motion']],
+    ['deezer', ['deezer']],
+    ['shazam', ['shazam']],
+    ['tidal', ['tidal']],
+    ['reverbnation', ['reverbnation', 'reverb nation']],
+    ['mixcloud', ['mixcloud', 'mix cloud']],
+    ['quora', ['quora']],
+    ['tumblr', ['tumblr']],
+    ['clubhouse', ['clubhouse', 'club house']],
+    ['likee', ['likee']],
+    ['kwai', ['kwai']],
+    ['trovo', ['trovo']],
+    ['odysee', ['odysee']],
+    ['bilibili', ['bilibili', 'bili bili']],
+    ['lemon8', ['lemon8', 'lemon 8']],
+    ['bereal', ['bereal', 'be real']],
+    ['weibo', ['weibo']],
+    ['line', ['line app', 'line.me']],
+    ['patreon', ['patreon']],
+    ['medium', ['medium.com', ' medium ']],
+    ['roblox', ['roblox']],
+    ['steam', ['steam']],
+    ['applemusic', ['apple music', 'applemusic', 'itunes']],
+    ['amazonmusic', ['amazon music', 'amazonmusic']],
+    ['napster', ['napster']],
+    ['iheart', ['iheart', 'iheartradio']],
+  ];
+  
+  for (const [platform, keywords] of platforms) {
+    if (keywords.some(kw => input.includes(kw))) {
+      return platform;
+    }
+  }
   return 'other';
 };
 

@@ -91,8 +91,8 @@ const ServiceRow = ({
       />
 
       {/* Service ID */}
-      <span className="text-xs text-muted-foreground w-12 shrink-0">
-        #{service.displayId || index + 1}
+      <span className="text-xs text-muted-foreground w-20 shrink-0 font-mono">
+        ID: {service.providerServiceId || service.displayId || index + 1}
       </span>
 
       {/* Icon & Name */}
