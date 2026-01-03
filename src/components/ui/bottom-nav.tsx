@@ -24,9 +24,10 @@ interface BottomNavProps {
   className?: string;
   showFab?: boolean;
   fabItems?: FabMenuItem[];
+  centerIndex?: number;
 }
 
-export const BottomNav = ({ items, className, showFab = false, fabItems }: BottomNavProps) => {
+export const BottomNav = ({ items, className, showFab = false, fabItems, centerIndex }: BottomNavProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [fabOpen, setFabOpen] = useState(false);
@@ -127,8 +128,41 @@ export const BottomNav = ({ items, className, showFab = false, fabItems }: Botto
         className
       )}>
         <nav className="flex items-stretch justify-around h-16 px-1">
-          {items.map((item) => {
+          {items.map((item, index) => {
             const active = isActive(item.href);
+            const isCenter = centerIndex !== undefined && index === centerIndex;
+            
+            // Center item with special styling (like buyer nav)
+            if (isCenter) {
+              return (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  data-tour={item.tourId}
+                  className="flex items-center justify-center flex-1 relative -mt-4"
+                >
+                  <motion.div
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className={cn(
+                      "w-14 h-14 rounded-full flex flex-col items-center justify-center shadow-lg",
+                      "bg-gradient-to-br from-primary to-primary/80 text-primary-foreground",
+                      "border-4 border-background"
+                    )}
+                  >
+                    <item.icon className="w-5 h-5" />
+                    <span className="text-[8px] font-semibold mt-0.5">{item.name}</span>
+                  </motion.div>
+                  {/* Badge for center item */}
+                  {item.badge && item.badge > 0 && (
+                    <span className="absolute top-0 right-1/2 translate-x-4 min-w-[16px] h-[16px] px-1 bg-destructive text-destructive-foreground text-[9px] font-bold rounded-full flex items-center justify-center">
+                      {item.badge > 99 ? '99+' : item.badge}
+                    </span>
+                  )}
+                </Link>
+              );
+            }
+            
             return (
               <Link
                 key={item.name}
