@@ -438,8 +438,13 @@ const BuyerServices = () => {
                                       </div>
                                     </div>
 
-                                    {/* Service Name */}
-                                    <h3 className="font-medium text-sm leading-tight line-clamp-2 mb-2 min-h-[2.5rem]">
+                                    {/* Service ID & Name */}
+                                    <div className="flex items-center gap-1.5 mb-1">
+                                      <Badge variant="secondary" className="text-[9px] font-mono px-1 py-0 h-4">
+                                        ID: {service.provider_service_id || service.id?.slice(0, 6)}
+                                      </Badge>
+                                    </div>
+                                    <h3 className="font-medium text-sm leading-tight line-clamp-2 mb-2 min-h-[2.25rem]">
                                       {service.name}
                                     </h3>
 

@@ -42,6 +42,7 @@ interface Service {
   category: string;
   min_quantity?: number;
   max_quantity?: number;
+  provider_service_id?: string;
 }
 
 interface FastOrderSectionProps {
@@ -629,7 +630,12 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                         {categoryServices.map((service) => (
                           <SelectItem key={service.id} value={service.id} className="py-3">
                             <div className="flex flex-col">
-                              <span className="font-medium">{service.name}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">{service.name}</span>
+                                <Badge variant="secondary" className="text-[9px] font-mono px-1 py-0 h-4">
+                                  ID: {service.provider_service_id || service.id?.slice(0, 6)}
+                                </Badge>
+                              </div>
                               <span className="text-xs text-muted-foreground">
                                 ${service.price.toFixed(4)}/1K • Min: {service.min_quantity || 100}
                               </span>
@@ -674,6 +680,11 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                                 <Check className="w-3 h-3 text-white" />
                               </motion.div>
                             )}
+                          </div>
+                          <div className="flex items-center gap-1.5 mb-0.5">
+                            <Badge variant="secondary" className="text-[8px] font-mono px-1 py-0 h-3.5">
+                              ID: {service.provider_service_id || service.id?.slice(0, 6)}
+                            </Badge>
                           </div>
                           <p className="text-sm line-clamp-2" style={{ color: textMuted }}>
                             {service.name}
