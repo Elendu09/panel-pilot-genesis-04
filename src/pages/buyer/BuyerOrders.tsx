@@ -43,7 +43,7 @@ interface Order {
   status: string;
   progress: number;
   created_at: string;
-  service?: { name: string } | null;
+  service?: { name: string; provider_service_id?: string } | null;
 }
 
 const BuyerOrders = () => {
@@ -73,7 +73,7 @@ const BuyerOrders = () => {
         .from('orders')
         .select(`
           *,
-          service:services(name)
+          service:services(name, provider_service_id)
         `)
         .eq('buyer_id', buyer.id)
         .order('created_at', { ascending: false });
@@ -396,7 +396,14 @@ const BuyerOrders = () => {
               
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">{t('orders.service')}</span>
-                <span className="font-medium">{selectedOrder.service?.name || 'Unknown'}</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">{selectedOrder.service?.name || 'Unknown'}</span>
+                  {selectedOrder.service?.provider_service_id && (
+                    <Badge variant="secondary" className="text-xs font-mono">
+                      ID: {selectedOrder.service.provider_service_id}
+                    </Badge>
+                  )}
+                </div>
               </div>
 
               <div className="flex items-center justify-between">
@@ -474,7 +481,14 @@ const OrderCard = ({
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
-          <p className="font-medium text-sm truncate">{order.service?.name || 'Unknown'}</p>
+          <div className="flex items-center gap-2">
+            <p className="font-medium text-sm truncate">{order.service?.name || 'Unknown'}</p>
+            {order.service?.provider_service_id && (
+              <Badge variant="secondary" className="text-[10px] font-mono px-1 py-0 h-4 shrink-0">
+                ID: {order.service.provider_service_id}
+              </Badge>
+            )}
+          </div>
           <button 
             onClick={onCopy}
             className="text-xs text-muted-foreground hover:text-primary transition-colors font-mono"

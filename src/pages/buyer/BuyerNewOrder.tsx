@@ -589,9 +589,14 @@ const BuyerNewOrder = () => {
                                 <ServiceTypeIcon className="w-3 h-3 text-white" />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <span className="font-medium text-sm truncate block max-w-[180px]">
-                                  {service.name}
-                                </span>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-sm truncate block max-w-[160px]">
+                                    {service.name}
+                                  </span>
+                                  <Badge variant="secondary" className="text-[10px] font-mono px-1 py-0 h-4 shrink-0">
+                                    ID: {service.provider_service_id || service.id?.slice(0, 6)}
+                                  </Badge>
+                                </div>
                                 <div className="flex items-center gap-2 mt-0.5">
                                   <span className="text-xs text-muted-foreground">
                                     Min: {(service.min_quantity || 100).toLocaleString()}
