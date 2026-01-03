@@ -45,24 +45,30 @@ const lightPalette = {
   cardBorder: 'rgba(0, 0, 0, 0.1)',
 };
 
-export const ThemeTwo = ({ panel, services = [], customization = {} }: ThemeTwoProps) => {
-  const [themeMode, setThemeMode] = useState<'dark' | 'light'>('dark');
-  
-  useEffect(() => {
-    const saved = localStorage.getItem('storefront-theme-mode');
-    if (saved === 'light' || saved === 'dark') {
-      setThemeMode(saved);
-    } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
-      setThemeMode('light');
-    }
-  }, []);
+export const ThemeTwo = ({ panel, services = [], customization = {}, isPreview = false }: ThemeTwoProps) => {
+  const passedThemeMode = customization?.themeMode as 'dark' | 'light' | undefined;
+  const [internalThemeMode, setInternalThemeMode] = useState<'dark' | 'light'>('dark');
 
   useEffect(() => {
-    localStorage.setItem('storefront-theme-mode', themeMode);
+    if (passedThemeMode) return;
+    const saved = localStorage.getItem('storefront-theme-mode');
+    if (saved === 'light' || saved === 'dark') {
+      setInternalThemeMode(saved);
+    } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+      setInternalThemeMode('light');
+    }
+  }, [passedThemeMode]);
+
+  const themeMode = passedThemeMode || internalThemeMode;
+  const setThemeMode = passedThemeMode ? undefined : setInternalThemeMode;
+
+  useEffect(() => {
+    if (passedThemeMode) return;
+    localStorage.setItem('storefront-theme-mode', internalThemeMode);
     // Sync with document class for shadcn/tailwind components
     document.documentElement.classList.remove('light', 'dark');
-    document.documentElement.classList.add(themeMode);
-  }, [themeMode]);
+    document.documentElement.classList.add(internalThemeMode);
+  }, [internalThemeMode, passedThemeMode]);
 
   const palette = themeMode === 'dark' ? darkPalette : lightPalette;
 
@@ -97,9 +103,9 @@ export const ThemeTwo = ({ panel, services = [], customization = {} }: ThemeTwoP
 
   const pageVariants = {
     initial: { opacity: 0 },
-    animate: { 
+    animate: {
       opacity: 1,
-      transition: { duration: 0.5, staggerChildren: 0.1 }
+      transition: { duration: 0.5, staggerChildren: 0.1 },
     },
   };
 
@@ -111,11 +117,11 @@ export const ThemeTwo = ({ panel, services = [], customization = {} }: ThemeTwoP
     switch (sectionId) {
       case 'hero':
         return (
-          <StorefrontHeroSection 
+          <StorefrontHeroSection
             key="hero"
-            panel={panel} 
-            services={services} 
-            customization={themeTwoCustomization} 
+            panel={panel}
+            services={services}
+            customization={themeTwoCustomization}
           />
         );
       case 'platform':
@@ -144,39 +150,39 @@ export const ThemeTwo = ({ panel, services = [], customization = {} }: ThemeTwoP
   };
 
   return (
-    <motion.div 
+    <motion.div
       className="min-h-screen relative overflow-hidden"
-      style={{ 
+      style={{
         backgroundColor: themeTwoCustomization.backgroundColor,
-        color: themeTwoCustomization.textColor 
+        color: themeTwoCustomization.textColor,
       }}
       variants={pageVariants}
       initial="initial"
       animate="animate"
     >
       <style>{themeStyles}</style>
-      
+
       {/* Animated Background Effects */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         {/* Diagonal Grid */}
-        <div 
+        <div
           className="absolute inset-0 opacity-20"
-          style={{ 
+          style={{
             backgroundImage: `linear-gradient(45deg, ${palette.border} 1px, transparent 1px)`,
-            backgroundSize: '40px 40px'
+            backgroundSize: '40px 40px',
           }}
         />
-        
+
         {/* Floating Wave Effect */}
         <motion.div
           className="absolute top-0 right-0 w-full h-96"
-          style={{ 
+          style={{
             background: `linear-gradient(180deg, ${palette.glow}, transparent)`,
           }}
           animate={{ opacity: [0.3, 0.5, 0.3] }}
-          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+          transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
         />
-        
+
         {/* Animated Circles */}
         <motion.div
           className="absolute top-20 right-20 w-72 h-72 rounded-full blur-3xl"
@@ -185,7 +191,7 @@ export const ThemeTwo = ({ panel, services = [], customization = {} }: ThemeTwoP
             scale: [1, 1.2, 1],
             opacity: [0.4, 0.6, 0.4],
           }}
-          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+          transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
         />
         <motion.div
           className="absolute bottom-40 left-10 w-60 h-60 rounded-full blur-3xl"
@@ -194,22 +200,18 @@ export const ThemeTwo = ({ panel, services = [], customization = {} }: ThemeTwoP
             scale: [1, 1.15, 1],
             x: [0, 20, 0],
           }}
-          transition={{ duration: 12, repeat: Infinity, ease: "easeInOut", delay: 3 }}
+          transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut', delay: 3 }}
         />
       </div>
 
-      {/* Navigation - hidden in preview inside design customization */}
-      {!customization?.isPreview && (
-        <StorefrontNavigation panel={panel} customization={themeTwoCustomization} />
-      )}
+      {/* Navigation */}
+      {!isPreview && <StorefrontNavigation panel={panel} customization={themeTwoCustomization} />}
 
       {/* Main Content */}
-      <main className="relative z-10">
-        {layout.map((sectionId) => renderSection(sectionId))}
-      </main>
+      <main className="relative z-10">{layout.map((sectionId) => renderSection(sectionId))}</main>
 
       {/* Footer */}
-      <StorefrontFooter 
+      <StorefrontFooter
         panelName={themeTwoCustomization.companyName || panel?.name || 'SMM Panel'}
         footerAbout={themeTwoCustomization.footerAbout}
         footerText={themeTwoCustomization.footerText}

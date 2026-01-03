@@ -45,24 +45,30 @@ const lightPalette = {
   cardBorder: 'rgba(0, 0, 0, 0.1)',
 };
 
-export const ThemeFour = ({ panel, services = [], customization = {} }: ThemeFourProps) => {
-  const [themeMode, setThemeMode] = useState<'dark' | 'light'>('dark');
-  
-  useEffect(() => {
-    const saved = localStorage.getItem('storefront-theme-mode');
-    if (saved === 'light' || saved === 'dark') {
-      setThemeMode(saved);
-    } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
-      setThemeMode('light');
-    }
-  }, []);
+export const ThemeFour = ({ panel, services = [], customization = {}, isPreview = false }: ThemeFourProps) => {
+  const passedThemeMode = customization?.themeMode as 'dark' | 'light' | undefined;
+  const [internalThemeMode, setInternalThemeMode] = useState<'dark' | 'light'>('dark');
 
   useEffect(() => {
-    localStorage.setItem('storefront-theme-mode', themeMode);
+    if (passedThemeMode) return;
+    const saved = localStorage.getItem('storefront-theme-mode');
+    if (saved === 'light' || saved === 'dark') {
+      setInternalThemeMode(saved);
+    } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+      setInternalThemeMode('light');
+    }
+  }, [passedThemeMode]);
+
+  const themeMode = passedThemeMode || internalThemeMode;
+  const setThemeMode = passedThemeMode ? undefined : setInternalThemeMode;
+
+  useEffect(() => {
+    if (passedThemeMode) return;
+    localStorage.setItem('storefront-theme-mode', internalThemeMode);
     // Sync with document class for shadcn/tailwind components
     document.documentElement.classList.remove('light', 'dark');
-    document.documentElement.classList.add(themeMode);
-  }, [themeMode]);
+    document.documentElement.classList.add(internalThemeMode);
+  }, [internalThemeMode, passedThemeMode]);
 
   const palette = themeMode === 'dark' ? darkPalette : lightPalette;
 
@@ -97,9 +103,9 @@ export const ThemeFour = ({ panel, services = [], customization = {} }: ThemeFou
 
   const pageVariants = {
     initial: { opacity: 0 },
-    animate: { 
+    animate: {
       opacity: 1,
-      transition: { duration: 0.5, staggerChildren: 0.1 }
+      transition: { duration: 0.5, staggerChildren: 0.1 },
     },
   };
 
@@ -111,11 +117,11 @@ export const ThemeFour = ({ panel, services = [], customization = {} }: ThemeFou
     switch (sectionId) {
       case 'hero':
         return (
-          <StorefrontHeroSection 
+          <StorefrontHeroSection
             key="hero"
-            panel={panel} 
-            services={services} 
-            customization={themeFourCustomization} 
+            panel={panel}
+            services={services}
+            customization={themeFourCustomization}
           />
         );
       case 'platform':
@@ -144,30 +150,30 @@ export const ThemeFour = ({ panel, services = [], customization = {} }: ThemeFou
   };
 
   return (
-    <motion.div 
+    <motion.div
       className="min-h-screen relative overflow-hidden"
-      style={{ 
+      style={{
         backgroundColor: themeFourCustomization.backgroundColor,
-        color: themeFourCustomization.textColor 
+        color: themeFourCustomization.textColor,
       }}
       variants={pageVariants}
       initial="initial"
       animate="animate"
     >
       <style>{themeStyles}</style>
-      
+
       {/* Animated Background Effects */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         {/* Nature-inspired Gradients */}
         <motion.div
           className="absolute top-0 left-0 w-full h-1/2"
-          style={{ 
+          style={{
             background: `linear-gradient(180deg, ${palette.glow}, transparent)`,
           }}
           animate={{ opacity: [0.4, 0.6, 0.4] }}
-          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+          transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
         />
-        
+
         {/* Organic Blob Shapes */}
         <motion.div
           className="absolute top-1/4 right-10 w-80 h-80 rounded-full blur-3xl"
@@ -177,7 +183,7 @@ export const ThemeFour = ({ panel, services = [], customization = {} }: ThemeFou
             x: [0, -20, 0],
             y: [0, 30, 0],
           }}
-          transition={{ duration: 16, repeat: Infinity, ease: "easeInOut" }}
+          transition={{ duration: 16, repeat: Infinity, ease: 'easeInOut' }}
         />
         <motion.div
           className="absolute bottom-20 left-20 w-64 h-64 rounded-full blur-3xl"
@@ -186,32 +192,28 @@ export const ThemeFour = ({ panel, services = [], customization = {} }: ThemeFou
             scale: [1, 1.2, 1],
             rotate: [0, 10, 0],
           }}
-          transition={{ duration: 14, repeat: Infinity, ease: "easeInOut", delay: 4 }}
+          transition={{ duration: 14, repeat: Infinity, ease: 'easeInOut', delay: 4 }}
         />
-        
+
         {/* Leaf-like Pattern */}
-        <div 
+        <div
           className="absolute inset-0 opacity-10"
-          style={{ 
+          style={{
             backgroundImage: `linear-gradient(135deg, ${palette.border} 25%, transparent 25%), 
                               linear-gradient(225deg, ${palette.border} 25%, transparent 25%)`,
-            backgroundSize: '60px 60px'
+            backgroundSize: '60px 60px',
           }}
         />
       </div>
 
-      {/* Navigation - hidden in preview inside design customization */}
-      {!customization?.isPreview && (
-        <StorefrontNavigation panel={panel} customization={themeFourCustomization} />
-      )}
+      {/* Navigation */}
+      {!isPreview && <StorefrontNavigation panel={panel} customization={themeFourCustomization} />}
 
       {/* Main Content */}
-      <main className="relative z-10">
-        {layout.map((sectionId) => renderSection(sectionId))}
-      </main>
+      <main className="relative z-10">{layout.map((sectionId) => renderSection(sectionId))}</main>
 
       {/* Footer */}
-      <StorefrontFooter 
+      <StorefrontFooter
         panelName={themeFourCustomization.companyName || panel?.name || 'SMM Panel'}
         footerAbout={themeFourCustomization.footerAbout}
         footerText={themeFourCustomization.footerText}
