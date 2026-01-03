@@ -207,7 +207,7 @@ const OrderManagement = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-secondary/10">
       <Helmet>
-        <title>Order Management - HomeOfSMM</title>
+        <title>Order Management - HOME OF SMM</title>
         <meta name="description" content="Manage and track all your SMM orders and service deliveries." />
         <meta name="robots" content="noindex,nofollow" />
       </Helmet>

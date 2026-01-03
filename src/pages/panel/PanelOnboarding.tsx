@@ -511,7 +511,7 @@ const PanelOnboarding = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-secondary/10 flex items-center justify-center p-4">
       <Helmet>
-        <title>Setup Your Panel - HomeOfSMM</title>
+        <title>Setup Your Panel - HOME OF SMM</title>
         <meta name="robots" content="noindex,nofollow" />
       </Helmet>
       

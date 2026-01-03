@@ -134,7 +134,7 @@ export default function Contact() {
               We're Here to Help
             </h1>
             <p className="text-xl text-muted-foreground mb-8">
-              Have questions about HomeOfSMM? Our support team is ready to assist you with any questions or concerns.
+              Have questions about HOME OF SMM? Our support team is ready to assist you with any questions or concerns.
             </p>
           </div>
         </div>
@@ -273,7 +273,7 @@ export default function Contact() {
               {/* Info */}
               <div className="space-y-8">
                 <div>
-                  <h3 className="text-2xl font-bold mb-4">Why Choose HomeOfSMM?</h3>
+                  <h3 className="text-2xl font-bold mb-4">Why Choose HOME OF SMM?</h3>
                   <div className="space-y-4">
                     <div className="flex items-start gap-3">
                       <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">

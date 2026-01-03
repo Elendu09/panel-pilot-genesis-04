@@ -54,13 +54,13 @@ const Blog = () => {
   return (
     <>
       <Helmet>
-        <title>Blog & Insights | HomeOfSMM</title>
+        <title>Blog & Insights | HOME OF SMM</title>
         <meta
           name="description"
           content="Stay updated with the latest trends, tips, and strategies in social media marketing. Expert insights on Instagram, TikTok, YouTube, and more."
         />
         <link rel="canonical" href="https://homeofsmm.com/blog" />
-        <meta property="og:title" content="Blog & Insights | HomeOfSMM" />
+        <meta property="og:title" content="Blog & Insights | HOME OF SMM" />
         <meta
           property="og:description"
           content="Stay updated with the latest trends, tips, and strategies in social media marketing."

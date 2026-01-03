@@ -39,7 +39,7 @@ const BlogPost = () => {
     <>
       <Helmet>
         {/* Basic Meta Tags */}
-        <title>{post.title} | HomeOfSMM Blog</title>
+        <title>{post.title} | HOME OF SMM Blog</title>
         <meta name="description" content={post.excerpt} />
         <meta name="author" content={post.author} />
         <link rel="canonical" href={fullUrl} />
@@ -51,7 +51,7 @@ const BlogPost = () => {
         <meta property="og:description" content={post.excerpt} />
         <meta property="og:image" content={post.image} />
         <meta property="og:url" content={fullUrl} />
-        <meta property="og:site_name" content="HomeOfSMM" />
+        <meta property="og:site_name" content="HOME OF SMM" />
         <meta property="article:published_time" content={post.isoDate} />
         <meta property="article:section" content={post.category} />
         <meta property="article:tag" content={post.tags.join(',')} />
