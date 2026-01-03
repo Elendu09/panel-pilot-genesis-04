@@ -202,7 +202,7 @@ const PanelOwnerDashboard = () => {
   return (
     <div className="min-h-screen bg-background w-full">
       <Helmet>
-        <title>Panel Dashboard | HomeOfSMM</title>
+        <title>Panel Dashboard | HOME OF SMM</title>
         <meta name="description" content="Manage services, clients, payments, domains, and panel settings." />
         <meta name="robots" content="noindex,nofollow" />
         <link rel="canonical" href={canonicalUrl} />
@@ -237,7 +237,7 @@ const PanelOwnerDashboard = () => {
                     <h2 
                       className="text-sm font-luckiest tracking-wide"
                       style={{
-                        background: 'linear-gradient(135deg, #00CED1, #00FFFF, #40E0D0)',
+                        background: 'linear-gradient(135deg, #3B82F6, #60A5FA, #2563EB)',
                         WebkitBackgroundClip: 'text',
                         WebkitTextFillColor: 'transparent',
                         backgroundClip: 'text',
@@ -419,7 +419,7 @@ const PanelOwnerDashboard = () => {
             <span 
               className="font-luckiest tracking-wide text-lg"
               style={{
-                background: 'linear-gradient(135deg, #00CED1, #00FFFF, #40E0D0)',
+                background: 'linear-gradient(135deg, #3B82F6, #60A5FA, #2563EB)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 backgroundClip: 'text',

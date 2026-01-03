@@ -39,8 +39,8 @@ export default function Support() {
           a: "We accept all major credit cards, PayPal, Bitcoin, and bank transfers. For enterprise clients, we also offer custom payment arrangements and invoicing."
         },
         {
-          q: "Do I need technical knowledge to use HomeOfSMM?",
-          a: "Not at all! HomeOfSMM is designed for users of all technical levels. Our intuitive interface and comprehensive documentation make it easy for anyone to start and manage their SMM panel."
+          q: "Do I need technical knowledge to use HOME OF SMM?",
+          a: "Not at all! HOME OF SMM is designed for users of all technical levels. Our intuitive interface and comprehensive documentation make it easy for anyone to start and manage their SMM panel."
         }
       ]
     },
@@ -348,7 +348,7 @@ export default function Support() {
               <h3 className="text-xl font-semibold">All Systems Operational</h3>
             </div>
             <p className="text-muted-foreground mb-6">
-              All HomeOfSMM services are running smoothly. Check our status page for real-time updates.
+              All HOME OF SMM services are running smoothly. Check our status page for real-time updates.
             </p>
             <Button variant="outline">
               View Status Page

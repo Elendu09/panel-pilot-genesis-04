@@ -16,26 +16,26 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <CursorEffects />
       <Helmet>
-        <title>HomeOfSMM - Professional SMM Panel Platform</title>
+        <title>HOME OF SMM - Professional SMM Panel Platform</title>
         <meta 
           name="description" 
-          content="Create and manage your own SMM panel with HomeOfSMM. Offer social media marketing services with custom branding, multiple payment methods, and powerful analytics." 
+          content="Create and manage your own SMM panel with HOME OF SMM. Offer social media marketing services with custom branding, multiple payment methods, and powerful analytics." 
         />
         <meta 
           name="keywords" 
           content="SMM panel, social media marketing, instagram followers, youtube views, tiktok likes, SMM reseller panel"
         />
         <link rel="canonical" href={canonicalUrl} />
-        <meta property="og:title" content="HomeOfSMM - Professional SMM Panel Platform" />
+        <meta property="og:title" content="HOME OF SMM - Professional SMM Panel Platform" />
         <meta 
           property="og:description" 
-          content="Create and manage your own SMM panel with HomeOfSMM. Offer social media marketing services with custom branding, multiple payment methods, and powerful analytics." 
+          content="Create and manage your own SMM panel with HOME OF SMM. Offer social media marketing services with custom branding, multiple payment methods, and powerful analytics." 
         />
         <meta property="og:type" content="website" />
         <meta property="og:url" content={canonicalUrl} />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="HomeOfSMM - Professional SMM Panel Platform" />
-        <meta name="twitter:description" content="Create and manage your own SMM panel with HomeOfSMM." />
+        <meta name="twitter:title" content="HOME OF SMM - Professional SMM Panel Platform" />
+        <meta name="twitter:description" content="Create and manage your own SMM panel with HOME OF SMM." />
       </Helmet>
       <Navigation />
       <main>

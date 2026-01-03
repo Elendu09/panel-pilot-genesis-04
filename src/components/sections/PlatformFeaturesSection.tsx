@@ -8,7 +8,7 @@ export const PlatformFeaturesSection = () => {
   const features = [
     {
       title: "Powered by zero-knowledge",
-      description: "HomeOfSMM runs a sophisticated panel management system that orchestrates multiple providers to work together as one unified platform.",
+      description: "HOME OF SMM runs a sophisticated panel management system that orchestrates multiple providers to work together as one unified platform.",
       icon: Zap,
       gradient: "from-primary/20 to-primary/5"
     },
@@ -20,7 +20,7 @@ export const PlatformFeaturesSection = () => {
     },
     {
       title: "Made for mass adoption", 
-      description: "The HomeOfSMM platform makes it easy for anyone to create, manage, and scale their own SMM panel business via our web app.",
+      description: "The HOME OF SMM platform makes it easy for anyone to create, manage, and scale their own SMM panel business via our web app.",
       icon: Users,
       gradient: "from-secondary/20 to-secondary/5"
     },
@@ -50,7 +50,7 @@ export const PlatformFeaturesSection = () => {
                 </span>
               </h2>
               <p className="text-lg text-muted-foreground leading-relaxed mb-8">
-                A new era of social media marketing requires a new approach to panel management. The HomeOfSMM platform concentrates the world's SMM providers into a single, 100% scalable infrastructure.
+                A new era of social media marketing requires a new approach to panel management. The HOME OF SMM platform concentrates the world's SMM providers into a single, 100% scalable infrastructure.
               </p>
               <Button 
                 variant="outline" 

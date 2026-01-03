@@ -471,7 +471,7 @@ const TrackOrder = () => {
         {/* Footer */}
         <footer className="relative z-10 border-t border-border py-6 mt-auto">
           <div className="container mx-auto px-4 text-center text-muted-foreground text-sm">
-            <p>© {new Date().getFullYear()} HomeOfSMM. All rights reserved.</p>
+            <p>© {new Date().getFullYear()} HOME OF SMM. All rights reserved.</p>
           </div>
         </footer>
       </div>

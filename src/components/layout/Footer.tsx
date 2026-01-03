@@ -38,8 +38,8 @@ export const Footer = () => {
               <div className="w-7 h-7 bg-gradient-primary rounded-lg flex items-center justify-center">
                 <Zap className="w-4 h-4 text-primary-foreground" />
               </div>
-              <span className="text-lg font-bold bg-gradient-primary bg-clip-text text-transparent">
-                HomeOfSMM
+            <span className="text-lg font-bold bg-gradient-primary bg-clip-text text-transparent">
+                HOME OF SMM
               </span>
             </Link>
             <p className="text-xs sm:text-sm text-muted-foreground">
@@ -139,7 +139,7 @@ export const Footer = () => {
         {/* Built with love */}
         <div className="border-t border-border mt-6 pt-4 flex flex-col md:flex-row justify-between items-center gap-2">
           <p className="text-muted-foreground text-xs">
-            © 2024 HomeOfSMM. All rights reserved.
+            © 2024 HOME OF SMM. All rights reserved.
           </p>
           <p className="text-muted-foreground text-xs flex items-center gap-1.5">
             Built with 

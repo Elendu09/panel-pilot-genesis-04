@@ -144,7 +144,7 @@ export default function Documentation() {
               <br />to Get Started
             </h1>
             <p className="text-xl text-muted-foreground mb-8">
-              Comprehensive guides, API references, and tutorials to help you master HomeOfSMM
+              Comprehensive guides, API references, and tutorials to help you master HOME OF SMM
             </p>
             
             {/* Search */}
@@ -261,7 +261,7 @@ export default function Documentation() {
                   Powerful REST API
                 </h2>
                 <p className="text-lg text-muted-foreground mb-8">
-                  Integrate HomeOfSMM with your existing systems using our comprehensive REST API.
+                  Integrate HOME OF SMM with your existing systems using our comprehensive REST API.
                   Complete with authentication, rate limiting, and detailed documentation.
                 </p>
                 

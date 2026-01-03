@@ -39,7 +39,7 @@ export const blogPosts: BlogPost[] = [
     readTime: "5 min read",
     date: "Jan 15, 2024",
     isoDate: "2024-01-15",
-    author: "HomeOfSMM Team",
+    author: "HOME OF SMM Team",
     image: "https://images.unsplash.com/photo-1611224923853-80b023f02d71?w=600&h=300&fit=crop"
   },
   {
@@ -67,7 +67,7 @@ export const blogPosts: BlogPost[] = [
     readTime: "8 min read",
     date: "Jan 12, 2024",
     isoDate: "2024-01-12",
-    author: "HomeOfSMM Team",
+    author: "HOME OF SMM Team",
     image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&h=300&fit=crop"
   },
   {
@@ -95,7 +95,7 @@ export const blogPosts: BlogPost[] = [
     readTime: "6 min read",
     date: "Jan 10, 2024",
     isoDate: "2024-01-10",
-    author: "HomeOfSMM Team",
+    author: "HOME OF SMM Team",
     image: "https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=600&h=300&fit=crop"
   },
   {
@@ -123,7 +123,7 @@ export const blogPosts: BlogPost[] = [
     readTime: "12 min read",
     date: "Jan 8, 2024",
     isoDate: "2024-01-08",
-    author: "HomeOfSMM Team",
+    author: "HOME OF SMM Team",
     image: "https://images.unsplash.com/photo-1611224923853-80b023f02d71?w=600&h=300&fit=crop"
   },
   {
@@ -151,7 +151,7 @@ export const blogPosts: BlogPost[] = [
     readTime: "7 min read",
     date: "Jan 5, 2024",
     isoDate: "2024-01-05",
-    author: "HomeOfSMM Team",
+    author: "HOME OF SMM Team",
     image: "https://images.unsplash.com/photo-1611605698335-8b1569810432?w=600&h=300&fit=crop"
   },
   {
@@ -179,7 +179,7 @@ export const blogPosts: BlogPost[] = [
     readTime: "10 min read",
     date: "Jan 3, 2024",
     isoDate: "2024-01-03",
-    author: "HomeOfSMM Team",
+    author: "HOME OF SMM Team",
     image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=300&fit=crop"
   }
 ];

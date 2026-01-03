@@ -7,7 +7,7 @@ const Services = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Helmet>
-        <title>Service Tools - HomeOfSMM</title>
+        <title>Service Tools - HOME OF SMM</title>
         <meta 
           name="description" 
           content="Powerful service tools for your SMM panel. Coming soon with advanced features to boost your social media marketing business." 
