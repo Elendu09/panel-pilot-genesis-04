@@ -27,8 +27,8 @@ export const CurrencySelector = () => {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-9 w-9" title="Change currency">
-          <span className="text-lg">{currencyConfig.flag}</span>
+        <Button variant="ghost" size="sm" className="h-9 px-2.5 gap-1 font-medium" title="Change currency">
+          <span className="text-xs font-semibold">{currency}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
