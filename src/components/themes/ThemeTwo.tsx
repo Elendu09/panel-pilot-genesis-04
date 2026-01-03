@@ -13,6 +13,7 @@ interface ThemeTwoProps {
   panel?: any;
   services?: any[];
   customization?: any;
+  isPreview?: boolean;
 }
 
 // Theme Two Color Palettes - Ocean Blue (Professional/Enhanced)
@@ -197,8 +198,10 @@ export const ThemeTwo = ({ panel, services = [], customization = {} }: ThemeTwoP
         />
       </div>
 
-      {/* Navigation */}
-      <StorefrontNavigation panel={panel} customization={themeTwoCustomization} />
+      {/* Navigation - hidden in preview inside design customization */}
+      {!customization?.isPreview && (
+        <StorefrontNavigation panel={panel} customization={themeTwoCustomization} />
+      )}
 
       {/* Main Content */}
       <main className="relative z-10">

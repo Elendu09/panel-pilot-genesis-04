@@ -13,6 +13,7 @@ interface ThemeFourProps {
   panel?: any;
   services?: any[];
   customization?: any;
+  isPreview?: boolean;
 }
 
 // Theme Four Color Palettes - Forest Earth (Natural/Enhanced)
@@ -199,8 +200,10 @@ export const ThemeFour = ({ panel, services = [], customization = {} }: ThemeFou
         />
       </div>
 
-      {/* Navigation */}
-      <StorefrontNavigation panel={panel} customization={themeFourCustomization} />
+      {/* Navigation - hidden in preview inside design customization */}
+      {!customization?.isPreview && (
+        <StorefrontNavigation panel={panel} customization={themeFourCustomization} />
+      )}
 
       {/* Main Content */}
       <main className="relative z-10">

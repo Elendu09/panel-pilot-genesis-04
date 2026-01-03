@@ -13,6 +13,7 @@ interface ThemeThreeProps {
   panel?: any;
   services?: any[];
   customization?: any;
+  isPreview?: boolean;
 }
 
 // Theme Three Color Palettes - Sunset Orange (Vibrant/Enhanced)
@@ -185,8 +186,10 @@ export const ThemeThree = ({ panel, services = [], customization = {} }: ThemeTh
         />
       </div>
 
-      {/* Navigation */}
-      <StorefrontNavigation panel={panel} customization={themeThreeCustomization} />
+      {/* Navigation - hidden in preview inside design customization */}
+      {!customization?.isPreview && (
+        <StorefrontNavigation panel={panel} customization={themeThreeCustomization} />
+      )}
 
       {/* Main Content */}
       <main className="relative z-10">
