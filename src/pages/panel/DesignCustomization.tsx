@@ -814,37 +814,79 @@ export default function DesignCustomization() {
     switch (sectionId) {
       case 'presets':
         const displayedPresets = showAllPresets ? designPresets : designPresets.slice(0, 4);
+        const savedStorefrontTheme = panelData?.theme_type || 'dark_gradient';
         return (
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Apply a complete design with one click, or save your own presets.
-            </p>
-            <div className="grid grid-cols-2 gap-3">
-              {displayedPresets.map(preset => (
-                <button 
-                  key={preset.id} 
-                  onClick={() => applyPreset(preset)} 
-                  className="p-3 rounded-xl border-2 border-border hover:border-primary/50 transition-all text-left group"
+          <div className="space-y-6">
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Apply a complete design with one click, or save your own presets.
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                {displayedPresets.map(preset => (
+                  <button 
+                    key={preset.id} 
+                    onClick={() => applyPreset(preset)} 
+                    className="p-3 rounded-xl border-2 border-border hover:border-primary/50 transition-all text-left group"
+                  >
+                    <div className="flex gap-1 mb-2">
+                      {preset.preview.map((c, i) => (
+                        <div key={i} className="w-5 h-5 rounded-full" style={{ backgroundColor: c }} />
+                      ))}
+                    </div>
+                    <p className="text-sm font-medium">{preset.name}</p>
+                    <p className="text-xs text-muted-foreground">{preset.description}</p>
+                  </button>
+                ))}
+              </div>
+              {designPresets.length > 4 && (
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={() => setShowAllPresets(!showAllPresets)}
                 >
-                  <div className="flex gap-1 mb-2">
-                    {preset.preview.map((c, i) => (
-                      <div key={i} className="w-5 h-5 rounded-full" style={{ backgroundColor: c }} />
-                    ))}
-                  </div>
-                  <p className="text-sm font-medium">{preset.name}</p>
-                  <p className="text-xs text-muted-foreground">{preset.description}</p>
-                </button>
-              ))}
+                  {showAllPresets ? 'Show Less' : `Load More (${designPresets.length - 4} more)`}
+                </Button>
+              )}
             </div>
-            {designPresets.length > 4 && (
-              <Button 
-                variant="outline" 
-                className="w-full"
-                onClick={() => setShowAllPresets(!showAllPresets)}
-              >
-                {showAllPresets ? 'Show Less' : `Load More (${designPresets.length - 4} more)`}
-              </Button>
-            )}
+
+            {/* Homepage Themes (moved from Theme Gallery) */}
+            <div className="pt-4 border-t border-border/60 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Homepage themes</p>
+                <Badge variant="outline" className="text-[10px]">Storefront layout</Badge>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                These themes control your public storefront (homepage) layout and overall style.
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                {storefrontThemes.map(theme => {
+                  const isActive = customization.selectedTheme === theme.themeType || customization.selectedTheme === theme.id;
+                  const isConfigured = savedStorefrontTheme === theme.themeType || savedStorefrontTheme === theme.id;
+                  return (
+                    <button 
+                      key={theme.id} 
+                      onClick={() => {
+                        updateCustomization('selectedTheme', theme.themeType);
+                      }} 
+                      className={`p-3 rounded-xl border-2 transition-all text-left ${isActive ? 'border-primary ring-2 ring-primary/20' : 'border-border hover:border-primary/50'}`}
+                    >
+                      <div className="flex gap-1 mb-2">
+                        {theme.colors.map((c, i) => (
+                          <div key={i} className="w-5 h-5 rounded-full ring-1 ring-white/10" style={{ backgroundColor: c }} />
+                        ))}
+                      </div>
+                      <p className="text-xs font-semibold">{theme.name}</p>
+                      <p className="text-[10px] text-muted-foreground line-clamp-1">{theme.description}</p>
+                      <div className="flex gap-1 mt-1.5 flex-wrap">
+                        {isActive && <Badge variant="secondary" className="text-[10px]">Active</Badge>}
+                        {isConfigured && !isActive && <Badge variant="outline" className="text-[10px] text-green-500 border-green-500/30">Saved</Badge>}
+                        {isActive && hasUnsavedChanges && <Badge variant="outline" className="text-[10px] text-amber-500 border-amber-500/30">Unsaved</Badge>}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
             {/* Custom presets saved per tenant */}
             <div className="pt-4 border-t border-border/60 space-y-3">
@@ -929,97 +971,47 @@ export default function DesignCustomization() {
           </div>
         );
       case 'themes':
-        // Theme Gallery with tabs: Storefront (ThemeOne-Five) + Buyer Portal (FlySMM, etc.)
-        const savedStorefrontTheme = panelData?.theme_type || 'dark_gradient';
+        // Theme Gallery: Buyer Portal themes only
         const savedBuyerTheme = panelData?.buyer_theme || 'default';
         return (
           <div className="space-y-4">
-            <Tabs defaultValue="storefront" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-4">
-                <TabsTrigger value="storefront" className="text-xs">Storefront (Homepage)</TabsTrigger>
-                <TabsTrigger value="buyer" className="text-xs">Buyer Portal</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="storefront" className="space-y-4">
-                <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Layout className="w-4 h-4 text-primary" />
-                    <span className="text-sm font-medium">Homepage Structure</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Controls your public storefront layout, sections, and visual style.
-                  </p>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  {storefrontThemes.map(theme => {
-                    const isActive = customization.selectedTheme === theme.themeType || customization.selectedTheme === theme.id;
-                    const isConfigured = savedStorefrontTheme === theme.themeType || savedStorefrontTheme === theme.id;
-                    return (
-                      <button 
-                        key={theme.id} 
-                        onClick={() => {
-                          updateCustomization('selectedTheme', theme.themeType);
-                        }} 
-                        className={`p-3 rounded-xl border-2 transition-all text-left ${isActive ? 'border-primary ring-2 ring-primary/20' : 'border-border hover:border-primary/50'}`}
-                      >
-                        <div className="flex gap-1 mb-2">
-                          {theme.colors.map((c, i) => (
-                            <div key={i} className="w-5 h-5 rounded-full ring-1 ring-white/10" style={{ backgroundColor: c }} />
-                          ))}
-                        </div>
-                        <p className="text-xs font-semibold">{theme.name}</p>
-                        <p className="text-[10px] text-muted-foreground line-clamp-1">{theme.description}</p>
-                        <div className="flex gap-1 mt-1.5 flex-wrap">
-                          {isActive && <Badge variant="secondary" className="text-[10px]">Active</Badge>}
-                          {isConfigured && !isActive && <Badge variant="outline" className="text-[10px] text-green-500 border-green-500/30">Saved</Badge>}
-                          {isActive && hasUnsavedChanges && <Badge variant="outline" className="text-[10px] text-amber-500 border-amber-500/30">Unsaved</Badge>}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="buyer" className="space-y-4">
-                <div className="p-3 rounded-lg bg-secondary/10 border border-secondary/20">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Users className="w-4 h-4 text-secondary" />
-                    <span className="text-sm font-medium">Buyer Dashboard Theme</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Theme for logged-in buyer dashboard (orders, deposit, profile pages).
-                  </p>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  {availableThemes.map(theme => {
-                    const isActive = (customization as any).buyerTheme === theme.key;
-                    const isConfigured = savedBuyerTheme === theme.key;
-                    return (
-                      <button 
-                        key={theme.key} 
-                        onClick={() => {
-                          updateCustomization('buyerTheme', theme.key);
-                        }} 
-                        className={`p-3 rounded-xl border-2 transition-all text-left ${isActive ? 'border-primary ring-2 ring-primary/20' : 'border-border hover:border-primary/50'}`}
-                      >
-                        <div className="flex gap-1 mb-2">
-                          <div className="w-5 h-5 rounded-full ring-1 ring-white/10" style={{ backgroundColor: theme.colors.dark.primary }} />
-                          <div className="w-5 h-5 rounded-full ring-1 ring-white/10" style={{ backgroundColor: theme.colors.dark.accent }} />
-                          <div className="w-5 h-5 rounded-full ring-1 ring-white/10" style={{ backgroundColor: theme.colors.dark.background }} />
-                        </div>
-                        <p className="text-xs font-semibold">{theme.name}</p>
-                        <p className="text-[10px] text-muted-foreground line-clamp-1">{theme.description}</p>
-                        <div className="flex gap-1 mt-1.5 flex-wrap">
-                          {isActive && <Badge variant="secondary" className="text-[10px]">Active</Badge>}
-                          {isConfigured && !isActive && <Badge variant="outline" className="text-[10px] text-green-500 border-green-500/30">Saved</Badge>}
-                          {isActive && hasUnsavedChanges && <Badge variant="outline" className="text-[10px] text-amber-500 border-amber-500/30">Unsaved</Badge>}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </TabsContent>
-            </Tabs>
+            <div className="p-3 rounded-lg bg-secondary/10 border border-secondary/20">
+              <div className="flex items-center gap-2 mb-1">
+                <Users className="w-4 h-4 text-secondary" />
+                <span className="text-sm font-medium">Buyer Dashboard Theme</span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Theme for logged-in buyer dashboard (orders, deposit, profile pages). This does not affect your public homepage.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {availableThemes.map(theme => {
+                const isActive = (customization as any).buyerTheme === theme.key;
+                const isConfigured = savedBuyerTheme === theme.key;
+                return (
+                  <button 
+                    key={theme.key} 
+                    onClick={() => {
+                      updateCustomization('buyerTheme', theme.key as BuyerThemeKey);
+                    }} 
+                    className={`p-3 rounded-xl border-2 transition-all text-left ${isActive ? 'border-primary ring-2 ring-primary/20' : 'border-border hover:border-primary/50'}`}
+                  >
+                    <div className="flex gap-1 mb-2">
+                      <div className="w-5 h-5 rounded-full ring-1 ring-white/10" style={{ backgroundColor: theme.colors.dark.primary }} />
+                      <div className="w-5 h-5 rounded-full ring-1 ring-white/10" style={{ backgroundColor: theme.colors.dark.accent }} />
+                      <div className="w-5 h-5 rounded-full ring-1 ring-white/10" style={{ backgroundColor: theme.colors.dark.background }} />
+                    </div>
+                    <p className="text-xs font-semibold">{theme.name}</p>
+                    <p className="text-[10px] text-muted-foreground line-clamp-1">{theme.description}</p>
+                    <div className="flex gap-1 mt-1.5 flex-wrap">
+                      {isActive && <Badge variant="secondary" className="text-[10px]">Active</Badge>}
+                      {isConfigured && !isActive && <Badge variant="outline" className="text-[10px] text-green-500 border-green-500/30">Saved</Badge>}
+                      {isActive && hasUnsavedChanges && <Badge variant="outline" className="text-[10px] text-amber-500 border-amber-500/30">Unsaved</Badge>}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         );
       // buyer-themes section has been merged into 'themes' section above
