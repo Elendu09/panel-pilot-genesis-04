@@ -237,7 +237,7 @@ const PanelOwnerDashboard = () => {
                     <h2 
                       className="text-sm font-luckiest tracking-wide"
                       style={{
-                        background: 'linear-gradient(135deg, #00CED1, #00FFFF, #40E0D0)',
+                        background: 'linear-gradient(135deg, #1E90FF, #00BFFF, #4169E1)',
                         WebkitBackgroundClip: 'text',
                         WebkitTextFillColor: 'transparent',
                         backgroundClip: 'text',
@@ -419,7 +419,7 @@ const PanelOwnerDashboard = () => {
             <span 
               className="font-luckiest tracking-wide text-lg"
               style={{
-                background: 'linear-gradient(135deg, #00CED1, #00FFFF, #40E0D0)',
+                background: 'linear-gradient(135deg, #1E90FF, #00BFFF, #4169E1)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 backgroundClip: 'text',
