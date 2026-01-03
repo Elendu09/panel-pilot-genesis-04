@@ -234,7 +234,17 @@ const PanelOwnerDashboard = () => {
                     <Sparkles className="w-4 h-4 text-primary-foreground" />
                   </div>
                   <div className="overflow-hidden">
-                    <h2 className="text-sm font-bold text-foreground">HOME OF SMM</h2>
+                    <h2 
+                      className="text-sm font-luckiest tracking-wide"
+                      style={{
+                        background: 'linear-gradient(135deg, #00CED1, #00FFFF, #40E0D0)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        backgroundClip: 'text',
+                      }}
+                    >
+                      HOME OF SMM
+                    </h2>
                     <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Panel Manager</p>
                   </div>
                 </motion.div>
@@ -406,7 +416,17 @@ const PanelOwnerDashboard = () => {
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center">
               <Sparkles className="w-4 h-4 text-primary-foreground" />
             </div>
-            <span className="font-bold">HOME OF SMM</span>
+            <span 
+              className="font-luckiest tracking-wide text-lg"
+              style={{
+                background: 'linear-gradient(135deg, #00CED1, #00FFFF, #40E0D0)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}
+            >
+              HOME OF SMM
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <NotificationCenter variant="sheet" />
