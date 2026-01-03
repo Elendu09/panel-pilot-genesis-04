@@ -2320,6 +2320,45 @@ export type Database = {
         | "linkedin"
         | "telegram"
         | "other"
+        | "threads"
+        | "snapchat"
+        | "pinterest"
+        | "whatsapp"
+        | "twitch"
+        | "discord"
+        | "spotify"
+        | "soundcloud"
+        | "audiomack"
+        | "reddit"
+        | "vk"
+        | "kick"
+        | "rumble"
+        | "dailymotion"
+        | "deezer"
+        | "shazam"
+        | "tidal"
+        | "reverbnation"
+        | "mixcloud"
+        | "quora"
+        | "tumblr"
+        | "clubhouse"
+        | "likee"
+        | "kwai"
+        | "trovo"
+        | "odysee"
+        | "bilibili"
+        | "lemon8"
+        | "bereal"
+        | "weibo"
+        | "line"
+        | "patreon"
+        | "medium"
+        | "roblox"
+        | "steam"
+        | "applemusic"
+        | "amazonmusic"
+        | "napster"
+        | "iheart"
       subscription_plan: "free" | "basic" | "pro"
       subscription_status: "active" | "expired" | "cancelled" | "pending"
       theme_type: "dark_gradient" | "professional" | "vibrant"
@@ -2471,6 +2510,45 @@ export const Constants = {
         "linkedin",
         "telegram",
         "other",
+        "threads",
+        "snapchat",
+        "pinterest",
+        "whatsapp",
+        "twitch",
+        "discord",
+        "spotify",
+        "soundcloud",
+        "audiomack",
+        "reddit",
+        "vk",
+        "kick",
+        "rumble",
+        "dailymotion",
+        "deezer",
+        "shazam",
+        "tidal",
+        "reverbnation",
+        "mixcloud",
+        "quora",
+        "tumblr",
+        "clubhouse",
+        "likee",
+        "kwai",
+        "trovo",
+        "odysee",
+        "bilibili",
+        "lemon8",
+        "bereal",
+        "weibo",
+        "line",
+        "patreon",
+        "medium",
+        "roblox",
+        "steam",
+        "applemusic",
+        "amazonmusic",
+        "napster",
+        "iheart",
       ],
       subscription_plan: ["free", "basic", "pro"],
       subscription_status: ["active", "expired", "cancelled", "pending"],
