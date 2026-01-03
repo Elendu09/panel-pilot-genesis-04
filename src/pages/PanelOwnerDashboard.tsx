@@ -135,10 +135,16 @@ const PanelOwnerDashboard = () => {
 
   const bottomNavItems = [
     { name: 'Home', href: '/panel', icon: LayoutDashboard, tourId: 'mobile-home' },
+    { name: 'Customers', href: '/panel/customers', icon: Users, tourId: 'mobile-customers' },
     { name: 'Services', href: '/panel/services', icon: Package, tourId: 'mobile-services' },
     { name: 'Orders', href: '/panel/orders', icon: ShoppingCart, badge: pendingCount > 0 ? pendingCount : undefined, tourId: 'mobile-orders' },
-    { name: 'Analytics', href: '/panel/analytics', icon: BarChart3, tourId: 'mobile-analytics' },
     { name: 'More', href: '/panel/more', icon: Settings, tourId: 'mobile-more' },
+  ];
+
+  const panelFabItems = [
+    { name: 'Add Provider', icon: Plug, action: () => window.location.href = '/panel/providers', color: 'bg-purple-500' },
+    { name: 'Add Customer', icon: Users, action: () => window.location.href = '/panel/customers', color: 'bg-green-500' },
+    { name: 'Analytics', icon: BarChart3, action: () => window.location.href = '/panel/analytics', color: 'bg-orange-500' },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -434,7 +440,7 @@ const PanelOwnerDashboard = () => {
       </main>
 
       {/* Mobile Bottom Navigation */}
-      <BottomNav items={bottomNavItems} showFab />
+      <BottomNav items={bottomNavItems} showFab fabItems={panelFabItems} centerIndex={2} />
 
       {/* Onboarding Tour */}
       <OnboardingTour isOpen={tourOpen} onComplete={completeTour} />
