@@ -18,15 +18,16 @@ export default {
 			}
 		},
 		extend: {
-			fontFamily: {
-				'inter': ['Inter', 'sans-serif'],
-				'poppins': ['Poppins', 'sans-serif'],
-				'nunito': ['Nunito', 'sans-serif'],
-				'montserrat': ['Montserrat', 'sans-serif'],
-				'outfit': ['Outfit', 'sans-serif'],
-				'space-mono': ['"Space Mono"', 'monospace'],
-				'space-grotesk': ['"Space Grotesk"', 'sans-serif'],
-			},
+		fontFamily: {
+			'inter': ['Inter', 'sans-serif'],
+			'poppins': ['Poppins', 'sans-serif'],
+			'nunito': ['Nunito', 'sans-serif'],
+			'montserrat': ['Montserrat', 'sans-serif'],
+			'outfit': ['Outfit', 'sans-serif'],
+			'space-mono': ['"Space Mono"', 'monospace'],
+			'space-grotesk': ['"Space Grotesk"', 'sans-serif'],
+			'luckiest': ['"Luckiest Guy"', 'cursive'],
+		},
 		colors: {
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
