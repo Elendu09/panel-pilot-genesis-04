@@ -128,8 +128,8 @@ export const ServiceKanbanCard = ({
                 onCheckedChange={() => onToggleSelect()}
                 className="h-4 w-4"
               />
-              <Badge variant="outline" className="text-[10px] sm:text-xs font-mono px-1.5 sm:px-2">
-                #{service.displayId}
+              <Badge variant="outline" className="text-[10px] sm:text-xs font-mono px-1.5 sm:px-2 bg-primary/5">
+                ID: {service.providerServiceId || service.displayId}
               </Badge>
             </div>
             <Switch

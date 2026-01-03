@@ -420,6 +420,7 @@ const ServicesManagement = () => {
           const serviceItem: ServiceItem = {
             id: data.id,
             displayId: 0,
+            providerServiceId: data.provider_service_id || '',
             name: data.name,
             category: data.category,
             provider: getProviderName(data.provider_id || ''),
@@ -497,6 +498,7 @@ const ServicesManagement = () => {
       const serviceItem: ServiceItem = {
         id: data.id,
         displayId: 0,
+        providerServiceId: data.provider_service_id || '',
         name: data.name,
         category: data.category,
         provider: getProviderName(data.provider_id || ''),
@@ -636,6 +638,7 @@ const ServicesManagement = () => {
         return {
           id: s.id,
           displayId: from + index + 1,
+          providerServiceId: s.provider_service_id || '', // Actual provider service ID
           name: s.name,
           category: s.category,
           provider: getProviderName(s.provider_id || '', s.features as string | null),

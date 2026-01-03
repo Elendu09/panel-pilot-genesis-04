@@ -62,6 +62,7 @@ const ServiceIcon = ({ imageUrl, category, size = "small" }: { imageUrl?: string
 export interface ServiceItem {
   id: string;
   displayId: number;
+  providerServiceId?: string; // The actual service ID from the provider API
   name: string;
   category: string;
   provider: string;
@@ -157,8 +158,8 @@ export const DraggableServiceItem = ({
             onCheckedChange={() => onToggleSelect(service.id)}
             className="h-4 w-4"
           />
-          <Badge variant="outline" className="text-[10px] sm:text-xs px-1.5">
-            #{service.displayId}
+          <Badge variant="outline" className="text-[10px] sm:text-xs px-1.5 font-mono">
+            ID: {service.providerServiceId || service.displayId}
           </Badge>
           <div className="flex-1" />
           <Switch
@@ -247,10 +248,10 @@ export const DraggableServiceItem = ({
         </div>
       </td>
 
-      {/* ID */}
+      {/* ID - Shows provider service ID for easy reference */}
       <td className="py-3 px-2">
-        <Badge variant="outline" className="text-xs font-mono">
-          #{service.displayId}
+        <Badge variant="outline" className="text-xs font-mono bg-primary/5">
+          ID: {service.providerServiceId || service.displayId}
         </Badge>
       </td>
 
