@@ -135,36 +135,51 @@ serve(async (req) => {
 
         console.log(`Found ${providerServices.length} services from ${provider.name}`);
 
-        // Get existing services for this panel by matching provider_id pattern
-        // provider_id is stored as just the service ID from the provider
+        // Get ALL existing services for this panel (no limit)
         const providerServiceIds = providerServices.map(s => String(s.service));
         
-        const { data: existingServices } = await supabase
-          .from('services')
-          .select('*')
-          .eq('panel_id', panelId)
-          .in('provider_id', providerServiceIds);
+        // Fetch in batches to avoid Supabase's 1000 limit
+        const batchSize = 500;
+        const allExistingServices: any[] = [];
+        
+        for (let i = 0; i < providerServiceIds.length; i += batchSize) {
+          const batch = providerServiceIds.slice(i, i + batchSize);
+          const { data: batchServices, error: batchError } = await supabase
+            .from('services')
+            .select('*')
+            .eq('panel_id', panelId)
+            .in('provider_id', batch);
+          
+          if (batchError) {
+            console.error(`Error fetching batch ${i}-${i + batchSize}:`, batchError);
+          } else if (batchServices) {
+            allExistingServices.push(...batchServices);
+          }
+        }
 
-        // Map existing services by their provider_id (which is the provider's service ID)
+        // Map existing services by their provider_id
         const existingByProviderServiceId = new Map(
-          (existingServices || []).map(s => [s.provider_id, s])
+          allExistingServices.map(s => [s.provider_id, s])
         );
 
-        console.log(`Found ${existingServices?.length || 0} existing services to potentially update`);
+        console.log(`Found ${allExistingServices.length} existing services to potentially update`);
 
-        // Process each service from provider
-        for (const providerService of providerServices) {
+        // Prepare batch operations
+        const toUpdate: any[] = [];
+        const toInsert: any[] = [];
+        
+        // Process each service from provider - MAINTAIN ORIGINAL ORDER
+        providerServices.forEach((providerService, originalIndex) => {
           const serviceId = String(providerService.service);
           const existing = existingByProviderServiceId.get(serviceId);
           
-          // Provider rate is already per 1K - no division needed
           const providerRate = parseFloat(String(providerService.rate)) || 0;
           const markupMultiplier = 1 + (markupPercent / 100);
           const finalPrice = providerRate * markupMultiplier;
 
           const serviceData = {
             panel_id: panelId,
-            provider_id: serviceId, // Store just the provider's service ID
+            provider_id: serviceId,
             name: providerService.name || `Service ${serviceId}`,
             description: providerService.desc || null,
             category: mapCategory(providerService.category || providerService.type || 'other'),
@@ -172,43 +187,60 @@ serve(async (req) => {
             min_quantity: parseInt(String(providerService.min)) || 1,
             max_quantity: parseInt(String(providerService.max)) || 10000,
             is_active: true,
+            sort_order: originalIndex, // PRESERVE PROVIDER'S ORIGINAL ORDER
             updated_at: new Date().toISOString(),
           };
 
           if (existing) {
-            // Check if price changed significantly (more than 0.001)
             if (Math.abs(existing.price - finalPrice) > 0.001) {
               result.pricesChanged++;
-              console.log(`Price change for service ${serviceId}: ${existing.price} -> ${finalPrice}`);
             }
-
-            // Update existing service
-            const { error: updateError } = await supabase
-              .from('services')
-              .update(serviceData)
-              .eq('id', existing.id);
-
-            if (updateError) {
-              result.errors.push(`Update failed for service ${serviceId}: ${updateError.message}`);
-            } else {
-              result.servicesUpdated++;
-            }
+            toUpdate.push({ ...serviceData, id: existing.id });
+            result.servicesUpdated++;
           } else if (importNew) {
-            // Insert new service
-            const { error: insertError } = await supabase
-              .from('services')
-              .insert({
-                ...serviceData,
-                created_at: new Date().toISOString(),
-              });
+            toInsert.push({
+              ...serviceData,
+              created_at: new Date().toISOString(),
+            });
+            result.newServices++;
+          }
+        });
 
-            if (insertError) {
-              result.errors.push(`Insert failed for service ${serviceId}: ${insertError.message}`);
-            } else {
-              result.newServices++;
-            }
+        // Execute batch updates in chunks
+        const updateChunkSize = 100;
+        for (let i = 0; i < toUpdate.length; i += updateChunkSize) {
+          const chunk = toUpdate.slice(i, i + updateChunkSize);
+          
+          // Use upsert for batch updates
+          const { error: updateError } = await supabase
+            .from('services')
+            .upsert(chunk, { onConflict: 'id' });
+          
+          if (updateError) {
+            console.error(`Batch update error at ${i}:`, updateError);
+            result.errors.push(`Batch update failed at ${i}: ${updateError.message}`);
           }
         }
+
+        // Execute batch inserts in chunks (handles >1000 services)
+        const insertChunkSize = 100;
+        for (let i = 0; i < toInsert.length; i += insertChunkSize) {
+          const chunk = toInsert.slice(i, i + insertChunkSize);
+          
+          const { error: insertError } = await supabase
+            .from('services')
+            .insert(chunk);
+          
+          if (insertError) {
+            console.error(`Batch insert error at ${i}:`, insertError);
+            result.errors.push(`Batch insert failed at ${i}: ${insertError.message}`);
+            // Continue with remaining chunks instead of failing completely
+          } else {
+            console.log(`Successfully inserted chunk ${i}-${i + chunk.length}`);
+          }
+        }
+
+        console.log(`Processed: ${result.servicesUpdated} updated, ${result.newServices} new, ${result.pricesChanged} price changes`);
 
         // Update last sync timestamp on provider
         await supabase

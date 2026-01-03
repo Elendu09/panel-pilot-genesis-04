@@ -7,9 +7,10 @@ import { ThemeThree } from '@/components/themes/ThemeThree';
 import { ThemeFour } from '@/components/themes/ThemeFour';
 import { ThemeFive } from '@/components/themes/ThemeFive';
 import { FloatingChatWidget } from '@/components/storefront/FloatingChatWidget';
-import { FastOrderSection } from '@/components/storefront/FastOrderSection';
+import { PromotionalBanner } from '@/components/storefront/PromotionalBanner';
 import { supabase } from '@/integrations/supabase/client';
 import { AlertTriangle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 // Error Boundary Component
 const ErrorFallback = ({ error, panelName }: { error: string; panelName?: string }) => (
@@ -36,9 +37,23 @@ const ErrorFallback = ({ error, panelName }: { error: string; panelName?: string
 );
 
 const Storefront = () => {
+  const navigate = useNavigate();
   const { panel, loading: tenantLoading, error: tenantError } = useTenant();
   const { services } = useTenantServices(panel?.id);
   const [renderError, setRenderError] = useState<string | null>(null);
+  const [isGuest, setIsGuest] = useState(true);
+
+  // Check if user is logged in (guest check)
+  useEffect(() => {
+    const checkAuth = async () => {
+      // Check buyer session from localStorage
+      const buyerSession = localStorage.getItem(`buyer_session_${panel?.id}`);
+      setIsGuest(!buyerSession);
+    };
+    if (panel?.id) {
+      checkAuth();
+    }
+  }, [panel?.id]);
 
   // Debug logging
   useEffect(() => {
@@ -138,6 +153,10 @@ const Storefront = () => {
   const faviconUrl = customBranding?.faviconUrl || panel.logo_url || '/default-panel-favicon.png';
   const appleTouchIconUrl = customBranding?.appleTouchIconUrl || faviconUrl;
 
+  const handleSignUp = () => {
+    navigate('/auth');
+  };
+
   return (
     <>
       <Helmet>
@@ -153,6 +172,13 @@ const Storefront = () => {
         <meta property="og:url" content={canonicalUrl} />
         {panel.logo_url && <meta property="og:image" content={panel.logo_url} />}
       </Helmet>
+      {/* Promotional Banner for guest users */}
+      {isGuest && (
+        <PromotionalBanner 
+          customization={design as any} 
+          onSignUp={handleSignUp}
+        />
+      )}
       {renderTheme()}
       {/* Floating Chat Widget - Consolidated chat with AI, WhatsApp, Telegram, etc. */}
       <FloatingChatWidget panelId={panel?.id} panelName={panel?.name} />
