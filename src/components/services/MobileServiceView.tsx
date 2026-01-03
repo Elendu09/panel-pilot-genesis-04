@@ -372,12 +372,12 @@ const MobileServiceCard = ({
         <div className="flex-1 min-w-0">
           <p className="font-medium text-sm truncate">{service.name}</p>
           <div className="flex items-center gap-1.5 mt-0.5">
+            <Badge variant="outline" className="text-[10px] font-mono px-1.5 py-0 h-4">
+              ID: {service.providerServiceId || service.displayId}
+            </Badge>
             <Badge variant="secondary" className="text-[10px] capitalize px-1.5 py-0 h-4">
               {service.category}
             </Badge>
-            <span className="text-[10px] text-muted-foreground truncate">
-              {service.provider || 'Direct'}
-            </span>
           </div>
         </div>
         
