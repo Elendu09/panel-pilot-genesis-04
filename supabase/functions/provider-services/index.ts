@@ -121,39 +121,89 @@ const PLATFORM_PATTERNS: Array<{ platform: ValidCategory; keywords: string[] }> 
   { platform: 'website', keywords: ['website traffic', 'web traffic', 'site visitor', 'seo ', 'backlink'] },
 ];
 
-// Detect platform from category and service name
+// Platform shortforms for first-word detection
+const PLATFORM_SHORTFORMS: Record<string, ValidCategory> = {
+  'ig': 'instagram', 'insta': 'instagram', 'gram': 'instagram', 'igtv': 'instagram', 'reels': 'instagram',
+  'fb': 'facebook',
+  'tw': 'twitter', 'x': 'twitter', 'twtr': 'twitter', 'tweet': 'twitter',
+  'yt': 'youtube', 'tube': 'youtube', 'ytb': 'youtube', 'shorts': 'youtube',
+  'tt': 'tiktok', 'tok': 'tiktok',
+  'tg': 'telegram', 'telg': 'telegram',
+  'li': 'linkedin', 'ln': 'linkedin', 'lkdn': 'linkedin',
+  'sc': 'snapchat', 'snap': 'snapchat',
+  'pt': 'pinterest', 'pin': 'pinterest',
+  'wa': 'whatsapp', 'whtsp': 'whatsapp',
+  'dc': 'discord', 'disc': 'discord',
+  'vk': 'vk', 'vkontakte': 'vk',
+  'th': 'threads', 'thrd': 'threads', 'thread': 'threads',
+  'sp': 'spotify', 'spfy': 'spotify', 'spot': 'spotify',
+  'am': 'audiomack', 'aud': 'audiomack', 'audio': 'audiomack',
+  'scl': 'soundcloud', 'scloud': 'soundcloud',
+  'dz': 'deezer', 'shz': 'shazam', 'td': 'tidal',
+  'rv': 'reverbnation', 'mc': 'mixcloud', 'np': 'napster',
+  'twt': 'twitch', 'rb': 'rumble', 'dm': 'dailymotion',
+  'bb': 'bilibili', 'bili': 'bilibili', 'od': 'odysee',
+  'kk': 'kick', 'tv': 'trovo',
+  'rd': 'reddit', 'qr': 'quora', 'tm': 'tumblr', 'md': 'medium',
+  'ptr': 'patreon', 'lk': 'likee', 'kw': 'kwai',
+  'ch': 'clubhouse', 'wb': 'weibo', 'br': 'bereal', 'l8': 'lemon8',
+  'rx': 'roblox', 'rbx': 'roblox', 'stm': 'steam',
+  'apm': 'applemusic', 'amz': 'amazonmusic', 'ih': 'iheart',
+};
+
+// Ignored prefixes (country codes, quality markers)
+const IGNORED_PREFIXES = [
+  'fr', 'ca', 'us', 'uk', 'de', 'it', 'es', 'br', 'mx', 'ar', 'au', 'nz', 'jp', 'kr', 'cn', 'in', 'ru',
+  'nr', 'hq', 'real', 'fast', 'slow', 'cheap', 'premium', 'instant', 'best', 'top', 'super', 'ultra',
+  'mega', 'pro', 'vip', 'new', 'hot', 'old', 'mixed', 'pure', 'safe', 'max', 'mini', 'low', 'high',
+  'targeted', 'organic', 'active', 'legit', 'quality', 'verified', 'worldwide', 'global', 'intl',
+];
+
+// Detect platform from category and service name with enhanced shortform detection
 function detectPlatform(category: string, serviceName: string = ''): ValidCategory {
   const cleanedCategory = cleanCategoryString(category).toLowerCase();
   const cleanedName = cleanCategoryString(serviceName).toLowerCase();
-  const combinedInput = `${cleanedCategory} ${cleanedName}`;
+  const combinedInput = ` ${cleanedCategory} ${cleanedName} `;
   
-  // Check if cleaned category exactly matches a valid platform
+  // Step 1: Check if cleaned category exactly matches a valid platform
   if (VALID_CATEGORIES.includes(cleanedCategory as ValidCategory)) {
     return cleanedCategory as ValidCategory;
   }
   
-  // Check for platform name at start of category
+  // Step 2: Check shortforms in first few words
+  const words = cleanedName.split(/\s+/).filter(w => w.length > 0);
+  for (let i = 0; i < Math.min(3, words.length); i++) {
+    const word = words[i];
+    // Skip ignored prefixes
+    if (IGNORED_PREFIXES.includes(word)) continue;
+    // Check shortform match
+    if (PLATFORM_SHORTFORMS[word]) {
+      return PLATFORM_SHORTFORMS[word];
+    }
+  }
+  
+  // Step 3: Check for platform name at start of category
   for (const pattern of PLATFORM_PATTERNS) {
     if (cleanedCategory.startsWith(pattern.platform + ' ') || cleanedCategory === pattern.platform) {
       return pattern.platform;
     }
   }
   
-  // Check keywords in category (priority)
+  // Step 4: Check keywords in category (priority)
   for (const pattern of PLATFORM_PATTERNS) {
     if (pattern.keywords.some(kw => cleanedCategory.includes(kw))) {
       return pattern.platform;
     }
   }
   
-  // Check keywords in service name
+  // Step 5: Check keywords in service name
   for (const pattern of PLATFORM_PATTERNS) {
     if (pattern.keywords.some(kw => cleanedName.includes(kw))) {
       return pattern.platform;
     }
   }
   
-  // Check combined input
+  // Step 6: Check combined input
   for (const pattern of PLATFORM_PATTERNS) {
     if (pattern.keywords.some(kw => combinedInput.includes(kw))) {
       return pattern.platform;

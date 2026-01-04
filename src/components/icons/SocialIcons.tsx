@@ -551,7 +551,7 @@ const MessageSquareWrapper = createLucideWrapper(MessageSquare);
 const BookmarkWrapper = createLucideWrapper(Bookmark);
 const CameraWrapper = createLucideWrapper(Camera);
 
-// Extended Social Icons Map with all platforms
+// Extended Social Icons Map with all 50+ platforms
 export const SOCIAL_ICONS_MAP: Record<string, { 
   icon: React.ComponentType<SocialIconProps>;
   label: string;
@@ -617,6 +617,15 @@ export const SOCIAL_ICONS_MAP: Record<string, {
   // Gaming Platforms
   roblox: { icon: RobloxIcon, label: "Roblox", color: "#E2231A", bgColor: "bg-red-500" },
   steam: { icon: SteamIcon, label: "Steam", color: "#1B2838", bgColor: "bg-slate-800" },
+  
+  // Review Platforms
+  google: { icon: GlobeWrapper, label: "Google", color: "#4285F4", bgColor: "bg-blue-500" },
+  trustpilot: { icon: VoteIcon, label: "Trustpilot", color: "#00B67A", bgColor: "bg-green-600" },
+  yelp: { icon: VoteIcon, label: "Yelp", color: "#FF1A1A", bgColor: "bg-red-600" },
+  tripadvisor: { icon: GlobeWrapper, label: "TripAdvisor", color: "#00AF87", bgColor: "bg-emerald-600" },
+  
+  // Website & SEO
+  website: { icon: GlobeWrapper, label: "Website Traffic", color: "#6B7280", bgColor: "bg-gray-600" },
   
   // Engagement Types
   heart: { icon: HeartIcon, label: "Likes", color: "#E11D48", bgColor: "bg-rose-500" },
