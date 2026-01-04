@@ -489,7 +489,7 @@ const BuyerDashboard = () => {
                 const Icon = column.icon;
 
                 return (
-                  <div key={column.status} className="w-[75vw] min-w-[260px] max-w-[300px] shrink-0 snap-center space-y-2">
+                  <div key={column.status} className="w-[72vw] min-w-[240px] max-w-[280px] shrink-0 snap-center space-y-2">
                     {/* Column Header */}
                     <div className={cn("glass-card p-2.5 border-l-4", column.borderColor)}>
                       <div className="flex items-center justify-between">

@@ -43,7 +43,7 @@ export const LiveStorefrontPreview = ({ panelId, subdomain, customDomain }: Live
     mobile: { width: "375px", height: "100%" },
   };
 
-  const checkReachability = async () => {
+  const checkReachability = async (retryCount = 0) => {
     if (!displayDomain) return;
     
     setLoading(true);
@@ -53,10 +53,21 @@ export const LiveStorefrontPreview = ({ panelId, subdomain, customDomain }: Live
       });
 
       if (error) throw error;
-      setIsReachable(data.https_ok || data.http_ok);
+      const isOnline = data.https_ok || data.http_ok;
+      setIsReachable(isOnline);
+      
+      // Auto-retry up to 3 times if not reachable
+      if (!isOnline && retryCount < 3) {
+        setTimeout(() => checkReachability(retryCount + 1), 2000);
+      }
     } catch (err) {
       console.error('Reachability check failed:', err);
-      setIsReachable(false);
+      // Auto-retry on error
+      if (retryCount < 3) {
+        setTimeout(() => checkReachability(retryCount + 1), 2000);
+      } else {
+        setIsReachable(false);
+      }
     } finally {
       setLoading(false);
     }
@@ -179,10 +190,20 @@ export const LiveStorefrontPreview = ({ panelId, subdomain, customDomain }: Live
                 <p className="text-sm text-muted-foreground mb-4">
                   The subdomain may not be configured correctly.
                 </p>
-                <div className="text-xs text-muted-foreground bg-muted p-3 rounded-lg">
+                <div className="text-xs text-muted-foreground bg-muted p-3 rounded-lg mb-4">
                   <p>Ensure your DNS has:</p>
                   <p className="font-mono mt-1">*.smmpilot.online → 185.158.133.1</p>
                 </div>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={handleRefresh}
+                  disabled={loading}
+                  className="gap-2"
+                >
+                  <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
+                  Retry Connection
+                </Button>
               </div>
             </div>
           ) : (
