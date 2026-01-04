@@ -33,8 +33,12 @@ import {
   Calculator
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { useCurrency } from "@/contexts/CurrencyContext";
 
 export default function Pricing() {
+  const { t } = useLanguage();
+  const { formatPrice, currencyConfig } = useCurrency();
   const [isYearly, setIsYearly] = useState(false);
   const [orderVolume, setOrderVolume] = useState([5000]);
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
@@ -97,86 +101,78 @@ export default function Pricing() {
 
   const plans = [
     {
-      name: "Starter",
-      description: "Perfect for new panel owners",
+      name: "Free",
+      description: "Get started with basic features",
       icon: <Zap className="h-6 w-6" />,
-      monthlyPrice: 29,
-      yearlyPrice: 290,
-      ordersIncluded: "1,000",
+      monthlyPrice: 0,
+      yearlyPrice: 0,
+      ordersIncluded: "100",
       popular: false,
-      color: "from-blue-500 to-cyan-500",
+      color: "from-slate-500 to-slate-600",
       features: [
-        "Up to 1,000 orders/month",
-        "All 50+ social platforms",
-        "Real-time analytics dashboard",
-        "24/7 email support",
-        "Full white-label branding",
-        "API access included",
-        "Custom domain support",
-        "10+ payment gateways"
+        "1 Active Service",
+        "Basic Analytics",
+        "Email Support",
+        "Subdomain Only",
+        "100 Orders/month"
       ],
       limitations: []
     },
     {
-      name: "Professional",
-      description: "Most popular for growing panels",
+      name: "Basic",
+      description: "Perfect for growing panels",
       icon: <Star className="h-6 w-6" />,
-      monthlyPrice: 79,
-      yearlyPrice: 790,
-      ordersIncluded: "15,000",
+      monthlyPrice: 5,
+      yearlyPrice: 50,
+      ordersIncluded: "1,000",
       popular: true,
       color: "from-primary to-primary-glow",
       features: [
-        "Up to 15,000 orders/month",
-        "All 50+ social platforms",
-        "Advanced analytics + reports",
-        "Priority 24/7 support",
-        "Full white-label branding",
-        "API access + webhooks",
-        "Custom domain + SSL",
-        "200+ payment gateways",
-        "Multi-user management",
-        "Automated order syncing"
+        "10 Active Services",
+        "Full Analytics Dashboard",
+        "Priority Email Support",
+        "Custom Domain",
+        "1,000 Orders/month",
+        "API Access",
+        "Custom Branding"
       ],
       limitations: []
     },
     {
-      name: "Enterprise",
-      description: "For high-volume businesses",
+      name: "Pro",
+      description: "For serious SMM businesses",
       icon: <Crown className="h-6 w-6" />,
-      monthlyPrice: 249,
-      yearlyPrice: 2490,
+      monthlyPrice: 15,
+      yearlyPrice: 150,
       ordersIncluded: "Unlimited",
       popular: false,
       color: "from-amber-500 to-orange-500",
       features: [
-        "Unlimited orders/month",
-        "All 50+ social platforms",
-        "Enterprise analytics suite",
-        "Dedicated account manager",
-        "Full white-label branding",
-        "Priority API + webhooks",
-        "Custom domain + SSL",
-        "200+ payment gateways",
-        "Unlimited team members",
-        "Automated order syncing",
-        "Custom integrations",
-        "99.9% SLA guarantee"
+        "Unlimited Services",
+        "Advanced Analytics + Reports",
+        "24/7 Priority Support",
+        "Multiple Custom Domains",
+        "Unlimited Orders",
+        "Full API Access",
+        "White-label Branding",
+        "Dedicated Account Manager",
+        "Custom Integrations"
       ],
       limitations: []
     }
   ];
 
   const competitorComparison = [
-    { feature: "Starting Price", us: "$29/mo", competitor1: "$50/mo", competitor2: "Hidden" },
-    { feature: "Order Limit (Starter)", us: "1,000", competitor1: "1,000", competitor2: "Unknown" },
+    { feature: "Starting Price", us: "Free", competitor1: "$50/mo", competitor2: "Hidden" },
+    { feature: "Pro Plan", us: "$15/mo", competitor1: "$100/mo", competitor2: "$120/mo" },
     { feature: "Payment Gateways", us: "200+", competitor1: "Limited", competitor2: "200+" },
-    { feature: "Languages", us: "20+", competitor1: "15+", competitor2: "20+" },
-    { feature: "White Label", us: "✓ All plans", competitor1: "Extra cost", competitor2: "✓" },
-    { feature: "Custom Domain", us: "✓ All plans", competitor1: "Pro+ only", competitor2: "Extra cost" },
-    { feature: "API Access", us: "✓ All plans", competitor1: "Extra cost", competitor2: "✓" },
+    { feature: "Languages", us: "10+", competitor1: "15+", competitor2: "20+" },
+    { feature: "White Label", us: "✓ All plans", competitor1: "Extra cost", competitor2: "Pro only" },
+    { feature: "Custom Domain", us: "✓ Basic+", competitor1: "Pro+ only", competitor2: "Extra cost" },
+    { feature: "API Access", us: "✓ Basic+", competitor1: "Extra cost", competitor2: "✓" },
     { feature: "Setup Fee", us: "$0", competitor1: "$0", competitor2: "Varies" },
     { feature: "24/7 Support", us: "✓", competitor1: "Email only", competitor2: "✓" },
+    { feature: "Free Plan", us: "✓ Forever", competitor1: "7-day trial", competitor2: "None" },
     { feature: "Free Trial", us: "14 days", competitor1: "7 days", competitor2: "None" },
   ];
 
@@ -242,16 +238,15 @@ export default function Pricing() {
           >
             <Badge className="mb-6 bg-gradient-to-r from-primary to-primary-glow text-primary-foreground px-4 py-1.5">
               <Sparkles className="w-4 h-4 mr-2" />
-              Transparent Pricing • No Hidden Fees
+              {t('pricing.save')} • No Hidden Fees
             </Badge>
             <h1 className="text-4xl md:text-6xl font-bold mb-6">
               <span className="bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent">
-                Pay Only for What You Use
+                {t('pricing.title')}
               </span>
             </h1>
             <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-              The most affordable SMM panel platform with all premium features included. 
-              No per-order fees, no hidden costs.
+              {t('pricing.subtitle')}
             </p>
             
             {/* Trust Badges */}
@@ -267,7 +262,7 @@ export default function Pricing() {
             {/* Billing Toggle */}
             <div className="inline-flex items-center gap-4 p-2 bg-muted/50 rounded-full backdrop-blur-sm">
               <span className={`px-4 py-2 rounded-full transition-all ${!isYearly ? 'bg-background shadow-md font-medium' : 'text-muted-foreground'}`}>
-                Monthly
+                {t('pricing.monthly')}
               </span>
               <Switch 
                 checked={isYearly} 
@@ -275,12 +270,12 @@ export default function Pricing() {
                 className="data-[state=checked]:bg-primary"
               />
               <span className={`px-4 py-2 rounded-full transition-all ${isYearly ? 'bg-background shadow-md font-medium' : 'text-muted-foreground'}`}>
-                Yearly
+                {t('pricing.yearly')}
               </span>
               {isYearly && (
                 <Badge variant="secondary" className="bg-green-500/10 text-green-600 border-green-500/20">
                   <Gift className="w-3 h-3 mr-1" />
-                  Save 17%
+                  {t('pricing.save')}
                 </Badge>
               )}
             </div>
@@ -500,11 +495,11 @@ export default function Pricing() {
                       <th className="text-center p-4">
                         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary font-bold">
                           <Rocket className="w-4 h-4" />
-                          Us
+                          {t('pricing.comparison.us')}
                         </div>
                       </th>
-                      <th className="text-center p-4 text-muted-foreground">Competitor A</th>
-                      <th className="text-center p-4 text-muted-foreground">Competitor B</th>
+                      <th className="text-center p-4 text-muted-foreground">SocPanel</th>
+                      <th className="text-center p-4 text-muted-foreground">PerfectPanel</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -541,7 +536,7 @@ export default function Pricing() {
             viewport={{ once: true }}
             className="text-center mb-12"
           >
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Frequently Asked Questions</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">{t('pricing.faq.title')}</h2>
             <p className="text-lg text-muted-foreground">
               Everything you need to know about our pricing
             </p>
@@ -604,26 +599,26 @@ export default function Pricing() {
           >
             <Badge className="mb-6" variant="secondary">
               <Rocket className="w-4 h-4 mr-2" />
-              Get Started Today
+              {t('home.cta.create')}
             </Badge>
             <h2 className="text-4xl md:text-5xl font-bold mb-6">
-              Ready to Launch Your<br />
+              {t('pricing.cta.title')}<br />
               <span className="bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">
                 SMM Empire?
               </span>
             </h2>
             <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Join thousands of successful panel owners. Start your 14-day free trial today — no credit card required.
+              {t('pricing.cta.subtitle')}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button asChild size="lg" className="bg-gradient-to-r from-primary to-primary-glow hover:shadow-lg hover:shadow-primary/25 text-lg px-8">
                 <Link to="/auth">
-                  Start Free Trial
+                  {t('pricing.cta.button')}
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
               </Button>
               <Button asChild variant="outline" size="lg" className="text-lg px-8">
-                <Link to="/contact">Talk to Sales</Link>
+                <Link to="/contact">{t('platform.contact')}</Link>
               </Button>
             </div>
             <p className="text-sm text-muted-foreground mt-6">

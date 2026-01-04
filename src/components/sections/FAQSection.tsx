@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ChevronDown, HelpCircle, Sparkles, Rocket, Scale, DollarSign, CreditCard, Globe, Target } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { BackgroundEffects } from "@/components/effects/BackgroundEffects";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -28,6 +29,7 @@ const itemVariants = {
 };
 
 export const FAQSection = () => {
+  const { t } = useLanguage();
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   // Icon mapping for FAQ items
@@ -106,18 +108,17 @@ export const FAQSection = () => {
             transition={{ delay: 0.2 }}
           >
             <HelpCircle className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium text-primary">FAQ</span>
+            <span className="text-sm font-medium text-primary">{t('faq.badge')}</span>
           </motion.div>
           
           <h2 className="text-4xl md:text-5xl font-bold mb-4">
-            Your{" "}
+            {t('faq.title.your')}{" "}
             <span className="bg-gradient-primary bg-clip-text text-transparent">
-              questions
-            </span>
-            , answered
+              {t('faq.title.questions')}</span>
+            , {t('faq.title.answered')}
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Everything you need to know about starting your SMM panel
+            {t('faq.subtitle')}
           </p>
         </motion.div>
 
@@ -236,7 +237,7 @@ export const FAQSection = () => {
           transition={{ delay: 0.4 }}
         >
           <p className="text-muted-foreground mb-4">
-            Still have questions?
+            {t('faq.still_questions')}
           </p>
           <motion.a
             href="/support"
@@ -245,7 +246,7 @@ export const FAQSection = () => {
             whileTap={{ scale: 0.98 }}
           >
             <Sparkles className="w-4 h-4" />
-            Contact Support
+            {t('faq.contact_support')}
           </motion.a>
         </motion.div>
       </div>
