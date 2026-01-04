@@ -3,8 +3,10 @@ import { ArrowRight, Zap, Users, Globe, BarChart3 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { BackgroundEffects } from "@/components/effects/BackgroundEffects";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export const PlatformFeaturesSection = () => {
+  const { t } = useLanguage();
   const features = [
     {
       title: "Powered by zero-knowledge",
@@ -43,14 +45,14 @@ export const PlatformFeaturesSection = () => {
           <div className="space-y-8">
             <div>
               <h2 className="text-4xl md:text-5xl font-bold mb-6 leading-tight">
-                A World of
+                {t('platform_features.title.world_of')}
                 <br />
                 <span className="bg-gradient-primary bg-clip-text text-transparent">
-                  SMM Possibilities
+                  {t('platform_features.title.possibilities')}
                 </span>
               </h2>
               <p className="text-lg text-muted-foreground leading-relaxed mb-8">
-                A new era of social media marketing requires a new approach to panel management. The HOME OF SMM platform concentrates the world's SMM providers into a single, 100% scalable infrastructure.
+                {t('platform_features.description')}
               </p>
               <Button 
                 variant="outline" 
@@ -58,7 +60,7 @@ export const PlatformFeaturesSection = () => {
                 asChild
               >
                 <Link to="/docs">
-                  Platform Docs <ArrowRight className="ml-2 w-4 h-4" />
+                  {t('platform_features.docs_button')} <ArrowRight className="ml-2 w-4 h-4" />
                 </Link>
               </Button>
             </div>

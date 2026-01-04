@@ -30,6 +30,7 @@ import {
   type LucideIcon
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 // Platform icons with proper gradients
 const platformsData: { name: string; icon: LucideIcon; gradient: string }[] = [
@@ -44,6 +45,8 @@ const platformsData: { name: string; icon: LucideIcon; gradient: string }[] = [
 ];
 
 export default function Features() {
+  const { t } = useLanguage();
+  
   const features = [
     {
       icon: <Zap className="h-8 w-8" />,

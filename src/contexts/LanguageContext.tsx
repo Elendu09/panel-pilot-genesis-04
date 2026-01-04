@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { platformTranslations } from '@/lib/platform-translations';
+import { platformTranslations, sectionTranslations } from '@/lib/platform-translations';
 
 export type Language = 'en' | 'es' | 'pt' | 'ar' | 'tr' | 'ru' | 'fr' | 'de' | 'zh' | 'hi';
 
@@ -1674,9 +1674,11 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const t = (key: string, params?: Record<string, string | number>): string => {
-    // Check merged translations (including platform translations)
-    const mergedCurrent = mergeTranslations(translations[language], platformTranslations[language]);
-    const mergedEn = mergeTranslations(translations.en, platformTranslations.en);
+    // Check merged translations (including platform and section translations)
+    const sectionCurrent = sectionTranslations[language] || {};
+    const sectionEn = sectionTranslations.en || {};
+    const mergedCurrent = { ...translations[language], ...platformTranslations[language], ...sectionCurrent };
+    const mergedEn = { ...translations.en, ...platformTranslations.en, ...sectionEn };
     
     let text = mergedCurrent[key] || mergedEn[key] || key;
     

@@ -1,8 +1,10 @@
 import { Star, Quote } from "lucide-react";
 import { motion } from "framer-motion";
 import { BackgroundEffects } from "@/components/effects/BackgroundEffects";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export const TestimonialsSection = () => {
+  const { t } = useLanguage();
   const testimonials = [
     {
       name: "teateagram",
@@ -78,21 +80,21 @@ export const TestimonialsSection = () => {
             className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-6"
           >
             <Quote className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium text-primary">Testimonials</span>
+            <span className="text-sm font-medium text-primary">{t('testimonials.badge')}</span>
           </motion.div>
           
           <h2 className="text-3xl md:text-5xl font-bold mb-4">
-            What our{" "}
+            {t('testimonials.title.what')}{" "}
             <span className="bg-gradient-primary bg-clip-text text-transparent">
-              users say
+              {t('testimonials.title.users_say')}
             </span>
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Join thousands of successful panel owners who trust our platform
+            {t('testimonials.subtitle')}
           </p>
         </motion.div>
 
-        <motion.div 
+        <motion.div
           className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto"
           variants={containerVariants}
           initial="hidden"
