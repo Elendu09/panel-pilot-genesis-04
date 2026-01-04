@@ -611,6 +611,16 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
   const getCardPosition = () => {
     const position = getPosition();
     
+    // FIRST STEP (welcome): Always center on all devices
+    if (currentStep === 0 || position === "center") {
+      return { 
+        position: "fixed" as const,
+        top: "50%",
+        left: "50%",
+        transform: "translate(-50%, -50%)"
+      };
+    }
+    
     // MOBILE ONLY: Position at bottom since mobile uses bottom navigation bar
     if (isMobile) {
       if (position === "top" && targetRect) {
@@ -622,19 +632,19 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
           right: 16,
         };
       }
-      // Default mobile position - bottom area to avoid blocking content
+      // Default mobile position - center for better visibility
       return {
         position: "fixed" as const,
-        top: position === "center" ? "50%" : 80,
+        top: "50%",
         left: 16,
         right: 16,
-        transform: position === "center" ? "translateY(-50%)" : undefined,
+        transform: "translateY(-50%)",
       };
     }
 
     // TABLET & DESKTOP: Center the modal (both have sidebars, no bottom nav)
     // This provides a clean, focused experience on larger screens
-    if (!targetRect || position === "center") {
+    if (!targetRect) {
       return { 
         position: "fixed" as const,
         top: "50%",
