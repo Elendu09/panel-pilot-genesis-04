@@ -53,112 +53,110 @@ function cleanCategoryString(input: string): string {
     .trim();
 }
 
-// Enhanced platform detection patterns
-const PLATFORM_PATTERNS: Array<{ platform: string; keywords: string[] }> = [
-  { platform: 'instagram', keywords: ['instagram', 'insta', 'ig follower', 'ig like', 'ig view', 'ig comment', 'ig save', 'ig reach', 'igtv', 'ig story', 'ig reel', 'reels'] },
-  { platform: 'facebook', keywords: ['facebook', 'fb ', 'fb.com', 'fb like', 'fb follower', 'fb share', 'fb page', 'fb group', 'fb event', 'fb video', 'fb comment'] },
-  { platform: 'twitter', keywords: ['twitter', 'x.com', 'tweet', 'x follower', 'x like', 'x retweet', 'x view', 'x reply', 'x impression', 'x poll', 'x space'] },
-  { platform: 'youtube', keywords: ['youtube', 'yt ', 'yt.com', 'youtube short', 'yt subscriber', 'yt view', 'yt like', 'yt comment', 'yt share', 'yt watch', 'yt live', 'shorts'] },
-  { platform: 'tiktok', keywords: ['tiktok', 'tik tok', 'tt follower', 'tt like', 'tt view', 'tt share', 'tt comment', 'tt save', 'tt duet', 'tt live'] },
-  { platform: 'telegram', keywords: ['telegram', 'tg ', 'tg.me', 'tg channel', 'tg group', 'tg member', 'tg view', 'tg reaction', 'tg post'] },
-  { platform: 'linkedin', keywords: ['linkedin', 'linked in', 'linkedin connection', 'linkedin follower', 'linkedin like', 'linkedin share', 'linkedin comment'] },
-  { platform: 'threads', keywords: ['threads', 'thread follower', 'thread like', 'thread view', 'thread repost'] },
-  { platform: 'snapchat', keywords: ['snapchat', 'snap ', 'snap score', 'snap view', 'snap follower', 'snap story'] },
-  { platform: 'pinterest', keywords: ['pinterest', 'pin ', 'pinterest follower', 'pinterest repin', 'pinterest save', 'pinterest like'] },
-  { platform: 'twitch', keywords: ['twitch', 'twitch follower', 'twitch viewer', 'twitch subscriber', 'twitch chat', 'twitch clip'] },
-  { platform: 'discord', keywords: ['discord', 'discord member', 'discord server', 'discord boost', 'discord online'] },
-  { platform: 'spotify', keywords: ['spotify', 'spotify follower', 'spotify stream', 'spotify play', 'spotify save', 'spotify monthly listener', 'spotify playlist'] },
-  { platform: 'soundcloud', keywords: ['soundcloud', 'sound cloud', 'sc play', 'sc follower', 'sc like', 'sc repost', 'sc comment'] },
-  { platform: 'audiomack', keywords: ['audiomack', 'audio mack', 'audiomack play', 'audiomack follower'] },
-  { platform: 'reddit', keywords: ['reddit', 'reddit upvote', 'reddit subscriber', 'reddit comment', 'reddit award', 'reddit karma', 'subreddit'] },
-  { platform: 'vk', keywords: ['vk.com', 'vkontakte', ' vk ', 'vk follower', 'vk like', 'vk group', 'vk friend'] },
-  { platform: 'kick', keywords: ['kick.com', ' kick ', 'kick follower', 'kick viewer', 'kick subscriber', 'kick chat'] },
-  { platform: 'rumble', keywords: ['rumble', 'rumble view', 'rumble subscriber', 'rumble like'] },
-  { platform: 'dailymotion', keywords: ['dailymotion', 'daily motion', 'dm view', 'dm subscriber'] },
-  { platform: 'deezer', keywords: ['deezer', 'deezer play', 'deezer follower'] },
+// Valid database enum categories - must match exactly
+const VALID_CATEGORIES = [
+  'instagram', 'facebook', 'twitter', 'youtube', 'tiktok', 'linkedin', 'telegram',
+  'threads', 'snapchat', 'pinterest', 'whatsapp', 'twitch', 'discord', 'spotify',
+  'soundcloud', 'audiomack', 'reddit', 'vk', 'kick', 'rumble', 'dailymotion',
+  'deezer', 'shazam', 'tidal', 'reverbnation', 'mixcloud', 'quora', 'tumblr',
+  'clubhouse', 'likee', 'kwai', 'trovo', 'odysee', 'bilibili', 'lemon8', 'bereal',
+  'weibo', 'line', 'patreon', 'medium', 'roblox', 'steam', 'applemusic', 'amazonmusic',
+  'napster', 'iheart', 'google', 'trustpilot', 'yelp', 'tripadvisor', 'website', 'other'
+] as const;
+
+type ValidCategory = typeof VALID_CATEGORIES[number];
+
+// Platform patterns with comprehensive keywords - ORDER MATTERS
+const PLATFORM_PATTERNS: Array<{ platform: ValidCategory; keywords: string[] }> = [
+  { platform: 'instagram', keywords: ['instagram', 'insta ', ' ig ', 'ig follower', 'ig like', 'ig view', 'ig comment', 'ig save', 'ig reach', 'igtv', 'ig story', 'ig reel', 'reels', ' reel '] },
+  { platform: 'facebook', keywords: ['facebook', ' fb ', 'fb.com', 'fb like', 'fb follower', 'fb share', 'fb page', 'fb group', 'fb event', 'fb video'] },
+  { platform: 'twitter', keywords: ['twitter', 'x.com', 'tweet', ' x follower', ' x like', ' x retweet', ' x view', ' x impression', ' x poll'] },
+  { platform: 'youtube', keywords: ['youtube', ' yt ', 'yt.com', 'shorts', 'youtube short', 'yt subscriber', 'yt view', 'yt like', 'yt comment', 'yt watch'] },
+  { platform: 'tiktok', keywords: ['tiktok', 'tik tok', ' tt ', 'tt follower', 'tt like', 'tt view', 'tt share', 'tt comment'] },
+  { platform: 'linkedin', keywords: ['linkedin', 'linked in', 'linkedin connection', 'linkedin follower', 'linkedin like'] },
+  { platform: 'telegram', keywords: ['telegram', ' tg ', 'tg.me', 'tg channel', 'tg group', 'tg member', 'tg view', 'tg post'] },
+  { platform: 'threads', keywords: ['threads', 'thread follower', 'thread like', 'thread view'] },
+  { platform: 'snapchat', keywords: ['snapchat', 'snap ', 'snap score', 'snap view', 'snap story'] },
+  { platform: 'pinterest', keywords: ['pinterest', 'pin ', 'pinterest follower', 'pinterest repin'] },
+  { platform: 'whatsapp', keywords: ['whatsapp', 'whats app', 'wa channel', 'whatsapp channel'] },
+  { platform: 'twitch', keywords: ['twitch', 'twitch follower', 'twitch viewer', 'twitch subscriber'] },
+  { platform: 'discord', keywords: ['discord', 'discord member', 'discord server', 'discord boost'] },
+  { platform: 'spotify', keywords: ['spotify', 'spotify follower', 'spotify stream', 'spotify play', 'spotify playlist'] },
+  { platform: 'soundcloud', keywords: ['soundcloud', 'sound cloud', ' sc play', ' sc follower'] },
+  { platform: 'audiomack', keywords: ['audiomack', 'audio mack'] },
+  { platform: 'reddit', keywords: ['reddit', 'reddit upvote', 'subreddit', 'reddit karma'] },
+  { platform: 'vk', keywords: ['vk.com', 'vkontakte', ' vk ', 'vk follower', 'vk like'] },
+  { platform: 'kick', keywords: ['kick.com', ' kick ', 'kick follower', 'kick viewer'] },
+  { platform: 'rumble', keywords: ['rumble', 'rumble view', 'rumble subscriber'] },
+  { platform: 'dailymotion', keywords: ['dailymotion', 'daily motion', 'dm view'] },
+  { platform: 'deezer', keywords: ['deezer', 'deezer play'] },
   { platform: 'shazam', keywords: ['shazam', 'shazam count'] },
   { platform: 'tidal', keywords: ['tidal', 'tidal play', 'tidal stream'] },
   { platform: 'reverbnation', keywords: ['reverbnation', 'reverb nation'] },
   { platform: 'mixcloud', keywords: ['mixcloud', 'mix cloud'] },
-  { platform: 'quora', keywords: ['quora', 'quora follower', 'quora upvote', 'quora share'] },
-  { platform: 'tumblr', keywords: ['tumblr', 'tumblr follower', 'tumblr reblog', 'tumblr like'] },
+  { platform: 'quora', keywords: ['quora', 'quora follower', 'quora upvote'] },
+  { platform: 'tumblr', keywords: ['tumblr', 'tumblr follower', 'tumblr reblog'] },
   { platform: 'clubhouse', keywords: ['clubhouse', 'club house', 'clubhouse follower'] },
-  { platform: 'likee', keywords: ['likee', 'likee follower', 'likee like', 'likee view'] },
-  { platform: 'kwai', keywords: ['kwai', 'kwai follower', 'kwai like', 'kwai view'] },
-  { platform: 'trovo', keywords: ['trovo', 'trovo follower', 'trovo viewer'] },
-  { platform: 'odysee', keywords: ['odysee', 'odysee view', 'odysee follower'] },
-  { platform: 'bilibili', keywords: ['bilibili', 'bili bili', 'bilibili view', 'bilibili follower'] },
+  { platform: 'likee', keywords: ['likee', 'likee follower', 'likee like'] },
+  { platform: 'kwai', keywords: ['kwai', 'kwai follower', 'kwai like'] },
+  { platform: 'trovo', keywords: ['trovo', 'trovo follower'] },
+  { platform: 'odysee', keywords: ['odysee', 'odysee view'] },
+  { platform: 'bilibili', keywords: ['bilibili', 'bili bili', 'b站'] },
   { platform: 'lemon8', keywords: ['lemon8', 'lemon 8'] },
   { platform: 'bereal', keywords: ['bereal', 'be real'] },
-  { platform: 'weibo', keywords: ['weibo', 'weibo follower'] },
+  { platform: 'weibo', keywords: ['weibo', '微博'] },
   { platform: 'line', keywords: ['line app', 'line.me', 'line friend'] },
-  { platform: 'patreon', keywords: ['patreon', 'patreon member', 'patreon subscriber'] },
+  { platform: 'patreon', keywords: ['patreon', 'patreon member'] },
   { platform: 'medium', keywords: ['medium.com', ' medium ', 'medium follower', 'medium clap'] },
-  { platform: 'whatsapp', keywords: ['whatsapp', 'whats app', 'wa channel', 'whatsapp channel'] },
-  { platform: 'applemusic', keywords: ['apple music', 'applemusic', 'itunes', 'apple play', 'apple stream'] },
+  { platform: 'roblox', keywords: ['roblox', 'robux', 'roblox visit'] },
+  { platform: 'steam', keywords: ['steam', 'steam friend', 'steam wishlist', 'steam review'] },
+  { platform: 'applemusic', keywords: ['apple music', 'applemusic', 'itunes', 'apple play'] },
   { platform: 'amazonmusic', keywords: ['amazon music', 'amazonmusic'] },
   { platform: 'napster', keywords: ['napster'] },
   { platform: 'iheart', keywords: ['iheart', 'iheartradio'] },
-  { platform: 'roblox', keywords: ['roblox', 'robux', 'roblox visit', 'roblox follower'] },
-  { platform: 'steam', keywords: ['steam', 'steam friend', 'steam wishlist', 'steam review'] },
-  { platform: 'google', keywords: ['google review', 'google map', 'google business', 'gmb ', 'google my business'] },
-  { platform: 'trustpilot', keywords: ['trustpilot', 'trust pilot', 'trustpilot review'] },
+  { platform: 'google', keywords: ['google review', 'google map', 'gmb ', 'google my business', 'google business'] },
+  { platform: 'trustpilot', keywords: ['trustpilot', 'trust pilot'] },
   { platform: 'yelp', keywords: ['yelp', 'yelp review'] },
   { platform: 'tripadvisor', keywords: ['tripadvisor', 'trip advisor'] },
-  { platform: 'website', keywords: ['website traffic', 'web traffic', 'site visitor', 'website visitor', 'seo ', 'backlink'] },
+  { platform: 'website', keywords: ['website traffic', 'web traffic', 'site visitor', 'seo ', 'backlink'] },
 ];
 
-// Platform aliases for direct matching
-const PLATFORM_ALIASES: Record<string, string> = {
-  'ig': 'instagram', 'insta': 'instagram',
-  'fb': 'facebook',
-  'yt': 'youtube',
-  'tt': 'tiktok', 'tik tok': 'tiktok',
-  'tg': 'telegram',
-  'x': 'twitter', 'x.com': 'twitter',
-  'sc': 'soundcloud',
-  'vk': 'vk', 'vkontakte': 'vk',
-  'dc': 'discord',
-  'wa': 'whatsapp',
-};
-
 // Detect platform from category and service name
-function detectPlatform(category: string, serviceName: string = ''): string {
+function detectPlatform(category: string, serviceName: string = ''): ValidCategory {
   const cleanedCategory = cleanCategoryString(category).toLowerCase();
   const cleanedName = cleanCategoryString(serviceName).toLowerCase();
   const combinedInput = `${cleanedCategory} ${cleanedName}`;
   
-  // First, try direct alias match on category
-  for (const [alias, platform] of Object.entries(PLATFORM_ALIASES)) {
-    if (cleanedCategory === alias || cleanedCategory.startsWith(alias + ' ')) {
-      return platform;
+  // Check if cleaned category exactly matches a valid platform
+  if (VALID_CATEGORIES.includes(cleanedCategory as ValidCategory)) {
+    return cleanedCategory as ValidCategory;
+  }
+  
+  // Check for platform name at start of category
+  for (const pattern of PLATFORM_PATTERNS) {
+    if (cleanedCategory.startsWith(pattern.platform + ' ') || cleanedCategory === pattern.platform) {
+      return pattern.platform;
     }
   }
   
-  // Second, try keyword matching in category (priority)
+  // Check keywords in category (priority)
   for (const pattern of PLATFORM_PATTERNS) {
-    for (const keyword of pattern.keywords) {
-      if (cleanedCategory.includes(keyword)) {
-        return pattern.platform;
-      }
+    if (pattern.keywords.some(kw => cleanedCategory.includes(kw))) {
+      return pattern.platform;
     }
   }
   
-  // Third, try keyword matching in service name
+  // Check keywords in service name
   for (const pattern of PLATFORM_PATTERNS) {
-    for (const keyword of pattern.keywords) {
-      if (cleanedName.includes(keyword)) {
-        return pattern.platform;
-      }
+    if (pattern.keywords.some(kw => cleanedName.includes(kw))) {
+      return pattern.platform;
     }
   }
   
-  // Fourth, try combined input
+  // Check combined input
   for (const pattern of PLATFORM_PATTERNS) {
-    for (const keyword of pattern.keywords) {
-      if (combinedInput.includes(keyword)) {
-        return pattern.platform;
-      }
+    if (pattern.keywords.some(kw => combinedInput.includes(kw))) {
+      return pattern.platform;
     }
   }
   
