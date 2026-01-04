@@ -4,10 +4,12 @@ import { Link } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export const Footer = () => {
   const [email, setEmail] = useState("");
   const { toast } = useToast();
+  const { t } = useLanguage();
 
   const handleSubscribe = (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,51 +65,51 @@ export const Footer = () => {
 
           {/* Product */}
           <div className="space-y-2">
-            <h3 className="font-semibold text-foreground text-xs sm:text-sm">Product</h3>
+            <h3 className="font-semibold text-foreground text-xs sm:text-sm">{t('footer.product')}</h3>
             <div className="space-y-1">
               <Link to="/features" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">
-                Features
+                {t('footer.features')}
               </Link>
               <Link to="/pricing" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">
-                Pricing
+                {t('footer.pricing')}
               </Link>
               <Link to="/demo" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">
-                Demo
+                {t('footer.demo')}
               </Link>
             </div>
           </div>
 
           {/* Resources */}
           <div className="space-y-2">
-            <h3 className="font-semibold text-foreground text-xs sm:text-sm">Resources</h3>
+            <h3 className="font-semibold text-foreground text-xs sm:text-sm">{t('footer.resources')}</h3>
             <div className="space-y-1">
               <Link to="/docs" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">
-                Docs
+                {t('footer.docs')}
               </Link>
               <Link to="/blog" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">
-                Blog
+                {t('footer.blog')}
               </Link>
               <Link to="/support" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">
-                Support
+                {t('footer.support')}
               </Link>
             </div>
           </div>
 
           {/* Company */}
           <div className="space-y-2">
-            <h3 className="font-semibold text-foreground text-xs sm:text-sm">Company</h3>
+            <h3 className="font-semibold text-foreground text-xs sm:text-sm">{t('footer.company')}</h3>
             <div className="space-y-1">
               <Link to="/about" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">
-                About
+                {t('footer.about')}
               </Link>
               <Link to="/contact" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">
-                Contact
+                {t('footer.contact')}
               </Link>
               <Link to="/privacy" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">
-                Privacy
+                {t('footer.privacy')}
               </Link>
               <Link to="/terms" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">
-                Terms
+                {t('footer.terms')}
               </Link>
             </div>
           </div>
@@ -116,9 +118,9 @@ export const Footer = () => {
         {/* Newsletter Subscription */}
         <div className="border-t border-border mt-6 pt-6">
           <div className="max-w-md mx-auto text-center">
-            <h3 className="text-sm font-semibold mb-2">Subscribe to our newsletter</h3>
+            <h3 className="text-sm font-semibold mb-2">{t('footer.newsletter')}</h3>
             <p className="text-xs text-muted-foreground mb-3">
-              Get the latest updates and tips delivered to your inbox.
+              {t('footer.newsletter.desc')}
             </p>
             <form onSubmit={handleSubscribe} className="flex gap-2">
               <Input
@@ -130,7 +132,7 @@ export const Footer = () => {
                 required
               />
               <Button type="submit" size="sm" className="h-8 text-xs px-4">
-                Subscribe
+                {t('footer.subscribe')}
               </Button>
             </form>
           </div>
@@ -139,15 +141,15 @@ export const Footer = () => {
         {/* Built with love */}
         <div className="border-t border-border mt-6 pt-4 flex flex-col md:flex-row justify-between items-center gap-2">
           <p className="text-muted-foreground text-xs">
-            © 2024 HOME OF SMM. All rights reserved.
+            © 2024 HOME OF SMM. {t('footer.rights')}
           </p>
           <p className="text-muted-foreground text-xs flex items-center gap-1.5">
-            Built with 
+            {t('footer.built')} 
             <span className="relative inline-flex items-center justify-center">
               <span className="absolute inset-0 rounded-full bg-blue-500/30 blur-md animate-pulse" />
               <Heart className="w-4 h-4 text-blue-500 fill-blue-500 relative z-10" />
             </span>
-            for SMM panel entrepreneurs
+            {t('footer.for')}
           </p>
         </div>
       </div>

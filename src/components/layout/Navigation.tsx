@@ -2,15 +2,19 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { Menu, X, Zap, Users, Shield, LogOut } from "lucide-react";
+import { Menu, X, Zap, LogOut } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { LanguageSelector } from "@/components/buyer/LanguageSelector";
+import { CurrencySelector } from "@/components/buyer/CurrencySelector";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { user, profile, signOut } = useAuth();
   const location = useLocation();
   const isHomepage = location.pathname === '/';
+  const { t } = useLanguage();
 
   const getDashboardPath = () => {
     switch (profile?.role) {
@@ -41,20 +45,22 @@ export const Navigation = () => {
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
             <Link to="/features" className="text-muted-foreground hover:text-foreground transition-colors">
-              Features
+              {t('platform.features')}
             </Link>
             <Link to="/pricing" className="text-muted-foreground hover:text-foreground transition-colors">
-              Pricing
+              {t('platform.pricing')}
             </Link>
             <Link to="/docs" className="text-muted-foreground hover:text-foreground transition-colors">
-              Documentation
+              {t('platform.docs')}
             </Link>
             <Link to="/contact" className="text-muted-foreground hover:text-foreground transition-colors">
-              Contact
+              {t('platform.contact')}
             </Link>
           </div>
 
           <div className="hidden md:flex items-center space-x-3">
+            <LanguageSelector />
+            <CurrencySelector />
             <ThemeToggle />
             {user ? (
               <div className="flex items-center space-x-3">

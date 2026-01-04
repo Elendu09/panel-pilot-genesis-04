@@ -8,6 +8,8 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { OnboardingTourProvider } from "@/contexts/OnboardingTourContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { HelmetProvider } from "react-helmet-async";
+import { LanguageProvider } from "@/contexts/LanguageContext";
+import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import Index from "./pages/Index";
 import Services from "./pages/Services";
 import SuperAdminDashboard from "./pages/SuperAdminDashboard";
@@ -51,12 +53,14 @@ const queryClient = new QueryClient({
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <HelmetProvider>
-      <ThemeProvider defaultTheme="dark" storageKey="smm-panel-theme">
-        <AuthProvider>
-          <OnboardingTourProvider>
-            <TooltipProvider>
-            <Toaster />
-            <Sonner />
+      <LanguageProvider>
+        <CurrencyProvider>
+          <ThemeProvider defaultTheme="dark" storageKey="smm-panel-theme">
+            <AuthProvider>
+              <OnboardingTourProvider>
+                <TooltipProvider>
+                <Toaster />
+                <Sonner />
             <BrowserRouter>
               <Routes>
                 <Route path="/" element={<Index />} />
@@ -110,10 +114,12 @@ const App = () => (
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
-            </TooltipProvider>
-          </OnboardingTourProvider>
-        </AuthProvider>
-      </ThemeProvider>
+                </TooltipProvider>
+              </OnboardingTourProvider>
+            </AuthProvider>
+          </ThemeProvider>
+        </CurrencyProvider>
+      </LanguageProvider>
     </HelmetProvider>
   </QueryClientProvider>
 );

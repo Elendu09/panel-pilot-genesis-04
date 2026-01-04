@@ -2,33 +2,35 @@ import { Users, ShoppingBag, Globe, Zap } from "lucide-react";
 import { motion } from "framer-motion";
 import { usePlatformStats } from "@/hooks/useServiceStats";
 import { BackgroundEffects } from "@/components/effects/BackgroundEffects";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export const StatsSection = () => {
   const { totalPanels, totalOrders, totalServices, loading } = usePlatformStats();
+  const { t } = useLanguage();
 
   const stats = [
     {
       icon: Users,
       value: loading ? "..." : totalPanels > 1000 ? `${Math.floor(totalPanels / 1000)}k+` : `${totalPanels}+`,
-      label: "Panels created",
+      label: t('home.stats.panels'),
       gradient: "from-blue-500 to-cyan-500"
     },
     {
       icon: ShoppingBag,
       value: loading ? "..." : totalOrders > 1000000 ? `${Math.floor(totalOrders / 1000000)}M+` : totalOrders > 1000 ? `${Math.floor(totalOrders / 1000)}k+` : `${totalOrders}+`,
-      label: "Orders completed",
+      label: t('home.stats.orders'),
       gradient: "from-green-500 to-emerald-500"
     },
     {
       icon: Zap,
       value: loading ? "..." : totalServices > 1000 ? `${(totalServices / 1000).toFixed(1)}k+` : `${totalServices}+`,
-      label: "Services available",
+      label: t('home.stats.services'),
       gradient: "from-purple-500 to-pink-500"
     },
     {
       icon: Globe,
       value: "200+",
-      label: "Payment systems",
+      label: t('home.stats.payment'),
       gradient: "from-amber-500 to-orange-500"
     }
   ];
@@ -74,13 +76,13 @@ export const StatsSection = () => {
           transition={{ duration: 0.6 }}
         >
           <h2 className="text-3xl md:text-5xl font-bold mb-4">
-            We are trusted by{" "}
+            {t('home.stats.trusted')}{" "}
             <span className="bg-gradient-primary bg-clip-text text-transparent">
-              thousands of users
+              {t('home.stats.thousands')}
             </span>
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Join a growing community of successful SMM panel owners who trust our platform
+            {t('home.stats.community')}
           </p>
         </motion.div>
 

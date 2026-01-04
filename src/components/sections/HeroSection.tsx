@@ -1,33 +1,36 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Sparkles, Zap, TrendingUp, Users, Heart, Eye, MessageCircle, Star } from "lucide-react";
+import { ArrowRight, Sparkles, Zap, TrendingUp, MessageCircle, Star } from "lucide-react";
 import { Link } from "react-router-dom";
 import { AnimatedText } from "@/components/ui/animated-text";
 import { motion } from "framer-motion";
 import { TelegramIcon, VoteIcon, ViewsIcon, HeartIcon } from "@/components/icons/SocialIcons";
 import { BackgroundEffects } from "@/components/effects/BackgroundEffects";
-
-// Floating feature cards data
-const leftCards = [
-  { title: "Ultra fast.", subtitle: "Almost speed of light.", delay: 0.8 },
-  { title: "Hot design", subtitle: "Far ahead of others.", delay: 1.2 },
-];
-
-const rightCards = [
-  { title: "Cool functions.", subtitle: "Updates every month.", delay: 1.0 },
-  { title: "Ecosystem.", subtitle: "Market transparency", delay: 1.4 },
-];
-
-// Panel showcase services with SVG icons
-const showcaseServices = [
-  { icon: TelegramIcon, name: "Telegram Subscribers", price: "$0.3", discount: "-50%", gradient: "from-blue-500 to-cyan-500" },
-  { icon: VoteIcon, name: "Premium Votes", price: "$1", discount: "-30%", gradient: "from-amber-400 to-yellow-500" },
-  { icon: ViewsIcon, name: "Channel Viewers", price: "$0.5", gradient: "from-green-500 to-emerald-500" },
-  { icon: HeartIcon, name: "Real Likes", price: "$20", gradient: "from-red-500 to-pink-500" },
-];
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export const HeroSection = () => {
+  const { t } = useLanguage();
+
+  // Floating feature cards data
+  const leftCards = [
+    { title: t('home.card.ultrafast'), subtitle: t('home.card.ultrafast.sub'), delay: 0.8 },
+    { title: t('home.card.design'), subtitle: t('home.card.design.sub'), delay: 1.2 },
+  ];
+
+  const rightCards = [
+    { title: t('home.card.functions'), subtitle: t('home.card.functions.sub'), delay: 1.0 },
+    { title: t('home.card.ecosystem'), subtitle: t('home.card.ecosystem.sub'), delay: 1.4 },
+  ];
+
+  // Panel showcase services with SVG icons
+  const showcaseServices = [
+    { icon: TelegramIcon, name: "Telegram Subscribers", price: "$0.3", discount: "-50%", gradient: "from-blue-500 to-cyan-500" },
+    { icon: VoteIcon, name: "Premium Votes", price: "$1", discount: "-30%", gradient: "from-amber-400 to-yellow-500" },
+    { icon: ViewsIcon, name: "Channel Viewers", price: "$0.5", gradient: "from-green-500 to-emerald-500" },
+    { icon: HeartIcon, name: "Real Likes", price: "$20", gradient: "from-red-500 to-pink-500" },
+  ];
+
   return (
     <section className="relative min-h-screen bg-gradient-hero overflow-hidden perspective-1000">
       {/* Grid, Bubbles & Particles */}
@@ -120,7 +123,7 @@ export const HeroSection = () => {
             whileHover={{ scale: 1.05, boxShadow: "0 0 30px hsl(var(--primary) / 0.3)" }}
           >
             <Sparkles className="w-4 h-4 text-primary animate-pulse" />
-            <span className="text-sm font-medium">Automate Your Business</span>
+            <span className="text-sm font-medium">{t('home.badge')}</span>
           </motion.div>
 
           {/* Main Heading */}
@@ -130,7 +133,7 @@ export const HeroSection = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3, duration: 0.6 }}
           >
-            Create your own
+            {t('home.title.line1')}
             <br />
             <motion.span 
               className="bg-gradient-primary bg-clip-text text-transparent inline-block"
@@ -140,7 +143,7 @@ export const HeroSection = () => {
               transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
               style={{ backgroundSize: "200% 200%" }}
             >
-              smm panel
+              {t('home.title.line2')}
             </motion.span>
           </motion.h1>
 
@@ -154,14 +157,14 @@ export const HeroSection = () => {
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.98 }}>
               <Button asChild size="lg" className="bg-gradient-primary hover:shadow-glow text-lg px-8 py-6 rounded-full">
                 <Link to="/auth">
-                  Create panel <ArrowRight className="ml-2 w-5 h-5" />
+                  {t('home.cta.create')} <ArrowRight className="ml-2 w-5 h-5" />
                 </Link>
               </Button>
             </motion.div>
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.98 }}>
               <Button asChild variant="outline" size="lg" className="text-lg px-8 py-6 border-primary/30 hover:bg-primary/10 rounded-full backdrop-blur-sm">
                 <Link to="/services">
-                  Service Tools
+                  {t('home.cta.tools')}
                 </Link>
               </Button>
             </motion.div>
@@ -177,9 +180,9 @@ export const HeroSection = () => {
         >
           <AnimatedText
             phrases={[
-              { static: "build an smm panel", bold: "for profit" },
-              { static: "build an smm panel", bold: "for clients" },
-              { static: "build an smm panel", bold: "with ease" }
+              { static: "build an smm panel", bold: t('home.animated.profit') },
+              { static: "build an smm panel", bold: t('home.animated.clients') },
+              { static: "build an smm panel", bold: t('home.animated.ease') }
             ]}
           />
         </motion.div>
@@ -287,10 +290,10 @@ export const HeroSection = () => {
           transition={{ delay: 1.5, duration: 0.6 }}
         >
           {[
-            { value: "200+", label: "Payment systems", icon: Zap },
-            { value: "Easy start", label: "to run own panel", icon: Star },
-            { value: "20+", label: "Language localizations", icon: MessageCircle },
-            { value: "No code", label: "solution", icon: TrendingUp },
+            { value: "200+", label: t('home.stats.payment'), icon: Zap },
+            { value: t('home.stats.easy'), label: t('home.stats.easy.sub'), icon: Star },
+            { value: "20+", label: t('home.stats.languages'), icon: MessageCircle },
+            { value: t('home.stats.nocode'), label: t('home.stats.nocode.sub'), icon: TrendingUp },
           ].map((stat, index) => (
             <motion.div
               key={index}
