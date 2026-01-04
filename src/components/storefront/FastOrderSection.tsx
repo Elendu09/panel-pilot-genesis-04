@@ -75,8 +75,9 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
     ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
     : theme;
   
-  const textColor = customization?.textColor || (themeMode === 'dark' ? '#FFFFFF' : '#111827');
-  const textMuted = customization?.textMuted || (themeMode === 'dark' ? '#9CA3AF' : '#6B7280');
+  // Use proper theme-aware text colors
+  const textColor = themeMode === 'dark' ? 'hsl(var(--foreground))' : 'hsl(var(--foreground))';
+  const textMuted = themeMode === 'dark' ? 'hsl(var(--muted-foreground))' : 'hsl(var(--muted-foreground))';
   
   // True dark/light mode card styles
   const cardBg = themeMode === 'dark' 
@@ -324,6 +325,13 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
 
   const handlePlaceOrder = async () => {
     if (!buyer) {
+      // Save order state to localStorage before showing guest modal
+      localStorage.setItem('fast_order_pending', JSON.stringify({
+        categoryId: selectedCategory,
+        serviceId: selectedServiceId,
+        quantity,
+        targetUrl
+      }));
       setShowGuestModal(true);
       return;
     }
@@ -331,10 +339,46 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
     setCurrentStep(5);
   };
 
+  // Restore order state after login/signup
+  useEffect(() => {
+    if (buyer && services.length > 0) {
+      const pending = localStorage.getItem('fast_order_pending');
+      if (pending) {
+        try {
+          const data = JSON.parse(pending);
+          const service = services.find(s => s.id === data.serviceId);
+          if (service) {
+            setSelectedCategory(data.categoryId);
+            setSelectedServiceId(data.serviceId);
+            setQuantity(data.quantity || 1000);
+            setTargetUrl(data.targetUrl || '');
+            // Continue to payment step
+            setCurrentStep(5);
+          }
+          localStorage.removeItem('fast_order_pending');
+        } catch (e) {
+          console.error('Failed to restore order state:', e);
+          localStorage.removeItem('fast_order_pending');
+        }
+      }
+    }
+  }, [buyer, services]);
+
   // Process payment and create order
   const handleProcessPayment = async () => {
-    if (!buyer || !selectedService) {
-      toast({ title: "Error", description: "Please complete previous steps", variant: "destructive" });
+    if (!buyer) {
+      toast({ title: "Error", description: "Please login first", variant: "destructive" });
+      setShowGuestModal(true);
+      return;
+    }
+    
+    if (!selectedService) {
+      toast({ 
+        title: "Service Not Available", 
+        description: "Please select a service again",
+        variant: "destructive" 
+      });
+      setCurrentStep(2);
       return;
     }
 
@@ -480,7 +524,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
       <section className="flex-1 p-4 lg:p-8" id="fast-order">
         <div className="max-w-3xl mx-auto h-full">
           <Card className={cn("border rounded-3xl overflow-hidden", cardBg)}>
-            <CardContent className="p-4 md:p-6 lg:p-8">
+            <CardContent className="p-3 sm:p-4 md:p-6 lg:p-8">
               {/* Back Button - Visible after step 1, hidden on step 6 (tracking) */}
               {currentStep > 1 && currentStep < 6 && (
                 <motion.div
@@ -527,10 +571,16 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                       )}>
                         Step 1 of 6
                       </Badge>
-                      <h3 className="text-2xl font-bold mb-2 tracking-tight" style={{ color: textColor }}>
+                      <h3 className={cn(
+                        "text-xl sm:text-2xl font-bold mb-2 tracking-tight",
+                        themeMode === 'dark' ? 'text-foreground' : 'text-gray-900'
+                      )}>
                         Select a Platform
                       </h3>
-                      <p className="text-sm" style={{ color: textMuted }}>
+                      <p className={cn(
+                        "text-sm",
+                        themeMode === 'dark' ? 'text-muted-foreground' : 'text-gray-600'
+                      )}>
                         Choose the platform you want to boost
                       </p>
                     </div>
@@ -571,10 +621,16 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                               <CategoryIcon className="w-6 h-6 text-white" size={24} />
                             </div>
                             <div className="text-center relative">
-                              <span className="text-sm font-semibold capitalize block tracking-tight" style={{ color: textColor }}>
+                              <span className={cn(
+                                "text-sm font-semibold capitalize block tracking-tight",
+                                themeMode === 'dark' ? 'text-foreground' : 'text-gray-900'
+                              )}>
                                 {category}
                               </span>
-                              <span className="text-xs" style={{ color: textMuted }}>
+                              <span className={cn(
+                                "text-xs",
+                                themeMode === 'dark' ? 'text-muted-foreground' : 'text-gray-600'
+                              )}>
                                 {serviceCount} service{serviceCount !== 1 ? 's' : ''}
                               </span>
                             </div>
@@ -614,25 +670,31 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                         </div>
                       )}
                       
-                      <h3 className="text-2xl font-bold mb-2 tracking-tight" style={{ color: textColor }}>
+                      <h3 className={cn(
+                        "text-xl sm:text-2xl font-bold mb-2 tracking-tight",
+                        themeMode === 'dark' ? 'text-foreground' : 'text-gray-900'
+                      )}>
                         Choose a Service
                       </h3>
-                      <p className="text-sm" style={{ color: textMuted }}>
+                      <p className={cn(
+                        "text-sm",
+                        themeMode === 'dark' ? 'text-muted-foreground' : 'text-gray-600'
+                      )}>
                         {categoryServices.length} services available
                       </p>
                     </div>
                     
                     <Select value={selectedServiceId} onValueChange={handleServiceSelect}>
-                      <SelectTrigger className={cn("h-14 text-left rounded-xl", inputBg)}>
+                      <SelectTrigger className={cn("h-12 sm:h-14 text-left rounded-xl", inputBg)}>
                         <SelectValue placeholder="Select a service..." />
                       </SelectTrigger>
-                      <SelectContent className="max-h-80">
+                      <SelectContent className="max-h-[60vh] bg-background border shadow-lg z-50">
                         {categoryServices.map((service) => (
                           <SelectItem key={service.id} value={service.id} className="py-3">
-                            <div className="flex flex-col">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium">{service.name}</span>
-                                <Badge variant="secondary" className="text-[9px] font-mono px-1 py-0 h-4">
+                            <div className="flex flex-col max-w-[280px] sm:max-w-none">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-medium text-sm truncate">{service.name}</span>
+                                <Badge variant="secondary" className="text-[9px] font-mono px-1 py-0 h-4 shrink-0">
                                   ID: {service.provider_service_id || service.id?.slice(0, 6)}
                                 </Badge>
                               </div>
@@ -726,17 +788,23 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                         </div>
                       )}
                       
-                      <h3 className="text-2xl font-bold mb-2 tracking-tight" style={{ color: textColor }}>
+                      <h3 className={cn(
+                        "text-xl sm:text-2xl font-bold mb-2 tracking-tight",
+                        themeMode === 'dark' ? 'text-foreground' : 'text-gray-900'
+                      )}>
                         Order Details
                       </h3>
-                      <p className="text-sm truncate max-w-xs mx-auto" style={{ color: textMuted }}>
+                      <p className={cn(
+                        "text-sm truncate max-w-xs mx-auto",
+                        themeMode === 'dark' ? 'text-muted-foreground' : 'text-gray-600'
+                      )}>
                         {selectedService?.name}
                       </p>
                     </div>
                     
                     {/* Target URL */}
                     <div className="space-y-2">
-                      <Label className="font-semibold" style={{ color: textColor }}>Link / Username *</Label>
+                      <Label className={cn("font-semibold", themeMode === 'dark' ? 'text-foreground' : 'text-gray-900')}>Link / Username *</Label>
                       <Input
                         placeholder="https://instagram.com/yourprofile"
                         value={targetUrl}
@@ -747,7 +815,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
 
                     {/* Quantity */}
                     <div className="space-y-2">
-                      <Label className="font-semibold" style={{ color: textColor }}>Quantity</Label>
+                      <Label className={cn("font-semibold", themeMode === 'dark' ? 'text-foreground' : 'text-gray-900')}>Quantity</Label>
                       <div className="flex flex-wrap gap-2 mb-2">
                         {quantityPresets.map((preset) => (
                           <Button
@@ -789,14 +857,17 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                     )}>
                       <div className="flex justify-between items-center">
                         <div>
-                          <span className="text-xs uppercase tracking-wider font-semibold" style={{ color: textMuted }}>
+                          <span className={cn(
+                            "text-xs uppercase tracking-wider font-semibold",
+                            themeMode === 'dark' ? 'text-muted-foreground' : 'text-gray-500'
+                          )}>
                             Estimated Total
                           </span>
                           <div className="flex items-baseline gap-1 mt-1">
-                            <span className="text-3xl font-bold tabular-nums text-blue-500">
+                            <span className="text-2xl sm:text-3xl font-bold tabular-nums text-blue-500">
                               ${totalPrice.toFixed(2)}
                             </span>
-                            <span className="text-sm" style={{ color: textMuted }}>USD</span>
+                            <span className={cn("text-sm", themeMode === 'dark' ? 'text-muted-foreground' : 'text-gray-500')}>USD</span>
                           </div>
                         </div>
                         <Sparkles className={cn(
@@ -838,10 +909,16 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                       )}>
                         Step 4 of 6
                       </Badge>
-                      <h3 className="text-2xl font-bold mb-2 tracking-tight" style={{ color: textColor }}>
+                      <h3 className={cn(
+                        "text-xl sm:text-2xl font-bold mb-2 tracking-tight",
+                        themeMode === 'dark' ? 'text-foreground' : 'text-gray-900'
+                      )}>
                         Review Your Order
                       </h3>
-                      <p className="text-sm" style={{ color: textMuted }}>
+                      <p className={cn(
+                        "text-sm",
+                        themeMode === 'dark' ? 'text-muted-foreground' : 'text-gray-600'
+                      )}>
                         Confirm your order details
                       </p>
                     </div>
@@ -1114,7 +1191,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
 
       {/* Guest Signup Modal */}
       <Dialog open={showGuestModal} onOpenChange={handleModalClose}>
-        <DialogContent className="max-w-[95vw] sm:max-w-md overflow-hidden p-4 sm:p-6">
+        <DialogContent className="max-w-[92vw] sm:max-w-md w-full overflow-hidden p-3 sm:p-6 mx-2 sm:mx-auto">
           {/* Modal Progress Indicator - Compact on mobile */}
           <div className="flex items-center justify-center gap-1.5 sm:gap-2 mb-2">
             <div className={cn(

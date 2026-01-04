@@ -471,8 +471,8 @@ const BuyerNewOrder = () => {
           </div>
         </div>
 
-        {/* Two Column Layout */}
-        <div className="grid lg:grid-cols-3 gap-6">
+        {/* Two Column Layout - Stack on mobile */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
           {/* Main Order Form - Left Column */}
           <div className="lg:col-span-2 space-y-6">
             <Card className="overflow-hidden border-0 shadow-lg">
@@ -482,7 +482,7 @@ const BuyerNewOrder = () => {
                   Order Details
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-6 space-y-6">
+              <CardContent className="p-4 md:p-6 space-y-4 md:space-y-6">
                 {/* TIER 1: Network Selection */}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium flex items-center gap-2">
@@ -490,10 +490,10 @@ const BuyerNewOrder = () => {
                     Network
                   </Label>
                   <Select value={selectedNetwork} onValueChange={handleNetworkChange}>
-                    <SelectTrigger className="h-14 bg-background/50 border-2 hover:border-primary/50 transition-colors">
+                    <SelectTrigger className="h-12 sm:h-14 bg-background/50 border-2 hover:border-primary/50 transition-colors">
                       <SelectValue placeholder="Select a network (e.g., Instagram, Facebook)" />
                     </SelectTrigger>
-                    <SelectContent className="max-h-[300px]">
+                    <SelectContent className="max-h-[60vh] overflow-y-auto bg-background border shadow-lg z-50">
                       {networks.map((network) => {
                         const NetworkIcon = network.icon;
                         return (
@@ -528,12 +528,12 @@ const BuyerNewOrder = () => {
                     disabled={!selectedNetwork}
                   >
                     <SelectTrigger className={cn(
-                      "h-14 bg-background/50 border-2 transition-colors",
+                      "h-12 sm:h-14 bg-background/50 border-2 transition-colors",
                       selectedNetwork ? "hover:border-primary/50" : "opacity-60"
                     )}>
                       <SelectValue placeholder={selectedNetwork ? "Select a category (e.g., Followers, Likes)" : "Select a network first"} />
                     </SelectTrigger>
-                    <SelectContent className="max-h-[300px]">
+                    <SelectContent className="max-h-[60vh] overflow-y-auto bg-background border shadow-lg z-50">
                       {categories.map((category) => {
                         const CategoryIcon = category.icon;
                         return (
@@ -569,12 +569,12 @@ const BuyerNewOrder = () => {
                     disabled={!selectedCategory}
                   >
                     <SelectTrigger className={cn(
-                      "h-14 bg-background/50 border-2 transition-colors",
+                      "h-12 sm:h-14 bg-background/50 border-2 transition-colors",
                       selectedCategory ? "hover:border-primary/50" : "opacity-60"
                     )}>
                       <SelectValue placeholder={selectedCategory ? "Select a service" : "Select a category first"} />
                     </SelectTrigger>
-                    <SelectContent className="max-h-[300px]">
+                    <SelectContent className="max-h-[60vh] overflow-y-auto bg-background border shadow-lg z-50">
                       {filteredServices.map((service: any) => {
                         const price = getEffectivePrice(service);
                         const serviceType = detectServiceType(service.name);
@@ -589,25 +589,25 @@ const BuyerNewOrder = () => {
                                 <ServiceTypeIcon className="w-3 h-3 text-white" />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium text-sm truncate block max-w-[160px]">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-medium text-sm truncate block max-w-[140px] sm:max-w-[200px]">
                                     {service.name}
                                   </span>
                                   <Badge variant="secondary" className="text-[10px] font-mono px-1 py-0 h-4 shrink-0">
                                     ID: {service.provider_service_id || service.id?.slice(0, 6)}
                                   </Badge>
                                 </div>
-                                <div className="flex items-center gap-2 mt-0.5">
+                                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                                   <span className="text-xs text-muted-foreground">
                                     Min: {(service.min_quantity || 100).toLocaleString()}
                                   </span>
-                                  <span className="text-xs text-muted-foreground">•</span>
-                                  <span className="text-xs text-muted-foreground">
+                                  <span className="text-xs text-muted-foreground hidden sm:inline">•</span>
+                                  <span className="text-xs text-muted-foreground hidden sm:inline">
                                     Max: {(service.max_quantity || 10000).toLocaleString()}
                                   </span>
                                 </div>
                               </div>
-                              <Badge variant="outline" className="shrink-0 font-mono">
+                              <Badge variant="outline" className="shrink-0 font-mono text-xs">
                                 {formatPrice(price)}/1k
                               </Badge>
                             </div>
@@ -756,7 +756,7 @@ const BuyerNewOrder = () => {
 
           {/* Right Column - Price Summary */}
           <div className="space-y-6">
-            <Card className="sticky top-4 overflow-hidden border-0 shadow-lg">
+            <Card className="sticky top-20 overflow-hidden border-0 shadow-lg max-h-[calc(100vh-6rem)] overflow-y-auto">
               <CardHeader className="bg-gradient-to-br from-primary/10 to-primary/5 border-b">
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <Sparkles className="w-5 h-5 text-primary" />
