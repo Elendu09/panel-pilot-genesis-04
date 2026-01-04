@@ -611,13 +611,27 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
   const getCardPosition = () => {
     const position = getPosition();
     
-    // FIRST STEP (welcome): Always center on all devices
-    if (currentStep === 0 || position === "center") {
+    // FIRST STEP (welcome): ALWAYS center on ALL devices - this takes priority
+    if (currentStep === 0) {
       return { 
         position: "fixed" as const,
         top: "50%",
         left: "50%",
-        transform: "translate(-50%, -50%)"
+        transform: "translate(-50%, -50%)",
+        maxWidth: isMobile ? "calc(100vw - 32px)" : undefined,
+        width: isMobile ? "auto" : undefined,
+      };
+    }
+    
+    // Center position - also always centered on all devices
+    if (position === "center") {
+      return { 
+        position: "fixed" as const,
+        top: "50%",
+        left: "50%",
+        transform: "translate(-50%, -50%)",
+        maxWidth: isMobile ? "calc(100vw - 32px)" : undefined,
+        width: isMobile ? "auto" : undefined,
       };
     }
     
@@ -636,9 +650,10 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
       return {
         position: "fixed" as const,
         top: "50%",
-        left: 16,
-        right: 16,
-        transform: "translateY(-50%)",
+        left: "50%",
+        transform: "translate(-50%, -50%)",
+        maxWidth: "calc(100vw - 32px)",
+        width: "auto",
       };
     }
 

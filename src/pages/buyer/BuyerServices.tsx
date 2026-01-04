@@ -293,7 +293,7 @@ const BuyerServices = () => {
                     whileTap={{ scale: 0.98 }}
                     onClick={() => setSelectedCategory(platform.id)}
                     className={cn(
-                      "flex items-center gap-2 px-4 py-2.5 rounded-full border transition-all shrink-0",
+                      "flex items-center gap-1.5 sm:gap-2 px-3 py-2 sm:px-4 sm:py-2.5 rounded-full border transition-all shrink-0",
                       isActive
                         ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20"
                         : "bg-card hover:bg-accent border-border/50"
@@ -326,7 +326,7 @@ const BuyerServices = () => {
         </div>
 
         {/* Services - Carousel Layout per Category */}
-        <div className="space-y-8 pb-32 md:pb-24">
+        <div className="space-y-8 pb-36 md:pb-24">
           {loading ? (
             <div className="space-y-6">
               {[1, 2, 3].map(i => (
@@ -404,7 +404,7 @@ const BuyerServices = () => {
                           const serviceType = detectServiceType(service.name);
 
                           return (
-                            <CarouselItem key={service.id} className="pl-2 md:pl-3 basis-[280px] md:basis-[320px]">
+                            <CarouselItem key={service.id} className="pl-2 md:pl-3 basis-[240px] sm:basis-[260px] md:basis-[320px]">
                               <motion.div
                                 whileHover={{ scale: 1.02 }}
                                 whileTap={{ scale: 0.98 }}
