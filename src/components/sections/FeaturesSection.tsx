@@ -4,19 +4,19 @@ import {
   Droplets, 
   Zap,
   QrCode,
-  Languages,
-  Flag,
   Shield,
   TrendingUp,
   Headphones,
-  Gift,
   Building2
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { PayPalIcon, StripeIcon, BitcoinIcon, RazorpayIcon } from "@/components/payment/PaymentIcons";
 import { BackgroundEffects } from "@/components/effects/BackgroundEffects";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export const FeaturesSection = () => {
+  const { t } = useLanguage();
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -54,6 +54,13 @@ export const FeaturesSection = () => {
     }
   };
 
+  const bottomFeatures = [
+    { icon: QrCode, title: t('features.promo.title'), desc: t('features.promo.desc'), gradient: "from-blue-500 to-cyan-500" },
+    { icon: MessageSquare, title: t('features.popup.title'), desc: t('features.popup.desc'), gradient: "from-purple-500 to-pink-500" },
+    { icon: Droplets, title: t('features.drip.title'), desc: t('features.drip.desc'), gradient: "from-green-500 to-emerald-500" },
+    { icon: Zap, title: t('features.integrations.title'), desc: t('features.integrations.desc'), gradient: "from-amber-500 to-orange-500" },
+  ];
+
   return (
     <section className="py-24 bg-background relative overflow-hidden">
       {/* Grid, Bubbles & Particles */}
@@ -72,7 +79,7 @@ export const FeaturesSection = () => {
           className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-6"
         >
           <Zap className="w-4 h-4 text-primary" />
-          <span className="text-sm font-medium text-primary">Powerful Features</span>
+          <span className="text-sm font-medium text-primary">{t('features.badge')}</span>
         </motion.div>
 
         <motion.h2 
@@ -83,7 +90,7 @@ export const FeaturesSection = () => {
           transition={{ delay: 0.1 }}
         >
           <span className="bg-gradient-primary bg-clip-text text-transparent">
-            No code solution
+            {t('features.title')}
           </span>
         </motion.h2>
       </div>
@@ -115,8 +122,8 @@ export const FeaturesSection = () => {
               >
                 200+
               </motion.div>
-              <h3 className="text-xl font-semibold mb-2 group-hover:text-primary transition-colors">Payment systems</h3>
-              <p className="text-muted-foreground">for every country</p>
+              <h3 className="text-xl font-semibold mb-2 group-hover:text-primary transition-colors">{t('features.payment.title')}</h3>
+              <p className="text-muted-foreground">{t('features.payment.subtitle')}</p>
             </div>
             <div className="space-y-3 relative z-10">
               {[
@@ -152,7 +159,7 @@ export const FeaturesSection = () => {
                 </motion.div>
               ))}
               <p className="text-center text-primary/70 text-sm mt-6 font-medium group-hover:text-primary transition-colors">
-                and much more...
+                {t('features.payment.more')}
               </p>
             </div>
           </motion.div>
@@ -183,8 +190,8 @@ export const FeaturesSection = () => {
             </div>
             
             <div className="text-center relative z-10">
-              <h3 className="text-xl font-semibold mb-2 bg-gradient-primary bg-clip-text text-transparent">Easy start</h3>
-              <p className="text-muted-foreground mb-8">to run own panel</p>
+              <h3 className="text-xl font-semibold mb-2 bg-gradient-primary bg-clip-text text-transparent">{t('features.easy.title')}</h3>
+              <p className="text-muted-foreground mb-8">{t('features.easy.subtitle')}</p>
             </div>
             
             {/* Enhanced Dashboard Visual */}
@@ -253,8 +260,8 @@ export const FeaturesSection = () => {
               >
                 20+
               </motion.div>
-              <h3 className="text-xl font-semibold mb-2 group-hover:text-primary transition-colors">Language</h3>
-              <p className="text-muted-foreground">localizations</p>
+              <h3 className="text-xl font-semibold mb-2 group-hover:text-primary transition-colors">{t('features.language.title')}</h3>
+              <p className="text-muted-foreground">{t('features.language.subtitle')}</p>
             </div>
             <div className="grid grid-cols-5 gap-3 relative z-10">
               {[
@@ -291,12 +298,7 @@ export const FeaturesSection = () => {
           whileInView="visible"
           viewport={{ once: true, margin: "-50px" }}
         >
-          {[
-            { icon: QrCode, title: "Promocode", desc: "Create promo codes to attract new users or retain old ones", gradient: "from-blue-500 to-cyan-500" },
-            { icon: MessageSquare, title: "Pop-up messages", desc: "Notify your users and keep in touch with them", gradient: "from-purple-500 to-pink-500" },
-            { icon: Droplets, title: "Drip Feed", desc: "Raise social engagement at the desired speed", gradient: "from-green-500 to-emerald-500" },
-            { icon: Zap, title: "Integrations", desc: "We have a bunch of integrations to fit in your panel", gradient: "from-amber-500 to-orange-500" },
-          ].map((feature, index) => (
+          {bottomFeatures.map((feature, index) => (
             <motion.div
               key={feature.title}
               variants={featureCardVariants}

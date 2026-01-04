@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { platformTranslations } from '@/lib/platform-translations';
 
 export type Language = 'en' | 'es' | 'pt' | 'ar' | 'tr' | 'ru' | 'fr' | 'de' | 'zh' | 'hi';
 
@@ -10,6 +11,11 @@ interface LanguageContextType {
 }
 
 export const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
+
+// Merge platform translations with existing translations
+const mergeTranslations = (base: Record<string, string>, platform: Record<string, string> | undefined) => {
+  return { ...base, ...(platform || {}) };
+};
 
 // Comprehensive translation dictionaries
 const translations: Record<Language, Record<string, string>> = {
@@ -1668,7 +1674,11 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const t = (key: string, params?: Record<string, string | number>): string => {
-    let text = translations[language][key] || translations.en[key] || key;
+    // Check merged translations (including platform translations)
+    const mergedCurrent = mergeTranslations(translations[language], platformTranslations[language]);
+    const mergedEn = mergeTranslations(translations.en, platformTranslations.en);
+    
+    let text = mergedCurrent[key] || mergedEn[key] || key;
     
     // Replace parameters like {name} with actual values
     if (params) {
