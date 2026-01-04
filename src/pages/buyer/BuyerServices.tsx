@@ -7,16 +7,21 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { 
   Search,
   ArrowLeft,
-  Globe,
   Zap,
   ChevronRight,
-  ChevronLeft,
   LayoutDashboard,
   Filter,
   Package,
   ShoppingCart as ShoppingCartIcon,
   Star,
-  Heart
+  Heart,
+  TrendingUp,
+  Clock,
+  DollarSign,
+  Sparkles,
+  Eye,
+  Wallet,
+  Award
 } from "lucide-react";
 import { SOCIAL_ICONS_MAP } from "@/components/icons/SocialIcons";
 import { motion, AnimatePresence } from "framer-motion";
@@ -33,8 +38,9 @@ import { LanguageSelector } from "@/components/buyer/LanguageSelector";
 import { CurrencySelector } from "@/components/buyer/CurrencySelector";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useBuyerRealtimeOrders } from "@/hooks/use-buyer-realtime-orders";
-import { detectServiceType, getSubCategory } from "@/lib/service-icon-detection";
+import { detectServiceType } from "@/lib/service-icon-detection";
 import { useBuyerCart } from "@/hooks/use-buyer-cart";
+import { ServiceInfoPanel } from "@/components/buyer/ServiceInfoPanel";
 import {
   Carousel,
   CarouselContent,
@@ -83,6 +89,10 @@ const BuyerServices = () => {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [customPrices, setCustomPrices] = useState<Map<string, number>>(new Map());
   const [fastOrderApplied, setFastOrderApplied] = useState(false);
+  const [selectedService, setSelectedService] = useState<any>(null);
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [recentOrders, setRecentOrders] = useState<any[]>([]);
+  const [orderStats, setOrderStats] = useState({ total: 0, pending: 0, completed: 0 });
 
   // Real-time order tracking
   useBuyerRealtimeOrders(buyer?.id, panel?.id);
@@ -140,6 +150,52 @@ const BuyerServices = () => {
       fetchCustomPrices();
     }
   }, [buyer?.id, panel?.id, services]);
+
+  // Fetch favorites for authenticated users
+  useEffect(() => {
+    const fetchFavorites = async () => {
+      if (!buyer?.id || !panel?.id) return;
+      
+      const { data } = await supabase
+        .from('buyer_favorites')
+        .select('service_id')
+        .eq('buyer_id', buyer.id)
+        .eq('panel_id', panel.id);
+      
+      if (data) {
+        setFavorites(new Set(data.map(f => f.service_id)));
+      }
+    };
+    
+    fetchFavorites();
+  }, [buyer?.id, panel?.id]);
+
+  // Fetch recent orders and stats for authenticated users
+  useEffect(() => {
+    const fetchOrderData = async () => {
+      if (!buyer?.id || !panel?.id) return;
+      
+      // Fetch recent orders
+      const { data: orders } = await supabase
+        .from('orders')
+        .select('id, order_number, status, price, quantity, created_at, service:services(name, category)')
+        .eq('panel_id', panel.id)
+        .eq('buyer_id', buyer.id)
+        .order('created_at', { ascending: false })
+        .limit(5);
+      
+      if (orders) {
+        setRecentOrders(orders);
+        setOrderStats({
+          total: orders.length,
+          pending: orders.filter(o => ['pending', 'processing', 'in_progress'].includes(o.status)).length,
+          completed: orders.filter(o => o.status === 'completed').length
+        });
+      }
+    };
+    
+    fetchOrderData();
+  }, [buyer?.id, panel?.id]);
 
   // Handle Fast Order URL parameters
   useEffect(() => {
@@ -262,6 +318,104 @@ const BuyerServices = () => {
             </div>
           </div>
         </div>
+
+        {/* Authenticated User Widgets */}
+        {buyer && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 py-4">
+            {/* Balance Widget */}
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl p-3 border border-primary/20"
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <Wallet className="w-4 h-4 text-primary" />
+                <span className="text-xs text-muted-foreground">Balance</span>
+              </div>
+              <p className="text-lg font-bold">{formatPrice(buyer.balance || 0)}</p>
+            </motion.div>
+
+            {/* Total Services Widget */}
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              className="bg-gradient-to-br from-blue-500/10 to-blue-500/5 rounded-xl p-3 border border-blue-500/20"
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <Package className="w-4 h-4 text-blue-500" />
+                <span className="text-xs text-muted-foreground">Services</span>
+              </div>
+              <p className="text-lg font-bold">{services.length.toLocaleString()}</p>
+            </motion.div>
+
+            {/* Favorites Widget */}
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              className="bg-gradient-to-br from-pink-500/10 to-pink-500/5 rounded-xl p-3 border border-pink-500/20 cursor-pointer"
+              onClick={() => navigate('/favorites')}
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <Heart className="w-4 h-4 text-pink-500" />
+                <span className="text-xs text-muted-foreground">Favorites</span>
+              </div>
+              <p className="text-lg font-bold">{favorites.size}</p>
+            </motion.div>
+
+            {/* Orders Widget */}
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              className="bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 rounded-xl p-3 border border-emerald-500/20 cursor-pointer"
+              onClick={() => navigate('/orders')}
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <TrendingUp className="w-4 h-4 text-emerald-500" />
+                <span className="text-xs text-muted-foreground">Orders</span>
+              </div>
+              <p className="text-lg font-bold">{orderStats.total}</p>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Quick Actions for Auth Users */}
+        {buyer && (
+          <div className="flex gap-2 overflow-x-auto pb-4 -mx-4 px-4 md:mx-0 md:px-0 scrollbar-hide">
+            <Button
+              variant="outline"
+              size="sm"
+              className="shrink-0 gap-2 border-primary/30 bg-primary/5"
+              onClick={() => navigate('/new-order')}
+            >
+              <Zap className="w-4 h-4 text-primary" />
+              Quick Order
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="shrink-0 gap-2"
+              onClick={() => navigate('/favorites')}
+            >
+              <Heart className="w-4 h-4 text-pink-500" />
+              My Favorites
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="shrink-0 gap-2"
+              onClick={() => navigate('/orders')}
+            >
+              <Clock className="w-4 h-4" />
+              Order History
+            </Button>
+            {buyer.is_vip && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="shrink-0 gap-2 border-amber-500/30 bg-amber-500/5"
+              >
+                <Award className="w-4 h-4 text-amber-500" />
+                VIP Prices
+              </Button>
+            )}
+          </div>
+        )}
 
         {/* Search Bar */}
         <div className="py-4">
@@ -409,9 +563,15 @@ const BuyerServices = () => {
                                 whileHover={{ scale: 1.02 }}
                                 whileTap={{ scale: 0.98 }}
                               >
-                                <Card className="bg-card border-border/50 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 transition-all h-full">
+                                <Card 
+                                  className={cn(
+                                    "bg-card border-border/50 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 transition-all h-full cursor-pointer",
+                                    selectedService?.id === service.id && "border-primary ring-2 ring-primary/20"
+                                  )}
+                                  onClick={() => setSelectedService(service)}
+                                >
                                   <CardContent className="p-4">
-                                    {/* Service Type & Price */}
+                                    {/* Header with Favorite */}
                                     <div className="flex items-center justify-between gap-2 mb-3">
                                       <Badge 
                                         variant="outline" 
@@ -423,20 +583,13 @@ const BuyerServices = () => {
                                         {serviceType.charAt(0).toUpperCase() + serviceType.slice(1)}
                                       </Badge>
                                       <div className="flex items-center gap-1.5">
+                                        {favorites.has(service.id) && (
+                                          <Heart className="w-3.5 h-3.5 text-pink-500 fill-pink-500" />
+                                        )}
                                         {isInstant && (
                                           <Badge className="text-[10px] bg-amber-500/10 text-amber-600 border-amber-500/20">
                                             <Zap className="w-2.5 h-2.5 mr-0.5" />
                                             Instant
-                                          </Badge>
-                                        )}
-                                        {service.refill_available && (
-                                          <Badge className="text-[10px] bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
-                                            ♻️ Refill
-                                          </Badge>
-                                        )}
-                                        {service.cancel_available && (
-                                          <Badge className="text-[10px] bg-rose-500/10 text-rose-600 border-rose-500/20">
-                                            ❌ Cancel
                                           </Badge>
                                         )}
                                         {hasCustomPrice && (
@@ -453,9 +606,9 @@ const BuyerServices = () => {
                                       <Badge variant="secondary" className="text-[9px] font-mono px-1 py-0 h-4">
                                         ID: {service.provider_service_id || service.id?.slice(0, 6)}
                                       </Badge>
-                                      {service.service_type && service.service_type !== 'default' && (
-                                        <Badge variant="outline" className="text-[9px] px-1 py-0 h-4">
-                                          {service.service_type}
+                                      {service.refill_available && (
+                                        <Badge className="text-[9px] bg-emerald-500/10 text-emerald-600 border-emerald-500/20 px-1 py-0 h-4">
+                                          ♻️
                                         </Badge>
                                       )}
                                     </div>
@@ -477,14 +630,30 @@ const BuyerServices = () => {
                                       </Badge>
                                     </div>
 
-                                    {/* Order Button */}
-                                    <Button
-                                      className="w-full h-9 text-sm font-medium gap-2"
-                                      onClick={() => navigate(`/new-order?service=${service.id}`)}
-                                    >
-                                      {t('services.order_now') || 'Order Now'}
-                                      <ChevronRight className="w-4 h-4" />
-                                    </Button>
+                                    {/* Actions */}
+                                    <div className="flex gap-2">
+                                      <Button
+                                        className="flex-1 h-9 text-sm font-medium gap-2"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          navigate(`/new-order?service=${service.id}`);
+                                        }}
+                                      >
+                                        {t('services.order_now') || 'Order Now'}
+                                        <ChevronRight className="w-4 h-4" />
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        size="icon"
+                                        className="h-9 w-9 shrink-0"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setSelectedService(service);
+                                        }}
+                                      >
+                                        <Eye className="w-4 h-4" />
+                                      </Button>
+                                    </div>
                                   </CardContent>
                                 </Card>
                               </motion.div>
@@ -502,6 +671,78 @@ const BuyerServices = () => {
           )}
         </div>
       </div>
+
+      {/* Service Info Panel - Desktop Sidebar */}
+      {buyer && selectedService && (
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="hidden lg:block fixed right-6 top-24 w-80 z-20"
+        >
+          <ServiceInfoPanel 
+            service={selectedService} 
+            showFavorite={true}
+          />
+          <div className="mt-3 space-y-2">
+            <Button
+              className="w-full gap-2"
+              onClick={() => navigate(`/new-order?service=${selectedService.id}`)}
+            >
+              <Zap className="w-4 h-4" />
+              Order This Service
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full gap-2"
+              onClick={() => setSelectedService(null)}
+            >
+              Close Panel
+            </Button>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Mobile Service Info Sheet */}
+      {buyer && selectedService && (
+        <motion.div
+          initial={{ opacity: 0, y: 100 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 100 }}
+          className="lg:hidden fixed bottom-20 left-4 right-4 z-20 bg-background border border-border rounded-xl shadow-2xl p-4"
+        >
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <div className="flex-1 min-w-0">
+              <Badge variant="secondary" className="text-[9px] font-mono mb-1">
+                ID: {selectedService.provider_service_id || selectedService.id?.slice(0, 6)}
+              </Badge>
+              <h3 className="font-semibold text-sm line-clamp-2">{selectedService.name}</h3>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="shrink-0 h-8 w-8"
+              onClick={() => setSelectedService(null)}
+            >
+              ×
+            </Button>
+          </div>
+          <div className="flex items-center gap-3 mb-3">
+            <Badge variant="secondary" className="font-mono">
+              {formatPrice(getEffectivePrice(selectedService))}/1K
+            </Badge>
+            <span className="text-xs text-muted-foreground">
+              {selectedService.min_quantity?.toLocaleString() || 100} - {selectedService.max_quantity?.toLocaleString() || '10K'}
+            </span>
+          </div>
+          <Button
+            className="w-full gap-2"
+            onClick={() => navigate(`/new-order?service=${selectedService.id}`)}
+          >
+            <Zap className="w-4 h-4" />
+            Order Now
+          </Button>
+        </motion.div>
+      )}
 
       {/* Bottom Navigation for authenticated users only */}
       {buyer && (
