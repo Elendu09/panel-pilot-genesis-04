@@ -34,29 +34,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
-
-// Platform icon mapping
-const platformIcons: Record<string, React.ElementType> = {
-  instagram: Instagram,
-  tiktok: Music,
-  youtube: Youtube,
-  telegram: Send,
-  twitter: Twitter,
-  linkedin: Linkedin,
-  facebook: Facebook,
-  other: Globe,
-};
-
-const platformColors: Record<string, string> = {
-  instagram: "from-pink-500 to-purple-500",
-  tiktok: "from-cyan-400 to-pink-500",
-  youtube: "from-red-500 to-red-600",
-  telegram: "from-blue-400 to-blue-600",
-  twitter: "from-sky-400 to-blue-500",
-  linkedin: "from-blue-600 to-blue-700",
-  facebook: "from-blue-500 to-blue-600",
-  other: "from-gray-500 to-gray-600",
-};
+import { SOCIAL_ICONS_MAP } from "@/components/icons/SocialIcons";
 
 const BuyerPublicServices = () => {
   const { panelId, buyer } = useBuyerAuth();
@@ -127,10 +105,15 @@ const BuyerPublicServices = () => {
     }
   }, [services, searchParams, setSearchParams, t]);
 
-  // Get unique categories
+  // Get unique categories with counts and icons from SOCIAL_ICONS_MAP
   const categories = useMemo(() => {
-    const cats = [...new Set(services.map((s: any) => s.category))];
-    return cats.sort();
+    const cats = [...new Set(services.map((s: any) => s.category).filter(Boolean))];
+    return cats.sort().map(cat => ({
+      id: cat,
+      name: cat,
+      count: services.filter((s: any) => s.category === cat).length,
+      ...SOCIAL_ICONS_MAP[cat.toLowerCase()] || SOCIAL_ICONS_MAP.other
+    }));
   }, [services]);
 
   // Filter services
@@ -275,32 +258,55 @@ const BuyerPublicServices = () => {
             />
           </div>
 
-          {/* Category Filter Pills */}
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant={selectedCategory === null ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSelectedCategory(null)}
-              className="rounded-full"
-            >
-              <Filter className="w-4 h-4 mr-1" />
-              {t('common.all')}
-            </Button>
-            {categories.map(category => {
-              const Icon = platformIcons[category] || Globe;
-              return (
-                <Button
-                  key={category}
-                  variant={selectedCategory === category ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setSelectedCategory(category)}
-                  className="rounded-full capitalize"
-                >
-                  <Icon className="w-4 h-4 mr-1" />
-                  {category}
-                </Button>
-              );
-            })}
+          {/* Category Filter Pills - Horizontal Scroll with Icons */}
+          <div className="-mx-4 px-4 overflow-x-auto scrollbar-hide">
+            <div className="flex gap-2 pb-2 min-w-max">
+              <Button
+                variant={selectedCategory === null ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedCategory(null)}
+                className="rounded-full shrink-0"
+              >
+                <Filter className="w-4 h-4 mr-1" />
+                {t('common.all')}
+                <Badge variant="secondary" className="ml-1.5 text-[10px] px-1.5 py-0">
+                  {services.length}
+                </Badge>
+              </Button>
+              {categories.map(category => {
+                const CategoryIcon = category.icon || Globe;
+                const isActive = selectedCategory === category.id;
+                return (
+                  <Button
+                    key={category.id}
+                    variant={isActive ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setSelectedCategory(category.id)}
+                    className={cn(
+                      "rounded-full capitalize shrink-0 gap-1.5",
+                      isActive && "shadow-lg"
+                    )}
+                  >
+                    <div className={cn(
+                      "p-1 rounded-md",
+                      isActive ? "bg-white/20" : category.bgColor || "bg-gray-500"
+                    )}>
+                      <CategoryIcon className={cn("w-3 h-3", isActive ? "text-current" : "text-white")} />
+                    </div>
+                    {category.name}
+                    <Badge 
+                      variant="secondary" 
+                      className={cn(
+                        "text-[10px] px-1.5 py-0",
+                        isActive && "bg-white/20 text-current"
+                      )}
+                    >
+                      {category.count}
+                    </Badge>
+                  </Button>
+                );
+              })}
+            </div>
           </div>
         </div>
 
@@ -324,8 +330,8 @@ const BuyerPublicServices = () => {
         ) : (
           <div className="space-y-4">
             {Object.entries(groupedServices).map(([category, categoryServices]) => {
-              const Icon = platformIcons[category] || Globe;
-              const gradient = platformColors[category] || platformColors.other;
+              const categoryData = SOCIAL_ICONS_MAP[category.toLowerCase()] || SOCIAL_ICONS_MAP.other;
+              const CategoryIcon = categoryData.icon;
               const isExpanded = expandedCategories.has(category);
               
               return (
@@ -342,10 +348,10 @@ const BuyerPublicServices = () => {
                       whileTap={{ scale: 0.995 }}
                     >
                       <div className={cn(
-                        "w-10 h-10 rounded-lg bg-gradient-to-br flex items-center justify-center shrink-0",
-                        gradient
+                        "w-10 h-10 rounded-lg flex items-center justify-center shrink-0",
+                        categoryData.bgColor || "bg-gray-500"
                       )}>
-                        <Icon className="w-5 h-5 text-white" />
+                        <CategoryIcon className="w-5 h-5 text-white" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <h2 className="font-semibold capitalize">{category}</h2>

@@ -547,9 +547,9 @@ const BuyerServices = () => {
                         align: "start",
                         loop: false,
                       }}
-                      className="w-full"
+                      className="w-full overflow-hidden"
                     >
-                      <CarouselContent className="-ml-2 md:-ml-3">
+                      <CarouselContent className="-ml-2 md:-ml-3 overflow-visible">
                         {allCategoryServices.slice(0, 10).map((service: any) => {
                           const effectivePrice = getEffectivePrice(service);
                           const hasCustomPrice = customPrices.has(service.id);
@@ -571,31 +571,31 @@ const BuyerServices = () => {
                                   onClick={() => setSelectedService(service)}
                                 >
                                   <CardContent className="p-4">
-                                    {/* Header with Favorite */}
-                                    <div className="flex items-center justify-between gap-2 mb-3">
+                                    {/* Header with Favorite - Mobile responsive */}
+                                    <div className="flex items-center justify-between gap-1.5 mb-3 flex-wrap">
                                       <Badge 
                                         variant="outline" 
                                         className={cn(
-                                          "text-[10px]",
+                                          "text-[10px] shrink-0",
                                           SERVICE_TYPE_COLORS[serviceType] || SERVICE_TYPE_COLORS.general
                                         )}
                                       >
                                         {serviceType.charAt(0).toUpperCase() + serviceType.slice(1)}
                                       </Badge>
-                                      <div className="flex items-center gap-1.5">
+                                      <div className="flex items-center gap-1 flex-wrap">
                                         {favorites.has(service.id) && (
-                                          <Heart className="w-3.5 h-3.5 text-pink-500 fill-pink-500" />
+                                          <Heart className="w-3.5 h-3.5 text-pink-500 fill-pink-500 shrink-0" />
                                         )}
                                         {isInstant && (
-                                          <Badge className="text-[10px] bg-amber-500/10 text-amber-600 border-amber-500/20">
+                                          <Badge className="text-[10px] bg-amber-500/10 text-amber-600 border-amber-500/20 shrink-0">
                                             <Zap className="w-2.5 h-2.5 mr-0.5" />
-                                            Instant
+                                            <span className="hidden sm:inline">Instant</span>
                                           </Badge>
                                         )}
                                         {hasCustomPrice && (
-                                          <Badge className="text-[10px] bg-purple-500/10 text-purple-600 border-purple-500/20">
+                                          <Badge className="text-[10px] bg-purple-500/10 text-purple-600 border-purple-500/20 shrink-0">
                                             <Star className="w-2.5 h-2.5 mr-0.5" />
-                                            VIP
+                                            <span className="hidden sm:inline">VIP</span>
                                           </Badge>
                                         )}
                                       </div>
@@ -630,13 +630,13 @@ const BuyerServices = () => {
                                       </Badge>
                                     </div>
 
-                                    {/* Actions */}
+                                    {/* Actions with View Now button */}
                                     <div className="flex gap-2">
                                       <Button
                                         className="flex-1 h-9 text-sm font-medium gap-2"
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          navigate(`/new-order?service=${service.id}`);
+                                          navigate(`/new-order?service=${service.id}&quantity=${service.min_quantity || 100}`);
                                         }}
                                       >
                                         {t('services.order_now') || 'Order Now'}
@@ -644,14 +644,16 @@ const BuyerServices = () => {
                                       </Button>
                                       <Button
                                         variant="outline"
-                                        size="icon"
-                                        className="h-9 w-9 shrink-0"
+                                        size="sm"
+                                        className="shrink-0 h-9 gap-1"
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          setSelectedService(service);
+                                          // Navigate to new order with pre-filled service
+                                          navigate(`/new-order?service=${service.id}&quantity=${service.min_quantity || 100}`);
                                         }}
                                       >
                                         <Eye className="w-4 h-4" />
+                                        <span className="hidden sm:inline">View</span>
                                       </Button>
                                     </div>
                                   </CardContent>
