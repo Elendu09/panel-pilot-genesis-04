@@ -23,69 +23,135 @@ interface ProviderService {
   min: string | number;
   max: string | number;
   desc?: string;
+  description?: string;
   type?: string;
+  refill?: boolean | string;
+  cancel?: boolean | string;
+  dripfeed?: boolean;
+  average_time?: string;
+}
+
+// Emoji regex to strip emojis from category strings
+const emojiRegex = /[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F000}-\u{1F02F}]|[\u{1F0A0}-\u{1F0FF}]|[\u{1F100}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]|[\u{1FA00}-\u{1FA6F}]|[\u{1FA70}-\u{1FAFF}]|[\u{FE00}-\u{FE0F}]|[\u{1F900}-\u{1F9FF}]/gu;
+
+function cleanCategoryString(input: string): string {
+  if (!input) return '';
+  return input
+    .replace(emojiRegex, '')
+    .replace(/[🔥⭐✨💎🚀💯🎯🌟⚡️💪🏆🎉🎊]/g, '')
+    .replace(/^\d+\.\s*/, '')
+    .replace(/^\[.*?\]\s*/, '')
+    .replace(/^-+\s*/, '')
+    .replace(/\s*-+$/, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 const mapCategory = (category: string, serviceName: string = ''): string => {
-  const input = `${category} ${serviceName}`.toLowerCase();
+  // Clean the inputs first
+  const cleanedCategory = cleanCategoryString(category).toLowerCase();
+  const cleanedName = cleanCategoryString(serviceName).toLowerCase();
+  const input = `${cleanedCategory} ${cleanedName}`;
   
-  // Comprehensive platform detection matching frontend
-  const platforms: [string, string[]][] = [
-    ['instagram', ['instagram', 'insta', 'ig follower', 'ig like', 'ig view', 'reels']],
-    ['facebook', ['facebook', 'fb ', 'fb.com']],
-    ['twitter', ['twitter', 'x.com', 'tweet', 'x follower', 'x like']],
-    ['youtube', ['youtube', 'yt ', 'yt.com', 'shorts', 'youtube short']],
-    ['tiktok', ['tiktok', 'tik tok', 'tt follower', 'tt like']],
-    ['linkedin', ['linkedin', 'linked in']],
-    ['telegram', ['telegram', 'tg ', 'tg.me']],
-    ['threads', ['threads']],
-    ['snapchat', ['snapchat', 'snap ']],
-    ['pinterest', ['pinterest', 'pin ']],
-    ['whatsapp', ['whatsapp', 'whats app']],
-    ['twitch', ['twitch']],
-    ['discord', ['discord']],
-    ['spotify', ['spotify']],
-    ['soundcloud', ['soundcloud', 'sound cloud']],
-    ['audiomack', ['audiomack', 'audio mack']],
-    ['reddit', ['reddit']],
-    ['vk', ['vk.com', 'vkontakte', ' vk ']],
-    ['kick', ['kick.com', ' kick ']],
-    ['rumble', ['rumble']],
-    ['dailymotion', ['dailymotion', 'daily motion']],
-    ['deezer', ['deezer']],
-    ['shazam', ['shazam']],
-    ['tidal', ['tidal']],
-    ['reverbnation', ['reverbnation', 'reverb nation']],
-    ['mixcloud', ['mixcloud', 'mix cloud']],
-    ['quora', ['quora']],
-    ['tumblr', ['tumblr']],
-    ['clubhouse', ['clubhouse', 'club house']],
-    ['likee', ['likee']],
-    ['kwai', ['kwai']],
-    ['trovo', ['trovo']],
-    ['odysee', ['odysee']],
-    ['bilibili', ['bilibili', 'bili bili']],
-    ['lemon8', ['lemon8', 'lemon 8']],
-    ['bereal', ['bereal', 'be real']],
-    ['weibo', ['weibo']],
-    ['line', ['line app', 'line.me']],
-    ['patreon', ['patreon']],
-    ['medium', ['medium.com', ' medium ']],
-    ['roblox', ['roblox']],
-    ['steam', ['steam']],
-    ['applemusic', ['apple music', 'applemusic', 'itunes']],
-    ['amazonmusic', ['amazon music', 'amazonmusic']],
-    ['napster', ['napster']],
-    ['iheart', ['iheart', 'iheartradio']],
+  // Platform patterns with comprehensive keywords
+  const platforms: Array<{ platform: string; keywords: string[] }> = [
+    { platform: 'instagram', keywords: ['instagram', 'insta', 'ig follower', 'ig like', 'ig view', 'ig comment', 'ig save', 'ig reach', 'igtv', 'ig story', 'ig reel', 'reels'] },
+    { platform: 'facebook', keywords: ['facebook', 'fb ', 'fb.com', 'fb like', 'fb follower', 'fb share', 'fb page', 'fb group'] },
+    { platform: 'twitter', keywords: ['twitter', 'x.com', 'tweet', 'x follower', 'x like', 'x retweet', 'x view', 'x impression'] },
+    { platform: 'youtube', keywords: ['youtube', 'yt ', 'yt.com', 'shorts', 'youtube short', 'yt subscriber', 'yt view', 'yt like'] },
+    { platform: 'tiktok', keywords: ['tiktok', 'tik tok', 'tt follower', 'tt like', 'tt view', 'tt share'] },
+    { platform: 'linkedin', keywords: ['linkedin', 'linked in', 'linkedin connection', 'linkedin follower'] },
+    { platform: 'telegram', keywords: ['telegram', 'tg ', 'tg.me', 'tg channel', 'tg group', 'tg member'] },
+    { platform: 'threads', keywords: ['threads', 'thread follower', 'thread like'] },
+    { platform: 'snapchat', keywords: ['snapchat', 'snap ', 'snap score'] },
+    { platform: 'pinterest', keywords: ['pinterest', 'pin ', 'pinterest follower'] },
+    { platform: 'whatsapp', keywords: ['whatsapp', 'whats app', 'wa channel'] },
+    { platform: 'twitch', keywords: ['twitch', 'twitch follower', 'twitch viewer'] },
+    { platform: 'discord', keywords: ['discord', 'discord member', 'discord server'] },
+    { platform: 'spotify', keywords: ['spotify', 'spotify follower', 'spotify stream', 'spotify play'] },
+    { platform: 'soundcloud', keywords: ['soundcloud', 'sound cloud', 'sc play'] },
+    { platform: 'audiomack', keywords: ['audiomack', 'audio mack'] },
+    { platform: 'reddit', keywords: ['reddit', 'reddit upvote', 'subreddit'] },
+    { platform: 'vk', keywords: ['vk.com', 'vkontakte', ' vk '] },
+    { platform: 'kick', keywords: ['kick.com', ' kick ', 'kick follower'] },
+    { platform: 'rumble', keywords: ['rumble'] },
+    { platform: 'dailymotion', keywords: ['dailymotion', 'daily motion'] },
+    { platform: 'deezer', keywords: ['deezer'] },
+    { platform: 'shazam', keywords: ['shazam'] },
+    { platform: 'tidal', keywords: ['tidal'] },
+    { platform: 'reverbnation', keywords: ['reverbnation', 'reverb nation'] },
+    { platform: 'mixcloud', keywords: ['mixcloud', 'mix cloud'] },
+    { platform: 'quora', keywords: ['quora'] },
+    { platform: 'tumblr', keywords: ['tumblr'] },
+    { platform: 'clubhouse', keywords: ['clubhouse', 'club house'] },
+    { platform: 'likee', keywords: ['likee'] },
+    { platform: 'kwai', keywords: ['kwai'] },
+    { platform: 'trovo', keywords: ['trovo'] },
+    { platform: 'odysee', keywords: ['odysee'] },
+    { platform: 'bilibili', keywords: ['bilibili', 'bili bili'] },
+    { platform: 'lemon8', keywords: ['lemon8', 'lemon 8'] },
+    { platform: 'bereal', keywords: ['bereal', 'be real'] },
+    { platform: 'weibo', keywords: ['weibo'] },
+    { platform: 'line', keywords: ['line app', 'line.me'] },
+    { platform: 'patreon', keywords: ['patreon'] },
+    { platform: 'medium', keywords: ['medium.com', ' medium '] },
+    { platform: 'roblox', keywords: ['roblox'] },
+    { platform: 'steam', keywords: ['steam'] },
+    { platform: 'applemusic', keywords: ['apple music', 'applemusic', 'itunes'] },
+    { platform: 'amazonmusic', keywords: ['amazon music', 'amazonmusic'] },
+    { platform: 'napster', keywords: ['napster'] },
+    { platform: 'iheart', keywords: ['iheart', 'iheartradio'] },
+    { platform: 'google', keywords: ['google review', 'google map', 'gmb '] },
+    { platform: 'trustpilot', keywords: ['trustpilot'] },
+    { platform: 'yelp', keywords: ['yelp'] },
+    { platform: 'website', keywords: ['website traffic', 'web traffic', 'seo '] },
   ];
   
-  for (const [platform, keywords] of platforms) {
+  // First check cleaned category for exact platform match
+  for (const { platform, keywords } of platforms) {
+    if (cleanedCategory === platform || cleanedCategory.startsWith(platform + ' ')) {
+      return platform;
+    }
+  }
+  
+  // Then check keywords in category
+  for (const { platform, keywords } of platforms) {
+    if (keywords.some(kw => cleanedCategory.includes(kw))) {
+      return platform;
+    }
+  }
+  
+  // Then check keywords in combined input
+  for (const { platform, keywords } of platforms) {
     if (keywords.some(kw => input.includes(kw))) {
       return platform;
     }
   }
+  
   return 'other';
 };
+
+function parseServiceType(type: string | undefined): string {
+  if (!type) return 'default';
+  const normalized = type.toLowerCase().trim();
+  const typeMap: Record<string, string> = {
+    'default': 'default', '0': 'default',
+    'package': 'package', '1': 'package',
+    'custom_comments': 'custom_comments', '2': 'custom_comments',
+    'custom_comments_package': 'custom_comments_package', '3': 'custom_comments_package',
+    'poll': 'poll', '8': 'poll',
+    'subscriptions': 'subscriptions', '9': 'subscriptions',
+    'drip_feed': 'drip_feed', 'dripfeed': 'drip_feed',
+  };
+  return typeMap[normalized] || 'default';
+}
+
+function parseBooleanField(value: any): boolean {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') return value.toLowerCase() === 'true' || value === '1';
+  if (typeof value === 'number') return value === 1;
+  return false;
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -154,7 +220,7 @@ serve(async (req) => {
 
         const response = await fetch(url.toString(), {
           method: 'GET',
-          headers: { 'User-Agent': 'SMM-Panel/1.0' },
+          headers: { 'User-Agent': 'SMM-Panel/2.0' },
         });
 
         if (!response.ok) {
@@ -165,7 +231,7 @@ serve(async (req) => {
 
         const data = await response.json();
         
-        // Handle both array and object responses
+        // Handle different response formats from various providers
         let providerServices: ProviderService[] = [];
         if (Array.isArray(data)) {
           providerServices = data;
@@ -173,14 +239,18 @@ serve(async (req) => {
           providerServices = data.services;
         } else if (data.data) {
           providerServices = data.data;
+        } else if (data.error) {
+          result.errors.push(`Provider error: ${data.error}`);
+          results.push(result);
+          continue;
         }
 
         console.log(`Found ${providerServices.length} services from ${provider.name}`);
 
-        // Get ALL existing services for this panel (no limit)
+        // Get existing services for this panel
         const providerServiceIds = providerServices.map(s => String(s.service));
         
-        // Fetch in batches to avoid Supabase's 1000 limit
+        // Fetch in batches
         const batchSize = 500;
         const allExistingServices: any[] = [];
         
@@ -190,27 +260,24 @@ serve(async (req) => {
             .from('services')
             .select('*')
             .eq('panel_id', panelId)
-            .in('provider_id', batch);
+            .in('provider_service_id', batch);
           
-          if (batchError) {
-            console.error(`Error fetching batch ${i}-${i + batchSize}:`, batchError);
-          } else if (batchServices) {
+          if (!batchError && batchServices) {
             allExistingServices.push(...batchServices);
           }
         }
 
-        // Map existing services by their provider_id
         const existingByProviderServiceId = new Map(
-          allExistingServices.map(s => [s.provider_id, s])
+          allExistingServices.map(s => [s.provider_service_id, s])
         );
 
-        console.log(`Found ${allExistingServices.length} existing services to potentially update`);
+        console.log(`Found ${allExistingServices.length} existing services to update`);
 
         // Prepare batch operations
         const toUpdate: any[] = [];
         const toInsert: any[] = [];
         
-        // Process each service from provider - MAINTAIN ORIGINAL ORDER
+        // Process each service - MAINTAIN ORIGINAL ORDER
         providerServices.forEach((providerService, originalIndex) => {
           const serviceId = String(providerService.service);
           const existing = existingByProviderServiceId.get(serviceId);
@@ -219,17 +286,30 @@ serve(async (req) => {
           const markupMultiplier = 1 + (markupPercent / 100);
           const finalPrice = providerRate * markupMultiplier;
 
+          // Enhanced category detection with cleaned strings
+          const detectedCategory = mapCategory(
+            providerService.category || '',
+            providerService.name || ''
+          );
+
           const serviceData = {
             panel_id: panelId,
-            provider_id: serviceId,
+            provider_id: provider.id,
+            provider_service_id: serviceId,
             name: providerService.name || `Service ${serviceId}`,
-            description: providerService.desc || null,
-            category: mapCategory(providerService.category || providerService.type || 'other'),
+            description: providerService.desc || providerService.description || null,
+            category: detectedCategory,
             price: finalPrice,
+            provider_price: providerRate,
+            markup_percent: markupPercent,
             min_quantity: parseInt(String(providerService.min)) || 1,
             max_quantity: parseInt(String(providerService.max)) || 10000,
             is_active: true,
-            sort_order: originalIndex, // PRESERVE PROVIDER'S ORIGINAL ORDER
+            display_order: originalIndex,
+            service_type: parseServiceType(providerService.type),
+            refill_available: parseBooleanField(providerService.refill),
+            cancel_available: parseBooleanField(providerService.cancel),
+            average_time: providerService.average_time || null,
             updated_at: new Date().toISOString(),
           };
 
@@ -248,12 +328,10 @@ serve(async (req) => {
           }
         });
 
-        // Execute batch updates in chunks
+        // Execute batch updates
         const updateChunkSize = 100;
         for (let i = 0; i < toUpdate.length; i += updateChunkSize) {
           const chunk = toUpdate.slice(i, i + updateChunkSize);
-          
-          // Use upsert for batch updates
           const { error: updateError } = await supabase
             .from('services')
             .upsert(chunk, { onConflict: 'id' });
@@ -264,11 +342,10 @@ serve(async (req) => {
           }
         }
 
-        // Execute batch inserts in chunks (handles >1000 services)
+        // Execute batch inserts
         const insertChunkSize = 100;
         for (let i = 0; i < toInsert.length; i += insertChunkSize) {
           const chunk = toInsert.slice(i, i + insertChunkSize);
-          
           const { error: insertError } = await supabase
             .from('services')
             .insert(chunk);
@@ -276,7 +353,6 @@ serve(async (req) => {
           if (insertError) {
             console.error(`Batch insert error at ${i}:`, insertError);
             result.errors.push(`Batch insert failed at ${i}: ${insertError.message}`);
-            // Continue with remaining chunks instead of failing completely
           } else {
             console.log(`Successfully inserted chunk ${i}-${i + chunk.length}`);
           }
@@ -284,7 +360,7 @@ serve(async (req) => {
 
         console.log(`Processed: ${result.servicesUpdated} updated, ${result.newServices} new, ${result.pricesChanged} price changes`);
 
-        // Update last sync timestamp on provider
+        // Update provider sync timestamp
         await supabase
           .from('providers')
           .update({ updated_at: new Date().toISOString() })

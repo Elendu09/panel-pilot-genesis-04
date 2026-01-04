@@ -86,3 +86,9 @@ verify_jwt = false
 
 [functions.track-order]
 verify_jwt = false
+
+[functions.buyer-api]
+verify_jwt = false
+
+[functions.panel-api]
+verify_jwt = false

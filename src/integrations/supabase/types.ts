@@ -917,6 +917,51 @@ export type Database = {
         }
         Relationships: []
       }
+      order_refills: {
+        Row: {
+          created_at: string | null
+          external_refill_id: string | null
+          id: string
+          order_id: string | null
+          panel_id: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          external_refill_id?: string | null
+          id?: string
+          order_id?: string | null
+          panel_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          external_refill_id?: string | null
+          id?: string
+          order_id?: string | null
+          panel_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_refills_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_refills_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           buyer_id: string | null
@@ -2017,6 +2062,8 @@ export type Database = {
       }
       services: {
         Row: {
+          average_time: string | null
+          cancel_available: boolean | null
           category: Database["public"]["Enums"]["service_category"]
           created_at: string
           description: string | null
@@ -2035,9 +2082,13 @@ export type Database = {
           provider_id: string | null
           provider_price: number | null
           provider_service_id: string | null
+          refill_available: boolean | null
+          service_type: string | null
           updated_at: string
         }
         Insert: {
+          average_time?: string | null
+          cancel_available?: boolean | null
           category: Database["public"]["Enums"]["service_category"]
           created_at?: string
           description?: string | null
@@ -2056,9 +2107,13 @@ export type Database = {
           provider_id?: string | null
           provider_price?: number | null
           provider_service_id?: string | null
+          refill_available?: boolean | null
+          service_type?: string | null
           updated_at?: string
         }
         Update: {
+          average_time?: string | null
+          cancel_available?: boolean | null
           category?: Database["public"]["Enums"]["service_category"]
           created_at?: string
           description?: string | null
@@ -2077,6 +2132,8 @@ export type Database = {
           provider_id?: string | null
           provider_price?: number | null
           provider_service_id?: string | null
+          refill_available?: boolean | null
+          service_type?: string | null
           updated_at?: string
         }
         Relationships: [
