@@ -429,6 +429,16 @@ const BuyerServices = () => {
                                             Instant
                                           </Badge>
                                         )}
+                                        {service.refill_available && (
+                                          <Badge className="text-[10px] bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
+                                            ♻️ Refill
+                                          </Badge>
+                                        )}
+                                        {service.cancel_available && (
+                                          <Badge className="text-[10px] bg-rose-500/10 text-rose-600 border-rose-500/20">
+                                            ❌ Cancel
+                                          </Badge>
+                                        )}
                                         {hasCustomPrice && (
                                           <Badge className="text-[10px] bg-purple-500/10 text-purple-600 border-purple-500/20">
                                             <Star className="w-2.5 h-2.5 mr-0.5" />
@@ -443,6 +453,11 @@ const BuyerServices = () => {
                                       <Badge variant="secondary" className="text-[9px] font-mono px-1 py-0 h-4">
                                         ID: {service.provider_service_id || service.id?.slice(0, 6)}
                                       </Badge>
+                                      {service.service_type && service.service_type !== 'default' && (
+                                        <Badge variant="outline" className="text-[9px] px-1 py-0 h-4">
+                                          {service.service_type}
+                                        </Badge>
+                                      )}
                                     </div>
                                     <h3 className="font-medium text-sm leading-tight line-clamp-2 mb-2 min-h-[2.25rem]">
                                       {service.name}
@@ -491,42 +506,42 @@ const BuyerServices = () => {
       {/* Bottom Navigation for authenticated users only */}
       {buyer && (
         <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-background/95 backdrop-blur-xl border-t border-border/50 safe-area-bottom">
-          <div className="flex items-center justify-around py-2 px-1">
+          <div className="flex items-center justify-around py-1.5 px-0.5">
             <Link
               to="/dashboard"
               className={cn(
-                "flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-colors",
+                "flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl transition-colors min-w-0",
                 location.pathname === '/dashboard' ? "text-primary" : "text-muted-foreground"
               )}
             >
               <LayoutDashboard className="w-5 h-5" />
-              <span className="text-[10px] font-medium">Dashboard</span>
+              <span className="text-[9px] font-medium">Dashboard</span>
             </Link>
             <Link
               to="/services"
-              className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl text-primary"
+              className="flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl text-primary min-w-0"
             >
               <Package className="w-5 h-5" />
-              <span className="text-[10px] font-medium">Services</span>
+              <span className="text-[9px] font-medium">Services</span>
             </Link>
-            <Link to="/new-order" className="relative -mt-6">
-              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/30">
-                <Zap className="w-6 h-6 text-primary-foreground" />
+            <Link to="/new-order" className="relative -mt-5">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/30">
+                <Zap className="w-5 h-5 text-primary-foreground" />
               </div>
             </Link>
             <Link
               to="/support"
-              className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl text-muted-foreground"
+              className="flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl text-muted-foreground min-w-0"
             >
               <Filter className="w-5 h-5" />
-              <span className="text-[10px] font-medium">Support</span>
+              <span className="text-[9px] font-medium">Support</span>
             </Link>
             <Link
               to="/orders"
-              className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl text-muted-foreground"
+              className="flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl text-muted-foreground min-w-0"
             >
               <ShoppingCartIcon className="w-5 h-5" />
-              <span className="text-[10px] font-medium">Orders</span>
+              <span className="text-[9px] font-medium">Orders</span>
             </Link>
           </div>
         </nav>

@@ -482,41 +482,41 @@ const BuyerDashboard = () => {
           </div>
 
           {/* Mobile: Horizontal scroll kanban */}
-          <div className="md:hidden overflow-x-auto pb-4 -mx-4 px-4 snap-x snap-mandatory">
-            <div className="flex gap-4" style={{ width: 'max-content' }}>
+          <div className="md:hidden overflow-x-auto pb-4 -mx-4 px-4 snap-x snap-mandatory scrollbar-hide">
+            <div className="flex gap-3 w-max">
               {kanbanColumns.map((column) => {
                 const columnOrders = recentOrders.filter(o => o.status === column.status);
                 const Icon = column.icon;
 
                 return (
-                  <div key={column.status} className="w-[85vw] max-w-[320px] shrink-0 snap-center space-y-3">
+                  <div key={column.status} className="w-[75vw] min-w-[260px] max-w-[300px] shrink-0 snap-center space-y-2">
                     {/* Column Header */}
-                    <div className={cn("glass-card p-3 border-l-4", column.borderColor)}>
+                    <div className={cn("glass-card p-2.5 border-l-4", column.borderColor)}>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <div className={cn("p-1.5 rounded-xl bg-gradient-to-br", column.gradient)}>
-                            <Icon className="w-4 h-4 text-white" />
+                          <div className={cn("p-1.5 rounded-lg bg-gradient-to-br", column.gradient)}>
+                            <Icon className="w-3.5 h-3.5 text-white" />
                           </div>
-                          <span className="font-semibold text-sm">{column.title}</span>
+                          <span className="font-semibold text-xs">{column.title}</span>
                         </div>
-                        <Badge variant="outline" className={cn(column.bg, column.textColor)}>
+                        <Badge variant="outline" className={cn("text-[10px] px-1.5", column.bg, column.textColor)}>
                           {columnOrders.length}
                         </Badge>
                       </div>
                     </div>
 
                     {/* Column Items */}
-                    <div className="space-y-2 max-h-[50vh] overflow-y-auto">
+                    <div className="space-y-2 max-h-[45vh] overflow-y-auto scrollbar-hide">
                       {loading ? (
                         [1, 2].map(i => (
-                          <div key={i} className="h-24 bg-muted/50 rounded-xl animate-pulse" />
+                          <div key={i} className="h-20 bg-muted/50 rounded-xl animate-pulse" />
                         ))
                       ) : columnOrders.length === 0 ? (
-                        <div className="glass-card p-6 text-center">
-                          <div className={cn("w-10 h-10 rounded-full mx-auto mb-2 flex items-center justify-center", column.bg)}>
-                            <Icon className={cn("w-5 h-5", column.textColor)} />
+                        <div className="glass-card p-4 text-center">
+                          <div className={cn("w-8 h-8 rounded-full mx-auto mb-1.5 flex items-center justify-center", column.bg)}>
+                            <Icon className={cn("w-4 h-4", column.textColor)} />
                           </div>
-                          <p className="text-xs text-muted-foreground">No orders</p>
+                          <p className="text-[10px] text-muted-foreground">No orders</p>
                         </div>
                       ) : (
                         columnOrders.slice(0, 4).map((order) => (

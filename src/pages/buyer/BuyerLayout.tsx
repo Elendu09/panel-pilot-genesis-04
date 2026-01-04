@@ -276,32 +276,30 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
       </aside>
 
       {/* Mobile Header */}
-      <header className="md:hidden glass border-b border-border/50 p-3 flex items-center justify-between sticky top-0 z-30">
-        <div className="flex items-center gap-2">
+      <header className="md:hidden glass border-b border-border/50 p-2 flex items-center justify-between sticky top-0 z-30">
+        <div className="flex items-center gap-1.5 min-w-0 flex-shrink">
           {panel?.logo_url ? (
-            <img src={panel.logo_url} alt={panel.name} className="w-8 h-8 rounded-lg object-cover" />
+            <img src={panel.logo_url} alt={panel.name} className="w-7 h-7 rounded-lg object-cover flex-shrink-0" />
           ) : (
             <div 
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm"
+              className="w-7 h-7 rounded-lg flex items-center justify-center text-white font-bold text-xs flex-shrink-0"
               style={{ background: `linear-gradient(135deg, ${panel?.primary_color || '#3b82f6'}, ${panel?.secondary_color || '#1e40af'})` }}
             >
               {panel?.name?.charAt(0) || 'P'}
             </div>
           )}
-          <span className="font-bold text-sm">{panel?.name || 'Panel'}</span>
+          <span className="font-bold text-xs truncate max-w-[80px]">{panel?.name || 'Panel'}</span>
         </div>
-        <div className="flex items-center gap-1.5">
-          {/* Balance + Add Funds Button - Enhanced for mobile */}
-          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Link to="/deposit" className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-800/90 dark:bg-slate-800/90 hover:bg-slate-700/90 transition-all shadow-lg">
-              <span className="text-sm font-bold text-white">${userBalance.toFixed(2)}</span>
-              <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
-                <Plus className="w-4 h-4 text-primary-foreground" />
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {/* Balance + Add Funds Button */}
+          <motion.div whileTap={{ scale: 0.95 }}>
+            <Link to="/deposit" className="flex items-center gap-1 px-2 py-1 rounded-full bg-slate-800/90 dark:bg-slate-800/90">
+              <span className="text-xs font-bold text-white">${userBalance.toFixed(2)}</span>
+              <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                <Plus className="w-3 h-3 text-primary-foreground" />
               </div>
             </Link>
           </motion.div>
-          <LanguageSelector />
-          <CurrencySelector />
           <BuyerNotifications />
           <ThemeToggle />
         </div>
@@ -335,18 +333,18 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
 
       {/* Mobile Bottom Navigation */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-background/95 backdrop-blur-xl border-t border-border/50 safe-area-bottom">
-        <div className="flex items-center justify-around py-2 px-1">
+        <div className="flex items-center justify-around py-1.5 px-0.5">
           {bottomNavItems.map((item, index) => {
             if (item.isMenu) {
               return (
                 <Sheet key={item.name} open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
                   <SheetTrigger asChild>
-                    <button className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl text-muted-foreground">
+                    <button className="flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl text-muted-foreground min-w-0">
                       <item.icon className="w-5 h-5" />
-                      <span className="text-[10px] font-medium">{item.name}</span>
+                      <span className="text-[9px] font-medium truncate">{item.name}</span>
                     </button>
                   </SheetTrigger>
-                  <SheetContent side="bottom" className="h-auto max-h-[85vh] rounded-t-3xl">
+                  <SheetContent side="bottom" className="h-auto max-h-[80vh] rounded-t-3xl overflow-y-auto">
                     <SheetHeader className="pb-4">
                       <SheetTitle>{t('nav.menu')}</SheetTitle>
                     </SheetHeader>
@@ -471,27 +469,27 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
               );
             }
 
-            // Center button (My Order)
+            // Center button (New Order)
             if (item.isCenter) {
               return (
                 <Link
                   key={item.name}
                   to={item.href}
-                  className="relative -mt-6"
+                  className="relative -mt-5"
                 >
                   <motion.div 
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     className={cn(
-                      "w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg transition-all",
+                      "w-12 h-12 rounded-xl flex items-center justify-center shadow-lg transition-all",
                       isActive(item.href) 
                         ? "bg-primary text-primary-foreground shadow-primary/30" 
                         : "bg-primary/90 text-primary-foreground shadow-primary/20"
                     )}
                   >
-                    <item.icon className="w-6 h-6" />
+                    <item.icon className="w-5 h-5" />
                   </motion.div>
-                  <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] font-medium whitespace-nowrap">
+                  <span className="absolute -bottom-4 left-1/2 -translate-x-1/2 text-[9px] font-medium whitespace-nowrap">
                     {item.name}
                   </span>
                 </Link>
@@ -504,18 +502,18 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
                 key={item.name}
                 to={item.href}
                 className={cn(
-                  "flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all relative",
+                  "flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl transition-all relative min-w-0",
                   isActive(item.href) 
                     ? "text-primary" 
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 <item.icon className="w-5 h-5" />
-                <span className="text-[10px] font-medium">{item.name}</span>
+                <span className="text-[9px] font-medium truncate">{item.name}</span>
                 {item.badge && (
                   <Badge 
                     variant="default" 
-                    className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-[9px]"
+                    className="absolute -top-0.5 -right-0.5 h-3.5 w-3.5 p-0 flex items-center justify-center text-[8px]"
                   >
                     {item.badge}
                   </Badge>
