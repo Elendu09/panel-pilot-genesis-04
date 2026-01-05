@@ -47,20 +47,28 @@ function cleanCategoryString(input: string): string {
     .trim();
 }
 
-// Valid database enum categories
+// Valid database enum categories - COMPLETE list including 29 new categories
 const VALID_CATEGORIES = [
+  // Original 47
   'instagram', 'facebook', 'twitter', 'youtube', 'tiktok', 'linkedin', 'telegram',
   'threads', 'snapchat', 'pinterest', 'whatsapp', 'twitch', 'discord', 'spotify',
   'soundcloud', 'audiomack', 'reddit', 'vk', 'kick', 'rumble', 'dailymotion',
   'deezer', 'shazam', 'tidal', 'reverbnation', 'mixcloud', 'quora', 'tumblr',
   'clubhouse', 'likee', 'kwai', 'trovo', 'odysee', 'bilibili', 'lemon8', 'bereal',
   'weibo', 'line', 'patreon', 'medium', 'roblox', 'steam', 'applemusic', 'amazonmusic',
-  'napster', 'iheart', 'google', 'trustpilot', 'yelp', 'tripadvisor', 'website', 'other'
+  'napster', 'iheart',
+  // New 29 from migration
+  'gettr', 'truthsocial', 'parler', 'mastodon', 'bluesky', 'gab', 'minds',
+  'caffeine', 'dlive', 'nimotv', 'bigo', 'douyin', 'xiaohongshu', 'qq', 'wechat',
+  'kuaishou', 'youtubemusic', 'pandora', 'googlebusiness', 'trustpilot', 'yelp',
+  'tripadvisor', 'behance', 'dribbble', 'deviantart', 'flickr', 'vero', 'podcast', 'momo',
+  // Misc
+  'google', 'website', 'other'
 ] as const;
 
 type ValidCategory = typeof VALID_CATEGORIES[number];
 
-// Platform shortforms for first-word detection
+// Platform shortforms for first-word detection - EXTENDED
 const PLATFORM_SHORTFORMS: Record<string, ValidCategory> = {
   'ig': 'instagram', 'insta': 'instagram', 'gram': 'instagram', 'igtv': 'instagram', 'reels': 'instagram',
   'fb': 'facebook',
@@ -88,6 +96,14 @@ const PLATFORM_SHORTFORMS: Record<string, ValidCategory> = {
   'ch': 'clubhouse', 'wb': 'weibo', 'br': 'bereal', 'l8': 'lemon8',
   'rx': 'roblox', 'rbx': 'roblox', 'stm': 'steam',
   'apm': 'applemusic', 'amz': 'amazonmusic', 'ih': 'iheart',
+  // NEW shortforms
+  'gt': 'gettr', 'ts': 'truthsocial', 'pl': 'parler', 'mst': 'mastodon',
+  'bs': 'bluesky', 'bsky': 'bluesky', 'nim': 'nimotv', 'bg': 'bigo',
+  'dy': 'douyin', 'xhs': 'xiaohongshu', 'ks': 'kuaishou',
+  'ytm': 'youtubemusic', 'pd': 'pandora', 'gmb': 'googlebusiness',
+  'bh': 'behance', 'dr': 'dribbble', 'da': 'deviantart',
+  'fl': 'flickr', 'pc': 'podcast', 'mm': 'momo',
+  'tp': 'trustpilot', 'yp': 'yelp', 'ta': 'tripadvisor',
 };
 
 // Ignored prefixes (country codes, quality markers)
@@ -100,6 +116,7 @@ const IGNORED_PREFIXES = [
 
 // Platform patterns with comprehensive keywords - ORDER MATTERS (more specific first)
 const PLATFORM_PATTERNS: Array<{ platform: ValidCategory; keywords: string[] }> = [
+  // Major platforms first
   { platform: 'instagram', keywords: ['instagram', 'insta ', ' ig ', 'ig follower', 'ig like', 'ig view', 'ig comment', 'ig save', 'ig reach', 'igtv', 'ig story', 'ig reel', 'reels', ' reel '] },
   { platform: 'facebook', keywords: ['facebook', ' fb ', 'fb.com', 'fb like', 'fb follower', 'fb share', 'fb page', 'fb group', 'fb event', 'fb video'] },
   { platform: 'twitter', keywords: ['twitter', 'x.com', 'tweet', ' x follower', ' x like', ' x retweet', ' x view', ' x impression', ' x poll'] },
@@ -146,10 +163,38 @@ const PLATFORM_PATTERNS: Array<{ platform: ValidCategory; keywords: string[] }> 
   { platform: 'amazonmusic', keywords: ['amazon music', 'amazonmusic'] },
   { platform: 'napster', keywords: ['napster'] },
   { platform: 'iheart', keywords: ['iheart', 'iheartradio'] },
-  { platform: 'google', keywords: ['google review', 'google map', 'gmb ', 'google my business', 'google business'] },
-  { platform: 'trustpilot', keywords: ['trustpilot', 'trust pilot'] },
+  // NEW 29 categories
+  { platform: 'gettr', keywords: ['gettr', 'gettr follower', 'gettr like'] },
+  { platform: 'truthsocial', keywords: ['truthsocial', 'truth social', 'truth follower'] },
+  { platform: 'parler', keywords: ['parler', 'parler follower'] },
+  { platform: 'mastodon', keywords: ['mastodon', 'masto', 'mastodon follower'] },
+  { platform: 'bluesky', keywords: ['bluesky', 'blue sky', 'bsky', 'bluesky follower'] },
+  { platform: 'gab', keywords: ['gab', 'gab.com', 'gab follower'] },
+  { platform: 'minds', keywords: ['minds', 'minds.com', 'minds follower'] },
+  { platform: 'caffeine', keywords: ['caffeine', 'caffeine.tv', 'caffeine follower'] },
+  { platform: 'dlive', keywords: ['dlive', 'd.live', 'dlive follower'] },
+  { platform: 'nimotv', keywords: ['nimotv', 'nimo.tv', 'nimo', 'nimo follower'] },
+  { platform: 'bigo', keywords: ['bigo', 'bigo live', 'bigolive', 'bigo follower'] },
+  { platform: 'douyin', keywords: ['douyin', '抖音', 'douyin follower'] },
+  { platform: 'xiaohongshu', keywords: ['xiaohongshu', '小红书', 'red', 'little red book', 'xhs'] },
+  { platform: 'qq', keywords: [' qq ', 'tencent qq', 'qq.com', 'qq follower'] },
+  { platform: 'wechat', keywords: ['wechat', 'weixin', '微信', 'wechat follower'] },
+  { platform: 'kuaishou', keywords: ['kuaishou', '快手', 'kuaishou follower'] },
+  { platform: 'youtubemusic', keywords: ['youtube music', 'ytmusic', 'yt music'] },
+  { platform: 'pandora', keywords: ['pandora', 'pandora music', 'pandora play'] },
+  { platform: 'googlebusiness', keywords: ['google business', 'gmb', 'google my business', 'gbp', 'google map review'] },
+  { platform: 'behance', keywords: ['behance', 'behance follower', 'behance like'] },
+  { platform: 'dribbble', keywords: ['dribbble', 'dribbble follower', 'dribbble like'] },
+  { platform: 'deviantart', keywords: ['deviantart', 'deviant art', 'deviantart follower'] },
+  { platform: 'flickr', keywords: ['flickr', 'flickr follower', 'flickr like'] },
+  { platform: 'vero', keywords: ['vero', 'vero follower'] },
+  { platform: 'podcast', keywords: ['podcast', 'podcasts', 'apple podcast', 'google podcast', 'podcast play'] },
+  { platform: 'momo', keywords: ['momo', 'momo follower'] },
+  { platform: 'trustpilot', keywords: ['trustpilot', 'trust pilot', 'trustpilot review'] },
   { platform: 'yelp', keywords: ['yelp', 'yelp review'] },
-  { platform: 'tripadvisor', keywords: ['tripadvisor', 'trip advisor'] },
+  { platform: 'tripadvisor', keywords: ['tripadvisor', 'trip advisor', 'tripadvisor review'] },
+  // Generic
+  { platform: 'google', keywords: ['google review', 'google map', 'google business'] },
   { platform: 'website', keywords: ['website traffic', 'web traffic', 'site visitor', 'seo ', 'backlink'] },
 ];
 
@@ -209,7 +254,7 @@ const mapCategory = (category: string, serviceName: string = ''): ValidCategory 
 
 function parseServiceType(type: string | undefined): string {
   if (!type) return 'default';
-  const normalized = type.toLowerCase().trim();
+  const normalized = String(type).toLowerCase().trim();
   const typeMap: Record<string, string> = {
     'default': 'default', '0': 'default',
     'package': 'package', '1': 'package',
@@ -355,52 +400,66 @@ serve(async (req) => {
         
         // Process each service - MAINTAIN ORIGINAL ORDER
         providerServices.forEach((providerService, originalIndex) => {
-          const serviceId = String(providerService.service);
-          const existing = existingByProviderServiceId.get(serviceId);
-          
-          const providerRate = parseFloat(String(providerService.rate)) || 0;
-          const markupMultiplier = 1 + (markupPercent / 100);
-          const finalPrice = providerRate * markupMultiplier;
-
-          // Enhanced category detection with cleaned strings
-          const detectedCategory = mapCategory(
-            providerService.category || '',
-            providerService.name || ''
-          );
-
-          const serviceData = {
-            panel_id: panelId,
-            provider_id: provider.id,
-            provider_service_id: serviceId,
-            name: providerService.name || `Service ${serviceId}`,
-            description: providerService.desc || providerService.description || null,
-            category: detectedCategory,
-            price: finalPrice,
-            provider_price: providerRate,
-            markup_percent: markupPercent,
-            min_quantity: parseInt(String(providerService.min)) || 1,
-            max_quantity: parseInt(String(providerService.max)) || 10000,
-            is_active: true,
-            display_order: originalIndex,
-            service_type: parseServiceType(providerService.type),
-            refill_available: parseBooleanField(providerService.refill),
-            cancel_available: parseBooleanField(providerService.cancel),
-            average_time: providerService.average_time || null,
-            updated_at: new Date().toISOString(),
-          };
-
-          if (existing) {
-            if (Math.abs(existing.price - finalPrice) > 0.001) {
-              result.pricesChanged++;
+          try {
+            const serviceId = String(providerService.service);
+            const existing = existingByProviderServiceId.get(serviceId);
+            
+            // Clean and validate rate
+            const rawRate = String(providerService.rate).replace(/[^0-9.]/g, '');
+            const providerRate = parseFloat(rawRate) || 0;
+            
+            // Skip services with invalid rates
+            if (providerRate <= 0) {
+              console.log(`Skipping service ${serviceId}: Invalid rate ${providerService.rate}`);
+              return;
             }
-            toUpdate.push({ ...serviceData, id: existing.id });
-            result.servicesUpdated++;
-          } else if (importNew) {
-            toInsert.push({
-              ...serviceData,
-              created_at: new Date().toISOString(),
-            });
-            result.newServices++;
+            
+            const markupMultiplier = 1 + (markupPercent / 100);
+            const finalPrice = providerRate * markupMultiplier;
+
+            // Enhanced category detection with cleaned strings
+            const detectedCategory = mapCategory(
+              providerService.category || '',
+              providerService.name || ''
+            );
+
+            const serviceData = {
+              panel_id: panelId,
+              provider_id: provider.id,
+              provider_service_id: serviceId,
+              name: providerService.name || `Service ${serviceId}`,
+              description: providerService.desc || providerService.description || null,
+              category: detectedCategory,
+              price: finalPrice,
+              provider_price: providerRate,
+              markup_percent: markupPercent,
+              min_quantity: parseInt(String(providerService.min).replace(/[^0-9]/g, '')) || 1,
+              max_quantity: parseInt(String(providerService.max).replace(/[^0-9]/g, '')) || 10000,
+              is_active: true,
+              display_order: originalIndex,
+              service_type: parseServiceType(providerService.type),
+              refill_available: parseBooleanField(providerService.refill),
+              cancel_available: parseBooleanField(providerService.cancel),
+              average_time: providerService.average_time || null,
+              updated_at: new Date().toISOString(),
+            };
+
+            if (existing) {
+              if (Math.abs(existing.price - finalPrice) > 0.001) {
+                result.pricesChanged++;
+              }
+              toUpdate.push({ ...serviceData, id: existing.id });
+              result.servicesUpdated++;
+            } else if (importNew) {
+              toInsert.push({
+                ...serviceData,
+                created_at: new Date().toISOString(),
+              });
+              result.newServices++;
+            }
+          } catch (serviceError: any) {
+            console.error(`Error processing service ${providerService.service}:`, serviceError);
+            result.errors.push(`Service ${providerService.service}: ${serviceError.message}`);
           }
         });
 

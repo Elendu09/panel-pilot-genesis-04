@@ -137,7 +137,7 @@ const PanelOwnerDashboard = () => {
   const bottomNavItems = [
     { name: 'Home', href: '/panel', icon: LayoutDashboard, tourId: 'mobile-home' },
     { name: 'Customers', href: '/panel/customers', icon: Users, tourId: 'mobile-customers' },
-    { name: 'Services', href: '/panel/services', icon: Package, tourId: 'mobile-services' },
+    { name: 'Services', href: '/panel/services', icon: Package, tourId: 'mobile-services', isCenter: true },
     { name: 'Orders', href: '/panel/orders', icon: ShoppingCart, badge: pendingCount > 0 ? pendingCount : undefined, tourId: 'mobile-orders' },
     { name: 'More', href: '/panel/more', icon: Settings, tourId: 'mobile-more' },
   ];
