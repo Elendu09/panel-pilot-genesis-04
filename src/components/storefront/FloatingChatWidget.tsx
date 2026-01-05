@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageCircle, X, Send, Loader2, RotateCcw, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -339,12 +339,28 @@ export const FloatingChatWidget = ({
     }
   }, [panelId, whatsappNumber, telegramUsername, messengerUsername, discordInvite, customUrl, customLabel, position, message, enableAI]);
 
+  // Enhanced auto-scroll function with smooth behavior
+  const scrollToBottom = useCallback(() => {
+    if (scrollRef.current) {
+      requestAnimationFrame(() => {
+        if (scrollRef.current) {
+          scrollRef.current.scrollTo({
+            top: scrollRef.current.scrollHeight,
+            behavior: 'smooth'
+          });
+        }
+      });
+    }
+  }, []);
+
   // Auto scroll to bottom when messages change
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages]);
+    // Immediate scroll for user messages, delayed for AI responses
+    scrollToBottom();
+    // Extra scroll after a brief delay to ensure new content is rendered
+    const timer = setTimeout(scrollToBottom, 150);
+    return () => clearTimeout(timer);
+  }, [messages, scrollToBottom]);
 
   const hasAnyChatOption = settings.whatsapp || settings.telegram || settings.messenger || settings.discord || settings.customUrl || enableAI;
   
@@ -400,12 +416,15 @@ export const FloatingChatWidget = ({
       if (error) throw error;
 
       setMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);
+      // Ensure scroll to AI response after state update
+      setTimeout(scrollToBottom, 100);
     } catch (error) {
       console.error('AI chat error:', error);
       setMessages(prev => [...prev, { 
         role: 'assistant', 
         content: "Sorry, I'm having trouble responding right now. Please try again or use one of our other contact options." 
       }]);
+      setTimeout(scrollToBottom, 100);
     } finally {
       setIsLoading(false);
     }

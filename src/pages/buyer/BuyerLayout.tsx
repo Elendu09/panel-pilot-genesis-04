@@ -340,7 +340,10 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
               return (
                 <Sheet key={item.name} open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
                   <SheetTrigger asChild>
-                    <button className="flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl text-muted-foreground min-w-0">
+                    <button 
+                      data-tour="mobile-more"
+                      className="flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl text-muted-foreground min-w-0"
+                    >
                       <item.icon className="w-5 h-5" />
                       <span className="text-[9px] font-medium truncate">{item.name}</span>
                     </button>
@@ -488,6 +491,7 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
                 <Link
                   key={item.name}
                   to={item.href}
+                  data-tour="mobile-services"
                   className="relative -mt-5"
                 >
                   <motion.div 
@@ -509,11 +513,19 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
               );
             }
 
-            // Regular nav item
+            // Regular nav items with data-tour attributes
+            const getTourAttribute = () => {
+              if (item.href === '/dashboard') return 'mobile-home';
+              if (item.href === '/deposit') return 'mobile-deposit';
+              if (item.href === '/support') return 'mobile-support';
+              return undefined;
+            };
+
             return (
               <Link
                 key={item.name}
                 to={item.href}
+                data-tour={getTourAttribute()}
                 className={cn(
                   "flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl transition-all relative min-w-0",
                   isActive(item.href) 
