@@ -130,7 +130,7 @@ import { SmartOrganizeDialog } from "@/components/services/SmartOrganizeDialog";
 import { ServiceAnalytics } from "@/components/services/ServiceAnalytics";
 import { ServiceKanbanCard } from "@/components/services/ServiceKanbanCard";
 import { ServiceToolsCards } from "@/components/services/ServiceToolsCards";
-import { ServiceHealthCheck } from "@/components/services/ServiceHealthCheck";
+
 import { BulkProgressModal } from "@/components/services/BulkProgressModal";
 import { AutoFixProgressDialog, AutoFixProgress } from "@/components/services/AutoFixProgressDialog";
 import { BulkOperationHistory } from "@/components/services/BulkOperationHistory";
@@ -290,10 +290,6 @@ const ServicesManagement = () => {
   
   // Analytics panel
   const [showAnalytics, setShowAnalytics] = useState(false);
-  
-  // Health Check Dialog
-  const [isHealthCheckOpen, setIsHealthCheckOpen] = useState(false);
-  const [healthIssueCount, setHealthIssueCount] = useState(0);
   
   // Bulk Delete Confirmation
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
@@ -1990,10 +1986,8 @@ const ServicesManagement = () => {
               break;
           }
         }}
-        onHealthCheck={() => setIsHealthCheckOpen(true)}
         isOrganizing={isAutoFixingIcons}
         totalServices={totalCount}
-        healthIssues={healthIssueCount}
       />
 
       {/* Service Tips */}
@@ -2010,16 +2004,6 @@ const ServicesManagement = () => {
       {/* Service Analytics */}
       <ServiceAnalytics isOpen={showAnalytics} onToggle={() => setShowAnalytics(!showAnalytics)} />
 
-      {/* Health Check Dialog */}
-      {panel?.id && (
-        <ServiceHealthCheck
-          open={isHealthCheckOpen}
-          onOpenChange={setIsHealthCheckOpen}
-          panelId={panel.id}
-          onIssuesFound={setHealthIssueCount}
-          onRefresh={fetchServices}
-        />
-      )}
 
       {/* Bulk Action Bar - Fixed Position on Mobile */}
       <AnimatePresence>

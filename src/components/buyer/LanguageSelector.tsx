@@ -66,8 +66,8 @@ export const LanguageSelector = () => {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative h-9 w-9" title="Change language">
-          <span className="text-lg">{currentLanguage?.flag || '🌐'}</span>
+        <Button variant="ghost" size="icon" className="relative h-8 w-8 sm:h-9 sm:w-9" title="Change language">
+          <span className="text-base sm:text-lg">{currentLanguage?.flag || '🌐'}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56 max-h-80 overflow-y-auto">

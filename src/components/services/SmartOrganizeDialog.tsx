@@ -16,7 +16,8 @@ import {
   Search,
   Layers,
   Wand2,
-  Zap
+  Zap,
+  Stethoscope
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,6 +27,7 @@ import { SOCIAL_ICONS_MAP } from "@/components/icons/SocialIcons";
 
 export type OrganizePhase = 
   | 'idle' 
+  | 'health-check'
   | 'fetching' 
   | 'analyzing' 
   | 'applying' 
@@ -71,25 +73,27 @@ export const SmartOrganizeDialog = ({
     processed: 0,
     applied: 0,
     categories: new Set<string>(),
+    healthIssues: 0,
   });
 
   // Calculate overall percentage
   const overallPercentage = useMemo(() => {
-    if (progress.total === 0) return 0;
+    if (progress.total === 0 && progress.phase !== 'health-check') return 0;
     
     const phaseWeights: Record<OrganizePhase, { start: number; weight: number }> = {
       idle: { start: 0, weight: 0 },
-      fetching: { start: 0, weight: 15 },
-      analyzing: { start: 15, weight: 20 },
-      applying: { start: 35, weight: 30 },
-      organizing: { start: 65, weight: 20 },
+      'health-check': { start: 0, weight: 10 },
+      fetching: { start: 10, weight: 10 },
+      analyzing: { start: 20, weight: 25 },
+      applying: { start: 45, weight: 25 },
+      organizing: { start: 70, weight: 15 },
       categorizing: { start: 85, weight: 15 },
       completed: { start: 100, weight: 0 },
       error: { start: 0, weight: 0 },
     };
     
     const { start, weight } = phaseWeights[progress.phase];
-    const phaseProgress = progress.total > 0 ? (progress.current / progress.total) : 0;
+    const phaseProgress = progress.total > 0 ? (progress.current / progress.total) : (progress.phase === 'health-check' ? 1 : 0);
     return Math.min(100, Math.round(start + (phaseProgress * weight)));
   }, [progress]);
 
@@ -105,7 +109,7 @@ export const SmartOrganizeDialog = ({
     if (!open) {
       setProgress({ phase: 'idle', current: 0, total: 0 });
       setIsProcessing(false);
-      setLiveStats({ processed: 0, applied: 0, categories: new Set() });
+      setLiveStats({ processed: 0, applied: 0, categories: new Set(), healthIssues: 0 });
     }
   }, [open]);
 
@@ -113,10 +117,39 @@ export const SmartOrganizeDialog = ({
     if (!panelId) return;
     
     setIsProcessing(true);
-    setProgress({ phase: 'fetching', current: 0, total: 0, message: 'Starting automatic organization...' });
-    setLiveStats({ processed: 0, applied: 0, categories: new Set() });
+    setProgress({ phase: 'health-check', current: 0, total: 0, message: 'Running health check scan...' });
+    setLiveStats({ processed: 0, applied: 0, categories: new Set(), healthIssues: 0 });
     
     try {
+      // Phase 0: Health Check - scan for issues
+      let healthIssuesFound = 0;
+      
+      // Check for services with missing data
+      const { count: missingIcons } = await supabase
+        .from('services')
+        .select('*', { count: 'exact', head: true })
+        .eq('panel_id', panelId)
+        .or('image_url.is.null,image_url.eq.');
+      
+      const { count: missingCategories } = await supabase
+        .from('services')
+        .select('*', { count: 'exact', head: true })
+        .eq('panel_id', panelId)
+        .or('category.is.null,category.eq.other');
+      
+      const { count: inactiveServices } = await supabase
+        .from('services')
+        .select('*', { count: 'exact', head: true })
+        .eq('panel_id', panelId)
+        .eq('is_active', false);
+      
+      healthIssuesFound = (missingIcons || 0) + (missingCategories || 0);
+      setLiveStats(prev => ({ ...prev, healthIssues: healthIssuesFound }));
+      setProgress({ phase: 'health-check', current: 1, total: 1, message: `Found ${healthIssuesFound} issues to fix` });
+      
+      // Brief pause to show health check results
+      await new Promise(r => setTimeout(r, 500));
+      
       // Phase 1: Fetch total count
       const { count } = await supabase
         .from('services')
@@ -348,9 +381,10 @@ export const SmartOrganizeDialog = ({
 
   const phaseLabels: Record<OrganizePhase, string> = {
     idle: 'Preparing...',
+    'health-check': 'Running health check...',
     fetching: 'Fetching services...',
-    analyzing: 'AI analyzing with enhanced detection...',
-    applying: 'Applying icon & category changes...',
+    analyzing: 'AI analyzing 50+ platforms...',
+    applying: 'Applying icon & category fixes...',
     organizing: 'Organizing by category & type...',
     categorizing: 'Updating categories...',
     completed: 'Completed!',
@@ -359,6 +393,7 @@ export const SmartOrganizeDialog = ({
 
   const phaseIcons: Record<OrganizePhase, React.ReactNode> = {
     idle: <Loader2 className="w-5 h-5 animate-spin" />,
+    'health-check': <Stethoscope className="w-5 h-5 animate-pulse" />,
     fetching: <Download className="w-5 h-5 animate-pulse" />,
     analyzing: <Search className="w-5 h-5 animate-pulse" />,
     applying: <Sparkles className="w-5 h-5 animate-pulse" />,
@@ -368,7 +403,7 @@ export const SmartOrganizeDialog = ({
     error: <AlertCircle className="w-5 h-5 text-destructive" />,
   };
 
-  const showProgress = ['fetching', 'analyzing', 'applying', 'organizing', 'categorizing'].includes(progress.phase);
+  const showProgress = ['health-check', 'fetching', 'analyzing', 'applying', 'organizing', 'categorizing'].includes(progress.phase);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -385,7 +420,7 @@ export const SmartOrganizeDialog = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {phaseIcons[progress.phase]}
-            AutoFix Icon + Smart Organize
+            Smart Organize + Health Check
           </DialogTitle>
           <DialogDescription>
             {progress.message || phaseLabels[progress.phase]}
@@ -435,29 +470,33 @@ export const SmartOrganizeDialog = ({
             </div>
             
             {/* Live Stats Grid */}
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div className="bg-muted/50 rounded-lg p-3">
-                <div className="text-xl font-bold text-primary">{liveStats.processed.toLocaleString()}</div>
-                <div className="text-xs text-muted-foreground">Processed</div>
+            <div className="grid grid-cols-4 gap-2 text-center">
+              <div className="bg-muted/50 rounded-lg p-2">
+                <div className="text-lg font-bold text-primary">{liveStats.processed.toLocaleString()}</div>
+                <div className="text-[10px] text-muted-foreground">Scanned</div>
               </div>
-              <div className="bg-muted/50 rounded-lg p-3">
-                <div className="text-xl font-bold text-green-500">{liveStats.applied.toLocaleString()}</div>
-                <div className="text-xs text-muted-foreground">Updated</div>
+              <div className="bg-muted/50 rounded-lg p-2">
+                <div className="text-lg font-bold text-green-500">{liveStats.applied.toLocaleString()}</div>
+                <div className="text-[10px] text-muted-foreground">Fixed</div>
               </div>
-              <div className="bg-muted/50 rounded-lg p-3">
-                <div className="text-xl font-bold text-amber-500">{liveStats.categories.size}</div>
-                <div className="text-xs text-muted-foreground">Categories</div>
+              <div className="bg-muted/50 rounded-lg p-2">
+                <div className="text-lg font-bold text-amber-500">{liveStats.categories.size}</div>
+                <div className="text-[10px] text-muted-foreground">Platforms</div>
+              </div>
+              <div className="bg-muted/50 rounded-lg p-2">
+                <div className="text-lg font-bold text-blue-500">{liveStats.healthIssues}</div>
+                <div className="text-[10px] text-muted-foreground">Issues</div>
               </div>
             </div>
             
             {/* Phase steps with connecting lines */}
             <div className="relative pt-4">
               <div className="flex items-center justify-between">
-                {(['fetching', 'analyzing', 'applying', 'organizing', 'categorizing', 'completed'] as OrganizePhase[]).map((phase, idx, arr) => {
-                  const isActive = progress.phase === phase;
+                {(['health-check', 'fetching', 'analyzing', 'applying', 'organizing', 'completed'] as OrganizePhase[]).map((phase, idx, arr) => {
+                  const isActive = progress.phase === phase || (progress.phase === 'categorizing' && phase === 'organizing');
                   const currentIdx = arr.indexOf(progress.phase);
-                  const isPast = currentIdx > idx || progress.phase === 'completed';
-                  const labels = ['Fetch', 'Analyze', 'Apply', 'Organize', 'Categories', 'Done'];
+                  const isPast = currentIdx > idx || progress.phase === 'completed' || progress.phase === 'categorizing';
+                  const labels = ['Health', 'Fetch', 'Analyze', 'Apply', 'Organize', 'Done'];
                   
                   return (
                     <div key={phase} className="flex flex-col items-center relative z-10">
@@ -485,7 +524,7 @@ export const SmartOrganizeDialog = ({
                 <div 
                   className="h-full bg-green-500 transition-all duration-500"
                   style={{ 
-                    width: `${Math.max(0, ((['fetching', 'analyzing', 'applying', 'organizing', 'categorizing', 'completed'] as OrganizePhase[]).indexOf(progress.phase) / 5) * 100)}%` 
+                    width: `${Math.max(0, ((['health-check', 'fetching', 'analyzing', 'applying', 'organizing', 'completed'] as OrganizePhase[]).indexOf(progress.phase === 'categorizing' ? 'organizing' : progress.phase) / 5) * 100)}%` 
                   }}
                 />
               </div>
@@ -507,18 +546,22 @@ export const SmartOrganizeDialog = ({
             </div>
             
             {/* Final Stats */}
-            <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="grid grid-cols-4 gap-2 text-center">
               <div className="bg-muted/50 rounded-lg p-3">
-                <div className="text-xl font-bold text-primary">{liveStats.processed.toLocaleString()}</div>
-                <div className="text-xs text-muted-foreground">Total Services</div>
+                <div className="text-lg font-bold text-primary">{liveStats.processed.toLocaleString()}</div>
+                <div className="text-[10px] text-muted-foreground">Services</div>
               </div>
               <div className="bg-muted/50 rounded-lg p-3">
-                <div className="text-xl font-bold text-green-500">{liveStats.applied.toLocaleString()}</div>
-                <div className="text-xs text-muted-foreground">Updated</div>
+                <div className="text-lg font-bold text-green-500">{liveStats.applied.toLocaleString()}</div>
+                <div className="text-[10px] text-muted-foreground">Fixed</div>
               </div>
               <div className="bg-muted/50 rounded-lg p-3">
-                <div className="text-xl font-bold text-amber-500">{liveStats.categories.size}</div>
-                <div className="text-xs text-muted-foreground">Categories</div>
+                <div className="text-lg font-bold text-amber-500">{liveStats.categories.size}</div>
+                <div className="text-[10px] text-muted-foreground">Categories</div>
+              </div>
+              <div className="bg-muted/50 rounded-lg p-3">
+                <div className="text-lg font-bold text-blue-500">{liveStats.healthIssues}</div>
+                <div className="text-[10px] text-muted-foreground">Issues</div>
               </div>
             </div>
             
