@@ -467,7 +467,6 @@ const BuyerNewOrder = () => {
               getEffectivePrice={getEffectivePrice}
             />
             <CurrencySelector />
-            <LanguageSelector />
           </div>
         </div>
 
