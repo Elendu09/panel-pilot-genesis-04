@@ -21,8 +21,7 @@ import {
   MousePointer2,
   Hand,
   Check,
-  Menu,
-  Home
+  Menu
 } from "lucide-react";
 
 type ScreenSize = 'mobile' | 'tablet' | 'desktop';
@@ -49,89 +48,92 @@ interface TourStep {
   tabletOnly?: boolean;
 }
 
+// PANEL OWNER onboarding tour steps
 const tourSteps: TourStep[] = [
   {
     id: "welcome",
     title: "Welcome to Your Panel",
-    description: "Let’s take a quick tour to help you get oriented in your SMM panel admin interface.",
+    description: "Let's take a quick tour to help you get oriented in your SMM panel admin interface.",
     mobileDescription: "Let's take a quick 30-second tour to help you get started!",
-    tabletDescription: "Let’s quickly walk through the main areas of your panel and how to navigate them.",
+    tabletDescription: "Let's quickly walk through the main areas of your panel and how to navigate them.",
     icon: Sparkles,
     target: null,
     position: "center",
     tabletPosition: "center",
     mobilePosition: "center",
   },
+  // MOBILE-ONLY STEPS - Panel Owner bottom nav
   {
     id: "mobile-dashboard",
     title: "Your Dashboard",
     description: "Your main hub showing stats and quick actions.",
-    mobileDescription: "See your balance, recent orders, and quick stats at a glance.",
+    mobileDescription: "View your revenue, orders, and key stats at a glance.",
     icon: LayoutDashboard,
     target: "mobile-home",
     mobileSelector: "[data-tour='mobile-home']",
-    fallbackSelector: "[data-tour='sidebar']",
+    fallbackSelector: "[href='/panel']",
     mobilePosition: "top",
     mobileOnly: true,
     action: "Tap to view dashboard",
     mobileAction: "Tap to view dashboard",
   },
   {
-    id: "mobile-deposit",
-    title: "Add Funds",
-    description: "Top up your balance to start ordering services.",
-    mobileDescription: "Top up your balance quickly to start ordering services.",
-    icon: CreditCard,
-    target: "mobile-deposit",
-    mobileSelector: "[data-tour='mobile-deposit']",
-    fallbackSelector: "[href*='deposit']",
+    id: "mobile-customers",
+    title: "Customer Management",
+    description: "View and manage your customers.",
+    mobileDescription: "Manage customer accounts, balances, and custom pricing.",
+    icon: Users,
+    target: "mobile-customers",
+    mobileSelector: "[data-tour='mobile-customers']",
+    fallbackSelector: "[href*='customers']",
     mobilePosition: "top",
     mobileOnly: true,
-    action: "Tap to add funds",
-    mobileAction: "Tap to add funds",
+    action: "Tap to manage customers",
+    mobileAction: "Tap to manage customers",
   },
   {
-    id: "mobile-new-order",
-    title: "Place New Order",
-    description: "The center button is your shortcut to ordering any service!",
-    mobileDescription: "The center button is your shortcut to ordering any service!",
-    icon: ShoppingCart,
+    id: "mobile-services",
+    title: "Services Management",
+    description: "Add, edit, and organize your services.",
+    mobileDescription: "Import services from providers, set markups, and organize by category.",
+    icon: Package,
     target: "mobile-services",
     mobileSelector: "[data-tour='mobile-services']",
-    fallbackSelector: "[href*='new-order']",
+    fallbackSelector: "[href*='services']",
     mobilePosition: "top",
     mobileOnly: true,
-    action: "Tap to order",
-    mobileAction: "Tap to order",
+    action: "Tap to manage services",
+    mobileAction: "Tap to manage services",
   },
   {
-    id: "mobile-support",
-    title: "Get Support",
-    description: "Need help? Access support tickets and live chat here.",
-    mobileDescription: "Need help? Access support tickets and live chat here.",
-    icon: Users,
-    target: "mobile-support",
-    mobileSelector: "[data-tour='mobile-support']",
-    fallbackSelector: "[href*='support']",
+    id: "mobile-orders",
+    title: "Orders Management",
+    description: "Track and process customer orders.",
+    mobileDescription: "Monitor order status, process refunds, and track delivery progress.",
+    icon: ShoppingCart,
+    target: "mobile-orders",
+    mobileSelector: "[data-tour='mobile-orders']",
+    fallbackSelector: "[href*='orders']",
     mobilePosition: "top",
     mobileOnly: true,
-    action: "Tap for support",
-    mobileAction: "Tap for support",
+    action: "Tap to view orders",
+    mobileAction: "Tap to view orders",
   },
   {
     id: "mobile-more",
     title: "More Options",
     description: "Access additional settings like API management, domain configuration, and more from the menu.",
-    mobileDescription: "Find profile settings, API access, favorites, and more!",
+    mobileDescription: "Find providers, payments, API, domain settings, and more!",
     icon: Menu,
     target: "mobile-more",
     mobileSelector: "[data-tour='mobile-more']",
-    fallbackSelector: "[data-tour='sidebar']",
+    fallbackSelector: "[href*='more']",
     mobilePosition: "top",
     mobileOnly: true,
     action: "Tap for more options",
-    mobileAction: "Tap the More icon",
+    mobileAction: "Tap for more options",
   },
+  // DESKTOP/TABLET STEPS
   {
     id: "sidebar",
     title: "Navigation Sidebar",
@@ -270,7 +272,7 @@ const tourSteps: TourStep[] = [
   {
     id: "api",
     title: "API Management",
-    description: "Empower your resellers with API access! Generate secure API keys for customers who want to integrate your services into their own systems. View API documentation, monitor usage statistics, and manage key permissions. Rate limiting protects your system while allowing legitimate high-volume users.",
+    description: "Empower your resellers with API access! Generate secure API keys for customers who want to integrate your services into their own systems.",
     tabletDescription: "Generate API keys for customers to integrate your services. View documentation and monitor usage.",
     icon: Code,
     target: "api",
@@ -286,7 +288,7 @@ const tourSteps: TourStep[] = [
   {
     id: "domain",
     title: "Domain Settings",
-    description: "Professional branding with your own domain! Connect a custom domain (e.g., panel.yourbrand.com) for a polished look. The setup wizard guides you through DNS configuration. SSL certificates are automatically provisioned for secure HTTPS connections. Monitor domain health and troubleshoot issues here.",
+    description: "Professional branding with your own domain! Connect a custom domain (e.g., panel.yourbrand.com) for a polished look.",
     tabletDescription: "Connect your custom domain with guided DNS setup. Automatic SSL certificates for secure connections.",
     icon: Globe,
     target: "domains",
@@ -303,7 +305,7 @@ const tourSteps: TourStep[] = [
     id: "complete",
     title: "You're All Set!",
     description: "Congratulations! You're now ready to run your SMM panel like a pro. Remember: the sidebar provides quick access to all sections.",
-    mobileDescription: "All done! Start managing your panel. Need help? Tap the More menu.",
+    mobileDescription: "All done! Start managing your panel. Tap More for additional settings.",
     tabletDescription: "You're ready! Use the sidebar for quick navigation. Visit Support Center if you need assistance.",
     icon: Sparkles,
     target: null,
@@ -318,17 +320,13 @@ interface OnboardingTourProps {
   isOpen: boolean;
 }
 
-// Hook to detect screen size - aligned with CSS md: breakpoint (768px) for sidebar visibility
-// Includes device rotation detection for responsive tour
+// Hook to detect screen size
 const useScreenSize = (): ScreenSize => {
   const [screenSize, setScreenSize] = useState<ScreenSize>('desktop');
   
   useEffect(() => {
     const updateScreenSize = () => {
       const width = window.innerWidth;
-      // Mobile: < 768px (no sidebar, uses bottom nav)
-      // Tablet: 768px - 1024px (sidebar visible)
-      // Desktop: >= 1024px (sidebar visible)
       if (width < 768) {
         setScreenSize('mobile');
       } else if (width < 1024) {
@@ -338,14 +336,12 @@ const useScreenSize = (): ScreenSize => {
       }
     };
     
-    // Debounce to prevent rapid-fire updates
     let timeoutId: ReturnType<typeof setTimeout>;
     const debouncedUpdate = () => {
       clearTimeout(timeoutId);
       timeoutId = setTimeout(updateScreenSize, 100);
     };
     
-    // Handle orientation change with delay to wait for orientation to settle
     const handleOrientationChange = () => {
       setTimeout(updateScreenSize, 150);
     };
@@ -416,7 +412,6 @@ const SpotlightOverlay = ({ targetRect }: { targetRect: DOMRect | null }) => {
 
   return (
     <>
-      {/* Spotlight cutout using clip-path */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -439,7 +434,6 @@ const SpotlightOverlay = ({ targetRect }: { targetRect: DOMRect | null }) => {
         }}
       />
       
-      {/* Highlight border around target */}
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -483,12 +477,9 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
   const [clickPosition, setClickPosition] = useState<{ x: number; y: number } | null>(null);
   
   // Filter steps based on screen size
-  // Tablet (768px+) has sidebar visible, so treat it like desktop for navigation
   const filteredSteps = useMemo(() => {
     return tourSteps.filter(step => {
-      // Skip desktop-only steps on mobile only (tablet has sidebar)
       if (isMobile && step.desktopOnly) return false;
-      // Skip mobile-only steps on tablet and desktop (they have sidebar)
       if (!isMobile && step.mobileOnly) return false;
       return true;
     });
@@ -501,7 +492,6 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
   const getActiveSelector = useCallback((): string | null => {
     if (!step) return null;
     
-    // Build priority list based on screen size
     const selectors: (string | undefined)[] = [];
     
     if (isMobile) {
@@ -512,13 +502,11 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
       selectors.push(step.selector, step.tabletSelector, step.fallbackSelector);
     }
     
-    // Find first selector that matches a visible element
     for (const sel of selectors) {
       if (!sel) continue;
       const element = document.querySelector(sel);
       if (element) {
         const rect = element.getBoundingClientRect();
-        // Check if element is visible (not zero-sized, on screen)
         if (rect.width > 0 && rect.height > 0 && rect.top < window.innerHeight && rect.bottom > 0) {
           return sel;
         }
@@ -559,7 +547,6 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
       if (element) {
         const rect = element.getBoundingClientRect();
         setTargetRect(rect);
-        // Position click indicator at center of element
         setClickPosition({
           x: rect.left + rect.width / 2,
           y: rect.top + rect.height / 2
@@ -579,7 +566,6 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
         const element = document.querySelector(selector);
         if (element) {
           element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
-          // Wait for scroll, then update rect
           setTimeout(updateTargetRect, 350);
         }
       }
@@ -588,9 +574,7 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
 
   useEffect(() => {
     if (isOpen) {
-      // Small delay to ensure DOM is ready
       const timeout = setTimeout(updateTargetRect, 100);
-      // Update on scroll/resize
       window.addEventListener('resize', updateTargetRect);
       window.addEventListener('scroll', updateTargetRect);
       return () => {
@@ -634,35 +618,34 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
   const getCardPosition = () => {
     const position = getPosition();
     
-    // FIRST STEP (welcome): ALWAYS center on ALL devices - this takes priority
-    if (currentStep === 0) {
+    // Welcome and complete steps: ALWAYS center
+    if (currentStep === 0 || step?.id === 'complete') {
       return { 
         position: "fixed" as const,
         top: "50%",
         left: "50%",
         transform: "translate(-50%, -50%)",
-        maxWidth: isMobile ? "calc(100vw - 32px)" : undefined,
-        width: isMobile ? "auto" : undefined,
+        maxWidth: isMobile ? "min(340px, calc(100vw - 32px))" : undefined,
+        width: isMobile ? "100%" : undefined,
       };
     }
     
-    // Center position - also always centered on all devices
+    // Center position
     if (position === "center") {
       return { 
         position: "fixed" as const,
         top: "50%",
         left: "50%",
         transform: "translate(-50%, -50%)",
-        maxWidth: isMobile ? "calc(100vw - 32px)" : undefined,
-        width: isMobile ? "auto" : undefined,
+        maxWidth: isMobile ? "min(340px, calc(100vw - 32px))" : undefined,
+        width: isMobile ? "100%" : undefined,
       };
     }
     
-    // MOBILE ONLY: Position above bottom nav for targeted steps
+    // MOBILE: Position above bottom nav for targeted steps
     if (isMobile) {
       if (position === "top" && targetRect) {
-        // Card positioned above the bottom nav, below the target element
-        const bottomNavHeight = 80; // Safe area for bottom nav
+        const bottomNavHeight = 80;
         return {
           position: "fixed" as const,
           bottom: bottomNavHeight + 16,
@@ -672,7 +655,6 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
           width: "100%",
         };
       }
-      // Default mobile position - center with better max-width
       return {
         position: "fixed" as const,
         top: "50%",
@@ -683,8 +665,7 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
       };
     }
 
-    // TABLET & DESKTOP: Center the modal (both have sidebars, no bottom nav)
-    // This provides a clean, focused experience on larger screens
+    // TABLET & DESKTOP
     if (!targetRect) {
       return { 
         position: "fixed" as const,
@@ -694,7 +675,6 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
       };
     }
 
-    // For targeted elements on tablet/desktop, position relative to target
     const cardWidth = isTablet ? 380 : 450;
     const cardHeight = isTablet ? 400 : 500;
     const padding = 24;
@@ -725,7 +705,6 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
           left: Math.max(padding, Math.min(targetRect.left, window.innerWidth - cardWidth - padding)),
         };
       default:
-        // Default to centered for tablet/desktop
         return {
           position: "fixed" as const,
           top: "50%",
@@ -737,7 +716,6 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
 
   if (!isOpen || !step) return null;
 
-  // Desktop gets a richer experience with larger cards
   const isCompact = isMobile;
   const isDesktop = screenSize === 'desktop';
 
@@ -798,16 +776,6 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
                     Interactive
                   </span>
                 )}
-                {isDesktop && (
-                  <span className="px-2 py-1 text-xs font-medium bg-emerald-500/10 text-emerald-600 rounded-full">
-                    Desktop Mode
-                  </span>
-                )}
-                {isTablet && (
-                  <span className="px-2 py-1 text-xs font-medium bg-blue-500/10 text-blue-600 rounded-full">
-                    Tablet Mode
-                  </span>
-                )}
               </div>
               <Button
                 variant="ghost"
@@ -822,7 +790,7 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
             {/* Progress */}
             <Progress value={progress} className={isDesktop ? "h-2" : "h-1.5"} />
 
-            {/* Icon - larger on desktop */}
+            {/* Icon */}
             <div className="flex justify-center">
               <motion.div
                 initial={{ scale: 0, rotate: -180 }}
@@ -834,7 +802,7 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
               </motion.div>
             </div>
 
-            {/* Content - richer on desktop */}
+            {/* Content */}
             <div className="text-center space-y-2">
               <motion.h2
                 initial={{ opacity: 0, y: 10 }}
@@ -853,7 +821,7 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
                 {getDescription()}
               </motion.p>
               
-              {/* Action hint - uses device-specific action text */}
+              {/* Action hint */}
               {getActionText() && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
@@ -869,132 +837,72 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
               )}
             </div>
 
-            {/* Enhanced Step Progress Indicator */}
+            {/* Step Progress Indicator */}
             <div className={`${isCompact ? 'space-y-2' : 'space-y-3'}`}>
-              {/* Step counter text */}
               <div className={`flex items-center justify-between text-muted-foreground ${isCompact ? 'text-[10px]' : 'text-xs'}`}>
                 <span>{currentStep + 1} of {filteredSteps.length} steps</span>
                 <span>{filteredSteps.length - currentStep - 1} remaining</span>
               </div>
               
-              {/* Visual step indicators - simplified on mobile/tablet */}
-              {isCompact ? (
-                // Simplified progress bar for mobile/tablet
-                <div className="flex items-center gap-1">
-                  {filteredSteps.map((_, index) => (
-                    <motion.div
-                      key={index}
-                      initial={false}
-                      animate={{
-                        backgroundColor: index <= currentStep 
-                          ? "hsl(var(--primary))" 
-                          : "hsl(var(--muted))"
-                      }}
-                      className={`h-1 flex-1 rounded-full transition-colors ${
-                        index === currentStep ? "bg-primary" : ""
-                      }`}
-                      onClick={() => handleStepClick(index)}
-                    />
-                  ))}
-                </div>
-              ) : (
-                // Full step indicators for desktop
-                <div className="flex items-center justify-center gap-1">
-                  {filteredSteps.map((s, index) => (
-                    <button
-                      key={index}
-                      onClick={() => handleStepClick(index)}
-                      className="group relative flex items-center"
-                      title={s.title}
-                    >
-                      {/* Connector line */}
-                      {index > 0 && (
-                        <div className={`absolute right-full w-1 h-0.5 ${
-                          index <= currentStep ? "bg-primary" : "bg-muted"
-                        }`} />
-                      )}
-                      
-                      {/* Step dot/icon */}
-                      <motion.div
-                        initial={false}
-                        animate={{
-                          scale: index === currentStep ? 1 : 0.8,
-                          backgroundColor: index < currentStep 
-                            ? "hsl(var(--primary))" 
-                            : index === currentStep 
-                              ? "hsl(var(--primary))"
-                              : "hsl(var(--muted))"
-                        }}
-                        className={`relative flex items-center justify-center rounded-full transition-all duration-300 ${
-                          index === currentStep 
-                            ? "w-6 h-6 ring-2 ring-primary/30 ring-offset-2 ring-offset-background" 
-                            : "w-4 h-4 hover:scale-110"
-                        }`}
-                      >
-                        {index < currentStep ? (
-                          <Check className="w-2.5 h-2.5 text-primary-foreground" />
-                        ) : index === currentStep ? (
-                          <motion.div 
-                            className="w-2 h-2 bg-primary-foreground rounded-full"
-                            animate={{ scale: [1, 1.2, 1] }}
-                            transition={{ duration: 1.5, repeat: Infinity }}
-                          />
-                        ) : null}
-                      </motion.div>
-                      
-                      {/* Tooltip on hover */}
-                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                        <div className="px-2 py-1 text-[10px] font-medium bg-popover border border-border rounded shadow-lg whitespace-nowrap">
-                          {s.title.replace(/[🎉✨]/g, '').trim()}
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
+              {/* Simplified progress bar */}
+              <div className="flex items-center gap-1">
+                {filteredSteps.map((_, index) => (
+                  <motion.div
+                    key={index}
+                    initial={false}
+                    animate={{
+                      backgroundColor: index <= currentStep 
+                        ? "hsl(var(--primary))" 
+                        : "hsl(var(--muted))"
+                    }}
+                    className={`h-1 flex-1 rounded-full transition-colors cursor-pointer ${
+                      index === currentStep ? "bg-primary" : ""
+                    }`}
+                    onClick={() => handleStepClick(index)}
+                  />
+                ))}
+              </div>
             </div>
 
-            {/* Navigation */}
-            <div className={`flex ${isCompact ? 'gap-2' : 'gap-3'}`}>
-              {currentStep > 0 && (
-                <Button
-                  variant="outline"
-                  onClick={handlePrev}
-                  className={`flex-1 gap-1 ${isCompact ? 'text-sm py-2' : 'gap-2'}`}
-                  size={isCompact ? "sm" : "default"}
-                >
-                  <ChevronLeft className={isCompact ? "w-3 h-3" : "w-4 h-4"} />
-                  {isCompact ? "" : "Back"}
-                </Button>
-              )}
+            {/* Navigation buttons */}
+            <div className="flex items-center gap-2 pt-2">
+              <Button
+                variant="ghost"
+                onClick={handleSkip}
+                className={`text-muted-foreground ${isCompact ? 'text-xs h-9' : ''}`}
+              >
+                Skip Tour
+              </Button>
+              
+              <div className="flex-1" />
+              
+              <Button
+                variant="outline"
+                onClick={handlePrev}
+                disabled={currentStep === 0}
+                className={`gap-1 ${isCompact ? 'text-xs h-9 px-3' : ''}`}
+              >
+                <ChevronLeft className="w-4 h-4" />
+                {!isCompact && "Back"}
+              </Button>
+              
               <Button
                 onClick={handleNext}
-                className={`flex-1 gap-1 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 ${isCompact ? 'text-sm py-2' : 'gap-2'}`}
-                size={isCompact ? "sm" : "default"}
+                className={`gap-1 min-w-[100px] ${isCompact ? 'text-xs h-9' : ''}`}
               >
                 {currentStep === filteredSteps.length - 1 ? (
                   <>
-                    <Sparkles className={isCompact ? "w-3 h-3" : "w-4 h-4"} />
-                    {isCompact ? "Start" : "Get Started"}
+                    <Check className="w-4 h-4" />
+                    {isCompact ? "Done" : "Complete Tour"}
                   </>
                 ) : (
                   <>
                     Next
-                    <ChevronRight className={isCompact ? "w-3 h-3" : "w-4 h-4"} />
+                    <ChevronRight className="w-4 h-4" />
                   </>
                 )}
               </Button>
             </div>
-
-            {/* Skip link */}
-            {currentStep < filteredSteps.length - 1 && (
-              <button
-                onClick={handleSkip}
-                className={`w-full text-center text-muted-foreground hover:text-foreground transition-colors ${isCompact ? 'text-[10px]' : 'text-xs'}`}
-              >
-                Skip tour
-              </button>
-            )}
           </Card>
         </motion.div>
       </div>

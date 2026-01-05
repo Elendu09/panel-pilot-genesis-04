@@ -20,6 +20,7 @@ import {
   Layers,
   Search,
   Plus,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -449,6 +450,17 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
                           <User className="w-5 h-5 text-muted-foreground" />
                           <span className="font-medium">Profile</span>
                         </Link>
+                        <button
+                          onClick={() => {
+                            setMobileMenuOpen(false);
+                            // Trigger buyer tour restart
+                            window.dispatchEvent(new CustomEvent('restartBuyerTour'));
+                          }}
+                          className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-all w-full text-left"
+                        >
+                          <Sparkles className="w-5 h-5 text-primary" />
+                          <span className="font-medium text-primary">Take a Tour</span>
+                        </button>
                         <Link
                           to="/terms"
                           onClick={() => setMobileMenuOpen(false)}

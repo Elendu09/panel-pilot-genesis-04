@@ -53,21 +53,30 @@ function cleanCategoryString(input: string): string {
     .trim();
 }
 
-// Valid database enum categories - must match exactly
+// Valid database enum categories - COMPLETE list including 29 new categories
 const VALID_CATEGORIES = [
+  // Original 47
   'instagram', 'facebook', 'twitter', 'youtube', 'tiktok', 'linkedin', 'telegram',
   'threads', 'snapchat', 'pinterest', 'whatsapp', 'twitch', 'discord', 'spotify',
   'soundcloud', 'audiomack', 'reddit', 'vk', 'kick', 'rumble', 'dailymotion',
   'deezer', 'shazam', 'tidal', 'reverbnation', 'mixcloud', 'quora', 'tumblr',
   'clubhouse', 'likee', 'kwai', 'trovo', 'odysee', 'bilibili', 'lemon8', 'bereal',
   'weibo', 'line', 'patreon', 'medium', 'roblox', 'steam', 'applemusic', 'amazonmusic',
-  'napster', 'iheart', 'google', 'trustpilot', 'yelp', 'tripadvisor', 'website', 'other'
+  'napster', 'iheart',
+  // New 29 from migration
+  'gettr', 'truthsocial', 'parler', 'mastodon', 'bluesky', 'gab', 'minds',
+  'caffeine', 'dlive', 'nimotv', 'bigo', 'douyin', 'xiaohongshu', 'qq', 'wechat',
+  'kuaishou', 'youtubemusic', 'pandora', 'googlebusiness', 'trustpilot', 'yelp',
+  'tripadvisor', 'behance', 'dribbble', 'deviantart', 'flickr', 'vero', 'podcast', 'momo',
+  // Misc
+  'google', 'website', 'other'
 ] as const;
 
 type ValidCategory = typeof VALID_CATEGORIES[number];
 
 // Platform patterns with comprehensive keywords - ORDER MATTERS
 const PLATFORM_PATTERNS: Array<{ platform: ValidCategory; keywords: string[] }> = [
+  // Major platforms first
   { platform: 'instagram', keywords: ['instagram', 'insta ', ' ig ', 'ig follower', 'ig like', 'ig view', 'ig comment', 'ig save', 'ig reach', 'igtv', 'ig story', 'ig reel', 'reels', ' reel '] },
   { platform: 'facebook', keywords: ['facebook', ' fb ', 'fb.com', 'fb like', 'fb follower', 'fb share', 'fb page', 'fb group', 'fb event', 'fb video'] },
   { platform: 'twitter', keywords: ['twitter', 'x.com', 'tweet', ' x follower', ' x like', ' x retweet', ' x view', ' x impression', ' x poll'] },
@@ -114,14 +123,42 @@ const PLATFORM_PATTERNS: Array<{ platform: ValidCategory; keywords: string[] }> 
   { platform: 'amazonmusic', keywords: ['amazon music', 'amazonmusic'] },
   { platform: 'napster', keywords: ['napster'] },
   { platform: 'iheart', keywords: ['iheart', 'iheartradio'] },
-  { platform: 'google', keywords: ['google review', 'google map', 'gmb ', 'google my business', 'google business'] },
-  { platform: 'trustpilot', keywords: ['trustpilot', 'trust pilot'] },
+  // NEW 29 categories
+  { platform: 'gettr', keywords: ['gettr', 'gettr follower', 'gettr like'] },
+  { platform: 'truthsocial', keywords: ['truthsocial', 'truth social', 'truth follower'] },
+  { platform: 'parler', keywords: ['parler', 'parler follower'] },
+  { platform: 'mastodon', keywords: ['mastodon', 'masto', 'mastodon follower'] },
+  { platform: 'bluesky', keywords: ['bluesky', 'blue sky', 'bsky', 'bluesky follower'] },
+  { platform: 'gab', keywords: ['gab', 'gab.com', 'gab follower'] },
+  { platform: 'minds', keywords: ['minds', 'minds.com', 'minds follower'] },
+  { platform: 'caffeine', keywords: ['caffeine', 'caffeine.tv', 'caffeine follower'] },
+  { platform: 'dlive', keywords: ['dlive', 'd.live', 'dlive follower'] },
+  { platform: 'nimotv', keywords: ['nimotv', 'nimo.tv', 'nimo', 'nimo follower'] },
+  { platform: 'bigo', keywords: ['bigo', 'bigo live', 'bigolive', 'bigo follower'] },
+  { platform: 'douyin', keywords: ['douyin', '抖音', 'douyin follower'] },
+  { platform: 'xiaohongshu', keywords: ['xiaohongshu', '小红书', 'red', 'little red book', 'xhs'] },
+  { platform: 'qq', keywords: [' qq ', 'tencent qq', 'qq.com', 'qq follower'] },
+  { platform: 'wechat', keywords: ['wechat', 'weixin', '微信', 'wechat follower'] },
+  { platform: 'kuaishou', keywords: ['kuaishou', '快手', 'kuaishou follower'] },
+  { platform: 'youtubemusic', keywords: ['youtube music', 'ytmusic', 'yt music'] },
+  { platform: 'pandora', keywords: ['pandora', 'pandora music', 'pandora play'] },
+  { platform: 'googlebusiness', keywords: ['google business', 'gmb', 'google my business', 'gbp', 'google map review'] },
+  { platform: 'behance', keywords: ['behance', 'behance follower', 'behance like'] },
+  { platform: 'dribbble', keywords: ['dribbble', 'dribbble follower', 'dribbble like'] },
+  { platform: 'deviantart', keywords: ['deviantart', 'deviant art', 'deviantart follower'] },
+  { platform: 'flickr', keywords: ['flickr', 'flickr follower', 'flickr like'] },
+  { platform: 'vero', keywords: ['vero', 'vero follower'] },
+  { platform: 'podcast', keywords: ['podcast', 'podcasts', 'apple podcast', 'google podcast', 'podcast play'] },
+  { platform: 'momo', keywords: ['momo', 'momo follower'] },
+  { platform: 'trustpilot', keywords: ['trustpilot', 'trust pilot', 'trustpilot review'] },
   { platform: 'yelp', keywords: ['yelp', 'yelp review'] },
-  { platform: 'tripadvisor', keywords: ['tripadvisor', 'trip advisor'] },
+  { platform: 'tripadvisor', keywords: ['tripadvisor', 'trip advisor', 'tripadvisor review'] },
+  // Generic
+  { platform: 'google', keywords: ['google review', 'google map', 'google business'] },
   { platform: 'website', keywords: ['website traffic', 'web traffic', 'site visitor', 'seo ', 'backlink'] },
 ];
 
-// Platform shortforms for first-word detection
+// Platform shortforms for first-word detection - EXTENDED
 const PLATFORM_SHORTFORMS: Record<string, ValidCategory> = {
   'ig': 'instagram', 'insta': 'instagram', 'gram': 'instagram', 'igtv': 'instagram', 'reels': 'instagram',
   'fb': 'facebook',
@@ -149,6 +186,14 @@ const PLATFORM_SHORTFORMS: Record<string, ValidCategory> = {
   'ch': 'clubhouse', 'wb': 'weibo', 'br': 'bereal', 'l8': 'lemon8',
   'rx': 'roblox', 'rbx': 'roblox', 'stm': 'steam',
   'apm': 'applemusic', 'amz': 'amazonmusic', 'ih': 'iheart',
+  // NEW shortforms
+  'gt': 'gettr', 'ts': 'truthsocial', 'pl': 'parler', 'mst': 'mastodon',
+  'bs': 'bluesky', 'bsky': 'bluesky', 'nim': 'nimotv', 'bg': 'bigo',
+  'dy': 'douyin', 'xhs': 'xiaohongshu', 'ks': 'kuaishou',
+  'ytm': 'youtubemusic', 'pd': 'pandora', 'gmb': 'googlebusiness',
+  'bh': 'behance', 'dr': 'dribbble', 'da': 'deviantart',
+  'fl': 'flickr', 'pc': 'podcast', 'mm': 'momo',
+  'tp': 'trustpilot', 'yp': 'yelp', 'ta': 'tripadvisor',
 };
 
 // Ignored prefixes (country codes, quality markers)
@@ -275,7 +320,7 @@ serve(async (req) => {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'User-Agent': 'SMM-Panel/1.0',
+        'User-Agent': 'SMM-Panel/2.0',
       },
     });
 
@@ -297,6 +342,8 @@ serve(async (req) => {
       services = data;
     } else if (data.services && Array.isArray(data.services)) {
       services = data.services;
+    } else if (data.data && Array.isArray(data.data)) {
+      services = data.data;
     } else if (data.error) {
       return new Response(
         JSON.stringify({ error: data.error }),
@@ -313,15 +360,19 @@ serve(async (req) => {
       const refill = parseBoolean(service.refill);
       const cancel = parseBoolean(service.cancel);
       
+      // Clean and validate rate
+      const rawRate = String(service.rate).replace(/[^0-9.]/g, '');
+      const rate = parseFloat(rawRate) || 0;
+      
       return {
         providerId: 'external',
         providerServiceId: String(service.service),
         name: service.name || 'Unknown Service',
         category: detectedPlatform,
         type: service.type || 'default',
-        rate: parseFloat(service.rate) || 0,
-        min: parseInt(service.min) || 1,
-        max: parseInt(service.max) || 10000,
+        rate: rate,
+        min: parseInt(String(service.min).replace(/[^0-9]/g, '')) || 1,
+        max: parseInt(String(service.max).replace(/[^0-9]/g, '')) || 10000,
         description: service.description || generateDescription(service, refill, cancel),
         refill,
         cancel,
@@ -335,7 +386,7 @@ serve(async (req) => {
     standardizedServices.forEach(s => {
       categoryStats[s.category] = (categoryStats[s.category] || 0) + 1;
     });
-    console.log('Category detection stats:', categoryStats);
+    console.log('Category detection stats:', JSON.stringify(categoryStats));
 
     console.log(`Successfully standardized ${standardizedServices.length} services`);
 
