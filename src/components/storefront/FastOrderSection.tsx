@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext, useMemo } from 'react';
 import { useTheme } from '@/hooks/use-theme';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -34,6 +34,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { LiveOrderTracker } from '@/components/order/LiveOrderTracker';
 import { Confetti } from '@/components/effects/Confetti';
+import { useCategoryFilters } from '@/hooks/useCategoryFilters';
 
 interface Service {
   id: string;
@@ -130,8 +131,13 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
   const [modalStep, setModalStep] = useState<'email' | 'credentials' | 'login'>('email');
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
-  // Get unique categories from services (filter out empty/null categories)
-  const categories = [...new Set(services.map(s => s.category).filter(Boolean))];
+  // Use enhanced category filters hook for real-time sync with 70+ platforms
+  const { activeCategories, getCategoryData: hookGetCategoryData } = useCategoryFilters(panelId, services);
+
+  // Get unique categories from services (enhanced with real-time sync)
+  const categories = useMemo(() => {
+    return activeCategories.map(cat => cat.id);
+  }, [activeCategories]);
   
   // Get services for selected category
   const categoryServices = selectedCategory 
@@ -142,7 +148,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
   const totalPrice = selectedService ? (selectedService.price * quantity) / 1000 : 0;
 
   const getCategoryIcon = (category: string) => {
-    return SOCIAL_ICONS_MAP[category.toLowerCase()] || SOCIAL_ICONS_MAP.other;
+    return hookGetCategoryData(category.toLowerCase());
   };
 
   // Quantity presets

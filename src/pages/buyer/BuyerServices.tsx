@@ -41,6 +41,7 @@ import { useBuyerRealtimeOrders } from "@/hooks/use-buyer-realtime-orders";
 import { detectServiceType } from "@/lib/service-icon-detection";
 import { useBuyerCart } from "@/hooks/use-buyer-cart";
 import { ServiceInfoPanel } from "@/components/buyer/ServiceInfoPanel";
+import { useCategoryFilters } from "@/hooks/useCategoryFilters";
 import {
   Carousel,
   CarouselContent,
@@ -64,18 +65,8 @@ const SERVICE_TYPE_COLORS: Record<string, string> = {
   general: 'bg-gray-500/10 text-gray-600 border-gray-500/20',
 };
 
-// Dynamically build platform filters from SOCIAL_ICONS_MAP
-const platformFilters = [
-  { id: 'all', name: 'All', icon: Filter, bgColor: 'bg-primary', color: 'text-primary' },
-  ...Object.entries(SOCIAL_ICONS_MAP)
-    .filter(([key]) => key !== 'other')
-    .map(([id, data]) => ({
-      id,
-      name: data.label || id.charAt(0).toUpperCase() + id.slice(1),
-      ...data,
-    })),
-  { id: 'other', name: 'Other', ...SOCIAL_ICONS_MAP.other },
-];
+// Dynamically build platform filters from database categories with real-time sync
+// This ensures 70+ categories are displayed when active
 
 const BuyerServices = () => {
   const navigate = useNavigate();
@@ -93,6 +84,9 @@ const BuyerServices = () => {
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
   const [orderStats, setOrderStats] = useState({ total: 0, pending: 0, completed: 0 });
+
+  // Use enhanced category filters hook for real-time sync with 70+ platforms
+  const { filterPills, stats: categoryStats, getCategoryData: getHookCategoryData } = useCategoryFilters(panel?.id, services);
 
   // Real-time order tracking
   useBuyerRealtimeOrders(buyer?.id, panel?.id);
@@ -218,7 +212,7 @@ const BuyerServices = () => {
   }, [services, searchParams, navigate, fastOrderApplied]);
 
 
-  // Get categories with counts
+  // Get categories with counts - now uses the hook's categoryCounts for consistency
   const categoriesWithCounts = useMemo(() => {
     const counts: Record<string, number> = { all: services.length };
     services.forEach((s: any) => {
@@ -226,6 +220,9 @@ const BuyerServices = () => {
     });
     return counts;
   }, [services]);
+
+  // Platform filters from hook (real-time synced with 70+ categories)
+  const platformFilters = filterPills;
 
   // Group services by category and sub-category
   const groupedServices = useMemo(() => {
@@ -260,9 +257,8 @@ const BuyerServices = () => {
     return Object.values(categoryData.subCategories).reduce((sum, arr) => sum + arr.length, 0);
   };
 
-  const getCategoryData = (categoryId: string) => {
-    return SOCIAL_ICONS_MAP[categoryId] || SOCIAL_ICONS_MAP.other;
-  };
+  // Use the hook's getCategoryData for consistency
+  const getCategoryData = getHookCategoryData;
 
   return (
     <BuyerLayout>
