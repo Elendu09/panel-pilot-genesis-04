@@ -900,7 +900,7 @@ export const autoAssignIconsAndCategories = (
 };
 
 /**
- * Comprehensive icon map for UI rendering
+ * Comprehensive icon map for UI rendering - 70+ platforms
  */
 export const ICON_CATEGORIES = [
   { id: "instagram", label: "Instagram", color: "from-purple-500 to-pink-500" },
@@ -949,7 +949,7 @@ export const ICON_CATEGORIES = [
   { id: "applemusic", label: "Apple Music", color: "from-pink-500 to-red-500" },
   { id: "amazonmusic", label: "Amazon Music", color: "from-teal-400 to-teal-300" },
   { id: "iheart", label: "iHeart Radio", color: "from-red-600 to-red-400" },
-  // New 20+ platforms for 70+ total
+  // 20+ additional platforms for 70+ total coverage
   { id: "gettr", label: "Gettr", color: "from-red-500 to-red-400" },
   { id: "truthsocial", label: "Truth Social", color: "from-blue-600 to-blue-400" },
   { id: "parler", label: "Parler", color: "from-red-700 to-red-500" },
@@ -976,8 +976,59 @@ export const ICON_CATEGORIES = [
   { id: "dribbble", label: "Dribbble", color: "from-pink-500 to-pink-400" },
   { id: "deviantart", label: "DeviantArt", color: "from-green-700 to-green-500" },
   { id: "flickr", label: "Flickr", color: "from-pink-600 to-blue-500" },
-  { id: "500px", label: "500px", color: "from-gray-800 to-gray-600" },
   { id: "vero", label: "Vero", color: "from-gray-900 to-gray-700" },
   { id: "podcast", label: "Podcast", color: "from-purple-600 to-purple-400" },
+  { id: "momo", label: "Momo", color: "from-pink-500 to-pink-400" },
   { id: "other", label: "Other", color: "from-gray-500 to-gray-400" },
 ];
+
+// Valid database categories - these match the service_category enum in Supabase
+export const VALID_DB_CATEGORIES = [
+  'instagram', 'facebook', 'twitter', 'youtube', 'tiktok', 'linkedin', 'telegram', 'other',
+  'threads', 'snapchat', 'pinterest', 'whatsapp', 'twitch', 'discord', 'spotify', 'soundcloud',
+  'audiomack', 'reddit', 'vk', 'kick', 'rumble', 'dailymotion', 'deezer', 'shazam', 'tidal',
+  'reverbnation', 'mixcloud', 'quora', 'tumblr', 'clubhouse', 'likee', 'kwai', 'trovo', 'odysee',
+  'bilibili', 'lemon8', 'bereal', 'weibo', 'line', 'patreon', 'medium', 'roblox', 'steam',
+  'applemusic', 'amazonmusic', 'napster', 'iheart',
+  // Newly added categories
+  'gettr', 'truthsocial', 'parler', 'mastodon', 'bluesky', 'gab', 'minds', 'caffeine', 'dlive',
+  'nimotv', 'bigo', 'douyin', 'xiaohongshu', 'qq', 'wechat', 'kuaishou', 'youtubemusic', 'pandora',
+  'googlebusiness', 'trustpilot', 'yelp', 'tripadvisor', 'behance', 'dribbble', 'deviantart',
+  'flickr', 'vero', 'podcast', 'momo'
+] as const;
+
+// Type for valid categories
+export type ValidServiceCategory = typeof VALID_DB_CATEGORIES[number];
+
+// Function to validate and map category to a valid database value
+export const mapToValidCategory = (category: string): ValidServiceCategory => {
+  const normalized = category.toLowerCase().trim();
+  
+  // Direct match
+  if (VALID_DB_CATEGORIES.includes(normalized as ValidServiceCategory)) {
+    return normalized as ValidServiceCategory;
+  }
+  
+  // Fallback mappings for edge cases
+  const fallbacks: Record<string, ValidServiceCategory> = {
+    'x': 'twitter',
+    'ytmusic': 'youtubemusic',
+    'yt music': 'youtubemusic',
+    'youtube music': 'youtubemusic',
+    'google business': 'googlebusiness',
+    'trip advisor': 'tripadvisor',
+    'deviant art': 'deviantart',
+    'nimo': 'nimotv',
+    'nimo tv': 'nimotv',
+    'bigo live': 'bigo',
+    'red': 'xiaohongshu',
+    'little red book': 'xiaohongshu',
+  };
+  
+  if (fallbacks[normalized]) {
+    return fallbacks[normalized];
+  }
+  
+  // Default fallback
+  return 'other';
+};

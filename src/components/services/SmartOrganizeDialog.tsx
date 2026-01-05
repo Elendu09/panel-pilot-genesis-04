@@ -251,35 +251,57 @@ export const SmartOrganizeDialog = ({
         }
       }
       
-      // Phase 3: Apply ALL changes automatically (no preview needed)
+      // Phase 3: Apply ALL changes automatically with proper error handling
       const changesToApply = analyzed.filter(s => s.willChange);
-      setProgress({ phase: 'applying', current: 0, total: changesToApply.length, message: 'Applying changes...' });
+      setProgress({ phase: 'applying', current: 0, total: changesToApply.length, message: 'Applying changes to database...' });
       
-      const chunkSize = 100;
+      const chunkSize = 50; // Smaller chunks for better error handling
       let appliedCount = 0;
+      let failedCount = 0;
       
       for (let i = 0; i < changesToApply.length; i += chunkSize) {
         const chunk = changesToApply.slice(i, i + chunkSize);
         
-        await Promise.all(
-          chunk.map(update =>
-            supabase
+        const results = await Promise.allSettled(
+          chunk.map(async (update) => {
+            const { error } = await supabase
               .from('services')
-              .update({ category: update.newCategory as any, image_url: update.newIcon })
-              .eq('id', update.id)
-          )
+              .update({ 
+                category: update.newCategory as any, 
+                image_url: update.newIcon 
+              })
+              .eq('id', update.id);
+            
+            if (error) {
+              console.error(`Failed to update service ${update.id}:`, error.message);
+              throw error;
+            }
+            return update.id;
+          })
         );
         
-        appliedCount += chunk.length;
+        const successCount = results.filter(r => r.status === 'fulfilled').length;
+        const failCount = results.filter(r => r.status === 'rejected').length;
+        
+        appliedCount += successCount;
+        failedCount += failCount;
+        
         setLiveStats(prev => ({ ...prev, applied: appliedCount }));
         
         setProgress({ 
           phase: 'applying', 
-          current: appliedCount, 
+          current: i + chunk.length, 
           total: changesToApply.length,
-          message: `Updated ${appliedCount.toLocaleString()} of ${changesToApply.length.toLocaleString()} services...`
+          message: `Updated ${appliedCount.toLocaleString()} services (${failedCount} failed)...`
         });
+        
+        // Small delay to prevent rate limiting
+        if (i % 200 === 0 && i > 0) {
+          await new Promise(r => setTimeout(r, 100));
+        }
       }
+      
+      console.log(`Smart Organize: Updated ${appliedCount} services, ${failedCount} failed`);
       
       // Phase 4: Organize - sort by category then service type
       setProgress({ phase: 'organizing', current: 0, total: analyzed.length, message: 'Organizing by category & type...' });

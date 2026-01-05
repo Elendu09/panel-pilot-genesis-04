@@ -2416,6 +2416,35 @@ export type Database = {
         | "amazonmusic"
         | "napster"
         | "iheart"
+        | "gettr"
+        | "truthsocial"
+        | "parler"
+        | "mastodon"
+        | "bluesky"
+        | "gab"
+        | "minds"
+        | "caffeine"
+        | "dlive"
+        | "nimotv"
+        | "bigo"
+        | "douyin"
+        | "xiaohongshu"
+        | "qq"
+        | "wechat"
+        | "kuaishou"
+        | "youtubemusic"
+        | "pandora"
+        | "googlebusiness"
+        | "trustpilot"
+        | "yelp"
+        | "tripadvisor"
+        | "behance"
+        | "dribbble"
+        | "deviantart"
+        | "flickr"
+        | "vero"
+        | "podcast"
+        | "momo"
       subscription_plan: "free" | "basic" | "pro"
       subscription_status: "active" | "expired" | "cancelled" | "pending"
       theme_type: "dark_gradient" | "professional" | "vibrant"
@@ -2606,6 +2635,35 @@ export const Constants = {
         "amazonmusic",
         "napster",
         "iheart",
+        "gettr",
+        "truthsocial",
+        "parler",
+        "mastodon",
+        "bluesky",
+        "gab",
+        "minds",
+        "caffeine",
+        "dlive",
+        "nimotv",
+        "bigo",
+        "douyin",
+        "xiaohongshu",
+        "qq",
+        "wechat",
+        "kuaishou",
+        "youtubemusic",
+        "pandora",
+        "googlebusiness",
+        "trustpilot",
+        "yelp",
+        "tripadvisor",
+        "behance",
+        "dribbble",
+        "deviantart",
+        "flickr",
+        "vero",
+        "podcast",
+        "momo",
       ],
       subscription_plan: ["free", "basic", "pro"],
       subscription_status: ["active", "expired", "cancelled", "pending"],
