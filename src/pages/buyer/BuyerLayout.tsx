@@ -365,6 +365,18 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
                         </Badge>
                       </div>
 
+                      {/* Quick Settings - Language & Currency */}
+                      <div className="grid grid-cols-2 gap-3 mb-4">
+                        <div className="flex items-center justify-between p-3 rounded-xl bg-muted/50 border border-border/50">
+                          <span className="text-xs font-medium text-muted-foreground">{t('nav.language') || 'Language'}</span>
+                          <LanguageSelector />
+                        </div>
+                        <div className="flex items-center justify-between p-3 rounded-xl bg-muted/50 border border-border/50">
+                          <span className="text-xs font-medium text-muted-foreground">{t('nav.currency') || 'Currency'}</span>
+                          <CurrencySelector />
+                        </div>
+                      </div>
+
                       {/* Primary Actions */}
                       <div className="grid grid-cols-3 gap-3 mb-4">
                         <Link
