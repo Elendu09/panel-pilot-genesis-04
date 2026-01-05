@@ -383,7 +383,7 @@ export const SmartOrganizeDialog = ({
     idle: 'Preparing...',
     'health-check': 'Running health check...',
     fetching: 'Fetching services...',
-    analyzing: 'AI analyzing 50+ platforms...',
+    analyzing: 'AI analyzing 70+ platforms...',
     applying: 'Applying icon & category fixes...',
     organizing: 'Organizing by category & type...',
     categorizing: 'Updating categories...',

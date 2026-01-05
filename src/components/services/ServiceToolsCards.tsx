@@ -63,13 +63,13 @@ export const ServiceToolsCards = ({
     {
       id: "smart-organize",
       title: "Smart Organize + Health Check",
-      description: "AI scans 50+ platforms, fixes icons, categories & health issues automatically",
+      description: "AI scans 70+ platforms, fixes icons, categories & health issues automatically",
       icon: Wand2,
       action: onSmartOrganize,
       loading: isOrganizing,
       color: "from-violet-500 to-purple-600",
       iconBg: "bg-violet-500/10 text-violet-500",
-      badge: "50+ platforms",
+      badge: "70+ platforms",
       badgeVariant: "secondary",
     },
   ];

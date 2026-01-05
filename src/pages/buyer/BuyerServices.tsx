@@ -288,17 +288,6 @@ const BuyerServices = () => {
               <LanguageSelector />
               <CurrencySelector />
               <ThemeToggle />
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="hidden md:flex gap-2"
-                asChild
-              >
-                <Link to="/dashboard">
-                  <LayoutDashboard className="h-4 w-4" />
-                  Dashboard
-                </Link>
-              </Button>
               <ShoppingCart
                 cart={cart}
                 cartTotal={cartTotal}
