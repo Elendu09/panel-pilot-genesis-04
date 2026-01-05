@@ -38,19 +38,15 @@ export type ArrangeOption =
 interface ServiceToolsCardsProps {
   onSmartOrganize: () => void;
   onAutoArrange: (option: ArrangeOption) => void;
-  onHealthCheck: () => void;
   isOrganizing: boolean;
   totalServices: number;
-  healthIssues?: number;
 }
 
 export const ServiceToolsCards = ({
   onSmartOrganize,
   onAutoArrange,
-  onHealthCheck,
   isOrganizing,
   totalServices,
-  healthIssues = 0,
 }: ServiceToolsCardsProps) => {
   const [autoArrangeEnabled, setAutoArrangeEnabled] = useState(false);
 
@@ -66,30 +62,20 @@ export const ServiceToolsCards = ({
   const tools = [
     {
       id: "smart-organize",
-      title: "AutoFix Icon + Smart Organize",
-      description: "Fully automatic: AI detects platforms, fixes icons & organizes all services instantly",
+      title: "Smart Organize + Health Check",
+      description: "AI scans 50+ platforms, fixes icons, categories & health issues automatically",
       icon: Wand2,
       action: onSmartOrganize,
       loading: isOrganizing,
       color: "from-violet-500 to-purple-600",
       iconBg: "bg-violet-500/10 text-violet-500",
-    },
-    {
-      id: "health-check",
-      title: "Health Check",
-      description: "Scan for errors, duplicates, and missing data",
-      icon: healthIssues > 0 ? AlertTriangle : CheckCircle,
-      action: onHealthCheck,
-      loading: false,
-      color: healthIssues > 0 ? "from-amber-500 to-orange-600" : "from-green-500 to-emerald-600",
-      iconBg: healthIssues > 0 ? "bg-amber-500/10 text-amber-500" : "bg-green-500/10 text-green-500",
-      badge: healthIssues > 0 ? `${healthIssues} issues` : undefined,
-      badgeVariant: healthIssues > 0 ? "destructive" : "secondary",
+      badge: "50+ platforms",
+      badgeVariant: "secondary",
     },
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
       {tools.map((tool) => (
         <Card 
           key={tool.id} 

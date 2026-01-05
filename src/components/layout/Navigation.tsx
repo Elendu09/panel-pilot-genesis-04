@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
@@ -6,7 +5,6 @@ import { Menu, X, Zap, LogOut } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { LanguageSelector } from "@/components/buyer/LanguageSelector";
-import { CurrencySelector } from "@/components/buyer/CurrencySelector";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 export const Navigation = () => {
@@ -58,9 +56,8 @@ export const Navigation = () => {
             </Link>
           </div>
 
-          <div className="hidden md:flex items-center space-x-3">
+          <div className="hidden md:flex items-center gap-2 lg:gap-3">
             <LanguageSelector />
-            <CurrencySelector />
             <ThemeToggle />
             {user ? (
               <div className="flex items-center space-x-3">
@@ -90,12 +87,11 @@ export const Navigation = () => {
             )}
           </div>
 
-          {/* Mobile Header Icons */}
-          <div className="md:hidden flex items-center gap-2">
+          {/* Mobile/Tablet Header Icons */}
+          <div className="md:hidden flex items-center gap-1.5 sm:gap-2">
+            <LanguageSelector />
             <ThemeToggle />
-            <button
-              onClick={() => setIsOpen(!isOpen)}
-            >
+            <button onClick={() => setIsOpen(!isOpen)}>
               {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
           </div>
