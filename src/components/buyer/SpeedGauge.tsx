@@ -5,12 +5,42 @@ import { cn } from '@/lib/utils';
 
 interface SpeedGaugeProps {
   estimatedTime?: string;
+  averageDeliveryTime?: number; // in minutes - from provider data
+  providerSpeed?: 'instant' | 'fast' | 'medium' | 'slow';
   className?: string;
+  compact?: boolean; // For mobile/small spaces
 }
 
-export const SpeedGauge = ({ estimatedTime, className = '' }: SpeedGaugeProps) => {
+export const SpeedGauge = ({ 
+  estimatedTime, 
+  averageDeliveryTime,
+  providerSpeed,
+  className = '',
+  compact = false
+}: SpeedGaugeProps) => {
   // Parse estimated time to determine speed level (0-100)
   const speedLevel = useMemo(() => {
+    // Priority 1: Use explicit provider speed if available
+    if (providerSpeed) {
+      switch (providerSpeed) {
+        case 'instant': return 95;
+        case 'fast': return 80;
+        case 'medium': return 50;
+        case 'slow': return 25;
+      }
+    }
+    
+    // Priority 2: Use average delivery time in minutes
+    if (averageDeliveryTime) {
+      if (averageDeliveryTime <= 5) return 95; // Under 5 mins = instant
+      if (averageDeliveryTime <= 30) return 85; // Under 30 mins = fast
+      if (averageDeliveryTime <= 60) return 70; // Under 1 hour
+      if (averageDeliveryTime <= 360) return 50; // Under 6 hours
+      if (averageDeliveryTime <= 1440) return 30; // Under 24 hours
+      return 15; // Over 24 hours = slow
+    }
+    
+    // Priority 3: Parse estimatedTime string
     if (!estimatedTime) return 50;
     
     const lower = estimatedTime.toLowerCase();
@@ -42,7 +72,7 @@ export const SpeedGauge = ({ estimatedTime, className = '' }: SpeedGaugeProps) =
     }
     
     return 50;
-  }, [estimatedTime]);
+  }, [estimatedTime, averageDeliveryTime, providerSpeed]);
 
   const speedLabel = useMemo(() => {
     if (speedLevel >= 80) return 'Fast';
@@ -77,8 +107,36 @@ export const SpeedGauge = ({ estimatedTime, className = '' }: SpeedGaugeProps) =
     return AlertCircle;
   }, [speedLevel]);
 
+  // Compact mode for mobile - just show label and icon
+  if (compact) {
+    return (
+      <div className={cn("flex items-center gap-2", className)}>
+        <motion.div
+          key={speedLabel}
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className={cn(
+            "flex items-center gap-1.5 px-2.5 py-1 rounded-full",
+            speedLevel >= 80 ? "bg-emerald-500/10" : 
+            speedLevel >= 50 ? "bg-amber-500/10" : "bg-red-500/10"
+          )}
+        >
+          <SpeedIcon className={cn("w-3.5 h-3.5", speedColorClass)} />
+          <span className={cn("text-xs font-semibold", speedColorClass)}>
+            {speedLabel}
+          </span>
+        </motion.div>
+        {estimatedTime && (
+          <span className="text-[10px] text-muted-foreground truncate max-w-[80px]">
+            {estimatedTime}
+          </span>
+        )}
+      </div>
+    );
+  }
+
   return (
-    <div className={`flex flex-col items-center gap-3 ${className}`}>
+    <div className={cn("flex flex-col items-center gap-3", className)}>
       {/* Gauge with glow effect */}
       <div className="relative w-32 h-20">
         {/* Background glow */}

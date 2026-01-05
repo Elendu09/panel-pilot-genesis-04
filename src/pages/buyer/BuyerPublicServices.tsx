@@ -214,36 +214,90 @@ const BuyerPublicServices = () => {
         </div>
       </header>
 
-      {/* Promotional Banner */}
-      <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10 border-b border-primary/20">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/20">
-                <Sparkles className="w-5 h-5 text-primary" />
-              </div>
+      {/* Promotional Banner - Enhanced for Guest Conversion */}
+      <motion.div 
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="relative overflow-hidden bg-gradient-to-r from-primary/20 via-primary/10 to-amber-500/20 border-b border-primary/30"
+      >
+        {/* Animated background elements */}
+        <div className="absolute inset-0 overflow-hidden">
+          <motion.div 
+            animate={{ rotate: 360 }}
+            transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
+            className="absolute -right-20 -top-20 w-60 h-60 bg-primary/5 rounded-full blur-3xl"
+          />
+          <motion.div 
+            animate={{ scale: [1, 1.2, 1] }}
+            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute -left-10 -bottom-10 w-40 h-40 bg-amber-500/10 rounded-full blur-2xl"
+          />
+        </div>
+        
+        <div className="container mx-auto px-4 py-5 relative">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <motion.div 
+                animate={{ scale: [1, 1.1, 1], rotate: [0, 5, -5, 0] }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                className="p-3 rounded-xl bg-gradient-to-br from-primary to-primary/80 shadow-lg shadow-primary/30"
+              >
+                <Sparkles className="w-6 h-6 text-white" />
+              </motion.div>
               <div>
-                <p className="font-semibold text-sm">{t('auth.sign_up')} to Start Ordering!</p>
-                <p className="text-xs text-muted-foreground">Get access to all services with instant delivery</p>
+                <h3 className="font-bold text-base sm:text-lg flex items-center gap-2">
+                  🎉 Get 10% OFF Your First Order!
+                </h3>
+                <p className="text-xs sm:text-sm text-muted-foreground">
+                  Sign up now and start growing your social presence today
+                </p>
               </div>
             </div>
-            <div className="flex items-center gap-4 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <Zap className="w-3 h-3 text-amber-500" />
-                Instant Delivery
-              </span>
-              <span className="flex items-center gap-1">
-                <Shield className="w-3 h-3 text-green-500" />
-                Secure Payment
-              </span>
-              <span className="flex items-center gap-1">
-                <Clock className="w-3 h-3 text-blue-500" />
-                24/7 Support
-              </span>
+            
+            <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1 bg-background/50 px-2 py-1 rounded-full">
+                  <Zap className="w-3 h-3 text-amber-500" />
+                  Instant
+                </span>
+                <span className="flex items-center gap-1 bg-background/50 px-2 py-1 rounded-full">
+                  <Shield className="w-3 h-3 text-green-500" />
+                  Secure
+                </span>
+                <span className="flex items-center gap-1 bg-background/50 px-2 py-1 rounded-full">
+                  <Clock className="w-3 h-3 text-blue-500" />
+                  24/7
+                </span>
+              </div>
+              <Button asChild size="sm" className="w-full sm:w-auto shadow-lg shadow-primary/20">
+                <Link to="/auth?tab=signup">
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Sign Up Free
+                </Link>
+              </Button>
             </div>
           </div>
+          
+          {/* Urgency indicator */}
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+            className="flex items-center justify-center gap-2 mt-3 text-xs text-muted-foreground"
+          >
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20">
+              <motion.div
+                animate={{ scale: [1, 1.2, 1] }}
+                transition={{ duration: 1, repeat: Infinity }}
+                className="w-2 h-2 rounded-full bg-amber-500"
+              />
+              <span className="text-amber-600 dark:text-amber-400 font-medium">
+                ⏰ Limited time offer - Don't miss out!
+              </span>
+            </div>
+          </motion.div>
         </div>
-      </div>
+      </motion.div>
 
       <main className="container mx-auto px-4 py-6">
         {/* Search and Filters */}
