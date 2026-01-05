@@ -40,8 +40,8 @@ export const Navigation = () => {
             </span>
           </Link>
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
+          {/* Desktop Navigation (lg+) */}
+          <div className="hidden lg:flex items-center space-x-8">
             <Link to="/features" className="text-muted-foreground hover:text-foreground transition-colors">
               {t('platform.features')}
             </Link>
@@ -56,7 +56,8 @@ export const Navigation = () => {
             </Link>
           </div>
 
-          <div className="hidden md:flex items-center gap-2 lg:gap-3">
+          {/* Desktop Actions (lg+) */}
+          <div className="hidden lg:flex items-center gap-3">
             <LanguageSelector />
             <ThemeToggle />
             {user ? (
@@ -78,20 +79,38 @@ export const Navigation = () => {
             ) : (
               <div className="flex items-center space-x-2">
                 <Button asChild variant="ghost">
-                  <Link to="/auth">Sign In</Link>
+                  <Link to="/auth">{t('platform.signIn')}</Link>
                 </Button>
                 <Button asChild className="bg-gradient-primary hover:shadow-glow">
-                  <Link to="/auth">Get Started</Link>
+                  <Link to="/auth">{t('platform.getStarted')}</Link>
                 </Button>
               </div>
             )}
           </div>
 
-          {/* Mobile/Tablet Header Icons */}
-          <div className="md:hidden flex items-center gap-1.5 sm:gap-2">
+          {/* Tablet Navigation (md to lg) */}
+          <div className="hidden md:flex lg:hidden items-center gap-2">
             <LanguageSelector />
             <ThemeToggle />
-            <button onClick={() => setIsOpen(!isOpen)}>
+            {user ? (
+              <Button asChild variant="outline" size="sm">
+                <Link to={getDashboardPath()}>Dashboard</Link>
+              </Button>
+            ) : (
+              <Button asChild size="sm" className="bg-gradient-primary">
+                <Link to="/auth">{t('platform.signIn')}</Link>
+              </Button>
+            )}
+            <button onClick={() => setIsOpen(!isOpen)} className="p-2">
+              {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+          </div>
+
+          {/* Mobile Header Icons */}
+          <div className="md:hidden flex items-center gap-1.5">
+            <LanguageSelector />
+            <ThemeToggle />
+            <button onClick={() => setIsOpen(!isOpen)} className="p-1.5">
               {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
           </div>

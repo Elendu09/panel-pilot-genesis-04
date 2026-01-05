@@ -623,9 +623,50 @@ export const SOCIAL_ICONS_MAP: Record<string, {
   trustpilot: { icon: VoteIcon, label: "Trustpilot", color: "#00B67A", bgColor: "bg-green-600" },
   yelp: { icon: VoteIcon, label: "Yelp", color: "#FF1A1A", bgColor: "bg-red-600" },
   tripadvisor: { icon: GlobeWrapper, label: "TripAdvisor", color: "#00AF87", bgColor: "bg-emerald-600" },
+  googlebusiness: { icon: GlobeWrapper, label: "Google Business", color: "#4285F4", bgColor: "bg-blue-500" },
   
   // Website & SEO
   website: { icon: GlobeWrapper, label: "Website Traffic", color: "#6B7280", bgColor: "bg-gray-600" },
+  
+  // Alternative Social Platforms (New 70+ support)
+  gettr: { icon: GlobeWrapper, label: "Gettr", color: "#E21D3E", bgColor: "bg-red-500" },
+  truthsocial: { icon: GlobeWrapper, label: "Truth Social", color: "#1D4ED8", bgColor: "bg-blue-600" },
+  parler: { icon: GlobeWrapper, label: "Parler", color: "#B91C1C", bgColor: "bg-red-700" },
+  mastodon: { icon: GlobeWrapper, label: "Mastodon", color: "#6364FF", bgColor: "bg-purple-600" },
+  bluesky: { icon: GlobeWrapper, label: "Bluesky", color: "#0085FF", bgColor: "bg-sky-500" },
+  gab: { icon: GlobeWrapper, label: "Gab", color: "#21CF7A", bgColor: "bg-green-600" },
+  minds: { icon: GlobeWrapper, label: "Minds", color: "#FCD34D", bgColor: "bg-yellow-500" },
+  
+  // Live Streaming Platforms
+  caffeine: { icon: CameraWrapper, label: "Caffeine", color: "#0066FF", bgColor: "bg-blue-500" },
+  dlive: { icon: CameraWrapper, label: "DLive", color: "#FFD700", bgColor: "bg-yellow-400" },
+  nimotv: { icon: CameraWrapper, label: "Nimo TV", color: "#4FC3F7", bgColor: "bg-blue-400" },
+  bigo: { icon: CameraWrapper, label: "Bigo Live", color: "#EC4899", bgColor: "bg-pink-500" },
+  
+  // Asian Platforms
+  douyin: { icon: TikTokIcon, label: "Douyin", color: "#000000", bgColor: "bg-black" },
+  xiaohongshu: { icon: BookmarkWrapper, label: "Xiaohongshu", color: "#FE2C55", bgColor: "bg-red-500" },
+  qq: { icon: MessageSquareWrapper, label: "QQ", color: "#12B7F5", bgColor: "bg-sky-500" },
+  wechat: { icon: MessageSquareWrapper, label: "WeChat", color: "#07C160", bgColor: "bg-green-500" },
+  kuaishou: { icon: CameraWrapper, label: "Kuaishou", color: "#FF6900", bgColor: "bg-orange-500" },
+  
+  // Music Platforms (additional)
+  youtubemusic: { icon: YouTubeIcon, label: "YouTube Music", color: "#FF0000", bgColor: "bg-red-600" },
+  pandora: { icon: MusicWrapper, label: "Pandora", color: "#224099", bgColor: "bg-blue-600" },
+  anghami: { icon: MusicWrapper, label: "Anghami", color: "#8833FF", bgColor: "bg-purple-600" },
+  jiosaavn: { icon: MusicWrapper, label: "JioSaavn", color: "#2BC5B4", bgColor: "bg-teal-500" },
+  
+  // Creative Platforms
+  behance: { icon: GlobeWrapper, label: "Behance", color: "#1769FF", bgColor: "bg-blue-600" },
+  dribbble: { icon: GlobeWrapper, label: "Dribbble", color: "#EA4C89", bgColor: "bg-pink-500" },
+  deviantart: { icon: GlobeWrapper, label: "DeviantArt", color: "#05CC47", bgColor: "bg-green-600" },
+  flickr: { icon: CameraWrapper, label: "Flickr", color: "#FF0084", bgColor: "bg-pink-600" },
+  "500px": { icon: CameraWrapper, label: "500px", color: "#0099E5", bgColor: "bg-blue-500" },
+  vero: { icon: GlobeWrapper, label: "Vero", color: "#000000", bgColor: "bg-black" },
+  
+  // Podcasts
+  podcast: { icon: RadioWrapper, label: "Podcast", color: "#8B5CF6", bgColor: "bg-purple-600" },
+  anchor: { icon: RadioWrapper, label: "Anchor", color: "#5000B9", bgColor: "bg-purple-700" },
   
   // Engagement Types
   heart: { icon: HeartIcon, label: "Likes", color: "#E11D48", bgColor: "bg-rose-500" },
