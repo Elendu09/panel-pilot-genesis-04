@@ -62,6 +62,7 @@ import { OrderSuccessModal } from "@/components/buyer/OrderSuccessModal";
 import { detectServiceType, getSubCategory, ICON_CATEGORIES } from "@/lib/service-icon-detection";
 import ShoppingCart from "@/components/buyer/ShoppingCart";
 import { useBuyerCart } from "@/hooks/use-buyer-cart";
+import { useCategoryFilters } from "@/hooks/useCategoryFilters";
 
 interface PromoCode {
   id: string;
@@ -79,6 +80,9 @@ const BuyerNewOrder = () => {
   const { formatPrice, convertPrice } = useCurrency();
   const [searchParams] = useSearchParams();
   const [customPrices, setCustomPrices] = useState<Map<string, number>>(new Map());
+  
+  // Use enhanced category filters hook for real-time sync with 70+ platforms
+  const { activeCategories, getCategoryData: hookGetCategoryData, stats: categoryStats } = useCategoryFilters(panel?.id, services);
   
   // 3-Tier Selection State
   const [selectedNetwork, setSelectedNetwork] = useState<string>("");
@@ -179,7 +183,7 @@ const BuyerNewOrder = () => {
   }, [services, searchParams]);
 
 
-  // TIER 1: Group by Network (Platform)
+  // TIER 1: Group by Network (Platform) - Enhanced with real-time sync
   const networks = useMemo(() => {
     const networkMap = new Map<string, { services: any[]; count: number }>();
     
@@ -193,17 +197,20 @@ const BuyerNewOrder = () => {
     });
 
     return Array.from(networkMap.entries())
-      .map(([id, data]) => ({
-        id,
-        name: SOCIAL_ICONS_MAP[id]?.label || id.charAt(0).toUpperCase() + id.slice(1),
-        icon: SOCIAL_ICONS_MAP[id]?.icon || SOCIAL_ICONS_MAP.other.icon,
-        color: SOCIAL_ICONS_MAP[id]?.color || SOCIAL_ICONS_MAP.other.color,
-        bgColor: SOCIAL_ICONS_MAP[id]?.bgColor || SOCIAL_ICONS_MAP.other.bgColor,
-        count: data.count,
-        services: data.services,
-      }))
+      .map(([id, data]) => {
+        const catData = hookGetCategoryData(id);
+        return {
+          id,
+          name: catData.label || id.charAt(0).toUpperCase() + id.slice(1),
+          icon: catData.icon,
+          color: catData.color,
+          bgColor: catData.bgColor,
+          count: data.count,
+          services: data.services,
+        };
+      })
       .sort((a, b) => b.count - a.count);
-  }, [services]);
+  }, [services, hookGetCategoryData]);
 
   // Helper function to get category icon based on category name
   const getCategoryIcon = (categoryName: string) => {
@@ -418,9 +425,8 @@ const BuyerNewOrder = () => {
     }
   };
 
-  const getCategoryData = (categoryId: string) => {
-    return SOCIAL_ICONS_MAP[categoryId] || SOCIAL_ICONS_MAP.other;
-  };
+  // Use the hook's getCategoryData for consistent category display
+  const getCategoryData = hookGetCategoryData;
 
   const selectedNetworkData = selectedNetwork ? getCategoryData(selectedNetwork) : null;
 
