@@ -404,6 +404,13 @@ export type Database = {
             foreignKeyName: "buyer_cart_service_id_fkey"
             columns: ["service_id"]
             isOneToOne: false
+            referencedRelation: "buyer_visible_services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "buyer_cart_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
             referencedRelation: "services"
             referencedColumns: ["id"]
           },
@@ -444,6 +451,13 @@ export type Database = {
             columns: ["panel_id"]
             isOneToOne: false
             referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "buyer_favorites_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "buyer_visible_services"
             referencedColumns: ["id"]
           },
           {
@@ -736,6 +750,13 @@ export type Database = {
             foreignKeyName: "client_custom_prices_service_id_fkey"
             columns: ["service_id"]
             isOneToOne: false
+            referencedRelation: "buyer_visible_services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_custom_prices_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
             referencedRelation: "services"
             referencedColumns: ["id"]
           },
@@ -917,6 +938,71 @@ export type Database = {
         }
         Relationships: []
       }
+      normalized_services: {
+        Row: {
+          admin_override_category: string | null
+          admin_override_name: string | null
+          admin_override_platform: string | null
+          buyer_friendly_category: string | null
+          confidence_score: number | null
+          created_at: string | null
+          detected_delivery_type: string | null
+          detected_platform: string
+          detected_service_type: string | null
+          id: string
+          is_ai_processed: boolean | null
+          normalized_name: string
+          platform_icon: string | null
+          provider_service_id: string
+          service_icon: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          admin_override_category?: string | null
+          admin_override_name?: string | null
+          admin_override_platform?: string | null
+          buyer_friendly_category?: string | null
+          confidence_score?: number | null
+          created_at?: string | null
+          detected_delivery_type?: string | null
+          detected_platform: string
+          detected_service_type?: string | null
+          id?: string
+          is_ai_processed?: boolean | null
+          normalized_name: string
+          platform_icon?: string | null
+          provider_service_id: string
+          service_icon?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          admin_override_category?: string | null
+          admin_override_name?: string | null
+          admin_override_platform?: string | null
+          buyer_friendly_category?: string | null
+          confidence_score?: number | null
+          created_at?: string | null
+          detected_delivery_type?: string | null
+          detected_platform?: string
+          detected_service_type?: string | null
+          id?: string
+          is_ai_processed?: boolean | null
+          normalized_name?: string
+          platform_icon?: string | null
+          provider_service_id?: string
+          service_icon?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "normalized_services_provider_service_id_fkey"
+            columns: ["provider_service_id"]
+            isOneToOne: true
+            referencedRelation: "provider_services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_refills: {
         Row: {
           created_at: string | null
@@ -1039,6 +1125,13 @@ export type Database = {
             columns: ["panel_id"]
             isOneToOne: false
             referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "buyer_visible_services"
             referencedColumns: ["id"]
           },
           {
@@ -1717,6 +1810,62 @@ export type Database = {
         }
         Relationships: []
       }
+      pricing_rules: {
+        Row: {
+          applies_to_categories: string[] | null
+          applies_to_providers: string[] | null
+          config: Json
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          max_provider_rate: number | null
+          min_provider_rate: number | null
+          name: string
+          panel_id: string
+          priority: number | null
+          rule_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          applies_to_categories?: string[] | null
+          applies_to_providers?: string[] | null
+          config?: Json
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_provider_rate?: number | null
+          min_provider_rate?: number | null
+          name: string
+          panel_id: string
+          priority?: number | null
+          rule_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          applies_to_categories?: string[] | null
+          applies_to_providers?: string[] | null
+          config?: Json
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_provider_rate?: number | null
+          min_provider_rate?: number | null
+          name?: string
+          panel_id?: string
+          priority?: number | null
+          rule_type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pricing_rules_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -1876,6 +2025,90 @@ export type Database = {
             columns: ["panel_id"]
             isOneToOne: false
             referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      provider_services: {
+        Row: {
+          average_time: string | null
+          cancel_available: boolean | null
+          created_at: string | null
+          dripfeed_available: boolean | null
+          external_service_id: string
+          id: string
+          last_synced_at: string | null
+          max_quantity: number | null
+          min_quantity: number | null
+          panel_id: string
+          provider_id: string
+          provider_rate: number
+          raw_category: string | null
+          raw_data: Json | null
+          raw_description: string | null
+          raw_name: string
+          raw_type: string | null
+          refill_available: boolean | null
+          sync_status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          average_time?: string | null
+          cancel_available?: boolean | null
+          created_at?: string | null
+          dripfeed_available?: boolean | null
+          external_service_id: string
+          id?: string
+          last_synced_at?: string | null
+          max_quantity?: number | null
+          min_quantity?: number | null
+          panel_id: string
+          provider_id: string
+          provider_rate?: number
+          raw_category?: string | null
+          raw_data?: Json | null
+          raw_description?: string | null
+          raw_name: string
+          raw_type?: string | null
+          refill_available?: boolean | null
+          sync_status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          average_time?: string | null
+          cancel_available?: boolean | null
+          created_at?: string | null
+          dripfeed_available?: boolean | null
+          external_service_id?: string
+          id?: string
+          last_synced_at?: string | null
+          max_quantity?: number | null
+          min_quantity?: number | null
+          panel_id?: string
+          provider_id?: string
+          provider_rate?: number
+          raw_category?: string | null
+          raw_data?: Json | null
+          raw_description?: string | null
+          raw_name?: string
+          raw_type?: string | null
+          refill_available?: boolean | null
+          sync_status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_services_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_services_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
             referencedColumns: ["id"]
           },
         ]
@@ -2055,6 +2288,13 @@ export type Database = {
             foreignKeyName: "service_reviews_service_id_fkey"
             columns: ["service_id"]
             isOneToOne: false
+            referencedRelation: "buyer_visible_services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_reviews_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
             referencedRelation: "services"
             referencedColumns: ["id"]
           },
@@ -2073,15 +2313,20 @@ export type Database = {
           id: string
           image_url: string | null
           is_active: boolean | null
+          is_price_locked: boolean | null
+          last_price_sync_at: string | null
           markup_percent: number | null
           max_quantity: number | null
           min_quantity: number | null
           name: string
           panel_id: string | null
           price: number
+          pricing_rule_id: string | null
+          provider_cost: number | null
           provider_id: string | null
           provider_price: number | null
           provider_service_id: string | null
+          provider_service_ref: string | null
           refill_available: boolean | null
           service_type: string | null
           updated_at: string
@@ -2098,15 +2343,20 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean | null
+          is_price_locked?: boolean | null
+          last_price_sync_at?: string | null
           markup_percent?: number | null
           max_quantity?: number | null
           min_quantity?: number | null
           name: string
           panel_id?: string | null
           price: number
+          pricing_rule_id?: string | null
+          provider_cost?: number | null
           provider_id?: string | null
           provider_price?: number | null
           provider_service_id?: string | null
+          provider_service_ref?: string | null
           refill_available?: boolean | null
           service_type?: string | null
           updated_at?: string
@@ -2123,15 +2373,20 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean | null
+          is_price_locked?: boolean | null
+          last_price_sync_at?: string | null
           markup_percent?: number | null
           max_quantity?: number | null
           min_quantity?: number | null
           name?: string
           panel_id?: string | null
           price?: number
+          pricing_rule_id?: string | null
+          provider_cost?: number | null
           provider_id?: string | null
           provider_price?: number | null
           provider_service_id?: string | null
+          provider_service_ref?: string | null
           refill_available?: boolean | null
           service_type?: string | null
           updated_at?: string
@@ -2142,6 +2397,20 @@ export type Database = {
             columns: ["panel_id"]
             isOneToOne: false
             referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "services_pricing_rule_id_fkey"
+            columns: ["pricing_rule_id"]
+            isOneToOne: false
+            referencedRelation: "pricing_rules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "services_provider_service_ref_fkey"
+            columns: ["provider_service_ref"]
+            isOneToOne: false
+            referencedRelation: "provider_services"
             referencedColumns: ["id"]
           },
         ]
@@ -2313,10 +2582,51 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      buyer_visible_services: {
+        Row: {
+          average_time: string | null
+          buyer_price: number | null
+          cancel_available: boolean | null
+          confidence_score: number | null
+          delivery_type: string | null
+          description: string | null
+          display_name: string | null
+          display_order: number | null
+          dripfeed_available: boolean | null
+          icon: string | null
+          id: string | null
+          is_active: boolean | null
+          max_quantity: number | null
+          min_quantity: number | null
+          name: string | null
+          panel_id: string | null
+          platform: string | null
+          provider_cost: number | null
+          refill_available: boolean | null
+          service_type: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "services_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       approve_panel: { Args: { panel_id: string }; Returns: boolean }
+      calculate_buyer_price: {
+        Args: {
+          p_category?: string
+          p_panel_id: string
+          p_provider_id?: string
+          p_provider_rate: number
+        }
+        Returns: number
+      }
       create_panel_notification: {
         Args: {
           p_message: string

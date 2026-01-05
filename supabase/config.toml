@@ -92,3 +92,9 @@ verify_jwt = false
 
 [functions.panel-api]
 verify_jwt = false
+
+[functions.import-provider-services]
+verify_jwt = false
+
+[functions.normalize-services]
+verify_jwt = false
