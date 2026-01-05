@@ -106,10 +106,10 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
     { name: t('nav.profile'), href: '/profile', icon: User },
   ];
 
-  // Bottom nav items: Dashboard, Services, New Order (center, goes to new-order page), Support, More
+  // Bottom nav items: Dashboard, Add Funds, New Order (center, goes to new-order page), Support, More
   const bottomNavItems = [
     { name: t('nav.dashboard'), href: '/dashboard', icon: LayoutDashboard },
-    { name: t('nav.services'), href: '/services', icon: Package, badge: cartCount > 0 ? cartCount : undefined },
+    { name: t('nav.deposit'), href: '/deposit', icon: Wallet, badge: cartCount > 0 ? cartCount : undefined },
     { name: t('nav.new_order'), href: '/new-order', icon: ShoppingCart, isCenter: true },
     { name: t('nav.support'), href: '/support', icon: HeadphonesIcon },
     { name: t('nav.more'), href: '#menu', icon: Menu, isMenu: true },
