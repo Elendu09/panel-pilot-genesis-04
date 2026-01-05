@@ -40,6 +40,7 @@ const menuGroups = [
       { name: "Customers", href: "/panel/customers", icon: Users, color: "text-blue-500", bgColor: "bg-blue-500/10" },
       { name: "Providers", href: "/panel/providers", icon: Plug, color: "text-purple-500", bgColor: "bg-purple-500/10" },
       { name: "Payments", href: "/panel/payments", icon: CreditCard, color: "text-green-500", bgColor: "bg-green-500/10" },
+      { name: "Promotions", href: "/panel/promotions", icon: Sparkles, color: "text-pink-500", bgColor: "bg-pink-500/10" },
       { name: "Billing", href: "/panel/billing", icon: Sparkles, color: "text-amber-500", bgColor: "bg-amber-500/10" },
       { name: "Integrations", href: "/panel/integrations", icon: Plug, color: "text-teal-500", bgColor: "bg-teal-500/10" },
       { name: "Team", href: "/panel/team", icon: Users, color: "text-violet-500", bgColor: "bg-violet-500/10" },

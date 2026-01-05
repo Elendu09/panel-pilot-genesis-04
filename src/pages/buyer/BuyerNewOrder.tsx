@@ -568,47 +568,41 @@ const BuyerNewOrder = () => {
                     disabled={!selectedCategory}
                   >
                     <SelectTrigger className={cn(
-                      "h-12 sm:h-14 bg-background/50 border-2 transition-colors",
+                      "min-h-[60px] sm:min-h-[68px] h-auto bg-background/50 border-2 transition-colors",
                       selectedCategory ? "hover:border-primary/50" : "opacity-60"
                     )}>
                       <SelectValue placeholder={selectedCategory ? "Select a service" : "Select a category first"} />
                     </SelectTrigger>
-                    <SelectContent className="max-h-[60vh] overflow-y-auto bg-background border shadow-lg z-50">
+                    <SelectContent className="w-[calc(100vw-32px)] sm:w-auto min-w-[320px] max-h-[60vh] overflow-y-auto bg-background border shadow-lg z-50">
                       {filteredServices.map((service: any) => {
                         const price = getEffectivePrice(service);
                         const serviceType = detectServiceType(service.name);
                         const ServiceTypeIcon = getCategoryIcon(selectedCategory);
                         return (
-                          <SelectItem key={service.id} value={service.id}>
-                            <div className="flex items-center gap-3 w-full py-1">
-                              <div className={cn(
-                                "p-1.5 rounded-md shrink-0",
-                                selectedNetworkData?.bgColor || "bg-primary/10"
-                              )}>
-                                <ServiceTypeIcon className="w-3 h-3 text-white" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="font-medium text-sm truncate block max-w-[140px] sm:max-w-[200px]">
-                                    {service.name}
-                                  </span>
-                                  <Badge variant="secondary" className="text-[10px] font-mono px-1 py-0 h-4 shrink-0">
-                                    ID: {service.provider_service_id || service.id?.slice(0, 6)}
-                                  </Badge>
+                          <SelectItem key={service.id} value={service.id} className="py-3">
+                            <div className="flex flex-col gap-1.5 w-full">
+                              <div className="flex items-start gap-2">
+                                <div className={cn(
+                                  "p-1.5 rounded-md shrink-0 mt-0.5",
+                                  selectedNetworkData?.bgColor || "bg-primary/10"
+                                )}>
+                                  <ServiceTypeIcon className="w-3 h-3 text-white" />
                                 </div>
-                                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                                  <span className="text-xs text-muted-foreground">
-                                    Min: {(service.min_quantity || 100).toLocaleString()}
-                                  </span>
-                                  <span className="text-xs text-muted-foreground hidden sm:inline">•</span>
-                                  <span className="text-xs text-muted-foreground hidden sm:inline">
-                                    Max: {(service.max_quantity || 10000).toLocaleString()}
-                                  </span>
-                                </div>
+                                <span className="font-medium text-sm text-left whitespace-normal break-words leading-tight flex-1">
+                                  {service.name}
+                                </span>
                               </div>
-                              <Badge variant="outline" className="shrink-0 font-mono text-xs">
-                                {formatPrice(price)}/1k
-                              </Badge>
+                              <div className="flex items-center gap-2 flex-wrap ml-7">
+                                <Badge variant="secondary" className="text-[10px] font-mono px-1.5 py-0.5 h-5 shrink-0">
+                                  ID: {service.provider_service_id || service.id?.slice(0, 6)}
+                                </Badge>
+                                <span className="text-xs text-muted-foreground">
+                                  {(service.min_quantity || 100).toLocaleString()}-{(service.max_quantity || 10000).toLocaleString()}
+                                </span>
+                                <Badge variant="outline" className="shrink-0 font-mono text-xs ml-auto">
+                                  {formatPrice(price)}/1k
+                                </Badge>
+                              </div>
                             </div>
                           </SelectItem>
                         );
@@ -755,20 +749,20 @@ const BuyerNewOrder = () => {
 
           {/* Right Column - Price Summary */}
           <div className="space-y-6">
-            <Card className="sticky top-20 overflow-hidden border-0 shadow-lg max-h-[calc(100vh-6rem)] overflow-y-auto">
+            <Card className="sticky top-20 overflow-hidden border-0 shadow-lg">
               <CardHeader className="bg-gradient-to-br from-primary/10 to-primary/5 border-b">
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <Sparkles className="w-5 h-5 text-primary" />
                   Order Summary
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-6 space-y-4">
+              <CardContent className="p-4 sm:p-6 space-y-4">
                 {selectedService ? (
                   <>
                     <div className="space-y-3">
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Service</span>
-                        <span className="font-medium truncate max-w-[180px]">{selectedService.name}</span>
+                        <span className="font-medium text-right max-w-[180px] line-clamp-2 text-xs sm:text-sm">{selectedService.name}</span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Quantity</span>
@@ -790,7 +784,7 @@ const BuyerNewOrder = () => {
 
                     <div className="flex justify-between items-center">
                       <span className="font-medium">Total</span>
-                      <span className="text-2xl font-bold text-primary">{formatPrice(totalPrice)}</span>
+                      <span className="text-xl sm:text-2xl font-bold text-primary">{formatPrice(totalPrice)}</span>
                     </div>
 
                     <div className="flex items-center justify-between text-sm">
@@ -824,7 +818,7 @@ const BuyerNewOrder = () => {
                       <Button 
                         onClick={handleOrder}
                         disabled={!hasEnoughBalance || orderLoading || !targetUrl}
-                        className="w-full h-12 text-base font-medium gap-2"
+                        className="w-full h-11 sm:h-12 text-sm sm:text-base font-medium gap-2"
                       >
                         {orderLoading ? (
                           <Loader2 className="w-5 h-5 animate-spin" />
@@ -838,7 +832,7 @@ const BuyerNewOrder = () => {
                         variant="outline"
                         onClick={handleAddToCart}
                         disabled={!selectedService || !targetUrl}
-                        className="w-full h-12 text-base font-medium gap-2"
+                        className="w-full h-11 sm:h-12 text-sm sm:text-base font-medium gap-2"
                       >
                         <Plus className="w-5 h-5" />
                         Add to Cart
@@ -856,8 +850,12 @@ const BuyerNewOrder = () => {
               </CardContent>
             </Card>
 
-            {/* Service Info Panel */}
-            {selectedService && <ServiceInfoPanel service={selectedService} />}
+            {/* Service Info Panel - Hidden on mobile to prevent overlap */}
+            {selectedService && (
+              <div className="hidden lg:block">
+                <ServiceInfoPanel service={selectedService} />
+              </div>
+            )}
           </div>
         </div>
       </motion.div>

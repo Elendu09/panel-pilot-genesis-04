@@ -37,6 +37,7 @@ import Auth from "./pages/Auth";
 import SEOSettings from "./pages/panel/SEOSettings";
 import FastOrder from "./pages/FastOrder";
 import TrackOrder from "./pages/TrackOrder";
+import PromoManagement from "./pages/panel/PromoManagement";
 
 // Enhanced QueryClient with caching for faster page loads
 const queryClient = new QueryClient({

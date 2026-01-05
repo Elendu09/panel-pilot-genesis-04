@@ -301,6 +301,7 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
             </Link>
           </motion.div>
           <BuyerNotifications />
+          <LanguageSelector />
           <ThemeToggle />
         </div>
       </header>

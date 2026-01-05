@@ -52,6 +52,7 @@ import MoreMenu from "./panel/MoreMenu";
 import Billing from "./panel/Billing";
 import Integrations from "./panel/Integrations";
 import TeamManagement from "./panel/TeamManagement";
+import PromoManagement from "./panel/PromoManagement";
 import { Helmet } from "react-helmet-async";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -454,6 +455,7 @@ const PanelOwnerDashboard = () => {
             <Route path="billing" element={<Billing />} />
             <Route path="integrations" element={<Integrations />} />
             <Route path="team" element={<TeamManagement />} />
+            <Route path="promotions" element={<PromoManagement />} />
             <Route path="more" element={<MoreMenu />} />
           </Routes>
         </div>
