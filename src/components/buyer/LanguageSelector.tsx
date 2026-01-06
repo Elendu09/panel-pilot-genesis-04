@@ -12,18 +12,38 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { useContext, useState, useCallback } from "react";
 import { toast } from "sonner";
+import { 
+  FlagUS, 
+  FlagES, 
+  FlagBR, 
+  FlagFR, 
+  FlagDE, 
+  FlagSA, 
+  FlagTR, 
+  FlagRU, 
+  FlagCN, 
+  FlagIN,
+  type FlagProps 
+} from "@/components/icons/FlagIcons";
 
-const languages: { code: Language; name: string; nativeName: string; flag: string }[] = [
-  { code: 'en', name: 'English', nativeName: 'English', flag: '🇺🇸' },
-  { code: 'es', name: 'Spanish', nativeName: 'Español', flag: '🇪🇸' },
-  { code: 'pt', name: 'Portuguese', nativeName: 'Português', flag: '🇧🇷' },
-  { code: 'fr', name: 'French', nativeName: 'Français', flag: '🇫🇷' },
-  { code: 'de', name: 'German', nativeName: 'Deutsch', flag: '🇩🇪' },
-  { code: 'ar', name: 'Arabic', nativeName: 'العربية', flag: '🇸🇦' },
-  { code: 'tr', name: 'Turkish', nativeName: 'Türkçe', flag: '🇹🇷' },
-  { code: 'ru', name: 'Russian', nativeName: 'Русский', flag: '🇷🇺' },
-  { code: 'zh', name: 'Chinese', nativeName: '中文', flag: '🇨🇳' },
-  { code: 'hi', name: 'Hindi', nativeName: 'हिन्दी', flag: '🇮🇳' },
+interface LanguageItem {
+  code: Language;
+  name: string;
+  nativeName: string;
+  FlagComponent: React.FC<FlagProps>;
+}
+
+const languages: LanguageItem[] = [
+  { code: 'en', name: 'English', nativeName: 'English', FlagComponent: FlagUS },
+  { code: 'es', name: 'Spanish', nativeName: 'Español', FlagComponent: FlagES },
+  { code: 'pt', name: 'Portuguese', nativeName: 'Português', FlagComponent: FlagBR },
+  { code: 'fr', name: 'French', nativeName: 'Français', FlagComponent: FlagFR },
+  { code: 'de', name: 'German', nativeName: 'Deutsch', FlagComponent: FlagDE },
+  { code: 'ar', name: 'Arabic', nativeName: 'العربية', FlagComponent: FlagSA },
+  { code: 'tr', name: 'Turkish', nativeName: 'Türkçe', FlagComponent: FlagTR },
+  { code: 'ru', name: 'Russian', nativeName: 'Русский', FlagComponent: FlagRU },
+  { code: 'zh', name: 'Chinese', nativeName: '中文', FlagComponent: FlagCN },
+  { code: 'hi', name: 'Hindi', nativeName: 'हिन्दी', FlagComponent: FlagIN },
 ];
 
 export const LanguageSelector = () => {
@@ -44,7 +64,7 @@ export const LanguageSelector = () => {
     
     // Show feedback
     const selectedLang = languages.find(l => l.code === code);
-    toast.success(`${selectedLang?.flag} ${selectedLang?.nativeName}`, {
+    toast.success(selectedLang?.nativeName || 'Language updated', {
       description: 'Language updated successfully',
       duration: 2000,
     });
@@ -67,7 +87,11 @@ export const LanguageSelector = () => {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className="relative h-8 w-8 sm:h-9 sm:w-9" title="Change language">
-          <span className="text-base sm:text-lg">{currentLanguage?.flag || '🌐'}</span>
+          {currentLanguage ? (
+            <currentLanguage.FlagComponent className="w-5 h-5 sm:w-6 sm:h-6 rounded-sm" />
+          ) : (
+            <Globe className="w-5 h-5" />
+          )}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56 max-h-80 overflow-y-auto bg-popover border border-border shadow-lg z-50">
@@ -76,6 +100,7 @@ export const LanguageSelector = () => {
         </div>
         {languages.map((lang) => {
           const isSelected = language === lang.code;
+          const FlagIcon = lang.FlagComponent;
           return (
             <DropdownMenuItem
               key={lang.code}
@@ -85,7 +110,7 @@ export const LanguageSelector = () => {
                 isSelected && "bg-primary/10"
               )}
             >
-              <span className="text-xl">{lang.flag}</span>
+              <FlagIcon className="w-6 h-6 rounded-sm shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium">{lang.nativeName}</p>
                 <p className="text-xs text-muted-foreground">{lang.name}</p>
