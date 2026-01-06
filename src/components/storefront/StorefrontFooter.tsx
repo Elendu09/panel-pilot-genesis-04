@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Instagram, Facebook, Twitter, Youtube, MessageCircle, Send, Linkedin } from "lucide-react";
 import { TikTokIcon } from "@/components/icons/SocialIcons";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface SocialPlatform {
   id: string;
@@ -49,6 +50,15 @@ export const StorefrontFooter = ({
   primaryColor = '#3B82F6',
   variant = 'dark'
 }: StorefrontFooterProps) => {
+  // Get translations - wrapped in try/catch since it may not always be available
+  let t = (key: string) => key;
+  try {
+    const lang = useLanguage();
+    t = lang.t;
+  } catch {
+    // Not within LanguageProvider context
+  }
+  
   const enabledPlatforms = socialPlatforms.filter(p => p.enabled !== false);
   const isDark = variant === 'dark';
   const currentYear = new Date().getFullYear();
@@ -91,7 +101,7 @@ export const StorefrontFooter = ({
           
           {/* Services Column */}
           <div>
-            <h4 className="font-semibold mb-4">Services</h4>
+            <h4 className="font-semibold mb-4">{t('storefront.footer.services')}</h4>
             <ul className={`space-y-2 text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
               <li><Link to="/services" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>Instagram</Link></li>
               <li><Link to="/services" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>YouTube</Link></li>
@@ -102,21 +112,21 @@ export const StorefrontFooter = ({
           
           {/* Company Column */}
           <div>
-            <h4 className="font-semibold mb-4">Company</h4>
+            <h4 className="font-semibold mb-4">{t('storefront.footer.company')}</h4>
             <ul className={`space-y-2 text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-              <li><Link to="/contact" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>About Us</Link></li>
-              <li><Link to="/contact" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>Contact</Link></li>
-              <li><Link to="/blog" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>Blog</Link></li>
+              <li><Link to="/contact" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>{t('storefront.footer.aboutUs')}</Link></li>
+              <li><Link to="/contact" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>{t('storefront.footer.contact')}</Link></li>
+              <li><Link to="/blog" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>{t('storefront.nav.blog')}</Link></li>
             </ul>
           </div>
           
           {/* Support Column */}
           <div>
-            <h4 className="font-semibold mb-4">Support</h4>
+            <h4 className="font-semibold mb-4">{t('storefront.footer.support')}</h4>
             <ul className={`space-y-2 text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-              <li><a href="#faq" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>FAQ</a></li>
-              <li><Link to="/terms" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>Terms of Service</Link></li>
-              <li><Link to="/privacy" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>Privacy Policy</Link></li>
+              <li><a href="#faq" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>{t('storefront.nav.faq')}</a></li>
+              <li><Link to="/terms" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>{t('storefront.footer.termsOfService')}</Link></li>
+              <li><Link to="/privacy" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>{t('storefront.footer.privacyPolicy')}</Link></li>
             </ul>
           </div>
         </div>

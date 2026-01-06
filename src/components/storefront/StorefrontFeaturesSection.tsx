@@ -17,12 +17,22 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { PayPalIcon, StripeIcon, BitcoinIcon } from "@/components/payment/PaymentIcons";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface StorefrontFeaturesSectionProps {
   customization?: any;
 }
 
 export const StorefrontFeaturesSection = ({ customization = {} }: StorefrontFeaturesSectionProps) => {
+  // Get translations - wrapped in try/catch since it may not always be available
+  let t = (key: string) => key;
+  try {
+    const lang = useLanguage();
+    t = lang.t;
+  } catch {
+    // Not within LanguageProvider context
+  }
+  
   const themeMode = customization.themeMode || 'dark';
   const textColor = customization.textColor || (themeMode === 'dark' ? '#FFFFFF' : '#1F2937');
   const textMuted = customization.textMuted || (themeMode === 'dark' ? '#A1A1AA' : '#4B5563');
@@ -101,7 +111,7 @@ export const StorefrontFeaturesSection = ({ customization = {} }: StorefrontFeat
           }}
         >
           <Zap className="w-4 h-4" style={{ color: customization.primaryColor || '#8B5CF6' }} />
-          <span className="text-sm font-medium" style={{ color: customization.primaryColor || '#8B5CF6' }}>Powerful Features</span>
+          <span className="text-sm font-medium" style={{ color: customization.primaryColor || '#8B5CF6' }}>{t('storefront.features.badge')}</span>
         </motion.div>
 
         <motion.h2 
@@ -116,7 +126,7 @@ export const StorefrontFeaturesSection = ({ customization = {} }: StorefrontFeat
             className="bg-clip-text text-transparent"
             style={{ backgroundImage: `linear-gradient(135deg, ${customization.primaryColor || '#8B5CF6'}, ${customization.secondaryColor || '#EC4899'})` }}
           >
-            Everything You Need
+            {t('storefront.features.title')}
           </span>
         </motion.h2>
       </div>
@@ -144,8 +154,8 @@ export const StorefrontFeaturesSection = ({ customization = {} }: StorefrontFeat
               >
                 50+
               </motion.div>
-              <h3 className="text-xl font-semibold mb-2" style={{ color: textColor }}>Payment Methods</h3>
-              <p style={{ color: textMuted }}>for every country</p>
+              <h3 className="text-xl font-semibold mb-2" style={{ color: textColor }}>{t('storefront.features.paymentMethods')}</h3>
+              <p style={{ color: textMuted }}>{t('storefront.features.forEveryCountry')}</p>
             </div>
             <div className="space-y-3 relative z-10">
               {[
@@ -182,7 +192,7 @@ export const StorefrontFeaturesSection = ({ customization = {} }: StorefrontFeat
                 </motion.div>
               ))}
               <p className="text-center text-sm mt-6 font-medium" style={{ color: customization.primaryColor || '#8B5CF6' }}>
-                and much more...
+                {t('storefront.features.andMore')}
               </p>
             </div>
           </motion.div>
@@ -213,9 +223,9 @@ export const StorefrontFeaturesSection = ({ customization = {} }: StorefrontFeat
                 className="text-xl font-semibold mb-2 bg-clip-text text-transparent"
                 style={{ backgroundImage: `linear-gradient(135deg, ${customization.primaryColor || '#8B5CF6'}, ${customization.secondaryColor || '#EC4899'})` }}
               >
-                Easy to use
+                {t('storefront.features.easyToUse')}
               </h3>
-              <p className="mb-8" style={{ color: textMuted }}>Simple ordering process</p>
+              <p className="mb-8" style={{ color: textMuted }}>{t('storefront.features.simpleProcess')}</p>
             </div>
             
             {/* Dashboard Visual */}
@@ -279,8 +289,8 @@ export const StorefrontFeaturesSection = ({ customization = {} }: StorefrontFeat
               >
                 10+
               </motion.div>
-              <h3 className="text-xl font-semibold mb-2" style={{ color: textColor }}>Platforms</h3>
-              <p style={{ color: textMuted }}>supported</p>
+              <h3 className="text-xl font-semibold mb-2" style={{ color: textColor }}>{t('storefront.features.platforms')}</h3>
+              <p style={{ color: textMuted }}>{t('storefront.features.supported')}</p>
             </div>
             <div className="grid grid-cols-5 gap-3 relative z-10">
               {platformIcons.map((platform, index) => (
@@ -315,10 +325,10 @@ export const StorefrontFeaturesSection = ({ customization = {} }: StorefrontFeat
           viewport={{ once: true, margin: "-50px" }}
         >
           {[
-            { icon: QrCode, title: "Discount Codes", desc: "Use promo codes for extra savings on your orders", gradient: "from-blue-500 to-cyan-500" },
-            { icon: MessageSquare, title: "24/7 Support", desc: "Our support team is always ready to help you", gradient: "from-purple-500 to-pink-500" },
-            { icon: Droplets, title: "Drip Feed", desc: "Gradual delivery for natural looking growth", gradient: "from-green-500 to-emerald-500" },
-            { icon: Zap, title: "Instant Start", desc: "Most orders start within minutes of payment", gradient: "from-amber-500 to-orange-500" },
+            { icon: QrCode, title: t('storefront.features.discountCodes'), desc: t('storefront.features.discountDesc'), gradient: "from-blue-500 to-cyan-500" },
+            { icon: MessageSquare, title: t('storefront.features.support247'), desc: t('storefront.features.supportDesc'), gradient: "from-purple-500 to-pink-500" },
+            { icon: Droplets, title: t('storefront.features.dripFeed'), desc: t('storefront.features.dripFeedDesc'), gradient: "from-green-500 to-emerald-500" },
+            { icon: Zap, title: t('storefront.features.instantStart'), desc: t('storefront.features.instantDesc'), gradient: "from-amber-500 to-orange-500" },
           ].map((feature, index) => (
             <motion.div
               key={feature.title}

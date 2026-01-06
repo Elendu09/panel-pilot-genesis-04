@@ -3,6 +3,7 @@ import { ChevronDown, HelpCircle, Sparkles, Zap, CreditCard, DollarSign, Shield,
 import { motion, AnimatePresence } from "framer-motion";
 import { useDeviceKey, defaultFaqDeviceLayout, defaultFaqCompactMode } from "@/hooks/use-device-key";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface FAQ {
   question: string;
@@ -51,6 +52,15 @@ const iconMapping: Record<string, React.ElementType> = {
 export const StorefrontFAQSection = ({ customization = {} }: StorefrontFAQSectionProps) => {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const deviceKey = useDeviceKey();
+  
+  // Get translations - wrapped in try/catch since it may not always be available
+  let t = (key: string) => key;
+  try {
+    const lang = useLanguage();
+    t = lang.t;
+  } catch {
+    // Not within LanguageProvider context
+  }
   
   const themeMode = customization.themeMode || 'dark';
   const textColor = customization.textColor || (themeMode === 'dark' ? '#FFFFFF' : '#1F2937');
@@ -141,21 +151,20 @@ export const StorefrontFAQSection = ({ customization = {} }: StorefrontFAQSectio
             transition={{ delay: 0.2 }}
           >
             <HelpCircle className="w-4 h-4" style={{ color: customization.primaryColor || '#8B5CF6' }} />
-            <span className="text-sm font-medium" style={{ color: customization.primaryColor || '#8B5CF6' }}>FAQ</span>
+            <span className="text-sm font-medium" style={{ color: customization.primaryColor || '#8B5CF6' }}>{t('storefront.faq.badge')}</span>
           </motion.div>
           
           <h2 className="text-4xl md:text-5xl font-bold mb-4" style={{ color: textColor }}>
-            Your{" "}
+            {t('storefront.faq.title').split(',')[0]}{", "}
             <span 
               className="bg-clip-text text-transparent"
               style={{ backgroundImage: `linear-gradient(135deg, ${customization.primaryColor || '#8B5CF6'}, ${customization.secondaryColor || '#EC4899'})` }}
             >
-              questions
+              {t('storefront.faq.title').split(',')[1]?.trim() || 'answered'}
             </span>
-            , answered
           </h2>
           <p className="text-xl max-w-2xl mx-auto" style={{ color: textMuted }}>
-            Everything you need to know about our services
+            {t('storefront.faq.subtitle')}
           </p>
         </motion.div>
 
@@ -297,7 +306,7 @@ export const StorefrontFAQSection = ({ customization = {} }: StorefrontFAQSectio
           transition={{ delay: 0.4 }}
         >
           <p className="mb-4" style={{ color: textMuted }}>
-            Still have questions?
+            {t('storefront.faq.stillQuestions')}
           </p>
           <motion.a
             href="#"
@@ -311,7 +320,7 @@ export const StorefrontFAQSection = ({ customization = {} }: StorefrontFAQSectio
             whileTap={{ scale: 0.98 }}
           >
             <Sparkles className="w-4 h-4" />
-            Contact Support
+            {t('storefront.faq.contactSupport')}
           </motion.a>
         </motion.div>
       </div>
