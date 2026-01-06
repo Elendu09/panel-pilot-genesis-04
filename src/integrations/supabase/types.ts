@@ -2336,6 +2336,56 @@ export type Database = {
           },
         ]
       }
+      service_categories: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          icon_key: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          panel_id: string
+          position: number
+          service_count: number | null
+          slug: string
+          updated_at: string | null
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          icon_key?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          panel_id: string
+          position?: number
+          service_count?: number | null
+          slug: string
+          updated_at?: string | null
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          icon_key?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          panel_id?: string
+          position?: number
+          service_count?: number | null
+          slug?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_categories_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_reviews: {
         Row: {
           buyer_id: string | null
@@ -2416,6 +2466,7 @@ export type Database = {
           average_time: string | null
           cancel_available: boolean | null
           category: Database["public"]["Enums"]["service_category"]
+          category_id: string | null
           cost_usd: number | null
           created_at: string
           description: string | null
@@ -2447,6 +2498,7 @@ export type Database = {
           average_time?: string | null
           cancel_available?: boolean | null
           category: Database["public"]["Enums"]["service_category"]
+          category_id?: string | null
           cost_usd?: number | null
           created_at?: string
           description?: string | null
@@ -2478,6 +2530,7 @@ export type Database = {
           average_time?: string | null
           cancel_available?: boolean | null
           category?: Database["public"]["Enums"]["service_category"]
+          category_id?: string | null
           cost_usd?: number | null
           created_at?: string
           description?: string | null
@@ -2506,6 +2559,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "services_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "service_categories"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "services_panel_id_fkey"
             columns: ["panel_id"]
@@ -2777,6 +2837,7 @@ export type Database = {
         Args: { p_provider_id: string }
         Returns: number
       }
+      sync_panel_categories: { Args: { p_panel_id: string }; Returns: number }
       update_user_role: {
         Args: {
           new_role: Database["public"]["Enums"]["user_role"]

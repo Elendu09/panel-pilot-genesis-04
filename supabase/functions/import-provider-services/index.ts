@@ -471,6 +471,49 @@ serve(async (req) => {
       console.log(`[IMPORT] Processed ${Math.min(i + BATCH_SIZE, rawServices.length)}/${rawServices.length}`);
     }
 
+    // 4. Sync categories to service_categories table for persistent ordering
+    console.log(`[IMPORT] Syncing categories to service_categories table...`);
+    
+    // Get unique categories from the imported services
+    const { data: categoryData } = await supabase
+      .from('services')
+      .select('category')
+      .eq('panel_id', panelId)
+      .eq('is_active', true);
+    
+    if (categoryData) {
+      const categoryCounts: Record<string, number> = {};
+      categoryData.forEach((svc: any) => {
+        const cat = svc.category || 'other';
+        categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+      });
+
+      // Upsert each category to service_categories
+      const sortedCategories = Object.entries(categoryCounts)
+        .sort((a, b) => b[1] - a[1]); // Sort by count descending
+
+      for (let idx = 0; idx < sortedCategories.length; idx++) {
+        const [category, count] = sortedCategories[idx];
+        const catName = category.charAt(0).toUpperCase() + category.slice(1);
+        
+        await supabase
+          .from('service_categories')
+          .upsert({
+            panel_id: panelId,
+            name: catName,
+            slug: category,
+            icon_key: category,
+            position: idx,
+            service_count: count,
+            is_active: true,
+          }, {
+            onConflict: 'panel_id,slug'
+          });
+      }
+      
+      console.log(`[IMPORT] Synced ${sortedCategories.length} categories`);
+    }
+
     // Update provider sync status
     await supabase
       .from('providers')

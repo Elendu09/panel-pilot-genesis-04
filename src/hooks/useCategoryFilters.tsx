@@ -9,6 +9,18 @@ interface Service {
   is_active?: boolean;
 }
 
+interface ServiceCategoryDB {
+  id: string;
+  panel_id: string;
+  name: string;
+  slug: string;
+  icon_key: string;
+  color: string;
+  position: number;
+  is_active: boolean;
+  service_count: number;
+}
+
 interface CategoryFilter {
   id: string;
   name: string;
@@ -17,6 +29,7 @@ interface CategoryFilter {
   color: string;
   bgColor: string;
   isActive: boolean;
+  position: number;
 }
 
 interface CategoryStats {
@@ -26,50 +39,63 @@ interface CategoryStats {
 }
 
 /**
- * Enhanced hook that syncs category filters from database with real-time updates
- * Ensures all buyer pages show consistent 70+ platform categories
+ * Enhanced hook that syncs category filters from service_categories table
+ * Uses persistent ordering from database for consistent display across all pages
  */
 export const useCategoryFilters = (panelId: string | null | undefined, services?: Service[]) => {
-  const [dbCategories, setDbCategories] = useState<Record<string, number>>({});
+  const [dbCategories, setDbCategories] = useState<ServiceCategoryDB[]>([]);
+  const [serviceCounts, setServiceCounts] = useState<Record<string, number>>({});
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch category counts directly from database
+  // Fetch categories from service_categories table (with persistent ordering)
   useEffect(() => {
     if (!panelId) {
       setIsLoading(false);
       return;
     }
 
-    const fetchCategoryCounts = async () => {
+    const fetchCategories = async () => {
       setIsLoading(true);
       try {
-        const { data, error } = await supabase
+        // First try to get from service_categories table (persistent ordering)
+        const { data: catData, error: catError } = await supabase
+          .from('service_categories')
+          .select('*')
+          .eq('panel_id', panelId)
+          .eq('is_active', true)
+          .order('position', { ascending: true });
+
+        if (!catError && catData && catData.length > 0) {
+          setDbCategories(catData);
+        }
+
+        // Also get service counts directly
+        const { data: svcData, error: svcError } = await supabase
           .from('services')
           .select('category')
           .eq('panel_id', panelId)
           .eq('is_active', true);
 
-        if (error) throw error;
-
-        const counts: Record<string, number> = {};
-        data?.forEach((service) => {
-          const cat = service.category || 'other';
-          counts[cat] = (counts[cat] || 0) + 1;
-        });
-
-        setDbCategories(counts);
+        if (!svcError && svcData) {
+          const counts: Record<string, number> = {};
+          svcData.forEach((service: any) => {
+            const cat = service.category || 'other';
+            counts[cat] = (counts[cat] || 0) + 1;
+          });
+          setServiceCounts(counts);
+        }
       } catch (error) {
-        console.error('Error fetching category counts:', error);
+        console.error('Error fetching categories:', error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchCategoryCounts();
+    fetchCategories();
 
-    // Subscribe to real-time updates for services table
+    // Subscribe to real-time updates for both tables
     const channel = supabase
-      .channel(`category-sync-${panelId}`)
+      .channel(`category-sync-v2-${panelId}`)
       .on(
         'postgres_changes',
         {
@@ -78,10 +104,17 @@ export const useCategoryFilters = (panelId: string | null | undefined, services?
           table: 'services',
           filter: `panel_id=eq.${panelId}`,
         },
-        () => {
-          // Refetch category counts on any service change
-          fetchCategoryCounts();
-        }
+        () => fetchCategories()
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'service_categories',
+          filter: `panel_id=eq.${panelId}`,
+        },
+        () => fetchCategories()
       )
       .subscribe();
 
@@ -90,7 +123,7 @@ export const useCategoryFilters = (panelId: string | null | undefined, services?
     };
   }, [panelId]);
 
-  // If services array is provided, use it directly; otherwise use db counts
+  // Build category counts from services or serviceCounts
   const categoryCounts = useMemo(() => {
     if (services && services.length > 0) {
       const counts: Record<string, number> = {};
@@ -102,14 +135,32 @@ export const useCategoryFilters = (panelId: string | null | undefined, services?
       });
       return counts;
     }
-    return dbCategories;
-  }, [services, dbCategories]);
+    return serviceCounts;
+  }, [services, serviceCounts]);
 
-  // Build active categories with icons from SOCIAL_ICONS_MAP
+  // Build active categories - use DB categories for ordering if available
   const activeCategories = useMemo(() => {
+    // If we have DB categories with persistent ordering, use those
+    if (dbCategories.length > 0) {
+      return dbCategories.map(cat => {
+        const iconData = SOCIAL_ICONS_MAP[cat.icon_key] || SOCIAL_ICONS_MAP.other;
+        return {
+          id: cat.slug,
+          name: cat.name,
+          count: categoryCounts[cat.slug] || cat.service_count || 0,
+          icon: iconData.icon,
+          color: iconData.color,
+          bgColor: iconData.bgColor,
+          isActive: cat.is_active,
+          position: cat.position,
+        };
+      });
+    }
+
+    // Fallback: build from categoryCounts
     const filters: CategoryFilter[] = Object.entries(categoryCounts)
       .filter(([_, count]) => count > 0)
-      .map(([category, count]) => {
+      .map(([category, count], idx) => {
         const iconData = SOCIAL_ICONS_MAP[category] || SOCIAL_ICONS_MAP.other;
         return {
           id: category,
@@ -119,16 +170,17 @@ export const useCategoryFilters = (panelId: string | null | undefined, services?
           color: iconData.color,
           bgColor: iconData.bgColor,
           isActive: true,
+          position: idx,
         };
       })
-      .sort((a, b) => b.count - a.count); // Sort by count descending
+      .sort((a, b) => b.count - a.count);
 
     return filters;
-  }, [categoryCounts]);
+  }, [dbCategories, categoryCounts]);
 
   // Get all available platform categories (70+ from SOCIAL_ICONS_MAP)
   const allCategories = useMemo(() => {
-    return Object.entries(SOCIAL_ICONS_MAP).map(([id, data]) => {
+    return Object.entries(SOCIAL_ICONS_MAP).map(([id, data], idx) => {
       const count = categoryCounts[id] || 0;
       return {
         id,
@@ -138,12 +190,14 @@ export const useCategoryFilters = (panelId: string | null | undefined, services?
         bgColor: data.bgColor,
         count,
         isActive: count > 0,
+        position: idx,
       };
     });
   }, [categoryCounts]);
 
-  // Filter pills for UI - only show categories with services
+  // Filter pills for UI - only show categories with services, ordered by position
   const filterPills = useMemo(() => {
+    const totalCount = Object.values(categoryCounts).reduce((sum, c) => sum + c, 0);
     return [
       {
         id: 'all',
@@ -151,10 +205,11 @@ export const useCategoryFilters = (panelId: string | null | undefined, services?
         icon: SOCIAL_ICONS_MAP.other.icon,
         color: 'text-primary',
         bgColor: 'bg-primary',
-        count: Object.values(categoryCounts).reduce((sum, c) => sum + c, 0),
+        count: totalCount,
         isActive: true,
+        position: -1,
       },
-      ...activeCategories,
+      ...activeCategories.sort((a, b) => a.position - b.position),
     ];
   }, [activeCategories, categoryCounts]);
 
