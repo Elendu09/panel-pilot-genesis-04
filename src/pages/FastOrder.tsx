@@ -125,22 +125,11 @@ const VerticalStepProgress = ({
 
       {/* Panel Logo */}
       <div className="flex items-center gap-3 mb-8 relative z-10">
-        {panelLogo ? (
-          <img 
-            src={panelLogo} 
-            alt={panelName} 
-            className="h-10 w-auto object-contain"
-          />
-        ) : (
-          <div className={cn(
-            "w-11 h-11 rounded-xl flex items-center justify-center text-white font-bold text-lg",
-            themeMode === 'dark' 
-              ? 'bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/30'
-              : 'bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/40'
-          )}>
-            {panelName.charAt(0).toUpperCase()}
-          </div>
-        )}
+        <img 
+          src={panelLogo || '/default-panel-favicon.png'} 
+          alt={panelName} 
+          className="h-10 w-10 rounded-xl object-cover"
+        />
         <div>
           <span className={cn(
             "font-bold text-lg tracking-tight block",
@@ -574,22 +563,11 @@ const FastOrderContent = () => {
           >
             <div className="px-4 py-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                {panel.logo_url ? (
-                  <img 
-                    src={panel.logo_url} 
-                    alt={panel.name} 
-                    className="h-8 w-auto object-contain"
-                  />
-                ) : (
-                  <div className={cn(
-                    "w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold",
-                    themeMode === 'dark'
-                      ? 'bg-gradient-to-br from-blue-500 to-blue-600'
-                      : 'bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/30'
-                  )}>
-                    {panel.name.charAt(0).toUpperCase()}
-                  </div>
-                )}
+                <img 
+                  src={panel.logo_url || '/default-panel-favicon.png'} 
+                  alt={panel.name} 
+                  className="h-8 w-8 rounded-lg object-cover"
+                />
                 <span className={cn(
                   "font-semibold tracking-tight",
                   themeMode === 'dark' ? 'text-white' : 'text-gray-900'

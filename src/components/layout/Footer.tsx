@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Zap, Twitter, Github, Linkedin, Mail, Heart } from "lucide-react";
+import { Twitter, Github, Linkedin, Mail, Heart } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -37,10 +37,12 @@ export const Footer = () => {
           {/* Brand */}
           <div className="col-span-3 md:col-span-1 space-y-2 sm:space-y-3 mb-3 md:mb-0">
             <Link to="/" className="flex items-center space-x-2">
-              <div className="w-7 h-7 bg-gradient-primary rounded-lg flex items-center justify-center">
-                <Zap className="w-4 h-4 text-primary-foreground" />
-              </div>
-            <span className="text-lg font-bold bg-gradient-primary bg-clip-text text-transparent">
+              <img 
+                src="/favicon.ico" 
+                alt="HOME OF SMM" 
+                className="w-7 h-7 rounded-lg object-cover"
+              />
+              <span className="text-lg font-bold bg-gradient-primary bg-clip-text text-transparent">
                 HOME OF SMM
               </span>
             </Link>
