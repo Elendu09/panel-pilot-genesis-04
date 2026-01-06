@@ -300,6 +300,8 @@ export const ServiceImportDialog = ({
   };
 
   const handleImport = async () => {
+    // For selected services import, we still use the old flow via onImport
+    // But for "Import All" we use the new edge function
     let selectedServiceData = fetchedServices.filter(s => selectedServices.includes(s.id));
     
     // Enforce limit
