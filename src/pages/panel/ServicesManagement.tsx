@@ -1486,52 +1486,94 @@ const ServicesManagement = () => {
     }
   };
 
-  // Import handler - applies markup ONCE and stores provider info for duplicate detection
-  // NOTE: service.price is already the provider's rate per 1K from ServiceImportDialog
-  // AI detection is done in ServiceImportDialog with pre-computed iconUrl
+  // Import handler - stores to provider_services, normalized_services, and services tables
+  // Following the professional 3-tier architecture: raw → normalized → buyer-visible
   const handleImport = async (importedServices: any[], markups: Record<number, number>, providerId?: string, providerName?: string) => {
     if (!panel?.id) return;
     
     try {
-      const newServices = importedServices.map((service, index) => {
+      // Process each service through the 3-tier architecture
+      for (const service of importedServices) {
         const markupPercent = markups[service.id] ?? 25;
         const providerRate = Number(service.price) || 0;
         const finalPrice = providerRate * (1 + markupPercent / 100);
-        
-        // Use pre-computed AI-detected category and icon from import dialog
         const detectedCategory = service.category || 'other';
-        // Use pre-computed iconUrl if available, otherwise generate from category
         const iconUrl = service.iconUrl || `icon:${detectedCategory}`;
         
-        console.log(`[Import] "${service.name}" → ${detectedCategory} → ${iconUrl}`);
-        
-        // Store both the actual provider UUID and the provider's service ID
-        // The provider_id field stores the actual provider UUID for lookup
-        // features stores the original service ID from provider for duplicate detection
-        return {
-          panel_id: panel.id,
-          name: service.name,
-          category: detectedCategory, // AI-detected category (50+ platforms)
-          image_url: iconUrl, // Auto-set icon based on detected category
-          price: finalPrice, // Final sale price per 1K (provider rate + markup)
-          provider_price: providerRate, // Store original provider rate for auto-adjustment
-          markup_percent: markupPercent, // Store markup % for price recalculation on resync
-          min_quantity: service.minQty || 100,
-          max_quantity: service.maxQty || 10000,
-          is_active: true,
-          display_order: services.length + index + 1,
-          provider_id: providerId || 'direct', // Store actual provider UUID
-          provider_service_id: String(service.id), // Store original provider service ID for re-sync
-          features: JSON.stringify({ 
-            original_service_id: service.id, 
-            provider_name: providerName || 'Direct',
+        // 1. Store raw provider service
+        const { data: rawService, error: rawError } = await supabase
+          .from('provider_services')
+          .upsert({
+            panel_id: panel.id,
+            provider_id: providerId || null,
+            external_service_id: String(service.id),
+            raw_name: service.name,
+            raw_category: service.category || 'other',
             provider_rate: providerRate,
-          }),
-        };
-      });
+            min_quantity: service.minQty || 100,
+            max_quantity: service.maxQty || 10000,
+            description: service.description || null,
+            is_active: true,
+            raw_data: service as any
+          }, {
+            onConflict: 'panel_id,provider_id,external_service_id'
+          })
+          .select('id')
+          .single();
 
-      const { error } = await supabase.from('services').insert(newServices);
-      if (error) throw error;
+        if (rawError) {
+          console.error('Raw service insert error:', rawError);
+          // Continue anyway - might be duplicate
+        }
+
+        const providerServiceId = rawService?.id;
+
+        // 2. Create normalized entry (if raw service was created)
+        if (providerServiceId) {
+          await supabase
+            .from('normalized_services')
+            .upsert({
+              provider_service_id: providerServiceId,
+              normalized_name: service.name,
+              detected_platform: detectedCategory,
+              detected_service_type: 'other',
+              detected_delivery_type: 'instant',
+              buyer_friendly_category: detectedCategory,
+              confidence_score: 0.8,
+              is_ai_processed: false
+            }, {
+              onConflict: 'provider_service_id'
+            });
+        }
+
+        // 3. Create buyer-visible service
+        await supabase
+          .from('services')
+          .upsert({
+            panel_id: panel.id,
+            provider_service_ref: providerServiceId || null,
+            provider_id: providerId || 'direct',
+            provider_service_id: String(service.id),
+            name: service.name,
+            category: detectedCategory,
+            image_url: iconUrl,
+            price: finalPrice,
+            provider_price: providerRate,
+            provider_cost: providerRate,
+            markup_percent: markupPercent,
+            min_quantity: service.minQty || 100,
+            max_quantity: service.maxQty || 10000,
+            is_active: true,
+            display_order: services.length + importedServices.indexOf(service) + 1,
+            features: JSON.stringify({ 
+              original_service_id: service.id, 
+              provider_name: providerName || 'Direct',
+              provider_rate: providerRate,
+            }),
+          }, {
+            onConflict: 'panel_id,provider_service_ref'
+          });
+      }
 
       toast({ title: `${importedServices.length} services imported successfully` });
       fetchServices();

@@ -98,3 +98,6 @@ verify_jwt = false
 
 [functions.normalize-services]
 verify_jwt = false
+
+[functions.scheduled-sync]
+verify_jwt = false

@@ -2034,9 +2034,13 @@ export type Database = {
           average_time: string | null
           cancel_available: boolean | null
           created_at: string | null
+          description: string | null
           dripfeed_available: boolean | null
           external_service_id: string
           id: string
+          is_cancel: boolean | null
+          is_dripfeed: boolean | null
+          is_refill: boolean | null
           last_synced_at: string | null
           max_quantity: number | null
           min_quantity: number | null
@@ -2056,9 +2060,13 @@ export type Database = {
           average_time?: string | null
           cancel_available?: boolean | null
           created_at?: string | null
+          description?: string | null
           dripfeed_available?: boolean | null
           external_service_id: string
           id?: string
+          is_cancel?: boolean | null
+          is_dripfeed?: boolean | null
+          is_refill?: boolean | null
           last_synced_at?: string | null
           max_quantity?: number | null
           min_quantity?: number | null
@@ -2078,9 +2086,13 @@ export type Database = {
           average_time?: string | null
           cancel_available?: boolean | null
           created_at?: string | null
+          description?: string | null
           dripfeed_available?: boolean | null
           external_service_id?: string
           id?: string
+          is_cancel?: boolean | null
+          is_dripfeed?: boolean | null
+          is_refill?: boolean | null
           last_synced_at?: string | null
           max_quantity?: number | null
           min_quantity?: number | null
@@ -2106,6 +2118,60 @@ export type Database = {
           },
           {
             foreignKeyName: "provider_services_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      provider_sync_logs: {
+        Row: {
+          completed_at: string | null
+          errors: Json | null
+          id: string
+          new_services: number | null
+          panel_id: string | null
+          prices_updated: number | null
+          provider_id: string | null
+          services_synced: number | null
+          started_at: string | null
+          status: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          errors?: Json | null
+          id?: string
+          new_services?: number | null
+          panel_id?: string | null
+          prices_updated?: number | null
+          provider_id?: string | null
+          services_synced?: number | null
+          started_at?: string | null
+          status?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          errors?: Json | null
+          id?: string
+          new_services?: number | null
+          panel_id?: string | null
+          prices_updated?: number | null
+          provider_id?: string | null
+          services_synced?: number | null
+          started_at?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_sync_logs_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_sync_logs_provider_id_fkey"
             columns: ["provider_id"]
             isOneToOne: false
             referencedRelation: "providers"
