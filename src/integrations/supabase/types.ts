@@ -2560,6 +2560,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_services_category"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "service_categories"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "services_category_id_fkey"
             columns: ["category_id"]
             isOneToOne: false

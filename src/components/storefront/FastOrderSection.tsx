@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext, useMemo } from 'react';
+import { useState, useEffect, useContext, useMemo, useCallback } from 'react';
 import { useTheme } from '@/hooks/use-theme';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -33,6 +33,7 @@ import { BuyerAuthContext } from '@/contexts/BuyerAuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { LiveOrderTracker } from '@/components/order/LiveOrderTracker';
+import { useUnifiedServices } from '@/hooks/useUnifiedServices';
 import { Confetti } from '@/components/effects/Confetti';
 import { useCategoryFilters } from '@/hooks/useCategoryFilters';
 
@@ -131,13 +132,31 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
   const [modalStep, setModalStep] = useState<'email' | 'credentials' | 'login'>('email');
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
-  // Use enhanced category filters hook for real-time sync with 70+ platforms
-  const { activeCategories, getCategoryData: hookGetCategoryData } = useCategoryFilters(panelId, services);
+  // Use unified services for consistent category ordering across all pages
+  const { 
+    categoriesWithServices: unifiedCategories,
+  } = useUnifiedServices({ panelId, enabled: !!panelId });
 
-  // Get unique categories from services (enhanced with real-time sync)
+  // Get category data helper - uses SOCIAL_ICONS_MAP for icons
+  const hookGetCategoryData = useCallback((category: string) => {
+    const catData = SOCIAL_ICONS_MAP[category.toLowerCase()] || SOCIAL_ICONS_MAP.other;
+    return {
+      icon: catData.icon,
+      label: catData.label || category.charAt(0).toUpperCase() + category.slice(1),
+      color: catData.color,
+      bgColor: catData.bgColor,
+    };
+  }, []);
+
+  // Get unique categories from unified services (consistent ordering)
   const categories = useMemo(() => {
-    return activeCategories.map(cat => cat.id);
-  }, [activeCategories]);
+    if (unifiedCategories.length > 0) {
+      return unifiedCategories.map(cat => cat.slug);
+    }
+    // Fallback to extracting from services prop
+    const uniqueCats = [...new Set(services.map(s => s.category))];
+    return uniqueCats;
+  }, [unifiedCategories, services]);
   
   // Get services for selected category
   const categoryServices = selectedCategory 
