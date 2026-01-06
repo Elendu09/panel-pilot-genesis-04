@@ -39,6 +39,7 @@ export interface UnifiedService {
   refillAvailable: boolean;
   cancelAvailable: boolean;
   averageTime: string;
+  estimated_time: string; // Alias for backwards compatibility
   serviceType: string;
   providerServiceId: string | null;
   providerId: string | null;
@@ -164,6 +165,7 @@ export function useUnifiedServices({ panelId, enabled = true }: UseUnifiedServic
         refillAvailable: svc.refill_available || false,
         cancelAvailable: svc.cancel_available || false,
         averageTime: svc.average_time || '',
+        estimated_time: svc.average_time || '', // Alias for backwards compatibility
         serviceType: svc.service_type || 'default',
         providerServiceId: svc.provider_service_id || null,
         providerId: svc.provider_id || null,

@@ -36,6 +36,7 @@ import { LiveOrderTracker } from '@/components/order/LiveOrderTracker';
 import { useUnifiedServices } from '@/hooks/useUnifiedServices';
 import { Confetti } from '@/components/effects/Confetti';
 import { useCategoryFilters } from '@/hooks/useCategoryFilters';
+import { SpeedGauge } from '@/components/buyer/SpeedGauge';
 
 interface Service {
   id: string;
@@ -723,9 +724,18 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                                   ID: {service.provider_service_id || service.id?.slice(0, 6)}
                                 </Badge>
                               </div>
-                              <span className="text-xs text-muted-foreground">
-                                ${service.price.toFixed(4)}/1K • Min: {service.min_quantity || 100}
-                              </span>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="text-xs text-muted-foreground">
+                                  ${service.price.toFixed(4)}/1K • Min: {service.min_quantity || 100}
+                                </span>
+                                <SpeedGauge 
+                                  estimatedTime={(service as any).average_time || (service as any).averageTime} 
+                                  compact 
+                                  size="sm"
+                                  showEstimatedTime={false}
+                                  className="shrink-0 ml-auto"
+                                />
+                              </div>
                             </div>
                           </SelectItem>
                         ))}
@@ -776,9 +786,17 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                           <p className="text-sm line-clamp-2" style={{ color: textMuted }}>
                             {service.name}
                           </p>
-                          <p className="text-xs mt-1" style={{ color: textMuted }}>
-                            Min: {service.min_quantity || 100}
-                          </p>
+                          <div className="flex items-center justify-between mt-1">
+                            <p className="text-xs" style={{ color: textMuted }}>
+                              Min: {service.min_quantity || 100}
+                            </p>
+                            <SpeedGauge 
+                              estimatedTime={(service as any).average_time || (service as any).averageTime} 
+                              compact 
+                              size="sm"
+                              showEstimatedTime={false}
+                            />
+                          </div>
                         </motion.button>
                       ))}
                     </div>
