@@ -6,8 +6,8 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
-import { useLanguage, Language, LanguageContext } from "@/contexts/LanguageContext";
-import { useBuyerAuth, BuyerAuthContext } from "@/contexts/BuyerAuthContext";
+import { Language, LanguageContext } from "@/contexts/LanguageContext";
+import { BuyerAuthContext } from "@/contexts/BuyerAuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { useCallback, useContext, useState } from "react";
