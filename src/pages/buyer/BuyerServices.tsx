@@ -26,7 +26,7 @@ import {
 import { SOCIAL_ICONS_MAP } from "@/components/icons/SocialIcons";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { useTenant, useTenantServices } from "@/hooks/useTenant";
+import { useTenant } from "@/hooks/useTenant";
 import { useBuyerAuth } from "@/contexts/BuyerAuthContext";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -41,7 +41,7 @@ import { useBuyerRealtimeOrders } from "@/hooks/use-buyer-realtime-orders";
 import { detectServiceType } from "@/lib/service-icon-detection";
 import { useBuyerCart } from "@/hooks/use-buyer-cart";
 import { ServiceInfoPanel } from "@/components/buyer/ServiceInfoPanel";
-import { useCategoryFilters } from "@/hooks/useCategoryFilters";
+import { useUnifiedServices } from "@/hooks/useUnifiedServices";
 import {
   Carousel,
   CarouselContent,
@@ -74,7 +74,6 @@ const BuyerServices = () => {
   const { buyer, refreshBuyer } = useBuyerAuth();
   const { formatPrice, currency } = useCurrency();
   const { t } = useLanguage();
-  const { services, loading } = useTenantServices(panel?.id);
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -85,8 +84,41 @@ const BuyerServices = () => {
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
   const [orderStats, setOrderStats] = useState({ total: 0, pending: 0, completed: 0 });
 
-  // Use enhanced category filters hook for real-time sync with 70+ platforms
-  const { filterPills, stats: categoryStats, getCategoryData: getHookCategoryData } = useCategoryFilters(panel?.id, services);
+  // Use unified services hook for consistent data across all buyer pages
+  const { 
+    services, 
+    categories: dbCategories, 
+    loading,
+    categoriesWithServices 
+  } = useUnifiedServices({ panelId: panel?.id || null });
+
+  // Build filter pills from unified categories
+  const filterPills = useMemo(() => {
+    const pills: Array<{ id: string; name: string; icon: any; bgColor: string }> = [
+      { id: 'all', name: 'All', icon: Package, bgColor: 'bg-primary' }
+    ];
+    
+    categoriesWithServices.forEach(cat => {
+      const catData = SOCIAL_ICONS_MAP[cat.slug.toLowerCase()] || SOCIAL_ICONS_MAP.other;
+      pills.push({
+        id: cat.slug,
+        name: cat.name,
+        icon: catData.icon,
+        bgColor: catData.bgColor,
+      });
+    });
+    
+    return pills;
+  }, [categoriesWithServices]);
+  const getHookCategoryData = useCallback((category: string) => {
+    const catData = SOCIAL_ICONS_MAP[category.toLowerCase()] || SOCIAL_ICONS_MAP.other;
+    return {
+      icon: catData.icon,
+      label: catData.label || category.charAt(0).toUpperCase() + category.slice(1),
+      color: catData.color,
+      bgColor: catData.bgColor,
+    };
+  }, []);
 
   // Real-time order tracking
   useBuyerRealtimeOrders(buyer?.id, panel?.id);

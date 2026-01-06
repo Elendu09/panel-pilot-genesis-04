@@ -30,6 +30,9 @@ export interface UnifiedService {
   providerCost: number | null;
   minQuantity: number;
   maxQuantity: number;
+  // Legacy snake_case aliases for backwards compatibility
+  min_quantity: number;
+  max_quantity: number;
   description: string;
   isActive: boolean;
   displayOrder: number;
@@ -46,7 +49,7 @@ interface UseUnifiedServicesOptions {
   enabled?: boolean;
 }
 
-interface UseUnifiedServicesReturn {
+export interface UseUnifiedServicesReturn {
   // Services
   services: UnifiedService[];
   servicesLoading: boolean;
@@ -57,6 +60,9 @@ interface UseUnifiedServicesReturn {
   categories: ServiceCategory[];
   categoriesLoading: boolean;
   refetchCategories: () => Promise<void>;
+  
+  // Combined loading state
+  loading: boolean;
   
   // Grouped data
   servicesByCategory: Record<string, UnifiedService[]>;
@@ -149,6 +155,9 @@ export function useUnifiedServices({ panelId, enabled = true }: UseUnifiedServic
         providerCost: svc.provider_cost || svc.provider_price || null,
         minQuantity: svc.min_quantity || 10,
         maxQuantity: svc.max_quantity || 1000000,
+        // Legacy snake_case aliases
+        min_quantity: svc.min_quantity || 10,
+        max_quantity: svc.max_quantity || 1000000,
         description: svc.description || '',
         isActive: svc.is_active ?? true,
         displayOrder: svc.display_order || 0,
@@ -315,6 +324,9 @@ export function useUnifiedServices({ panelId, enabled = true }: UseUnifiedServic
     categories,
     categoriesLoading,
     refetchCategories: fetchCategories,
+    
+    // Combined loading state
+    loading: servicesLoading || categoriesLoading,
     
     // Grouped data
     servicesByCategory,

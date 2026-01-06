@@ -47,7 +47,7 @@ import {
 import { SOCIAL_ICONS_MAP } from "@/components/icons/SocialIcons";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { useTenant, useTenantServices } from "@/hooks/useTenant";
+import { useTenant } from "@/hooks/useTenant";
 import { useBuyerAuth } from "@/contexts/BuyerAuthContext";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -62,7 +62,7 @@ import { OrderSuccessModal } from "@/components/buyer/OrderSuccessModal";
 import { detectServiceType, getSubCategory, ICON_CATEGORIES } from "@/lib/service-icon-detection";
 import ShoppingCart from "@/components/buyer/ShoppingCart";
 import { useBuyerCart } from "@/hooks/use-buyer-cart";
-import { useCategoryFilters } from "@/hooks/useCategoryFilters";
+import { useUnifiedServices } from "@/hooks/useUnifiedServices";
 
 interface PromoCode {
   id: string;
@@ -76,13 +76,29 @@ const BuyerNewOrder = () => {
   const navigate = useNavigate();
   const { panel } = useTenant();
   const { buyer, refreshBuyer } = useBuyerAuth();
-  const { services, loading } = useTenantServices(panel?.id);
   const { formatPrice, convertPrice } = useCurrency();
   const [searchParams] = useSearchParams();
   const [customPrices, setCustomPrices] = useState<Map<string, number>>(new Map());
   
-  // Use enhanced category filters hook for real-time sync with 70+ platforms
-  const { activeCategories, getCategoryData: hookGetCategoryData, stats: categoryStats } = useCategoryFilters(panel?.id, services);
+  // Use unified services hook for consistent data across all buyer pages
+  const { 
+    services, 
+    categories: dbCategories, 
+    loading, 
+    categoriesWithServices,
+    servicesByCategory 
+  } = useUnifiedServices({ panelId: panel?.id || null });
+
+  // Get category data helper
+  const hookGetCategoryData = useCallback((category: string) => {
+    const catData = SOCIAL_ICONS_MAP[category.toLowerCase()] || SOCIAL_ICONS_MAP.other;
+    return {
+      icon: catData.icon,
+      label: catData.label || category.charAt(0).toUpperCase() + category.slice(1),
+      color: catData.color,
+      bgColor: catData.bgColor,
+    };
+  }, []);
   
   // 3-Tier Selection State
   const [selectedNetwork, setSelectedNetwork] = useState<string>("");

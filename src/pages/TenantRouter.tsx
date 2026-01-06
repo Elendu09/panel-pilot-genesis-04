@@ -32,6 +32,7 @@ import BuyerContact from './buyer/BuyerContact';
 import Storefront from './Storefront';
 import StorefrontBlog from './storefront/StorefrontBlog';
 import FastOrder from './FastOrder';
+import BuyerBulkOrder from './buyer/BuyerBulkOrder';
 import TrackOrder from './TrackOrder';
 
 const queryClient = new QueryClient();
@@ -211,6 +212,11 @@ const TenantRouter = () => {
                         <Route path="/favorites" element={
                           <BuyerProtectedRoute>
                             <BuyerFavorites />
+                          </BuyerProtectedRoute>
+                        } />
+                        <Route path="/bulk-order" element={
+                          <BuyerProtectedRoute>
+                            <BuyerBulkOrder />
                           </BuyerProtectedRoute>
                         } />
                         
