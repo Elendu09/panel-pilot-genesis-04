@@ -6,11 +6,11 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
-import { LanguageContext, Language } from "@/contexts/LanguageContext";
-import { BuyerAuthContext } from "@/contexts/BuyerAuthContext";
+import { useLanguage, Language, LanguageContext } from "@/contexts/LanguageContext";
+import { useBuyerAuth, BuyerAuthContext } from "@/contexts/BuyerAuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
-import { useContext, useState, useCallback } from "react";
+import { useCallback, useContext, useState } from "react";
 import { toast } from "sonner";
 import { 
   FlagUS, 
@@ -47,13 +47,24 @@ const languages: LanguageItem[] = [
 ];
 
 export const LanguageSelector = () => {
+  // Try to use contexts - they might not be available in all component trees
   const languageContext = useContext(LanguageContext);
   const buyerAuthContext = useContext(BuyerAuthContext);
-  const [fallbackLanguage, setFallbackLanguage] = useState<Language>('en');
+  
+  // Fallback state for when context is not available
+  const [fallbackLanguage, setFallbackLanguage] = useState<Language>(() => {
+    const saved = localStorage.getItem('preferred_language');
+    return (saved as Language) || 'en';
+  });
   
   // Use context values if available, otherwise use fallbacks
   const language = languageContext?.language ?? fallbackLanguage;
-  const setLanguage = languageContext?.setLanguage ?? setFallbackLanguage;
+  const setLanguage = languageContext?.setLanguage ?? ((lang: Language) => {
+    setFallbackLanguage(lang);
+    localStorage.setItem('preferred_language', lang);
+    // Force page reload to apply language change when context is not available
+    window.location.reload();
+  });
   const buyer = buyerAuthContext?.buyer ?? null;
   const panelId = buyerAuthContext?.panelId ?? null;
 
