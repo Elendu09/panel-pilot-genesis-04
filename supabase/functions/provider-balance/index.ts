@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -6,8 +7,7 @@ const corsHeaders = {
 };
 
 interface BalanceRequest {
-  api_endpoint: string;
-  api_key: string;
+  providerId: string; // ID of provider in database - credentials fetched securely
 }
 
 interface BalanceResponse {
@@ -17,6 +17,27 @@ interface BalanceResponse {
   error?: string;
 }
 
+// Rate limiting
+const requestCounts = new Map<string, { count: number; resetAt: number }>();
+const MAX_REQUESTS_PER_MINUTE = 10;
+
+function checkRateLimit(key: string): boolean {
+  const now = Date.now();
+  const record = requestCounts.get(key);
+  
+  if (!record || now > record.resetAt) {
+    requestCounts.set(key, { count: 1, resetAt: now + 60000 });
+    return true;
+  }
+  
+  if (record.count >= MAX_REQUESTS_PER_MINUTE) {
+    return false;
+  }
+  
+  record.count++;
+  return true;
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -24,23 +45,107 @@ serve(async (req) => {
   }
 
   try {
-    const { api_endpoint, api_key }: BalanceRequest = await req.json();
-
-    if (!api_endpoint || !api_key) {
+    // Authentication check
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
       return new Response(
-        JSON.stringify({ success: false, error: "Missing api_endpoint or api_key" }),
+        JSON.stringify({ success: false, error: "Authentication required" }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Verify the token
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claims, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !claims?.user) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Invalid authentication" }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { providerId }: BalanceRequest = await req.json();
+
+    if (!providerId) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Provider ID is required" }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`Fetching balance from: ${api_endpoint}`);
+    // Rate limit per user+provider
+    const rateLimitKey = `${claims.user.id}:${providerId}`;
+    if (!checkRateLimit(rateLimitKey)) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Rate limit exceeded. Please try again later." }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Create admin client to fetch provider credentials
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+      { auth: { persistSession: false } }
+    );
+
+    // Get the user's profile to find their panel
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('id')
+      .eq('user_id', claims.user.id)
+      .single();
+
+    if (!profile) {
+      return new Response(
+        JSON.stringify({ success: false, error: "User profile not found" }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Fetch provider credentials from database - verify ownership
+    const { data: provider, error: providerError } = await supabaseAdmin
+      .from('providers')
+      .select('id, api_endpoint, api_key, panel_id')
+      .eq('id', providerId)
+      .single();
+
+    if (providerError || !provider) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Provider not found" }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Verify the user owns the panel this provider belongs to
+    const { data: panel } = await supabaseAdmin
+      .from('panels')
+      .select('owner_id')
+      .eq('id', provider.panel_id)
+      .single();
+
+    if (!panel || panel.owner_id !== profile.id) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Access denied" }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log(`Fetching balance for provider: ${providerId} by user ${claims.user.id}`);
 
     // SMM Panel standard API format for balance check
     const formData = new URLSearchParams();
-    formData.append('key', api_key);
+    formData.append('key', provider.api_key);
     formData.append('action', 'balance');
 
-    const response = await fetch(api_endpoint, {
+    const response = await fetch(provider.api_endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -60,7 +165,7 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    console.log("Provider response:", JSON.stringify(data));
+    console.log("Provider response received");
 
     // Handle different response formats from various SMM providers
     let balance: number | undefined;
@@ -79,6 +184,12 @@ serve(async (req) => {
     }
 
     if (balance !== undefined && !isNaN(balance)) {
+      // Update provider balance in database
+      await supabaseAdmin
+        .from('providers')
+        .update({ balance, updated_at: new Date().toISOString() })
+        .eq('id', providerId);
+
       return new Response(
         JSON.stringify({ 
           success: true, 

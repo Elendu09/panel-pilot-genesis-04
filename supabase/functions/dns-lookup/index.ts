@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -34,6 +35,27 @@ const DNS_TYPE_MAP: Record<string, number> = {
   NS: 2,
   SRV: 33,
 };
+
+// Rate limiting
+const requestCounts = new Map<string, { count: number; resetAt: number }>();
+const MAX_REQUESTS_PER_MINUTE = 30;
+
+function checkRateLimit(clientIP: string): boolean {
+  const now = Date.now();
+  const record = requestCounts.get(clientIP);
+  
+  if (!record || now > record.resetAt) {
+    requestCounts.set(clientIP, { count: 1, resetAt: now + 60000 });
+    return true;
+  }
+  
+  if (record.count >= MAX_REQUESTS_PER_MINUTE) {
+    return false;
+  }
+  
+  record.count++;
+  return true;
+}
 
 async function queryGoogleDNS(domain: string, recordType: string) {
   const typeNum = DNS_TYPE_MAP[recordType] || 1;
@@ -80,6 +102,16 @@ async function queryCloudflare(domain: string, recordType: string) {
   };
 }
 
+// Validate domain format
+function isValidDomain(domain: string): boolean {
+  if (!domain || typeof domain !== 'string') return false;
+  if (domain.length > 253) return false;
+  
+  // Basic domain validation regex
+  const domainRegex = /^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)*[a-zA-Z]{2,}$/;
+  return domainRegex.test(domain);
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -87,13 +119,62 @@ serve(async (req) => {
   }
 
   try {
-    const { domain, recordType = "A" } = await req.json();
-
-    if (!domain) {
-      throw new Error("Domain is required");
+    // Get client IP for rate limiting
+    const clientIP = req.headers.get('x-forwarded-for') || 'unknown';
+    
+    // Check rate limit
+    if (!checkRateLimit(clientIP)) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Rate limit exceeded. Please try again later." }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    console.log(`DNS lookup for ${domain} (${recordType})`);
+    // Authentication check - require valid auth header for panel owners
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Authentication required" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Verify the token
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claims, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !claims?.user) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Invalid authentication" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { domain, recordType = "A" } = await req.json();
+
+    // Validate domain
+    if (!domain || !isValidDomain(domain)) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Invalid domain format" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate record type
+    if (!DNS_TYPE_MAP[recordType]) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Invalid record type" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`DNS lookup for ${domain} (${recordType}) by user ${claims.user.id}`);
 
     // Query all DNS servers in parallel
     const results = await Promise.allSettled(
