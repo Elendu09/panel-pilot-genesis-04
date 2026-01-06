@@ -1,6 +1,7 @@
 import { useRef, useMemo } from "react";
 import { useParams, Link, Navigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
+import DOMPurify from "dompurify";
 import { Navigation } from "@/components/layout/Navigation";
 import { Footer } from "@/components/layout/Footer";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +26,15 @@ const BlogPost = () => {
   const headings = useMemo(() => {
     if (!post) return [];
     return extractHeadings(post.content);
+  }, [post]);
+
+  // Sanitize blog content to prevent XSS attacks
+  const sanitizedContent = useMemo(() => {
+    if (!post) return '';
+    return DOMPurify.sanitize(post.content, {
+      ALLOWED_TAGS: ['h2', 'h3', 'h4', 'p', 'strong', 'em', 'ul', 'ol', 'li', 'a', 'br', 'span', 'div', 'blockquote', 'code', 'pre', 'img'],
+      ALLOWED_ATTR: ['href', 'id', 'class', 'target', 'rel', 'src', 'alt', 'title'],
+    });
   }, [post]);
 
   const activeId = useActiveSection(headings);
@@ -149,7 +159,7 @@ const BlogPost = () => {
                   prose-p:text-muted-foreground prose-p:leading-relaxed
                   prose-strong:text-foreground
                   prose-a:text-primary prose-a:no-underline hover:prose-a:underline"
-                dangerouslySetInnerHTML={{ __html: post.content }}
+                dangerouslySetInnerHTML={{ __html: sanitizedContent }}
               />
             </article>
 
