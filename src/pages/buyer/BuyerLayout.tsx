@@ -147,16 +147,11 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
         {/* Header with Panel Branding */}
         <div className="p-4 border-b border-sidebar-border/50">
           <div className="flex items-center gap-3">
-            {panel?.logo_url ? (
-              <img src={panel.logo_url} alt={panel.name} className="w-10 h-10 rounded-xl object-cover" />
-            ) : (
-              <div 
-                className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold"
-                style={{ background: `linear-gradient(135deg, ${panel?.primary_color || '#3b82f6'}, ${panel?.secondary_color || '#1e40af'})` }}
-              >
-                {panel?.name?.charAt(0) || 'P'}
-              </div>
-            )}
+            <img 
+              src={panel?.logo_url || '/default-panel-favicon.png'} 
+              alt={panel?.name || 'Panel'} 
+              className="w-10 h-10 rounded-xl object-cover" 
+            />
             <div>
               <h2 className="text-base font-bold">{panel?.name || 'Panel'}</h2>
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{t('nav.smm_services')}</p>
@@ -238,12 +233,11 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
 
       {/* Tablet Sidebar (collapsible) */}
       <aside className="hidden md:flex lg:hidden flex-col fixed left-0 top-0 h-full w-16 glass-sidebar z-20 items-center py-4">
-        <div 
-          className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold mb-6"
-          style={{ background: `linear-gradient(135deg, ${panel?.primary_color || '#3b82f6'}, ${panel?.secondary_color || '#1e40af'})` }}
-        >
-          {panel?.name?.charAt(0) || 'P'}
-        </div>
+        <img 
+          src={panel?.logo_url || '/default-panel-favicon.png'} 
+          alt={panel?.name || 'Panel'} 
+          className="w-10 h-10 rounded-xl object-cover mb-6" 
+        />
         
         <nav className="flex-1 flex flex-col items-center gap-2">
           {navigation.map((item) => (
@@ -279,16 +273,11 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
       {/* Mobile Header */}
       <header className="md:hidden glass border-b border-border/50 p-2 flex items-center justify-between sticky top-0 z-30">
         <div className="flex items-center gap-1.5 min-w-0 flex-shrink">
-          {panel?.logo_url ? (
-            <img src={panel.logo_url} alt={panel.name} className="w-7 h-7 rounded-lg object-cover flex-shrink-0" />
-          ) : (
-            <div 
-              className="w-7 h-7 rounded-lg flex items-center justify-center text-white font-bold text-xs flex-shrink-0"
-              style={{ background: `linear-gradient(135deg, ${panel?.primary_color || '#3b82f6'}, ${panel?.secondary_color || '#1e40af'})` }}
-            >
-              {panel?.name?.charAt(0) || 'P'}
-            </div>
-          )}
+          <img 
+            src={panel?.logo_url || '/default-panel-favicon.png'} 
+            alt={panel?.name || 'Panel'} 
+            className="w-7 h-7 rounded-lg object-cover flex-shrink-0" 
+          />
           <span className="font-bold text-xs truncate max-w-[80px]">{panel?.name || 'Panel'}</span>
         </div>
         <div className="flex items-center gap-1 flex-shrink-0">

@@ -121,24 +121,13 @@ export const StorefrontNavigation = memo(({ panel, customization = {} }: Storefr
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-3">
-            {logoUrl ? (
-              <motion.img 
-                src={logoUrl} 
-                alt={panelName} 
-                className="w-9 h-9 rounded-lg object-cover"
-                whileHover={{ scale: 1.1, rotate: 5 }}
-                transition={{ type: "spring", stiffness: 400 }}
-              />
-            ) : (
-              <motion.div 
-                className="w-9 h-9 rounded-lg flex items-center justify-center"
-                style={{ background: `linear-gradient(135deg, ${primaryColor}, ${primaryColor}CC)` }}
-                whileHover={{ scale: 1.1, rotate: 5 }}
-                transition={{ type: "spring", stiffness: 400 }}
-              >
-                <Zap className="w-5 h-5 text-white" />
-              </motion.div>
-            )}
+          <motion.img 
+            src={logoUrl || '/default-panel-favicon.png'} 
+            alt={panelName} 
+            className="w-9 h-9 rounded-lg object-cover"
+            whileHover={{ scale: 1.1, rotate: 5 }}
+            transition={{ type: "spring", stiffness: 400 }}
+          />
             <span 
               className="text-xl font-bold bg-clip-text text-transparent"
               style={{ 
