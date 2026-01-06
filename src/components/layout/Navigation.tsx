@@ -81,10 +81,10 @@ export const Navigation = () => {
             ) : (
               <div className="flex items-center space-x-2">
                 <Button asChild variant="ghost">
-                  <Link to="/auth">{t('platform.signIn')}</Link>
+                  <Link to="/auth">{t('platform.signin')}</Link>
                 </Button>
                 <Button asChild className="bg-gradient-primary hover:shadow-glow">
-                  <Link to="/auth">{t('platform.getStarted')}</Link>
+                  <Link to="/auth">{t('platform.getstarted')}</Link>
                 </Button>
               </div>
             )}
@@ -100,7 +100,7 @@ export const Navigation = () => {
               </Button>
             ) : (
               <Button asChild size="sm" className="bg-gradient-primary">
-                <Link to="/auth">{t('platform.signIn')}</Link>
+                <Link to="/auth">{t('platform.signin')}</Link>
               </Button>
             )}
             <button onClick={() => setIsOpen(!isOpen)} className="p-2">
