@@ -63,6 +63,7 @@ import { detectServiceType, getSubCategory, ICON_CATEGORIES } from "@/lib/servic
 import ShoppingCart from "@/components/buyer/ShoppingCart";
 import { useBuyerCart } from "@/hooks/use-buyer-cart";
 import { useUnifiedServices } from "@/hooks/useUnifiedServices";
+import { SpeedGauge } from "@/components/buyer/SpeedGauge";
 
 interface PromoCode {
   id: string;
@@ -621,6 +622,13 @@ const BuyerNewOrder = () => {
                                 <span className="text-xs text-muted-foreground">
                                   {(service.min_quantity || 100).toLocaleString()}-{(service.max_quantity || 10000).toLocaleString()}
                                 </span>
+                                <SpeedGauge 
+                                  estimatedTime={service.average_time || service.averageTime} 
+                                  compact 
+                                  size="sm"
+                                  showEstimatedTime={false}
+                                  className="shrink-0"
+                                />
                                 <Badge variant="outline" className="shrink-0 font-mono text-xs ml-auto">
                                   {formatPrice(price)}/1k
                                 </Badge>

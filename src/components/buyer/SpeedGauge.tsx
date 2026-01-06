@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { useMemo } from 'react';
 import { Zap, Clock, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface SpeedGaugeProps {
   estimatedTime?: string;
@@ -9,6 +10,8 @@ interface SpeedGaugeProps {
   providerSpeed?: 'instant' | 'fast' | 'medium' | 'slow';
   className?: string;
   compact?: boolean; // For mobile/small spaces
+  size?: 'sm' | 'md' | 'lg'; // Size variants
+  showEstimatedTime?: boolean; // Toggle estimated time display
 }
 
 export const SpeedGauge = ({ 
@@ -16,8 +19,15 @@ export const SpeedGauge = ({
   averageDeliveryTime,
   providerSpeed,
   className = '',
-  compact = false
+  compact: compactProp,
+  size = 'md',
+  showEstimatedTime = true
 }: SpeedGaugeProps) => {
+  const isMobile = useIsMobile();
+  
+  // Auto-compact on mobile if not explicitly set
+  const compact = compactProp ?? isMobile;
+  
   // Parse estimated time to determine speed level (0-100)
   const speedLevel = useMemo(() => {
     // Priority 1: Use explicit provider speed if available
@@ -98,6 +108,12 @@ export const SpeedGauge = ({
     return 'bg-red-500';
   }, [speedLevel]);
 
+  const bgColorClass = useMemo(() => {
+    if (speedLevel >= 80) return 'bg-emerald-500/10';
+    if (speedLevel >= 50) return 'bg-amber-500/10';
+    return 'bg-red-500/10';
+  }, [speedLevel]);
+
   // Calculate needle rotation (-90 to 90 degrees)
   const needleRotation = -90 + (speedLevel / 100) * 180;
 
@@ -107,27 +123,73 @@ export const SpeedGauge = ({
     return AlertCircle;
   }, [speedLevel]);
 
+  // Size configurations
+  const sizeConfig = useMemo(() => {
+    switch (size) {
+      case 'sm':
+        return {
+          gaugeWidth: 'w-20',
+          gaugeHeight: 'h-12',
+          iconSize: 'w-3 h-3',
+          textSize: 'text-[10px]',
+          badgePadding: 'px-2 py-0.5',
+          estimatedTextSize: 'text-[9px]',
+          maxWidth: 'max-w-[90px]',
+        };
+      case 'lg':
+        return {
+          gaugeWidth: 'w-40',
+          gaugeHeight: 'h-24',
+          iconSize: 'w-5 h-5',
+          textSize: 'text-sm',
+          badgePadding: 'px-4 py-1.5',
+          estimatedTextSize: 'text-xs',
+          maxWidth: 'max-w-[180px]',
+        };
+      default: // md
+        return {
+          gaugeWidth: 'w-32',
+          gaugeHeight: 'h-20',
+          iconSize: 'w-4 h-4',
+          textSize: 'text-sm',
+          badgePadding: 'px-3 py-1',
+          estimatedTextSize: 'text-xs',
+          maxWidth: 'max-w-[140px]',
+        };
+    }
+  }, [size]);
+
   // Compact mode for mobile - just show label and icon
   if (compact) {
     return (
-      <div className={cn("flex items-center gap-2", className)}>
+      <div className={cn("flex items-center gap-2 shrink-0 overflow-hidden", className)}>
         <motion.div
           key={speedLabel}
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           className={cn(
-            "flex items-center gap-1.5 px-2.5 py-1 rounded-full",
-            speedLevel >= 80 ? "bg-emerald-500/10" : 
-            speedLevel >= 50 ? "bg-amber-500/10" : "bg-red-500/10"
+            "flex items-center gap-1.5 rounded-full shrink-0",
+            size === 'sm' ? 'px-2 py-0.5' : 'px-2.5 py-1',
+            bgColorClass
           )}
         >
-          <SpeedIcon className={cn("w-3.5 h-3.5", speedColorClass)} />
-          <span className={cn("text-xs font-semibold", speedColorClass)}>
+          <SpeedIcon className={cn(
+            speedColorClass,
+            size === 'sm' ? 'w-3 h-3' : 'w-3.5 h-3.5'
+          )} />
+          <span className={cn(
+            "font-semibold whitespace-nowrap",
+            speedColorClass,
+            size === 'sm' ? 'text-[10px]' : 'text-xs'
+          )}>
             {speedLabel}
           </span>
         </motion.div>
-        {estimatedTime && (
-          <span className="text-[10px] text-muted-foreground truncate max-w-[80px]">
+        {showEstimatedTime && estimatedTime && (
+          <span className={cn(
+            "text-muted-foreground truncate",
+            size === 'sm' ? 'text-[9px] max-w-[60px]' : 'text-[10px] max-w-[80px]'
+          )}>
             {estimatedTime}
           </span>
         )}
@@ -136,9 +198,13 @@ export const SpeedGauge = ({
   }
 
   return (
-    <div className={cn("flex flex-col items-center gap-3", className)}>
+    <div className={cn(
+      "flex flex-col items-center gap-3 overflow-hidden shrink-0",
+      sizeConfig.maxWidth,
+      className
+    )}>
       {/* Gauge with glow effect */}
-      <div className="relative w-32 h-20">
+      <div className={cn("relative", sizeConfig.gaugeWidth, sizeConfig.gaugeHeight)}>
         {/* Background glow */}
         <div className={cn(
           "absolute inset-0 rounded-full blur-xl opacity-20",
@@ -158,7 +224,7 @@ export const SpeedGauge = ({
           />
         )}
         
-        <svg viewBox="0 0 100 55" className="w-full h-full relative z-10">
+        <svg viewBox="0 0 100 55" className="w-full h-full relative z-10" preserveAspectRatio="xMidYMid meet">
           {/* Background arc */}
           <path
             d="M 10 50 A 40 40 0 0 1 90 50"
@@ -170,7 +236,7 @@ export const SpeedGauge = ({
           
           {/* Gradient arc segments */}
           <defs>
-            <linearGradient id="speedGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <linearGradient id={`speedGradient-${speedLevel}`} x1="0%" y1="0%" x2="100%" y2="0%">
               <stop offset="0%" stopColor="hsl(var(--destructive))" />
               <stop offset="50%" stopColor="hsl(var(--chart-4))" />
               <stop offset="100%" stopColor="hsl(var(--chart-2))" />
@@ -181,7 +247,7 @@ export const SpeedGauge = ({
           <path
             d="M 10 50 A 40 40 0 0 1 90 50"
             fill="none"
-            stroke="url(#speedGradient)"
+            stroke={`url(#speedGradient-${speedLevel})`}
             strokeWidth="8"
             strokeLinecap="round"
             strokeDasharray={`${(speedLevel / 100) * 126} 126`}
@@ -221,19 +287,22 @@ export const SpeedGauge = ({
         initial={{ opacity: 0, y: 5 }}
         animate={{ opacity: 1, y: 0 }}
         className={cn(
-          "flex items-center gap-1.5 px-3 py-1 rounded-full",
-          speedLevel >= 80 ? "bg-emerald-500/10" : 
-          speedLevel >= 50 ? "bg-amber-500/10" : "bg-red-500/10"
+          "flex items-center gap-1.5 rounded-full",
+          sizeConfig.badgePadding,
+          bgColorClass
         )}
       >
-        <SpeedIcon className={cn("w-4 h-4", speedColorClass)} />
-        <span className={cn("text-sm font-semibold", speedColorClass)}>
+        <SpeedIcon className={cn(sizeConfig.iconSize, speedColorClass)} />
+        <span className={cn("font-semibold", sizeConfig.textSize, speedColorClass)}>
           {speedLabel}
         </span>
       </motion.div>
       
-      {estimatedTime && (
-        <span className="text-xs text-muted-foreground text-center max-w-[120px]">
+      {showEstimatedTime && estimatedTime && (
+        <span className={cn(
+          "text-muted-foreground text-center truncate w-full",
+          sizeConfig.estimatedTextSize
+        )}>
           {estimatedTime}
         </span>
       )}

@@ -4,11 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Package,
   Layers,
   ArrowLeft,
   ShoppingCart as ShoppingCartIcon,
+  Repeat,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useTenant } from "@/hooks/useTenant";
@@ -22,6 +24,7 @@ import ShoppingCart from "@/components/buyer/ShoppingCart";
 import { CurrencySelector } from "@/components/buyer/CurrencySelector";
 import { LanguageSelector } from "@/components/buyer/LanguageSelector";
 import { BulkAddForm } from "@/components/buyer/BulkAddForm";
+import { QuickRepeatOrder } from "@/components/buyer/QuickRepeatOrder";
 import { useBuyerCart } from "@/hooks/use-buyer-cart";
 import { useUnifiedServices } from "@/hooks/useUnifiedServices";
 import { SOCIAL_ICONS_MAP } from "@/components/icons/SocialIcons";
@@ -35,6 +38,7 @@ const BuyerBulkOrder = () => {
   const { formatPrice } = useCurrency();
   const { t } = useLanguage();
   const [customPrices, setCustomPrices] = useState<Map<string, number>>(new Map());
+  const [activeTab, setActiveTab] = useState("bulk");
 
   // Use unified services for consistent data across all buyer pages
   const { 
@@ -254,13 +258,21 @@ const BuyerBulkOrder = () => {
           </CardContent>
         </Card>
 
-        {/* Bulk Add Form */}
+        {/* Bulk Order Tabs */}
         <Card>
           <CardHeader className="border-b">
-            <CardTitle className="flex items-center gap-2">
-              <Package className="w-5 h-5 text-primary" />
-              Add Multiple Services
-            </CardTitle>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="bulk" className="gap-2">
+                  <Package className="w-4 h-4" />
+                  Bulk Add
+                </TabsTrigger>
+                <TabsTrigger value="repeat" className="gap-2">
+                  <Repeat className="w-4 h-4" />
+                  Quick Repeat
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
           </CardHeader>
           <CardContent className="p-6">
             {loading ? (
@@ -268,13 +280,26 @@ const BuyerBulkOrder = () => {
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
               </div>
             ) : (
-              <BulkAddForm
-                services={services}
-                getEffectivePrice={getEffectivePrice}
-                formatPrice={formatPrice}
-                onAddToCart={handleBulkAddToCart}
-                disabled={!buyer}
-              />
+              <Tabs value={activeTab} onValueChange={setActiveTab}>
+                <TabsContent value="bulk" className="mt-0">
+                  <BulkAddForm
+                    services={services}
+                    getEffectivePrice={getEffectivePrice}
+                    formatPrice={formatPrice}
+                    onAddToCart={handleBulkAddToCart}
+                    disabled={!buyer}
+                  />
+                </TabsContent>
+                <TabsContent value="repeat" className="mt-0">
+                  <QuickRepeatOrder
+                    services={services}
+                    getEffectivePrice={getEffectivePrice}
+                    formatPrice={formatPrice}
+                    onAddToCart={handleBulkAddToCart}
+                    disabled={!buyer}
+                  />
+                </TabsContent>
+              </Tabs>
             )}
             
             {!buyer && (

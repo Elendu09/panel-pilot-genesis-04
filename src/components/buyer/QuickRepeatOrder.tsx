@@ -14,6 +14,7 @@ import {
 import { Repeat, Package, Link as LinkIcon, Hash, Zap, Info } from "lucide-react";
 import { SOCIAL_ICONS_MAP } from "@/components/icons/SocialIcons";
 import { cn } from "@/lib/utils";
+import { SpeedGauge } from "@/components/buyer/SpeedGauge";
 
 interface QuickRepeatOrderProps {
   services: any[];
@@ -142,7 +143,7 @@ export const QuickRepeatOrder = ({
       {/* Selected Service Info */}
       {selectedService && categoryData && (
         <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border">
-          <div className={cn("p-2 rounded-lg", categoryData.bgColor)}>
+          <div className={cn("p-2 rounded-lg shrink-0", categoryData.bgColor)}>
             <categoryData.icon className="w-4 h-4 text-white" />
           </div>
           <div className="flex-1 min-w-0">
@@ -152,7 +153,13 @@ export const QuickRepeatOrder = ({
               Max: {(selectedService.max_quantity || 10000).toLocaleString()}
             </p>
           </div>
-          <div className="text-right">
+          <SpeedGauge 
+            estimatedTime={selectedService.average_time || selectedService.averageTime} 
+            compact 
+            size="sm"
+            className="shrink-0"
+          />
+          <div className="text-right shrink-0">
             <p className="font-bold text-sm">{formatPrice(effectivePrice)}</p>
             <p className="text-xs text-muted-foreground">per 1K</p>
           </div>

@@ -14,6 +14,7 @@ import { Plus, Trash2, Package, Link as LinkIcon, Hash } from "lucide-react";
 import { SOCIAL_ICONS_MAP } from "@/components/icons/SocialIcons";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { SpeedGauge } from "@/components/buyer/SpeedGauge";
 
 interface BulkOrderRow {
   id: string;

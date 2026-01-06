@@ -42,6 +42,7 @@ import { detectServiceType } from "@/lib/service-icon-detection";
 import { useBuyerCart } from "@/hooks/use-buyer-cart";
 import { ServiceInfoPanel } from "@/components/buyer/ServiceInfoPanel";
 import { useUnifiedServices } from "@/hooks/useUnifiedServices";
+import { SpeedGauge } from "@/components/buyer/SpeedGauge";
 import {
   Carousel,
   CarouselContent,
@@ -634,7 +635,7 @@ const BuyerServices = () => {
                                     </h3>
 
                                     {/* Price & Quantity */}
-                                    <div className="flex items-center justify-between text-xs text-muted-foreground mb-3">
+                                    <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
                                       <span>{(service.min_quantity || 100).toLocaleString()} - {(service.max_quantity || 10000).toLocaleString()}</span>
                                       <Badge 
                                         variant="secondary" 
@@ -645,6 +646,16 @@ const BuyerServices = () => {
                                       >
                                         {formatPrice(effectivePrice)}/1K
                                       </Badge>
+                                    </div>
+                                    
+                                    {/* Speed Gauge */}
+                                    <div className="mb-3">
+                                      <SpeedGauge 
+                                        estimatedTime={service.average_time || service.averageTime || service.estimated_time} 
+                                        compact 
+                                        size="sm"
+                                        className="justify-start"
+                                      />
                                     </div>
 
                                     {/* Actions with View Now button */}
