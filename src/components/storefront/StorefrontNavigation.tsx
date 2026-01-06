@@ -1,9 +1,10 @@
 import { useState, useMemo, useCallback, memo } from "react";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Zap, LogIn, Sun, Moon, LayoutDashboard, LogOut, Globe } from "lucide-react";
+import { Menu, X, LogIn, Sun, Moon, LayoutDashboard, LogOut } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useBuyerAuth } from "@/contexts/BuyerAuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { LanguageSelector } from "@/components/buyer/LanguageSelector";
 
 interface StorefrontNavigationProps {
@@ -37,6 +38,15 @@ export const StorefrontNavigation = memo(({ panel, customization = {} }: Storefr
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
   
+  // Get translations - wrapped in try/catch since it may not always be available
+  let t = (key: string) => key;
+  try {
+    const lang = useLanguage();
+    t = lang.t;
+  } catch {
+    // Not within LanguageProvider context
+  }
+  
   // Get buyer auth state - wrapped in try/catch since it may not always be available
   let buyer = null;
   let signOut: (() => void) | null = null;
@@ -68,18 +78,18 @@ export const StorefrontNavigation = memo(({ panel, customization = {} }: Storefr
   // Show blog in menu if explicitly enabled via customization or if panel has blog_enabled
   const showBlogInMenu = customization.showBlogInMenu ?? panel?.blog_enabled ?? false;
 
-  // Memoize navigation links
+  // Memoize navigation links with translations
   const navLinks = useMemo(() => {
     const baseNavLinks = [
-      { href: "/services", label: "Services", isRoute: true },
-      { href: "#features", label: "Features", isRoute: false },
-      { href: "#testimonials", label: "Reviews", isRoute: false },
-      { href: "#faq", label: "FAQ", isRoute: false },
+      { href: "/services", label: t('storefront.nav.services'), isRoute: true },
+      { href: "#features", label: t('storefront.nav.features'), isRoute: false },
+      { href: "#testimonials", label: t('storefront.nav.reviews'), isRoute: false },
+      { href: "#faq", label: t('storefront.nav.faq'), isRoute: false },
     ];
     return showBlogInMenu
-      ? [...baseNavLinks, { href: "/blog", label: "Blog", isRoute: true }]
+      ? [...baseNavLinks, { href: "/blog", label: t('storefront.nav.blog'), isRoute: true }]
       : baseNavLinks;
-  }, [showBlogInMenu]);
+  }, [showBlogInMenu, t]);
 
   const toggleThemeMode = useCallback(() => {
     if (setThemeMode) {
@@ -191,7 +201,7 @@ export const StorefrontNavigation = memo(({ panel, customization = {} }: Storefr
                 >
                   <Link to="/dashboard">
                     <LayoutDashboard className="w-4 h-4 mr-2" />
-                    Dashboard
+                    {t('storefront.nav.dashboard')}
                   </Link>
                 </Button>
                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.98 }}>
@@ -205,7 +215,7 @@ export const StorefrontNavigation = memo(({ panel, customization = {} }: Storefr
                     }}
                   >
                     <LogOut className="w-4 h-4 mr-2" />
-                    Sign Out
+                    {t('storefront.nav.signOut')}
                   </Button>
                 </motion.div>
               </>
@@ -220,7 +230,7 @@ export const StorefrontNavigation = memo(({ panel, customization = {} }: Storefr
                 >
                   <Link to="/auth?tab=login">
                     <LogIn className="w-4 h-4 mr-2" />
-                    Sign In
+                    {t('storefront.nav.signIn')}
                   </Link>
                 </Button>
                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.98 }}>
@@ -234,7 +244,7 @@ export const StorefrontNavigation = memo(({ panel, customization = {} }: Storefr
                     }}
                   >
                     <Link to="/auth?tab=signup">
-                      Get Started
+                      {t('storefront.nav.getStarted')}
                     </Link>
                   </Button>
                 </motion.div>
@@ -331,7 +341,7 @@ export const StorefrontNavigation = memo(({ panel, customization = {} }: Storefr
                       >
                         <Link to="/dashboard">
                           <LayoutDashboard className="w-4 h-4 mr-2" />
-                          Dashboard
+                          {t('storefront.nav.dashboard')}
                         </Link>
                       </Button>
                       <Button 
@@ -342,7 +352,7 @@ export const StorefrontNavigation = memo(({ panel, customization = {} }: Storefr
                         }}
                       >
                         <LogOut className="w-4 h-4 mr-2" />
-                        Sign Out
+                        {t('storefront.nav.signOut')}
                       </Button>
                     </>
                   ) : (
@@ -356,7 +366,7 @@ export const StorefrontNavigation = memo(({ panel, customization = {} }: Storefr
                           color: textColor 
                         }}
                       >
-                        <Link to="/auth?tab=login">Sign In</Link>
+                        <Link to="/auth?tab=login">{t('storefront.nav.signIn')}</Link>
                       </Button>
                       <Button 
                         asChild 
@@ -365,7 +375,7 @@ export const StorefrontNavigation = memo(({ panel, customization = {} }: Storefr
                           background: `linear-gradient(135deg, ${primaryColor}, ${customization.secondaryColor || primaryColor})`
                         }}
                       >
-                        <Link to="/auth?tab=signup">Get Started</Link>
+                        <Link to="/auth?tab=signup">{t('storefront.nav.getStarted')}</Link>
                       </Button>
                     </>
                   )}

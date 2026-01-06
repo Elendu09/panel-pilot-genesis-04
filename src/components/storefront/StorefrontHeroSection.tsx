@@ -12,6 +12,7 @@ import { motion } from "framer-motion";
 import { TikTokIcon } from "@/components/icons/SocialIcons";
 import { useDeviceKey, defaultHeroShowFloatingCards, defaultHeroShowCategories } from "@/hooks/use-device-key";
 import { BuyerAuthContext } from "@/contexts/BuyerAuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface StorefrontHeroSectionProps {
   panel?: any;
@@ -103,6 +104,15 @@ const paymentIcons = [
 export const StorefrontHeroSection = ({ panel, services = [], customization = {} }: StorefrontHeroSectionProps) => {
   const navigate = useNavigate();
   const deviceKey = useDeviceKey();
+  
+  // Get translations - wrapped in try/catch since it may not always be available
+  let t = (key: string) => key;
+  try {
+    const lang = useLanguage();
+    t = lang.t;
+  } catch {
+    // Not within LanguageProvider context
+  }
   
   // Safely access buyer auth context (may not be available in preview mode)
   const buyerAuthContext = useContext(BuyerAuthContext);
@@ -233,7 +243,7 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
               className="px-1.5 sm:px-2 py-0.5 text-[10px] sm:text-xs rounded-full font-semibold text-white"
               style={{ backgroundColor: customization.primaryColor || '#8B5CF6' }}
             >
-              Trusted
+              {t('storefront.hero.trusted')}
             </span>
           </motion.div>
 
@@ -301,7 +311,7 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
                       navigate(panelId ? `/fast-order?panel=${panelId}` : '/fast-order');
                     }}
                   >
-                    <Zap className="mr-2 w-4 h-4 sm:w-5 sm:h-5" /> Fast Order
+                    <Zap className="mr-2 w-4 h-4 sm:w-5 sm:h-5" /> {t('storefront.hero.fastOrder')}
                   </Button>
                 </motion.div>
                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.98 }}>
@@ -316,7 +326,7 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
                     }}
                   >
                     <Link to="/services">
-                      View Services
+                      {t('storefront.hero.viewServices')}
                     </Link>
                   </Button>
                 </motion.div>
