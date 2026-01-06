@@ -322,6 +322,12 @@ serve(async (req) => {
     const results: SyncResult[] = [];
 
     for (const provider of providers) {
+      // Get provider currency settings
+      const providerCurrency = provider.currency || 'USD';
+      const currencyRateToUsd = provider.currency_rate_to_usd || 1.0;
+      
+      console.log(`[SYNC] Provider ${provider.name}: Currency=${providerCurrency}, Rate=${currencyRateToUsd}`);
+      
       const result: SyncResult = {
         providerId: provider.id,
         providerName: provider.name,
@@ -404,7 +410,7 @@ serve(async (req) => {
             const serviceId = String(providerService.service);
             const existing = existingByProviderServiceId.get(serviceId);
             
-            // Clean and validate rate
+            // Clean and validate rate - this is in PROVIDER CURRENCY
             const rawRate = String(providerService.rate).replace(/[^0-9.]/g, '');
             const providerRate = parseFloat(rawRate) || 0;
             
@@ -414,8 +420,10 @@ serve(async (req) => {
               return;
             }
             
+            // CRITICAL: Convert to USD before applying markup
+            const costUsd = providerRate * currencyRateToUsd;
             const markupMultiplier = 1 + (markupPercent / 100);
-            const finalPrice = providerRate * markupMultiplier;
+            const finalPrice = costUsd * markupMultiplier;
 
             // Enhanced category detection with cleaned strings
             const detectedCategory = mapCategory(
@@ -430,8 +438,10 @@ serve(async (req) => {
               name: providerService.name || `Service ${serviceId}`,
               description: providerService.desc || providerService.description || null,
               category: detectedCategory,
-              price: finalPrice,
-              provider_price: providerRate,
+              price: finalPrice,                    // Final price in USD with markup
+              provider_price: providerRate,         // Original provider rate (in provider currency)
+              provider_cost: providerRate,          // Keep original for reference
+              cost_usd: costUsd,                    // Normalized USD cost (before markup)
               markup_percent: markupPercent,
               min_quantity: parseInt(String(providerService.min).replace(/[^0-9]/g, '')) || 1,
               max_quantity: parseInt(String(providerService.max).replace(/[^0-9]/g, '')) || 10000,

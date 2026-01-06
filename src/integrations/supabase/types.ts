@@ -861,6 +861,36 @@ export type Database = {
           },
         ]
       }
+      currency_rates: {
+        Row: {
+          created_at: string | null
+          currency_code: string
+          currency_name: string
+          id: string
+          is_auto_updated: boolean | null
+          last_updated_at: string | null
+          rate_to_usd: number
+        }
+        Insert: {
+          created_at?: string | null
+          currency_code: string
+          currency_name: string
+          id?: string
+          is_auto_updated?: boolean | null
+          last_updated_at?: string | null
+          rate_to_usd: number
+        }
+        Update: {
+          created_at?: string | null
+          currency_code?: string
+          currency_name?: string
+          id?: string
+          is_auto_updated?: boolean | null
+          last_updated_at?: string | null
+          rate_to_usd?: number
+        }
+        Relationships: []
+      }
       domain_verifications: {
         Row: {
           created_at: string
@@ -2033,6 +2063,7 @@ export type Database = {
         Row: {
           average_time: string | null
           cancel_available: boolean | null
+          cost_usd: number | null
           created_at: string | null
           description: string | null
           dripfeed_available: boolean | null
@@ -2048,6 +2079,7 @@ export type Database = {
           provider_id: string
           provider_rate: number
           raw_category: string | null
+          raw_currency: string | null
           raw_data: Json | null
           raw_description: string | null
           raw_name: string
@@ -2059,6 +2091,7 @@ export type Database = {
         Insert: {
           average_time?: string | null
           cancel_available?: boolean | null
+          cost_usd?: number | null
           created_at?: string | null
           description?: string | null
           dripfeed_available?: boolean | null
@@ -2074,6 +2107,7 @@ export type Database = {
           provider_id: string
           provider_rate?: number
           raw_category?: string | null
+          raw_currency?: string | null
           raw_data?: Json | null
           raw_description?: string | null
           raw_name: string
@@ -2085,6 +2119,7 @@ export type Database = {
         Update: {
           average_time?: string | null
           cancel_available?: boolean | null
+          cost_usd?: number | null
           created_at?: string | null
           description?: string | null
           dripfeed_available?: boolean | null
@@ -2100,6 +2135,7 @@ export type Database = {
           provider_id?: string
           provider_rate?: number
           raw_category?: string | null
+          raw_currency?: string | null
           raw_data?: Json | null
           raw_description?: string | null
           raw_name?: string
@@ -2185,6 +2221,9 @@ export type Database = {
           api_key: string
           balance: number | null
           created_at: string
+          currency: string | null
+          currency_last_updated: string | null
+          currency_rate_to_usd: number | null
           id: string
           is_active: boolean | null
           name: string
@@ -2196,6 +2235,9 @@ export type Database = {
           api_key: string
           balance?: number | null
           created_at?: string
+          currency?: string | null
+          currency_last_updated?: string | null
+          currency_rate_to_usd?: number | null
           id?: string
           is_active?: boolean | null
           name: string
@@ -2207,6 +2249,9 @@ export type Database = {
           api_key?: string
           balance?: number | null
           created_at?: string
+          currency?: string | null
+          currency_last_updated?: string | null
+          currency_rate_to_usd?: number | null
           id?: string
           is_active?: boolean | null
           name?: string
@@ -2371,6 +2416,7 @@ export type Database = {
           average_time: string | null
           cancel_available: boolean | null
           category: Database["public"]["Enums"]["service_category"]
+          cost_usd: number | null
           created_at: string
           description: string | null
           display_order: number | null
@@ -2401,6 +2447,7 @@ export type Database = {
           average_time?: string | null
           cancel_available?: boolean | null
           category: Database["public"]["Enums"]["service_category"]
+          cost_usd?: number | null
           created_at?: string
           description?: string | null
           display_order?: number | null
@@ -2431,6 +2478,7 @@ export type Database = {
           average_time?: string | null
           cancel_available?: boolean | null
           category?: Database["public"]["Enums"]["service_category"]
+          cost_usd?: number | null
           created_at?: string
           description?: string | null
           display_order?: number | null
@@ -2725,6 +2773,10 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       is_any_admin: { Args: { _user_id: string }; Returns: boolean }
       is_email_verified: { Args: { user_id: string }; Returns: boolean }
+      recalculate_provider_costs: {
+        Args: { p_provider_id: string }
+        Returns: number
+      }
       update_user_role: {
         Args: {
           new_role: Database["public"]["Enums"]["user_role"]

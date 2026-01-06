@@ -251,10 +251,10 @@ serve(async (req) => {
 
     console.log(`[IMPORT] Starting import for panel: ${panelId}, provider: ${providerId}`);
 
-    // Get provider details
+    // Get provider details WITH currency info
     const { data: provider, error: providerError } = await supabase
       .from('providers')
-      .select('*')
+      .select('*, currency, currency_rate_to_usd')
       .eq('id', providerId)
       .eq('panel_id', panelId)
       .single();
@@ -266,7 +266,13 @@ serve(async (req) => {
       );
     }
 
-    const result: ImportResult = {
+    // Currency conversion setup - default to USD if not set
+    const providerCurrency = provider.currency || 'USD';
+    const currencyRateToUsd = provider.currency_rate_to_usd || 1.0;
+    
+    console.log(`[IMPORT] Provider currency: ${providerCurrency}, rate to USD: ${currencyRateToUsd}`);
+
+    const result: ImportResult & { currency: string; currencyRate: number } = {
       providerId: provider.id,
       providerName: provider.name,
       totalFetched: 0,
@@ -274,6 +280,8 @@ serve(async (req) => {
       normalized: 0,
       buyerServicesCreated: 0,
       errors: [],
+      currency: providerCurrency,
+      currencyRate: currencyRateToUsd,
     };
 
     // Fetch services from provider API
@@ -323,25 +331,33 @@ serve(async (req) => {
     for (let i = 0; i < rawServices.length; i += BATCH_SIZE) {
       const batch = rawServices.slice(i, i + BATCH_SIZE);
       
-      // 1. Store raw data in provider_services
-      const rawInserts = batch.map((svc, idx) => ({
-        panel_id: panelId,
-        provider_id: providerId,
-        external_service_id: String(svc.service),
-        raw_name: svc.name || `Service ${svc.service}`,
-        raw_category: svc.category || '',
-        raw_type: svc.type || '',
-        provider_rate: parseRate(svc.rate),
-        min_quantity: parseInt(String(svc.min)) || 10,
-        max_quantity: parseInt(String(svc.max)) || 1000000,
-        raw_description: svc.desc || svc.description || '',
-        refill_available: parseBoolean(svc.refill),
-        cancel_available: parseBoolean(svc.cancel),
-        dripfeed_available: parseBoolean(svc.dripfeed),
-        average_time: svc.average_time || '',
-        raw_data: svc,
-        sync_status: 'active',
-      }));
+      // 1. Store raw data in provider_services WITH currency conversion
+      const rawInserts = batch.map((svc, idx) => {
+        const rawRate = parseRate(svc.rate);
+        // CRITICAL: Convert provider rate to USD
+        const costUsd = rawRate * currencyRateToUsd;
+        
+        return {
+          panel_id: panelId,
+          provider_id: providerId,
+          external_service_id: String(svc.service),
+          raw_name: svc.name || `Service ${svc.service}`,
+          raw_category: svc.category || '',
+          raw_type: svc.type || '',
+          provider_rate: rawRate,           // Original rate in provider currency
+          raw_currency: providerCurrency,   // Track original currency
+          cost_usd: costUsd,                // Normalized USD cost
+          min_quantity: parseInt(String(svc.min)) || 10,
+          max_quantity: parseInt(String(svc.max)) || 1000000,
+          raw_description: svc.desc || svc.description || '',
+          refill_available: parseBoolean(svc.refill),
+          cancel_available: parseBoolean(svc.cancel),
+          dripfeed_available: parseBoolean(svc.dripfeed),
+          average_time: svc.average_time || '',
+          raw_data: svc,
+          sync_status: 'active',
+        };
+      });
 
       const { data: storedRaw, error: rawError } = await supabase
         .from('provider_services')
@@ -404,11 +420,13 @@ serve(async (req) => {
           result.normalized += normalizedData?.length || 0;
         }
 
-        // 3. Create buyer-visible services
+        // 3. Create buyer-visible services WITH USD-based pricing
         const buyerServiceInserts = storedRaw.map((raw, idx) => {
           const norm = normalizedInserts[idx];
-          const providerRate = raw.provider_rate;
-          const buyerPrice = providerRate * (1 + markupPercent / 100);
+          const rawRate = raw.provider_rate;
+          // CRITICAL: Use USD cost for markup calculation, never raw provider rate
+          const costUsd = rawRate * currencyRateToUsd;
+          const buyerPrice = costUsd * (1 + markupPercent / 100);
 
           return {
             panel_id: panelId,
@@ -419,9 +437,10 @@ serve(async (req) => {
             category: norm.detected_platform,
             service_type: norm.detected_service_type,
             description: `${norm.detected_service_type} for ${norm.buyer_friendly_category}`,
-            price: Math.round(buyerPrice * 10000) / 10000,
-            provider_price: providerRate,
-            provider_cost: providerRate,
+            price: Math.round(buyerPrice * 10000) / 10000,     // Final buyer price in USD
+            provider_price: rawRate,                           // Original provider rate
+            provider_cost: rawRate,                            // Keep original for reference
+            cost_usd: costUsd,                                 // Normalized USD cost
             markup_percent: markupPercent,
             min_quantity: 10,
             max_quantity: 1000000,
@@ -469,6 +488,8 @@ serve(async (req) => {
       details: {
         panel_id: panelId,
         provider_name: provider.name,
+        provider_currency: providerCurrency,
+        currency_rate_to_usd: currencyRateToUsd,
         total_fetched: result.totalFetched,
         raw_stored: result.rawStored,
         normalized: result.normalized,
