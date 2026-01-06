@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Slider } from "@/components/ui/slider";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -47,7 +48,31 @@ interface Provider {
   balance: number;
   is_active: boolean;
   created_at: string;
+  currency?: string;
+  currency_rate_to_usd?: number;
 }
+
+// Common currencies for SMM providers
+const CURRENCY_OPTIONS = [
+  { code: 'USD', name: 'US Dollar', symbol: '$' },
+  { code: 'NGN', name: 'Nigerian Naira', symbol: '₦' },
+  { code: 'INR', name: 'Indian Rupee', symbol: '₹' },
+  { code: 'PKR', name: 'Pakistani Rupee', symbol: '₨' },
+  { code: 'EUR', name: 'Euro', symbol: '€' },
+  { code: 'GBP', name: 'British Pound', symbol: '£' },
+  { code: 'BRL', name: 'Brazilian Real', symbol: 'R$' },
+  { code: 'RUB', name: 'Russian Ruble', symbol: '₽' },
+  { code: 'IDR', name: 'Indonesian Rupiah', symbol: 'Rp' },
+  { code: 'PHP', name: 'Philippine Peso', symbol: '₱' },
+  { code: 'BDT', name: 'Bangladeshi Taka', symbol: '৳' },
+  { code: 'VND', name: 'Vietnamese Dong', symbol: '₫' },
+  { code: 'TRY', name: 'Turkish Lira', symbol: '₺' },
+  { code: 'EGP', name: 'Egyptian Pound', symbol: 'E£' },
+  { code: 'ZAR', name: 'South African Rand', symbol: 'R' },
+  { code: 'AED', name: 'UAE Dirham', symbol: 'د.إ' },
+  { code: 'MYR', name: 'Malaysian Ringgit', symbol: 'RM' },
+  { code: 'THB', name: 'Thai Baht', symbol: '฿' },
+];
 
 interface BalanceState {
   balance: number | null;
@@ -90,7 +115,9 @@ const ProviderManagement = () => {
   const [formData, setFormData] = useState({
     name: "",
     api_endpoint: "",
-    api_key: ""
+    api_key: "",
+    currency: "USD",
+    currency_rate_to_usd: "1.0"
   });
   
   const [balances, setBalances] = useState<Record<string, BalanceState>>({});
@@ -195,13 +222,18 @@ const ProviderManagement = () => {
     }
 
     try {
+      const currencyRate = parseFloat(formData.currency_rate_to_usd) || 1.0;
+      
       if (editingProvider) {
         await supabase
           .from('providers')
           .update({
             name: formData.name,
             api_endpoint: formData.api_endpoint,
-            api_key: formData.api_key
+            api_key: formData.api_key,
+            currency: formData.currency,
+            currency_rate_to_usd: currencyRate,
+            currency_last_updated: new Date().toISOString()
           })
           .eq('id', editingProvider.id);
         toast({ title: "Provider Updated" });
@@ -212,7 +244,9 @@ const ProviderManagement = () => {
             panel_id: panel.id,
             name: formData.name,
             api_endpoint: formData.api_endpoint,
-            api_key: formData.api_key
+            api_key: formData.api_key,
+            currency: formData.currency,
+            currency_rate_to_usd: currencyRate
           })
           .select()
           .single();
@@ -222,7 +256,7 @@ const ProviderManagement = () => {
 
       setDialogOpen(false);
       setEditingProvider(null);
-      setFormData({ name: "", api_endpoint: "", api_key: "" });
+      setFormData({ name: "", api_endpoint: "", api_key: "", currency: "USD", currency_rate_to_usd: "1.0" });
       fetchProviders();
     } catch (error) {
       toast({ variant: "destructive", title: "Error", description: "Failed to save provider" });
@@ -353,14 +387,16 @@ const ProviderManagement = () => {
     setFormData({
       name: provider.name,
       api_endpoint: provider.api_endpoint,
-      api_key: provider.api_key
+      api_key: provider.api_key,
+      currency: provider.currency || "USD",
+      currency_rate_to_usd: (provider.currency_rate_to_usd || 1.0).toString()
     });
     setDialogOpen(true);
   };
 
   const openAddDialog = () => {
     setEditingProvider(null);
-    setFormData({ name: "", api_endpoint: "", api_key: "" });
+    setFormData({ name: "", api_endpoint: "", api_key: "", currency: "USD", currency_rate_to_usd: "1.0" });
     setDialogOpen(true);
   };
 
@@ -368,7 +404,9 @@ const ProviderManagement = () => {
     setFormData({
       name: providerInfo.name,
       api_endpoint: providerInfo.endpoint,
-      api_key: ""
+      api_key: "",
+      currency: "USD",
+      currency_rate_to_usd: "1.0"
     });
     setEditingProvider(null);
     setDialogOpen(true);
@@ -481,6 +519,11 @@ const ProviderManagement = () => {
                                 <Badge variant={provider.is_active ? "default" : "secondary"} className="shrink-0">
                                   {provider.is_active ? "Active" : "Inactive"}
                                 </Badge>
+                                {provider.currency && provider.currency !== 'USD' && (
+                                  <Badge variant="outline" className="shrink-0 text-blue-500 border-blue-500/50">
+                                    {provider.currency}
+                                  </Badge>
+                                )}
                                 {isLowBalance && (
                                   <Badge variant="outline" className="text-yellow-500 border-yellow-500/50 shrink-0">
                                     <AlertTriangle className="w-3 h-3 mr-1" /> Low
@@ -600,6 +643,40 @@ const ProviderManagement = () => {
               <Label>API Key</Label>
               <Input type="password" value={formData.api_key} onChange={(e) => setFormData({...formData, api_key: e.target.value})} placeholder="Your API key" />
             </div>
+            
+            {/* Currency Configuration */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Provider Currency</Label>
+                <Select value={formData.currency} onValueChange={(v) => setFormData({...formData, currency: v})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select currency" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CURRENCY_OPTIONS.map(curr => (
+                      <SelectItem key={curr.code} value={curr.code}>
+                        {curr.symbol} {curr.code} - {curr.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Rate to USD</Label>
+                <Input 
+                  type="number" 
+                  step="0.000001"
+                  value={formData.currency_rate_to_usd}
+                  onChange={(e) => setFormData({...formData, currency_rate_to_usd: e.target.value})}
+                  placeholder="1.0"
+                />
+              </div>
+            </div>
+            {formData.currency !== 'USD' && (
+              <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
+                1 {formData.currency} = ${formData.currency_rate_to_usd} USD. Provider prices will be converted to USD using this rate.
+              </p>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
