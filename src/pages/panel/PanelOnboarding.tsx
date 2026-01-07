@@ -580,6 +580,7 @@ const PanelOnboarding = () => {
             </div>
           </motion.div>
         );
+      }
 
       default:
         return null;

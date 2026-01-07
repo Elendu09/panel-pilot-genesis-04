@@ -28,13 +28,13 @@ export const Navigation = () => {
   };
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
+    <header role="banner" className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
-          <Link to="/" className="flex items-center space-x-2">
+          <Link to="/" aria-label="HOME OF SMM - Home" className="flex items-center space-x-2">
             <img 
               src="/favicon.ico" 
-              alt="HOME OF SMM" 
+              alt="HOME OF SMM logo" 
               className="w-8 h-8 rounded-lg object-cover"
             />
             <span className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
@@ -43,20 +43,20 @@ export const Navigation = () => {
           </Link>
 
           {/* Desktop Navigation (lg+) */}
-          <div className="hidden lg:flex items-center space-x-8">
-            <Link to="/features" className="text-muted-foreground hover:text-foreground transition-colors">
+          <nav aria-label="Main navigation" className="hidden lg:flex items-center space-x-8">
+            <Link to="/features" aria-label="Features page" className="text-muted-foreground hover:text-foreground transition-colors">
               {t('platform.features')}
             </Link>
-            <Link to="/pricing" className="text-muted-foreground hover:text-foreground transition-colors">
+            <Link to="/pricing" aria-label="Pricing page" className="text-muted-foreground hover:text-foreground transition-colors">
               {t('platform.pricing')}
             </Link>
-            <Link to="/docs" className="text-muted-foreground hover:text-foreground transition-colors">
+            <Link to="/docs" aria-label="Documentation" className="text-muted-foreground hover:text-foreground transition-colors">
               {t('platform.docs')}
             </Link>
-            <Link to="/contact" className="text-muted-foreground hover:text-foreground transition-colors">
+            <Link to="/contact" aria-label="Contact page" className="text-muted-foreground hover:text-foreground transition-colors">
               {t('platform.contact')}
             </Link>
-          </div>
+          </nav>
 
           {/* Desktop Actions (lg+) */}
           <div className="hidden lg:flex items-center gap-3">
@@ -167,6 +167,6 @@ export const Navigation = () => {
           </div>
         )}
       </div>
-    </nav>
+    </header>
   );
 };
