@@ -100,35 +100,35 @@ export const StorefrontFooter = ({
           </div>
           
           {/* Services Column */}
-          <div>
+          <nav aria-label="Services navigation">
             <h4 className="font-semibold mb-4">{t('storefront.footer.services')}</h4>
             <ul className={`space-y-2 text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-              <li><Link to="/services" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>Instagram</Link></li>
-              <li><Link to="/services" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>YouTube</Link></li>
-              <li><Link to="/services" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>TikTok</Link></li>
-              <li><Link to="/services" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>Twitter</Link></li>
+              <li><Link to="/services?platform=instagram" aria-label="Instagram services" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>Instagram</Link></li>
+              <li><Link to="/services?platform=youtube" aria-label="YouTube services" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>YouTube</Link></li>
+              <li><Link to="/services?platform=tiktok" aria-label="TikTok services" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>TikTok</Link></li>
+              <li><Link to="/services?platform=twitter" aria-label="Twitter services" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>Twitter</Link></li>
             </ul>
-          </div>
+          </nav>
           
           {/* Company Column */}
-          <div>
+          <nav aria-label="Company navigation">
             <h4 className="font-semibold mb-4">{t('storefront.footer.company')}</h4>
             <ul className={`space-y-2 text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-              <li><Link to="/contact" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>{t('storefront.footer.aboutUs')}</Link></li>
-              <li><Link to="/contact" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>{t('storefront.footer.contact')}</Link></li>
-              <li><Link to="/blog" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>{t('storefront.nav.blog')}</Link></li>
+              <li><Link to="/support" aria-label="About us" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>{t('storefront.footer.aboutUs')}</Link></li>
+              <li><Link to="/support" aria-label="Contact us" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>{t('storefront.footer.contact')}</Link></li>
+              <li><Link to="/blog" aria-label="Blog" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>{t('storefront.nav.blog')}</Link></li>
             </ul>
-          </div>
+          </nav>
           
           {/* Support Column */}
-          <div>
+          <nav aria-label="Support navigation">
             <h4 className="font-semibold mb-4">{t('storefront.footer.support')}</h4>
             <ul className={`space-y-2 text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-              <li><a href="#faq" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>{t('storefront.nav.faq')}</a></li>
-              <li><Link to="/terms" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>{t('storefront.footer.termsOfService')}</Link></li>
-              <li><Link to="/privacy" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>{t('storefront.footer.privacyPolicy')}</Link></li>
+              <li><a href="#faq" aria-label="FAQ section" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>{t('storefront.nav.faq')}</a></li>
+              <li><Link to="/terms" aria-label="Terms of Service" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>{t('storefront.footer.termsOfService')}</Link></li>
+              <li><Link to="/privacy" aria-label="Privacy Policy" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>{t('storefront.footer.privacyPolicy')}</Link></li>
             </ul>
-          </div>
+          </nav>
         </div>
         
         <div className={`border-t ${isDark ? 'border-slate-800' : 'border-slate-200'} pt-8 text-center`}>

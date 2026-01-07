@@ -66,55 +66,75 @@ export const Footer = () => {
           </div>
 
           {/* Product */}
-          <div className="space-y-2">
+          <nav aria-label="Product navigation" className="space-y-2">
             <h3 className="font-semibold text-foreground text-xs sm:text-sm">{t('footer.product')}</h3>
-            <div className="space-y-1">
-              <Link to="/features" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">
-                {t('footer.features')}
-              </Link>
-              <Link to="/pricing" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">
-                {t('footer.pricing')}
-              </Link>
-              <Link to="/demo" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">
-                {t('footer.demo')}
-              </Link>
-            </div>
-          </div>
+            <ul className="space-y-1">
+              <li>
+                <Link to="/features" aria-label="Features page" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">
+                  {t('footer.features')}
+                </Link>
+              </li>
+              <li>
+                <Link to="/pricing" aria-label="Pricing page" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">
+                  {t('footer.pricing')}
+                </Link>
+              </li>
+              <li>
+                <Link to="/demo" aria-label="Demo page" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">
+                  {t('footer.demo')}
+                </Link>
+              </li>
+            </ul>
+          </nav>
 
           {/* Resources */}
-          <div className="space-y-2">
+          <nav aria-label="Resources navigation" className="space-y-2">
             <h3 className="font-semibold text-foreground text-xs sm:text-sm">{t('footer.resources')}</h3>
-            <div className="space-y-1">
-              <Link to="/docs" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">
-                {t('footer.docs')}
-              </Link>
-              <Link to="/blog" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">
-                {t('footer.blog')}
-              </Link>
-              <Link to="/support" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">
-                {t('footer.support')}
-              </Link>
-            </div>
-          </div>
+            <ul className="space-y-1">
+              <li>
+                <Link to="/docs" aria-label="Documentation" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">
+                  {t('footer.docs')}
+                </Link>
+              </li>
+              <li>
+                <Link to="/blog" aria-label="Blog" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">
+                  {t('footer.blog')}
+                </Link>
+              </li>
+              <li>
+                <Link to="/support" aria-label="Support" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">
+                  {t('footer.support')}
+                </Link>
+              </li>
+            </ul>
+          </nav>
 
           {/* Company */}
-          <div className="space-y-2">
+          <nav aria-label="Company navigation" className="space-y-2">
             <h3 className="font-semibold text-foreground text-xs sm:text-sm">{t('footer.company')}</h3>
-            <div className="space-y-1">
-              <Link to="/about" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">
-                {t('footer.about')}
-              </Link>
-              <Link to="/contact" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">
-                {t('footer.contact')}
-              </Link>
-              <Link to="/privacy" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">
-                {t('footer.privacy')}
-              </Link>
-              <Link to="/terms" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">
-                {t('footer.terms')}
-              </Link>
-            </div>
-          </div>
+            <ul className="space-y-1">
+              <li>
+                <Link to="/about" aria-label="About us" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">
+                  {t('footer.about')}
+                </Link>
+              </li>
+              <li>
+                <Link to="/contact" aria-label="Contact us" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">
+                  {t('footer.contact')}
+                </Link>
+              </li>
+              <li>
+                <Link to="/privacy" aria-label="Privacy Policy" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">
+                  {t('footer.privacy')}
+                </Link>
+              </li>
+              <li>
+                <Link to="/terms" aria-label="Terms of Service" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">
+                  {t('footer.terms')}
+                </Link>
+              </li>
+            </ul>
+          </nav>
         </div>
 
         {/* Newsletter Subscription */}
