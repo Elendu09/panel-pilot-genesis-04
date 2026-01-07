@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { FileText, ArrowLeft } from "lucide-react";
+import { FileText, ArrowLeft, Printer, Shield, CreditCard, Users, Scale, AlertTriangle, Mail, FileCheck, Gavel, RefreshCw, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -8,12 +8,35 @@ import { useNavigate } from "react-router-dom";
 import { useTenant } from "@/hooks/useTenant";
 import { supabase } from "@/integrations/supabase/client";
 import BuyerLayout from "./BuyerLayout";
+import { LegalTableOfContents } from "@/components/buyer/LegalTableOfContents";
+import { getDefaultTermsOfService, LegalSection } from "@/lib/legal-content";
+import { useLanguage } from "@/contexts/LanguageContext";
+
+// Section icons mapping
+const sectionIcons: Record<string, React.ElementType> = {
+  'introduction': FileText,
+  'service-description': Info,
+  'account-responsibilities': Users,
+  'usage-guidelines': Shield,
+  'payment-terms': CreditCard,
+  'service-delivery': RefreshCw,
+  'intellectual-property': FileCheck,
+  'limitation-liability': AlertTriangle,
+  'termination': Gavel,
+  'dispute-resolution': Scale,
+  'changes-to-terms': RefreshCw,
+  'contact': Mail,
+};
 
 const BuyerTerms = () => {
   const navigate = useNavigate();
   const { panel } = useTenant();
-  const [termsOfService, setTermsOfService] = useState<string>("");
+  const { t } = useLanguage();
+  const [sections, setSections] = useState<LegalSection[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeSection, setActiveSection] = useState<string>("");
+  const [lastUpdated, setLastUpdated] = useState<string>("");
+  const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
 
   useEffect(() => {
     const fetchTermsOfService = async () => {
@@ -22,54 +45,141 @@ const BuyerTerms = () => {
       try {
         const { data } = await supabase
           .from('panel_settings')
-          .select('terms_of_service')
+          .select('terms_of_service, contact_info, updated_at')
           .eq('panel_id', panel.id)
           .single();
         
-        if (data?.terms_of_service) {
-          setTermsOfService(data.terms_of_service);
+        const contactInfo = data?.contact_info as Record<string, any> | null;
+        const supportEmail = contactInfo?.email;
+        
+        // If custom content exists and is substantial, parse it
+        if (data?.terms_of_service && data.terms_of_service.length > 200) {
+          const parsedSections = parseCustomContent(data.terms_of_service);
+          setSections(parsedSections);
+        } else {
+          // Use default compliant content
+          setSections(getDefaultTermsOfService(panel?.name || 'Our Panel', supportEmail));
+        }
+        
+        if (data?.updated_at) {
+          setLastUpdated(new Date(data.updated_at).toLocaleDateString());
+        } else {
+          setLastUpdated(new Date().toLocaleDateString());
         }
       } catch (error) {
         console.error('Error fetching terms of service:', error);
+        setSections(getDefaultTermsOfService(panel?.name || 'Our Panel'));
+        setLastUpdated(new Date().toLocaleDateString());
       } finally {
         setLoading(false);
       }
     };
 
     fetchTermsOfService();
-  }, [panel?.id]);
+  }, [panel?.id, panel?.name]);
 
-  // Convert markdown-like formatting to HTML
+  // Parse custom content into sections
+  const parseCustomContent = (content: string): LegalSection[] => {
+    const lines = content.split('\n');
+    const parsedSections: LegalSection[] = [];
+    let currentSection: LegalSection | null = null;
+    let contentBuffer: string[] = [];
+
+    lines.forEach((line) => {
+      // Check for headers (## or ** style)
+      const headerMatch = line.match(/^#{1,2}\s+(.+)$/) || line.match(/^\*\*(.+)\*\*$/);
+      
+      if (headerMatch) {
+        // Save previous section
+        if (currentSection) {
+          currentSection.content = contentBuffer.join('\n').trim();
+          parsedSections.push(currentSection);
+        }
+        
+        const title = headerMatch[1].trim();
+        const id = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+        
+        currentSection = { id, title, content: '' };
+        contentBuffer = [];
+      } else if (currentSection) {
+        contentBuffer.push(line);
+      }
+    });
+
+    // Don't forget the last section
+    if (currentSection) {
+      currentSection.content = contentBuffer.join('\n').trim();
+      parsedSections.push(currentSection);
+    }
+
+    return parsedSections.length > 0 ? parsedSections : getDefaultTermsOfService(panel?.name || 'Our Panel');
+  };
+
+  // Track active section on scroll
+  useEffect(() => {
+    if (sections.length === 0) return;
+    
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setActiveSection(entry.target.id);
+          }
+        });
+      },
+      { rootMargin: '-20% 0px -70% 0px' }
+    );
+
+    sections.forEach((section) => {
+      const el = sectionRefs.current[section.id];
+      if (el) observer.observe(el);
+    });
+
+    return () => observer.disconnect();
+  }, [sections]);
+
+  const scrollToSection = (id: string) => {
+    const el = sectionRefs.current[id];
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const getSectionIcon = (id: string) => {
+    return sectionIcons[id] || FileText;
+  };
+
+  // Format content with markdown-like styling
   const formatContent = (content: string) => {
-    return content
-      .split('\n\n')
-      .map((paragraph, index) => {
-        // Handle headers
-        if (paragraph.startsWith('**') && paragraph.endsWith('**')) {
-          return (
-            <h3 key={index} className="text-lg font-semibold mt-6 mb-3 text-foreground">
-              {paragraph.replace(/\*\*/g, '')}
-            </h3>
-          );
-        }
-        // Handle list items
-        if (paragraph.startsWith('- ')) {
-          const items = paragraph.split('\n').filter(item => item.startsWith('- '));
-          return (
-            <ul key={index} className="list-disc list-inside space-y-1 mb-4 text-muted-foreground">
-              {items.map((item, i) => (
-                <li key={i}>{item.replace('- ', '')}</li>
-              ))}
-            </ul>
-          );
-        }
-        // Regular paragraphs
+    return content.split('\n\n').map((paragraph, index) => {
+      // Handle bold text
+      const formattedParagraph = paragraph.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      
+      // Handle list items
+      if (paragraph.startsWith('- ')) {
+        const items = paragraph.split('\n').filter(item => item.startsWith('- '));
         return (
-          <p key={index} className="text-muted-foreground mb-4 leading-relaxed">
-            {paragraph}
-          </p>
+          <ul key={index} className="list-disc list-inside space-y-1.5 mb-4 text-muted-foreground ml-4">
+            {items.map((item, i) => (
+              <li key={i} className="leading-relaxed">{item.replace('- ', '')}</li>
+            ))}
+          </ul>
         );
-      });
+      }
+      
+      // Regular paragraphs
+      return (
+        <p 
+          key={index} 
+          className="text-muted-foreground mb-4 leading-relaxed"
+          dangerouslySetInnerHTML={{ __html: formattedParagraph }}
+        />
+      );
+    });
   };
 
   return (
@@ -77,58 +187,134 @@ const BuyerTerms = () => {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="max-w-3xl mx-auto space-y-6"
+        className="max-w-6xl mx-auto"
       >
         {/* Header */}
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div className="flex items-center gap-4">
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={() => navigate(-1)}
+              className="print:hidden"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold">{t('nav.terms')}</h1>
+              <p className="text-sm text-muted-foreground">
+                Please read these terms carefully before using our services
+              </p>
+            </div>
+          </div>
           <Button 
-            variant="ghost" 
-            size="icon"
-            onClick={() => navigate(-1)}
+            variant="outline" 
+            size="sm" 
+            onClick={handlePrint}
+            className="print:hidden gap-2"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <Printer className="w-4 h-4" />
+            Print
           </Button>
-          <div>
-            <h1 className="text-2xl font-bold">Terms of Service</h1>
-            <p className="text-sm text-muted-foreground">
-              Please read these terms carefully before using our services
+        </div>
+
+        {/* Main Layout */}
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Table of Contents */}
+          {!loading && sections.length > 0 && (
+            <LegalTableOfContents
+              sections={sections}
+              activeSection={activeSection}
+              onSectionClick={scrollToSection}
+            />
+          )}
+
+          {/* Content */}
+          <div className="flex-1 min-w-0">
+            <Card className="glass-card">
+              <CardContent className="p-6 md:p-8">
+                {/* Document Header */}
+                <div className="flex items-center gap-3 mb-6 pb-6 border-b border-border/50 print:border-b-2">
+                  <div className="p-3 rounded-xl bg-blue-500/10 print:bg-blue-100">
+                    <FileText className="w-6 h-6 text-blue-500" />
+                  </div>
+                  <div>
+                    <h2 className="font-semibold">{panel?.name || 'Panel'}</h2>
+                    <p className="text-sm text-muted-foreground">Terms of Service</p>
+                  </div>
+                </div>
+
+                {loading ? (
+                  <div className="space-y-6">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="space-y-3">
+                        <Skeleton className="h-6 w-48" />
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-3/4" />
+                        <Skeleton className="h-4 w-5/6" />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-8">
+                    {sections.map((section) => {
+                      const IconComponent = getSectionIcon(section.id);
+                      return (
+                        <section
+                          key={section.id}
+                          id={section.id}
+                          ref={(el) => (sectionRefs.current[section.id] = el)}
+                          className="scroll-mt-24 print:break-inside-avoid"
+                        >
+                          <div className="flex items-center gap-3 mb-4">
+                            <div className="p-2 rounded-lg bg-primary/10 print:bg-primary/20">
+                              <IconComponent className="w-4 h-4 text-primary" />
+                            </div>
+                            <h3 className="text-lg font-semibold text-foreground">
+                              {section.title}
+                            </h3>
+                          </div>
+                          <div className="pl-11 print:pl-0">
+                            {formatContent(section.content)}
+                          </div>
+                        </section>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Footer */}
+            <p className="text-center text-xs text-muted-foreground mt-6 print:mt-8">
+              Last updated: {lastUpdated}
             </p>
           </div>
         </div>
-
-        {/* Content */}
-        <Card className="glass-card">
-          <CardContent className="p-6 md:p-8">
-            <div className="flex items-center gap-3 mb-6 pb-6 border-b border-border/50">
-              <div className="p-3 rounded-xl bg-blue-500/10">
-                <FileText className="w-6 h-6 text-blue-500" />
-              </div>
-              <div>
-                <h2 className="font-semibold">{panel?.name || 'Panel'}</h2>
-                <p className="text-sm text-muted-foreground">Terms of Service</p>
-              </div>
-            </div>
-
-            {loading ? (
-              <div className="space-y-4">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-4 w-5/6" />
-                <Skeleton className="h-4 w-full" />
-              </div>
-            ) : (
-              <div className="prose prose-sm dark:prose-invert max-w-none">
-                {formatContent(termsOfService)}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Footer */}
-        <p className="text-center text-xs text-muted-foreground">
-          Last updated: {new Date().toLocaleDateString()}
-        </p>
       </motion.div>
+
+      {/* Print Styles */}
+      <style>{`
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+          .glass-card, .glass-card * {
+            visibility: visible;
+          }
+          .glass-card {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            box-shadow: none !important;
+            border: none !important;
+          }
+          .print\\:hidden {
+            display: none !important;
+          }
+        }
+      `}</style>
     </BuyerLayout>
   );
 };

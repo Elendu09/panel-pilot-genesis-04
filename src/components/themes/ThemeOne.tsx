@@ -94,6 +94,7 @@ export const ThemeOne = ({ panel, services = [], customization = {}, isPreview =
     glowColor: palette.glow,
     themeMode,
     setThemeMode,
+    showBlogInMenu: customization.showBlogInMenu ?? panel?.blog_enabled,
   } as any;
 
   // Ensure layout variants are always available
