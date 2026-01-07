@@ -1059,3 +1059,10 @@
   outline: 4px solid hsl(var(--primary)) !important;
   outline-offset: 4px !important;
 }
+
+/* Shimmer animation for loading states */
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}

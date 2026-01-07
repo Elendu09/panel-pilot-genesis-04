@@ -87,32 +87,31 @@ const TenantRouter = () => {
     }
   }, [isTenantDomain]);
 
-  // Show skeleton for tenant domains during loading - prevents blank screen
+  // Show centered logo + shimmer for tenant domains during loading - prevents blank screen
   if (loading && !loadingTimeout) {
     // For platform domains, render App immediately (optimistic)
     if (isPlatformDomain) {
       return <App />;
     }
-    // For tenant domains, show skeleton immediately to prevent blank screen
+    // For tenant domains, show centered logo loading with shimmer
     return (
-      <div className="min-h-screen bg-slate-900">
-        {/* Navigation skeleton */}
-        <div className="h-16 border-b border-slate-800 px-4 flex items-center justify-between">
-          <div className="w-32 h-8 bg-slate-800 rounded animate-pulse" />
-          <div className="flex gap-4">
-            <div className="w-20 h-8 bg-slate-800 rounded animate-pulse" />
-            <div className="w-20 h-8 bg-slate-800 rounded animate-pulse" />
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          {/* Centered favicon with shimmer overlay */}
+          <div className="relative w-20 h-20 mx-auto mb-6">
+            <img 
+              src="/default-panel-favicon.png" 
+              alt="Loading" 
+              className="w-20 h-20 rounded-2xl opacity-80"
+            />
+            {/* Shimmer overlay animation */}
+            <div className="absolute inset-0 rounded-2xl overflow-hidden">
+              <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+            </div>
           </div>
-        </div>
-        
-        {/* Hero skeleton */}
-        <div className="flex flex-col items-center justify-center pt-24 px-4">
-          <div className="w-40 h-6 bg-slate-800 rounded-full animate-pulse mb-6" />
-          <div className="w-80 max-w-full h-12 bg-slate-800 rounded animate-pulse mb-4" />
-          <div className="w-64 max-w-full h-8 bg-slate-800 rounded animate-pulse mb-8" />
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="w-32 h-12 bg-slate-800 rounded-full animate-pulse" />
-            <div className="w-32 h-12 bg-slate-800 rounded-full animate-pulse" />
+          {/* Shimmer text placeholder for panel name */}
+          <div className="h-6 w-40 mx-auto bg-slate-800 rounded-lg overflow-hidden relative">
+            <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
           </div>
         </div>
       </div>
