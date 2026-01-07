@@ -76,7 +76,7 @@ export const StorefrontFeaturesSection = ({ customization = {} }: StorefrontFeat
   ];
 
   return (
-    <section id="features" className="py-24 relative overflow-hidden" style={{ backgroundColor: customization.backgroundColor }}>
+    <section id="features" className="py-24 relative overflow-hidden scroll-mt-20" style={{ backgroundColor: customization.backgroundColor }} aria-labelledby="storefront-features-heading">
       {/* Grid overlay */}
       <div className="absolute inset-0 bg-grid-pattern opacity-20 pointer-events-none" />
       

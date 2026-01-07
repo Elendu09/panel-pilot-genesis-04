@@ -59,7 +59,7 @@ export const StorefrontTestimonialsSection = ({ customization = {} }: Storefront
   const themeMode = customization?.themeMode || 'dark';
 
   return (
-    <section id="testimonials" className="py-24 relative overflow-hidden" style={{ backgroundColor: customization?.backgroundColor }}>
+    <section id="testimonials" className="py-24 relative overflow-hidden scroll-mt-20" style={{ backgroundColor: customization?.backgroundColor }} aria-labelledby="storefront-testimonials-heading">
       {/* Grid overlay */}
       <div className="absolute inset-0 bg-grid-pattern opacity-15 pointer-events-none" />
       

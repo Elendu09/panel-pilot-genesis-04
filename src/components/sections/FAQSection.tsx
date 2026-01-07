@@ -82,7 +82,7 @@ export const FAQSection = () => {
   ];
 
   return (
-    <section className="py-24 relative overflow-hidden">
+    <section id="faq" className="py-24 relative overflow-hidden scroll-mt-20" aria-labelledby="faq-heading">
       {/* Grid, Bubbles & Particles */}
       <BackgroundEffects variant="section" showGrid showBubbles showParticles bubbleCount={4} particleCount={10} />
       
@@ -111,7 +111,7 @@ export const FAQSection = () => {
             <span className="text-sm font-medium text-primary">{t('faq.badge')}</span>
           </motion.div>
           
-          <h2 className="text-4xl md:text-5xl font-bold mb-4">
+          <h2 id="faq-heading" className="text-4xl md:text-5xl font-bold mb-4">
             {t('faq.title.your')}{" "}
             <span className="bg-gradient-primary bg-clip-text text-transparent">
               {t('faq.title.questions')}</span>

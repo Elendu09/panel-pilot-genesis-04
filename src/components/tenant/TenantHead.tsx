@@ -36,18 +36,27 @@ export const TenantHead = ({ title, description }: TenantHeadProps) => {
     document.head.appendChild(appleIcon);
   }, [faviconUrl, appleTouchIconUrl]);
   
-  const pageTitle = title || (panel?.settings as any)?.seo_title || `${panel?.name || 'Panel'} - SMM Panel`;
-  const pageDescription = description || (panel?.settings as any)?.seo_description || `Professional SMM services from ${panel?.name}`;
+  // Generate proper SEO title - use panel name, never hardcoded "SMM Panel"
+  const panelName = panel?.name || 'Panel';
+  const seoSettings = panel?.settings as any;
+  const pageTitle = title || seoSettings?.seo_title || `${panelName} - Social Media Marketing Services`;
+  const pageDescription = description || seoSettings?.seo_description || `Professional social media marketing services from ${panelName}. Buy followers, likes, and views.`;
+  const seoKeywords = seoSettings?.seo_keywords || `${panelName}, social media marketing, smm services`;
   
   return (
     <Helmet>
       <title>{pageTitle}</title>
       <meta name="description" content={pageDescription} />
+      <meta name="keywords" content={seoKeywords} />
       <link rel="icon" type="image/png" href={faviconUrl} />
       <link rel="apple-touch-icon" href={appleTouchIconUrl} />
       {ogImage && <meta property="og:image" content={ogImage} />}
       <meta property="og:title" content={pageTitle} />
       <meta property="og:description" content={pageDescription} />
+      <meta property="og:site_name" content={panelName} />
+      <meta name="twitter:card" content="summary_large_image" />
+      <meta name="twitter:title" content={pageTitle} />
+      <meta name="twitter:description" content={pageDescription} />
     </Helmet>
   );
 };

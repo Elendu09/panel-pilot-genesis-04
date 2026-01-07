@@ -248,7 +248,7 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
             </span>
           </motion.div>
 
-          {/* Main Heading */}
+          {/* Main Heading - SEO: Single H1 with semantic structure */}
           <motion.h1 
             className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-bold mb-4 sm:mb-6 leading-tight px-2"
             style={{ color: textColor }}
@@ -256,8 +256,8 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3, duration: 0.6 }}
           >
-            {heroTitle.split(' ').slice(0, Math.ceil(heroTitle.split(' ').length / 2)).join(' ')}
-            <br />
+            <span>{heroTitle.split(' ').slice(0, Math.ceil(heroTitle.split(' ').length / 2)).join(' ')}</span>
+            {' '}
             <motion.span 
               className="bg-clip-text text-transparent inline-block"
               style={{ 

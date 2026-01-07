@@ -12,25 +12,27 @@ interface StorefrontNavigationProps {
   customization?: any;
 }
 
-// Memoized nav link component
+// Memoized nav link component - Uses proper <a> tags for SEO crawlability
 const NavLink = memo(({ link, index, textMuted, textColor, onClick }: { 
   link: { href: string; label: string; isRoute: boolean }; 
   index: number; 
   textMuted: string; 
   textColor: string;
-  onClick: (link: { href: string; isRoute: boolean }) => void;
+  onClick: (e: React.MouseEvent, link: { href: string; isRoute: boolean }) => void;
 }) => (
-  <motion.button 
-    onClick={() => onClick(link)}
-    className="text-sm font-medium transition-colors bg-transparent border-none cursor-pointer"
+  <motion.a 
+    href={link.href}
+    onClick={(e) => onClick(e, link)}
+    className="text-sm font-medium transition-colors cursor-pointer"
     style={{ color: textMuted }}
     whileHover={{ color: textColor, y: -2 }}
     initial={{ opacity: 0, y: -10 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ delay: index * 0.1 }}
+    aria-label={`Navigate to ${link.label}`}
   >
     {link.label}
-  </motion.button>
+  </motion.a>
 ));
 NavLink.displayName = 'NavLink';
 
@@ -97,13 +99,14 @@ export const StorefrontNavigation = memo(({ panel, customization = {} }: Storefr
     }
   }, [setThemeMode, themeMode]);
 
-  const handleNavClick = useCallback((link: { href: string; isRoute: boolean }) => {
+  const handleNavClick = useCallback((e: React.MouseEvent, link: { href: string; isRoute: boolean }) => {
+    e.preventDefault();
     if (link.isRoute) {
       navigate(link.href);
     } else {
       const element = document.querySelector(link.href);
       if (element) {
-        element.scrollIntoView({ behavior: 'smooth' });
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     }
     setIsOpen(false);
@@ -157,7 +160,7 @@ export const StorefrontNavigation = memo(({ panel, customization = {} }: Storefr
                 index={index}
                 textMuted={textMuted}
                 textColor={textColor}
-                onClick={handleNavClick}
+                onClick={(e, lnk) => handleNavClick(e, lnk)}
               />
             ))}
           </div>
@@ -296,17 +299,19 @@ export const StorefrontNavigation = memo(({ panel, customization = {} }: Storefr
             >
               <div className="flex flex-col space-y-4">
                 {navLinks.map((link, index) => (
-                  <motion.button 
+                  <motion.a 
                     key={link.href}
-                    onClick={() => handleNavClick(link)}
-                    className="text-left transition-colors bg-transparent border-none cursor-pointer py-2"
+                    href={link.href}
+                    onClick={(e) => handleNavClick(e, link)}
+                    className="text-left transition-colors cursor-pointer py-2"
                     style={{ color: textMuted }}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.05 }}
+                    aria-label={`Navigate to ${link.label}`}
                   >
                     {link.label}
-                  </motion.button>
+                  </motion.a>
                 ))}
                 <div 
                   className="flex flex-col space-y-3 pt-4" 
