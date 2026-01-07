@@ -164,8 +164,9 @@ const ProviderManagement = () => {
     }));
 
     try {
+      // Use providerId - edge function fetches credentials securely from database
       const { data, error } = await supabase.functions.invoke('provider-balance', {
-        body: { api_endpoint: provider.api_endpoint, api_key: provider.api_key }
+        body: { providerId: provider.id }
       });
 
       if (error) throw new Error(error.message);
@@ -181,11 +182,6 @@ const ProviderManagement = () => {
             lastUpdated: new Date()
           }
         }));
-
-        await supabase
-          .from('providers')
-          .update({ balance: data.balance })
-          .eq('id', provider.id);
       } else {
         setBalances(prev => ({
           ...prev,
