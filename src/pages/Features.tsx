@@ -3,7 +3,6 @@ import { Helmet } from "react-helmet-async";
 import { Navigation } from "@/components/layout/Navigation";
 import { Footer } from "@/components/layout/Footer";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { 
   Search,
   Users,
@@ -16,11 +15,8 @@ import {
   Server,
   Puzzle,
   FileText,
-  Layers,
-  ChevronDown,
-  Menu
+  Layers
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 
 // Feature categories with all features
 const featureCategories = [
@@ -194,115 +190,6 @@ const featureCategories = [
   },
 ];
 
-// Feature Card with grid pattern
-const FeatureCard = ({ title, description }: { title: string; description: string }) => (
-  <motion.div
-    className="group relative p-5 rounded-xl bg-card hover:bg-accent/10 transition-all duration-300 border border-border/50 hover:border-primary/30 overflow-hidden"
-    initial={{ opacity: 0, y: 20 }}
-    whileInView={{ opacity: 1, y: 0 }}
-    viewport={{ once: true }}
-    whileHover={{ scale: 1.02 }}
-    transition={{ duration: 0.3 }}
-  >
-    {/* Grid pattern overlay */}
-    <div 
-      className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05] group-hover:opacity-[0.08] transition-opacity pointer-events-none"
-      style={{
-        backgroundImage: `linear-gradient(to right, hsl(var(--foreground)) 1px, transparent 1px),
-                          linear-gradient(to bottom, hsl(var(--foreground)) 1px, transparent 1px)`,
-        backgroundSize: '20px 20px'
-      }}
-    />
-    {/* Corner accent */}
-    <div className="absolute top-0 right-0 w-12 h-12 opacity-0 group-hover:opacity-100 transition-opacity">
-      <div 
-        className="absolute top-2 right-2 w-2 h-2 rounded-full"
-        style={{ background: 'hsl(var(--primary))' }}
-      />
-    </div>
-    
-    <h3 className="relative font-semibold text-foreground mb-2">
-      {title}
-    </h3>
-    <p className="relative text-sm text-muted-foreground leading-relaxed">
-      {description}
-    </p>
-  </motion.div>
-);
-
-// Mobile TOC Component
-const MobileTOC = ({ 
-  categories, 
-  activeSection, 
-  onSelect,
-  filteredIds
-}: { 
-  categories: typeof featureCategories;
-  activeSection: string;
-  onSelect: (id: string) => void;
-  filteredIds: Set<string>;
-}) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const activeCategory = categories.find(c => c.id === activeSection);
-
-  return (
-    <div className="lg:hidden sticky top-16 z-40 bg-background/95 backdrop-blur-lg border-b border-border/50 -mx-4 px-4 py-3">
-      <Button
-        variant="outline"
-        className="w-full justify-between h-11"
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        <span className="flex items-center gap-2">
-          <Menu className="h-4 w-4" />
-          <span className="font-medium">{activeCategory?.title || 'Navigate'}</span>
-        </span>
-        <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-      </Button>
-      
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.2 }}
-            className="overflow-hidden"
-          >
-            <nav className="py-2 grid grid-cols-2 gap-1">
-              {categories.map((category) => {
-                const isActive = activeSection === category.id;
-                const hasResults = filteredIds.has(category.id);
-                
-                return (
-                  <button
-                    key={category.id}
-                    onClick={() => {
-                      onSelect(category.id);
-                      setIsOpen(false);
-                    }}
-                    disabled={!hasResults}
-                    className={`
-                      flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-all text-left
-                      ${isActive 
-                        ? "text-primary bg-primary/10" 
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                      }
-                      ${!hasResults ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}
-                    `}
-                  >
-                    <category.icon className="h-4 w-4 flex-shrink-0" />
-                    <span className="truncate">{category.title}</span>
-                  </button>
-                );
-              })}
-            </nav>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-};
-
 export default function Features() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeSection, setActiveSection] = useState("user-panel");
@@ -322,13 +209,11 @@ export default function Features() {
     })).filter(category => category.features.length > 0);
   }, [searchQuery]);
 
-  const filteredIds = useMemo(() => new Set(filteredCategories.map(c => c.id)), [filteredCategories]);
-
   // Track active section on scroll
   useEffect(() => {
     const handleScroll = () => {
       const sections = featureCategories.map(cat => document.getElementById(cat.id));
-      const scrollPosition = window.scrollY + 200;
+      const scrollPosition = window.scrollY + 150;
 
       for (let i = sections.length - 1; i >= 0; i--) {
         const section = sections[i];
@@ -346,7 +231,7 @@ export default function Features() {
   const scrollToSection = (id: string) => {
     const element = document.getElementById(id);
     if (element) {
-      const offset = 120;
+      const offset = 100;
       const top = element.offsetTop - offset;
       window.scrollTo({ top, behavior: "smooth" });
     }
@@ -365,78 +250,53 @@ export default function Features() {
       <section className="pt-24 pb-8 border-b border-border/50">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl">
-            <motion.h1 
-              className="text-4xl md:text-5xl font-bold text-foreground mb-4"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
+            <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
               Explore all our features
-            </motion.h1>
-            <motion.p 
-              className="text-lg text-muted-foreground mb-8"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-            >
+            </h1>
+            <p className="text-lg text-muted-foreground mb-8">
               Check out the features listed below to learn more about the advantages of using our platform.
-            </motion.p>
+            </p>
             
             {/* Search */}
-            <motion.div 
-              className="relative max-w-xl"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-            >
+            <div className="relative max-w-xl">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
                 type="text"
-                placeholder="Search features..."
+                placeholder="Search..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-12 h-12 text-base bg-muted/50 border-border/50"
               />
-            </motion.div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Mobile TOC */}
-      <div className="container mx-auto px-4">
-        <MobileTOC 
-          categories={featureCategories}
-          activeSection={activeSection}
-          onSelect={scrollToSection}
-          filteredIds={filteredIds}
-        />
-      </div>
-
       {/* Main Content */}
-      <div className="container mx-auto px-4 py-8 lg:py-12">
+      <div className="container mx-auto px-4 py-12">
         <div className="flex gap-12">
           {/* Feature List */}
           <div className="flex-1 max-w-4xl">
             {filteredCategories.map((category) => (
-              <section key={category.id} id={category.id} className="mb-16 scroll-mt-32">
-                <motion.h2 
-                  className="text-2xl font-bold text-foreground mb-6 flex items-center gap-3"
-                  initial={{ opacity: 0, x: -20 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true }}
-                >
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <category.icon className="h-5 w-5 text-primary" />
-                  </div>
+              <section key={category.id} id={category.id} className="mb-16">
+                <h2 className="text-2xl font-bold text-foreground mb-6 flex items-center gap-3">
+                  <category.icon className="h-6 w-6 text-primary" />
                   {category.title}
-                </motion.h2>
+                </h2>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {category.features.map((feature, index) => (
-                    <FeatureCard 
+                    <div
                       key={index}
-                      title={feature.title}
-                      description={feature.description}
-                    />
+                      className="p-5 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors border border-border/30"
+                    >
+                      <h3 className="font-semibold text-foreground mb-2">
+                        {feature.title}
+                      </h3>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        {feature.description}
+                      </p>
+                    </div>
                   ))}
                 </div>
               </section>
@@ -451,16 +311,13 @@ export default function Features() {
             )}
           </div>
 
-          {/* Sticky Sidebar Navigation - Desktop */}
+          {/* Sticky Sidebar Navigation */}
           <aside className="hidden lg:block w-56 flex-shrink-0">
-            <nav className="sticky top-24 p-4 rounded-xl bg-card/50 border border-border/50">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 px-3">
-                Categories
-              </p>
+            <nav className="sticky top-24">
               <ul className="space-y-1">
                 {featureCategories.map((category) => {
                   const isActive = activeSection === category.id;
-                  const hasResults = filteredIds.has(category.id);
+                  const hasResults = filteredCategories.some(c => c.id === category.id);
                   
                   return (
                     <li key={category.id}>
@@ -468,15 +325,14 @@ export default function Features() {
                         onClick={() => scrollToSection(category.id)}
                         disabled={!hasResults}
                         className={`
-                          w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2
+                          w-full text-left px-4 py-2 rounded-lg text-sm font-medium transition-all
                           ${isActive 
-                            ? "text-primary bg-primary/10 border-l-2 border-primary" 
+                            ? "text-primary bg-primary/10" 
                             : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                           }
                           ${!hasResults ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}
                         `}
                       >
-                        <category.icon className="h-4 w-4" />
                         {category.title}
                       </button>
                     </li>

@@ -223,7 +223,7 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
       )}
 
       {/* Main Content */}
-      <div className="container mx-auto px-4 text-center relative z-10 pt-20 sm:pt-24 lg:pt-32">
+      <div className="container mx-auto px-4 text-center relative z-10 pt-24 sm:pt-24 lg:pt-32">
         <motion.div 
           className="max-w-4xl mx-auto"
           initial={{ opacity: 0, y: 30 }}
