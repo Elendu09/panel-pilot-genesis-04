@@ -29,6 +29,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { SEO_DESC_PX_RANGE, SEO_TITLE_PX_RANGE, generateSeoMeta, isInRange, measureTextPx } from "@/lib/seo-metrics";
 
 interface SEOData {
   title: string;
@@ -75,9 +76,12 @@ Sitemap: https://example.com/sitemap.xml`,
   // Calculate SEO score
   const calculateSEOScore = () => {
     let score = 0;
+    const titlePx = measureTextPx(seoData.title);
+    const descPx = measureTextPx(seoData.description);
+
     const checks = [
-      { condition: seoData.title.length >= 30 && seoData.title.length <= 60, points: 20 },
-      { condition: seoData.description.length >= 120 && seoData.description.length <= 160, points: 20 },
+      { condition: isInRange(titlePx, SEO_TITLE_PX_RANGE), points: 20 },
+      { condition: isInRange(descPx, SEO_DESC_PX_RANGE), points: 20 },
       { condition: seoData.keywords.split(',').length >= 3, points: 15 },
       { condition: !!seoData.ogImage, points: 15 },
       { condition: !!seoData.canonicalUrl, points: 10 },
@@ -291,26 +295,52 @@ Sitemap: https://example.com/sitemap.xml`,
                 <CardDescription>The main title shown in search results</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <Label className="text-xs text-muted-foreground">Auto</Label>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="gap-2"
+                    onClick={() => {
+                      const generated = generateSeoMeta({
+                        panelName: panelSubdomain || 'Panel',
+                        domain: seoData.canonicalUrl || `https://${panelSubdomain}.homeofsmm.com`,
+                        offeringHint: '',
+                      });
+                      setSeoData((prev) => ({
+                        ...prev,
+                        title: generated.title,
+                        description: prev.description || generated.description,
+                      }));
+                    }}
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    Auto-Generate
+                  </Button>
+                </div>
+
                 <Input
                   value={seoData.title}
                   onChange={(e) => setSeoData({ ...seoData, title: e.target.value })}
-                  placeholder="My Awesome SMM Panel - Best Social Media Services"
-                  maxLength={60}
+                  placeholder="Your Panel - Social Media Marketing Services"
                 />
                 <div className="flex justify-between text-xs">
-                  <span className={cn(
-                    seoData.title.length >= 30 && seoData.title.length <= 60 
-                      ? "text-green-500" 
-                      : "text-yellow-500"
-                  )}>
-                    {seoData.title.length >= 30 && seoData.title.length <= 60 ? (
-                      <CheckCircle className="w-3 h-3 inline mr-1" />
-                    ) : (
-                      <AlertCircle className="w-3 h-3 inline mr-1" />
-                    )}
-                    {seoData.title.length}/60 characters
-                  </span>
-                  <span className="text-muted-foreground">Optimal: 30-60</span>
+                  {(() => {
+                    const px = measureTextPx(seoData.title);
+                    const ok = isInRange(px, SEO_TITLE_PX_RANGE);
+                    return (
+                      <span className={ok ? "text-emerald-500" : "text-yellow-500"}>
+                        {ok ? (
+                          <CheckCircle className="w-3 h-3 inline mr-1" />
+                        ) : (
+                          <AlertCircle className="w-3 h-3 inline mr-1" />
+                        )}
+                        {Math.round(px)}px (needs {SEO_TITLE_PX_RANGE.min}-{SEO_TITLE_PX_RANGE.max}px)
+                      </span>
+                    );
+                  })()}
+                  <span className="text-muted-foreground">Pixel rule enforced</span>
                 </div>
               </CardContent>
             </Card>
@@ -328,24 +358,25 @@ Sitemap: https://example.com/sitemap.xml`,
                 <Textarea
                   value={seoData.description}
                   onChange={(e) => setSeoData({ ...seoData, description: e.target.value })}
-                  placeholder="Get high-quality Instagram followers, YouTube views, TikTok likes and more..."
-                  maxLength={160}
+                  placeholder=""
                   rows={3}
                 />
                 <div className="flex justify-between text-xs">
-                  <span className={cn(
-                    seoData.description.length >= 120 && seoData.description.length <= 160 
-                      ? "text-green-500" 
-                      : "text-yellow-500"
-                  )}>
-                    {seoData.description.length >= 120 && seoData.description.length <= 160 ? (
-                      <CheckCircle className="w-3 h-3 inline mr-1" />
-                    ) : (
-                      <AlertCircle className="w-3 h-3 inline mr-1" />
-                    )}
-                    {seoData.description.length}/160 characters
-                  </span>
-                  <span className="text-muted-foreground">Optimal: 120-160</span>
+                  {(() => {
+                    const px = measureTextPx(seoData.description);
+                    const ok = isInRange(px, SEO_DESC_PX_RANGE);
+                    return (
+                      <span className={ok ? "text-emerald-500" : "text-yellow-500"}>
+                        {ok ? (
+                          <CheckCircle className="w-3 h-3 inline mr-1" />
+                        ) : (
+                          <AlertCircle className="w-3 h-3 inline mr-1" />
+                        )}
+                        {Math.round(px)}px (needs {SEO_DESC_PX_RANGE.min}-{SEO_DESC_PX_RANGE.max}px)
+                      </span>
+                    );
+                  })()}
+                  <span className="text-muted-foreground">Pixel rule enforced</span>
                 </div>
               </CardContent>
             </Card>

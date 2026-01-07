@@ -4,7 +4,6 @@ import { MessageCircle, X, Send, Loader2, RotateCcw, Trash2 } from "lucide-react
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface FloatingChatWidgetProps {
   panelId?: string;
@@ -498,7 +497,10 @@ export const FloatingChatWidget = ({
             {showAIChat ? (
               /* AI Chat Interface */
               <div className="flex flex-col h-80">
-                <ScrollArea ref={scrollRef} className="flex-1 p-3">
+                <div
+                  ref={scrollRef}
+                  className="flex-1 overflow-y-auto p-3 scroll-smooth"
+                >
                   <div className="space-y-3">
                     {messages.map((msg, i) => (
                       <div
@@ -528,7 +530,7 @@ export const FloatingChatWidget = ({
                       </div>
                     )}
                   </div>
-                </ScrollArea>
+                </div>
                 <div className="p-3 border-t dark:border-slate-700">
                   <form
                     onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }}

@@ -56,7 +56,7 @@ const StorefrontBlog = () => {
     fetchPosts();
   }, [panel?.id]);
 
-  const panelName = panel?.name || "SMM Panel";
+  const panelName = panel?.name || "Panel";
 
   return (
     <>

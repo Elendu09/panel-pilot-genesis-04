@@ -21,10 +21,12 @@ import {
   ArrowRight,
   ArrowLeft,
   Sparkles,
-  Loader2
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { SEO_DESC_PX_RANGE, SEO_TITLE_PX_RANGE, generateSeoMeta, isInRange, measureTextPx } from '@/lib/seo-metrics';
 
 const PanelOnboarding = () => {
   const [currentStep, setCurrentStep] = useState(0);
@@ -183,6 +185,40 @@ const PanelOnboarding = () => {
       return;
     }
 
+    // Ensure SEO fields are generated + pixel-valid on first save
+    const domainLabel = domainType === 'custom' ? customDomain : `${subdomain}.homeofsmm.com`;
+    const draft = {
+      title: seoTitle,
+      description: seoDescription,
+    };
+
+    const ensureSeo = () => {
+      if (draft.title.trim() && draft.description.trim()) return;
+      const generated = generateSeoMeta({
+        panelName,
+        domain: domainLabel,
+        offeringHint: description,
+      });
+      draft.title = generated.title;
+      draft.description = generated.description;
+      setSeoTitle(generated.title);
+      setSeoDescription(generated.description);
+    };
+
+    ensureSeo();
+
+    const titlePx = measureTextPx(draft.title);
+    const descPx = measureTextPx(draft.description);
+
+    if (!isInRange(titlePx, SEO_TITLE_PX_RANGE) || !isInRange(descPx, SEO_DESC_PX_RANGE)) {
+      toast({
+        variant: "destructive",
+        title: "SEO meta length needs adjustment",
+        description: `Title: ${Math.round(titlePx)}px (needs ${SEO_TITLE_PX_RANGE.min}-${SEO_TITLE_PX_RANGE.max}px), Description: ${Math.round(descPx)}px (needs ${SEO_DESC_PX_RANGE.min}-${SEO_DESC_PX_RANGE.max}px)`
+      });
+      return;
+    }
+
     // Mark final step as complete
     markStepComplete(currentStep);
 
@@ -224,8 +260,8 @@ const PanelOnboarding = () => {
           .insert([
             {
               panel_id: panelData.id,
-              seo_title: seoTitle || panelName,
-              seo_description: seoDescription || `Professional SMM services by ${panelName}`,
+              seo_title: draft.title,
+              seo_description: draft.description,
               seo_keywords: seoKeywords || 'SMM, social media marketing, services'
             }
           ]);
@@ -457,7 +493,13 @@ const PanelOnboarding = () => {
           </motion.div>
         );
 
-      case 3:
+      case 3: {
+        const domainLabel = domainType === 'custom' ? customDomain : `${subdomain}.homeofsmm.com`;
+        const titlePx = measureTextPx(seoTitle || '');
+        const descPx = measureTextPx(seoDescription || '');
+        const titleOk = !!seoTitle.trim() && isInRange(titlePx, SEO_TITLE_PX_RANGE);
+        const descOk = !!seoDescription.trim() && isInRange(descPx, SEO_DESC_PX_RANGE);
+
         return (
           <motion.div
             key="step3"
@@ -467,15 +509,46 @@ const PanelOnboarding = () => {
             exit="exit"
             className="space-y-6"
           >
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold">SEO</h2>
+                <p className="text-sm text-muted-foreground">Set your title and description for search engines</p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const generated = generateSeoMeta({
+                    panelName,
+                    domain: domainLabel,
+                    offeringHint: description,
+                  });
+                  setSeoTitle(generated.title);
+                  setSeoDescription(generated.description);
+                }}
+                className="gap-2"
+              >
+                <Sparkles className="w-4 h-4" />
+                Auto-Generate
+              </Button>
+            </div>
+
             <div className="space-y-2">
               <Label>SEO Title</Label>
               <Input
                 value={seoTitle}
                 onChange={(e) => setSeoTitle(e.target.value)}
-                placeholder={panelName ? `${panelName} - Professional SMM Services` : "Your Business - SMM Services"}
+                placeholder={panelName ? `${panelName} - Social Media Marketing Services` : "Your Business - Social Media Marketing Services"}
                 className="bg-background/50"
               />
-              <p className="text-xs text-muted-foreground">50-60 characters recommended</p>
+              <p className={cn(
+                "text-xs flex items-center gap-1",
+                titleOk ? "text-emerald-500" : "text-yellow-500"
+              )}>
+                {titleOk ? <CheckCircle className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
+                {Math.round(titlePx)}px (needs {SEO_TITLE_PX_RANGE.min}-{SEO_TITLE_PX_RANGE.max}px)
+              </p>
             </div>
             
             <div className="space-y-2">
@@ -483,11 +556,17 @@ const PanelOnboarding = () => {
               <Textarea
                 value={seoDescription}
                 onChange={(e) => setSeoDescription(e.target.value)}
-                placeholder="Get professional social media marketing services..."
+                placeholder=""
                 rows={3}
                 className="bg-background/50"
               />
-              <p className="text-xs text-muted-foreground">150-160 characters recommended</p>
+              <p className={cn(
+                "text-xs flex items-center gap-1",
+                descOk ? "text-emerald-500" : "text-yellow-500"
+              )}>
+                {descOk ? <CheckCircle className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
+                {Math.round(descPx)}px (needs {SEO_DESC_PX_RANGE.min}-{SEO_DESC_PX_RANGE.max}px)
+              </p>
             </div>
             
             <div className="space-y-2">
@@ -498,7 +577,6 @@ const PanelOnboarding = () => {
                 placeholder="SMM, social media marketing, followers, likes"
                 className="bg-background/50"
               />
-              <p className="text-xs text-muted-foreground">Comma-separated keywords</p>
             </div>
           </motion.div>
         );
