@@ -48,6 +48,13 @@ export const platformTranslations = {
     'home.stats.thousands': 'thousands of users',
     'home.stats.community': 'Join a growing community of successful SMM panel owners who trust our platform',
     
+    // Features Page
+    'features.page.title': 'Explore all our features',
+    'features.page.subtitle': 'Check out the features listed below to learn more about the advantages of using our platform.',
+    'features.page.search': 'Search features...',
+    'features.page.toc': 'Table of Contents',
+    'features.page.noResults': 'No features found matching your search',
+    
     // Features Section
     'features.badge': 'Powerful Features',
     'features.title': 'No code solution',
@@ -151,6 +158,14 @@ export const platformTranslations = {
     'home.stats.trusted': 'Confían en nosotros',
     'home.stats.thousands': 'miles de usuarios',
     'home.stats.community': 'Únete a una comunidad creciente de propietarios de paneles SMM exitosos',
+    
+    // Features Page
+    'features.page.title': 'Explora todas nuestras funciones',
+    'features.page.subtitle': 'Consulta las funciones listadas para conocer las ventajas de nuestra plataforma.',
+    'features.page.search': 'Buscar funciones...',
+    'features.page.toc': 'Tabla de Contenidos',
+    'features.page.noResults': 'No se encontraron funciones',
+    
     'features.badge': 'Potentes Características',
     'features.title': 'Solución sin código',
     'features.payment.title': 'Sistemas de pago',
@@ -249,6 +264,14 @@ export const platformTranslations = {
     'home.stats.trusted': 'Confiam em nós',
     'home.stats.thousands': 'milhares de usuários',
     'home.stats.community': 'Junte-se a uma comunidade crescente de proprietários de painéis SMM de sucesso',
+    
+    // Features Page
+    'features.page.title': 'Explore todos os nossos recursos',
+    'features.page.subtitle': 'Confira os recursos listados para conhecer as vantagens da nossa plataforma.',
+    'features.page.search': 'Pesquisar recursos...',
+    'features.page.toc': 'Índice',
+    'features.page.noResults': 'Nenhum recurso encontrado',
+    
     'features.badge': 'Recursos Poderosos',
     'features.title': 'Solução sem código',
     'features.payment.title': 'Sistemas de pagamento',
@@ -347,6 +370,14 @@ export const platformTranslations = {
     'home.stats.trusted': 'يثقون بنا',
     'home.stats.thousands': 'آلاف المستخدمين',
     'home.stats.community': 'انضم إلى مجتمع متنامي من مالكي لوحات SMM الناجحين',
+    
+    // Features Page
+    'features.page.title': 'استكشف جميع ميزاتنا',
+    'features.page.subtitle': 'اطلع على الميزات أدناه لمعرفة مزايا استخدام منصتنا.',
+    'features.page.search': 'البحث في الميزات...',
+    'features.page.toc': 'جدول المحتويات',
+    'features.page.noResults': 'لم يتم العثور على ميزات',
+    
     'features.badge': 'ميزات قوية',
     'features.title': 'حل بدون كود',
     'features.payment.title': 'أنظمة الدفع',

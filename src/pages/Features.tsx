@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 // Feature categories with all features
 const featureCategories = [
@@ -198,6 +199,7 @@ const featureCategories = [
 ];
 
 export default function Features() {
+  const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeSection, setActiveSection] = useState("user-panel");
   const [isMobileTocOpen, setIsMobileTocOpen] = useState(false);
@@ -272,10 +274,10 @@ export default function Features() {
         <div className="container mx-auto px-4">
           <div className="max-w-3xl">
             <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
-              Explore all our features
+              {t('features.page.title')}
             </h1>
             <p className="text-lg text-muted-foreground mb-8">
-              Check out the features listed below to learn more about the advantages of using our platform.
+              {t('features.page.subtitle')}
             </p>
             
             {/* Search */}
@@ -283,7 +285,7 @@ export default function Features() {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
                 type="text"
-                placeholder="Search..."
+                placeholder={t('features.page.search')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-12 h-12 text-base bg-muted/50 border-border/50"
@@ -303,7 +305,7 @@ export default function Features() {
           >
             <span className="flex items-center gap-2 font-medium">
               <List className="w-4 h-4" />
-              Table of Contents
+              {t('features.page.toc')}
             </span>
             {isMobileTocOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </Button>
@@ -364,9 +366,10 @@ export default function Features() {
                       key={index}
                       initial={{ opacity: 0, y: 10 }}
                       whileInView={{ opacity: 1, y: 0 }}
+                      whileTap={{ scale: 0.97 }}
                       viewport={{ once: true, margin: "-50px" }}
                       transition={{ duration: 0.3, delay: index * 0.03 }}
-                      className="p-5 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors border border-border/30 feature-card-stroke"
+                      className="p-5 rounded-xl bg-muted/30 hover:bg-muted/50 active:bg-muted/70 active:ring-2 active:ring-primary/30 transition-all cursor-pointer border border-border/30 feature-card-stroke"
                     >
                       <h3 className="font-semibold text-foreground mb-2">
                         {feature.title}
@@ -383,7 +386,7 @@ export default function Features() {
             {filteredCategories.length === 0 && (
               <div className="text-center py-16">
                 <p className="text-muted-foreground text-lg">
-                  No features found matching "{searchQuery}"
+                  {t('features.page.noResults')} "{searchQuery}"
                 </p>
               </div>
             )}
@@ -394,7 +397,7 @@ export default function Features() {
             <nav className="sticky top-24 rounded-xl border border-border/50 bg-card/50 backdrop-blur-sm p-4">
               <h3 className="font-semibold mb-3 flex items-center gap-2 text-sm">
                 <List className="w-4 h-4" />
-                Table of Contents
+                {t('features.page.toc')}
               </h3>
               <ul className="space-y-0.5 max-h-[calc(100vh-200px)] overflow-y-auto pr-2">
                 {featureCategories.map((category, index) => {

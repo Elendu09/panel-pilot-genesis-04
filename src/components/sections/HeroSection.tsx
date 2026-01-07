@@ -8,6 +8,7 @@ import { motion } from "framer-motion";
 import { TelegramIcon, VoteIcon, ViewsIcon, HeartIcon } from "@/components/icons/SocialIcons";
 import { BackgroundEffects } from "@/components/effects/BackgroundEffects";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { cn } from "@/lib/utils";
 
 export const HeroSection = () => {
   const { t } = useLanguage();
@@ -32,7 +33,7 @@ export const HeroSection = () => {
   ];
 
   return (
-    <section className="relative min-h-[70vh] md:min-h-[80vh] lg:min-h-screen bg-gradient-hero overflow-hidden perspective-1000 pb-8 md:pb-12">
+    <section className="relative min-h-[50vh] sm:min-h-[60vh] md:min-h-[75vh] lg:min-h-screen bg-gradient-hero overflow-hidden perspective-1000 pb-4 md:pb-8 lg:pb-12">
       {/* Grid, Bubbles & Particles */}
       <BackgroundEffects variant="hero" showGrid showBubbles showParticles bubbleCount={8} particleCount={15} />
       
@@ -196,39 +197,39 @@ export const HeroSection = () => {
         >
           <Card className="bg-card/60 backdrop-blur-2xl border border-primary/20 shadow-2xl shadow-primary/10 overflow-hidden">
             {/* Panel Header */}
-            <div className="flex items-center justify-between p-4 border-b border-border/50 bg-muted/30">
-              <div className="flex items-center gap-4">
-                <span className="font-bold text-lg bg-gradient-primary bg-clip-text text-transparent">PANEL</span>
-                <Button size="sm" variant="default" className="bg-primary/90 text-xs">New order</Button>
-                <Button size="sm" variant="outline" className="text-xs">
+            <div className="flex items-center justify-between p-2 sm:p-4 border-b border-border/50 bg-muted/30 gap-2 flex-wrap sm:flex-nowrap">
+              <div className="flex items-center gap-2 sm:gap-4 overflow-x-auto scrollbar-hide">
+                <span className="font-bold text-sm sm:text-lg bg-gradient-primary bg-clip-text text-transparent shrink-0">PANEL</span>
+                <Button size="sm" variant="default" className="bg-primary/90 text-xs shrink-0">New order</Button>
+                <Button size="sm" variant="outline" className="text-xs shrink-0 hidden sm:inline-flex">
                   My orders <Badge variant="secondary" className="ml-1 text-xs">1</Badge>
                 </Button>
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 sm:gap-4 shrink-0">
                 <motion.span 
-                  className="text-primary font-bold text-xl"
+                  className="text-primary font-bold text-lg sm:text-xl"
                   animate={{ scale: [1, 1.05, 1] }}
                   transition={{ duration: 2, repeat: Infinity }}
                 >
                   $800
                 </motion.span>
-                <Button size="sm" variant="ghost" className="text-xs">Menu</Button>
               </div>
             </div>
 
             {/* Category Tabs */}
-            <div className="flex gap-2 p-4 border-b border-border/50 overflow-x-auto">
+            <div className="flex gap-2 p-2 sm:p-4 border-b border-border/50 overflow-x-auto scrollbar-hide">
               {['All', 'VK', 'Telegram', 'Instagram', 'More'].map((cat, i) => (
                 <motion.div
                   key={cat}
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 1 + i * 0.1 }}
+                  className="shrink-0"
                 >
                   <Button 
                     size="sm" 
                     variant={i === 0 ? "default" : "outline"}
-                    className={i === 0 ? "bg-primary" : ""}
+                    className={cn("text-xs sm:text-sm", i === 0 ? "bg-primary" : "")}
                   >
                     {cat}
                   </Button>
@@ -284,7 +285,7 @@ export const HeroSection = () => {
 
         {/* Bottom Stats */}
         <motion.div 
-          className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto mt-12 mb-8"
+          className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 max-w-4xl mx-auto mt-6 sm:mt-8 lg:mt-12 mb-4 sm:mb-6 lg:mb-8"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 1.5, duration: 0.6 }}
