@@ -111,7 +111,7 @@ export const StorefrontFAQSection = ({ customization = {} }: StorefrontFAQSectio
   })) || defaultFaqs;
 
   return (
-    <section id="faq" className="py-24 relative overflow-hidden" style={{ backgroundColor: customization.backgroundColor }}>
+    <section id="faq" className="py-24 relative overflow-hidden scroll-mt-20" style={{ backgroundColor: customization.backgroundColor }} aria-labelledby="storefront-faq-heading">
       {/* Background Elements */}
       <div 
         className="absolute inset-0"

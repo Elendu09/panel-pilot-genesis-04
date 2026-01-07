@@ -339,13 +339,16 @@ export const FloatingChatWidget = ({
     }
   }, [panelId, whatsappNumber, telegramUsername, messengerUsername, discordInvite, customUrl, customLabel, position, message, enableAI]);
 
-  // Enhanced auto-scroll function with smooth behavior
+  // Enhanced auto-scroll function with smooth behavior - ensures latest message is visible
   const scrollToBottom = useCallback(() => {
     if (scrollRef.current) {
+      // Use requestAnimationFrame for smoother scroll timing
       requestAnimationFrame(() => {
         if (scrollRef.current) {
-          scrollRef.current.scrollTo({
-            top: scrollRef.current.scrollHeight,
+          const scrollElement = scrollRef.current;
+          // Force scroll to absolute bottom
+          scrollElement.scrollTo({
+            top: scrollElement.scrollHeight + 1000,
             behavior: 'smooth'
           });
         }
@@ -353,14 +356,20 @@ export const FloatingChatWidget = ({
     }
   }, []);
 
-  // Auto scroll to bottom when messages change
+  // Auto scroll to bottom when messages change - multiple attempts to ensure visibility
   useEffect(() => {
-    // Immediate scroll for user messages, delayed for AI responses
+    // Immediate scroll
     scrollToBottom();
-    // Extra scroll after a brief delay to ensure new content is rendered
-    const timer = setTimeout(scrollToBottom, 150);
-    return () => clearTimeout(timer);
-  }, [messages, scrollToBottom]);
+    // Delayed scrolls to handle async content rendering
+    const timer1 = setTimeout(scrollToBottom, 100);
+    const timer2 = setTimeout(scrollToBottom, 300);
+    const timer3 = setTimeout(scrollToBottom, 500);
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      clearTimeout(timer3);
+    };
+  }, [messages, scrollToBottom, isLoading]);
 
   const hasAnyChatOption = settings.whatsapp || settings.telegram || settings.messenger || settings.discord || settings.customUrl || enableAI;
   

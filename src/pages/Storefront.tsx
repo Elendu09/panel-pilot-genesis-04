@@ -7,7 +7,6 @@ import { ThemeThree } from '@/components/themes/ThemeThree';
 import { ThemeFour } from '@/components/themes/ThemeFour';
 import { ThemeFive } from '@/components/themes/ThemeFive';
 import { FloatingChatWidget } from '@/components/storefront/FloatingChatWidget';
-import { PromotionalBanner } from '@/components/storefront/PromotionalBanner';
 import { supabase } from '@/integrations/supabase/client';
 import { AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -41,27 +40,14 @@ const Storefront = () => {
   const { panel, loading: tenantLoading, error: tenantError } = useTenant();
   const { services } = useTenantServices(panel?.id);
   const [renderError, setRenderError] = useState<string | null>(null);
-  const [isGuest, setIsGuest] = useState(true);
 
   // Immediately update document title when panel loads (before React Helmet)
   useEffect(() => {
     if (panel) {
-      const seoTitle = (panel.settings as any)?.seo_title || `${panel.name} - SMM Panel`;
+      const seoTitle = (panel.settings as any)?.seo_title || `${panel.name} - Social Media Marketing Services`;
       document.title = seoTitle;
     }
   }, [panel]);
-
-  // Check if user is logged in (guest check)
-  useEffect(() => {
-    const checkAuth = async () => {
-      // Check buyer session from localStorage
-      const buyerSession = localStorage.getItem(`buyer_session_${panel?.id}`);
-      setIsGuest(!buyerSession);
-    };
-    if (panel?.id) {
-      checkAuth();
-    }
-  }, [panel?.id]);
 
   // Debug logging
   useEffect(() => {
@@ -182,32 +168,31 @@ const Storefront = () => {
   const faviconUrl = customBranding?.faviconUrl || panel.logo_url || '/default-panel-favicon.png';
   const appleTouchIconUrl = customBranding?.appleTouchIconUrl || faviconUrl;
 
-  const handleSignUp = () => {
-    navigate('/auth');
-  };
+  // Generate proper SEO title - never use hardcoded "SMM Panel" for tenants
+  const seoTitle = (panel.settings as any)?.seo_title || `${panel.name} - Social Media Marketing Services`;
+  const seoDescription = (panel.settings as any)?.seo_description || `Professional social media marketing services from ${panel.name}. Buy Instagram followers, YouTube views, TikTok likes and more.`;
+  const seoKeywords = (panel.settings as any)?.seo_keywords || `${panel.name}, social media marketing, instagram followers, youtube views, tiktok likes, smm services`;
 
   return (
     <>
       <Helmet>
-        <title>{(panel.settings as any)?.seo_title || `${panel.name} - SMM Panel`}</title>
-        <meta name="description" content={(panel.settings as any)?.seo_description || `Professional social media marketing services from ${panel.name}`} />
-        <meta name="keywords" content={(panel.settings as any)?.seo_keywords || 'social media marketing, instagram followers, youtube views'} />
+        <title>{seoTitle}</title>
+        <meta name="description" content={seoDescription} />
+        <meta name="keywords" content={seoKeywords} />
         <link rel="canonical" href={canonicalUrl} />
         <link rel="icon" type="image/png" href={faviconUrl} />
         <link rel="apple-touch-icon" href={appleTouchIconUrl} />
-        <meta property="og:title" content={(panel.settings as any)?.seo_title || `${panel.name} - SMM Panel`} />
-        <meta property="og:description" content={(panel.settings as any)?.seo_description || `Professional social media marketing services`} />
+        <meta property="og:title" content={seoTitle} />
+        <meta property="og:description" content={seoDescription} />
         <meta property="og:type" content="website" />
         <meta property="og:url" content={canonicalUrl} />
+        <meta property="og:site_name" content={panel.name} />
         {panel.logo_url && <meta property="og:image" content={panel.logo_url} />}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={seoTitle} />
+        <meta name="twitter:description" content={seoDescription} />
       </Helmet>
-      {/* Promotional Banner for guest users */}
-      {isGuest && (
-        <PromotionalBanner 
-          customization={design as any} 
-          onSignUp={handleSignUp}
-        />
-      )}
+      {/* Removed PromotionalBanner - "Welcome bonus! Claim now" removed per SEO requirements */}
       {renderTheme()}
       {/* Floating Chat Widget - Consolidated chat with AI, WhatsApp, Telegram, etc. */}
       <FloatingChatWidget panelId={panel?.id} panelName={panel?.name} />

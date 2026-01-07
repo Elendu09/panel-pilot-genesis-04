@@ -62,7 +62,7 @@ export const FeaturesSection = () => {
   ];
 
   return (
-    <section className="py-24 bg-background relative overflow-hidden">
+    <section id="features" className="py-24 bg-background relative overflow-hidden scroll-mt-20" aria-labelledby="features-heading">
       {/* Grid, Bubbles & Particles */}
       <BackgroundEffects variant="section" showGrid showBubbles showParticles bubbleCount={6} particleCount={12} />
       
@@ -83,6 +83,7 @@ export const FeaturesSection = () => {
         </motion.div>
 
         <motion.h2 
+          id="features-heading"
           className="text-4xl md:text-5xl font-bold mb-6"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}

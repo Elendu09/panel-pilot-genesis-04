@@ -60,7 +60,7 @@ export const StatsSection = () => {
   };
 
   return (
-    <section className="py-24 bg-background relative overflow-hidden">
+    <section id="stats" className="py-24 bg-background relative overflow-hidden scroll-mt-20" aria-labelledby="stats-heading">
       {/* Grid, Bubbles & Particles */}
       <BackgroundEffects variant="section" showGrid showBubbles showParticles bubbleCount={4} particleCount={8} />
       
@@ -75,7 +75,7 @@ export const StatsSection = () => {
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
         >
-          <h2 className="text-3xl md:text-5xl font-bold mb-4">
+          <h2 id="stats-heading" className="text-3xl md:text-5xl font-bold mb-4">
             {t('home.stats.trusted')}{" "}
             <span className="bg-gradient-primary bg-clip-text text-transparent">
               {t('home.stats.thousands')}

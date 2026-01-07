@@ -54,7 +54,7 @@ export const TestimonialsSection = () => {
   };
 
   return (
-    <section className="py-24 bg-background relative overflow-hidden">
+    <section id="testimonials" className="py-24 bg-background relative overflow-hidden scroll-mt-20" aria-labelledby="testimonials-heading">
       {/* Grid, Bubbles & Particles */}
       <BackgroundEffects variant="section" showGrid showBubbles showParticles bubbleCount={3} particleCount={8} />
       
@@ -83,7 +83,7 @@ export const TestimonialsSection = () => {
             <span className="text-sm font-medium text-primary">{t('testimonials.badge')}</span>
           </motion.div>
           
-          <h2 className="text-3xl md:text-5xl font-bold mb-4">
+          <h2 id="testimonials-heading" className="text-3xl md:text-5xl font-bold mb-4">
             {t('testimonials.title.what')}{" "}
             <span className="bg-gradient-primary bg-clip-text text-transparent">
               {t('testimonials.title.users_say')}
