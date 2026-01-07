@@ -44,6 +44,13 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.terms': 'Terms of Service',
     'nav.privacy': 'Privacy Policy',
     
+    // Legal pages
+    'legal.table_of_contents': 'Table of Contents',
+    'legal.last_updated': 'Last updated',
+    'legal.privacy_subtitle': 'How we collect, use, and protect your data',
+    'legal.terms_subtitle': 'Please read these terms carefully before using our services',
+    'common.print': 'Print',
+    
     // Common
     'common.loading': 'Loading...',
     'common.save': 'Save',
@@ -275,6 +282,13 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.terms': 'Términos de Servicio',
     'nav.privacy': 'Política de Privacidad',
     
+    // Legal pages
+    'legal.table_of_contents': 'Tabla de Contenidos',
+    'legal.last_updated': 'Última actualización',
+    'legal.privacy_subtitle': 'Cómo recopilamos, usamos y protegemos sus datos',
+    'legal.terms_subtitle': 'Por favor lea estos términos antes de usar nuestros servicios',
+    'common.print': 'Imprimir',
+    
     // Common
     'common.loading': 'Cargando...',
     'common.save': 'Guardar',
@@ -504,6 +518,13 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.take_tour': 'Fazer um Tour',
     'nav.terms': 'Termos de Serviço',
     'nav.privacy': 'Política de Privacidade',
+    
+    // Legal pages
+    'legal.table_of_contents': 'Índice',
+    'legal.last_updated': 'Última atualização',
+    'legal.privacy_subtitle': 'Como coletamos, usamos e protegemos seus dados',
+    'legal.terms_subtitle': 'Por favor leia estes termos antes de usar nossos serviços',
+    'common.print': 'Imprimir',
     'common.loading': 'Carregando...',
     'common.save': 'Salvar',
     'common.cancel': 'Cancelar',
@@ -710,6 +731,13 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.take_tour': 'قم بجولة',
     'nav.terms': 'شروط الخدمة',
     'nav.privacy': 'سياسة الخصوصية',
+    
+    // Legal pages
+    'legal.table_of_contents': 'جدول المحتويات',
+    'legal.last_updated': 'آخر تحديث',
+    'legal.privacy_subtitle': 'كيف نجمع ونستخدم ونحمي بياناتك',
+    'legal.terms_subtitle': 'يرجى قراءة هذه الشروط قبل استخدام خدماتنا',
+    'common.print': 'طباعة',
     'common.loading': 'جاري التحميل...',
     'common.save': 'حفظ',
     'common.cancel': 'إلغاء',

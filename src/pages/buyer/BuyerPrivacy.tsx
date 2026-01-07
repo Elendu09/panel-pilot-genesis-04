@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { Shield, ArrowLeft, Printer, Lock, Eye, Database, Users, Globe, Mail } from "lucide-react";
+import { Shield, ArrowLeft, Printer, Lock, Eye, Database, Users, Globe, Mail, Cookie, UserCheck, RefreshCw, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -10,35 +10,38 @@ import { supabase } from "@/integrations/supabase/client";
 import BuyerLayout from "./BuyerLayout";
 import { LegalTableOfContents } from "@/components/buyer/LegalTableOfContents";
 import { getDefaultPrivacyPolicy, LegalSection } from "@/lib/legal-content";
+import { useLanguage } from "@/contexts/LanguageContext";
 
-// Icons for each section category
-const sectionIcons: Record<string, React.ReactNode> = {
-  introduction: <Shield className="w-5 h-5" />,
-  'information-collected': <Database className="w-5 h-5" />,
-  'how-we-use': <Eye className="w-5 h-5" />,
-  'information-sharing': <Users className="w-5 h-5" />,
-  'data-security': <Lock className="w-5 h-5" />,
-  'data-retention': <Database className="w-5 h-5" />,
-  'your-rights': <Users className="w-5 h-5" />,
-  cookies: <Globe className="w-5 h-5" />,
-  'third-party': <Globe className="w-5 h-5" />,
-  'childrens-privacy': <Shield className="w-5 h-5" />,
-  international: <Globe className="w-5 h-5" />,
-  contact: <Mail className="w-5 h-5" />,
-  updates: <Shield className="w-5 h-5" />,
+// Section icons mapping
+const sectionIcons: Record<string, React.ElementType> = {
+  'introduction': Shield,
+  'information-collected': Database,
+  'how-we-use': Eye,
+  'information-sharing': Users,
+  'data-security': Lock,
+  'data-retention': Database,
+  'your-rights': UserCheck,
+  'cookies': Cookie,
+  'third-party': Globe,
+  'childrens-privacy': Shield,
+  'international': Globe,
+  'contact': Mail,
+  'updates': RefreshCw,
+  'content': Info,
 };
 
 const BuyerPrivacy = () => {
   const navigate = useNavigate();
   const { panel } = useTenant();
+  const { t } = useLanguage();
   const [sections, setSections] = useState<LegalSection[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeSection, setActiveSection] = useState("");
-  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
+  const [activeSection, setActiveSection] = useState<string>("");
+  const [lastUpdated, setLastUpdated] = useState<string>("");
+  const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
 
   useEffect(() => {
-    const fetchPrivacy = async () => {
+    const fetchPrivacyPolicy = async () => {
       if (!panel?.id) return;
       
       try {
@@ -48,89 +51,76 @@ const BuyerPrivacy = () => {
           .eq('panel_id', panel.id)
           .single();
         
-        if (data?.privacy_policy && data.privacy_policy.trim().length > 100) {
-          // Use custom content - parse into sections
-          setSections(parseCustomContent(data.privacy_policy));
-          setLastUpdated(data.updated_at);
+        const contactInfo = data?.contact_info as Record<string, any> | null;
+        const supportEmail = contactInfo?.email;
+        
+        // If custom content exists and is substantial, parse it
+        if (data?.privacy_policy && data.privacy_policy.length > 200) {
+          const parsedSections = parseCustomContent(data.privacy_policy);
+          setSections(parsedSections);
         } else {
           // Use default compliant content
-          const contactInfo = data?.contact_info as { email?: string } | null;
-          const defaultSections = getDefaultPrivacyPolicy(
-            panel?.name || 'Our Platform',
-            contactInfo?.email
-          );
-          setSections(defaultSections);
-          setLastUpdated(new Date().toISOString());
+          setSections(getDefaultPrivacyPolicy(panel?.name || 'Our Panel', supportEmail));
+        }
+        
+        if (data?.updated_at) {
+          setLastUpdated(new Date(data.updated_at).toLocaleDateString());
+        } else {
+          setLastUpdated(new Date().toLocaleDateString());
         }
       } catch (error) {
         console.error('Error fetching privacy policy:', error);
-        // Fallback to default content
-        setSections(getDefaultPrivacyPolicy(panel?.name || 'Our Platform'));
-        setLastUpdated(new Date().toISOString());
+        setSections(getDefaultPrivacyPolicy(panel?.name || 'Our Panel'));
+        setLastUpdated(new Date().toLocaleDateString());
       } finally {
         setLoading(false);
       }
     };
 
-    fetchPrivacy();
+    fetchPrivacyPolicy();
   }, [panel?.id, panel?.name]);
 
   // Parse custom content into sections
   const parseCustomContent = (content: string): LegalSection[] => {
     const lines = content.split('\n');
-    const parsed: LegalSection[] = [];
+    const parsedSections: LegalSection[] = [];
     let currentSection: LegalSection | null = null;
-    let currentContent: string[] = [];
+    let contentBuffer: string[] = [];
 
     lines.forEach((line) => {
-      // Check for section headers (starts with ** or ##)
-      const headerMatch = line.match(/^(\*\*|##)\s*(\d+\.?\s*)?(.+?)(\*\*)?$/);
+      // Check for headers (## or ** style)
+      const headerMatch = line.match(/^#{1,2}\s+(.+)$/) || line.match(/^\*\*(.+)\*\*$/);
+      
       if (headerMatch) {
         // Save previous section
         if (currentSection) {
-          currentSection.content = currentContent.join('\n').trim();
-          parsed.push(currentSection);
+          currentSection.content = contentBuffer.join('\n').trim();
+          parsedSections.push(currentSection);
         }
-        // Start new section
-        const title = headerMatch[3].replace(/\*\*/g, '').trim();
-        currentSection = {
-          id: title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-          title: line.replace(/\*\*/g, '').trim(),
-          content: ''
-        };
-        currentContent = [];
+        
+        const title = headerMatch[1].trim();
+        const id = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+        
+        currentSection = { id, title, content: '' };
+        contentBuffer = [];
       } else if (currentSection) {
-        currentContent.push(line);
-      } else {
-        // Content before first header
-        if (!parsed.length && line.trim()) {
-          currentSection = {
-            id: 'introduction',
-            title: 'Introduction',
-            content: ''
-          };
-          currentContent.push(line);
-        }
+        contentBuffer.push(line);
       }
     });
 
-    // Save last section
+    // Don't forget the last section
     if (currentSection) {
-      currentSection.content = currentContent.join('\n').trim();
-      parsed.push(currentSection);
+      currentSection.content = contentBuffer.join('\n').trim();
+      parsedSections.push(currentSection);
     }
 
-    return parsed.length > 0 ? parsed : [{
-      id: 'content',
-      title: 'Privacy Policy',
-      content: content
-    }];
+    return parsedSections.length > 0 ? parsedSections : getDefaultPrivacyPolicy(panel?.name || 'Our Panel');
   };
 
-  // Intersection observer for active section
+  // Track active section on scroll
   useEffect(() => {
-    if (!contentRef.current || sections.length === 0) return;
-
+    if (sections.length === 0) return;
+    
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -139,19 +129,21 @@ const BuyerPrivacy = () => {
           }
         });
       },
-      { rootMargin: '-20% 0px -60% 0px' }
+      { rootMargin: '-20% 0px -70% 0px' }
     );
 
-    const sectionElements = contentRef.current.querySelectorAll('[data-section]');
-    sectionElements.forEach((el) => observer.observe(el));
+    sections.forEach((section) => {
+      const el = sectionRefs.current[section.id];
+      if (el) observer.observe(el);
+    });
 
     return () => observer.disconnect();
   }, [sections]);
 
   const scrollToSection = (id: string) => {
-    const element = document.getElementById(id);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const el = sectionRefs.current[id];
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   };
 
@@ -159,24 +151,23 @@ const BuyerPrivacy = () => {
     window.print();
   };
 
-  // Get icon for section
   const getSectionIcon = (id: string) => {
-    return sectionIcons[id] || <Shield className="w-5 h-5" />;
+    return sectionIcons[id] || Shield;
   };
 
   // Format content with markdown-like styling
   const formatContent = (content: string) => {
     return content.split('\n\n').map((paragraph, index) => {
       // Handle bold text
-      const formattedText = paragraph.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      const formattedParagraph = paragraph.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
       
       // Handle list items
       if (paragraph.startsWith('- ')) {
         const items = paragraph.split('\n').filter(item => item.startsWith('- '));
         return (
-          <ul key={index} className="list-disc list-inside space-y-2 mb-4 text-muted-foreground ml-4">
+          <ul key={index} className="list-disc list-inside space-y-1.5 mb-4 text-muted-foreground ml-4">
             {items.map((item, i) => (
-              <li key={i} dangerouslySetInnerHTML={{ __html: item.replace('- ', '').replace(/\*\*(.+?)\*\*/g, '<strong class="text-foreground">$1</strong>') }} />
+              <li key={i} className="leading-relaxed">{item.replace('- ', '')}</li>
             ))}
           </ul>
         );
@@ -187,7 +178,7 @@ const BuyerPrivacy = () => {
         <p 
           key={index} 
           className="text-muted-foreground mb-4 leading-relaxed"
-          dangerouslySetInnerHTML={{ __html: formattedText }}
+          dangerouslySetInnerHTML={{ __html: formattedParagraph }}
         />
       );
     });
@@ -201,7 +192,7 @@ const BuyerPrivacy = () => {
         className="max-w-6xl mx-auto"
       >
         {/* Header */}
-        <div className="flex items-center justify-between gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-4">
             <Button 
               variant="ghost" 
@@ -212,26 +203,27 @@ const BuyerPrivacy = () => {
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <div>
-              <h1 className="text-2xl font-bold">Privacy Policy</h1>
+              <h1 className="text-2xl font-bold">{t('nav.privacy')}</h1>
               <p className="text-sm text-muted-foreground">
-                How we collect, use, and protect your data
+                {t('legal.privacy_subtitle') || 'How we collect, use, and protect your data'}
               </p>
             </div>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
+          <Button 
+            variant="outline" 
+            size="sm" 
             onClick={handlePrint}
             className="print:hidden gap-2"
           >
             <Printer className="w-4 h-4" />
-            Print
+            {t('common.print') || 'Print'}
           </Button>
         </div>
 
-        <div className="flex gap-8">
+        {/* Main Layout */}
+        <div className="flex flex-col lg:flex-row gap-6">
           {/* Table of Contents */}
-          {!loading && sections.length > 1 && (
+          {!loading && sections.length > 0 && (
             <LegalTableOfContents
               sections={sections}
               activeSection={activeSection}
@@ -240,66 +232,89 @@ const BuyerPrivacy = () => {
           )}
 
           {/* Content */}
-          <Card className="flex-1 glass-card print:shadow-none print:border-0">
-            <CardContent className="p-6 md:p-8" ref={contentRef}>
-              {/* Header badge */}
-              <div className="flex items-center gap-3 mb-6 pb-6 border-b border-border/50 print:border-border">
-                <div className="p-3 rounded-xl bg-primary/10 print:bg-transparent print:p-0">
-                  <Shield className="w-6 h-6 text-primary" />
+          <div className="flex-1 min-w-0">
+            <Card className="glass-card">
+              <CardContent className="p-6 md:p-8">
+                {/* Document Header */}
+                <div className="flex items-center gap-3 mb-6 pb-6 border-b border-border/50 print:border-b-2">
+                  <div className="p-3 rounded-xl bg-primary/10 print:bg-primary/20">
+                    <Shield className="w-6 h-6 text-primary" />
+                  </div>
+                  <div>
+                    <h2 className="font-semibold">{panel?.name || 'Panel'}</h2>
+                    <p className="text-sm text-muted-foreground">{t('nav.privacy')}</p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="font-semibold">{panel?.name || 'Panel'}</h2>
-                  <p className="text-sm text-muted-foreground">Privacy Policy</p>
-                </div>
-              </div>
 
-              {loading ? (
-                <div className="space-y-4">
-                  <Skeleton className="h-6 w-48" />
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-4 w-5/6" />
-                  <Skeleton className="h-6 w-48 mt-8" />
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-2/3" />
-                </div>
-              ) : (
-                <div className="prose prose-sm dark:prose-invert max-w-none">
-                  {sections.map((section, index) => (
-                    <section
-                      key={section.id}
-                      id={section.id}
-                      data-section
-                      className={index > 0 ? "mt-8 pt-6 border-t border-border/30" : ""}
-                    >
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="p-2 rounded-lg bg-primary/10 text-primary print:hidden">
-                          {getSectionIcon(section.id)}
-                        </div>
-                        <h3 className="text-lg font-semibold text-foreground m-0">
-                          {section.title}
-                        </h3>
+                {loading ? (
+                  <div className="space-y-6">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="space-y-3">
+                        <Skeleton className="h-6 w-48" />
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-3/4" />
+                        <Skeleton className="h-4 w-5/6" />
                       </div>
-                      {formatContent(section.content)}
-                    </section>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-8">
+                    {sections.map((section) => {
+                      const IconComponent = getSectionIcon(section.id);
+                      return (
+                        <section
+                          key={section.id}
+                          id={section.id}
+                          ref={(el) => (sectionRefs.current[section.id] = el)}
+                          className="scroll-mt-24 print:break-inside-avoid"
+                        >
+                          <div className="flex items-center gap-3 mb-4">
+                            <div className="p-2 rounded-lg bg-primary/10 print:bg-primary/20">
+                              <IconComponent className="w-4 h-4 text-primary" />
+                            </div>
+                            <h3 className="text-lg font-semibold text-foreground">
+                              {section.title}
+                            </h3>
+                          </div>
+                          <div className="pl-11 print:pl-0">
+                            {formatContent(section.content)}
+                          </div>
+                        </section>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
-        {/* Footer */}
-        <p className="text-center text-xs text-muted-foreground mt-6 print:mt-12">
-          Last updated: {lastUpdated ? new Date(lastUpdated).toLocaleDateString() : new Date().toLocaleDateString()}
-        </p>
+            {/* Footer */}
+            <p className="text-center text-xs text-muted-foreground mt-6 print:mt-8">
+              {t('legal.last_updated') || 'Last updated'}: {lastUpdated}
+            </p>
+          </div>
+        </div>
       </motion.div>
 
-      {/* Print styles */}
+      {/* Print Styles */}
       <style>{`
         @media print {
-          body { background: white !important; }
-          .glass-card { background: white !important; backdrop-filter: none !important; }
+          body * {
+            visibility: hidden;
+          }
+          .glass-card, .glass-card * {
+            visibility: visible;
+          }
+          .glass-card {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            box-shadow: none !important;
+            border: none !important;
+          }
+          .print\\:hidden {
+            display: none !important;
+          }
         }
       `}</style>
     </BuyerLayout>
