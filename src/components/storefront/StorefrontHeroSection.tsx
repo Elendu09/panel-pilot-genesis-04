@@ -119,9 +119,10 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
   const buyer = buyerAuthContext?.buyer ?? null;
   
   const panelName = customization.companyName || panel?.name || 'SMM Panel';
-  const heroTitle = customization.heroTitle || 'Boost Your Social Media';
-  const heroSubtitle = customization.heroSubtitle || 'Get real followers, likes, and views at the lowest prices with instant delivery. Trusted by thousands of creators and businesses worldwide.';
-  const badgeText = customization.badgeText || customization.heroBadgeText || '#1 SMM Panel';
+  // Use panel owner's custom content if set, otherwise use translated defaults
+  const heroTitle = customization.heroTitle || t('storefront.hero.defaultTitle');
+  const heroSubtitle = customization.heroSubtitle || t('storefront.hero.defaultSubtitle');
+  const badgeText = customization.badgeText || customization.heroBadgeText || t('storefront.hero.defaultBadge');
   const enableFastOrder = customization.enableFastOrder ?? true;
   const themeMode = customization.themeMode || 'dark';
   const textColor = customization.textColor || (themeMode === 'dark' ? '#FFFFFF' : '#1F2937');
@@ -141,12 +142,12 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
 
   return (
     <section className="relative min-h-screen overflow-hidden">
-      {/* Floating Particles - Hidden on mobile for performance */}
+      {/* Floating Particles - Reduced count for performance */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none hidden md:block">
-        {[...Array(15)].map((_, i) => (
+        {[...Array(8)].map((_, i) => (
           <motion.div
             key={i}
-            className="absolute w-1.5 h-1.5 rounded-full"
+            className="absolute w-1.5 h-1.5 rounded-full will-change-transform"
             style={{
               left: `${Math.random() * 100}%`,
               top: `${Math.random() * 100}%`,

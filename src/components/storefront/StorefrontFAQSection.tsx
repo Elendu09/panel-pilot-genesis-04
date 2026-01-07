@@ -74,33 +74,33 @@ export const StorefrontFAQSection = ({ customization = {} }: StorefrontFAQSectio
 
   const defaultFaqs: FAQ[] = [
     {
-      question: "How fast is the delivery?",
-      answer: "Most orders start within 0-1 hour after payment confirmation. Delivery speed depends on the service type and quantity ordered. We offer drip-feed options for gradual delivery.",
+      question: t('storefront.faq.q1'),
+      answer: t('storefront.faq.a1'),
       icon: Zap
     },
     {
-      question: "Are the followers/likes real?",
-      answer: "We offer both real and premium services. Real services come from genuine accounts with activity history. Premium services provide high-quality engagement that looks natural.",
+      question: t('storefront.faq.q2'),
+      answer: t('storefront.faq.a2'),
       icon: Sparkles
     },
     {
-      question: "What payment methods do you accept?",
-      answer: "We accept multiple payment methods including PayPal, Credit/Debit Cards, Cryptocurrency (Bitcoin, USDT, ETH), and various local payment options depending on your country.",
+      question: t('storefront.faq.q3'),
+      answer: t('storefront.faq.a3'),
       icon: CreditCard
     },
     {
-      question: "Is there a money-back guarantee?",
-      answer: "Yes! If we fail to deliver your order or if there's an issue with the quality, we offer full refunds. Our customer support team will help resolve any issues within 24 hours.",
+      question: t('storefront.faq.q4'),
+      answer: t('storefront.faq.a4'),
       icon: DollarSign
     },
     {
-      question: "Will my account get banned?",
-      answer: "No. Our services are designed to be safe and comply with platform guidelines. We use gradual delivery and quality accounts to ensure your safety. We've never had a customer banned.",
+      question: t('storefront.faq.q5'),
+      answer: t('storefront.faq.a5'),
       icon: Shield
     },
     {
-      question: "Do you offer customer support?",
-      answer: "Yes, we offer 24/7 customer support via live chat and ticket system. Our average response time is under 5 minutes. We're always here to help with any questions or issues.",
+      question: t('storefront.faq.q6'),
+      answer: t('storefront.faq.a6'),
       icon: Target
     }
   ];
