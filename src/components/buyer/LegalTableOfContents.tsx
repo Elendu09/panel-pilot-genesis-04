@@ -32,13 +32,21 @@ export const LegalTableOfContents = ({
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  const handleClick = (id: string) => {
+  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
+    e.preventDefault();
+
+    // Update hash for anchor-based navigation
+    if (typeof window !== 'undefined') {
+      history.replaceState(null, '', `#${id}`);
+    }
+
     const element = document.getElementById(id);
     if (element) {
       const offset = 100; // Account for sticky header
       const y = element.getBoundingClientRect().top + window.scrollY - offset;
       window.scrollTo({ top: y, behavior: "smooth" });
     }
+
     onSectionClick(id);
     if (isMobile) setIsExpanded(false);
   };
@@ -71,13 +79,14 @@ export const LegalTableOfContents = ({
           transition={{ duration: 0.2 }}
           className="overflow-hidden"
         >
-          <nav className="p-4 pt-0 space-y-1">
+          <nav className="p-4 pt-0 space-y-1" aria-label={tocTitle}>
             {sections.map((section, index) => (
-              <button
+              <a
                 key={section.id}
-                onClick={() => handleClick(section.id)}
+                href={`#${section.id}`}
+                onClick={(e) => handleClick(e, section.id)}
                 className={cn(
-                  "w-full text-left px-3 py-2.5 rounded-lg text-sm transition-colors flex items-center gap-2",
+                  "block w-full text-left px-3 py-2.5 rounded-lg text-sm transition-colors flex items-center gap-2",
                   activeSection === section.id
                     ? "bg-primary/10 text-primary font-medium"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
@@ -85,7 +94,7 @@ export const LegalTableOfContents = ({
               >
                 <span className="text-xs text-muted-foreground w-5">{index + 1}.</span>
                 <span className="flex-1 truncate">{section.title}</span>
-              </button>
+              </a>
             ))}
           </nav>
         </motion.div>
@@ -101,13 +110,14 @@ export const LegalTableOfContents = ({
           <List className="w-4 h-4" />
           {tocTitle}
         </h3>
-        <nav className="space-y-0.5 max-h-[calc(100vh-200px)] overflow-y-auto pr-2">
+        <nav className="space-y-0.5 max-h-[calc(100vh-200px)] overflow-y-auto pr-2" aria-label={tocTitle}>
           {sections.map((section, index) => (
-            <button
+            <a
               key={section.id}
-              onClick={() => handleClick(section.id)}
+              href={`#${section.id}`}
+              onClick={(e) => handleClick(e, section.id)}
               className={cn(
-                "w-full text-left px-3 py-2 rounded-lg text-sm transition-all flex items-center gap-2",
+                "block w-full text-left px-3 py-2 rounded-lg text-sm transition-all flex items-center gap-2",
                 activeSection === section.id
                   ? "bg-primary/10 text-primary font-medium border-l-2 border-primary"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
@@ -115,7 +125,7 @@ export const LegalTableOfContents = ({
             >
               <span className="text-xs text-muted-foreground/70 w-4">{index + 1}.</span>
               <span className="flex-1 truncate">{section.title}</span>
-            </button>
+            </a>
           ))}
         </nav>
       </div>
