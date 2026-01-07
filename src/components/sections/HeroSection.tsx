@@ -32,7 +32,7 @@ export const HeroSection = () => {
   ];
 
   return (
-    <section className="relative min-h-screen bg-gradient-hero overflow-hidden perspective-1000">
+    <section className="relative min-h-[70vh] md:min-h-[80vh] lg:min-h-screen bg-gradient-hero overflow-hidden perspective-1000 pb-8 md:pb-12">
       {/* Grid, Bubbles & Particles */}
       <BackgroundEffects variant="hero" showGrid showBubbles showParticles bubbleCount={8} particleCount={15} />
       
