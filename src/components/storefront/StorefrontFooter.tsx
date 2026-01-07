@@ -133,7 +133,7 @@ export const StorefrontFooter = ({
         
         <div className={`border-t ${isDark ? 'border-slate-800' : 'border-slate-200'} pt-8 text-center`}>
           <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-            {footerText || `© ${currentYear} ${panelName}. All rights reserved.`}
+            {footerText || `© ${currentYear} ${panelName}. ${t('storefront.footer.allRights')}.`}
           </p>
         </div>
       </div>

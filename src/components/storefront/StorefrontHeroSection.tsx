@@ -25,15 +25,15 @@ const TikTokWrapper = ({ className }: { className?: string }) => (
   <TikTokIcon className={className} size={16} />
 );
 
-// Buyer-focused floating cards - different from homepage
-const leftCards = [
-  { icon: DollarSign, title: "Best Prices", subtitle: "Lowest in the market", delay: 0.8, gradient: "from-green-500 to-emerald-500" },
-  { icon: Zap, title: "Instant Start", subtitle: "Orders begin in seconds", delay: 1.2, gradient: "from-yellow-500 to-orange-500" },
+// Buyer-focused floating cards - will be translated
+const getLeftCards = (t: (key: string) => string) => [
+  { icon: DollarSign, titleKey: 'storefront.hero.card.bestPrices', subtitleKey: 'storefront.hero.card.bestPricesDesc', delay: 0.8, gradient: "from-green-500 to-emerald-500" },
+  { icon: Zap, titleKey: 'storefront.hero.card.instantStart', subtitleKey: 'storefront.hero.card.instantStartDesc', delay: 1.2, gradient: "from-yellow-500 to-orange-500" },
 ];
 
-const rightCards = [
-  { icon: Shield, title: "100% Safe", subtitle: "No password needed", delay: 1.0, gradient: "from-blue-500 to-cyan-500" },
-  { icon: MessageCircle, title: "24/7 Support", subtitle: "Always here to help", delay: 1.4, gradient: "from-purple-500 to-pink-500" },
+const getRightCards = (t: (key: string) => string) => [
+  { icon: Shield, titleKey: 'storefront.hero.card.safe', subtitleKey: 'storefront.hero.card.safeDesc', delay: 1.0, gradient: "from-blue-500 to-cyan-500" },
+  { icon: MessageCircle, titleKey: 'storefront.hero.card.support', subtitleKey: 'storefront.hero.card.supportDesc', delay: 1.4, gradient: "from-purple-500 to-pink-500" },
 ];
 
 // Service categories with platform icons
@@ -45,11 +45,11 @@ const serviceCategories = [
   { name: "Twitter", Icon: Twitter, color: "from-sky-400 to-blue-500" },
 ];
 
-// Trust indicators
-const trustBadges = [
-  { icon: CheckCircle, text: "50K+ Happy Customers", color: "text-green-500" },
-  { icon: Star, text: "99.9% Success Rate", color: "text-yellow-500" },
-  { icon: Clock, text: "Instant Delivery", color: "text-blue-500" },
+// Trust indicators - will be translated
+const getTrustBadges = (t: (key: string) => string) => [
+  { icon: CheckCircle, textKey: 'storefront.hero.trust.customers', color: "text-green-500" },
+  { icon: Star, textKey: 'storefront.hero.trust.success', color: "text-yellow-500" },
+  { icon: Clock, textKey: 'storefront.hero.trust.delivery', color: "text-blue-500" },
 ];
 
 // Payment SVG Icons
@@ -170,7 +170,7 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
       {/* Left Floating Cards */}
       {heroShowFloatingCards && (
         <div className="absolute left-4 lg:left-[5%] top-1/4 space-y-4 hidden lg:block z-20">
-          {leftCards.map((card, index) => (
+          {getLeftCards(t).map((card, index) => (
           <motion.div
             key={index}
             initial={{ opacity: 0, x: -100 }}
@@ -184,8 +184,8 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
                   <card.icon className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm" style={{ color: textColor }}>{card.title}</h3>
-                  <p className="text-xs" style={{ color: textMuted }}>{card.subtitle}</p>
+                  <h3 className="font-bold text-sm" style={{ color: textColor }}>{t(card.titleKey)}</h3>
+                  <p className="text-xs" style={{ color: textMuted }}>{t(card.subtitleKey)}</p>
                 </div>
               </div>
             </Card>
@@ -197,7 +197,7 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
       {/* Right Floating Cards */}
       {heroShowFloatingCards && (
         <div className="absolute right-4 lg:right-[5%] top-1/4 space-y-4 hidden lg:block z-20">
-        {rightCards.map((card, index) => (
+        {getRightCards(t).map((card, index) => (
           <motion.div
             key={index}
             initial={{ opacity: 0, x: 100 }}
@@ -211,8 +211,8 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
                   <card.icon className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm" style={{ color: textColor }}>{card.title}</h3>
-                  <p className="text-xs" style={{ color: textMuted }}>{card.subtitle}</p>
+                  <h3 className="font-bold text-sm" style={{ color: textColor }}>{t(card.titleKey)}</h3>
+                  <p className="text-xs" style={{ color: textMuted }}>{t(card.subtitleKey)}</p>
                 </div>
               </div>
             </Card>
@@ -344,7 +344,7 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
                     }}
                   >
                     <Link to="/buyer/auth?mode=signup">
-                      Get Started <ArrowRight className="ml-2 w-4 h-4 sm:w-5 sm:h-5" />
+                      {t('storefront.hero.getStarted')} <ArrowRight className="ml-2 w-4 h-4 sm:w-5 sm:h-5" />
                     </Link>
                   </Button>
                 </motion.div>
@@ -511,7 +511,7 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 1.5, duration: 0.6 }}
           >
-            {trustBadges.map((badge, index) => (
+            {getTrustBadges(t).map((badge, index) => (
               <motion.div 
                 key={index}
                 className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm"
@@ -520,7 +520,7 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
                 transition={{ delay: 1.6 + index * 0.1 }}
               >
                 <badge.icon className={`w-4 h-4 sm:w-5 sm:h-5 ${badge.color}`} />
-                <span style={{ color: textMuted }}>{badge.text}</span>
+                <span style={{ color: textMuted }}>{t(badge.textKey)}</span>
               </motion.div>
             ))}
           </motion.div>
@@ -532,7 +532,7 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
             animate={{ opacity: 1 }}
             transition={{ delay: 1.8, duration: 0.6 }}
           >
-            <span className="text-[10px] sm:text-xs" style={{ color: textMuted }}>We accept:</span>
+            <span className="text-[10px] sm:text-xs" style={{ color: textMuted }}>{t('storefront.hero.trust.payments')}:</span>
             <div className="flex items-center gap-2 sm:gap-3">
               {paymentIcons.map((payment, i) => (
                 <motion.div
