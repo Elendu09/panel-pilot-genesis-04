@@ -1,293 +1,348 @@
+import { useState, useMemo, useEffect } from "react";
 import { Helmet } from "react-helmet-async";
 import { Navigation } from "@/components/layout/Navigation";
 import { Footer } from "@/components/layout/Footer";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { 
-  Zap, 
-  Shield, 
-  BarChart3, 
-  Palette, 
-  Users, 
-  Globe, 
-  Clock, 
-  Smartphone,
-  DollarSign,
+  Search,
+  Users,
+  Package,
+  CreditCard,
   Settings,
-  TrendingUp,
-  Lock,
-  CheckCircle,
-  ArrowRight,
-  Instagram,
-  Youtube,
-  Music,
-  Twitter,
-  Linkedin,
-  Send,
-  MessageSquare,
-  Facebook,
-  type LucideIcon
+  Palette,
+  BarChart3,
+  Shield,
+  Server,
+  Puzzle,
+  FileText,
+  Layers
 } from "lucide-react";
-import { Link } from "react-router-dom";
-import { useLanguage } from "@/contexts/LanguageContext";
 
-// Platform icons with proper gradients
-const platformsData: { name: string; icon: LucideIcon; gradient: string }[] = [
-  { name: "Instagram", icon: Instagram, gradient: "from-pink-500 to-purple-600" },
-  { name: "YouTube", icon: Youtube, gradient: "from-red-500 to-red-600" },
-  { name: "TikTok", icon: Music, gradient: "from-gray-900 to-pink-500" },
-  { name: "Twitter", icon: Twitter, gradient: "from-blue-400 to-blue-500" },
-  { name: "Facebook", icon: Facebook, gradient: "from-blue-600 to-blue-700" },
-  { name: "LinkedIn", icon: Linkedin, gradient: "from-blue-700 to-blue-800" },
-  { name: "Telegram", icon: Send, gradient: "from-sky-400 to-sky-600" },
-  { name: "Discord", icon: MessageSquare, gradient: "from-indigo-500 to-indigo-600" }
+// Feature categories with all features
+const featureCategories = [
+  {
+    id: "user-panel",
+    title: "User Panel",
+    icon: Users,
+    features: [
+      { title: "Mass Orders", description: "Let users set up mass orders for bulk delivery to save time." },
+      { title: "User API", description: "Methods that allow your resellers to work with your panel via API." },
+      { title: "Multi-currency", description: "Display service rates, user balance, and order charges based on selected currency." },
+      { title: "Multi-language", description: "An optional multilingual interface that adapts to users' language preferences." },
+      { title: "Language Packs", description: "Ready-made panel translations: Turkish, Portuguese, Korean, Russian, Arabic, etc." },
+      { title: "RTL Support", description: "Right-to-left support for languages like Arabic, Hebrew, etc." },
+      { title: "Order History", description: "Users can keep track of all their orders in one place." },
+      { title: "Deposit History", description: "Shows users information on adding funds to their accounts." },
+      { title: "Mobile-friendly", description: "Panels can be easily accessed and used on mobile devices." },
+      { title: "Time Zone Setup", description: "Allows changing time zone settings on your panel." },
+      { title: "Password Reset", description: "Lets users restore forgotten passwords." },
+      { title: "Two-factor Auth", description: "Optional email-based two-factor authentication for user accounts." },
+      { title: "User Notifications", description: "Communicate important information to panel users." },
+      { title: "Ticket System", description: "Users can communicate with panel admins via support tickets." },
+    ]
+  },
+  {
+    id: "services",
+    title: "Services",
+    icon: Package,
+    features: [
+      { title: "Various Types", description: "The platform helps panel admins sell a great variety of services." },
+      { title: "Service Descriptions", description: "Help users quickly get familiar with all services." },
+      { title: "Service Categories", description: "Create categories to keep all services neatly organized." },
+      { title: "Subscriptions", description: "Auto orders for likes, views, etc. on new posts." },
+      { title: "Refill", description: "An order refill can be performed by a provider or manually." },
+      { title: "Import from Providers", description: "Quickly import services from providers that use the platform." },
+      { title: "Sync with Providers", description: "Sync rates, min & max limits, statuses with providers." },
+      { title: "Mass Edit Rates", description: "Mass set service rates in percent or set new rates for services." },
+      { title: "Drip-feed", description: "Divide one order into multiple intervals to build engagement gradually." },
+      { title: "Cancel Services", description: "Easily cancel services you don't plan to offer anymore." },
+      { title: "Bulk Actions", description: "Perform various actions related to user, order, and service management in bulk." },
+      { title: "Auto Complete", description: "The system automatically changes the order status once complete." },
+    ]
+  },
+  {
+    id: "accept-payments",
+    title: "Accept Payments",
+    icon: CreditCard,
+    features: [
+      { title: "150+ Payment Methods", description: "Many already integrated payment methods with new ones added constantly." },
+      { title: "Method Instructions", description: "Add multilingual instructions for each payment method." },
+      { title: "Extra Fee", description: "Set an additional fee for selected methods when adding funds." },
+      { title: "Currency Conversion", description: "Payment options available for conversion from other currencies." },
+      { title: "Min & Max Amounts", description: "Set the min & max payment amounts for each method." },
+      { title: "Payment Bonuses", description: "Reward customers for using certain payment methods." },
+      { title: "Manage Payments", description: "Add payments manually and cut balances when needed." },
+      { title: "Export Payments", description: "Export payment data in CSV format with customizable columns." },
+    ]
+  },
+  {
+    id: "order-processing",
+    title: "Order Processing",
+    icon: Layers,
+    features: [
+      { title: "Unlimited Providers", description: "Connect as many providers as you want without extra charges." },
+      { title: "Provider Balance Check", description: "Check all your providers' balances in one place." },
+      { title: "Auto & Manual Modes", description: "Connect APIs for automated processing or manage orders manually." },
+      { title: "Export Orders", description: "Export order data in CSV format with customizable columns." },
+      { title: "Resend Orders", description: "The option to resend an order is always available." },
+      { title: "Cancel & Refund", description: "Cancel specific orders anytime and give refunds." },
+      { title: "Status Change", description: "Change order statuses manually whenever needed." },
+      { title: "Admin API", description: "Integrate other products and services into panels and automate tasks." },
+      { title: "Drip-feed Management", description: "Change status or cancel and refund for drip-feeds." },
+    ]
+  },
+  {
+    id: "user-management",
+    title: "User Management",
+    icon: Settings,
+    features: [
+      { title: "Create Accounts", description: "Users register automatically or admins can create accounts manually." },
+      { title: "Custom Rates", description: "Easily set up custom rates for each user." },
+      { title: "Copy Rates", description: "Copy rates from one user to another or to multiple users at once." },
+      { title: "Amount Spent", description: "Monitor how much users spend on your panel." },
+      { title: "User Discount", description: "Set a personal discount on all panel services for each user." },
+      { title: "Suspend Users", description: "Suspend users on your panel in a few clicks." },
+      { title: "Export Users", description: "Export user data in CSV format with customizable columns." },
+      { title: "Access Rules", description: "Edit panel access rules and actions users are allowed to perform." },
+      { title: "Email Confirmation", description: "Enable mandatory email address confirmation after signing up." },
+    ]
+  },
+  {
+    id: "theme-editor",
+    title: "Visual Theme Editor",
+    icon: Palette,
+    features: [
+      { title: "Create Pages", description: "Create public & internal pages with customizable blocks." },
+      { title: "Block Types", description: "A variety of block types (media, text, etc) for different purposes." },
+      { title: "Block Styles", description: "Edit block styles and components to transform your panel's look." },
+      { title: "Block Background", description: "Set gradients, images, or patterns as block backgrounds." },
+      { title: "Menu Items", description: "Create custom menu sections with items from scratch." },
+      { title: "Color Palette", description: "Apply one of the pre-made color palettes or create your own." },
+      { title: "Custom CSS", description: "Apply custom CSS to fine-tune your panel's appearance." },
+      { title: "Font Picker", description: "Select from a variety of fonts for your panel." },
+      { title: "Logo & Favicon", description: "Upload your own logo and favicon for branding." },
+    ]
+  },
+  {
+    id: "seo",
+    title: "SEO",
+    icon: FileText,
+    features: [
+      { title: "Metadata", description: "Set meta titles and descriptions for your panel pages." },
+      { title: "Sitemap.xml", description: "Auto-generated sitemap for better search engine indexing." },
+      { title: "Robots.txt", description: "Customize your robots.txt file for crawler instructions." },
+      { title: "Google Analytics", description: "Integrate Google Analytics for traffic insights." },
+      { title: "Blog System", description: "Create and manage blog posts to boost SEO." },
+      { title: "Custom URLs", description: "Set custom URLs for pages to improve SEO." },
+    ]
+  },
+  {
+    id: "reports",
+    title: "Reports",
+    icon: BarChart3,
+    features: [
+      { title: "Payment Reports", description: "Detailed reports on all payment transactions." },
+      { title: "Order Reports", description: "Comprehensive analytics on orders placed." },
+      { title: "Profit Reports", description: "Track your profits and revenue over time." },
+      { title: "User Statistics", description: "Insights on user activity and registrations." },
+      { title: "Export Data", description: "Export all reports in CSV format for analysis." },
+    ]
+  },
+  {
+    id: "admin-options",
+    title: "Admin Options",
+    icon: Shield,
+    features: [
+      { title: "Help Center", description: "Built-in help documentation for panel admins." },
+      { title: "Notifications", description: "System notifications for important events." },
+      { title: "Activity Log", description: "Track all admin and user activities." },
+      { title: "Dark Mode", description: "Toggle between light and dark themes." },
+      { title: "Maintenance Mode", description: "Put your panel in maintenance mode when needed." },
+      { title: "Team Members", description: "Add team members with different permission levels." },
+    ]
+  },
+  {
+    id: "hosting",
+    title: "Hosting",
+    icon: Server,
+    features: [
+      { title: "CDN", description: "Content delivery network for faster global access." },
+      { title: "Unlimited Bandwidth", description: "No limits on data transfer for your panel." },
+      { title: "DDoS Protection", description: "Protection against distributed denial-of-service attacks." },
+      { title: "Free SSL", description: "Automatic SSL certificates for secure connections." },
+      { title: "Custom Domain", description: "Connect your own domain to your panel." },
+      { title: "Automatic Backups", description: "Regular backups of your panel data." },
+      { title: "99.9% Uptime", description: "Reliable hosting with maximum uptime guarantee." },
+    ]
+  },
+  {
+    id: "integrations",
+    title: "Integrations",
+    icon: Puzzle,
+    features: [
+      { title: "Google Analytics", description: "Track visitor behavior and traffic sources." },
+      { title: "Google Tag Manager", description: "Manage marketing tags without code changes." },
+      { title: "Live Chat Widgets", description: "Integrate popular live chat solutions." },
+      { title: "Push Notifications", description: "Send push notifications to users." },
+      { title: "Webhook Support", description: "Send event notifications to external services." },
+      { title: "Social Login", description: "Allow users to sign in with social accounts." },
+    ]
+  },
 ];
 
 export default function Features() {
-  const { t } = useLanguage();
-  
-  const features = [
-    {
-      icon: <Zap className="h-8 w-8" />,
-      title: "Lightning Fast",
-      description: "Get your orders processed instantly with our automated systems",
-      benefits: ["Instant order processing", "Real-time updates", "24/7 automation"]
-    },
-    {
-      icon: <Shield className="h-8 w-8" />,
-      title: "Enterprise Security",
-      description: "Bank-level security with SSL encryption and secure payment processing",
-      benefits: ["SSL encryption", "Secure payments", "Data protection"]
-    },
-    {
-      icon: <BarChart3 className="h-8 w-8" />,
-      title: "Advanced Analytics",
-      description: "Track your performance with detailed analytics and reporting",
-      benefits: ["Real-time dashboards", "Performance metrics", "Export reports"]
-    },
-    {
-      icon: <Palette className="h-8 w-8" />,
-      title: "Custom Branding",
-      description: "White-label solution with your own branding and domain",
-      benefits: ["Custom themes", "Your logo", "Custom domain"]
-    },
-    {
-      icon: <Users className="h-8 w-8" />,
-      title: "Multi-User Management",
-      description: "Manage different user roles and permissions efficiently",
-      benefits: ["Role-based access", "User permissions", "Team collaboration"]
-    },
-    {
-      icon: <Globe className="h-8 w-8" />,
-      title: "Global Reach",
-      description: "Support for multiple languages and currencies worldwide",
-      benefits: ["Multi-language", "Multiple currencies", "Global support"]
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeSection, setActiveSection] = useState("user-panel");
+
+  // Filter features based on search
+  const filteredCategories = useMemo(() => {
+    if (!searchQuery.trim()) return featureCategories;
+    
+    const query = searchQuery.toLowerCase();
+    return featureCategories.map(category => ({
+      ...category,
+      features: category.features.filter(
+        feature =>
+          feature.title.toLowerCase().includes(query) ||
+          feature.description.toLowerCase().includes(query)
+      )
+    })).filter(category => category.features.length > 0);
+  }, [searchQuery]);
+
+  // Track active section on scroll
+  useEffect(() => {
+    const handleScroll = () => {
+      const sections = featureCategories.map(cat => document.getElementById(cat.id));
+      const scrollPosition = window.scrollY + 150;
+
+      for (let i = sections.length - 1; i >= 0; i--) {
+        const section = sections[i];
+        if (section && section.offsetTop <= scrollPosition) {
+          setActiveSection(featureCategories[i].id);
+          break;
+        }
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const scrollToSection = (id: string) => {
+    const element = document.getElementById(id);
+    if (element) {
+      const offset = 100;
+      const top = element.offsetTop - offset;
+      window.scrollTo({ top, behavior: "smooth" });
     }
-  ];
-
-  // Use platformsData defined above
-
-  const stats = [
-    { number: "500K+", label: "Orders Delivered", icon: <CheckCircle className="h-6 w-6" /> },
-    { number: "99.9%", label: "Uptime", icon: <Clock className="h-6 w-6" /> },
-    { number: "10K+", label: "Happy Customers", icon: <Users className="h-6 w-6" /> },
-    { number: "24/7", label: "Support", icon: <Settings className="h-6 w-6" /> }
-  ];
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-secondary/10">
+    <div className="min-h-screen bg-background">
+      <Helmet>
+        <title>Features - HOME OF SMM | Complete SMM Panel Features</title>
+        <meta name="description" content="Explore all features of HOME OF SMM platform. User panel, services, payments, order processing, theme editor, SEO, reports, and more." />
+      </Helmet>
+      
       <Navigation />
       
       {/* Hero Section */}
-      <section className="pt-20 pb-16">
+      <section className="pt-24 pb-8 border-b border-border/50">
         <div className="container mx-auto px-4">
-          <div className="text-center max-w-4xl mx-auto mb-16">
-            <Badge className="mb-6 bg-gradient-primary text-primary-foreground">
-              <Zap className="w-4 h-4 mr-2" />
-              Feature Rich Platform
-            </Badge>
-            <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent mb-6">
-              Powerful Features for
-              <br />Your SMM Business
+          <div className="max-w-3xl">
+            <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
+              Explore all our features
             </h1>
-            <p className="text-xl text-muted-foreground mb-8">
-              Everything you need to build, manage, and scale your social media marketing panel
+            <p className="text-lg text-muted-foreground mb-8">
+              Check out the features listed below to learn more about the advantages of using our platform.
             </p>
-            <Button asChild size="lg" className="bg-gradient-primary hover:shadow-glow">
-              <Link to="/auth">
-                Start Free Trial <ArrowRight className="ml-2 h-5 w-5" />
-              </Link>
-            </Button>
-          </div>
-
-          {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-16">
-            {stats.map((stat, index) => (
-              <Card key={index} className="p-6 text-center bg-card/70 backdrop-blur-sm">
-                <div className="flex justify-center mb-3 text-primary">
-                  {stat.icon}
-                </div>
-                <div className="text-3xl font-bold text-primary mb-2">{stat.number}</div>
-                <div className="text-sm text-muted-foreground">{stat.label}</div>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Main Features */}
-      <section className="py-16">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4">Core Features</h2>
-            <p className="text-xl text-muted-foreground">
-              Built for performance, designed for growth
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {features.map((feature, index) => (
-              <Card key={index} className="p-8 bg-card/70 backdrop-blur-sm hover:bg-card/90 transition-all hover-scale">
-                <div className="text-primary mb-4">
-                  {feature.icon}
-                </div>
-                <h3 className="text-xl font-bold mb-3">{feature.title}</h3>
-                <p className="text-muted-foreground mb-6">{feature.description}</p>
-                <ul className="space-y-2">
-                  {feature.benefits.map((benefit, i) => (
-                    <li key={i} className="flex items-center gap-2 text-sm">
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                      {benefit}
-                    </li>
-                  ))}
-                </ul>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Supported Platforms */}
-      <section className="py-16 bg-muted/20">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4">Supported Platforms</h2>
-            <p className="text-xl text-muted-foreground">
-              Connect with all major social media platforms
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-6">
-            {platformsData.map((platform, index) => {
-              const IconComponent = platform.icon;
-              return (
-                <Card key={index} className="p-6 text-center bg-card/70 backdrop-blur-sm hover:bg-card/90 transition-all hover-scale group">
-                  <div className={`w-12 h-12 mx-auto mb-3 rounded-xl bg-gradient-to-br ${platform.gradient} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform`}>
-                    <IconComponent className="w-6 h-6 text-white" />
-                  </div>
-                  <div className="font-medium text-sm">{platform.name}</div>
-                </Card>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* Advanced Features */}
-      <section className="py-16">
-        <div className="container mx-auto px-4">
-          <div className="max-w-6xl mx-auto">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-              <div>
-                <Badge className="mb-6 bg-gradient-primary text-primary-foreground">
-                  <TrendingUp className="w-4 h-4 mr-2" />
-                  Advanced Features
-                </Badge>
-                <h2 className="text-4xl font-bold mb-6">
-                  Built for Scale & Performance
-                </h2>
-                <p className="text-lg text-muted-foreground mb-8">
-                  Our platform is designed to handle high-volume operations while maintaining
-                  the flexibility you need to customize your business.
-                </p>
-                
-                <div className="space-y-6">
-                  <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <DollarSign className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold mb-2">Flexible Pricing</h3>
-                      <p className="text-muted-foreground">Set your own prices and profit margins for each service</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <Smartphone className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold mb-2">Mobile Responsive</h3>
-                      <p className="text-muted-foreground">Fully optimized for mobile devices and tablets</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <Lock className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold mb-2">Secure API</h3>
-                      <p className="text-muted-foreground">RESTful API with authentication and rate limiting</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <Card className="p-8 bg-gradient-to-br from-primary/5 to-secondary/5">
-                <div className="text-center">
-                  <div className="w-16 h-16 bg-gradient-primary rounded-full flex items-center justify-center mx-auto mb-6">
-                    <BarChart3 className="h-8 w-8 text-primary-foreground" />
-                  </div>
-                  <h3 className="text-2xl font-bold mb-4">Real-time Dashboard</h3>
-                  <p className="text-muted-foreground mb-6">
-                    Monitor your business performance with live analytics and insights
-                  </p>
-                  <div className="grid grid-cols-2 gap-4 text-center">
-                    <div className="p-4 bg-card/50 rounded-lg">
-                      <div className="text-2xl font-bold text-primary">$24,890</div>
-                      <div className="text-sm text-muted-foreground">This Month</div>
-                    </div>
-                    <div className="p-4 bg-card/50 rounded-lg">
-                      <div className="text-2xl font-bold text-green-500">+23%</div>
-                      <div className="text-sm text-muted-foreground">Growth</div>
-                    </div>
-                  </div>
-                </div>
-              </Card>
+            
+            {/* Search */}
+            <div className="relative max-w-xl">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Search..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-12 h-12 text-base bg-muted/50 border-border/50"
+              />
             </div>
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-16 bg-gradient-to-r from-primary/10 to-secondary/10">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-4xl font-bold mb-4">Ready to Get Started?</h2>
-          <p className="text-xl text-muted-foreground mb-8">
-            Join thousands of businesses already using HOME OF SMM
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button asChild size="lg" className="bg-gradient-primary hover:shadow-glow">
-              <Link to="/auth">Start Free Trial</Link>
-            </Button>
-            <Button asChild variant="outline" size="lg">
-              <Link to="/contact">Contact Sales</Link>
-            </Button>
+      {/* Main Content */}
+      <div className="container mx-auto px-4 py-12">
+        <div className="flex gap-12">
+          {/* Feature List */}
+          <div className="flex-1 max-w-4xl">
+            {filteredCategories.map((category) => (
+              <section key={category.id} id={category.id} className="mb-16">
+                <h2 className="text-2xl font-bold text-foreground mb-6 flex items-center gap-3">
+                  <category.icon className="h-6 w-6 text-primary" />
+                  {category.title}
+                </h2>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {category.features.map((feature, index) => (
+                    <div
+                      key={index}
+                      className="p-5 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors border border-border/30"
+                    >
+                      <h3 className="font-semibold text-foreground mb-2">
+                        {feature.title}
+                      </h3>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        {feature.description}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ))}
+
+            {filteredCategories.length === 0 && (
+              <div className="text-center py-16">
+                <p className="text-muted-foreground text-lg">
+                  No features found matching "{searchQuery}"
+                </p>
+              </div>
+            )}
           </div>
+
+          {/* Sticky Sidebar Navigation */}
+          <aside className="hidden lg:block w-56 flex-shrink-0">
+            <nav className="sticky top-24">
+              <ul className="space-y-1">
+                {featureCategories.map((category) => {
+                  const isActive = activeSection === category.id;
+                  const hasResults = filteredCategories.some(c => c.id === category.id);
+                  
+                  return (
+                    <li key={category.id}>
+                      <button
+                        onClick={() => scrollToSection(category.id)}
+                        disabled={!hasResults}
+                        className={`
+                          w-full text-left px-4 py-2 rounded-lg text-sm font-medium transition-all
+                          ${isActive 
+                            ? "text-primary bg-primary/10" 
+                            : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                          }
+                          ${!hasResults ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}
+                        `}
+                      >
+                        {category.title}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </nav>
+          </aside>
         </div>
-      </section>
+      </div>
 
       <Footer />
     </div>
