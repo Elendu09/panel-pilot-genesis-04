@@ -270,6 +270,25 @@ const translations: Record<Language, Record<string, string>> = {
     'storefront.footer.termsOfService': 'Terms of Service',
     'storefront.footer.privacyPolicy': 'Privacy Policy',
     'storefront.footer.allRights': 'All rights reserved',
+    
+    // Default hero content (when panel owner hasn't customized)
+    'storefront.hero.defaultTitle': 'Boost Your Social Media',
+    'storefront.hero.defaultSubtitle': 'Get real followers, likes, and views at the lowest prices with instant delivery. Trusted by thousands of creators and businesses worldwide.',
+    'storefront.hero.defaultBadge': '#1 SMM Panel',
+    
+    // Default FAQ questions and answers
+    'storefront.faq.q1': 'How fast is the delivery?',
+    'storefront.faq.a1': 'Most orders start within 0-1 hour after payment confirmation. Delivery speed depends on the service type and quantity ordered. We offer drip-feed options for gradual delivery.',
+    'storefront.faq.q2': 'Are the followers/likes real?',
+    'storefront.faq.a2': 'We offer both real and premium services. Real services come from genuine accounts with activity history. Premium services provide high-quality engagement that looks natural.',
+    'storefront.faq.q3': 'What payment methods do you accept?',
+    'storefront.faq.a3': 'We accept multiple payment methods including PayPal, Credit/Debit Cards, Cryptocurrency (Bitcoin, USDT, ETH), and various local payment options depending on your country.',
+    'storefront.faq.q4': 'Is there a money-back guarantee?',
+    'storefront.faq.a4': 'Yes! If we fail to deliver your order or if there\'s an issue with the quality, we offer full refunds. Our customer support team will help resolve any issues within 24 hours.',
+    'storefront.faq.q5': 'Will my account get banned?',
+    'storefront.faq.a5': 'No. Our services are designed to be safe and comply with platform guidelines. We use gradual delivery and quality accounts to ensure your safety. We\'ve never had a customer banned.',
+    'storefront.faq.q6': 'Do you offer customer support?',
+    'storefront.faq.a6': 'Yes, we offer 24/7 customer support via live chat and ticket system. Our average response time is under 5 minutes. We\'re always here to help with any questions or issues.',
   },
   es: {
     // Navigation & Layout
@@ -522,6 +541,25 @@ const translations: Record<Language, Record<string, string>> = {
     'storefront.footer.termsOfService': 'Términos de Servicio',
     'storefront.footer.privacyPolicy': 'Política de Privacidad',
     'storefront.footer.allRights': 'Todos los derechos reservados',
+    
+    // Default hero content
+    'storefront.hero.defaultTitle': 'Impulsa Tus Redes Sociales',
+    'storefront.hero.defaultSubtitle': 'Obtén seguidores, likes y vistas reales a los precios más bajos con entrega instantánea. Confiado por miles de creadores y empresas en todo el mundo.',
+    'storefront.hero.defaultBadge': '#1 Panel SMM',
+    
+    // Default FAQ questions and answers
+    'storefront.faq.q1': '¿Qué tan rápida es la entrega?',
+    'storefront.faq.a1': 'La mayoría de los pedidos comienzan dentro de 0-1 hora después de la confirmación del pago. La velocidad de entrega depende del tipo de servicio y la cantidad ordenada.',
+    'storefront.faq.q2': '¿Los seguidores/likes son reales?',
+    'storefront.faq.a2': 'Ofrecemos servicios reales y premium. Los servicios reales provienen de cuentas genuinas con historial de actividad.',
+    'storefront.faq.q3': '¿Qué métodos de pago aceptan?',
+    'storefront.faq.a3': 'Aceptamos múltiples métodos de pago incluyendo PayPal, Tarjetas de Crédito/Débito, Criptomonedas (Bitcoin, USDT, ETH) y opciones de pago locales.',
+    'storefront.faq.q4': '¿Hay garantía de devolución?',
+    'storefront.faq.a4': '¡Sí! Si no entregamos tu pedido o hay problemas de calidad, ofrecemos reembolsos completos. Nuestro equipo resolverá cualquier problema en 24 horas.',
+    'storefront.faq.q5': '¿Mi cuenta será baneada?',
+    'storefront.faq.a5': 'No. Nuestros servicios están diseñados para ser seguros y cumplir con las directrices de las plataformas. Usamos entrega gradual para tu seguridad.',
+    'storefront.faq.q6': '¿Ofrecen soporte al cliente?',
+    'storefront.faq.a6': 'Sí, ofrecemos soporte 24/7 via chat en vivo y sistema de tickets. Nuestro tiempo de respuesta promedio es menos de 5 minutos.',
   },
   pt: {
     'nav.dashboard': 'Painel',
@@ -749,6 +787,25 @@ const translations: Record<Language, Record<string, string>> = {
     'storefront.footer.termsOfService': 'Termos de Serviço',
     'storefront.footer.privacyPolicy': 'Política de Privacidade',
     'storefront.footer.allRights': 'Todos os direitos reservados',
+    
+    // Default hero content
+    'storefront.hero.defaultTitle': 'Impulsione Suas Redes Sociais',
+    'storefront.hero.defaultSubtitle': 'Obtenha seguidores, curtidas e visualizações reais com os menores preços e entrega instantânea. Confiável por milhares de criadores e empresas.',
+    'storefront.hero.defaultBadge': '#1 Painel SMM',
+    
+    // Default FAQ questions and answers
+    'storefront.faq.q1': 'Qual a velocidade da entrega?',
+    'storefront.faq.a1': 'A maioria dos pedidos começa em 0-1 hora após confirmação do pagamento. A velocidade depende do tipo de serviço e quantidade pedida.',
+    'storefront.faq.q2': 'Os seguidores/curtidas são reais?',
+    'storefront.faq.a2': 'Oferecemos serviços reais e premium. Serviços reais vêm de contas genuínas com histórico de atividade.',
+    'storefront.faq.q3': 'Quais métodos de pagamento vocês aceitam?',
+    'storefront.faq.a3': 'Aceitamos múltiplos métodos incluindo PayPal, Cartões de Crédito/Débito, Criptomoedas (Bitcoin, USDT, ETH) e opções locais.',
+    'storefront.faq.q4': 'Há garantia de reembolso?',
+    'storefront.faq.a4': 'Sim! Se não entregarmos seu pedido ou houver problemas de qualidade, oferecemos reembolso total. Nossa equipe resolve qualquer problema em 24 horas.',
+    'storefront.faq.q5': 'Minha conta será banida?',
+    'storefront.faq.a5': 'Não. Nossos serviços são projetados para serem seguros e cumprir as diretrizes das plataformas. Usamos entrega gradual para sua segurança.',
+    'storefront.faq.q6': 'Vocês oferecem suporte ao cliente?',
+    'storefront.faq.a6': 'Sim, oferecemos suporte 24/7 via chat ao vivo e sistema de tickets. Nosso tempo médio de resposta é menos de 5 minutos.',
   },
   ar: {
     'nav.dashboard': 'لوحة التحكم',
@@ -976,6 +1033,25 @@ const translations: Record<Language, Record<string, string>> = {
     'storefront.footer.termsOfService': 'شروط الخدمة',
     'storefront.footer.privacyPolicy': 'سياسة الخصوصية',
     'storefront.footer.allRights': 'جميع الحقوق محفوظة',
+    
+    // Default hero content
+    'storefront.hero.defaultTitle': 'عزز وسائل التواصل الاجتماعي',
+    'storefront.hero.defaultSubtitle': 'احصل على متابعين وإعجابات ومشاهدات حقيقية بأقل الأسعار مع توصيل فوري. موثوق به من آلاف المبدعين والشركات.',
+    'storefront.hero.defaultBadge': '#1 لوحة SMM',
+    
+    // Default FAQ questions and answers
+    'storefront.faq.q1': 'ما مدى سرعة التوصيل؟',
+    'storefront.faq.a1': 'تبدأ معظم الطلبات خلال 0-1 ساعة بعد تأكيد الدفع. تعتمد سرعة التوصيل على نوع الخدمة والكمية المطلوبة.',
+    'storefront.faq.q2': 'هل المتابعون/الإعجابات حقيقية؟',
+    'storefront.faq.a2': 'نقدم خدمات حقيقية ومميزة. الخدمات الحقيقية تأتي من حسابات أصلية مع سجل نشاط.',
+    'storefront.faq.q3': 'ما طرق الدفع المقبولة؟',
+    'storefront.faq.a3': 'نقبل طرق دفع متعددة بما في ذلك PayPal وبطاقات الائتمان/الخصم والعملات المشفرة وخيارات الدفع المحلية.',
+    'storefront.faq.q4': 'هل يوجد ضمان استرداد الأموال؟',
+    'storefront.faq.a4': 'نعم! إذا فشلنا في تسليم طلبك أو كانت هناك مشكلة في الجودة، نقدم استرداد كامل. فريقنا يحل أي مشكلة خلال 24 ساعة.',
+    'storefront.faq.q5': 'هل سيتم حظر حسابي؟',
+    'storefront.faq.a5': 'لا. خدماتنا مصممة لتكون آمنة ومتوافقة مع إرشادات المنصات. نستخدم التوصيل التدريجي لضمان سلامتك.',
+    'storefront.faq.q6': 'هل تقدمون دعم العملاء؟',
+    'storefront.faq.a6': 'نعم، نقدم دعم 24/7 عبر الدردشة الحية ونظام التذاكر. متوسط وقت الاستجابة أقل من 5 دقائق.',
   },
   tr: {
     'nav.dashboard': 'Panel',
@@ -1515,6 +1591,25 @@ const translations: Record<Language, Record<string, string>> = {
     'storefront.footer.termsOfService': 'Conditions d\'Utilisation',
     'storefront.footer.privacyPolicy': 'Politique de Confidentialité',
     'storefront.footer.allRights': 'Tous droits réservés',
+    
+    // Default hero content
+    'storefront.hero.defaultTitle': 'Boostez Vos Réseaux Sociaux',
+    'storefront.hero.defaultSubtitle': 'Obtenez des abonnés, likes et vues réels aux prix les plus bas avec une livraison instantanée. Approuvé par des milliers de créateurs et entreprises.',
+    'storefront.hero.defaultBadge': '#1 Panel SMM',
+    
+    // Default FAQ questions and answers
+    'storefront.faq.q1': 'Quelle est la vitesse de livraison?',
+    'storefront.faq.a1': 'La plupart des commandes démarrent dans les 0-1 heure après confirmation du paiement. La vitesse dépend du type de service et de la quantité commandée.',
+    'storefront.faq.q2': 'Les abonnés/likes sont-ils réels?',
+    'storefront.faq.a2': 'Nous offrons des services réels et premium. Les services réels proviennent de comptes authentiques avec un historique d\'activité.',
+    'storefront.faq.q3': 'Quels modes de paiement acceptez-vous?',
+    'storefront.faq.a3': 'Nous acceptons plusieurs modes de paiement: PayPal, Cartes de Crédit/Débit, Cryptomonnaies (Bitcoin, USDT, ETH) et options locales.',
+    'storefront.faq.q4': 'Y a-t-il une garantie de remboursement?',
+    'storefront.faq.a4': 'Oui! Si nous échouons à livrer votre commande ou s\'il y a un problème de qualité, nous offrons un remboursement complet. Notre équipe résout tout problème sous 24 heures.',
+    'storefront.faq.q5': 'Mon compte sera-t-il banni?',
+    'storefront.faq.a5': 'Non. Nos services sont conçus pour être sûrs et conformes aux directives des plateformes. Nous utilisons une livraison progressive pour votre sécurité.',
+    'storefront.faq.q6': 'Offrez-vous un support client?',
+    'storefront.faq.a6': 'Oui, nous offrons un support 24/7 via chat en direct et système de tickets. Notre temps de réponse moyen est inférieur à 5 minutes.',
   },
   de: {
     'nav.dashboard': 'Dashboard',

@@ -43,6 +43,14 @@ const Storefront = () => {
   const [renderError, setRenderError] = useState<string | null>(null);
   const [isGuest, setIsGuest] = useState(true);
 
+  // Immediately update document title when panel loads (before React Helmet)
+  useEffect(() => {
+    if (panel) {
+      const seoTitle = (panel.settings as any)?.seo_title || `${panel.name} - SMM Panel`;
+      document.title = seoTitle;
+    }
+  }, [panel]);
+
   // Check if user is logged in (guest check)
   useEffect(() => {
     const checkAuth = async () => {
@@ -73,9 +81,16 @@ const Storefront = () => {
   const customBranding = panel?.custom_branding as any;
   const selectedTheme = customBranding?.selectedTheme || themeType;
 
-  // Skip loading state - render immediately with defaults if still loading
+  // Show minimal loading skeleton while tenant loads
   if (tenantLoading) {
-    return null; // Let the theme render with defaults
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="animate-pulse flex flex-col items-center gap-4">
+          <div className="w-16 h-16 bg-slate-700 rounded-full"></div>
+          <div className="h-4 w-32 bg-slate-700 rounded"></div>
+        </div>
+      </div>
+    );
   }
 
   if (tenantError || !panel) {
