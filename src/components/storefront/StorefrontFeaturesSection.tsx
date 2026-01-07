@@ -328,7 +328,7 @@ export const StorefrontFeaturesSection = ({ customization = {} }: StorefrontFeat
             { icon: QrCode, title: t('storefront.features.discountCodes'), desc: t('storefront.features.discountDesc'), gradient: "from-blue-500 to-cyan-500" },
             { icon: MessageSquare, title: t('storefront.features.support247'), desc: t('storefront.features.supportDesc'), gradient: "from-purple-500 to-pink-500" },
             { icon: Droplets, title: t('storefront.features.dripFeed'), desc: t('storefront.features.dripFeedDesc'), gradient: "from-green-500 to-emerald-500" },
-            { icon: Zap, title: t('storefront.features.instantStart'), desc: t('storefront.features.instantDesc'), gradient: "from-amber-500 to-orange-500" },
+            { icon: Zap, title: t('storefront.features.optimizedStart'), desc: t('storefront.features.optimizedDesc'), gradient: "from-amber-500 to-orange-500" },
           ].map((feature, index) => (
             <motion.div
               key={feature.title}
