@@ -47,6 +47,7 @@ interface PanelSettings {
   floating_chat_whatsapp?: string;
   floating_chat_telegram?: string;
   floating_chat_enabled?: boolean;
+  blog_enabled?: boolean;
 }
 
 const BuyerLayout = ({ children }: BuyerLayoutProps) => {
@@ -64,7 +65,7 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
       if (!panel?.id) return;
       const { data } = await supabase
         .from('panel_settings')
-        .select('floating_chat_whatsapp, floating_chat_telegram, floating_chat_enabled')
+        .select('floating_chat_whatsapp, floating_chat_telegram, floating_chat_enabled, blog_enabled')
         .eq('panel_id', panel.id)
         .single();
       if (data) setPanelSettings(data);
@@ -127,7 +128,7 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
   };
 
   const whatsappNumber = panelSettings?.floating_chat_whatsapp;
-
+  const blogEnabled = panelSettings?.blog_enabled ?? false;
   return (
     <BuyerThemeWrapper panelId={panel?.id}>
       <TenantHead />
@@ -383,16 +384,18 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
                           </div>
                           <span className="text-xs font-medium text-center">{t('nav.bulk_order')}</span>
                         </Link>
-                        <Link
-                          to="/blog"
-                          onClick={() => setMobileMenuOpen(false)}
-                          className="flex flex-col items-center gap-2 p-4 rounded-xl bg-muted/50 hover:bg-muted transition-all border border-border/50"
-                        >
-                          <div className="p-2 rounded-lg bg-blue-500/10">
-                            <BookOpen className="w-5 h-5 text-blue-500" />
-                          </div>
-                          <span className="text-xs font-medium text-center">{t('nav.blog')}</span>
-                        </Link>
+                        {blogEnabled && (
+                          <Link
+                            to="/blog"
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="flex flex-col items-center gap-2 p-4 rounded-xl bg-muted/50 hover:bg-muted transition-all border border-border/50"
+                          >
+                            <div className="p-2 rounded-lg bg-blue-500/10">
+                              <BookOpen className="w-5 h-5 text-blue-500" />
+                            </div>
+                            <span className="text-xs font-medium text-center">{t('nav.blog')}</span>
+                          </Link>
+                        )}
                         <Link
                           to="/api"
                           onClick={() => setMobileMenuOpen(false)}
@@ -413,7 +416,7 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
                           className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-all"
                         >
                           <HeadphonesIcon className="w-5 h-5 text-muted-foreground" />
-                          <span className="font-medium">Support</span>
+                          <span className="font-medium">{t('nav.support')}</span>
                         </Link>
                         <Link
                           to="/favorites"
@@ -421,7 +424,7 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
                           className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-all"
                         >
                           <Heart className="w-5 h-5 text-muted-foreground" />
-                          <span className="font-medium">Favorites</span>
+                          <span className="font-medium">{t('nav.favorites')}</span>
                         </Link>
                         <Link
                           to="/track-order"
@@ -429,7 +432,7 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
                           className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-all"
                         >
                           <Search className="w-5 h-5 text-muted-foreground" />
-                          <span className="font-medium">Track Order</span>
+                          <span className="font-medium">{t('nav.track_order')}</span>
                         </Link>
                         <Link
                           to="/profile"
@@ -437,7 +440,7 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
                           className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-all"
                         >
                           <User className="w-5 h-5 text-muted-foreground" />
-                          <span className="font-medium">Profile</span>
+                          <span className="font-medium">{t('nav.profile')}</span>
                         </Link>
                         <button
                           onClick={() => {
@@ -448,7 +451,7 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
                           className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-all w-full text-left"
                         >
                           <Sparkles className="w-5 h-5 text-primary" />
-                          <span className="font-medium text-primary">Take a Tour</span>
+                          <span className="font-medium text-primary">{t('nav.take_tour')}</span>
                         </button>
                         <Link
                           to="/terms"
@@ -456,7 +459,7 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
                           className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-all"
                         >
                           <FileText className="w-5 h-5 text-muted-foreground" />
-                          <span className="font-medium">Terms of Service</span>
+                          <span className="font-medium">{t('nav.terms')}</span>
                         </Link>
                         <Link
                           to="/privacy"
@@ -464,11 +467,10 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
                           className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-all"
                         >
                           <FileText className="w-5 h-5 text-muted-foreground" />
-                          <span className="font-medium">Privacy Policy</span>
+                          <span className="font-medium">{t('nav.privacy')}</span>
                         </Link>
                       </div>
 
-                      {/* Sign Out */}
                       <Button 
                         variant="outline" 
                         className="w-full mt-4 gap-2" 
@@ -478,7 +480,7 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
                         }}
                       >
                         <LogOut className="w-4 h-4" />
-                        Sign Out
+                        {t('nav.logout')}
                       </Button>
                     </div>
                   </SheetContent>

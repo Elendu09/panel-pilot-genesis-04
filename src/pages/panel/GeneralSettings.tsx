@@ -10,6 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ImageUpload } from "@/components/panel/ImageUpload";
+import { LegalContentEditor } from "@/components/settings/LegalContentEditor";
 import {
   Accordion,
   AccordionContent,
@@ -1172,76 +1173,21 @@ const GeneralSettings = () => {
             </div>
           </AccordionTrigger>
           <AccordionContent className="px-6 pb-6">
-            <div className="space-y-6 pt-2">
+            <div className="space-y-4 pt-2">
               <div className="p-4 rounded-lg bg-info/10 border border-info/20">
                 <p className="text-sm text-info">
                   These pages are displayed to your customers. Use clear, professional language. 
-                  Markdown formatting is supported (headings, lists, bold text).
+                  Click "Use Template" to load compliant default content that you can customize.
                 </p>
               </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="termsOfService">Terms of Service</Label>
-                  <Badge variant="outline" className="text-xs">
-                    {settings.termsOfService.length} characters
-                  </Badge>
-                </div>
-                <Textarea
-                  id="termsOfService"
-                  value={settings.termsOfService}
-                  onChange={(e) =>
-                    setSettings({ ...settings, termsOfService: e.target.value })
-                  }
-                  rows={12}
-                  placeholder="Enter your terms of service content...
-
-Example:
-# Terms of Service
-
-Welcome to our platform. By using our services, you agree to these terms.
-
-## Service Description
-We provide social media marketing services including followers, likes, views, and engagement.
-
-## User Responsibilities
-- Provide accurate account information
-- Use services in compliance with platform terms
-..."
-                  className="font-mono text-sm"
-                />
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="privacyPolicy">Privacy Policy</Label>
-                  <Badge variant="outline" className="text-xs">
-                    {settings.privacyPolicy.length} characters
-                  </Badge>
-                </div>
-                <Textarea
-                  id="privacyPolicy"
-                  value={settings.privacyPolicy}
-                  onChange={(e) =>
-                    setSettings({ ...settings, privacyPolicy: e.target.value })
-                  }
-                  rows={12}
-                  placeholder="Enter your privacy policy content...
-
-Example:
-# Privacy Policy
-
-We respect your privacy and are committed to protecting your personal data.
-
-## Information We Collect
-- Account information (email, username)
-- Transaction history and order details
-
-## How We Use Your Information
-- To process your orders and transactions
-- To provide customer support
-..."
-                  className="font-mono text-sm"
-                />
-              </div>
+              <LegalContentEditor
+                termsOfService={settings.termsOfService}
+                privacyPolicy={settings.privacyPolicy}
+                panelName={settings.panelName || 'Your Panel'}
+                supportEmail={settings.supportEmail}
+                onTermsChange={(value) => setSettings({ ...settings, termsOfService: value })}
+                onPrivacyChange={(value) => setSettings({ ...settings, privacyPolicy: value })}
+              />
             </div>
           </AccordionContent>
         </AccordionItem>
