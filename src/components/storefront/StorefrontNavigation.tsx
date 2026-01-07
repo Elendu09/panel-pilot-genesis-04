@@ -117,27 +117,29 @@ export const StorefrontNavigation = memo(({ panel, customization = {} }: Storefr
   }, [signOut, navigate]);
 
   return (
-    <motion.nav 
-      className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl"
-      style={{ 
-        backgroundColor: themeMode === 'dark' ? `${surfaceColor}E6` : `${surfaceColor}F2`,
-        borderBottom: `1px solid ${borderColor}`
-      }}
-      initial={{ y: -100 }}
-      animate={{ y: 0 }}
-      transition={{ duration: 0.5, ease: "easeOut" }}
-    >
-      <div className="container mx-auto px-4">
+    <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl" style={{ 
+      backgroundColor: themeMode === 'dark' ? `${surfaceColor}E6` : `${surfaceColor}F2`,
+      borderBottom: `1px solid ${borderColor}`
+    }}>
+      <motion.nav 
+        className="container mx-auto px-4"
+        aria-label="Storefront navigation"
+        initial={{ y: -100 }}
+        animate={{ y: 0 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+      >
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-3">
-          <motion.img 
-            src={logoUrl || '/default-panel-favicon.png'} 
-            alt={panelName} 
-            className="w-9 h-9 rounded-lg object-cover"
-            whileHover={{ scale: 1.1, rotate: 5 }}
-            transition={{ type: "spring", stiffness: 400 }}
-          />
+          <Link to="/" className="flex items-center space-x-3" aria-label={`${panelName} - Go to homepage`}>
+            <motion.img 
+              src={logoUrl || '/default-panel-favicon.png'} 
+              alt={`${panelName} Logo - SMM Panel Services`}
+              className="w-9 h-9 rounded-lg object-cover"
+              width="36"
+              height="36"
+              whileHover={{ scale: 1.1, rotate: 5 }}
+              transition={{ type: "spring", stiffness: 400 }}
+            />
             <span 
               className="text-xl font-bold bg-clip-text text-transparent"
               style={{ 
@@ -149,18 +151,19 @@ export const StorefrontNavigation = memo(({ panel, customization = {} }: Storefr
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
-          {navLinks.map((link, index) => (
-              <NavLink 
-                key={link.href}
-                link={link}
-                index={index}
-                textMuted={textMuted}
-                textColor={textColor}
-                onClick={handleNavClick}
-              />
+          <ul className="hidden md:flex items-center space-x-8 list-none" role="menubar">
+            {navLinks.map((link, index) => (
+              <li key={link.href} role="none">
+                <NavLink 
+                  link={link}
+                  index={index}
+                  textMuted={textMuted}
+                  textColor={textColor}
+                  onClick={handleNavClick}
+                />
+              </li>
             ))}
-          </div>
+          </ul>
 
           {/* Desktop Actions */}
           <div className="hidden md:flex items-center space-x-3">
@@ -384,8 +387,8 @@ export const StorefrontNavigation = memo(({ panel, customization = {} }: Storefr
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
-    </motion.nav>
+      </motion.nav>
+    </header>
   );
 });
 StorefrontNavigation.displayName = 'StorefrontNavigation';
