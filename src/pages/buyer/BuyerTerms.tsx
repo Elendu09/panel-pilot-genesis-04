@@ -203,7 +203,7 @@ const BuyerTerms = () => {
             <div>
               <h1 className="text-2xl font-bold">{t('nav.terms')}</h1>
               <p className="text-sm text-muted-foreground">
-                Please read these terms carefully before using our services
+                {t('legal.terms_subtitle') || 'Please read these terms carefully before using our services'}
               </p>
             </div>
           </div>
@@ -214,7 +214,7 @@ const BuyerTerms = () => {
             className="print:hidden gap-2"
           >
             <Printer className="w-4 h-4" />
-            Print
+            {t('common.print') || 'Print'}
           </Button>
         </div>
 
@@ -240,7 +240,7 @@ const BuyerTerms = () => {
                   </div>
                   <div>
                     <h2 className="font-semibold">{panel?.name || 'Panel'}</h2>
-                    <p className="text-sm text-muted-foreground">Terms of Service</p>
+                    <p className="text-sm text-muted-foreground">{t('nav.terms')}</p>
                   </div>
                 </div>
 
@@ -287,7 +287,7 @@ const BuyerTerms = () => {
 
             {/* Footer */}
             <p className="text-center text-xs text-muted-foreground mt-6 print:mt-8">
-              Last updated: {lastUpdated}
+              {t('legal.last_updated') || 'Last updated'}: {lastUpdated}
             </p>
           </div>
         </div>
