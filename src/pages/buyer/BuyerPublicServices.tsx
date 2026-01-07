@@ -44,12 +44,18 @@ const BuyerPublicServices = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  const [mounted, setMounted] = useState(false);
   
   // Fast Order prefill state
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [prefilledService, setPrefilledService] = useState<any>(null);
   const [prefilledQuantity, setPrefilledQuantity] = useState<number>(1000);
   const [prefilledUrl, setPrefilledUrl] = useState<string>("");
+
+  // Mount guard for hydration
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Fetch services for this panel
   const { data: services = [], isLoading } = useQuery({
@@ -181,32 +187,33 @@ const BuyerPublicServices = () => {
   return (
     <BuyerThemeWrapper panelId={panelId}>
       <div className="min-h-screen bg-background">
-      {/* Header - Guest Mode */}
+      {/* Header - Guest Mode - Responsive */}
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-xl border-b border-border">
         <div className="container mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Button variant="ghost" size="sm" asChild>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <Button variant="ghost" size="icon" className="shrink-0 h-9 w-9" asChild>
                 <Link to="/">
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  {t('common.back')}
+                  <ArrowLeft className="w-4 h-4" />
                 </Link>
               </Button>
-              <h1 className="text-lg font-bold hidden sm:block">{t('services.title')}</h1>
+              <h1 className="text-base sm:text-lg font-bold truncate">{t('services.title')}</h1>
             </div>
-            <div className="flex items-center gap-2">
-              <LanguageSelector />
-              <CurrencySelector />
+            <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+              <div className="hidden sm:flex items-center gap-1">
+                <LanguageSelector />
+                <CurrencySelector />
+              </div>
               <ThemeToggle />
-              <Button asChild size="sm" variant="outline">
+              <Button asChild size="sm" variant="outline" className="hidden sm:inline-flex">
                 <Link to="/auth">
                   {t('auth.sign_in')}
                 </Link>
               </Button>
-              <Button asChild size="sm">
+              <Button asChild size="sm" className="text-xs sm:text-sm">
                 <Link to="/auth?tab=signup">
-                  <UserPlus className="w-4 h-4 mr-2" />
-                  {t('auth.sign_up')}
+                  <UserPlus className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">{t('auth.sign_up')}</span>
                 </Link>
               </Button>
             </div>
@@ -214,7 +221,8 @@ const BuyerPublicServices = () => {
         </div>
       </header>
 
-      {/* Promotional Banner - Enhanced for Guest Conversion */}
+      {/* Promotional Banner - Only show after mount to prevent hydration flash */}
+      {mounted && (
       <motion.div 
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -298,6 +306,7 @@ const BuyerPublicServices = () => {
           </motion.div>
         </div>
       </motion.div>
+      )}
 
       <main className="container mx-auto px-4 py-6">
         {/* Search and Filters */}

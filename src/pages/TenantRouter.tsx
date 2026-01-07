@@ -87,14 +87,36 @@ const TenantRouter = () => {
     }
   }, [isTenantDomain]);
 
-  // Skip loading UI - render nothing briefly for instant page loads
+  // Show skeleton for tenant domains during loading - prevents blank screen
   if (loading && !loadingTimeout) {
     // For platform domains, render App immediately (optimistic)
     if (isPlatformDomain) {
       return <App />;
     }
-    // For tenant domains, render nothing briefly - content loads fast with caching
-    return null;
+    // For tenant domains, show skeleton immediately to prevent blank screen
+    return (
+      <div className="min-h-screen bg-slate-900">
+        {/* Navigation skeleton */}
+        <div className="h-16 border-b border-slate-800 px-4 flex items-center justify-between">
+          <div className="w-32 h-8 bg-slate-800 rounded animate-pulse" />
+          <div className="flex gap-4">
+            <div className="w-20 h-8 bg-slate-800 rounded animate-pulse" />
+            <div className="w-20 h-8 bg-slate-800 rounded animate-pulse" />
+          </div>
+        </div>
+        
+        {/* Hero skeleton */}
+        <div className="flex flex-col items-center justify-center pt-24 px-4">
+          <div className="w-40 h-6 bg-slate-800 rounded-full animate-pulse mb-6" />
+          <div className="w-80 max-w-full h-12 bg-slate-800 rounded animate-pulse mb-4" />
+          <div className="w-64 max-w-full h-8 bg-slate-800 rounded animate-pulse mb-8" />
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="w-32 h-12 bg-slate-800 rounded-full animate-pulse" />
+            <div className="w-32 h-12 bg-slate-800 rounded-full animate-pulse" />
+          </div>
+        </div>
+      </div>
+    );
   }
 
   // Show error if loading timed out

@@ -667,6 +667,34 @@
   background-size: 50px 50px;
 }
 
+/* Stroke Grid Background - Works in light and dark modes */
+.bg-grid-stroke {
+  background-image: 
+    linear-gradient(hsl(var(--border) / 0.15) 1px, transparent 1px),
+    linear-gradient(90deg, hsl(var(--border) / 0.15) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+.light .bg-grid-stroke {
+  background-image: 
+    linear-gradient(hsl(var(--border) / 0.25) 1px, transparent 1px),
+    linear-gradient(90deg, hsl(var(--border) / 0.25) 1px, transparent 1px);
+}
+
+/* Feature card with inner stroke */
+.feature-card-stroke {
+  box-shadow: inset 0 0 0 1px hsl(var(--border) / 0.4);
+}
+
+.light .feature-card-stroke {
+  box-shadow: inset 0 0 0 1px hsl(var(--border) / 0.6);
+}
+
+/* Scroll margin for TOC navigation */
+.scroll-mt-header {
+  scroll-margin-top: 100px;
+}
+
 /* Shimmer/Shine Effect */
 .shimmer-effect {
   background: linear-gradient(

@@ -33,6 +33,12 @@ export const LegalTableOfContents = ({
   }, []);
 
   const handleClick = (id: string) => {
+    const element = document.getElementById(id);
+    if (element) {
+      const offset = 100; // Account for sticky header
+      const y = element.getBoundingClientRect().top + window.scrollY - offset;
+      window.scrollTo({ top: y, behavior: "smooth" });
+    }
     onSectionClick(id);
     if (isMobile) setIsExpanded(false);
   };

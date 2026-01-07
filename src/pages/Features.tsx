@@ -1,8 +1,10 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Helmet } from "react-helmet-async";
 import { Navigation } from "@/components/layout/Navigation";
 import { Footer } from "@/components/layout/Footer";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { 
   Search,
   Users,
@@ -15,8 +17,13 @@ import {
   Server,
   Puzzle,
   FileText,
-  Layers
+  Layers,
+  ChevronDown,
+  ChevronUp,
+  List
 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
 
 // Feature categories with all features
 const featureCategories = [
@@ -193,6 +200,8 @@ const featureCategories = [
 export default function Features() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeSection, setActiveSection] = useState("user-panel");
+  const [isMobileTocOpen, setIsMobileTocOpen] = useState(false);
+  const sectionRefs = useRef<Map<string, HTMLElement>>(new Map());
 
   // Filter features based on search
   const filteredCategories = useMemo(() => {
@@ -209,36 +218,48 @@ export default function Features() {
     })).filter(category => category.features.length > 0);
   }, [searchQuery]);
 
-  // Track active section on scroll
+  // IntersectionObserver for accurate active section tracking
   useEffect(() => {
-    const handleScroll = () => {
-      const sections = featureCategories.map(cat => document.getElementById(cat.id));
-      const scrollPosition = window.scrollY + 150;
+    const observers: IntersectionObserver[] = [];
 
-      for (let i = sections.length - 1; i >= 0; i--) {
-        const section = sections[i];
-        if (section && section.offsetTop <= scrollPosition) {
-          setActiveSection(featureCategories[i].id);
-          break;
-        }
+    featureCategories.forEach(cat => {
+      const element = document.getElementById(cat.id);
+      if (element) {
+        const observer = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              if (entry.isIntersecting) {
+                setActiveSection(cat.id);
+              }
+            });
+          },
+          {
+            rootMargin: '-100px 0px -60% 0px',
+            threshold: 0,
+          }
+        );
+        observer.observe(element);
+        observers.push(observer);
       }
-    };
+    });
 
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    return () => {
+      observers.forEach(obs => obs.disconnect());
+    };
   }, []);
 
   const scrollToSection = (id: string) => {
     const element = document.getElementById(id);
     if (element) {
       const offset = 100;
-      const top = element.offsetTop - offset;
-      window.scrollTo({ top, behavior: "smooth" });
+      const y = element.getBoundingClientRect().top + window.scrollY - offset;
+      window.scrollTo({ top: y, behavior: "smooth" });
+      setIsMobileTocOpen(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background bg-grid-stroke">
       <Helmet>
         <title>Features - HOME OF SMM | Complete SMM Panel Features</title>
         <meta name="description" content="Explore all features of HOME OF SMM platform. User panel, services, payments, order processing, theme editor, SEO, reports, and more." />
@@ -272,13 +293,66 @@ export default function Features() {
         </div>
       </section>
 
+      {/* Mobile TOC */}
+      <div className="lg:hidden sticky top-16 z-30 bg-background/95 backdrop-blur-xl border-b border-border/50">
+        <div className="container mx-auto px-4">
+          <Button
+            variant="ghost"
+            className="w-full justify-between py-4 h-auto"
+            onClick={() => setIsMobileTocOpen(!isMobileTocOpen)}
+          >
+            <span className="flex items-center gap-2 font-medium">
+              <List className="w-4 h-4" />
+              Table of Contents
+            </span>
+            {isMobileTocOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </Button>
+          
+          <motion.div
+            initial={false}
+            animate={{ height: isMobileTocOpen ? "auto" : 0, opacity: isMobileTocOpen ? 1 : 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <nav className="pb-4 space-y-1">
+              {featureCategories.map((category, index) => {
+                const isActive = activeSection === category.id;
+                const hasResults = filteredCategories.some(c => c.id === category.id);
+                
+                return (
+                  <button
+                    key={category.id}
+                    onClick={() => scrollToSection(category.id)}
+                    disabled={!hasResults}
+                    className={cn(
+                      "w-full text-left px-4 py-2.5 rounded-lg text-sm transition-all flex items-center gap-2",
+                      isActive 
+                        ? "bg-primary/10 text-primary font-medium" 
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
+                      !hasResults && "opacity-40 cursor-not-allowed"
+                    )}
+                  >
+                    <span className="text-xs text-muted-foreground/70 w-5">{index + 1}.</span>
+                    {category.title}
+                  </button>
+                );
+              })}
+            </nav>
+          </motion.div>
+        </div>
+      </div>
+
       {/* Main Content */}
       <div className="container mx-auto px-4 py-12">
         <div className="flex gap-12">
           {/* Feature List */}
           <div className="flex-1 max-w-4xl">
             {filteredCategories.map((category) => (
-              <section key={category.id} id={category.id} className="mb-16">
+              <section 
+                key={category.id} 
+                id={category.id} 
+                className="mb-16 scroll-mt-header"
+              >
                 <h2 className="text-2xl font-bold text-foreground mb-6 flex items-center gap-3">
                   <category.icon className="h-6 w-6 text-primary" />
                   {category.title}
@@ -286,9 +360,13 @@ export default function Features() {
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {category.features.map((feature, index) => (
-                    <div
+                    <motion.div
                       key={index}
-                      className="p-5 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors border border-border/30"
+                      initial={{ opacity: 0, y: 10 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true, margin: "-50px" }}
+                      transition={{ duration: 0.3, delay: index * 0.03 }}
+                      className="p-5 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors border border-border/30 feature-card-stroke"
                     >
                       <h3 className="font-semibold text-foreground mb-2">
                         {feature.title}
@@ -296,7 +374,7 @@ export default function Features() {
                       <p className="text-sm text-muted-foreground leading-relaxed">
                         {feature.description}
                       </p>
-                    </div>
+                    </motion.div>
                   ))}
                 </div>
               </section>
@@ -311,11 +389,15 @@ export default function Features() {
             )}
           </div>
 
-          {/* Sticky Sidebar Navigation */}
+          {/* Sticky Sidebar Navigation - Desktop */}
           <aside className="hidden lg:block w-56 flex-shrink-0">
-            <nav className="sticky top-24">
-              <ul className="space-y-1">
-                {featureCategories.map((category) => {
+            <nav className="sticky top-24 rounded-xl border border-border/50 bg-card/50 backdrop-blur-sm p-4">
+              <h3 className="font-semibold mb-3 flex items-center gap-2 text-sm">
+                <List className="w-4 h-4" />
+                Table of Contents
+              </h3>
+              <ul className="space-y-0.5 max-h-[calc(100vh-200px)] overflow-y-auto pr-2">
+                {featureCategories.map((category, index) => {
                   const isActive = activeSection === category.id;
                   const hasResults = filteredCategories.some(c => c.id === category.id);
                   
@@ -324,15 +406,15 @@ export default function Features() {
                       <button
                         onClick={() => scrollToSection(category.id)}
                         disabled={!hasResults}
-                        className={`
-                          w-full text-left px-4 py-2 rounded-lg text-sm font-medium transition-all
-                          ${isActive 
-                            ? "text-primary bg-primary/10" 
-                            : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                          }
-                          ${!hasResults ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}
-                        `}
+                        className={cn(
+                          "w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2",
+                          isActive 
+                            ? "text-primary bg-primary/10 border-l-2 border-primary" 
+                            : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
+                          !hasResults && "opacity-40 cursor-not-allowed"
+                        )}
                       >
+                        <span className="text-xs text-muted-foreground/70 w-4">{index + 1}.</span>
                         {category.title}
                       </button>
                     </li>

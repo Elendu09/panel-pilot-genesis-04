@@ -81,13 +81,37 @@ const Storefront = () => {
   const customBranding = panel?.custom_branding as any;
   const selectedTheme = customBranding?.selectedTheme || themeType;
 
-  // Show minimal loading skeleton while tenant loads
+  // Show enhanced loading skeleton while tenant loads - prevents blank screen
   if (tenantLoading) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-        <div className="animate-pulse flex flex-col items-center gap-4">
-          <div className="w-16 h-16 bg-slate-700 rounded-full"></div>
-          <div className="h-4 w-32 bg-slate-700 rounded"></div>
+      <div className="min-h-screen bg-slate-900">
+        {/* Navigation skeleton */}
+        <div className="h-16 border-b border-slate-800 px-4 flex items-center justify-between">
+          <div className="w-32 h-8 bg-slate-800 rounded animate-pulse" />
+          <div className="flex gap-4">
+            <div className="w-20 h-8 bg-slate-800 rounded animate-pulse" />
+            <div className="w-20 h-8 bg-slate-800 rounded animate-pulse" />
+          </div>
+        </div>
+        
+        {/* Hero skeleton */}
+        <div className="flex flex-col items-center justify-center pt-24 px-4">
+          <div className="w-40 h-6 bg-slate-800 rounded-full animate-pulse mb-6" />
+          <div className="w-80 max-w-full h-12 bg-slate-800 rounded animate-pulse mb-4" />
+          <div className="w-64 max-w-full h-8 bg-slate-800 rounded animate-pulse mb-8" />
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="w-32 h-12 bg-slate-800 rounded-full animate-pulse" />
+            <div className="w-32 h-12 bg-slate-800 rounded-full animate-pulse" />
+          </div>
+        </div>
+        
+        {/* Features skeleton */}
+        <div className="container mx-auto px-4 mt-16">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="h-24 bg-slate-800/50 rounded-xl animate-pulse" />
+            ))}
+          </div>
         </div>
       </div>
     );

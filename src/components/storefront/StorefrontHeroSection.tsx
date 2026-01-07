@@ -141,7 +141,7 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
   ];
 
   return (
-    <section className="relative min-h-screen overflow-hidden">
+    <section className="relative min-h-[70vh] md:min-h-[80vh] lg:min-h-screen overflow-hidden pb-8 md:pb-12">
       {/* Floating Particles - Reduced count for performance */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none hidden md:block">
         {[...Array(8)].map((_, i) => (
