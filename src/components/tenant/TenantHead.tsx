@@ -17,13 +17,12 @@ export const TenantHead = ({ title, description }: TenantHeadProps) => {
   const ogImage = customBranding?.ogImageUrl || panel?.logo_url;
   
   // Force favicon update via DOM manipulation (overrides index.html)
+  // Always apply default favicon for tenant domains, even if panel is loading
   useEffect(() => {
-    if (!panel) return;
-    
     // Remove all existing favicon links
     document.querySelectorAll('link[rel*="icon"], link[rel="apple-touch-icon"]').forEach(el => el.remove());
     
-    // Add new favicon
+    // Add new favicon (defaults to default-panel-favicon.png if no custom favicon)
     const favicon = document.createElement('link');
     favicon.rel = 'icon';
     favicon.type = faviconUrl.endsWith('.ico') ? 'image/x-icon' : 'image/png';
@@ -35,7 +34,7 @@ export const TenantHead = ({ title, description }: TenantHeadProps) => {
     appleIcon.rel = 'apple-touch-icon';
     appleIcon.href = appleTouchIconUrl;
     document.head.appendChild(appleIcon);
-  }, [panel?.id, faviconUrl, appleTouchIconUrl]);
+  }, [faviconUrl, appleTouchIconUrl]);
   
   const pageTitle = title || (panel?.settings as any)?.seo_title || `${panel?.name || 'Panel'} - SMM Panel`;
   const pageDescription = description || (panel?.settings as any)?.seo_description || `Professional SMM services from ${panel?.name}`;
