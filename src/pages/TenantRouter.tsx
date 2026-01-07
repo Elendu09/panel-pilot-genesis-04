@@ -119,9 +119,9 @@ const TenantRouter = () => {
 
   // If this is a tenant domain and we found a panel, show PUBLIC storefront first
   if (isTenantDomain && panel) {
-    // Get favicon URL - use panel's custom favicon -> logo -> default
+    // Get favicon URL - use panel's custom favicon -> default (NOT logo_url as that's the brand logo)
     const customBranding = panel.custom_branding as any;
-    const faviconUrl = customBranding?.faviconUrl || panel.logo_url || '/default-panel-favicon.png';
+    const faviconUrl = customBranding?.faviconUrl || '/default-panel-favicon.png';
     const appleTouchIconUrl = customBranding?.appleTouchIconUrl || faviconUrl;
 
     // Force favicon update via DOM manipulation (overrides index.html)
