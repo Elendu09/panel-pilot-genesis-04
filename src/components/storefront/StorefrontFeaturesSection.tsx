@@ -98,7 +98,7 @@ export const StorefrontFeaturesSection = ({ customization = {} }: StorefrontFeat
       />
 
       {/* Header */}
-      <header className="container mx-auto px-4 text-center mb-16 relative z-10">
+      <div className="container mx-auto px-4 text-center mb-16 relative z-10">
         <motion.div
           initial={{ opacity: 0, scale: 0.8 }}
           whileInView={{ opacity: 1, scale: 1 }}
@@ -110,7 +110,7 @@ export const StorefrontFeaturesSection = ({ customization = {} }: StorefrontFeat
             borderColor: `${customization.primaryColor || '#8B5CF6'}30`
           }}
         >
-          <Zap className="w-4 h-4" style={{ color: customization.primaryColor || '#8B5CF6' }} aria-hidden="true" />
+          <Zap className="w-4 h-4" style={{ color: customization.primaryColor || '#8B5CF6' }} />
           <span className="text-sm font-medium" style={{ color: customization.primaryColor || '#8B5CF6' }}>{t('storefront.features.badge')}</span>
         </motion.div>
 
@@ -129,10 +129,7 @@ export const StorefrontFeaturesSection = ({ customization = {} }: StorefrontFeat
             {t('storefront.features.title')}
           </span>
         </motion.h2>
-        <p className="text-lg max-w-2xl mx-auto" style={{ color: textMuted }}>
-          Discover why thousands of businesses trust our platform for their social media marketing needs. We offer comprehensive solutions for all major platforms.
-        </p>
-      </header>
+      </div>
 
       {/* Main Feature Cards */}
       <div className="container mx-auto px-4 relative z-10">

@@ -10,7 +10,6 @@ interface TenantHeadProps {
 export const TenantHead = ({ title, description }: TenantHeadProps) => {
   const { panel } = useTenant();
   const customBranding = panel?.custom_branding as any;
-  const panelSettings = panel?.settings as any;
   
   // Favicon URLs with fallbacks: custom favicon -> default (NOT logo_url as that's the brand logo)
   const faviconUrl = customBranding?.faviconUrl || '/default-panel-favicon.png';
@@ -30,39 +29,25 @@ export const TenantHead = ({ title, description }: TenantHeadProps) => {
     favicon.href = faviconUrl;
     document.head.appendChild(favicon);
     
-    // Add apple touch icons with multiple sizes for iOS
-    const sizes = ['180x180', '152x152', '120x120'];
-    sizes.forEach(size => {
-      const appleIcon = document.createElement('link');
-      appleIcon.rel = 'apple-touch-icon';
-      appleIcon.setAttribute('sizes', size);
-      appleIcon.href = appleTouchIconUrl;
-      document.head.appendChild(appleIcon);
-    });
+    // Add apple touch icon
+    const appleIcon = document.createElement('link');
+    appleIcon.rel = 'apple-touch-icon';
+    appleIcon.href = appleTouchIconUrl;
+    document.head.appendChild(appleIcon);
   }, [faviconUrl, appleTouchIconUrl]);
   
-  // SEO title fallback chain: custom title -> panel settings seo_title -> panel name
-  const pageTitle = title || panelSettings?.seo_title || `${panel?.name || 'Panel'} - Best SMM Panel | Social Media Marketing Services`;
-  const pageDescription = description || panelSettings?.seo_description || `${panel?.name || 'Our panel'} offers premium SMM services including Instagram followers, YouTube views, TikTok likes and more. Fast delivery, 24/7 support, secure payments.`;
-  const pageKeywords = panelSettings?.seo_keywords || `${panel?.name}, SMM panel, instagram followers, youtube views, tiktok likes, social media marketing`;
+  const pageTitle = title || (panel?.settings as any)?.seo_title || `${panel?.name || 'Panel'} - SMM Panel`;
+  const pageDescription = description || (panel?.settings as any)?.seo_description || `Professional SMM services from ${panel?.name}`;
   
   return (
     <Helmet>
       <title>{pageTitle}</title>
       <meta name="description" content={pageDescription} />
-      <meta name="keywords" content={pageKeywords} />
-      <meta name="robots" content="index, follow" />
       <link rel="icon" type="image/png" href={faviconUrl} />
-      <link rel="apple-touch-icon" sizes="180x180" href={appleTouchIconUrl} />
-      <link rel="apple-touch-icon" sizes="152x152" href={appleTouchIconUrl} />
-      <link rel="apple-touch-icon" sizes="120x120" href={appleTouchIconUrl} />
+      <link rel="apple-touch-icon" href={appleTouchIconUrl} />
       {ogImage && <meta property="og:image" content={ogImage} />}
       <meta property="og:title" content={pageTitle} />
       <meta property="og:description" content={pageDescription} />
-      <meta property="og:type" content="website" />
-      <meta name="twitter:card" content="summary_large_image" />
-      <meta name="twitter:title" content={pageTitle} />
-      <meta name="twitter:description" content={pageDescription} />
     </Helmet>
   );
 };

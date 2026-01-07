@@ -141,7 +141,7 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
   ];
 
   return (
-    <section className="relative min-h-[70vh] md:min-h-[80vh] lg:min-h-screen overflow-hidden pb-8 md:pb-12" aria-label="Hero section">
+    <section className="relative min-h-[70vh] md:min-h-[80vh] lg:min-h-screen overflow-hidden pb-8 md:pb-12">
       {/* Floating Particles - Reduced count for performance */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none hidden md:block">
         {[...Array(8)].map((_, i) => (
@@ -248,7 +248,7 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
             </span>
           </motion.div>
 
-          {/* Main Heading - Single H1 per page */}
+          {/* Main Heading */}
           <motion.h1 
             className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-bold mb-4 sm:mb-6 leading-tight px-2"
             style={{ color: textColor }}
@@ -256,16 +256,20 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3, duration: 0.6 }}
           >
-            {panelName} - {heroTitle.split(' ').slice(0, Math.ceil(heroTitle.split(' ').length / 2)).join(' ')}
+            {heroTitle.split(' ').slice(0, Math.ceil(heroTitle.split(' ').length / 2)).join(' ')}
             <br />
-            <span 
+            <motion.span 
               className="bg-clip-text text-transparent inline-block"
               style={{ 
                 backgroundImage: `linear-gradient(135deg, ${customization.primaryColor || '#8B5CF6'}, ${customization.secondaryColor || '#EC4899'})` 
               }}
+              animate={{ 
+                backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"]
+              }}
+              transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
             >
-              {heroTitle.split(' ').slice(Math.ceil(heroTitle.split(' ').length / 2)).join(' ') || 'SMM Services'}
-            </span>
+              {heroTitle.split(' ').slice(Math.ceil(heroTitle.split(' ').length / 2)).join(' ') || 'Presence'}
+            </motion.span>
           </motion.h1>
 
           {/* Subtitle */}

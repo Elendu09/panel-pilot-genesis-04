@@ -7,6 +7,7 @@ import { ThemeThree } from '@/components/themes/ThemeThree';
 import { ThemeFour } from '@/components/themes/ThemeFour';
 import { ThemeFive } from '@/components/themes/ThemeFive';
 import { FloatingChatWidget } from '@/components/storefront/FloatingChatWidget';
+import { PromotionalBanner } from '@/components/storefront/PromotionalBanner';
 import { supabase } from '@/integrations/supabase/client';
 import { AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -45,8 +46,7 @@ const Storefront = () => {
   // Immediately update document title when panel loads (before React Helmet)
   useEffect(() => {
     if (panel) {
-      const panelSettings = panel.settings as any;
-      const seoTitle = panelSettings?.seo_title || `${panel.name} - Best SMM Panel | Buy Instagram Followers, YouTube Views & More`;
+      const seoTitle = (panel.settings as any)?.seo_title || `${panel.name} - SMM Panel`;
       document.title = seoTitle;
     }
   }, [panel]);
@@ -90,10 +90,8 @@ const Storefront = () => {
           <div className="relative w-20 h-20 mx-auto mb-6">
             <img 
               src="/default-panel-favicon.png" 
-              alt="Loading SMM Panel" 
+              alt="Loading" 
               className="w-20 h-20 rounded-2xl opacity-80"
-              width="80"
-              height="80"
             />
             {/* Shimmer overlay animation */}
             <div className="absolute inset-0 rounded-2xl overflow-hidden">
@@ -127,12 +125,6 @@ const Storefront = () => {
   }
 
   const canonicalUrl = typeof window !== 'undefined' ? window.location.origin : '';
-  const panelSettings = panel.settings as any;
-  
-  // SEO values with proper fallbacks
-  const seoTitle = panelSettings?.seo_title || `${panel.name} - Best SMM Panel | Buy Instagram Followers, YouTube Views & More`;
-  const seoDescription = panelSettings?.seo_description || `${panel.name} offers premium SMM services. Buy Instagram followers, YouTube views, TikTok likes, and more. Fast delivery, secure payments, 24/7 support. Best prices guaranteed.`;
-  const seoKeywords = panelSettings?.seo_keywords || `${panel.name}, SMM panel, instagram followers, youtube views, tiktok likes, social media marketing, buy followers, SMM services`;
 
   // Render appropriate theme based on panel.theme_type or custom_branding.selectedTheme
   // ThemeOne is ALWAYS the default - it's the primary/recommended theme
@@ -190,29 +182,32 @@ const Storefront = () => {
   const faviconUrl = customBranding?.faviconUrl || panel.logo_url || '/default-panel-favicon.png';
   const appleTouchIconUrl = customBranding?.appleTouchIconUrl || faviconUrl;
 
+  const handleSignUp = () => {
+    navigate('/auth');
+  };
+
   return (
     <>
       <Helmet>
-        <title>{seoTitle}</title>
-        <meta name="description" content={seoDescription} />
-        <meta name="keywords" content={seoKeywords} />
-        <meta name="robots" content="index, follow" />
+        <title>{(panel.settings as any)?.seo_title || `${panel.name} - SMM Panel`}</title>
+        <meta name="description" content={(panel.settings as any)?.seo_description || `Professional social media marketing services from ${panel.name}`} />
+        <meta name="keywords" content={(panel.settings as any)?.seo_keywords || 'social media marketing, instagram followers, youtube views'} />
         <link rel="canonical" href={canonicalUrl} />
         <link rel="icon" type="image/png" href={faviconUrl} />
-        <link rel="apple-touch-icon" sizes="180x180" href={appleTouchIconUrl} />
-        <link rel="apple-touch-icon" sizes="152x152" href={appleTouchIconUrl} />
-        <link rel="apple-touch-icon" sizes="120x120" href={appleTouchIconUrl} />
-        <meta property="og:title" content={seoTitle} />
-        <meta property="og:description" content={seoDescription} />
+        <link rel="apple-touch-icon" href={appleTouchIconUrl} />
+        <meta property="og:title" content={(panel.settings as any)?.seo_title || `${panel.name} - SMM Panel`} />
+        <meta property="og:description" content={(panel.settings as any)?.seo_description || `Professional social media marketing services`} />
         <meta property="og:type" content="website" />
         <meta property="og:url" content={canonicalUrl} />
-        <meta property="og:site_name" content={panel.name} />
         {panel.logo_url && <meta property="og:image" content={panel.logo_url} />}
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={seoTitle} />
-        <meta name="twitter:description" content={seoDescription} />
       </Helmet>
-      {/* Removed promotional banner as per user request */}
+      {/* Promotional Banner for guest users */}
+      {isGuest && (
+        <PromotionalBanner 
+          customization={design as any} 
+          onSignUp={handleSignUp}
+        />
+      )}
       {renderTheme()}
       {/* Floating Chat Widget - Consolidated chat with AI, WhatsApp, Telegram, etc. */}
       <FloatingChatWidget panelId={panel?.id} panelName={panel?.name} />
