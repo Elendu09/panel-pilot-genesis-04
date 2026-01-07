@@ -109,6 +109,20 @@ const PanelOnboarding = () => {
     }
   }, [panelName]);
 
+  // Auto-generate SEO title and description when panel name is set
+  useEffect(() => {
+    if (panelName && !seoTitle) {
+      // Generate SEO title within optimal pixel width (300-580px, roughly 35-68 chars)
+      const generatedTitle = `${panelName} - #1 SMM Panel | Best Social Media Services`;
+      setSeoTitle(generatedTitle.substring(0, 60)); // Max 60 chars for optimal display
+    }
+    if (panelName && !seoDescription) {
+      // Generate SEO description within optimal pixel width (450-1000px, roughly 53-118 chars)
+      const generatedDesc = `${panelName} offers premium SMM services including Instagram followers, YouTube views, TikTok likes and more. Fast delivery, 24/7 support, secure payments.`;
+      setSeoDescription(generatedDesc.substring(0, 155)); // Max 155 chars for optimal display
+    }
+  }, [panelName, seoTitle, seoDescription]);
+
   const checkSubdomainAvailability = async (subdomainToCheck: string) => {
     if (!subdomainToCheck || subdomainToCheck.length < 3) {
       setSubdomainAvailable(null);
@@ -458,6 +472,12 @@ const PanelOnboarding = () => {
         );
 
       case 3:
+        // Calculate pixel widths (average char ~8.5px)
+        const titlePixelWidth = seoTitle.length * 8.5;
+        const descPixelWidth = seoDescription.length * 8.5;
+        const titleInRange = titlePixelWidth >= 300 && titlePixelWidth <= 580;
+        const descInRange = descPixelWidth >= 450 && descPixelWidth <= 1000;
+        
         return (
           <motion.div
             key="step3"
@@ -472,10 +492,16 @@ const PanelOnboarding = () => {
               <Input
                 value={seoTitle}
                 onChange={(e) => setSeoTitle(e.target.value)}
-                placeholder={panelName ? `${panelName} - Professional SMM Services` : "Your Business - SMM Services"}
+                placeholder={panelName ? `${panelName} - #1 SMM Panel | Best Social Media Services` : "Your Business - SMM Services"}
                 className="bg-background/50"
+                maxLength={68}
               />
-              <p className="text-xs text-muted-foreground">50-60 characters recommended</p>
+              <div className="flex justify-between text-xs">
+                <span className={titleInRange ? "text-emerald-500" : "text-yellow-500"}>
+                  {seoTitle.length}/60 chars (~{Math.round(titlePixelWidth)}px)
+                </span>
+                <span className="text-muted-foreground">Optimal: 300-580px (35-68 chars)</span>
+              </div>
             </div>
             
             <div className="space-y-2">
@@ -483,11 +509,17 @@ const PanelOnboarding = () => {
               <Textarea
                 value={seoDescription}
                 onChange={(e) => setSeoDescription(e.target.value)}
-                placeholder="Get professional social media marketing services..."
+                placeholder="Premium SMM services including Instagram followers, YouTube views, TikTok likes. Fast delivery, 24/7 support."
                 rows={3}
                 className="bg-background/50"
+                maxLength={160}
               />
-              <p className="text-xs text-muted-foreground">150-160 characters recommended</p>
+              <div className="flex justify-between text-xs">
+                <span className={descInRange ? "text-emerald-500" : "text-yellow-500"}>
+                  {seoDescription.length}/160 chars (~{Math.round(descPixelWidth)}px)
+                </span>
+                <span className="text-muted-foreground">Optimal: 450-1000px (53-118 chars)</span>
+              </div>
             </div>
             
             <div className="space-y-2">
@@ -495,10 +527,10 @@ const PanelOnboarding = () => {
               <Input
                 value={seoKeywords}
                 onChange={(e) => setSeoKeywords(e.target.value)}
-                placeholder="SMM, social media marketing, followers, likes"
+                placeholder="SMM panel, instagram followers, youtube views, tiktok likes"
                 className="bg-background/50"
               />
-              <p className="text-xs text-muted-foreground">Comma-separated keywords</p>
+              <p className="text-xs text-muted-foreground">Comma-separated keywords for search engines</p>
             </div>
           </motion.div>
         );
