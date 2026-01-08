@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,7 +28,14 @@ const Auth = () => {
   const { signIn, signUp, user, profile } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
+  
+  // Detect if this is an email verification callback
+  const isVerificationCallback = searchParams.get('verified') === 'true' || 
+                                  searchParams.get('type') === 'signup' ||
+                                  searchParams.has('access_token') ||
+                                  searchParams.has('token_hash');
 
   // Get the intended destination from state or localStorage
   const getRedirectPath = () => {
@@ -46,6 +53,12 @@ const Auth = () => {
 
   useEffect(() => {
     if (user && profile) {
+      // If this is a fresh verification, ALWAYS check onboarding first
+      if (isVerificationCallback) {
+        checkOnboardingAndRedirect(null);
+        return;
+      }
+      
       const intendedPath = getRedirectPath();
       
       if (profile.role === 'admin') {
@@ -55,7 +68,7 @@ const Auth = () => {
         checkOnboardingAndRedirect(intendedPath);
       }
     }
-  }, [user, profile]);
+  }, [user, profile, isVerificationCallback]);
 
   const checkOnboardingAndRedirect = async (intendedPath: string | null) => {
     if (!profile?.id) return;

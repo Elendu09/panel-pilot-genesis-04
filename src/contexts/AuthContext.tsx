@@ -124,7 +124,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth`,
+          emailRedirectTo: `${window.location.origin}/auth?verified=true`,
           data: {
             username: username,
             role: 'panel_owner'
@@ -163,23 +163,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (identifier: string, password: string) => {
     try {
-      // First try to sign in with the identifier as email
-      let loginEmail = email;
+      let loginEmail = identifier.trim();
       
-      // Check if identifier might be a username (no @ symbol)
-      if (!email.includes('@')) {
-        // Look up the email by username
-        const { data: profileData } = await supabase
+      // Check if identifier is a username (no @ symbol)
+      if (!identifier.includes('@')) {
+        // Look up the email by username using case-insensitive match
+        const { data: profileData, error: lookupError } = await supabase
           .from('profiles')
           .select('email')
-          .eq('username', email)
+          .ilike('username', identifier.trim())
           .single();
         
-        if (profileData?.email) {
-          loginEmail = profileData.email;
+        if (lookupError || !profileData?.email) {
+          toast({
+            variant: "destructive",
+            title: "Sign In Error",
+            description: "Username not found. Please check and try again."
+          });
+          return { error: { message: 'Username not found' } };
         }
+        
+        loginEmail = profileData.email;
       }
       
       const { data, error } = await supabase.auth.signInWithPassword({

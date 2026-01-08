@@ -6,6 +6,8 @@ import { ThemeTwo } from '@/components/themes/ThemeTwo';
 import { ThemeThree } from '@/components/themes/ThemeThree';
 import { ThemeFour } from '@/components/themes/ThemeFour';
 import { ThemeFive } from '@/components/themes/ThemeFive';
+import { ThemeTGRef } from '@/components/themes/ThemeTGRef';
+import { ThemeAliPanel } from '@/components/themes/ThemeAliPanel';
 import { FloatingChatWidget } from '@/components/storefront/FloatingChatWidget';
 import { supabase } from '@/integrations/supabase/client';
 import { AlertTriangle } from 'lucide-react';
@@ -146,6 +148,14 @@ const Storefront = () => {
         case 'theme_five':
         case 'tech_futuristic':
           return <ThemeFive {...themeProps} />;
+        // TGRef theme - tech-inspired with bold typography
+        case 'theme_tgref':
+        case 'tgref':
+          return <ThemeTGRef {...themeProps} />;
+        // AliPanel theme - gradient with floating icons
+        case 'theme_alipanel':
+        case 'alipanel':
+          return <ThemeAliPanel {...themeProps} />;
         // ThemeOne is the default for all other cases (default, theme_one, dark_gradient, etc.)
         case 'default':
         case 'theme_one':
