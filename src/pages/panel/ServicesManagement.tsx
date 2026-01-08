@@ -1445,24 +1445,33 @@ const ServicesManagement = () => {
   };
 
   const handleSaveEdit = async (updatedService: any) => {
-    if (!editingService) return;
+    if (!editingService?.id) return;
     
     try {
+      // Handle both property naming conventions from ServiceEditDialog
+      const minQty = updatedService.minQty ?? updatedService.min_quantity ?? 100;
+      const maxQty = updatedService.maxQty ?? updatedService.max_quantity ?? 10000;
+      const imageUrl = updatedService.imageUrl ?? updatedService.image_url ?? null;
+      const providerId = updatedService.provider_id ?? null;
+      
       const { error } = await supabase
         .from('services')
         .update({
           name: updatedService.name,
-          description: updatedService.description,
+          description: updatedService.description || null,
           price: updatedService.price,
           category: updatedService.category,
-          min_quantity: updatedService.minQty,
-          max_quantity: updatedService.maxQty,
-          image_url: updatedService.imageUrl,
+          provider_id: providerId,
+          min_quantity: minQty,
+          max_quantity: maxQty,
+          image_url: imageUrl,
+          updated_at: new Date().toISOString(),
         })
         .eq('id', editingService.id);
 
       if (error) throw error;
 
+      // Update local state
       setServices(prev => prev.map(s =>
         s.id === editingService.id
           ? { 
@@ -1471,18 +1480,35 @@ const ServicesManagement = () => {
               description: updatedService.description,
               price: updatedService.price,
               category: updatedService.category,
-              minQty: updatedService.minQty,
-              maxQty: updatedService.maxQty,
-              imageUrl: updatedService.imageUrl,
+              providerId: providerId,
+              minQty: minQty,
+              maxQty: maxQty,
+              imageUrl: imageUrl,
             }
           : s
       ));
-      toast({ title: "Service updated successfully" });
+      
+      // Show success toast
+      toast({ 
+        title: "Service updated successfully",
+        description: `${updatedService.name} has been saved.`
+      });
+      
+      // Close dialog and reset state
       setIsEditDialogOpen(false);
       setEditingService(null);
+      
+      // Clear URL params if present
+      if (searchParams.get('edit')) {
+        setSearchParams({}, { replace: true });
+      }
     } catch (error) {
-      console.error('Error updating:', error);
-      toast({ title: 'Failed to update', variant: 'destructive' });
+      console.error('Error updating service:', error);
+      toast({ 
+        title: 'Failed to update service', 
+        description: 'Please try again.',
+        variant: 'destructive' 
+      });
     }
   };
 

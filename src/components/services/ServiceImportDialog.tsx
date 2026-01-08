@@ -52,6 +52,7 @@ interface FetchedService {
   name: string;
   category: string;
   price: number;
+  originalProviderRate?: number; // Original rate in provider currency
   minQty: number;
   maxQty: number;
   description: string;
@@ -64,7 +65,20 @@ interface Provider {
   api_endpoint?: string;
   api_key?: string;
   is_platform_provider?: boolean;
+  currency?: string;
+  currency_rate_to_usd?: number;
 }
+
+// Currency symbol helper
+const getCurrencySymbol = (code: string): string => {
+  const symbols: Record<string, string> = {
+    USD: '$', EUR: '€', GBP: '£', NGN: '₦', INR: '₹', 
+    BRL: 'R$', RUB: '₽', TRY: '₺', JPY: '¥', CNY: '¥',
+    KRW: '₩', PHP: '₱', IDR: 'Rp', MYR: 'RM', THB: '฿',
+    VND: '₫', PKR: '₨', BDT: '৳', EGP: 'E£', ZAR: 'R',
+  };
+  return symbols[code] || code + ' ';
+};
 
 interface ServiceImportDialogProps {
   open: boolean;
@@ -126,19 +140,16 @@ export const ServiceImportDialog = ({
 
   // Check provider balance when provider is selected
   const checkProviderBalance = async (providerId: string) => {
-    const provider = providers.find(p => p.id === providerId);
-    if (!provider?.api_endpoint || !provider?.api_key) {
+    if (!providerId) {
       setProviderBalance(null);
       return;
     }
 
     setIsCheckingBalance(true);
     try {
+      // Pass providerId - edge function fetches credentials securely from database
       const { data, error } = await supabase.functions.invoke('provider-balance', {
-        body: { 
-          api_endpoint: provider.api_endpoint, 
-          api_key: provider.api_key 
-        }
+        body: { providerId }
       });
 
       if (error) throw error;
@@ -197,6 +208,10 @@ export const ServiceImportDialog = ({
         return;
       }
       
+      // Get provider currency settings for rate conversion
+      const providerCurrency = provider.currency || 'USD';
+      const rateToUsd = provider.currency_rate_to_usd || 1.0;
+      
       // Map the API response to our format
       // NOTE: Provider rate is already "per 1K" - DO NOT divide by 1000!
       // Use AI detection on service NAME (not provider category) for accurate classification
@@ -211,17 +226,27 @@ export const ServiceImportDialog = ({
         const detectedPlatform = nameConfidence >= catConfidence ? nameDetected : catDetected;
         const iconUrl = `icon:${detectedPlatform}`;
         
+        // Get raw rate and convert to USD
+        const rawRate = parseFloat(s.rate || s.price || 0);
+        const rateInUsd = rawRate * rateToUsd; // Convert to USD
+        
         return {
           id: s.service || s.id || index + 1,
           name: serviceName,
           category: detectedPlatform, // AI-detected from service name + category (50+ platforms)
-          price: parseFloat(s.rate || s.price || 0), // Provider rate per 1K - no division
+          price: rateInUsd, // USD-converted rate for display and import
+          originalProviderRate: rawRate, // Keep original for reference
           minQty: parseInt(s.min || s.min_quantity || 100),
           maxQty: parseInt(s.max || s.max_quantity || 10000),
           description: s.description || s.name || '',
           iconUrl, // Pre-computed icon URL for import
         };
       });
+      
+      // Log currency conversion info
+      if (providerCurrency !== 'USD') {
+        console.log(`[Import] Converting ${providerCurrency} → USD (rate: ${rateToUsd})`);
+      }
       
       // Log detection results for debugging
       console.log(`[Import] Detected platforms from ${mappedServices.length} services:`);
@@ -731,13 +756,21 @@ export const ServiceImportDialog = ({
                           
                           {/* Pricing Row */}
                           <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-border/30">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-xs text-muted-foreground line-through">
-                                ${service.price < 1 ? service.price.toFixed(4) : service.price.toFixed(2)}
-                              </span>
-                              <span className="text-sm font-semibold text-primary">
-                                ${finalPrice < 1 ? finalPrice.toFixed(4) : finalPrice.toFixed(2)}
-                              </span>
+                            <div className="flex flex-col gap-0.5">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-xs text-muted-foreground line-through">
+                                  ${service.price < 1 ? service.price.toFixed(4) : service.price.toFixed(2)}
+                                </span>
+                                <span className="text-sm font-semibold text-primary">
+                                  ${finalPrice < 1 ? finalPrice.toFixed(4) : finalPrice.toFixed(2)}
+                                </span>
+                              </div>
+                              {/* Show original provider currency if not USD */}
+                              {service.originalProviderRate !== undefined && service.originalProviderRate !== service.price && (
+                                <span className="text-[9px] text-muted-foreground/70">
+                                  Provider: {service.originalProviderRate < 1 ? service.originalProviderRate.toFixed(4) : service.originalProviderRate.toFixed(2)} (local)
+                                </span>
+                              )}
                             </div>
                             <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                               <Input
