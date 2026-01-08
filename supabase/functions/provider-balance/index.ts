@@ -12,8 +12,10 @@ interface BalanceRequest {
 
 interface BalanceResponse {
   success: boolean;
-  balance?: number;
-  currency?: string;
+  balance?: number;          // USD equivalent
+  originalBalance?: number;  // Original provider currency balance
+  currency?: string;         // Provider's configured currency
+  rateToUsd?: number;        // Exchange rate used
   error?: string;
 }
 
@@ -110,10 +112,10 @@ serve(async (req) => {
       );
     }
 
-    // Fetch provider credentials from database - verify ownership
+    // Fetch provider credentials from database - verify ownership AND get currency settings
     const { data: provider, error: providerError } = await supabaseAdmin
       .from('providers')
-      .select('id, api_endpoint, api_key, panel_id')
+      .select('id, api_endpoint, api_key, panel_id, currency, currency_rate_to_usd')
       .eq('id', providerId)
       .single();
 
@@ -138,7 +140,11 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Fetching balance for provider: ${providerId} by user ${claims.user.id}`);
+    // Get provider's currency settings
+    const providerCurrency = provider.currency || 'USD';
+    const rateToUsd = provider.currency_rate_to_usd || 1.0;
+
+    console.log(`Fetching balance for provider: ${providerId} (currency: ${providerCurrency}, rate: ${rateToUsd}) by user ${claims.user.id}`);
 
     // SMM Panel standard API format for balance check
     const formData = new URLSearchParams();
@@ -168,33 +174,38 @@ serve(async (req) => {
     console.log("Provider response received");
 
     // Handle different response formats from various SMM providers
-    let balance: number | undefined;
-    let currency = "USD";
+    let originalBalance: number | undefined;
 
     if (typeof data.balance !== 'undefined') {
-      balance = parseFloat(data.balance);
+      originalBalance = parseFloat(data.balance);
     } else if (typeof data.funds !== 'undefined') {
-      balance = parseFloat(data.funds);
+      originalBalance = parseFloat(data.funds);
     } else if (typeof data.credit !== 'undefined') {
-      balance = parseFloat(data.credit);
+      originalBalance = parseFloat(data.credit);
     }
 
-    if (data.currency) {
-      currency = data.currency;
-    }
+    if (originalBalance !== undefined && !isNaN(originalBalance)) {
+      // Convert to USD using the configured rate
+      const balanceUsd = originalBalance * rateToUsd;
+      
+      console.log(`Original balance: ${originalBalance} ${providerCurrency}, USD equivalent: $${balanceUsd.toFixed(4)}`);
 
-    if (balance !== undefined && !isNaN(balance)) {
-      // Update provider balance in database
+      // Update provider balance in database (store USD equivalent)
       await supabaseAdmin
         .from('providers')
-        .update({ balance, updated_at: new Date().toISOString() })
+        .update({ 
+          balance: balanceUsd, 
+          updated_at: new Date().toISOString() 
+        })
         .eq('id', providerId);
 
       return new Response(
         JSON.stringify({ 
           success: true, 
-          balance,
-          currency
+          balance: balanceUsd,           // USD equivalent
+          originalBalance: originalBalance, // Original provider currency
+          currency: providerCurrency,     // Provider's currency code
+          rateToUsd: rateToUsd           // Exchange rate used
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );

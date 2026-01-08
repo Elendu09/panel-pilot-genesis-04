@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -173,16 +172,83 @@ function clearFailedAttempts(identifier: string): void {
   failedAttempts.delete(identifier.toLowerCase());
 }
 
-// Hash password using bcrypt
+// PBKDF2-based password hashing using Web Crypto API (no workers needed)
 async function hashPassword(password: string): Promise<string> {
-  const salt = await bcrypt.genSalt(10);
-  return await bcrypt.hash(password, salt);
+  const encoder = new TextEncoder();
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iterations = 100000;
+  
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(password),
+    { name: 'PBKDF2' },
+    false,
+    ['deriveBits']
+  );
+  
+  const derivedBits = await crypto.subtle.deriveBits(
+    {
+      name: 'PBKDF2',
+      salt: salt,
+      iterations: iterations,
+      hash: 'SHA-256'
+    },
+    keyMaterial,
+    256
+  );
+  
+  // Format: $pbkdf2$iterations$salt$hash
+  const hashArray = new Uint8Array(derivedBits);
+  const saltB64 = btoa(String.fromCharCode(...salt));
+  const hashB64 = btoa(String.fromCharCode(...hashArray));
+  
+  return `$pbkdf2$${iterations}$${saltB64}$${hashB64}`;
 }
 
 // Verify password against hash
-async function verifyPassword(password: string, hash: string): Promise<boolean> {
+async function verifyPassword(password: string, storedHash: string): Promise<boolean> {
   try {
-    return await bcrypt.compare(password, hash);
+    // PBKDF2 format: $pbkdf2$iterations$salt$hash
+    if (storedHash.startsWith('$pbkdf2$')) {
+      const parts = storedHash.split('$');
+      if (parts.length !== 5) return false;
+      
+      const iterations = parseInt(parts[2]);
+      const salt = Uint8Array.from(atob(parts[3]), c => c.charCodeAt(0));
+      const storedHashB64 = parts[4];
+      
+      const encoder = new TextEncoder();
+      const keyMaterial = await crypto.subtle.importKey(
+        'raw',
+        encoder.encode(password),
+        { name: 'PBKDF2' },
+        false,
+        ['deriveBits']
+      );
+      
+      const derivedBits = await crypto.subtle.deriveBits(
+        {
+          name: 'PBKDF2',
+          salt: salt,
+          iterations: iterations,
+          hash: 'SHA-256'
+        },
+        keyMaterial,
+        256
+      );
+      
+      const hashB64 = btoa(String.fromCharCode(...new Uint8Array(derivedBits)));
+      return hashB64 === storedHashB64;
+    }
+    
+    // Legacy bcrypt hash - cannot verify without workers, return false
+    if (storedHash.startsWith('$2')) {
+      console.log('Legacy bcrypt hash detected - cannot verify without workers');
+      return false;
+    }
+    
+    // Legacy plaintext comparison
+    return storedHash === password;
   } catch (error) {
     console.error('Password verification error:', error);
     return false;
@@ -192,6 +258,11 @@ async function verifyPassword(password: string, hash: string): Promise<boolean> 
 // Check if a string is a bcrypt hash
 function isBcryptHash(str: string): boolean {
   return str && str.startsWith('$2');
+}
+
+// Check if a string is a PBKDF2 hash
+function isPbkdf2Hash(str: string): boolean {
+  return str && str.startsWith('$pbkdf2$');
 }
 
 serve(async (req) => {
@@ -306,21 +377,27 @@ async function handleLogin(supabaseAdmin: any, body: any, req: Request) {
     return jsonResponse({ error: 'Your account has been suspended. Please contact support.' });
   }
 
-  // Verify password - support both hashed and legacy plaintext
+  // Verify password - support PBKDF2, legacy bcrypt (with migration prompt), and plaintext
   let passwordMatch = false;
   const storedHash = user.password_hash || user.password_temp;
   
   if (storedHash) {
-    if (isBcryptHash(storedHash)) {
-      // Modern: verify against bcrypt hash
+    if (isPbkdf2Hash(storedHash)) {
+      // Modern PBKDF2 verification
       passwordMatch = await verifyPassword(password, storedHash);
+    } else if (isBcryptHash(storedHash)) {
+      // Bcrypt - cannot verify without workers, prompt for password reset
+      console.log('Bcrypt hash detected, user needs password reset:', user.id);
+      return jsonResponse({ 
+        error: 'Please reset your password to continue. Use the "Forgot Password" option.',
+        requiresPasswordReset: true 
+      });
     } else {
-      // Legacy: plaintext comparison (will migrate to hash)
+      // Legacy plaintext comparison - migrate to PBKDF2
       passwordMatch = storedHash === password;
       
-      // If legacy password matches, upgrade to bcrypt
       if (passwordMatch) {
-        console.log('Migrating legacy password to bcrypt for user:', user.id);
+        console.log('Migrating legacy plaintext password to PBKDF2 for user:', user.id);
         const newHash = await hashPassword(password);
         await supabaseAdmin
           .from('client_users')
@@ -533,7 +610,7 @@ async function handleSignup(supabaseAdmin: any, body: any, req: Request) {
     }
   }
 
-  // Hash password
+  // Hash password using PBKDF2
   const hashedPassword = await hashPassword(password);
 
   // Create new buyer account
@@ -644,7 +721,7 @@ async function handleGuestOrder(supabaseAdmin: any, body: any) {
   // Generate temporary password (user-friendly)
   const tempPassword = generateTempPassword();
   
-  // Hash the temporary password
+  // Hash the temporary password using PBKDF2
   const hashedPassword = await hashPassword(tempPassword);
 
   // Create new buyer account with auto-generated or provided username
@@ -778,7 +855,7 @@ async function handleForgotPassword(supabaseAdmin: any, body: any, req: Request)
   // Generate a new temporary password
   const newPassword = generateTempPassword();
   
-  // Hash the new password
+  // Hash the new password using PBKDF2
   const hashedPassword = await hashPassword(newPassword);
 
   // Update user with new hashed password
@@ -864,18 +941,14 @@ async function handleChangePassword(supabaseAdmin: any, body: any) {
   let passwordMatch = false;
   
   if (storedHash) {
-    if (isBcryptHash(storedHash)) {
-      passwordMatch = await verifyPassword(currentPassword, storedHash);
-    } else {
-      passwordMatch = storedHash === currentPassword;
-    }
+    passwordMatch = await verifyPassword(currentPassword, storedHash);
   }
 
   if (!passwordMatch) {
     return jsonResponse({ error: 'Current password is incorrect' });
   }
 
-  // Hash new password
+  // Hash new password using PBKDF2
   const hashedPassword = await hashPassword(newPassword);
 
   // Update password
