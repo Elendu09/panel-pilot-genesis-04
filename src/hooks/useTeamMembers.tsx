@@ -2,7 +2,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
-type PanelRole = 'panel_admin' | 'manager' | 'agent';
+// Database enum only supports: panel_admin, manager, agent
+// We map UI roles to these DB roles
+export type PanelRole = 'panel_admin' | 'manager' | 'agent';
 
 interface TeamMember {
   id: string;

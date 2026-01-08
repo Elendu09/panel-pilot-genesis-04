@@ -28,7 +28,34 @@ export const VERCEL_CNAME = 'cname.vercel-dns.com';
 export const VERCEL_NAMESERVERS = ['ns1.vercel-dns.com', 'ns2.vercel-dns.com'];
 export const NETLIFY_IP = '75.2.60.5';
 
-export const PLATFORM_DOMAIN = 'homeofsmm.com';
+// Known platform root domains - add new domains here
+const PLATFORM_DOMAINS = ['homeofsmm.com', 'smmpilot.online'];
+
+/**
+ * Auto-detect platform domain from current hostname
+ * Supports multiple platform domains and handles www properly
+ */
+function detectPlatformDomain(): string {
+  if (typeof window === 'undefined') return 'homeofsmm.com';
+  
+  const hostname = window.location.hostname.toLowerCase();
+  
+  // Remove www prefix for comparison
+  const hostnameWithoutWww = hostname.startsWith('www.') ? hostname.slice(4) : hostname;
+  
+  // Check if current hostname matches any known platform domain
+  for (const domain of PLATFORM_DOMAINS) {
+    if (hostnameWithoutWww === domain || hostname.endsWith(`.${domain}`)) {
+      return domain;
+    }
+  }
+  
+  // If not a known platform, return the first one as default
+  return PLATFORM_DOMAINS[0];
+}
+
+export const PLATFORM_DOMAIN = detectPlatformDomain();
+export const ALL_PLATFORM_DOMAINS = PLATFORM_DOMAINS;
 
 export type HostingProviderType = 'lovable' | 'vercel' | 'netlify' | 'cloudflare_pages' | 'custom';
 
@@ -69,6 +96,11 @@ const EXTERNAL_HOSTING_PATTERNS = [
 export function analyzeDomain(hostname: string): TenantDomainConfig {
   const normalizedHostname = hostname.toLowerCase().trim();
   
+  // Remove www prefix for proper analysis
+  const hostnameWithoutWww = normalizedHostname.startsWith('www.') 
+    ? normalizedHostname.slice(4) 
+    : normalizedHostname;
+  
   // Check for development/preview domains
   const isDev = DEV_PATTERNS.some(p => p.test(normalizedHostname));
   if (isDev) {
@@ -82,29 +114,44 @@ export function analyzeDomain(hostname: string): TenantDomainConfig {
     };
   }
   
-  // Check for platform root
-  if (normalizedHostname === PLATFORM_DOMAIN || normalizedHostname === `www.${PLATFORM_DOMAIN}`) {
-    return {
-      type: 'platform',
-      hostname: normalizedHostname,
-      subdomain: null,
-      baseDomain: PLATFORM_DOMAIN,
-      isValid: true,
-      requiresVerification: false,
-    };
+  // Check for any known platform root domain (including www)
+  for (const domain of ALL_PLATFORM_DOMAINS) {
+    if (hostnameWithoutWww === domain || normalizedHostname === domain) {
+      return {
+        type: 'platform',
+        hostname: normalizedHostname,
+        subdomain: null,
+        baseDomain: domain,
+        isValid: true,
+        requiresVerification: false,
+      };
+    }
   }
   
-  // Check for tenant subdomain (*.smmpilot.online)
-  if (normalizedHostname.endsWith(`.${PLATFORM_DOMAIN}`)) {
-    const subdomain = normalizedHostname.replace(`.${PLATFORM_DOMAIN}`, '');
-    return {
-      type: 'subdomain',
-      hostname: normalizedHostname,
-      subdomain,
-      baseDomain: PLATFORM_DOMAIN,
-      isValid: isValidSubdomain(subdomain),
-      requiresVerification: false, // Subdomains don't need DNS verification
-    };
+  // Check for tenant subdomain on any known platform domain (*.homeofsmm.com, *.smmpilot.online)
+  for (const domain of ALL_PLATFORM_DOMAINS) {
+    if (normalizedHostname.endsWith(`.${domain}`)) {
+      const subdomain = normalizedHostname.replace(`.${domain}`, '');
+      // Skip www as it should redirect to root platform
+      if (subdomain === 'www') {
+        return {
+          type: 'platform',
+          hostname: normalizedHostname,
+          subdomain: null,
+          baseDomain: domain,
+          isValid: true,
+          requiresVerification: false,
+        };
+      }
+      return {
+        type: 'subdomain',
+        hostname: normalizedHostname,
+        subdomain,
+        baseDomain: domain,
+        isValid: isValidSubdomain(subdomain),
+        requiresVerification: false,
+      };
+    }
   }
   
   // Check for external hosting platforms

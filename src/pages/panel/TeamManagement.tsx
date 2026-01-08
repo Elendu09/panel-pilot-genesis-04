@@ -1,67 +1,107 @@
 import { useState, memo, useCallback } from 'react';
 import { usePanel } from '@/hooks/usePanel';
-import { useTeamMembers } from '@/hooks/useTeamMembers';
+import { useTeamMembers, type PanelRole } from '@/hooks/useTeamMembers';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Users, Plus, MoreVertical, Shield, UserCog, Headphones, Trash2, Mail, Clock, CheckCircle, Loader2 } from 'lucide-react';
+import { Users, Plus, MoreVertical, Shield, UserCog, Headphones, Trash2, Mail, Clock, CheckCircle, Loader2, Eye, EyeOff, Search } from 'lucide-react';
 
-type PanelRole = 'panel_admin' | 'manager' | 'agent';
-
-const roleConfig = {
+// Role configuration - maps to database roles
+const roleConfig: Record<PanelRole, {
+  label: string;
+  description: string;
+  color: string;
+  permissions: string[];
+}> = {
   panel_admin: {
     label: 'Admin',
-    description: 'Full access to all panel features including billing and settings',
-    icon: Shield,
-    color: 'bg-red-500/10 text-red-500 border-red-500/20',
-    permissions: ['Dashboard', 'Services', 'Orders', 'Customers', 'Analytics', 'Billing', 'Settings', 'Team']
+    description: 'Same rights as of main account',
+    color: 'border-primary bg-primary/10',
+    permissions: ['Full access', 'Billing', 'Settings', 'Team']
   },
   manager: {
-    label: 'Manager',
-    description: 'Manage orders, customers, and services (no billing access)',
-    icon: UserCog,
-    color: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
-    permissions: ['Dashboard', 'Services', 'Orders', 'Customers', 'Analytics']
+    label: 'Moderator',
+    description: "Can't see balance, providers and panel settings. Can work with orders, edit services and answer in support.",
+    color: 'border-muted bg-muted/50',
+    permissions: ['Orders', 'Services', 'Support']
   },
   agent: {
-    label: 'Support Agent',
-    description: 'Handle support tickets and view orders (read-only)',
-    icon: Headphones,
-    color: 'bg-green-500/10 text-green-500 border-green-500/20',
-    permissions: ['Dashboard', 'Orders (view)', 'Support Tickets']
+    label: 'Agent',
+    description: "Has SEO rights. Can answer in support, see orders and services but cant edit. Doesn't see provider and panel settings.",
+    color: 'border-muted bg-muted/50',
+    permissions: ['View Orders', 'View Services', 'Support', 'SEO']
   }
-} as const;
+};
 
-// Memoized role card
-const RoleCard = memo(({ roleKey, config }: { roleKey: string; config: typeof roleConfig[PanelRole] }) => (
-  <Card className="border-dashed">
-    <CardHeader className="pb-3">
-      <div className="flex items-center gap-2">
-        <div className={`p-2 rounded-lg ${config.color}`}>
-          <config.icon className="w-4 h-4" />
+// Role illustration SVGs
+const AdminIllustration = () => (
+  <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="8" y="20" width="32" height="20" rx="3" stroke="currentColor" strokeWidth="2" fill="none"/>
+    <circle cx="24" cy="30" r="4" stroke="currentColor" strokeWidth="2" fill="none"/>
+    <path d="M24 34V36" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    <path d="M16 20V16C16 11.5817 19.5817 8 24 8C28.4183 8 32 11.5817 32 16V20" stroke="currentColor" strokeWidth="2" fill="none"/>
+  </svg>
+);
+
+const ModeratorIllustration = () => (
+  <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="24" cy="16" r="8" stroke="currentColor" strokeWidth="2" fill="none"/>
+    <path d="M12 40C12 33.3726 17.3726 28 24 28C30.6274 28 36 33.3726 36 40" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round"/>
+    <path d="M32 12L36 16L32 20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M16 12L12 16L16 20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
+const AgentIllustration = () => (
+  <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="24" cy="20" r="8" stroke="currentColor" strokeWidth="2" fill="none"/>
+    <path d="M14 40C14 34.4772 18.4772 30 24 30C29.5228 30 34 34.4772 34 40" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round"/>
+    <path d="M32 10L40 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    <path d="M32 16L40 16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    <path d="M36 22L40 22" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+  </svg>
+);
+
+const roleIllustrations: Record<PanelRole, React.FC> = {
+  panel_admin: AdminIllustration,
+  manager: ModeratorIllustration,
+  agent: AgentIllustration
+};
+
+// Memoized role card for the overview section
+const RoleCard = memo(({ roleKey, config }: { roleKey: PanelRole; config: typeof roleConfig[PanelRole] }) => {
+  const Illustration = roleIllustrations[roleKey];
+  return (
+    <Card className="border-dashed">
+      <CardHeader className="pb-3">
+        <div className="flex items-center gap-3">
+          <div className="text-primary">
+            <Illustration />
+          </div>
+          <div>
+            <CardTitle className="text-sm">{config.label}</CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">{config.description}</p>
+          </div>
         </div>
-        <CardTitle className="text-sm">{config.label}</CardTitle>
-      </div>
-    </CardHeader>
-    <CardContent>
-      <p className="text-xs text-muted-foreground mb-2">{config.description}</p>
-      <div className="flex flex-wrap gap-1">
-        {config.permissions.map((perm) => (
-          <Badge key={perm} variant="secondary" className="text-[10px]">
-            {perm}
-          </Badge>
-        ))}
-      </div>
-    </CardContent>
-  </Card>
-));
+      </CardHeader>
+      <CardContent>
+        <div className="flex flex-wrap gap-1">
+          {config.permissions.map((perm) => (
+            <Badge key={perm} variant="secondary" className="text-[10px]">
+              {perm}
+            </Badge>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+});
 RoleCard.displayName = 'RoleCard';
 
 // Memoized member row
@@ -76,8 +116,7 @@ const MemberRow = memo(({
   onToggleActive: (id: string, isActive: boolean) => void;
   onDelete: (id: string) => void;
 }) => {
-  const config = roleConfig[member.role as PanelRole];
-  const RoleIcon = config.icon;
+  const config = roleConfig[member.role as PanelRole] || roleConfig.agent;
   
   return (
     <div
@@ -106,8 +145,7 @@ const MemberRow = memo(({
       </div>
       
       <div className="flex items-center gap-3">
-        <Badge className={config.color}>
-          <RoleIcon className="w-3 h-3 mr-1" />
+        <Badge variant="outline" className={config.color}>
           {config.label}
         </Badge>
         
@@ -138,7 +176,7 @@ const MemberRow = memo(({
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onRoleChange(member.id, 'manager')}>
               <UserCog className="w-4 h-4 mr-2" />
-              Set as Manager
+              Set as Moderator
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onRoleChange(member.id, 'agent')}>
               <Headphones className="w-4 h-4 mr-2" />
@@ -162,29 +200,78 @@ const MemberRow = memo(({
 });
 MemberRow.displayName = 'MemberRow';
 
+// Role selection card for the dialog
+const RoleSelectCard = memo(({ 
+  roleKey, 
+  config, 
+  selected, 
+  onSelect 
+}: { 
+  roleKey: PanelRole; 
+  config: typeof roleConfig[PanelRole]; 
+  selected: boolean;
+  onSelect: () => void;
+}) => {
+  const Illustration = roleIllustrations[roleKey];
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
+        selected 
+          ? 'border-primary bg-primary/5' 
+          : 'border-border hover:border-muted-foreground/30 bg-card'
+      }`}
+    >
+      <div className="flex items-start gap-3">
+        <div className={`flex-shrink-0 ${selected ? 'text-primary' : 'text-muted-foreground'}`}>
+          <Illustration />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className={`font-semibold ${selected ? 'text-primary' : 'text-foreground'}`}>
+              {config.label}
+            </span>
+            {selected && (
+              <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                <CheckCircle className="w-3 h-3 text-primary-foreground" />
+              </div>
+            )}
+          </div>
+          <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+            {config.description}
+          </p>
+        </div>
+      </div>
+    </button>
+  );
+});
+RoleSelectCard.displayName = 'RoleSelectCard';
+
 export default function TeamManagement() {
   const { panel } = usePanel();
   const { members, isLoading, invite, updateRole, toggleActive, deleteMember, isInviting } = useTeamMembers(panel?.id);
   
   const [inviteOpen, setInviteOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteFullName, setInviteFullName] = useState('');
+  const [inviteLogin, setInviteLogin] = useState('');
+  const [invitePassword, setInvitePassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [inviteRole, setInviteRole] = useState<PanelRole>('agent');
 
   const handleInvite = useCallback(() => {
     invite(
-      { email: inviteEmail, fullName: inviteFullName, role: inviteRole },
+      { email: inviteLogin, fullName: '', role: inviteRole },
       {
         onSuccess: () => {
           setInviteOpen(false);
-          setInviteEmail('');
-          setInviteFullName('');
+          setInviteLogin('');
+          setInvitePassword('');
           setInviteRole('agent');
         }
       }
     );
-  }, [invite, inviteEmail, inviteFullName, inviteRole]);
+  }, [invite, inviteLogin, inviteRole]);
 
   const handleRoleChange = useCallback((memberId: string, newRole: PanelRole) => {
     updateRole({ memberId, newRole });
@@ -200,6 +287,13 @@ export default function TeamManagement() {
       setDeleteId(null);
     }
   }, [deleteMember, deleteId]);
+
+  const resetForm = useCallback(() => {
+    setInviteLogin('');
+    setInvitePassword('');
+    setInviteRole('agent');
+    setShowPassword(false);
+  }, []);
 
   if (isLoading) {
     return (
@@ -217,74 +311,98 @@ export default function TeamManagement() {
           <h1 className="text-2xl font-bold">Team Management</h1>
           <p className="text-muted-foreground">Add team members to help manage your panel</p>
         </div>
-        <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+        <Dialog open={inviteOpen} onOpenChange={(open) => { setInviteOpen(open); if (!open) resetForm(); }}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="w-4 h-4 mr-2" />
               Add Team Member
             </Button>
           </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add Team Member</DialogTitle>
-              <DialogDescription>
-                Invite someone to help manage your panel
-              </DialogDescription>
+          <DialogContent className="sm:max-w-lg p-0 overflow-hidden">
+            <DialogHeader className="px-6 pt-6 pb-4 border-b">
+              <div className="flex items-center justify-between">
+                <DialogTitle className="text-xl font-semibold">Add manager</DialogTitle>
+              </div>
             </DialogHeader>
-            <div className="space-y-4 py-4">
+            
+            <div className="px-6 py-5 space-y-5 max-h-[70vh] overflow-y-auto">
+              {/* Login field */}
               <div className="space-y-2">
-                <Label>Email Address</Label>
+                <Label className="text-sm font-medium">Login</Label>
                 <Input
-                  type="email"
-                  placeholder="team@example.com"
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
+                  placeholder="Username or email"
+                  value={inviteLogin}
+                  onChange={(e) => setInviteLogin(e.target.value)}
+                  className="h-11"
                 />
               </div>
+              
+              {/* Password field */}
               <div className="space-y-2">
-                <Label>Full Name (Optional)</Label>
-                <Input
-                  placeholder="John Doe"
-                  value={inviteFullName}
-                  onChange={(e) => setInviteFullName(e.target.value)}
-                />
+                <Label className="text-sm font-medium">Password</Label>
+                <div className="relative">
+                  <Input
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Enter password"
+                    value={invitePassword}
+                    onChange={(e) => setInvitePassword(e.target.value)}
+                    className="h-11 pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
+              
+              {/* Role selection cards */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Select role</Label>
+                <div className="grid gap-3">
+                  {(Object.entries(roleConfig) as [PanelRole, typeof roleConfig[PanelRole]][]).map(([key, config]) => (
+                    <RoleSelectCard
+                      key={key}
+                      roleKey={key}
+                      config={config}
+                      selected={inviteRole === key}
+                      onSelect={() => setInviteRole(key)}
+                    />
+                  ))}
+                </div>
+              </div>
+              
+              {/* Select accessible panels - placeholder */}
               <div className="space-y-2">
-                <Label>Role</Label>
-                <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as PanelRole)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(roleConfig).map(([key, config]) => (
-                      <SelectItem key={key} value={key}>
-                        <div className="flex items-center gap-2">
-                          <config.icon className="w-4 h-4" />
-                          <span>{config.label}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {roleConfig[inviteRole].description}
-                </p>
+                <Label className="text-sm font-medium">Select accessible panels</Label>
+                <div className="p-4 rounded-lg border border-dashed border-border bg-muted/30 text-center">
+                  <p className="text-sm text-muted-foreground">
+                    All panels accessible by default
+                  </p>
+                </div>
               </div>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setInviteOpen(false)}>Cancel</Button>
-              <Button onClick={handleInvite} disabled={!inviteEmail || isInviting}>
+            
+            {/* Footer */}
+            <div className="px-6 py-4 border-t bg-muted/30">
+              <Button 
+                onClick={handleInvite} 
+                disabled={!inviteLogin || !invitePassword || isInviting}
+                className="w-full h-11"
+              >
                 {isInviting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                Add Member
+                Add
               </Button>
-            </DialogFooter>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
 
       {/* Role Permissions Overview */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {Object.entries(roleConfig).map(([key, config]) => (
+        {(Object.entries(roleConfig) as [PanelRole, typeof roleConfig[PanelRole]][]).map(([key, config]) => (
           <RoleCard key={key} roleKey={key} config={config} />
         ))}
       </div>
