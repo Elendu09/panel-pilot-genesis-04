@@ -776,11 +776,19 @@ export const ServiceImportDialog = ({
                               <Input
                                 type="number"
                                 placeholder={`${globalMarkup}%`}
-                                value={serviceMarkups[service.id] ?? ""}
-                                onChange={(e) => setServiceMarkups(prev => ({
-                                  ...prev,
-                                  [service.id]: e.target.value ? Number(e.target.value) : globalMarkup
-                                }))}
+                                value={serviceMarkups[service.id] !== undefined ? serviceMarkups[service.id] : ""}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setServiceMarkups(prev => {
+                                    if (val === "") {
+                                      // Remove the custom markup so it falls back to globalMarkup
+                                      const newMarkups = { ...prev };
+                                      delete newMarkups[service.id];
+                                      return newMarkups;
+                                    }
+                                    return { ...prev, [service.id]: Number(val) };
+                                  });
+                                }}
                                 className="w-12 h-6 text-[10px] bg-background/50 px-1 text-center"
                               />
                               <span className="text-[10px] text-muted-foreground">%</span>
