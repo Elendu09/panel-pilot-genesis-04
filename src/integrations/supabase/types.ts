@@ -772,6 +772,9 @@ export type Database = {
           email: string
           full_name: string | null
           id: string
+          invoice_address: string | null
+          invoice_company_name: string | null
+          invoice_vat_id: string | null
           is_active: boolean | null
           is_banned: boolean | null
           is_vip: boolean | null
@@ -799,6 +802,9 @@ export type Database = {
           email: string
           full_name?: string | null
           id?: string
+          invoice_address?: string | null
+          invoice_company_name?: string | null
+          invoice_vat_id?: string | null
           is_active?: boolean | null
           is_banned?: boolean | null
           is_vip?: boolean | null
@@ -826,6 +832,9 @@ export type Database = {
           email?: string
           full_name?: string | null
           id?: string
+          invoice_address?: string | null
+          invoice_company_name?: string | null
+          invoice_vat_id?: string | null
           is_active?: boolean | null
           is_banned?: boolean | null
           is_vip?: boolean | null
@@ -967,6 +976,191 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      invoice_settings: {
+        Row: {
+          auto_generate_on_payment: boolean | null
+          company_address: string | null
+          company_email: string | null
+          company_logo_url: string | null
+          company_name: string | null
+          company_phone: string | null
+          company_vat_id: string | null
+          created_at: string | null
+          id: string
+          invoice_footer_text: string | null
+          invoice_language: string | null
+          invoice_prefix: string | null
+          next_invoice_number: number | null
+          panel_id: string | null
+          tax_enabled: boolean | null
+          tax_label: string | null
+          tax_rate: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          auto_generate_on_payment?: boolean | null
+          company_address?: string | null
+          company_email?: string | null
+          company_logo_url?: string | null
+          company_name?: string | null
+          company_phone?: string | null
+          company_vat_id?: string | null
+          created_at?: string | null
+          id?: string
+          invoice_footer_text?: string | null
+          invoice_language?: string | null
+          invoice_prefix?: string | null
+          next_invoice_number?: number | null
+          panel_id?: string | null
+          tax_enabled?: boolean | null
+          tax_label?: string | null
+          tax_rate?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          auto_generate_on_payment?: boolean | null
+          company_address?: string | null
+          company_email?: string | null
+          company_logo_url?: string | null
+          company_name?: string | null
+          company_phone?: string | null
+          company_vat_id?: string | null
+          created_at?: string | null
+          id?: string
+          invoice_footer_text?: string | null
+          invoice_language?: string | null
+          invoice_prefix?: string | null
+          next_invoice_number?: number | null
+          panel_id?: string | null
+          tax_enabled?: boolean | null
+          tax_label?: string | null
+          tax_rate?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_settings_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: true
+            referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          buyer_id: string | null
+          company_snapshot: Json
+          created_at: string | null
+          currency: string | null
+          customer_snapshot: Json
+          id: string
+          invoice_number: string
+          invoice_type: string
+          issued_at: string | null
+          line_items: Json
+          notes: string | null
+          order_id: string | null
+          panel_id: string | null
+          payment_id: string | null
+          payment_method: string | null
+          pdf_generated_at: string | null
+          pdf_url: string | null
+          status: string | null
+          subtotal: number
+          tax_amount: number | null
+          tax_rate: number | null
+          total_amount: number
+          user_id: string | null
+        }
+        Insert: {
+          buyer_id?: string | null
+          company_snapshot?: Json
+          created_at?: string | null
+          currency?: string | null
+          customer_snapshot?: Json
+          id?: string
+          invoice_number: string
+          invoice_type: string
+          issued_at?: string | null
+          line_items?: Json
+          notes?: string | null
+          order_id?: string | null
+          panel_id?: string | null
+          payment_id?: string | null
+          payment_method?: string | null
+          pdf_generated_at?: string | null
+          pdf_url?: string | null
+          status?: string | null
+          subtotal: number
+          tax_amount?: number | null
+          tax_rate?: number | null
+          total_amount: number
+          user_id?: string | null
+        }
+        Update: {
+          buyer_id?: string | null
+          company_snapshot?: Json
+          created_at?: string | null
+          currency?: string | null
+          customer_snapshot?: Json
+          id?: string
+          invoice_number?: string
+          invoice_type?: string
+          issued_at?: string | null
+          line_items?: Json
+          notes?: string | null
+          order_id?: string | null
+          panel_id?: string | null
+          payment_id?: string | null
+          payment_method?: string | null
+          pdf_generated_at?: string | null
+          pdf_url?: string | null
+          status?: string | null
+          subtotal?: number
+          tax_amount?: number | null
+          tax_rate?: number | null
+          total_amount?: number
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "client_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       normalized_services: {
         Row: {
@@ -2336,6 +2530,75 @@ export type Database = {
           },
         ]
       }
+      service_access: {
+        Row: {
+          buyer_id: string
+          expires_at: string | null
+          granted_at: string | null
+          granted_by: string | null
+          id: string
+          notes: string | null
+          panel_id: string
+          service_id: string
+        }
+        Insert: {
+          buyer_id: string
+          expires_at?: string | null
+          granted_at?: string | null
+          granted_by?: string | null
+          id?: string
+          notes?: string | null
+          panel_id: string
+          service_id: string
+        }
+        Update: {
+          buyer_id?: string
+          expires_at?: string | null
+          granted_at?: string | null
+          granted_by?: string | null
+          id?: string
+          notes?: string | null
+          panel_id?: string
+          service_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_access_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "client_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_access_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_access_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_access_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "buyer_visible_services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_access_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_categories: {
         Row: {
           color: string | null
@@ -2473,9 +2736,12 @@ export type Database = {
           display_order: number | null
           estimated_time: string | null
           features: Json | null
+          hidden_at: string | null
+          hidden_by: string | null
           id: string
           image_url: string | null
           is_active: boolean | null
+          is_hidden: boolean | null
           is_price_locked: boolean | null
           last_price_sync_at: string | null
           markup_percent: number | null
@@ -2505,9 +2771,12 @@ export type Database = {
           display_order?: number | null
           estimated_time?: string | null
           features?: Json | null
+          hidden_at?: string | null
+          hidden_by?: string | null
           id?: string
           image_url?: string | null
           is_active?: boolean | null
+          is_hidden?: boolean | null
           is_price_locked?: boolean | null
           last_price_sync_at?: string | null
           markup_percent?: number | null
@@ -2537,9 +2806,12 @@ export type Database = {
           display_order?: number | null
           estimated_time?: string | null
           features?: Json | null
+          hidden_at?: string | null
+          hidden_by?: string | null
           id?: string
           image_url?: string | null
           is_active?: boolean | null
+          is_hidden?: boolean | null
           is_price_locked?: boolean | null
           last_price_sync_at?: string | null
           markup_percent?: number | null
@@ -2571,6 +2843,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "service_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "services_hidden_by_fkey"
+            columns: ["hidden_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -2799,6 +3078,10 @@ export type Database = {
     }
     Functions: {
       approve_panel: { Args: { panel_id: string }; Returns: boolean }
+      buyer_has_service_access: {
+        Args: { p_buyer_id: string; p_service_id: string }
+        Returns: boolean
+      }
       calculate_buyer_price: {
         Args: {
           p_category?: string
@@ -2818,6 +3101,7 @@ export type Database = {
         }
         Returns: string
       }
+      generate_invoice_number: { Args: { p_panel_id: string }; Returns: string }
       generate_order_number: { Args: never; Returns: string }
       generate_panel_api_key: { Args: never; Returns: string }
       generate_subdomain: { Args: { panel_name: string }; Returns: string }
