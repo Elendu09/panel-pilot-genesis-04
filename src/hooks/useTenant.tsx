@@ -1,6 +1,7 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { analyzeDomain, type TenantDomainConfig } from '@/lib/tenant-domain-config';
+import { analyzeDomain, PLATFORM_DOMAIN, type TenantDomainConfig } from '@/lib/tenant-domain-config';
+
 interface DesignCustomization {
   primaryColor?: string;
   secondaryColor?: string;
@@ -83,20 +84,66 @@ interface TenantDetectionResult {
 const tenantCache = new Map<string, { panel: TenantPanel | null; timestamp: number }>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
+// Retry function with exponential backoff
+async function fetchWithRetry<T>(
+  fn: () => Promise<T>, 
+  maxRetries = 3,
+  signal?: AbortSignal
+): Promise<T> {
+  let lastError: any;
+  for (let i = 0; i < maxRetries; i++) {
+    if (signal?.aborted) throw new Error('Request aborted');
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      if (i < maxRetries - 1) {
+        await new Promise(r => setTimeout(r, Math.pow(2, i) * 500));
+      }
+    }
+  }
+  throw lastError;
+}
+
 export function useTenant(): TenantDetectionResult {
+  // Synchronous domain detection for immediate routing
+  const hostname = typeof window !== 'undefined' ? window.location.hostname.toLowerCase() : '';
+  const initialConfig = useMemo(() => analyzeDomain(hostname), [hostname]);
+  
+  // Determine domain type synchronously
+  const initialIsPlatform = initialConfig.type === 'platform' || initialConfig.type === 'development';
+  const initialIsTenant = initialConfig.type === 'subdomain' || initialConfig.type === 'custom' || initialConfig.type === 'external';
+  
   const [panel, setPanel] = useState<TenantPanel | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!initialIsPlatform); // Only load if tenant domain
   const [error, setError] = useState<string | null>(null);
-  const [isTenantDomain, setIsTenantDomain] = useState(false);
-  const [isPlatformDomain, setIsPlatformDomain] = useState(true);
-  const [domainConfig, setDomainConfig] = useState<TenantDomainConfig | null>(null);
+  const [isTenantDomain, setIsTenantDomain] = useState(initialIsTenant);
+  const [isPlatformDomain, setIsPlatformDomain] = useState(initialIsPlatform);
+  const [domainConfig, setDomainConfig] = useState<TenantDomainConfig | null>(initialConfig);
   const [debugInfo, setDebugInfo] = useState<TenantDetectionResult['debugInfo']>();
+  
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     let isMounted = true;
     
+    // Cancel previous request if running
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+    const signal = abortControllerRef.current.signal;
+    
     const detectTenant = async () => {
       const searchAttempts: string[] = [];
+      
+      // If platform domain, skip async detection
+      if (initialIsPlatform) {
+        if (isMounted) {
+          setLoading(false);
+        }
+        return;
+      }
       
       try {
         if (isMounted) {
@@ -151,22 +198,23 @@ export function useTenant(): TenantDetectionResult {
           return;
         }
 
-        // Platform root domains (main website)
+        // Platform root domains (main website) - use PLATFORM_DOMAIN constant
         const isPlatformRoot = 
-          hostname === 'smmpilot.online' || 
-          hostname === 'www.smmpilot.online';
+          hostname === PLATFORM_DOMAIN || 
+          hostname === `www.${PLATFORM_DOMAIN}`;
 
-        // Check if it's a subdomain of smmpilot.online (tenant subdomain)
+        // Check if it's a subdomain of the platform (tenant subdomain)
         const isSubdomainOfPlatform = 
-          hostname.endsWith('.smmpilot.online') && 
-          hostname !== 'smmpilot.online' && 
-          hostname !== 'www.smmpilot.online';
+          hostname.endsWith(`.${PLATFORM_DOMAIN}`) && 
+          hostname !== PLATFORM_DOMAIN && 
+          hostname !== `www.${PLATFORM_DOMAIN}`;
 
         console.log('[useTenant] Domain analysis:', {
           isPlatformRoot,
           isSubdomainOfPlatform,
           isExternalHosting,
-          hostname
+          hostname,
+          PLATFORM_DOMAIN
         });
 
         // If it's the platform root domain, show the main app
@@ -201,9 +249,9 @@ export function useTenant(): TenantDetectionResult {
         let panelData: any = null;
         let panelError: any = null;
         
-        // Extract subdomain from smmpilot.online subdomains
+        // Extract subdomain from platform subdomains
         if (isSubdomainOfPlatform) {
-          subdomain = hostname.replace('.smmpilot.online', '');
+          subdomain = hostname.replace(`.${PLATFORM_DOMAIN}`, '');
           console.log('[useTenant] Extracted subdomain:', subdomain);
         }
 
@@ -215,6 +263,13 @@ export function useTenant(): TenantDetectionResult {
             console.log('[useTenant] Extracted from external host:', subdomain);
           }
         }
+        
+        // Panel query selection
+        const panelFields = `
+          id, name, subdomain, custom_domain, theme_type, primary_color,
+          secondary_color, logo_url, status, custom_branding, settings,
+          panel_settings (seo_title, seo_description, seo_keywords, maintenance_mode, maintenance_message, contact_info, social_links)
+        `;
 
         // PRIORITY 0: Try full hostname as custom_domain first (for any custom domain)
         if (!isSubdomainOfPlatform) {
@@ -240,21 +295,23 @@ export function useTenant(): TenantDetectionResult {
           }
         }
 
-        // PRIORITY 1: For smmpilot.online subdomains, search by subdomain
+        // PRIORITY 1: For platform subdomains, search by subdomain
         if (!panelData && isSubdomainOfPlatform && subdomain) {
           searchAttempts.push(`subdomain=${subdomain} (priority 1)`);
           console.log('[useTenant] P1: Searching subdomain:', subdomain);
           
-          const { data: subdomainPanel, error: subdomainError } = await supabase
-            .from('panels')
-            .select(`
-              id, name, subdomain, custom_domain, theme_type, primary_color,
-              secondary_color, logo_url, status, custom_branding, settings,
-              panel_settings (seo_title, seo_description, seo_keywords, maintenance_mode, maintenance_message, contact_info, social_links)
-            `)
-            .eq('subdomain', subdomain)
-            .in('status', ['active', 'pending'])
-            .maybeSingle();
+          const result = await fetchWithRetry(
+            async () => supabase
+              .from('panels')
+              .select(panelFields)
+              .eq('subdomain', subdomain)
+              .in('status', ['active', 'pending'])
+              .maybeSingle(),
+            3,
+            signal
+          );
+          
+          const { data: subdomainPanel, error: subdomainError } = result;
 
           console.log('[useTenant] P1 result:', { found: !!subdomainPanel, error: subdomainError?.message });
           
@@ -506,8 +563,12 @@ export function useTenant(): TenantDetectionResult {
     
     return () => {
       isMounted = false;
+      // Cleanup abort controller
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
     };
-  }, []);
+  }, [initialIsPlatform]);
 
   return {
     panel,

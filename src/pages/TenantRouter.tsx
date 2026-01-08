@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { useTenant } from '@/hooks/useTenant';
+import { analyzeDomain, PLATFORM_DOMAIN } from '@/lib/tenant-domain-config';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { HelmetProvider, Helmet } from "react-helmet-async";
 import { ThemeProvider } from "@/hooks/use-theme";
@@ -49,16 +50,33 @@ const queryClient = new QueryClient();
  * 5. External hosting domains (*.netlify.app, etc.) → Buyer Dashboard (if configured)
  */
 const TenantRouter = () => {
+  // Synchronous domain detection - runs immediately before any async operations
+  const hostname = typeof window !== 'undefined' ? window.location.hostname.toLowerCase() : '';
+  const domainConfig = useMemo(() => analyzeDomain(hostname), [hostname]);
+  const isImmediatelyPlatform = domainConfig.type === 'platform' || domainConfig.type === 'development';
+  
+  // If we know synchronously it's the platform domain, render App immediately
+  // This prevents the main website from briefly showing on subdomain loads
+  if (isImmediatelyPlatform) {
+    return <App />;
+  }
+  
+  // For tenant domains, proceed with async panel detection
+  return <TenantContent />;
+};
+
+// Separate component for tenant domain handling
+const TenantContent = () => {
   const { panel, loading, error, isTenantDomain, isPlatformDomain, domainConfig, debugInfo } = useTenant();
   const [loadingTimeout, setLoadingTimeout] = useState(false);
 
-  // Add timeout for loading state
+  // Add timeout for loading state - increased to 15 seconds
   useEffect(() => {
     if (loading) {
       const timer = setTimeout(() => {
         console.warn('[TenantRouter] Loading timeout reached');
         setLoadingTimeout(true);
-      }, 10000); // 10 second timeout
+      }, 15000); // 15 second timeout
       return () => clearTimeout(timer);
     }
     setLoadingTimeout(false);
@@ -256,6 +274,7 @@ const TenantRouter = () => {
   if (isTenantDomain && !panel) {
     const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
     const requestedSubdomain = hostname.split('.')[0];
+    const platformDomain = PLATFORM_DOMAIN;
     
     return (
       <QueryClientProvider client={queryClient}>
@@ -266,7 +285,7 @@ const TenantRouter = () => {
               <Sonner />
               <Helmet>
                 <link rel="icon" type="image/png" href="/default-panel-favicon.png" />
-                <title>{requestedSubdomain}.homeofsmm.com - Claim This Subdomain</title>
+                <title>{requestedSubdomain}.{platformDomain} - Claim This Subdomain</title>
               </Helmet>
               <div className="min-h-screen flex items-center justify-center bg-[#0d0d12] relative overflow-hidden">
                 {/* Grid pattern background - blue-gray subtle */}
@@ -296,7 +315,7 @@ const TenantRouter = () => {
                     {requestedSubdomain}
                   </h1>
                   <p className="text-xl text-slate-400 mb-2 font-medium">
-                    .homeofsmm.com
+                    .{platformDomain}
                   </p>
                   <p className="text-slate-500 mb-10 leading-relaxed">
                     This subdomain is not yet configured. Be the first to claim it and start your SMM business today.
@@ -304,17 +323,17 @@ const TenantRouter = () => {
                   
                   <div className="space-y-4">
                     <button 
-                      onClick={() => window.location.href = `https://homeofsmm.com/auth?subdomain=${requestedSubdomain}`}
+                      onClick={() => window.location.href = `https://${platformDomain}/auth?subdomain=${requestedSubdomain}`}
                       className="flex items-center justify-center gap-3 w-full px-8 py-4 bg-white text-slate-900 font-semibold rounded-xl hover:bg-slate-100 hover:-translate-y-0.5 transition-all duration-300 group"
                     >
                       <span className="text-xl group-hover:scale-110 transition-transform">✨</span>
                       Claim This Subdomain
                     </button>
                     <button 
-                      onClick={() => window.location.href = `https://${requestedSubdomain}.homeofsmm.com`}
+                      onClick={() => window.location.href = `https://${requestedSubdomain}.${platformDomain}`}
                       className="flex items-center justify-center gap-2 w-full px-8 py-4 border border-slate-700 text-slate-400 font-medium rounded-xl hover:bg-white/5 hover:border-slate-600 hover:text-slate-300 transition-all duration-300"
                     >
-                      Visit {requestedSubdomain}.homeofsmm.com
+                      Visit {requestedSubdomain}.{platformDomain}
                     </button>
                   </div>
                   
