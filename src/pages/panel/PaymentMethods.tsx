@@ -230,7 +230,10 @@ const PaymentMethods = () => {
           id,
           enabled: true,
           apiKey: config.apiKey,
-          // Don't store secret key in plain text for security
+          secretKey: config.secretKey, // Required for payment processing
+          testMode: formData.testMode,
+          minDeposit: parseFloat(formData.minDeposit) || 5,
+          maxDeposit: parseFloat(formData.maxDeposit) || 1000
         }));
       
       const currentSettings = (panel?.settings as any) || {};
