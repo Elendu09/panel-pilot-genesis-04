@@ -24,6 +24,8 @@ import { ThemeTwo } from '@/components/themes/ThemeTwo';
 import { ThemeThree } from '@/components/themes/ThemeThree';
 import { ThemeFour } from '@/components/themes/ThemeFour';
 import { ThemeFive } from '@/components/themes/ThemeFive';
+import { ThemeTGRef } from '@/components/themes/ThemeTGRef';
+import { ThemeAliPanel } from '@/components/themes/ThemeAliPanel';
 import { availableThemes, type BuyerThemeKey } from '@/components/buyer-themes';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -487,13 +489,15 @@ const gradientOptions = [
   'from-indigo-500 to-violet-500',
 ];
 
-// Storefront themes (for homepage layout - ThemeOne through ThemeFive)
+// Storefront themes (for homepage layout - ThemeOne through ThemeFive + TGRef + AliPanel)
 const storefrontThemes = [
   { id: 'theme_one', name: 'Theme One', description: 'Default gradient theme with modern layout', colors: ['#0F172A', '#6366F1', '#8B5CF6'], themeType: 'dark_gradient' },
   { id: 'theme_two', name: 'Theme Two', description: 'Professional ocean blue with clean design', colors: ['#0C4A6E', '#0EA5E9', '#38BDF8'], themeType: 'professional' },
   { id: 'theme_three', name: 'Theme Three', description: 'Vibrant sunset orange with warm tones', colors: ['#1A1310', '#F97316', '#EAB308'], themeType: 'vibrant' },
   { id: 'theme_four', name: 'Theme Four', description: 'Grace - Natural forest earth theme', colors: ['#0D1912', '#22C55E', '#84CC16'], themeType: 'grace' },
   { id: 'theme_five', name: 'Theme Five', description: 'Tech futuristic with cyber aesthetics', colors: ['#0A0A0F', '#00D4FF', '#8B5CF6'], themeType: 'tech_futuristic' },
+  { id: 'theme_tgref', name: 'TGRef Style', description: 'Tech-inspired with bold typography and terminal aesthetic', colors: ['#0A0A0F', '#00B4D8', '#00D4AA'], themeType: 'tgref' },
+  { id: 'theme_alipanel', name: 'AliPanel Style', description: 'Gradient hero with floating icons and vibrant colors', colors: ['#0A0A0F', '#EC4899', '#FF6B35'], themeType: 'alipanel' },
 ];
 
 // Live Preview Renderer - renders actual theme based on selectedTheme
@@ -535,6 +539,12 @@ function LivePreviewRenderer({ customization }: { customization: any }) {
     case 'theme_five':
     case 'tech_futuristic':
       return <ThemeFive {...themeProps} />;
+    case 'theme_tgref':
+    case 'tgref':
+      return <ThemeTGRef {...themeProps} />;
+    case 'theme_alipanel':
+    case 'alipanel':
+      return <ThemeAliPanel {...themeProps} />;
     // ThemeOne is the default for all other cases
     case 'default':
     case 'theme_one':
