@@ -86,7 +86,7 @@ const BuyerAuth = () => {
       return;
     }
 
-    const result = await signUp(signupData.email, signupData.password, signupData.fullName || signupData.email.split('@')[0]);
+    const result = await signUp(signupData.email, signupData.password, signupData.username || signupData.email.split('@')[0]);
     
     if (!result.error) {
       toast.success("Account created successfully!");
@@ -252,8 +252,24 @@ const BuyerAuth = () => {
                 </form>
               </TabsContent>
               
-              <TabsContent value="signup">
+                <TabsContent value="signup">
                 <form onSubmit={handleSignup} className="space-y-4 mt-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-username" className="text-gray-700 dark:text-gray-300">Username *</Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        id="signup-username"
+                        type="text"
+                        placeholder="Choose a username"
+                        value={signupData.username}
+                        onChange={(e) => setSignupData({ ...signupData, username: e.target.value })}
+                        className="pl-10 bg-gray-50 dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-900 dark:text-white placeholder:text-gray-400 focus:border-primary focus:ring-primary/20"
+                        disabled={loading}
+                      />
+                    </div>
+                  </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="signup-email" className="text-gray-700 dark:text-gray-300">Email *</Label>
                     <div className="relative">
@@ -268,19 +284,6 @@ const BuyerAuth = () => {
                         disabled={loading}
                       />
                     </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-fullname" className="text-gray-700 dark:text-gray-300">Full Name (optional)</Label>
-                    <Input
-                      id="signup-fullname"
-                      type="text"
-                      placeholder="Your full name"
-                      value={signupData.fullName}
-                      onChange={(e) => setSignupData({ ...signupData, fullName: e.target.value })}
-                      className="bg-gray-50 dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-900 dark:text-white placeholder:text-gray-400 focus:border-primary focus:ring-primary/20"
-                      disabled={loading}
-                    />
                   </div>
                   
                   <div className="space-y-2">

@@ -15,9 +15,10 @@ import EmailVerificationKanban from '@/components/auth/EmailVerificationKanban';
 const LAST_PANEL_ROUTE_KEY = 'homeofsmm_last_panel_route';
 
 const Auth = () => {
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState('');
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [resetEmail, setResetEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
@@ -86,9 +87,17 @@ const Auth = () => {
     e.preventDefault();
     setLoading(true);
     
-    const { error } = await signIn(email, password);
+    const result = await signIn(identifier, password);
     
-    if (!error) {
+    if (result.emailNotVerified) {
+      // User exists but hasn't verified email - show verification page
+      setRegisteredEmail(result.email || identifier);
+      setShowVerification(true);
+      toast({
+        title: "Email Not Verified",
+        description: "Please verify your email to continue."
+      });
+    } else if (!result.error) {
       toast({
         title: "Welcome back!",
         description: "You have been signed in successfully."
@@ -102,7 +111,17 @@ const Auth = () => {
     e.preventDefault();
     setLoading(true);
     
-    const { error } = await signUp(email, password, fullName);
+    if (!username.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Username Required",
+        description: "Please enter a username."
+      });
+      setLoading(false);
+      return;
+    }
+    
+    const { error } = await signUp(email, password, username);
     
     if (!error) {
       setRegisteredEmail(email);
@@ -146,16 +165,17 @@ const Auth = () => {
     }
   };
 
-  // Show verification UI after successful sign-up
+  // Show verification UI after successful sign-up or for unverified users
   if (showVerification) {
     return (
       <EmailVerificationKanban 
         email={registeredEmail} 
         onBack={() => {
           setShowVerification(false);
-          setEmail('');
+          setIdentifier('');
           setPassword('');
-          setFullName('');
+          setUsername('');
+          setEmail('');
         }} 
       />
     );
@@ -229,12 +249,13 @@ const Auth = () => {
             <TabsContent value="signin">
               <form onSubmit={handleSignIn} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="identifier">Email or Username</Label>
                   <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    id="identifier"
+                    type="text"
+                    value={identifier}
+                    onChange={(e) => setIdentifier(e.target.value)}
+                    placeholder="Enter email or username"
                     required
                   />
                 </div>
@@ -267,27 +288,29 @@ const Auth = () => {
             <TabsContent value="signup">
               <form onSubmit={handleSignUp} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="fullName">Full Name</Label>
+                  <Label htmlFor="username">Username *</Label>
                   <Input
-                    id="fullName"
+                    id="username"
                     type="text"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="Choose a username"
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signupEmail">Email</Label>
+                  <Label htmlFor="signupEmail">Email *</Label>
                   <Input
                     id="signupEmail"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Enter your email"
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signupPassword">Password</Label>
+                  <Label htmlFor="signupPassword">Password *</Label>
                   <PasswordInput
                     id="signupPassword"
                     value={password}

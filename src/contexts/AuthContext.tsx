@@ -9,8 +9,8 @@ interface AuthContextType {
   session: Session | null;
   profile: any | null;
   loading: boolean;
-  signUp: (email: string, password: string, fullName?: string) => Promise<{ error: any }>;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, username?: string) => Promise<{ error: any }>;
+  signIn: (email: string, password: string) => Promise<{ error: any; emailNotVerified?: boolean; email?: string }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -118,15 +118,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signUp = async (email: string, password: string, fullName?: string) => {
+  const signUp = async (email: string, password: string, username?: string) => {
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/`,
+          emailRedirectTo: `${window.location.origin}/auth`,
           data: {
-            full_name: fullName,
+            username: username,
             role: 'panel_owner'
           }
         }
@@ -139,6 +139,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           description: error.message
         });
       } else {
+        // Update profile with username if provided
+        if (data.user && username) {
+          await supabase
+            .from('profiles')
+            .update({ username: username })
+            .eq('user_id', data.user.id);
+        }
         toast({
           title: "Success",
           description: "Please check your email to confirm your account."
@@ -158,12 +165,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
+      // First try to sign in with the identifier as email
+      let loginEmail = email;
+      
+      // Check if identifier might be a username (no @ symbol)
+      if (!email.includes('@')) {
+        // Look up the email by username
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('email')
+          .eq('username', email)
+          .single();
+        
+        if (profileData?.email) {
+          loginEmail = profileData.email;
+        }
+      }
+      
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: loginEmail,
         password
       });
       
       if (error) {
+        // Check if error is about email not confirmed
+        if (error.message?.toLowerCase().includes('email not confirmed') || 
+            error.message?.toLowerCase().includes('email_not_confirmed')) {
+          return { error, emailNotVerified: true, email: loginEmail };
+        }
         toast({
           variant: "destructive",
           title: "Sign In Error",
