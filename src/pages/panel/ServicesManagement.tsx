@@ -229,7 +229,7 @@ const ServicesManagement = () => {
   useEffect(() => {
     localStorage.setItem('services-dnd-enabled', String(isDragEnabled));
   }, [isDragEnabled]);
-  const [providers, setProviders] = useState<Array<{ id: string; name: string; api_endpoint?: string; api_key?: string }>>([]);
+  const [providers, setProviders] = useState<Array<{ id: string; name: string; api_endpoint?: string; api_key?: string; currency?: string; currency_rate_to_usd?: number }>>([]);
   const [loading, setLoading] = useState(true);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -558,7 +558,7 @@ const ServicesManagement = () => {
     if (!panel?.id) return;
     const { data } = await supabase
       .from('providers')
-      .select('id, name, api_endpoint, api_key')
+      .select('id, name, api_endpoint, api_key, currency, currency_rate_to_usd')
       .eq('panel_id', panel.id)
       .eq('is_active', true);
     setProviders(data || []);
