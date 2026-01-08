@@ -206,24 +206,26 @@ export const ServiceEditDialog = ({
     if (!service?.id || !panel?.id) return;
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from('services')
-        .update({
-          name: formData.name,
-          description: formData.description,
-          category: formData.category as any,
-          provider_id: formData.provider_id || null,
-          min_quantity: formData.min_quantity,
-          max_quantity: formData.max_quantity,
-          price: calculatedPrice,
-          image_url: formData.image_url || null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', service.id);
-
-      if (error) throw error;
-      onSave({ ...formData, price: calculatedPrice, options, seoData });
-      toast({ title: "Service Updated", description: "Changes saved successfully." });
+      // Prepare data with consistent property names for parent handler
+      const updatedData = {
+        id: service.id,
+        name: formData.name,
+        description: formData.description,
+        category: formData.category,
+        provider_id: formData.provider_id || null,
+        minQty: formData.min_quantity,
+        maxQty: formData.max_quantity,
+        min_quantity: formData.min_quantity,
+        max_quantity: formData.max_quantity,
+        price: calculatedPrice,
+        imageUrl: formData.image_url || null,
+        image_url: formData.image_url || null,
+        options,
+        seoData,
+      };
+      
+      // Let parent handle database update to avoid double-update issues
+      await onSave(updatedData);
       onOpenChange(false);
     } catch (error) {
       console.error('Error saving service:', error);
