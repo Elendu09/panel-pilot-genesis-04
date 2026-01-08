@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
@@ -75,12 +76,20 @@ const CURRENCY_OPTIONS = [
 ];
 
 interface BalanceState {
-  balance: number | null;
+  balance: number | null;       // USD equivalent
+  originalBalance: number | null; // Original provider currency
   currency: string;
+  rateToUsd: number;
   loading: boolean;
   error: string | null;
   lastUpdated: Date | null;
 }
+
+// Helper to get currency symbol
+const getCurrencySymbol = (code: string): string => {
+  const currency = CURRENCY_OPTIONS.find(c => c.code === code);
+  return currency?.symbol || code;
+};
 
 const popularProviders = [
   { name: "SMMRush", endpoint: "https://smmrush.com/api/v2", category: "General", rating: 4.8 },
@@ -175,8 +184,10 @@ const ProviderManagement = () => {
         setBalances(prev => ({
           ...prev,
           [provider.id]: {
-            balance: data.balance,
+            balance: data.balance,               // USD equivalent
+            originalBalance: data.originalBalance, // Original provider currency
             currency: data.currency || 'USD',
+            rateToUsd: data.rateToUsd || 1.0,
             loading: false,
             error: null,
             lastUpdated: new Date()
@@ -186,7 +197,7 @@ const ProviderManagement = () => {
         setBalances(prev => ({
           ...prev,
           [provider.id]: {
-            balance: null, currency: 'USD', loading: false,
+            balance: null, originalBalance: null, currency: 'USD', rateToUsd: 1.0, loading: false,
             error: data.error || 'Failed to fetch balance', lastUpdated: null
           }
         }));
@@ -195,7 +206,7 @@ const ProviderManagement = () => {
       setBalances(prev => ({
         ...prev,
         [provider.id]: {
-          balance: null, currency: 'USD', loading: false,
+          balance: null, originalBalance: null, currency: 'USD', rateToUsd: 1.0, loading: false,
           error: error.message || 'Connection failed', lastUpdated: null
         }
       }));
@@ -495,7 +506,7 @@ const ProviderManagement = () => {
           ) : (
             <div className="grid gap-4">
               {providers.map((provider, index) => {
-                const balanceState = balances[provider.id] || { balance: null, loading: false, error: null, lastUpdated: null, currency: 'USD' };
+                const balanceState = balances[provider.id] || { balance: null, originalBalance: null, loading: false, error: null, lastUpdated: null, currency: 'USD', rateToUsd: 1.0 };
                 const isLowBalance = balanceState.balance !== null && balanceState.balance < LOW_BALANCE_THRESHOLD;
                 
                 return (
@@ -546,7 +557,14 @@ const ProviderManagement = () => {
                                   <p className={cn("text-lg md:text-xl font-bold", isLowBalance ? "text-yellow-500" : "text-green-500")}>
                                     ${balanceState.balance?.toFixed(2) || '0.00'}
                                   </p>
-                                  <p className="text-xs text-muted-foreground">Balance</p>
+                                  {balanceState.currency && balanceState.currency !== 'USD' && balanceState.originalBalance !== null && (
+                                    <p className="text-xs text-muted-foreground">
+                                      {getCurrencySymbol(balanceState.currency)}{balanceState.originalBalance?.toFixed(2)} {balanceState.currency}
+                                    </p>
+                                  )}
+                                  {(!balanceState.currency || balanceState.currency === 'USD') && (
+                                    <p className="text-xs text-muted-foreground">Balance</p>
+                                  )}
                                 </>
                               )}
                             </div>
@@ -673,6 +691,30 @@ const ProviderManagement = () => {
                 1 {formData.currency} = ${formData.currency_rate_to_usd} USD. Provider prices will be converted to USD using this rate.
               </p>
             )}
+            
+            {/* Currency FAQ */}
+            <Accordion type="single" collapsible className="mt-2">
+              <AccordionItem value="currency-faq" className="border-border/50">
+                <AccordionTrigger className="text-sm py-2 hover:no-underline">
+                  <span className="flex items-center gap-2 text-muted-foreground">
+                    <span className="text-primary">?</span> How does currency conversion work?
+                  </span>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="space-y-2 text-xs text-muted-foreground bg-muted/30 p-3 rounded-lg">
+                    <p><strong className="text-foreground">Provider Currency:</strong> Select the currency your provider uses (e.g., NGN for Nigerian Naira, INR for Indian Rupee).</p>
+                    <p><strong className="text-foreground">Rate to USD:</strong> Enter how many USD equals 1 unit of the provider's currency. For example:</p>
+                    <ul className="list-disc list-inside ml-2 space-y-1">
+                      <li>If 1 USD = 1550 NGN, enter <code className="bg-muted px-1 rounded">0.000645</code> (1/1550)</li>
+                      <li>If 1 USD = 83 INR, enter <code className="bg-muted px-1 rounded">0.012</code> (1/83)</li>
+                    </ul>
+                    <p><strong className="text-foreground">Balance Display:</strong> Your provider balance will show the USD equivalent with the original currency amount below.</p>
+                    <p><strong className="text-foreground">Service Import:</strong> When importing services, prices are automatically converted to USD using this rate for consistent pricing.</p>
+                    <p className="text-yellow-500 mt-2">💡 Tip: Update the exchange rate periodically to reflect current market rates for accurate pricing.</p>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
