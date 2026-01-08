@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useLayoutEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useTenant } from '@/hooks/useTenant';
 
@@ -15,6 +15,21 @@ export const TenantHead = ({ title, description }: TenantHeadProps) => {
   const faviconUrl = customBranding?.faviconUrl || '/default-panel-favicon.png';
   const appleTouchIconUrl = customBranding?.appleTouchIconUrl || faviconUrl;
   const ogImage = customBranding?.ogImageUrl || panel?.logo_url;
+  
+  // Generate proper SEO title - use panel name, never hardcoded "SMM Panel"
+  const panelName = panel?.name || 'Panel';
+  const seoSettings = panel?.settings as any;
+  const pageTitle = title || seoSettings?.seo_title || `${panelName} - Social Media Marketing Services`;
+  const pageDescription = description || seoSettings?.seo_description || `Professional social media marketing services from ${panelName}. Buy followers, likes, and views.`;
+  const seoKeywords = seoSettings?.seo_keywords || `${panelName}, social media marketing, smm services`;
+  
+  // CRITICAL: Set document title immediately using useLayoutEffect
+  // This runs synchronously before paint, preventing "HOME OF SMM" flash
+  useLayoutEffect(() => {
+    if (panel?.name) {
+      document.title = pageTitle;
+    }
+  }, [panel?.name, pageTitle]);
   
   // Force favicon update via DOM manipulation (overrides index.html)
   // Always apply default favicon for tenant domains, even if panel is loading
@@ -35,13 +50,6 @@ export const TenantHead = ({ title, description }: TenantHeadProps) => {
     appleIcon.href = appleTouchIconUrl;
     document.head.appendChild(appleIcon);
   }, [faviconUrl, appleTouchIconUrl]);
-  
-  // Generate proper SEO title - use panel name, never hardcoded "SMM Panel"
-  const panelName = panel?.name || 'Panel';
-  const seoSettings = panel?.settings as any;
-  const pageTitle = title || seoSettings?.seo_title || `${panelName} - Social Media Marketing Services`;
-  const pageDescription = description || seoSettings?.seo_description || `Professional social media marketing services from ${panelName}. Buy followers, likes, and views.`;
-  const seoKeywords = seoSettings?.seo_keywords || `${panelName}, social media marketing, smm services`;
   
   return (
     <Helmet>

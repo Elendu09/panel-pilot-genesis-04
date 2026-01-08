@@ -173,11 +173,17 @@ const Analytics = () => {
         .eq('panel_id', panel.id)
         .gte('created_at', startDate.toISOString());
 
-      // Fetch customers
+      // Fetch customers - FILTER BY DATE RANGE for new customers analytics
       const { data: customers } = await supabase
         .from('client_users')
         .select('*')
         .eq('panel_id', panel.id);
+      
+      // Filter customers created within the selected date range for "new customers" metric
+      const newCustomersInPeriod = customers?.filter(c => {
+        const createdDate = new Date(c.created_at);
+        return createdDate >= startDate && createdDate <= endDate;
+      }) || [];
 
       // Fetch transactions for payment analytics
       const { data: transactions } = await supabase
@@ -341,19 +347,25 @@ const Analytics = () => {
       });
       setRevenueData(Array.from(revenueByMonth.values()));
 
-      // Customer growth
+      // Customer growth - ONLY include customers within date range
+      const customersInRange = customers?.filter(c => {
+        const createdDate = new Date(c.created_at);
+        return createdDate >= startDate && createdDate <= endDate;
+      }) || [];
+      
       const customersByMonth = new Map<string, { month: string; new: number; total: number }>();
       let runningTotal = 0;
-      customers?.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+      customersInRange
+        .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
         .forEach(customer => {
-          const month = new Date(customer.created_at).toLocaleDateString('en-US', { month: 'short' });
+          const month = new Date(customer.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
           const existing = customersByMonth.get(month) || { month, new: 0, total: 0 };
           existing.new += 1;
           runningTotal += 1;
           existing.total = runningTotal;
           customersByMonth.set(month, existing);
         });
-      setCustomerGrowth(Array.from(customersByMonth.values()).slice(-6));
+      setCustomerGrowth(Array.from(customersByMonth.values()).slice(-14));
 
       // Service distribution from orders
       const { data: services } = await supabase

@@ -80,6 +80,13 @@ const PaymentManagement = () => {
   const [fixedFee, setFixedFee] = useState(0.30);
   const [minPayout, setMinPayout] = useState(25);
   const [payoutSchedule, setPayoutSchedule] = useState("weekly");
+  
+  // Gateway configurations with credentials
+  const [gatewayConfigs, setGatewayConfigs] = useState<Record<string, { enabled: boolean; publicKey: string; secretKey: string; testMode: boolean }>>({
+    stripe: { enabled: false, publicKey: '', secretKey: '', testMode: true },
+    paypal: { enabled: false, publicKey: '', secretKey: '', testMode: true },
+    crypto: { enabled: false, publicKey: '', secretKey: '', testMode: false },
+  });
 
   // Load data on mount
   useEffect(() => {
@@ -122,6 +129,9 @@ const PaymentManagement = () => {
           if (s.setting_key === 'min_payout' && typeof val === 'number') setMinPayout(val);
           if (s.setting_key === 'payout_schedule' && typeof val === 'string') setPayoutSchedule(val);
           if (s.setting_key === 'enabled_methods' && Array.isArray(val)) setEnabled(new Set(val as string[]));
+          if (s.setting_key === 'gateway_configs' && typeof val === 'object') {
+            setGatewayConfigs(prev => ({ ...prev, ...(val as any) }));
+          }
         });
       }
     } catch (error) {
@@ -141,6 +151,7 @@ const PaymentManagement = () => {
         { setting_key: 'min_payout', setting_value: minPayout, category: 'payments' },
         { setting_key: 'payout_schedule', setting_value: payoutSchedule, category: 'payments' },
         { setting_key: 'enabled_methods', setting_value: Array.from(enabled), category: 'payments' },
+        { setting_key: 'gateway_configs', setting_value: gatewayConfigs, category: 'payments' },
       ];
 
       for (const setting of settingsToUpsert) {
@@ -156,6 +167,13 @@ const PaymentManagement = () => {
     } finally {
       setSaving(false);
     }
+  };
+  
+  const updateGatewayConfig = (gateway: string, field: string, value: any) => {
+    setGatewayConfigs(prev => ({
+      ...prev,
+      [gateway]: { ...prev[gateway], [field]: value }
+    }));
   };
 
   const filtered = useMemo(() => {
@@ -281,27 +299,61 @@ const PaymentManagement = () => {
 
         <TabsContent value="gateways" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {[{name:'Stripe',icon:CreditCard},{name:'PayPal',icon:DollarSign},{name:'Crypto',icon:Coins}].map((gw) => (
-              <Card key={gw.name} className="bg-gradient-card border-border shadow-card">
+            {[
+              { id: 'stripe', name: 'Stripe', icon: CreditCard, description: 'Accept cards, Apple Pay, Google Pay' },
+              { id: 'paypal', name: 'PayPal', icon: DollarSign, description: 'Global payments with PayPal' },
+              { id: 'crypto', name: 'Coinbase Commerce', icon: Coins, description: 'Accept BTC, ETH, USDT' }
+            ].map((gw) => (
+              <Card key={gw.id} className="bg-gradient-card border-border shadow-card">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2"><gw.icon className="w-5 h-5" /> {gw.name}</CardTitle>
-                  <CardDescription>Enable and configure {gw.name}</CardDescription>
+                  <CardDescription>{gw.description}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <label className="flex items-center justify-between p-3 border rounded-lg"><span>Enable {gw.name}</span><Switch defaultChecked={gw.name!=='Crypto'} /></label>
+                  <label className="flex items-center justify-between p-3 border rounded-lg">
+                    <span>Enable {gw.name}</span>
+                    <Switch 
+                      checked={gatewayConfigs[gw.id]?.enabled || false}
+                      onCheckedChange={(checked) => updateGatewayConfig(gw.id, 'enabled', checked)}
+                    />
+                  </label>
                   <div>
-                    <Label>Public Key</Label>
-                    <Input placeholder={`${gw.name.toLowerCase()}_pub_...`} />
+                    <Label>Public Key / API Key</Label>
+                    <Input 
+                      placeholder={`${gw.id}_pub_...`}
+                      value={gatewayConfigs[gw.id]?.publicKey || ''}
+                      onChange={(e) => updateGatewayConfig(gw.id, 'publicKey', e.target.value)}
+                    />
                   </div>
                   <div>
                     <Label>Secret Key</Label>
-                    <Input type="password" placeholder="••••••••" />
+                    <Input 
+                      type="password" 
+                      placeholder="••••••••"
+                      value={gatewayConfigs[gw.id]?.secretKey || ''}
+                      onChange={(e) => updateGatewayConfig(gw.id, 'secretKey', e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">Stored securely for subscription payments</p>
                   </div>
-                  <label className="flex items-center justify-between p-3 border rounded-lg"><span>Test mode (sandbox)</span><Switch defaultChecked /></label>
+                  <label className="flex items-center justify-between p-3 border rounded-lg">
+                    <span>Test mode (sandbox)</span>
+                    <Switch 
+                      checked={gatewayConfigs[gw.id]?.testMode ?? true}
+                      onCheckedChange={(checked) => updateGatewayConfig(gw.id, 'testMode', checked)}
+                    />
+                  </label>
                 </CardContent>
               </Card>
             ))}
           </div>
+          <Card className="bg-muted/30 border-primary/20">
+            <CardContent className="p-4">
+              <p className="text-sm text-muted-foreground">
+                💡 <strong>Important:</strong> These gateway configurations are used for platform subscription payments. 
+                Panel owners can configure their own gateways for buyer deposits.
+              </p>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="methods" className="space-y-6">

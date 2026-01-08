@@ -105,6 +105,18 @@ const TenantContent = () => {
     }
   }, [isTenantDomain]);
 
+  // Set early title for tenant domains based on subdomain
+  useEffect(() => {
+    if (isTenantDomain && !panel) {
+      const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
+      const subdomain = hostname.split('.')[0];
+      if (subdomain && subdomain !== 'www') {
+        // Set a subdomain-based title early, before panel loads
+        document.title = `${subdomain.charAt(0).toUpperCase() + subdomain.slice(1)} - SMM Panel`;
+      }
+    }
+  }, [isTenantDomain, panel]);
+
   // Show centered logo + shimmer for tenant domains during loading - prevents blank screen
   if (loading && !loadingTimeout) {
     // For platform domains, render App immediately (optimistic)
