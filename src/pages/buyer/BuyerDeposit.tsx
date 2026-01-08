@@ -27,6 +27,8 @@ import { useBuyerAuth } from "@/contexts/BuyerAuthContext";
 import { useTenant } from "@/hooks/useTenant";
 import BuyerLayout from "./BuyerLayout";
 import { Link } from "react-router-dom";
+import { BuyerInvoiceHistory } from "@/components/billing/BuyerInvoiceHistory";
+import { useInvoiceGeneration } from "@/hooks/useInvoiceGeneration";
 
 const defaultPaymentMethods = [
   { id: "stripe", name: "Card", icon: CreditCard, color: "from-blue-500 to-blue-600", badge: "Instant" },
@@ -56,6 +58,7 @@ interface Transaction {
 const BuyerDeposit = () => {
   const { buyer, refreshBuyer, loading: authLoading } = useBuyerAuth();
   const { panel, loading: panelLoading } = useTenant();
+  const { generateInvoice } = useInvoiceGeneration();
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
   const [amount, setAmount] = useState("");
   const [processing, setProcessing] = useState(false);
@@ -190,6 +193,16 @@ const BuyerDeposit = () => {
 
       // Refresh buyer data
       await refreshBuyer();
+
+      // Auto-generate invoice
+      if (transaction?.id) {
+        await generateInvoice({
+          transactionId: transaction.id,
+          panelId: panel?.id,
+          buyerId: buyer.id,
+          invoiceType: "buyer_funding",
+        });
+      }
 
       toast({ 
         title: "Deposit Successful!", 
@@ -428,6 +441,13 @@ const BuyerDeposit = () => {
             )}
           </Button>
         </motion.div>
+
+        {/* Invoice History */}
+        {buyer?.id && (
+          <motion.div variants={itemVariants}>
+            <BuyerInvoiceHistory buyerId={buyer.id} />
+          </motion.div>
+        )}
 
         {/* Recent Deposits */}
         <motion.div variants={itemVariants} className="space-y-3 md:space-y-4">
