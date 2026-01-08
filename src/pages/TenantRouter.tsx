@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { useTenant } from '@/hooks/useTenant';
-import { analyzeDomain, PLATFORM_DOMAIN } from '@/lib/tenant-domain-config';
+import { analyzeDomain, PLATFORM_DOMAIN, ALL_PLATFORM_DOMAINS } from '@/lib/tenant-domain-config';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { HelmetProvider, Helmet } from "react-helmet-async";
 import { ThemeProvider } from "@/hooks/use-theme";
@@ -13,6 +13,30 @@ import { BuyerProtectedRoute } from '@/components/buyer/BuyerProtectedRoute';
 import { CurrencyProvider } from '@/contexts/CurrencyContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import App from '../App';
+
+// Set initial title immediately based on domain (prevents "Loading..." flash)
+(function setInitialTitle() {
+  if (typeof window === 'undefined') return;
+  const hostname = window.location.hostname.toLowerCase();
+  const hostnameWithoutWww = hostname.startsWith('www.') ? hostname.slice(4) : hostname;
+  
+  // Check if platform domain
+  const platformDomains = ['homeofsmm.com', 'smmpilot.online'];
+  const isPlatform = platformDomains.some(d => hostnameWithoutWww === d);
+  
+  if (isPlatform) {
+    document.title = 'HOME OF SMM - Advanced SMM Panel Platform';
+  } else {
+    // Extract subdomain for tenant domains
+    const parts = hostname.split('.');
+    if (parts.length > 2 || (parts.length === 2 && !platformDomains.includes(hostname))) {
+      const subdomain = parts[0];
+      if (subdomain && subdomain !== 'www') {
+        document.title = `${subdomain.charAt(0).toUpperCase() + subdomain.slice(1)} - SMM Panel`;
+      }
+    }
+  }
+})();
 
 // Buyer pages
 import BuyerDashboard from './buyer/BuyerDashboard';
