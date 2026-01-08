@@ -143,6 +143,34 @@ const BuyerDeposit = () => {
     fetchTransactions();
   }, [buyer?.id]);
 
+  // Check for payment success/cancel URL params on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const success = params.get('success');
+    const cancelled = params.get('cancelled');
+    const transactionId = params.get('transaction_id');
+    
+    if (success === 'true' && transactionId) {
+      // Payment was successful - verify and show confirmation
+      toast({ 
+        title: "Payment Successful!", 
+        description: "Your balance will be updated shortly." 
+      });
+      // Refresh buyer data
+      refreshBuyer();
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (cancelled === 'true') {
+      toast({ 
+        variant: "destructive",
+        title: "Payment Cancelled", 
+        description: "Your deposit was not completed." 
+      });
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [refreshBuyer]);
+
   const handleDeposit = async () => {
     if (!selectedMethod || !amount || parseFloat(amount) <= 0) {
       toast({ variant: "destructive", title: "Please select payment method and enter amount" });
@@ -159,11 +187,12 @@ const BuyerDeposit = () => {
     try {
       const depositAmount = parseFloat(amount);
 
-      // Create transaction record
+      // Create transaction record with pending status
       const { data: transaction, error: transError } = await supabase
         .from('transactions')
         .insert({
           user_id: buyer.id,
+          panel_id: panel.id,
           amount: depositAmount,
           type: 'deposit',
           payment_method: selectedMethod,
@@ -175,58 +204,54 @@ const BuyerDeposit = () => {
 
       if (transError) throw transError;
 
-      // Simulate payment processing (in real app, integrate with payment gateway)
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // Update transaction status to completed
-      await supabase
-        .from('transactions')
-        .update({ status: 'completed' })
-        .eq('id', transaction.id);
-
-      // Update buyer balance
-      const newBalance = (buyer.balance || 0) + depositAmount;
-      await supabase
-        .from('client_users')
-        .update({ balance: newBalance })
-        .eq('id', buyer.id);
-
-      // Refresh buyer data
-      await refreshBuyer();
-
-      // Auto-generate invoice
-      if (transaction?.id) {
-        await generateInvoice({
-          transactionId: transaction.id,
-          panelId: panel?.id,
+      // Call the payment processing edge function
+      const response = await supabase.functions.invoke('process-payment', {
+        body: {
+          gateway: selectedMethod,
+          amount: depositAmount,
+          panelId: panel.id,
           buyerId: buyer.id,
-          invoiceType: "buyer_funding",
-        });
-      }
-
-      toast({ 
-        title: "Deposit Successful!", 
-        description: `$${depositAmount.toFixed(2)} has been added to your balance` 
+          transactionId: transaction.id,
+          returnUrl: window.location.origin + '/deposit',
+          currency: 'usd'
+        }
       });
 
-      // Reset form
-      setAmount("");
-      setSelectedMethod(null);
+      if (response.error) {
+        throw new Error(response.error.message || 'Payment processing failed');
+      }
 
-      // Refresh transactions
-      const { data: updatedTrans } = await supabase
-        .from('transactions')
-        .select('*')
-        .eq('user_id', buyer.id)
-        .eq('type', 'deposit')
-        .order('created_at', { ascending: false })
-        .limit(10);
-      
-      setTransactions(updatedTrans || []);
+      const { redirectUrl, error: paymentError } = response.data || {};
 
-    } catch (error) {
+      if (paymentError) {
+        // Update transaction to failed
+        await supabase
+          .from('transactions')
+          .update({ status: 'failed' })
+          .eq('id', transaction.id);
+        throw new Error(paymentError);
+      }
+
+      if (redirectUrl) {
+        // Redirect to payment gateway
+        window.location.href = redirectUrl;
+      } else {
+        // If no redirect (some gateways might complete instantly)
+        toast({ 
+          title: "Deposit Initiated", 
+          description: "Your payment is being processed." 
+        });
+        setAmount("");
+        setSelectedMethod(null);
+      }
+
+    } catch (error: any) {
       console.error('Deposit error:', error);
-      toast({ variant: "destructive", title: "Deposit Failed", description: "Please try again" });
+      toast({ 
+        variant: "destructive", 
+        title: "Deposit Failed", 
+        description: error.message || "Please try again" 
+      });
     } finally {
       setProcessing(false);
     }
