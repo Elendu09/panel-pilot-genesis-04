@@ -97,7 +97,7 @@ interface TenantDetectionResult {
 
 // Cache for tenant data to avoid refetching on navigation
 const tenantCache = new Map<string, { panel: TenantPanel | null; timestamp: number }>();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const CACHE_TTL = 60 * 1000; // 1 minute (keeps pages snappy but allows fast design syncing)
 
 // Retry function with exponential backoff
 async function fetchWithRetry<T>(
@@ -136,11 +136,120 @@ export function useTenant(): TenantDetectionResult {
   const [isPlatformDomain, setIsPlatformDomain] = useState(initialIsPlatform);
   const [domainConfig, setDomainConfig] = useState<TenantDomainConfig | null>(initialConfig);
   const [debugInfo, setDebugInfo] = useState<TenantDetectionResult['debugInfo']>();
-  
+  const [refreshKey, setRefreshKey] = useState(0);
+
   const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    let isMounted = true;
+    const onDesignUpdated = () => {
+      try {
+        tenantCache.delete(hostname);
+      } catch {
+        // ignore
+      }
+      setRefreshKey((k) => k + 1);
+    };
+
+    window.addEventListener('panelDesignUpdated', onDesignUpdated);
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'panelDesignUpdatedAt') onDesignUpdated();
+    };
+    window.addEventListener('storage', onStorage);
+
+    return () => {
+      window.removeEventListener('panelDesignUpdated', onDesignUpdated);
+      window.removeEventListener('storage', onStorage);
+    };
+  }, [hostname]);
+
+  useEffect(() => {
+    const onDesignUpdated = () => {
+      try {
+        tenantCache.delete(hostname);
+      } catch {
+        // ignore
+      }
+      setRefreshKey((k) => k + 1);
+    };
+
+    window.addEventListener('panelDesignUpdated', onDesignUpdated);
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'panelDesignUpdatedAt') onDesignUpdated();
+    };
+    window.addEventListener('storage', onStorage);
+
+    return () => {
+      window.removeEventListener('panelDesignUpdated', onDesignUpdated);
+      window.removeEventListener('storage', onStorage);
+    };
+  }, [hostname]);
+
+  useEffect(() => {
+    const onDesignUpdated = () => {
+      try {
+        tenantCache.delete(hostname);
+      } catch {
+        // ignore
+      }
+      setRefreshKey((k) => k + 1);
+    };
+
+    window.addEventListener('panelDesignUpdated', onDesignUpdated);
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'panelDesignUpdatedAt') onDesignUpdated();
+    });
+
+    return () => {
+      window.removeEventListener('panelDesignUpdated', onDesignUpdated);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hostname]);
+
+  useEffect(() => {
+    const onDesignUpdated = () => {
+      try {
+        tenantCache.delete(hostname);
+      } catch {
+        // ignore
+      }
+      setRefreshKey((k) => k + 1);
+    };
+
+    window.addEventListener('panelDesignUpdated', onDesignUpdated);
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'panelDesignUpdatedAt') onDesignUpdated();
+    };
+    window.addEventListener('storage', onStorage);
+
+    return () => {
+      window.removeEventListener('panelDesignUpdated', onDesignUpdated);
+      window.removeEventListener('storage', onStorage);
+    };
+  }, [hostname]);
+
+  useEffect(() => {
+    const onDesignUpdated = () => {
+      try {
+        tenantCache.delete(hostname);
+      } catch {
+        // ignore
+      }
+      setRefreshKey((k) => k + 1);
+    };
+
+    window.addEventListener('panelDesignUpdated', onDesignUpdated);
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'panelDesignUpdatedAt') onDesignUpdated();
+    };
+    window.addEventListener('storage', onStorage);
+
+    return () => {
+      window.removeEventListener('panelDesignUpdated', onDesignUpdated);
+      window.removeEventListener('storage', onStorage);
+    };
+  }, [hostname]);
+
+  useEffect(() => {
     
     // Cancel previous request if running
     if (abortControllerRef.current) {

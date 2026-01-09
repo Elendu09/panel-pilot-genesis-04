@@ -25,18 +25,15 @@ import { ThemeTwo } from '@/components/themes/ThemeTwo';
 import { ThemeThree } from '@/components/themes/ThemeThree';
 import { ThemeFour } from '@/components/themes/ThemeFour';
 import { ThemeFive } from '@/components/themes/ThemeFive';
-import { ThemeTGRef } from '@/components/themes/ThemeTGRef';
-import { ThemeAliPanel } from '@/components/themes/ThemeAliPanel';
-import { 
-  TGRefHomepage, 
-  AliPanelHomepage, 
-  FlySMMHomepage, 
-  SMMStayHomepage, 
+import {
+  TGRefHomepage,
+  AliPanelHomepage,
+  FlySMMHomepage,
+  SMMStayHomepage,
   SMMVisitHomepage,
-  availableThemes, 
-  type BuyerThemeKey 
 } from '@/components/buyer-themes';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { generateBuyerThemeCSS } from '@/lib/color-utils';
 
 // Memoized preset button for performance
 const PresetButton = memo(({ preset, onApply }: { preset: any; onApply: (p: any) => void }) => (
@@ -774,13 +771,11 @@ const getThemeDefaults = (themeType: string): Partial<typeof defaultCustomizatio
   }
 };
 
-// Storefront themes (for homepage layout - ThemeOne through ThemeFive + Buyer Homepage Themes)
+// Storefront themes (for homepage layout)
+// NOTE: ThemeOne-ThemeFive are represented by design presets, so the homepage theme picker
+// only exposes "Default" plus the dedicated homepage layouts (TGRef/AliPanel/etc.).
 const storefrontThemes = [
-  { id: 'theme_one', name: 'Theme One', description: 'Default gradient theme with modern layout', colors: ['#0F172A', '#6366F1', '#8B5CF6'], themeType: 'dark_gradient' },
-  { id: 'theme_two', name: 'Theme Two', description: 'Professional ocean blue with clean design', colors: ['#0C4A6E', '#0EA5E9', '#38BDF8'], themeType: 'professional' },
-  { id: 'theme_three', name: 'Theme Three', description: 'Vibrant sunset orange with warm tones', colors: ['#1A1310', '#F97316', '#EAB308'], themeType: 'vibrant' },
-  { id: 'theme_four', name: 'Theme Four', description: 'Grace - Natural forest earth theme', colors: ['#0D1912', '#22C55E', '#84CC16'], themeType: 'grace' },
-  { id: 'theme_five', name: 'Theme Five', description: 'Tech futuristic with cyber aesthetics', colors: ['#0A0A0F', '#00D4FF', '#8B5CF6'], themeType: 'tech_futuristic' },
+  { id: 'default', name: 'Default', description: 'Modern default layout (recommended)', colors: ['#0F172A', '#6366F1', '#8B5CF6'], themeType: 'dark_gradient' },
   { id: 'theme_tgref', name: 'TGRef Style', description: 'Terminal/tech aesthetic with monospace fonts', colors: ['#1A1B26', '#00D4AA', '#0EA5E9'], themeType: 'tgref' },
   { id: 'theme_alipanel', name: 'AliPanel Style', description: 'Pink-orange gradients with floating icons', colors: ['#0A0A0A', '#FF6B6B', '#FFCC70'], themeType: 'alipanel' },
   { id: 'theme_flysmm', name: 'FlySMM Style', description: 'Light friendly with blue accents and illustrations', colors: ['#F8FAFC', '#2196F3', '#00BCD4'], themeType: 'flysmm' },
@@ -790,6 +785,9 @@ const storefrontThemes = [
 
 // Live Preview Renderer - renders actual theme based on selectedTheme
 function LivePreviewRenderer({ customization }: { customization: any }) {
+  const selectedTheme = customization.selectedTheme || 'dark_gradient';
+  const themeMode: 'dark' | 'light' = customization.themeMode === 'light' ? 'light' : 'dark';
+
   const mockPanel = {
     name: customization.companyName || 'Your Panel',
     logo_url: customization.logoUrl,
@@ -797,11 +795,10 @@ function LivePreviewRenderer({ customization }: { customization: any }) {
     secondary_color: customization.secondaryColor,
   };
 
-  const selectedTheme = customization.selectedTheme || 'dark_gradient';
   const themeProps = {
     panel: mockPanel,
     services: [],
-    customization: customization,
+    customization,
     isPreview: true,
   };
 
@@ -814,55 +811,89 @@ function LivePreviewRenderer({ customization }: { customization: any }) {
       totalUsers: 10000,
       servicesCount: 500,
     },
-    customization: customization,
+    customization,
     logoUrl: customization.logoUrl,
   };
 
+  const previewCSS = generateBuyerThemeCSS({
+    primaryColor: customization.primaryColor,
+    secondaryColor: customization.secondaryColor,
+    accentColor: customization.accentColor,
+    backgroundColor: customization.backgroundColor,
+    surfaceColor: customization.surfaceColor,
+    cardColor: customization.cardColor || customization.surfaceColor,
+    textColor: customization.textColor,
+    mutedColor: customization.mutedColor,
+    borderColor: customization.borderColor,
+    successColor: customization.successColor,
+    warningColor: customization.warningColor,
+    infoColor: customization.infoColor,
+    errorColor: customization.errorColor,
+  });
+
   // Render appropriate theme based on selectedTheme
+  let rendered: React.ReactNode;
   switch (selectedTheme) {
     case 'theme_two':
     case 'professional':
     case 'light_minimal':
     case 'corporate':
     case 'ocean_blue':
-      return <ThemeTwo {...themeProps} />;
+      rendered = <ThemeTwo {...themeProps} />;
+      break;
     case 'theme_three':
     case 'vibrant':
     case 'neon_glow':
     case 'sunset_orange':
     case 'royal_purple':
-      return <ThemeThree {...themeProps} />;
+      rendered = <ThemeThree {...themeProps} />;
+      break;
     case 'theme_four':
     case 'grace':
     case 'grace_cometh':
     case 'forest_earth':
-      return <ThemeFour {...themeProps} />;
+      rendered = <ThemeFour {...themeProps} />;
+      break;
     case 'theme_five':
     case 'tech_futuristic':
-      return <ThemeFive {...themeProps} />;
+      rendered = <ThemeFive {...themeProps} />;
+      break;
     case 'theme_tgref':
     case 'tgref':
-      return <TGRefHomepage {...homepageProps} />;
+      rendered = <TGRefHomepage {...homepageProps} />;
+      break;
     case 'theme_alipanel':
     case 'alipanel':
-      return <AliPanelHomepage {...homepageProps} />;
+      rendered = <AliPanelHomepage {...homepageProps} />;
+      break;
     case 'theme_flysmm':
     case 'flysmm':
-      return <FlySMMHomepage {...homepageProps} />;
+      rendered = <FlySMMHomepage {...homepageProps} />;
+      break;
     case 'theme_smmstay':
     case 'smmstay':
-      return <SMMStayHomepage {...homepageProps} />;
+      rendered = <SMMStayHomepage {...homepageProps} />;
+      break;
     case 'theme_smmvisit':
     case 'smmvisit':
-      return <SMMVisitHomepage {...homepageProps} />;
+      rendered = <SMMVisitHomepage {...homepageProps} />;
+      break;
     // ThemeOne is the default for all other cases
     case 'default':
     case 'theme_one':
     case 'dark_gradient':
     case 'cosmic_purple':
     default:
-      return <ThemeOne {...themeProps} />;
+      rendered = <ThemeOne {...themeProps} />;
+      break;
   }
+
+  return (
+    <div className={cn('buyer-theme-wrapper min-h-full', themeMode)}>
+      <style>{previewCSS}</style>
+      {rendered}
+    </div>
+  );
 }
 
 export default function DesignCustomization() {
@@ -933,11 +964,13 @@ export default function DesignCustomization() {
       setPanelCustomDomain(panelData.custom_domain || '');
       const branding = panelData.custom_branding as any || {};
       const loadedCustomization = { 
-        ...defaultCustomization, 
-        companyName: panelData.name || '', 
+        ...defaultCustomization,
+        companyName: panelData.name || '',
+        // Homepage layout key lives in custom_branding.selectedTheme; theme_type is just a safe fallback.
         selectedTheme: branding.selectedTheme || panelData.theme_type || 'dark_gradient',
-        buyerTheme: panelData.buyer_theme || 'default',
-        ...branding 
+        // Buyer dashboard uses design presets (colors) only.
+        buyerTheme: 'default',
+        ...branding,
       };
       resetHistory(loadedCustomization);
       setLoading(false);
@@ -1099,10 +1132,24 @@ export default function DesignCustomization() {
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!panelId) throw new Error('No panel ID');
-      const { error } = await supabase.from('panels').update({ 
-        custom_branding: customization as unknown as Json, 
-        theme_type: customization.selectedTheme as any,
-        buyer_theme: (customization as any).buyerTheme || 'default',
+
+      // theme_type is a Postgres enum; never store homepage-layout keys like "smmvisit" there.
+      // Store the homepage layout choice in custom_branding.selectedTheme, and persist a safe enum value.
+      const safeThemeTypes = new Set([
+        'dark_gradient',
+        'professional',
+        'vibrant',
+        'grace',
+        'tech_futuristic',
+      ]);
+      const selectedTheme = String(customization.selectedTheme || 'dark_gradient');
+      const themeTypeToPersist = safeThemeTypes.has(selectedTheme) ? selectedTheme : 'dark_gradient';
+
+      const { error } = await supabase.from('panels').update({
+        custom_branding: customization as unknown as Json,
+        theme_type: themeTypeToPersist as any,
+        // Buyer dashboard theme is driven by design preset colors (not the Ali/Fly/etc layouts)
+        buyer_theme: 'default',
         // Also save colors to main columns for proper syncing
         primary_color: customization.primaryColor,
         secondary_color: customization.secondaryColor,
@@ -1110,18 +1157,23 @@ export default function DesignCustomization() {
         updated_at: new Date().toISOString(),
       }).eq('id', panelId);
       if (error) throw error;
+
+      // Tell any open buyer/storefront tabs to refresh their tenant cache.
+      try {
+        localStorage.setItem('panelDesignUpdatedAt', String(Date.now()));
+        window.dispatchEvent(new Event('panelDesignUpdated'));
+      } catch {
+        // ignore
+      }
     },
     onSuccess: () => {
-      // Invalidate all relevant queries to ensure immediate sync across buyer pages
       queryClient.invalidateQueries({ queryKey: ['panel-design-settings'] });
       queryClient.invalidateQueries({ queryKey: ['panel-customization', panelId] });
-      queryClient.invalidateQueries({ queryKey: ['tenant'] });
-      queryClient.invalidateQueries({ queryKey: ['panel'] });
-      toast({ title: 'Design saved and applied!' }); 
+      toast({ title: 'Design saved and applied!' });
       setHasUnsavedChanges(false);
     },
     onError: (error: any) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' }); 
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   });
 
@@ -1326,8 +1378,8 @@ export default function DesignCustomization() {
           </div>
         );
       case 'themes':
-        // Theme Gallery: Buyer Portal themes only
-        const savedBuyerTheme = panelData?.buyer_theme || 'default';
+        // Buyer dashboard theming is driven by the design preset colors (CSS variables),
+        // not by swapping full buyer layout themes.
         return (
           <div className="space-y-4">
             <div className="p-3 rounded-lg bg-secondary/10 border border-secondary/20">
@@ -1336,36 +1388,9 @@ export default function DesignCustomization() {
                 <span className="text-sm font-medium">Buyer Dashboard Theme</span>
               </div>
               <p className="text-xs text-muted-foreground">
-                Theme for logged-in buyer dashboard (orders, deposit, profile pages). This does not affect your public homepage.
+                Your buyer dashboard now automatically uses the same colors you set in Presets/Colors.
+                (No separate buyer theme selector.)
               </p>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              {availableThemes.map(theme => {
-                const isActive = (customization as any).buyerTheme === theme.key;
-                const isConfigured = savedBuyerTheme === theme.key;
-                // Map buyer theme keys to storefront theme ids for preview mockups
-                const themeIdMap: Record<string, string> = {
-                  'default': 'theme_one',
-                  'alipanel': 'theme_alipanel',
-                  'flysmm': 'theme_flysmm',
-                  'smmstay': 'theme_smmstay',
-                  'tgref': 'theme_tgref',
-                  'smmvisit': 'theme_smmvisit',
-                };
-                return (
-                  <ThemeMiniPreview
-                    key={theme.key}
-                    themeId={themeIdMap[theme.key] || theme.key}
-                    name={theme.name}
-                    description={theme.description}
-                    colors={[theme.colors.dark.background, theme.colors.dark.primary, theme.colors.dark.accent]}
-                    isActive={isActive}
-                    isConfigured={isConfigured}
-                    hasUnsavedChanges={isActive && hasUnsavedChanges}
-                    onClick={() => updateCustomization('buyerTheme', theme.key as BuyerThemeKey)}
-                  />
-                );
-              })}
             </div>
           </div>
         );
@@ -1929,7 +1954,15 @@ export default function DesignCustomization() {
     return (
       <MobileDesignSlider
         previewDevice={previewDevice}
-        setPreviewDevice={setPreviewDevice}
+        setPreviewDevice={(device) => {
+          // On phone, never allow switching to tablet/desktop previews
+          if (isMobile && !isTablet) {
+            setPreviewDevice('mobile');
+            return;
+          }
+          setPreviewDevice(device);
+        }}
+        deviceMode={isMobile && !isTablet ? 'mobileOnly' : 'all'}
         hasUnsavedChanges={hasUnsavedChanges}
         saving={saving}
         onSave={handleSave}

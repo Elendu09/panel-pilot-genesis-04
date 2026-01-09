@@ -43,6 +43,7 @@ interface MobileDesignSliderProps {
   secondaryColor?: string;
   previewThemeMode?: 'dark' | 'light';
   onTogglePreviewTheme?: () => void;
+  deviceMode?: 'all' | 'mobileOnly';
 }
 
 const sections = [
@@ -77,28 +78,33 @@ export function MobileDesignSlider({
   secondaryColor,
   previewThemeMode = 'dark',
   onTogglePreviewTheme,
+  deviceMode = 'all',
 }: MobileDesignSliderProps) {
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(1);
   const [viewMode, setViewMode] = useState<'preview' | 'controls'>('preview');
 
-  const devices = [
-    { key: 'mobile' as const, icon: Smartphone, label: 'Mobile' },
-    { key: 'tablet' as const, icon: Tablet, label: 'Tablet' },
-    { key: 'desktop' as const, icon: Monitor, label: 'Desktop' },
-  ];
+  const devices = deviceMode === 'mobileOnly'
+    ? ([{ key: 'mobile' as const, icon: Smartphone, label: 'Mobile' }] as const)
+    : ([
+        { key: 'mobile' as const, icon: Smartphone, label: 'Mobile' },
+        { key: 'tablet' as const, icon: Tablet, label: 'Tablet' },
+        { key: 'desktop' as const, icon: Monitor, label: 'Desktop' },
+      ] as const);
 
   const handleDeviceSwipe = useCallback((direction: 'left' | 'right') => {
+    if (deviceMode === 'mobileOnly') return;
+
     if (direction === 'left' && currentPreviewIndex < 2) {
       const newIndex = currentPreviewIndex + 1;
       setCurrentPreviewIndex(newIndex);
-      setPreviewDevice(devices[newIndex].key);
+      setPreviewDevice((devices as any)[newIndex].key);
     } else if (direction === 'right' && currentPreviewIndex > 0) {
       const newIndex = currentPreviewIndex - 1;
       setCurrentPreviewIndex(newIndex);
-      setPreviewDevice(devices[newIndex].key);
+      setPreviewDevice((devices as any)[newIndex].key);
     }
-  }, [currentPreviewIndex, setPreviewDevice]);
+  }, [currentPreviewIndex, setPreviewDevice, deviceMode, devices]);
 
   const handleSectionSwipe = useCallback((direction: 'left' | 'right') => {
     if (direction === 'left' && currentSectionIndex < sections.length - 1) {
@@ -141,7 +147,7 @@ export function MobileDesignSlider({
         </div>
 
         {/* Device Selector - Only show in preview mode */}
-        {viewMode === 'preview' && (
+        {viewMode === 'preview' && deviceMode !== 'mobileOnly' && (
           <div className="flex items-center gap-1">
             <Button
               variant="ghost"
@@ -164,8 +170,8 @@ export function MobileDesignSlider({
                     }}
                     className={cn(
                       "p-1 rounded-lg transition-all",
-                      currentPreviewIndex === idx 
-                        ? "bg-primary/20 text-primary" 
+                      currentPreviewIndex === idx
+                        ? "bg-primary/20 text-primary"
                         : "text-white/40 hover:text-white/60"
                     )}
                   >
@@ -240,10 +246,11 @@ export function MobileDesignSlider({
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.2 }}
             className="flex-1 overflow-hidden relative"
-            drag="x"
+            drag={deviceMode === 'mobileOnly' ? false : 'x'}
             dragConstraints={{ left: 0, right: 0 }}
             dragElastic={0.1}
             onDragEnd={(_, info) => {
+              if (deviceMode === 'mobileOnly') return;
               if (info.offset.x < -50) handleDeviceSwipe('left');
               if (info.offset.x > 50) handleDeviceSwipe('right');
             }}
@@ -270,7 +277,7 @@ export function MobileDesignSlider({
                     maxHeight: 'calc(100vh - 120px)'
                   }}
                 >
-                  <div className="w-full h-full overflow-auto">
+                  <div className={cn("w-full h-full overflow-auto", previewThemeMode === 'dark' ? 'dark' : 'light')}>
                     {children}
                   </div>
                 </div>
@@ -278,17 +285,19 @@ export function MobileDesignSlider({
             </AnimatePresence>
 
             {/* Device indicator dots */}
-            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
-              {devices.map((_, idx) => (
-                <div
-                  key={idx}
-                  className={cn(
-                    "w-1.5 h-1.5 rounded-full transition-all",
-                    currentPreviewIndex === idx ? "bg-primary w-3" : "bg-white/30"
-                  )}
-                />
-              ))}
-            </div>
+            {deviceMode !== 'mobileOnly' && (
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
+                {devices.map((_, idx) => (
+                  <div
+                    key={idx}
+                    className={cn(
+                      "w-1.5 h-1.5 rounded-full transition-all",
+                      currentPreviewIndex === idx ? "bg-primary w-3" : "bg-white/30"
+                    )}
+                  />
+                ))}
+              </div>
+            )}
           </motion.div>
         ) : (
           <motion.div 
