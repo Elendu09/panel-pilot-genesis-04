@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useTenant, useTenantServices } from '@/hooks/useTenant';
 import { ThemeOne } from '@/components/themes/ThemeOne';
@@ -19,6 +19,7 @@ import { FloatingChatWidget } from '@/components/storefront/FloatingChatWidget';
 import { supabase } from '@/integrations/supabase/client';
 import { AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { generateBuyerThemeCSS } from '@/lib/color-utils';
 
 // Error Boundary Component
 const ErrorFallback = ({ error, panelName }: { error: string; panelName?: string }) => (
@@ -75,6 +76,26 @@ const Storefront = () => {
   const themeType = panel?.theme_type || 'dark_gradient';
   const customBranding = panel?.custom_branding as any;
   const selectedTheme = customBranding?.selectedTheme || themeType;
+
+  // Generate CSS variables for design preset colors - ensures colors sync across storefront
+  const storefrontColorStyles = useMemo(() => {
+    if (!customBranding) return '';
+    return generateBuyerThemeCSS({
+      primaryColor: customBranding?.primaryColor || panel?.primary_color || '#3b82f6',
+      secondaryColor: customBranding?.secondaryColor || panel?.secondary_color || '#8B5CF6',
+      accentColor: customBranding?.accentColor || '#EC4899',
+      backgroundColor: customBranding?.backgroundColor || '#0F172A',
+      surfaceColor: customBranding?.surfaceColor || '#1E293B',
+      cardColor: customBranding?.cardColor || customBranding?.surfaceColor || '#1E293B',
+      textColor: customBranding?.textColor || '#FFFFFF',
+      mutedColor: customBranding?.mutedColor || '#94A3B8',
+      borderColor: customBranding?.borderColor || '#334155',
+      successColor: customBranding?.successColor || '#22C55E',
+      warningColor: customBranding?.warningColor || '#F59E0B',
+      infoColor: customBranding?.infoColor || '#3B82F6',
+      errorColor: customBranding?.errorColor || '#EF4444',
+    });
+  }, [customBranding, panel]);
 
   // Show centered logo loading with shimmer while tenant loads - prevents blank screen
   if (tenantLoading) {
@@ -234,10 +255,14 @@ const Storefront = () => {
         <meta name="twitter:title" content={seoTitle} />
         <meta name="twitter:description" content={seoDescription} />
       </Helmet>
-      {/* Removed PromotionalBanner - "Welcome bonus! Claim now" removed per SEO requirements */}
-      {renderTheme()}
-      {/* Floating Chat Widget - Consolidated chat with AI, WhatsApp, Telegram, etc. */}
-      <FloatingChatWidget panelId={panel?.id} panelName={panel?.name} />
+      {/* Inject design preset colors as CSS variables */}
+      {storefrontColorStyles && <style>{storefrontColorStyles}</style>}
+      <div className="buyer-theme-wrapper">
+        {/* Removed PromotionalBanner - "Welcome bonus! Claim now" removed per SEO requirements */}
+        {renderTheme()}
+        {/* Floating Chat Widget - Consolidated chat with AI, WhatsApp, Telegram, etc. */}
+        <FloatingChatWidget panelId={panel?.id} panelName={panel?.name} />
+      </div>
     </>
   );
 };

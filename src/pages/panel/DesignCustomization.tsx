@@ -1102,14 +1102,22 @@ export default function DesignCustomization() {
       const { error } = await supabase.from('panels').update({ 
         custom_branding: customization as unknown as Json, 
         theme_type: customization.selectedTheme as any,
-        buyer_theme: (customization as any).buyerTheme || 'default'
+        buyer_theme: (customization as any).buyerTheme || 'default',
+        // Also save colors to main columns for proper syncing
+        primary_color: customization.primaryColor,
+        secondary_color: customization.secondaryColor,
+        logo_url: customization.logoUrl || null,
+        updated_at: new Date().toISOString(),
       }).eq('id', panelId);
       if (error) throw error;
     },
     onSuccess: () => {
+      // Invalidate all relevant queries to ensure immediate sync across buyer pages
       queryClient.invalidateQueries({ queryKey: ['panel-design-settings'] });
       queryClient.invalidateQueries({ queryKey: ['panel-customization', panelId] });
-      toast({ title: 'Design saved!' }); 
+      queryClient.invalidateQueries({ queryKey: ['tenant'] });
+      queryClient.invalidateQueries({ queryKey: ['panel'] });
+      toast({ title: 'Design saved and applied!' }); 
       setHasUnsavedChanges(false);
     },
     onError: (error: any) => {
