@@ -38,11 +38,28 @@ export function usePanelCustomization(panelId: string | undefined) {
     mutationFn: async (updates: Record<string, any>) => {
       if (!panelId) throw new Error('No panel ID');
       
+      // Extract all color fields from updates for proper storage
+      const colorFields = {
+        primaryColor: updates.primaryColor,
+        secondaryColor: updates.secondaryColor,
+        accentColor: updates.accentColor,
+        backgroundColor: updates.backgroundColor,
+        surfaceColor: updates.surfaceColor,
+        cardColor: updates.cardColor,
+        textColor: updates.textColor,
+        mutedColor: updates.mutedColor,
+        borderColor: updates.borderColor,
+        successColor: updates.successColor,
+        warningColor: updates.warningColor,
+        infoColor: updates.infoColor,
+        errorColor: updates.errorColor,
+      };
+      
       const { error } = await supabase
         .from('panels')
         .update({
-          custom_branding: updates,
-          theme_type: updates.themeType || 'dark_gradient',
+          custom_branding: { ...updates, ...colorFields },
+          theme_type: updates.themeType || updates.selectedTheme || 'dark_gradient',
           primary_color: updates.primaryColor,
           secondary_color: updates.secondaryColor,
           logo_url: updates.logoUrl,

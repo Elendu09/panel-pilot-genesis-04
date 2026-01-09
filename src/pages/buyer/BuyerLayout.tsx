@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { 
   LayoutDashboard, 
@@ -28,7 +28,7 @@ import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import { useTenant } from "@/hooks/useTenant";
+import { useTenant, type DesignCustomization } from "@/hooks/useTenant";
 import { useBuyerAuth } from "@/contexts/BuyerAuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
@@ -38,6 +38,7 @@ import { CurrencySelector } from "@/components/buyer/CurrencySelector";
 import { TenantHead } from "@/components/tenant/TenantHead";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { BuyerThemeWrapper } from "@/components/buyer-themes";
+import { hexToHSL } from "@/lib/color-utils";
 
 interface BuyerLayoutProps {
   children?: React.ReactNode;
@@ -129,19 +130,83 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
 
   const whatsappNumber = panelSettings?.floating_chat_whatsapp;
   const blogEnabled = panelSettings?.blog_enabled ?? false;
+  
+  // Get custom branding from panel
+  const customBranding = panel?.custom_branding as DesignCustomization | undefined;
+  
+  // Generate comprehensive CSS variables for all panel colors
+  const panelColorStyles = useMemo(() => {
+    const primary = customBranding?.primaryColor || panel?.primary_color || '#3b82f6';
+    const secondary = customBranding?.secondaryColor || panel?.secondary_color || '#8B5CF6';
+    const accent = customBranding?.accentColor || '#EC4899';
+    const background = customBranding?.backgroundColor || '#0F172A';
+    const surface = customBranding?.surfaceColor || '#1E293B';
+    const card = customBranding?.cardColor || surface;
+    const text = customBranding?.textColor || '#FFFFFF';
+    const muted = customBranding?.mutedColor || '#94A3B8';
+    const border = customBranding?.borderColor || '#334155';
+    const success = customBranding?.successColor || '#22C55E';
+    const warning = customBranding?.warningColor || '#F59E0B';
+    const info = customBranding?.infoColor || '#3B82F6';
+    const error = customBranding?.errorColor || '#EF4444';
+    
+    return `
+      :root {
+        /* Panel Primary Colors */
+        --panel-primary: ${primary};
+        --panel-secondary: ${secondary};
+        --panel-accent: ${accent};
+        
+        /* Panel Background Colors */
+        --panel-background: ${background};
+        --panel-surface: ${surface};
+        --panel-card: ${card};
+        
+        /* Panel Text Colors */
+        --panel-text: ${text};
+        --panel-muted: ${muted};
+        
+        /* Panel Border */
+        --panel-border: ${border};
+        
+        /* Panel Status Colors */
+        --panel-success: ${success};
+        --panel-warning: ${warning};
+        --panel-info: ${info};
+        --panel-error: ${error};
+      }
+      
+      /* Apply to buyer pages - override shadcn theme variables */
+      .buyer-theme-wrapper {
+        --background: ${hexToHSL(background)};
+        --foreground: ${hexToHSL(text)};
+        --card: ${hexToHSL(card)};
+        --card-foreground: ${hexToHSL(text)};
+        --popover: ${hexToHSL(surface)};
+        --popover-foreground: ${hexToHSL(text)};
+        --primary: ${hexToHSL(primary)};
+        --primary-foreground: ${hexToHSL('#FFFFFF')};
+        --secondary: ${hexToHSL(surface)};
+        --secondary-foreground: ${hexToHSL(text)};
+        --muted: ${hexToHSL(surface)};
+        --muted-foreground: ${hexToHSL(muted)};
+        --accent: ${hexToHSL(accent)};
+        --accent-foreground: ${hexToHSL('#FFFFFF')};
+        --border: ${hexToHSL(border)};
+        --input: ${hexToHSL(border)};
+        --ring: ${hexToHSL(primary)};
+        --destructive: ${hexToHSL(error)};
+        --destructive-foreground: ${hexToHSL('#FFFFFF')};
+      }
+    `;
+  }, [customBranding, panel]);
+  
   return (
     <BuyerThemeWrapper panelId={panel?.id}>
       <TenantHead />
-      <div className="min-h-screen bg-background">
-      {/* Apply panel theme colors */}
-      <style>
-        {`
-          :root {
-            --panel-primary: ${panel?.primary_color || '#3b82f6'};
-            --panel-secondary: ${panel?.secondary_color || '#1e40af'};
-          }
-        `}
-      </style>
+      <div className="buyer-theme-wrapper min-h-screen bg-background">
+      {/* Inject panel theme colors */}
+      <style>{panelColorStyles}</style>
 
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex flex-col fixed left-0 top-0 h-full w-64 glass-sidebar z-20">
