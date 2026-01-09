@@ -60,7 +60,7 @@ const PanelOnboarding = () => {
   const steps = [
     { id: 0, title: 'Basic Info', icon: Settings, description: 'Name your panel' },
     { id: 1, title: 'Domain', icon: Globe, description: 'Choose your URL' },
-    { id: 2, title: 'Branding', icon: Palette, description: 'Customize look' },
+    { id: 2, title: 'Branding Color', icon: Palette, description: 'Choose colors' },
     { id: 3, title: 'SEO', icon: Search, description: 'Optimize search' },
   ];
 
@@ -186,7 +186,6 @@ const PanelOnboarding = () => {
     }
 
     // Ensure SEO fields are generated + pixel-valid on first save
-    const domainLabel = domainType === 'custom' ? customDomain : `${subdomain}.homeofsmm.com`;
     const draft = {
       title: seoTitle,
       description: seoDescription,
@@ -196,7 +195,6 @@ const PanelOnboarding = () => {
       if (draft.title.trim() && draft.description.trim()) return;
       const generated = generateSeoMeta({
         panelName,
-        domain: domainLabel,
         offeringHint: description,
       });
       draft.title = generated.title;
@@ -435,6 +433,13 @@ const PanelOnboarding = () => {
             exit="exit"
             className="space-y-6"
           >
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/5 border border-primary/20">
+              <Palette className="w-5 h-5 text-primary" />
+              <p className="text-sm text-muted-foreground">
+                Choose your brand colors. You can customize logo, favicon, and more in Design Settings after setup.
+              </p>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Primary Color</Label>
@@ -494,11 +499,31 @@ const PanelOnboarding = () => {
         );
 
       case 3: {
-        const domainLabel = domainType === 'custom' ? customDomain : `${subdomain}.homeofsmm.com`;
         const titlePx = measureTextPx(seoTitle || '');
         const descPx = measureTextPx(seoDescription || '');
         const titleOk = !!seoTitle.trim() && isInRange(titlePx, SEO_TITLE_PX_RANGE);
         const descOk = !!seoDescription.trim() && isInRange(descPx, SEO_DESC_PX_RANGE);
+
+        // Real-time SEO feedback
+        const getTitleFeedback = () => {
+          if (!seoTitle.trim()) return { type: 'info', text: 'Add a compelling title with your brand name and main keyword' };
+          if (titlePx < SEO_TITLE_PX_RANGE.min) return { type: 'warning', text: 'Keep going! Add more descriptive keywords' };
+          if (titlePx > SEO_TITLE_PX_RANGE.max) return { type: 'warning', text: 'Slightly too long - trim a few words' };
+          if (!seoTitle.toLowerCase().includes('smm') && !seoTitle.toLowerCase().includes('social')) {
+            return { type: 'tip', text: 'Tip: Include "SMM" or "Social Media" for better SEO' };
+          }
+          return { type: 'success', text: 'Great title! Keywords and length are optimized' };
+        };
+
+        const getDescFeedback = () => {
+          if (!seoDescription.trim()) return { type: 'info', text: 'Write a description that tells users what you offer' };
+          if (descPx < SEO_DESC_PX_RANGE.min) return { type: 'warning', text: 'Keep going! Describe your key benefits and services' };
+          if (descPx > SEO_DESC_PX_RANGE.max) return { type: 'warning', text: 'Slightly too long - focus on your main value proposition' };
+          return { type: 'success', text: 'Perfect! Your description is well-optimized' };
+        };
+
+        const titleFeedback = getTitleFeedback();
+        const descFeedback = getDescFeedback();
 
         return (
           <motion.div
@@ -511,8 +536,8 @@ const PanelOnboarding = () => {
           >
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-lg font-semibold">SEO</h2>
-                <p className="text-sm text-muted-foreground">Set your title and description for search engines</p>
+                <h2 className="text-lg font-semibold">SEO Optimization</h2>
+                <p className="text-sm text-muted-foreground">Optimize how your panel appears in Google search results</p>
               </div>
               <Button
                 type="button"
@@ -521,7 +546,6 @@ const PanelOnboarding = () => {
                 onClick={() => {
                   const generated = generateSeoMeta({
                     panelName,
-                    domain: domainLabel,
                     offeringHint: description,
                   });
                   setSeoTitle(generated.title);
@@ -539,16 +563,28 @@ const PanelOnboarding = () => {
               <Input
                 value={seoTitle}
                 onChange={(e) => setSeoTitle(e.target.value)}
-                placeholder={panelName ? `${panelName} - Social Media Marketing Services` : "Your Business - Social Media Marketing Services"}
+                placeholder={panelName ? `${panelName} - #1 SMM Panel | Buy Followers & Likes` : "Your Panel - #1 SMM Panel | Buy Followers & Likes"}
                 className="bg-background/50"
               />
-              <p className={cn(
-                "text-xs flex items-center gap-1",
-                titleOk ? "text-emerald-500" : "text-yellow-500"
-              )}>
-                {titleOk ? <CheckCircle className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
-                {Math.round(titlePx)}px (needs {SEO_TITLE_PX_RANGE.min}-{SEO_TITLE_PX_RANGE.max}px)
-              </p>
+              <div className="flex items-center justify-between">
+                <p className={cn(
+                  "text-xs flex items-center gap-1",
+                  titleFeedback.type === 'success' ? "text-emerald-500" : 
+                  titleFeedback.type === 'warning' ? "text-yellow-500" : 
+                  titleFeedback.type === 'tip' ? "text-blue-500" : "text-muted-foreground"
+                )}>
+                  {titleFeedback.type === 'success' ? <CheckCircle className="w-3 h-3" /> : 
+                   titleFeedback.type === 'warning' ? <AlertCircle className="w-3 h-3" /> : 
+                   <Sparkles className="w-3 h-3" />}
+                  {titleFeedback.text}
+                </p>
+                <span className={cn(
+                  "text-[10px] font-mono",
+                  titleOk ? "text-emerald-500" : "text-muted-foreground"
+                )}>
+                  {Math.round(titlePx)}px
+                </span>
+              </div>
             </div>
             
             <div className="space-y-2">
@@ -556,17 +592,28 @@ const PanelOnboarding = () => {
               <Textarea
                 value={seoDescription}
                 onChange={(e) => setSeoDescription(e.target.value)}
-                placeholder=""
+                placeholder="Get real followers, likes, views & more. Instant delivery, 24/7 support, best prices guaranteed."
                 rows={3}
                 className="bg-background/50"
               />
-              <p className={cn(
-                "text-xs flex items-center gap-1",
-                descOk ? "text-emerald-500" : "text-yellow-500"
-              )}>
-                {descOk ? <CheckCircle className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
-                {Math.round(descPx)}px (needs {SEO_DESC_PX_RANGE.min}-{SEO_DESC_PX_RANGE.max}px)
-              </p>
+              <div className="flex items-center justify-between">
+                <p className={cn(
+                  "text-xs flex items-center gap-1",
+                  descFeedback.type === 'success' ? "text-emerald-500" : 
+                  descFeedback.type === 'warning' ? "text-yellow-500" : "text-muted-foreground"
+                )}>
+                  {descFeedback.type === 'success' ? <CheckCircle className="w-3 h-3" /> : 
+                   descFeedback.type === 'warning' ? <AlertCircle className="w-3 h-3" /> : 
+                   <Sparkles className="w-3 h-3" />}
+                  {descFeedback.text}
+                </p>
+                <span className={cn(
+                  "text-[10px] font-mono",
+                  descOk ? "text-emerald-500" : "text-muted-foreground"
+                )}>
+                  {Math.round(descPx)}px
+                </span>
+              </div>
             </div>
             
             <div className="space-y-2">
@@ -574,9 +621,26 @@ const PanelOnboarding = () => {
               <Input
                 value={seoKeywords}
                 onChange={(e) => setSeoKeywords(e.target.value)}
-                placeholder="SMM, social media marketing, followers, likes"
+                placeholder="SMM panel, buy followers, social media marketing, instagram likes"
                 className="bg-background/50"
               />
+              <p className="text-xs text-muted-foreground">Comma-separated keywords for better search visibility</p>
+            </div>
+
+            {/* Google Preview */}
+            <div className="p-4 rounded-xl border border-border bg-white">
+              <p className="text-xs text-muted-foreground mb-2">Google Preview</p>
+              <div className="space-y-1">
+                <p className="text-blue-600 text-base hover:underline cursor-pointer truncate">
+                  {seoTitle || `${panelName || 'Your Panel'} - #1 SMM Panel`}
+                </p>
+                <p className="text-green-700 text-xs">
+                  {domainType === 'custom' ? customDomain : `${subdomain || 'yourpanel'}.homeofsmm.com`}
+                </p>
+                <p className="text-gray-600 text-sm line-clamp-2">
+                  {seoDescription || 'Get real followers, likes, views & more. Instant delivery and 24/7 support.'}
+                </p>
+              </div>
             </div>
           </motion.div>
         );

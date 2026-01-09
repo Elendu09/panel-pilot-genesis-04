@@ -35,20 +35,17 @@ export function generateSeoMeta(input: {
   offeringHint?: string;
 }) {
   const panelName = (input.panelName || 'Panel').trim();
-  const domain = (input.domain || '').trim();
   const offeringHint = (input.offeringHint || '').trim();
 
-  // Use existing user-provided text only (panelName/domain/offeringHint are already in the UI)
-  const domainPart = domain ? ` (${domain})` : '';
+  // Generate SEO-optimized title WITHOUT domain name (cleaner for search results)
+  const rawTitle = `${panelName} - #1 SMM Panel | Buy Followers, Likes & Views`;
 
-  const rawTitle = `${panelName}${domainPart} - Social Media Marketing Services`;
-
-  // Description uses offeringHint when available (still user-provided)
+  // Description uses offeringHint when available, focuses on value proposition
   const baseDesc = offeringHint
-    ? `${offeringHint} — Social media marketing services from ${panelName}.`
-    : `Social media marketing services from ${panelName}.`;
+    ? `${offeringHint} — Get real followers, likes, views & more from ${panelName}. Instant delivery, 24/7 support, best prices guaranteed.`
+    : `Get real followers, likes, views & more from ${panelName}. Instant delivery, 24/7 support, best prices guaranteed.`;
 
-  const rawDescription = `${baseDesc} Buy followers, likes, views, and more.`;
+  const rawDescription = baseDesc;
 
   const title = clampToPx(rawTitle, SEO_TITLE_PX_RANGE.max);
   const description = clampToPx(rawDescription, SEO_DESC_PX_RANGE.max);
