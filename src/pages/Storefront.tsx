@@ -81,12 +81,12 @@ const Storefront = () => {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
         <div className="text-center">
-          {/* Centered favicon with shimmer overlay */}
+          {/* Centered favicon with shimmer overlay - uses panel logo if available */}
           <div className="relative w-20 h-20 mx-auto mb-6">
             <img 
-              src="/default-panel-favicon.png" 
+              src={panel?.logo_url || "/default-panel-favicon.png"} 
               alt="Loading" 
-              className="w-20 h-20 rounded-2xl opacity-80"
+              className="w-20 h-20 rounded-2xl opacity-80 object-cover"
             />
             {/* Shimmer overlay animation */}
             <div className="absolute inset-0 rounded-2xl overflow-hidden">
