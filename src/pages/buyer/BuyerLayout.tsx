@@ -38,7 +38,7 @@ import { CurrencySelector } from "@/components/buyer/CurrencySelector";
 import { TenantHead } from "@/components/tenant/TenantHead";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { BuyerThemeWrapper } from "@/components/buyer-themes";
-import { hexToHSL } from "@/lib/color-utils";
+import { generateBuyerThemeCSS } from "@/lib/color-utils";
 
 interface BuyerLayoutProps {
   children?: React.ReactNode;
@@ -134,71 +134,23 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
   // Get custom branding from panel
   const customBranding = panel?.custom_branding as DesignCustomization | undefined;
   
-  // Generate comprehensive CSS variables for all panel colors
+  // Generate comprehensive CSS variables for all panel colors with light/dark support
   const panelColorStyles = useMemo(() => {
-    const primary = customBranding?.primaryColor || panel?.primary_color || '#3b82f6';
-    const secondary = customBranding?.secondaryColor || panel?.secondary_color || '#8B5CF6';
-    const accent = customBranding?.accentColor || '#EC4899';
-    const background = customBranding?.backgroundColor || '#0F172A';
-    const surface = customBranding?.surfaceColor || '#1E293B';
-    const card = customBranding?.cardColor || surface;
-    const text = customBranding?.textColor || '#FFFFFF';
-    const muted = customBranding?.mutedColor || '#94A3B8';
-    const border = customBranding?.borderColor || '#334155';
-    const success = customBranding?.successColor || '#22C55E';
-    const warning = customBranding?.warningColor || '#F59E0B';
-    const info = customBranding?.infoColor || '#3B82F6';
-    const error = customBranding?.errorColor || '#EF4444';
-    
-    return `
-      :root {
-        /* Panel Primary Colors */
-        --panel-primary: ${primary};
-        --panel-secondary: ${secondary};
-        --panel-accent: ${accent};
-        
-        /* Panel Background Colors */
-        --panel-background: ${background};
-        --panel-surface: ${surface};
-        --panel-card: ${card};
-        
-        /* Panel Text Colors */
-        --panel-text: ${text};
-        --panel-muted: ${muted};
-        
-        /* Panel Border */
-        --panel-border: ${border};
-        
-        /* Panel Status Colors */
-        --panel-success: ${success};
-        --panel-warning: ${warning};
-        --panel-info: ${info};
-        --panel-error: ${error};
-      }
-      
-      /* Apply to buyer pages - override shadcn theme variables */
-      .buyer-theme-wrapper {
-        --background: ${hexToHSL(background)};
-        --foreground: ${hexToHSL(text)};
-        --card: ${hexToHSL(card)};
-        --card-foreground: ${hexToHSL(text)};
-        --popover: ${hexToHSL(surface)};
-        --popover-foreground: ${hexToHSL(text)};
-        --primary: ${hexToHSL(primary)};
-        --primary-foreground: ${hexToHSL('#FFFFFF')};
-        --secondary: ${hexToHSL(surface)};
-        --secondary-foreground: ${hexToHSL(text)};
-        --muted: ${hexToHSL(surface)};
-        --muted-foreground: ${hexToHSL(muted)};
-        --accent: ${hexToHSL(accent)};
-        --accent-foreground: ${hexToHSL('#FFFFFF')};
-        --border: ${hexToHSL(border)};
-        --input: ${hexToHSL(border)};
-        --ring: ${hexToHSL(primary)};
-        --destructive: ${hexToHSL(error)};
-        --destructive-foreground: ${hexToHSL('#FFFFFF')};
-      }
-    `;
+    return generateBuyerThemeCSS({
+      primaryColor: customBranding?.primaryColor || panel?.primary_color || '#3b82f6',
+      secondaryColor: customBranding?.secondaryColor || panel?.secondary_color || '#8B5CF6',
+      accentColor: customBranding?.accentColor || '#EC4899',
+      backgroundColor: customBranding?.backgroundColor || '#0F172A',
+      surfaceColor: customBranding?.surfaceColor || '#1E293B',
+      cardColor: customBranding?.cardColor || customBranding?.surfaceColor || '#1E293B',
+      textColor: customBranding?.textColor || '#FFFFFF',
+      mutedColor: customBranding?.mutedColor || '#94A3B8',
+      borderColor: customBranding?.borderColor || '#334155',
+      successColor: customBranding?.successColor || '#22C55E',
+      warningColor: customBranding?.warningColor || '#F59E0B',
+      infoColor: customBranding?.infoColor || '#3B82F6',
+      errorColor: customBranding?.errorColor || '#EF4444',
+    });
   }, [customBranding, panel]);
   
   return (
