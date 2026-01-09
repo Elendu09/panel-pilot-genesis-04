@@ -140,6 +140,7 @@ export function useTenant(): TenantDetectionResult {
 
   const abortControllerRef = useRef<AbortController | null>(null);
 
+  // Listen for design updates to invalidate cache and refresh
   useEffect(() => {
     const onDesignUpdated = () => {
       try {
@@ -163,93 +164,7 @@ export function useTenant(): TenantDetectionResult {
   }, [hostname]);
 
   useEffect(() => {
-    const onDesignUpdated = () => {
-      try {
-        tenantCache.delete(hostname);
-      } catch {
-        // ignore
-      }
-      setRefreshKey((k) => k + 1);
-    };
-
-    window.addEventListener('panelDesignUpdated', onDesignUpdated);
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === 'panelDesignUpdatedAt') onDesignUpdated();
-    };
-    window.addEventListener('storage', onStorage);
-
-    return () => {
-      window.removeEventListener('panelDesignUpdated', onDesignUpdated);
-      window.removeEventListener('storage', onStorage);
-    };
-  }, [hostname]);
-
-  useEffect(() => {
-    const onDesignUpdated = () => {
-      try {
-        tenantCache.delete(hostname);
-      } catch {
-        // ignore
-      }
-      setRefreshKey((k) => k + 1);
-    };
-
-    window.addEventListener('panelDesignUpdated', onDesignUpdated);
-    window.addEventListener('storage', (e) => {
-      if (e.key === 'panelDesignUpdatedAt') onDesignUpdated();
-    });
-
-    return () => {
-      window.removeEventListener('panelDesignUpdated', onDesignUpdated);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hostname]);
-
-  useEffect(() => {
-    const onDesignUpdated = () => {
-      try {
-        tenantCache.delete(hostname);
-      } catch {
-        // ignore
-      }
-      setRefreshKey((k) => k + 1);
-    };
-
-    window.addEventListener('panelDesignUpdated', onDesignUpdated);
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === 'panelDesignUpdatedAt') onDesignUpdated();
-    };
-    window.addEventListener('storage', onStorage);
-
-    return () => {
-      window.removeEventListener('panelDesignUpdated', onDesignUpdated);
-      window.removeEventListener('storage', onStorage);
-    };
-  }, [hostname]);
-
-  useEffect(() => {
-    const onDesignUpdated = () => {
-      try {
-        tenantCache.delete(hostname);
-      } catch {
-        // ignore
-      }
-      setRefreshKey((k) => k + 1);
-    };
-
-    window.addEventListener('panelDesignUpdated', onDesignUpdated);
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === 'panelDesignUpdatedAt') onDesignUpdated();
-    };
-    window.addEventListener('storage', onStorage);
-
-    return () => {
-      window.removeEventListener('panelDesignUpdated', onDesignUpdated);
-      window.removeEventListener('storage', onStorage);
-    };
-  }, [hostname]);
-
-  useEffect(() => {
+    let isMounted = true;
     
     // Cancel previous request if running
     if (abortControllerRef.current) {
