@@ -6,9 +6,9 @@ import BuyerThemeAliPanel, { aliPanelThemeConfig } from './BuyerThemeAliPanel';
 import BuyerThemeFlySMM, { flySMMThemeConfig } from './BuyerThemeFlySMM';
 import BuyerThemeSMMStay, { smmStayThemeConfig } from './BuyerThemeSMMStay';
 import BuyerThemeTGRef, { tgRefThemeConfig } from './BuyerThemeTGRef';
-import BuyerThemeSMMus, { smmusThemeConfig } from './BuyerThemeSMMus';
+import BuyerThemeSMMVisit, { smmVisitThemeConfig } from './BuyerThemeSMMVisit';
 
-export type BuyerThemeKey = 'default' | 'alipanel' | 'flysmm' | 'smmstay' | 'tgref' | 'smmus';
+export type BuyerThemeKey = 'default' | 'alipanel' | 'flysmm' | 'smmstay' | 'tgref' | 'smmvisit';
 
 interface BuyerThemeContextValue {
   themeKey: BuyerThemeKey;
@@ -29,7 +29,7 @@ const themeComponents: Record<BuyerThemeKey, React.FC<{ children: ReactNode; cla
   flysmm: BuyerThemeFlySMM,
   smmstay: BuyerThemeSMMStay,
   tgref: BuyerThemeTGRef,
-  smmus: BuyerThemeSMMus,
+  smmvisit: BuyerThemeSMMVisit,
 };
 
 // Theme configs map
@@ -39,7 +39,7 @@ const themeConfigs: Record<BuyerThemeKey, typeof defaultThemeConfig> = {
   flysmm: flySMMThemeConfig,
   smmstay: smmStayThemeConfig,
   tgref: tgRefThemeConfig,
-  smmus: smmusThemeConfig,
+  smmvisit: smmVisitThemeConfig,
 };
 
 // All available themes for selection UI
@@ -49,7 +49,7 @@ export const availableThemes = [
   { key: 'flysmm' as const, ...flySMMThemeConfig },
   { key: 'smmstay' as const, ...smmStayThemeConfig },
   { key: 'tgref' as const, ...tgRefThemeConfig },
-  { key: 'smmus' as const, ...smmusThemeConfig },
+  { key: 'smmvisit' as const, ...smmVisitThemeConfig },
 ];
 
 interface BuyerThemeWrapperProps {
