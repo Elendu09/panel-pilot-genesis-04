@@ -107,13 +107,26 @@ const defaultCustomization = {
   companyName: '',
   tagline: 'Best SMM Services',
   
-  // Colors
+  // Primary Colors
   primaryColor: '#6366F1',
   secondaryColor: '#8B5CF6',
   accentColor: '#EC4899',
+  
+  // Background Colors
   backgroundColor: '#0F172A',
   surfaceColor: '#1E293B',
+  cardColor: '#1E293B',
+  
+  // Text & UI Colors
   textColor: '#FFFFFF',
+  mutedColor: '#94A3B8',
+  borderColor: '#334155',
+  
+  // Status Colors
+  successColor: '#22C55E',
+  warningColor: '#F59E0B',
+  infoColor: '#3B82F6',
+  errorColor: '#EF4444',
   
   // Typography (NEW - Wix-like)
   fontFamily: 'Inter',
@@ -316,7 +329,7 @@ const themes = [
   },
 ];
 
-// Design Presets - One-click beautiful designs (deduplicated, valid theme_type values only)
+// Design Presets - One-click beautiful designs with full color palettes
 const designPresets = [
   {
     id: 'my_default_theme',
@@ -327,8 +340,16 @@ const designPresets = [
       backgroundColor: defaultCustomization.backgroundColor,
       primaryColor: defaultCustomization.primaryColor,
       secondaryColor: defaultCustomization.secondaryColor,
+      accentColor: defaultCustomization.accentColor,
       textColor: defaultCustomization.textColor,
+      mutedColor: defaultCustomization.mutedColor,
       surfaceColor: defaultCustomization.surfaceColor,
+      cardColor: defaultCustomization.cardColor,
+      borderColor: defaultCustomization.borderColor,
+      successColor: defaultCustomization.successColor,
+      warningColor: defaultCustomization.warningColor,
+      infoColor: defaultCustomization.infoColor,
+      errorColor: defaultCustomization.errorColor,
       selectedTheme: 'dark_gradient',
     }
   },
@@ -341,8 +362,16 @@ const designPresets = [
       backgroundColor: '#0F172A',
       primaryColor: '#6366F1',
       secondaryColor: '#8B5CF6',
+      accentColor: '#EC4899',
       textColor: '#FFFFFF',
+      mutedColor: '#94A3B8',
       surfaceColor: '#1E293B',
+      cardColor: '#1E293B',
+      borderColor: '#334155',
+      successColor: '#22C55E',
+      warningColor: '#F59E0B',
+      infoColor: '#3B82F6',
+      errorColor: '#EF4444',
       selectedTheme: 'dark_gradient',
     }
   },
@@ -355,8 +384,16 @@ const designPresets = [
       backgroundColor: '#0C4A6E',
       primaryColor: '#0EA5E9',
       secondaryColor: '#38BDF8',
+      accentColor: '#14B8A6',
       textColor: '#FFFFFF',
+      mutedColor: '#7DD3FC',
       surfaceColor: '#0e5a82',
+      cardColor: '#0D5276',
+      borderColor: '#0284C7',
+      successColor: '#22C55E',
+      warningColor: '#FBBF24',
+      infoColor: '#38BDF8',
+      errorColor: '#F43F5E',
       selectedTheme: 'professional',
     }
   },
@@ -369,8 +406,16 @@ const designPresets = [
       backgroundColor: '#1A1310',
       primaryColor: '#F97316',
       secondaryColor: '#EAB308',
+      accentColor: '#FB923C',
       textColor: '#FFFFFF',
+      mutedColor: '#A8A29E',
       surfaceColor: '#2A1F1A',
+      cardColor: '#292018',
+      borderColor: '#44403C',
+      successColor: '#84CC16',
+      warningColor: '#FBBF24',
+      infoColor: '#F97316',
+      errorColor: '#DC2626',
       selectedTheme: 'vibrant',
     }
   },
@@ -383,8 +428,16 @@ const designPresets = [
       backgroundColor: '#0D1912',
       primaryColor: '#22C55E',
       secondaryColor: '#84CC16',
+      accentColor: '#4ADE80',
       textColor: '#FFFFFF',
+      mutedColor: '#86EFAC',
       surfaceColor: '#162419',
+      cardColor: '#14291A',
+      borderColor: '#166534',
+      successColor: '#22C55E',
+      warningColor: '#FBBF24',
+      infoColor: '#4ADE80',
+      errorColor: '#EF4444',
       selectedTheme: 'dark_gradient',
     }
   },
@@ -397,8 +450,16 @@ const designPresets = [
       backgroundColor: '#0F0F1A',
       primaryColor: '#8B5CF6',
       secondaryColor: '#EC4899',
+      accentColor: '#14B8A6',
       textColor: '#FFFFFF',
+      mutedColor: '#A1A1AA',
       surfaceColor: '#1a1a2e',
+      cardColor: '#27273A',
+      borderColor: '#3F3F5A',
+      successColor: '#22C55E',
+      warningColor: '#F59E0B',
+      infoColor: '#38BDF8',
+      errorColor: '#F43F5E',
       selectedTheme: 'dark_gradient',
     }
   },
@@ -411,8 +472,16 @@ const designPresets = [
       backgroundColor: '#FFFFFF',
       primaryColor: '#3B82F6',
       secondaryColor: '#1E40AF',
+      accentColor: '#EC4899',
       textColor: '#1F2937',
+      mutedColor: '#6B7280',
       surfaceColor: '#F8FAFC',
+      cardColor: '#FFFFFF',
+      borderColor: '#E5E7EB',
+      successColor: '#22C55E',
+      warningColor: '#F59E0B',
+      infoColor: '#3B82F6',
+      errorColor: '#EF4444',
       selectedTheme: 'professional',
     }
   },
@@ -425,22 +494,170 @@ const designPresets = [
       backgroundColor: '#18181B',
       primaryColor: '#F97316',
       secondaryColor: '#EC4899',
+      accentColor: '#A855F7',
       textColor: '#FFFFFF',
+      mutedColor: '#A1A1AA',
       surfaceColor: '#27272a',
+      cardColor: '#27272A',
+      borderColor: '#3F3F46',
+      successColor: '#4ADE80',
+      warningColor: '#FBBF24',
+      infoColor: '#38BDF8',
+      errorColor: '#F43F5E',
       selectedTheme: 'vibrant',
     }
   },
   {
-    id: 'professional_dark',
-    name: 'Professional Dark',
-    description: 'Sleek dark with blue highlights',
-    preview: ['#1F2937', '#3B82F6', '#60A5FA'],
+    id: 'crypto_dark',
+    name: 'Crypto Dark',
+    description: 'Black with gold/amber accents',
+    preview: ['#0A0A0A', '#F59E0B', '#D97706'],
     customization: {
-      backgroundColor: '#1F2937',
-      primaryColor: '#3B82F6',
-      secondaryColor: '#60A5FA',
+      backgroundColor: '#0A0A0A',
+      primaryColor: '#F59E0B',
+      secondaryColor: '#D97706',
+      accentColor: '#FBBF24',
       textColor: '#FFFFFF',
-      surfaceColor: '#374151',
+      mutedColor: '#78716C',
+      surfaceColor: '#171717',
+      cardColor: '#1A1A1A',
+      borderColor: '#292524',
+      successColor: '#22C55E',
+      warningColor: '#F59E0B',
+      infoColor: '#FBBF24',
+      errorColor: '#DC2626',
+      selectedTheme: 'dark_gradient',
+    }
+  },
+  {
+    id: 'neon_cyber',
+    name: 'Neon Cyber',
+    description: 'Black with electric blue/pink neon',
+    preview: ['#000000', '#00D4FF', '#FF00FF'],
+    customization: {
+      backgroundColor: '#000000',
+      primaryColor: '#00D4FF',
+      secondaryColor: '#FF00FF',
+      accentColor: '#00FF9F',
+      textColor: '#FFFFFF',
+      mutedColor: '#71717A',
+      surfaceColor: '#0A0A0A',
+      cardColor: '#0F0F0F',
+      borderColor: '#27272A',
+      successColor: '#00FF9F',
+      warningColor: '#FFD600',
+      infoColor: '#00D4FF',
+      errorColor: '#FF0055',
+      selectedTheme: 'dark_gradient',
+    }
+  },
+  {
+    id: 'clean_minimal',
+    name: 'Clean Minimal',
+    description: 'Pure white with single accent color',
+    preview: ['#FAFAFA', '#18181B', '#6366F1'],
+    customization: {
+      backgroundColor: '#FAFAFA',
+      primaryColor: '#18181B',
+      secondaryColor: '#6366F1',
+      accentColor: '#6366F1',
+      textColor: '#18181B',
+      mutedColor: '#71717A',
+      surfaceColor: '#FFFFFF',
+      cardColor: '#FFFFFF',
+      borderColor: '#E4E4E7',
+      successColor: '#22C55E',
+      warningColor: '#F59E0B',
+      infoColor: '#3B82F6',
+      errorColor: '#EF4444',
+      selectedTheme: 'professional',
+    }
+  },
+  {
+    id: 'warm_sunset',
+    name: 'Warm Sunset',
+    description: 'Warm gradients with coral/orange',
+    preview: ['#1C1917', '#F97316', '#FB923C'],
+    customization: {
+      backgroundColor: '#1C1917',
+      primaryColor: '#F97316',
+      secondaryColor: '#FB923C',
+      accentColor: '#FBBF24',
+      textColor: '#FAFAF9',
+      mutedColor: '#A8A29E',
+      surfaceColor: '#292524',
+      cardColor: '#28211C',
+      borderColor: '#44403C',
+      successColor: '#84CC16',
+      warningColor: '#FBBF24',
+      infoColor: '#FB923C',
+      errorColor: '#DC2626',
+      selectedTheme: 'vibrant',
+    }
+  },
+  {
+    id: 'arctic_ice',
+    name: 'Arctic Ice',
+    description: 'Cool blues and teals on light background',
+    preview: ['#F0F9FF', '#0EA5E9', '#14B8A6'],
+    customization: {
+      backgroundColor: '#F0F9FF',
+      primaryColor: '#0EA5E9',
+      secondaryColor: '#14B8A6',
+      accentColor: '#06B6D4',
+      textColor: '#0C4A6E',
+      mutedColor: '#64748B',
+      surfaceColor: '#FFFFFF',
+      cardColor: '#FFFFFF',
+      borderColor: '#BAE6FD',
+      successColor: '#22C55E',
+      warningColor: '#F59E0B',
+      infoColor: '#0EA5E9',
+      errorColor: '#EF4444',
+      selectedTheme: 'professional',
+    }
+  },
+  {
+    id: 'royal_purple',
+    name: 'Royal Purple',
+    description: 'Deep purple with gold accents',
+    preview: ['#1E1B4B', '#A855F7', '#FBBF24'],
+    customization: {
+      backgroundColor: '#1E1B4B',
+      primaryColor: '#A855F7',
+      secondaryColor: '#FBBF24',
+      accentColor: '#C084FC',
+      textColor: '#FFFFFF',
+      mutedColor: '#A5B4FC',
+      surfaceColor: '#312E81',
+      cardColor: '#2E2A6B',
+      borderColor: '#4338CA',
+      successColor: '#22C55E',
+      warningColor: '#FBBF24',
+      infoColor: '#A855F7',
+      errorColor: '#F43F5E',
+      selectedTheme: 'dark_gradient',
+    }
+  },
+  {
+    id: 'nature_fresh',
+    name: 'Nature Fresh',
+    description: 'Greens with natural earth tones',
+    preview: ['#ECFDF5', '#10B981', '#059669'],
+    customization: {
+      backgroundColor: '#ECFDF5',
+      primaryColor: '#10B981',
+      secondaryColor: '#059669',
+      accentColor: '#34D399',
+      textColor: '#064E3B',
+      mutedColor: '#6B7280',
+      surfaceColor: '#FFFFFF',
+      cardColor: '#FFFFFF',
+      borderColor: '#A7F3D0',
+      successColor: '#22C55E',
+      warningColor: '#F59E0B',
+      infoColor: '#10B981',
+      errorColor: '#EF4444',
       selectedTheme: 'professional',
     }
   },
@@ -453,8 +670,16 @@ const designPresets = [
       backgroundColor: '#020617',
       primaryColor: '#0EA5E9',
       secondaryColor: '#22D3EE',
+      accentColor: '#38BDF8',
       textColor: '#E5E7EB',
-      surfaceColor: '#020617',
+      mutedColor: '#64748B',
+      surfaceColor: '#0F172A',
+      cardColor: '#0F172A',
+      borderColor: '#1E293B',
+      successColor: '#22C55E',
+      warningColor: '#FBBF24',
+      infoColor: '#0EA5E9',
+      errorColor: '#EF4444',
       selectedTheme: 'professional',
     }
   },
@@ -467,8 +692,16 @@ const designPresets = [
       backgroundColor: '#020617',
       primaryColor: '#7C3AED',
       secondaryColor: '#22C55E',
+      accentColor: '#A855F7',
       textColor: '#F9FAFB',
-      surfaceColor: '#020617',
+      mutedColor: '#6B7280',
+      surfaceColor: '#0F172A',
+      cardColor: '#0F172A',
+      borderColor: '#1E293B',
+      successColor: '#22C55E',
+      warningColor: '#F59E0B',
+      infoColor: '#7C3AED',
+      errorColor: '#EF4444',
       selectedTheme: 'dark_gradient',
     }
   },
@@ -476,13 +709,21 @@ const designPresets = [
     id: 'smm_clean_light',
     name: 'SMM Clean Light',
     description: 'Clean light layout with subtle gray sections',
-    preview: ['#F9FAFB', '#0F172A', '#6366F1'],
+    preview: ['#F9FAFB', '#6366F1', '#0F172A'],
     customization: {
       backgroundColor: '#F9FAFB',
       primaryColor: '#6366F1',
       secondaryColor: '#0F172A',
+      accentColor: '#8B5CF6',
       textColor: '#0F172A',
+      mutedColor: '#6B7280',
       surfaceColor: '#FFFFFF',
+      cardColor: '#FFFFFF',
+      borderColor: '#E5E7EB',
+      successColor: '#22C55E',
+      warningColor: '#F59E0B',
+      infoColor: '#6366F1',
+      errorColor: '#EF4444',
       selectedTheme: 'professional',
     }
   },
@@ -498,31 +739,38 @@ const gradientOptions = [
   'from-indigo-500 to-violet-500',
 ];
 
-// Theme defaults for reset functionality
+// Theme defaults for reset functionality - now with full color palette
 const getThemeDefaults = (themeType: string): Partial<typeof defaultCustomization> => {
+  const baseColors = {
+    successColor: '#22C55E',
+    warningColor: '#F59E0B',
+    infoColor: '#3B82F6',
+    errorColor: '#EF4444',
+  };
+  
   switch (themeType) {
     case 'dark_gradient':
-      return { backgroundColor: '#0F172A', primaryColor: '#6366F1', secondaryColor: '#8B5CF6', textColor: '#FFFFFF', surfaceColor: '#1E293B' };
+      return { backgroundColor: '#0F172A', primaryColor: '#6366F1', secondaryColor: '#8B5CF6', accentColor: '#EC4899', textColor: '#FFFFFF', mutedColor: '#94A3B8', surfaceColor: '#1E293B', cardColor: '#1E293B', borderColor: '#334155', ...baseColors };
     case 'professional':
-      return { backgroundColor: '#0C4A6E', primaryColor: '#0EA5E9', secondaryColor: '#38BDF8', textColor: '#FFFFFF', surfaceColor: '#0e5a82' };
+      return { backgroundColor: '#0C4A6E', primaryColor: '#0EA5E9', secondaryColor: '#38BDF8', accentColor: '#14B8A6', textColor: '#FFFFFF', mutedColor: '#7DD3FC', surfaceColor: '#0e5a82', cardColor: '#0D5276', borderColor: '#0284C7', ...baseColors };
     case 'vibrant':
-      return { backgroundColor: '#1A1310', primaryColor: '#F97316', secondaryColor: '#EAB308', textColor: '#FFFFFF', surfaceColor: '#2A1F1A' };
+      return { backgroundColor: '#1A1310', primaryColor: '#F97316', secondaryColor: '#EAB308', accentColor: '#FB923C', textColor: '#FFFFFF', mutedColor: '#A8A29E', surfaceColor: '#2A1F1A', cardColor: '#292018', borderColor: '#44403C', ...baseColors };
     case 'grace':
-      return { backgroundColor: '#0D1912', primaryColor: '#22C55E', secondaryColor: '#84CC16', textColor: '#FFFFFF', surfaceColor: '#162419' };
+      return { backgroundColor: '#0D1912', primaryColor: '#22C55E', secondaryColor: '#84CC16', accentColor: '#4ADE80', textColor: '#FFFFFF', mutedColor: '#86EFAC', surfaceColor: '#162419', cardColor: '#14291A', borderColor: '#166534', ...baseColors };
     case 'tech_futuristic':
-      return { backgroundColor: '#0A0A0F', primaryColor: '#00D4FF', secondaryColor: '#8B5CF6', textColor: '#FFFFFF', surfaceColor: '#101020' };
+      return { backgroundColor: '#0A0A0F', primaryColor: '#00D4FF', secondaryColor: '#8B5CF6', accentColor: '#00FF9F', textColor: '#FFFFFF', mutedColor: '#71717A', surfaceColor: '#101020', cardColor: '#101020', borderColor: '#27272A', ...baseColors };
     case 'tgref':
-      return { backgroundColor: '#1A1B26', primaryColor: '#00D4AA', secondaryColor: '#0EA5E9', textColor: '#E5E7EB', surfaceColor: '#0D0E14' };
+      return { backgroundColor: '#1A1B26', primaryColor: '#00D4AA', secondaryColor: '#0EA5E9', accentColor: '#22D3EE', textColor: '#E5E7EB', mutedColor: '#6B7280', surfaceColor: '#0D0E14', cardColor: '#0D0E14', borderColor: '#27272A', ...baseColors };
     case 'alipanel':
-      return { backgroundColor: '#0A0A0A', primaryColor: '#FF6B6B', secondaryColor: '#FFCC70', textColor: '#FFFFFF', surfaceColor: '#1A1A1A' };
+      return { backgroundColor: '#0A0A0A', primaryColor: '#FF6B6B', secondaryColor: '#FFCC70', accentColor: '#FF8E8E', textColor: '#FFFFFF', mutedColor: '#A1A1AA', surfaceColor: '#1A1A1A', cardColor: '#1A1A1A', borderColor: '#27272A', ...baseColors };
     case 'flysmm':
-      return { backgroundColor: '#F8FAFC', primaryColor: '#2196F3', secondaryColor: '#00BCD4', textColor: '#1F2937', surfaceColor: '#FFFFFF' };
+      return { backgroundColor: '#F8FAFC', primaryColor: '#2196F3', secondaryColor: '#00BCD4', accentColor: '#03A9F4', textColor: '#1F2937', mutedColor: '#6B7280', surfaceColor: '#FFFFFF', cardColor: '#FFFFFF', borderColor: '#E5E7EB', ...baseColors };
     case 'smmstay':
-      return { backgroundColor: '#000000', primaryColor: '#FF4081', secondaryColor: '#E040FB', textColor: '#FFFFFF', surfaceColor: '#0A0A0A' };
+      return { backgroundColor: '#000000', primaryColor: '#FF4081', secondaryColor: '#E040FB', accentColor: '#FF80AB', textColor: '#FFFFFF', mutedColor: '#A1A1AA', surfaceColor: '#0A0A0A', cardColor: '#0A0A0A', borderColor: '#27272A', ...baseColors };
     case 'smmvisit':
-      return { backgroundColor: '#F5F5F5', primaryColor: '#FFD700', secondaryColor: '#1A1A1A', textColor: '#1A1A1A', surfaceColor: '#FFFFFF' };
+      return { backgroundColor: '#F5F5F5', primaryColor: '#FFD700', secondaryColor: '#1A1A1A', accentColor: '#FFC107', textColor: '#1A1A1A', mutedColor: '#6B7280', surfaceColor: '#FFFFFF', cardColor: '#FFFFFF', borderColor: '#E5E7EB', ...baseColors };
     default:
-      return { backgroundColor: '#0F172A', primaryColor: '#6366F1', secondaryColor: '#8B5CF6', textColor: '#FFFFFF', surfaceColor: '#1E293B' };
+      return { backgroundColor: '#0F172A', primaryColor: '#6366F1', secondaryColor: '#8B5CF6', accentColor: '#EC4899', textColor: '#FFFFFF', mutedColor: '#94A3B8', surfaceColor: '#1E293B', cardColor: '#1E293B', borderColor: '#334155', ...baseColors };
   }
 };
 

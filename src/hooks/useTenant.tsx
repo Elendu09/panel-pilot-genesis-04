@@ -2,14 +2,29 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { analyzeDomain, PLATFORM_DOMAIN, type TenantDomainConfig } from '@/lib/tenant-domain-config';
 
-interface DesignCustomization {
+export interface DesignCustomization {
+  // Primary Colors
   primaryColor?: string;
   secondaryColor?: string;
   accentColor?: string;
+  
+  // Background Colors
   backgroundColor?: string;
   surfaceColor?: string;
+  cardColor?: string;
+  
+  // Text & UI Colors
   textColor?: string;
   mutedColor?: string;
+  borderColor?: string;
+  
+  // Status Colors
+  successColor?: string;
+  warningColor?: string;
+  infoColor?: string;
+  errorColor?: string;
+  
+  // Legacy/UI
   borderRadius?: string;
   logoUrl?: string;
   companyName?: string;
