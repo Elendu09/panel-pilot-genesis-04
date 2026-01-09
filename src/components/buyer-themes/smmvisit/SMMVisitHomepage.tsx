@@ -24,6 +24,7 @@ interface SMMVisitHomepageProps {
     secondaryColor?: string;
     accentColor?: string;
     backgroundColor?: string;
+    textColor?: string;
     logoUrl?: string;
     heroTitle?: string;
     heroSubtitle?: string;
@@ -78,8 +79,12 @@ export const SMMVisitHomepage = ({
     { name: 'Mike R.', text: 'Great customer support and competitive prices.', rating: 5, avatar: 'M' },
   ];
 
+  // Theme colors with customization support
+  const bgColor = customization?.backgroundColor || '#F5F5F5';
+  const textCol = customization?.textColor || '#1A1A1A';
+
   return (
-    <div className="min-h-screen bg-[#F5F5F5] text-gray-900 font-sans">
+    <div className="min-h-screen font-sans" style={{ backgroundColor: bgColor, color: textCol }}>
       {/* Navigation */}
       <nav className="sticky top-0 z-50 bg-white rounded-b-2xl shadow-sm mx-4 mt-2">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

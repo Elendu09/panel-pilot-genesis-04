@@ -22,6 +22,7 @@ interface FlySMMHomepageProps {
     secondaryColor?: string;
     accentColor?: string;
     backgroundColor?: string;
+    textColor?: string;
     logoUrl?: string;
     heroTitle?: string;
     heroSubtitle?: string;
@@ -66,8 +67,12 @@ export const FlySMMHomepage = ({
     { name: 'Emily R.', text: 'Great prices and even better customer support.', rating: 5 },
   ];
 
+  // Theme colors with customization support
+  const bgColor = customization?.backgroundColor || '#F8FAFC';
+  const textCol = customization?.textColor || '#1F2937';
+
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-gray-900 font-nunito">
+    <div className="min-h-screen font-nunito" style={{ backgroundColor: bgColor, color: textCol }}>
       {/* Navigation */}
       <nav className="sticky top-0 z-50 bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

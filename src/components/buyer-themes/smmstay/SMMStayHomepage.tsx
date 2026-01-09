@@ -22,6 +22,7 @@ interface SMMStayHomepageProps {
     secondaryColor?: string;
     accentColor?: string;
     backgroundColor?: string;
+    textColor?: string;
     logoUrl?: string;
     heroTitle?: string;
     heroSubtitle?: string;
@@ -64,17 +65,21 @@ export const SMMStayHomepage = ({
     { name: 'Telegram', icon: MessageCircle, color: '#0088cc' },
   ];
 
+  // Theme colors with customization support
+  const bgColor = customization?.backgroundColor || '#000000';
+  const textCol = customization?.textColor || '#FFFFFF';
+
   return (
-    <div className="min-h-screen bg-black text-white font-montserrat overflow-hidden">
+    <div className="min-h-screen text-white font-montserrat overflow-hidden" style={{ backgroundColor: bgColor, color: textCol }}>
       {/* Neon Grid Background */}
       <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(255,64,129,0.15)_0%,_transparent_50%)]" />
+        <div className="absolute inset-0" style={{ background: `radial-gradient(circle at center, ${primaryColor}26 0%, transparent 50%)` }} />
         <div 
           className="absolute inset-0 opacity-20"
           style={{
             backgroundImage: `
-              linear-gradient(rgba(255,64,129,0.1) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(255,64,129,0.1) 1px, transparent 1px)
+              linear-gradient(${primaryColor}1a 1px, transparent 1px),
+              linear-gradient(90deg, ${primaryColor}1a 1px, transparent 1px)
             `,
             backgroundSize: '60px 60px'
           }}

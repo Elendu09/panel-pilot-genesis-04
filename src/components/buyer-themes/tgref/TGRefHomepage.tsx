@@ -22,6 +22,7 @@ interface TGRefHomepageProps {
     secondaryColor?: string;
     accentColor?: string;
     backgroundColor?: string;
+    textColor?: string;
     logoUrl?: string;
     heroTitle?: string;
     heroSubtitle?: string;
@@ -68,14 +69,18 @@ export const TGRefHomepage = ({
     visible: { opacity: 1, y: 0 }
   };
 
+  // Theme colors with customization support
+  const bgColor = customization?.backgroundColor || '#1A1B26';
+  const textCol = customization?.textColor || '#FFFFFF';
+
   return (
-    <div className="min-h-screen bg-[#1A1B26] text-white font-mono">
+    <div className="min-h-screen text-white font-mono" style={{ backgroundColor: bgColor, color: textCol }}>
       {/* Grid Background */}
       <div className="fixed inset-0 pointer-events-none opacity-10">
         <div className="absolute inset-0" style={{
           backgroundImage: `
-            linear-gradient(rgba(0, 212, 170, 0.1) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(0, 212, 170, 0.1) 1px, transparent 1px)
+            linear-gradient(${primaryColor}1a 1px, transparent 1px),
+            linear-gradient(90deg, ${primaryColor}1a 1px, transparent 1px)
           `,
           backgroundSize: '50px 50px'
         }} />
