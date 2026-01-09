@@ -498,6 +498,34 @@ const gradientOptions = [
   'from-indigo-500 to-violet-500',
 ];
 
+// Theme defaults for reset functionality
+const getThemeDefaults = (themeType: string): Partial<typeof defaultCustomization> => {
+  switch (themeType) {
+    case 'dark_gradient':
+      return { backgroundColor: '#0F172A', primaryColor: '#6366F1', secondaryColor: '#8B5CF6', textColor: '#FFFFFF', surfaceColor: '#1E293B' };
+    case 'professional':
+      return { backgroundColor: '#0C4A6E', primaryColor: '#0EA5E9', secondaryColor: '#38BDF8', textColor: '#FFFFFF', surfaceColor: '#0e5a82' };
+    case 'vibrant':
+      return { backgroundColor: '#1A1310', primaryColor: '#F97316', secondaryColor: '#EAB308', textColor: '#FFFFFF', surfaceColor: '#2A1F1A' };
+    case 'grace':
+      return { backgroundColor: '#0D1912', primaryColor: '#22C55E', secondaryColor: '#84CC16', textColor: '#FFFFFF', surfaceColor: '#162419' };
+    case 'tech_futuristic':
+      return { backgroundColor: '#0A0A0F', primaryColor: '#00D4FF', secondaryColor: '#8B5CF6', textColor: '#FFFFFF', surfaceColor: '#101020' };
+    case 'tgref':
+      return { backgroundColor: '#1A1B26', primaryColor: '#00D4AA', secondaryColor: '#0EA5E9', textColor: '#E5E7EB', surfaceColor: '#0D0E14' };
+    case 'alipanel':
+      return { backgroundColor: '#0A0A0A', primaryColor: '#FF6B6B', secondaryColor: '#FFCC70', textColor: '#FFFFFF', surfaceColor: '#1A1A1A' };
+    case 'flysmm':
+      return { backgroundColor: '#F8FAFC', primaryColor: '#2196F3', secondaryColor: '#00BCD4', textColor: '#1F2937', surfaceColor: '#FFFFFF' };
+    case 'smmstay':
+      return { backgroundColor: '#000000', primaryColor: '#FF4081', secondaryColor: '#E040FB', textColor: '#FFFFFF', surfaceColor: '#0A0A0A' };
+    case 'smmvisit':
+      return { backgroundColor: '#F5F5F5', primaryColor: '#FFD700', secondaryColor: '#1A1A1A', textColor: '#1A1A1A', surfaceColor: '#FFFFFF' };
+    default:
+      return { backgroundColor: '#0F172A', primaryColor: '#6366F1', secondaryColor: '#8B5CF6', textColor: '#FFFFFF', surfaceColor: '#1E293B' };
+  }
+};
+
 // Storefront themes (for homepage layout - ThemeOne through ThemeFive + Buyer Homepage Themes)
 const storefrontThemes = [
   { id: 'theme_one', name: 'Theme One', description: 'Default gradient theme with modern layout', colors: ['#0F172A', '#6366F1', '#8B5CF6'], themeType: 'dark_gradient' },
@@ -906,6 +934,8 @@ export default function DesignCustomization() {
                 {storefrontThemes.map(theme => {
                   const isActive = customization.selectedTheme === theme.themeType || customization.selectedTheme === theme.id;
                   const isConfigured = savedStorefrontTheme === theme.themeType || savedStorefrontTheme === theme.id;
+                  // Get default colors for this theme
+                  const themeDefaults = getThemeDefaults(theme.themeType);
                   return (
                     <ThemeMiniPreview
                       key={theme.id}
@@ -916,11 +946,45 @@ export default function DesignCustomization() {
                       isActive={isActive}
                       isConfigured={isConfigured}
                       hasUnsavedChanges={isActive && hasUnsavedChanges}
-                      onClick={() => updateCustomization('selectedTheme', theme.themeType)}
+                      onClick={() => {
+                        // Apply theme with its default colors
+                        setCustomization(prev => ({
+                          ...prev,
+                          selectedTheme: theme.themeType,
+                          ...themeDefaults,
+                        }));
+                        setHasUnsavedChanges(true);
+                        toast({ title: `Applied "${theme.name}" theme` });
+                      }}
                     />
                   );
                 })}
               </div>
+
+              {/* Reset to Theme Default Button */}
+              {customization.selectedTheme && (
+                <Button 
+                  variant="outline" 
+                  className="w-full gap-2"
+                  onClick={() => {
+                    const currentTheme = storefrontThemes.find(
+                      t => t.themeType === customization.selectedTheme || t.id === customization.selectedTheme
+                    );
+                    if (currentTheme) {
+                      const themeDefaults = getThemeDefaults(currentTheme.themeType);
+                      setCustomization(prev => ({
+                        ...prev,
+                        ...themeDefaults,
+                      }));
+                      setHasUnsavedChanges(true);
+                      toast({ title: `Reset to "${currentTheme.name}" defaults` });
+                    }
+                  }}
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  Reset to Theme Default Colors
+                </Button>
+              )}
             </div>
 
             {/* Custom presets saved per tenant */}
@@ -1840,12 +1904,24 @@ export default function DesignCustomization() {
                   {/* Themes Section - uses renderSectionContent for tabbed Theme Gallery */}
                   {section.id === 'themes' && renderSectionContent('themes')}
 
-                  {/* Branding Section */}
+                  {/* Branding Section - Full branding controls including logo/favicon */}
                   {section.id === 'branding' && (
                     <div className="space-y-4">
                       <div>
-                        <Label>Logo URL</Label>
-                        <Input value={customization.logoUrl} onChange={(e) => updateCustomization('logoUrl', e.target.value)} placeholder="https://..." />
+                        <Label className="flex items-center gap-2">
+                          <Image className="w-4 h-4" />
+                          Logo URL
+                        </Label>
+                        <Input value={customization.logoUrl} onChange={(e) => updateCustomization('logoUrl', e.target.value)} placeholder="https://your-logo.png" />
+                        <p className="text-xs text-muted-foreground mt-1">Recommended: 200x50px or similar aspect ratio</p>
+                      </div>
+                      <div>
+                        <Label className="flex items-center gap-2">
+                          <Image className="w-4 h-4" />
+                          Favicon URL
+                        </Label>
+                        <Input value={customization.faviconUrl} onChange={(e) => updateCustomization('faviconUrl', e.target.value)} placeholder="https://your-favicon.ico" />
+                        <p className="text-xs text-muted-foreground mt-1">Recommended: 32x32px or 64x64px square icon</p>
                       </div>
                       <div>
                         <Label>Company Name</Label>
@@ -2718,6 +2794,26 @@ export default function DesignCustomization() {
                 </div>
               </div>
               <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
+                {/* Light/Dark Mode Toggle - Desktop */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    "h-7 w-7 sm:h-8 sm:w-8 p-0 transition-colors",
+                    previewThemeMode === 'dark' 
+                      ? "bg-slate-800 hover:bg-slate-700" 
+                      : "bg-amber-100 hover:bg-amber-200"
+                  )}
+                  onClick={togglePreviewTheme}
+                  title={previewThemeMode === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                >
+                  {previewThemeMode === 'dark' ? (
+                    <Sun className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-400" />
+                  ) : (
+                    <Moon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-600" />
+                  )}
+                </Button>
+
                 {/* Device Toggle */}
                 <div className="flex bg-background/50 rounded-lg p-0.5 sm:p-1 border border-border/30">
                   {(['desktop', 'tablet', 'mobile'] as const).map((device) => (
