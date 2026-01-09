@@ -17,10 +17,33 @@ interface TGRefHomepageProps {
     totalUsers?: number;
     servicesCount?: number;
   };
+  customization?: {
+    primaryColor?: string;
+    secondaryColor?: string;
+    accentColor?: string;
+    backgroundColor?: string;
+    logoUrl?: string;
+    heroTitle?: string;
+    heroSubtitle?: string;
+  };
+  logoUrl?: string;
 }
 
 // TGRef Theme: Terminal/Tech aesthetic with monospace fonts, teal gradients
-export const TGRefHomepage = ({ panelName = 'SMM Panel', services = [], stats }: TGRefHomepageProps) => {
+export const TGRefHomepage = ({ 
+  panelName = 'SMM Panel', 
+  services = [], 
+  stats,
+  customization,
+  logoUrl 
+}: TGRefHomepageProps) => {
+  // Use customization colors or fallback to theme defaults
+  const primaryColor = customization?.primaryColor || '#00D4AA';
+  const secondaryColor = customization?.secondaryColor || '#0EA5E9';
+  const accentColor = customization?.accentColor || '#7C3AED';
+  const heroTitle = customization?.heroTitle || 'Social Growth';
+  const heroSubtitle = customization?.heroSubtitle || 'Execute powerful SMM commands. Instant delivery, premium quality, unbeatable prices.';
+  const displayLogo = customization?.logoUrl || logoUrl;
   const platforms = [
     { name: 'Instagram', icon: Instagram, color: '#E4405F' },
     { name: 'YouTube', icon: Youtube, color: '#FF0000' },

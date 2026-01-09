@@ -17,10 +17,33 @@ interface AliPanelHomepageProps {
     totalUsers?: number;
     servicesCount?: number;
   };
+  customization?: {
+    primaryColor?: string;
+    secondaryColor?: string;
+    accentColor?: string;
+    backgroundColor?: string;
+    logoUrl?: string;
+    heroTitle?: string;
+    heroSubtitle?: string;
+  };
+  logoUrl?: string;
 }
 
 // AliPanel Theme: Dark with pink-orange gradients, floating icons, glassmorphism
-export const AliPanelHomepage = ({ panelName = 'SMM Panel', services = [], stats }: AliPanelHomepageProps) => {
+export const AliPanelHomepage = ({ 
+  panelName = 'SMM Panel', 
+  services = [], 
+  stats,
+  customization,
+  logoUrl 
+}: AliPanelHomepageProps) => {
+  // Use customization colors or fallback to theme defaults
+  const primaryColor = customization?.primaryColor || '#FF6B6B';
+  const secondaryColor = customization?.secondaryColor || '#FF8E53';
+  const accentColor = customization?.accentColor || '#FFCC70';
+  const heroTitle = customization?.heroTitle || 'Boost Your';
+  const heroSubtitle = customization?.heroSubtitle || 'Get real followers, likes, and views at the lowest prices. Trusted by over 10,000+ customers worldwide.';
+  const displayLogo = customization?.logoUrl || logoUrl;
   const floatingIcons = [
     { icon: Instagram, color: '#E4405F', delay: 0, x: -120, y: -80 },
     { icon: Youtube, color: '#FF0000', delay: 0.2, x: 130, y: -60 },

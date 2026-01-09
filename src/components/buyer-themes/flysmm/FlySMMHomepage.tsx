@@ -17,10 +17,32 @@ interface FlySMMHomepageProps {
     totalUsers?: number;
     servicesCount?: number;
   };
+  customization?: {
+    primaryColor?: string;
+    secondaryColor?: string;
+    accentColor?: string;
+    backgroundColor?: string;
+    logoUrl?: string;
+    heroTitle?: string;
+    heroSubtitle?: string;
+  };
+  logoUrl?: string;
 }
 
 // FlySMM Theme: Light, friendly, illustrated style with blue accents
-export const FlySMMHomepage = ({ panelName = 'SMM Panel', services = [], stats }: FlySMMHomepageProps) => {
+export const FlySMMHomepage = ({ 
+  panelName = 'SMM Panel', 
+  services = [], 
+  stats,
+  customization,
+  logoUrl 
+}: FlySMMHomepageProps) => {
+  // Use customization colors or fallback to theme defaults
+  const primaryColor = customization?.primaryColor || '#2196F3';
+  const secondaryColor = customization?.secondaryColor || '#00BCD4';
+  const heroTitle = customization?.heroTitle || 'Grow Your';
+  const heroSubtitle = customization?.heroSubtitle || 'Get real followers, likes, and views at the best prices. Fast delivery, premium quality, 24/7 support.';
+  const displayLogo = customization?.logoUrl || logoUrl;
   const features = [
     { title: 'Instant Delivery', desc: 'Your order starts processing immediately', icon: Zap, color: '#2196F3' },
     { title: 'Secure Payments', desc: 'Protected by industry-standard encryption', icon: Shield, color: '#00BCD4' },
