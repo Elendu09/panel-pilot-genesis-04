@@ -114,7 +114,7 @@ export interface ColorPalette {
 }
 
 /**
- * Default color values for light and dark themes
+ * Default color values for dark theme
  */
 export const defaultDarkColors: ColorPalette = {
   primaryColor: '#6366F1',
@@ -132,6 +132,9 @@ export const defaultDarkColors: ColorPalette = {
   errorColor: '#EF4444',
 };
 
+/**
+ * Default color values for light theme
+ */
 export const defaultLightColors: ColorPalette = {
   primaryColor: '#3B82F6',
   secondaryColor: '#1E40AF',
@@ -147,3 +150,136 @@ export const defaultLightColors: ColorPalette = {
   infoColor: '#3B82F6',
   errorColor: '#EF4444',
 };
+
+/**
+ * Generate complete CSS variables for buyer theme
+ * Supports both light and dark modes with proper scoping
+ */
+export function generateBuyerThemeCSS(colors: Partial<ColorPalette>): string {
+  const primary = colors.primaryColor || defaultDarkColors.primaryColor;
+  const secondary = colors.secondaryColor || defaultDarkColors.secondaryColor;
+  const accent = colors.accentColor || defaultDarkColors.accentColor;
+  const background = colors.backgroundColor || defaultDarkColors.backgroundColor;
+  const surface = colors.surfaceColor || defaultDarkColors.surfaceColor;
+  const card = colors.cardColor || surface;
+  const text = colors.textColor || defaultDarkColors.textColor;
+  const muted = colors.mutedColor || defaultDarkColors.mutedColor;
+  const border = colors.borderColor || defaultDarkColors.borderColor;
+  const success = colors.successColor || defaultDarkColors.successColor;
+  const warning = colors.warningColor || defaultDarkColors.warningColor;
+  const info = colors.infoColor || defaultDarkColors.infoColor;
+  const error = colors.errorColor || defaultDarkColors.errorColor;
+
+  // Light mode equivalents - keep brand colors, adjust UI colors
+  const lightBg = '#FAFBFC';
+  const lightSurface = '#FFFFFF';
+  const lightCard = '#FFFFFF';
+  const lightText = '#1F2937';
+  const lightMuted = '#6B7280';
+  const lightBorder = '#E5E7EB';
+
+  return `
+    /* Panel brand colors (shared across themes) */
+    .buyer-theme-wrapper {
+      --panel-primary: ${primary};
+      --panel-secondary: ${secondary};
+      --panel-accent: ${accent};
+      --panel-success: ${success};
+      --panel-warning: ${warning};
+      --panel-info: ${info};
+      --panel-error: ${error};
+    }
+    
+    /* Dark mode buyer theme (default) */
+    .buyer-theme-wrapper:not(.light),
+    .dark .buyer-theme-wrapper {
+      --panel-background: ${background};
+      --panel-surface: ${surface};
+      --panel-card: ${card};
+      --panel-text: ${text};
+      --panel-muted: ${muted};
+      --panel-border: ${border};
+      
+      --background: ${hexToHSL(background)};
+      --foreground: ${hexToHSL(text)};
+      --card: ${hexToHSL(card)};
+      --card-foreground: ${hexToHSL(text)};
+      --popover: ${hexToHSL(surface)};
+      --popover-foreground: ${hexToHSL(text)};
+      --primary: ${hexToHSL(primary)};
+      --primary-foreground: 0 0% 100%;
+      --secondary: ${hexToHSL(surface)};
+      --secondary-foreground: ${hexToHSL(text)};
+      --muted: ${hexToHSL(surface)};
+      --muted-foreground: ${hexToHSL(muted)};
+      --accent: ${hexToHSL(accent)};
+      --accent-foreground: 0 0% 100%;
+      --border: ${hexToHSL(border)};
+      --input: ${hexToHSL(border)};
+      --ring: ${hexToHSL(primary)};
+      --destructive: ${hexToHSL(error)};
+      --destructive-foreground: 0 0% 100%;
+      --success: ${hexToHSL(success)};
+      --warning: ${hexToHSL(warning)};
+      --info: ${hexToHSL(info)};
+      
+      --sidebar-background: ${hexToHSL(surface)};
+      --sidebar-foreground: ${hexToHSL(text)};
+      --sidebar-primary: ${hexToHSL(primary)};
+      --sidebar-primary-foreground: 0 0% 100%;
+      --sidebar-accent: ${hexToHSL(background)};
+      --sidebar-accent-foreground: ${hexToHSL(text)};
+      --sidebar-border: ${hexToHSL(border)};
+      --sidebar-ring: ${hexToHSL(primary)};
+      
+      --glass-bg: ${hexToHSL(surface)} / 0.6;
+      --glass-border: ${hexToHSL(border)} / 0.3;
+    }
+    
+    /* Light mode buyer theme */
+    .light .buyer-theme-wrapper,
+    .buyer-theme-wrapper.light {
+      --panel-background: ${lightBg};
+      --panel-surface: ${lightSurface};
+      --panel-card: ${lightCard};
+      --panel-text: ${lightText};
+      --panel-muted: ${lightMuted};
+      --panel-border: ${lightBorder};
+      
+      --background: ${hexToHSL(lightBg)};
+      --foreground: ${hexToHSL(lightText)};
+      --card: ${hexToHSL(lightCard)};
+      --card-foreground: ${hexToHSL(lightText)};
+      --popover: ${hexToHSL(lightSurface)};
+      --popover-foreground: ${hexToHSL(lightText)};
+      --primary: ${hexToHSL(primary)};
+      --primary-foreground: 0 0% 100%;
+      --secondary: ${hexToHSL(lightSurface)};
+      --secondary-foreground: ${hexToHSL(lightText)};
+      --muted: ${hexToHSL(lightSurface)};
+      --muted-foreground: ${hexToHSL(lightMuted)};
+      --accent: ${hexToHSL(accent)};
+      --accent-foreground: 0 0% 100%;
+      --border: ${hexToHSL(lightBorder)};
+      --input: ${hexToHSL(lightBorder)};
+      --ring: ${hexToHSL(primary)};
+      --destructive: ${hexToHSL(error)};
+      --destructive-foreground: 0 0% 100%;
+      --success: ${hexToHSL(success)};
+      --warning: ${hexToHSL(warning)};
+      --info: ${hexToHSL(info)};
+      
+      --sidebar-background: ${hexToHSL(lightSurface)};
+      --sidebar-foreground: ${hexToHSL(lightText)};
+      --sidebar-primary: ${hexToHSL(primary)};
+      --sidebar-primary-foreground: 0 0% 100%;
+      --sidebar-accent: ${hexToHSL(lightBg)};
+      --sidebar-accent-foreground: ${hexToHSL(lightText)};
+      --sidebar-border: ${hexToHSL(lightBorder)};
+      --sidebar-ring: ${hexToHSL(primary)};
+      
+      --glass-bg: ${hexToHSL(lightSurface)} / 0.85;
+      --glass-border: ${hexToHSL(lightBorder)} / 0.6;
+    }
+  `;
+}
