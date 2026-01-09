@@ -22,6 +22,7 @@ interface AliPanelHomepageProps {
     secondaryColor?: string;
     accentColor?: string;
     backgroundColor?: string;
+    textColor?: string;
     logoUrl?: string;
     heroTitle?: string;
     heroSubtitle?: string;
@@ -74,12 +75,16 @@ export const AliPanelHomepage = ({
     { title: '24/7 Support', desc: 'Always here to help', icon: Users, gradient: 'from-cyan-500 to-blue-500' },
   ];
 
+  // Theme colors with customization support
+  const bgColor = customization?.backgroundColor || '#0A0A0A';
+  const textCol = customization?.textColor || '#FFFFFF';
+
   return (
-    <div className="min-h-screen bg-[#0A0A0A] text-white font-poppins overflow-hidden">
+    <div className="min-h-screen text-white font-poppins overflow-hidden" style={{ backgroundColor: bgColor, color: textCol }}>
       {/* Gradient Orbs */}
       <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-gradient-to-r from-pink-500/20 to-orange-500/20 rounded-full blur-[150px]" />
-        <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-gradient-to-r from-violet-500/15 to-purple-500/15 rounded-full blur-[100px]" />
+        <div className="absolute top-0 left-1/4 w-[600px] h-[600px] rounded-full blur-[150px]" style={{ background: `linear-gradient(to right, ${primaryColor}33, ${secondaryColor}33)` }} />
+        <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] rounded-full blur-[100px]" style={{ background: `linear-gradient(to right, ${accentColor}26, ${primaryColor}26)` }} />
       </div>
 
       {/* Navigation */}
