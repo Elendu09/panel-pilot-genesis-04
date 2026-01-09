@@ -19,6 +19,7 @@ import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { MobileDesignSlider } from '@/components/design/MobileDesignSlider';
+import { ThemeMiniPreview } from '@/components/design/ThemeMiniPreview';
 import { ThemeOne } from '@/components/themes/ThemeOne';
 import { ThemeTwo } from '@/components/themes/ThemeTwo';
 import { ThemeThree } from '@/components/themes/ThemeThree';
@@ -892,40 +893,31 @@ export default function DesignCustomization() {
               )}
             </div>
 
-            {/* Homepage Themes (moved from Theme Gallery) */}
+            {/* Homepage Themes with Visual Mini Previews */}
             <div className="pt-4 border-t border-border/60 space-y-3">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Homepage themes</p>
                 <Badge variant="outline" className="text-[10px]">Storefront layout</Badge>
               </div>
               <p className="text-[11px] text-muted-foreground">
-                These themes control your public storefront (homepage) layout and overall style.
+                These themes control your public storefront (homepage) layout and overall style. Each theme has a unique visual identity.
               </p>
               <div className="grid grid-cols-2 gap-3">
                 {storefrontThemes.map(theme => {
                   const isActive = customization.selectedTheme === theme.themeType || customization.selectedTheme === theme.id;
                   const isConfigured = savedStorefrontTheme === theme.themeType || savedStorefrontTheme === theme.id;
                   return (
-                    <button 
-                      key={theme.id} 
-                      onClick={() => {
-                        updateCustomization('selectedTheme', theme.themeType);
-                      }} 
-                      className={`p-3 rounded-xl border-2 transition-all text-left ${isActive ? 'border-primary ring-2 ring-primary/20' : 'border-border hover:border-primary/50'}`}
-                    >
-                      <div className="flex gap-1 mb-2">
-                        {theme.colors.map((c, i) => (
-                          <div key={i} className="w-5 h-5 rounded-full ring-1 ring-white/10" style={{ backgroundColor: c }} />
-                        ))}
-                      </div>
-                      <p className="text-xs font-semibold">{theme.name}</p>
-                      <p className="text-[10px] text-muted-foreground line-clamp-1">{theme.description}</p>
-                      <div className="flex gap-1 mt-1.5 flex-wrap">
-                        {isActive && <Badge variant="secondary" className="text-[10px]">Active</Badge>}
-                        {isConfigured && !isActive && <Badge variant="outline" className="text-[10px] text-green-500 border-green-500/30">Saved</Badge>}
-                        {isActive && hasUnsavedChanges && <Badge variant="outline" className="text-[10px] text-amber-500 border-amber-500/30">Unsaved</Badge>}
-                      </div>
-                    </button>
+                    <ThemeMiniPreview
+                      key={theme.id}
+                      themeId={theme.id}
+                      name={theme.name}
+                      description={theme.description}
+                      colors={theme.colors}
+                      isActive={isActive}
+                      isConfigured={isConfigured}
+                      hasUnsavedChanges={isActive && hasUnsavedChanges}
+                      onClick={() => updateCustomization('selectedTheme', theme.themeType)}
+                    />
                   );
                 })}
               </div>
@@ -1031,27 +1023,27 @@ export default function DesignCustomization() {
               {availableThemes.map(theme => {
                 const isActive = (customization as any).buyerTheme === theme.key;
                 const isConfigured = savedBuyerTheme === theme.key;
+                // Map buyer theme keys to storefront theme ids for preview mockups
+                const themeIdMap: Record<string, string> = {
+                  'default': 'theme_one',
+                  'alipanel': 'theme_alipanel',
+                  'flysmm': 'theme_flysmm',
+                  'smmstay': 'theme_smmstay',
+                  'tgref': 'theme_tgref',
+                  'smmvisit': 'theme_smmvisit',
+                };
                 return (
-                  <button 
-                    key={theme.key} 
-                    onClick={() => {
-                      updateCustomization('buyerTheme', theme.key as BuyerThemeKey);
-                    }} 
-                    className={`p-3 rounded-xl border-2 transition-all text-left ${isActive ? 'border-primary ring-2 ring-primary/20' : 'border-border hover:border-primary/50'}`}
-                  >
-                    <div className="flex gap-1 mb-2">
-                      <div className="w-5 h-5 rounded-full ring-1 ring-white/10" style={{ backgroundColor: theme.colors.dark.primary }} />
-                      <div className="w-5 h-5 rounded-full ring-1 ring-white/10" style={{ backgroundColor: theme.colors.dark.accent }} />
-                      <div className="w-5 h-5 rounded-full ring-1 ring-white/10" style={{ backgroundColor: theme.colors.dark.background }} />
-                    </div>
-                    <p className="text-xs font-semibold">{theme.name}</p>
-                    <p className="text-[10px] text-muted-foreground line-clamp-1">{theme.description}</p>
-                    <div className="flex gap-1 mt-1.5 flex-wrap">
-                      {isActive && <Badge variant="secondary" className="text-[10px]">Active</Badge>}
-                      {isConfigured && !isActive && <Badge variant="outline" className="text-[10px] text-green-500 border-green-500/30">Saved</Badge>}
-                      {isActive && hasUnsavedChanges && <Badge variant="outline" className="text-[10px] text-amber-500 border-amber-500/30">Unsaved</Badge>}
-                    </div>
-                  </button>
+                  <ThemeMiniPreview
+                    key={theme.key}
+                    themeId={themeIdMap[theme.key] || theme.key}
+                    name={theme.name}
+                    description={theme.description}
+                    colors={[theme.colors.dark.background, theme.colors.dark.primary, theme.colors.dark.accent]}
+                    isActive={isActive}
+                    isConfigured={isConfigured}
+                    hasUnsavedChanges={isActive && hasUnsavedChanges}
+                    onClick={() => updateCustomization('buyerTheme', theme.key as BuyerThemeKey)}
+                  />
                 );
               })}
             </div>
