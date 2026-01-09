@@ -19,11 +19,34 @@ interface SMMVisitHomepageProps {
     totalUsers?: number;
     servicesCount?: number;
   };
+  customization?: {
+    primaryColor?: string;
+    secondaryColor?: string;
+    accentColor?: string;
+    backgroundColor?: string;
+    logoUrl?: string;
+    heroTitle?: string;
+    heroSubtitle?: string;
+  };
+  logoUrl?: string;
 }
 
 // SMMVisit Theme: Light gray, yellow/gold primary, clean professional
-export const SMMVisitHomepage = ({ panelName = 'SMM Panel', services = [], stats }: SMMVisitHomepageProps) => {
+export const SMMVisitHomepage = ({ 
+  panelName = 'SMM Panel', 
+  services = [], 
+  stats,
+  customization,
+  logoUrl 
+}: SMMVisitHomepageProps) => {
   const [selectedPlatform, setSelectedPlatform] = useState('instagram');
+
+  // Use customization colors or fallback to theme defaults
+  const primaryColor = customization?.primaryColor || '#FFD700';
+  const secondaryColor = customization?.secondaryColor || '#FFC107';
+  const heroTitle = customization?.heroTitle || 'Boost Your';
+  const heroSubtitle = customization?.heroSubtitle || 'Get real followers, likes, and views at the lowest prices. Trusted by over 100,000+ users worldwide.';
+  const displayLogo = customization?.logoUrl || logoUrl;
 
   const platforms = [
     { id: 'instagram', name: 'Instagram', icon: Instagram, color: '#E4405F' },

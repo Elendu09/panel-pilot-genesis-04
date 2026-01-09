@@ -17,10 +17,32 @@ interface SMMStayHomepageProps {
     totalUsers?: number;
     servicesCount?: number;
   };
+  customization?: {
+    primaryColor?: string;
+    secondaryColor?: string;
+    accentColor?: string;
+    backgroundColor?: string;
+    logoUrl?: string;
+    heroTitle?: string;
+    heroSubtitle?: string;
+  };
+  logoUrl?: string;
 }
 
 // SMMStay Theme: Dark with neon pink/purple, bold uppercase, high-energy
-export const SMMStayHomepage = ({ panelName = 'SMM Panel', services = [], stats }: SMMStayHomepageProps) => {
+export const SMMStayHomepage = ({ 
+  panelName = 'SMM Panel', 
+  services = [], 
+  stats,
+  customization,
+  logoUrl 
+}: SMMStayHomepageProps) => {
+  // Use customization colors or fallback to theme defaults
+  const primaryColor = customization?.primaryColor || '#FF4081';
+  const secondaryColor = customization?.secondaryColor || '#E040FB';
+  const heroTitle = customization?.heroTitle || 'Dominate';
+  const heroSubtitle = customization?.heroSubtitle || 'Premium followers, likes & views at unbeatable prices';
+  const displayLogo = customization?.logoUrl || logoUrl;
   const features = [
     { title: 'INSTANT START', desc: 'Orders begin within seconds', icon: Zap },
     { title: 'PREMIUM QUALITY', desc: 'Real accounts only', icon: Star },

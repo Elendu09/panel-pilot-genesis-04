@@ -8,6 +8,13 @@ import { ThemeFour } from '@/components/themes/ThemeFour';
 import { ThemeFive } from '@/components/themes/ThemeFive';
 import { ThemeTGRef } from '@/components/themes/ThemeTGRef';
 import { ThemeAliPanel } from '@/components/themes/ThemeAliPanel';
+import { 
+  TGRefHomepage, 
+  AliPanelHomepage, 
+  FlySMMHomepage, 
+  SMMStayHomepage, 
+  SMMVisitHomepage 
+} from '@/components/buyer-themes';
 import { FloatingChatWidget } from '@/components/storefront/FloatingChatWidget';
 import { supabase } from '@/integrations/supabase/client';
 import { AlertTriangle } from 'lucide-react';
@@ -126,6 +133,19 @@ const Storefront = () => {
 
       console.log('Rendering theme:', selectedTheme, 'with props:', { panelName: panel?.name, servicesCount: services?.length });
 
+      // Prepare homepage props with customization
+      const homepageProps = {
+        panelName: panel?.name,
+        services,
+        stats: {
+          totalOrders: (panel as any)?.total_orders || 0,
+          totalUsers: 0,
+          servicesCount: services?.length || 0,
+        },
+        customization: design,
+        logoUrl: panel?.logo_url,
+      };
+
       // Theme selection based on selectedTheme value
       switch (selectedTheme) {
         case 'theme_two':
@@ -148,14 +168,26 @@ const Storefront = () => {
         case 'theme_five':
         case 'tech_futuristic':
           return <ThemeFive {...themeProps} />;
-        // TGRef theme - tech-inspired with bold typography
+        // TGRef theme - terminal/tech aesthetic
         case 'theme_tgref':
         case 'tgref':
-          return <ThemeTGRef {...themeProps} />;
-        // AliPanel theme - gradient with floating icons
+          return <TGRefHomepage {...homepageProps} />;
+        // AliPanel theme - pink-orange gradients, floating icons
         case 'theme_alipanel':
         case 'alipanel':
-          return <ThemeAliPanel {...themeProps} />;
+          return <AliPanelHomepage {...homepageProps} />;
+        // FlySMM theme - light, friendly, blue accents
+        case 'theme_flysmm':
+        case 'flysmm':
+          return <FlySMMHomepage {...homepageProps} />;
+        // SMMStay theme - dark neon pink
+        case 'theme_smmstay':
+        case 'smmstay':
+          return <SMMStayHomepage {...homepageProps} />;
+        // SMMVisit theme - light gray, yellow/gold
+        case 'theme_smmvisit':
+        case 'smmvisit':
+          return <SMMVisitHomepage {...homepageProps} />;
         // ThemeOne is the default for all other cases (default, theme_one, dark_gradient, etc.)
         case 'default':
         case 'theme_one':

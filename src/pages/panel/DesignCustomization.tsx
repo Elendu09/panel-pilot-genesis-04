@@ -26,7 +26,15 @@ import { ThemeFour } from '@/components/themes/ThemeFour';
 import { ThemeFive } from '@/components/themes/ThemeFive';
 import { ThemeTGRef } from '@/components/themes/ThemeTGRef';
 import { ThemeAliPanel } from '@/components/themes/ThemeAliPanel';
-import { availableThemes, type BuyerThemeKey } from '@/components/buyer-themes';
+import { 
+  TGRefHomepage, 
+  AliPanelHomepage, 
+  FlySMMHomepage, 
+  SMMStayHomepage, 
+  SMMVisitHomepage,
+  availableThemes, 
+  type BuyerThemeKey 
+} from '@/components/buyer-themes';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 // Memoized preset button for performance
@@ -489,15 +497,18 @@ const gradientOptions = [
   'from-indigo-500 to-violet-500',
 ];
 
-// Storefront themes (for homepage layout - ThemeOne through ThemeFive + TGRef + AliPanel)
+// Storefront themes (for homepage layout - ThemeOne through ThemeFive + Buyer Homepage Themes)
 const storefrontThemes = [
   { id: 'theme_one', name: 'Theme One', description: 'Default gradient theme with modern layout', colors: ['#0F172A', '#6366F1', '#8B5CF6'], themeType: 'dark_gradient' },
   { id: 'theme_two', name: 'Theme Two', description: 'Professional ocean blue with clean design', colors: ['#0C4A6E', '#0EA5E9', '#38BDF8'], themeType: 'professional' },
   { id: 'theme_three', name: 'Theme Three', description: 'Vibrant sunset orange with warm tones', colors: ['#1A1310', '#F97316', '#EAB308'], themeType: 'vibrant' },
   { id: 'theme_four', name: 'Theme Four', description: 'Grace - Natural forest earth theme', colors: ['#0D1912', '#22C55E', '#84CC16'], themeType: 'grace' },
   { id: 'theme_five', name: 'Theme Five', description: 'Tech futuristic with cyber aesthetics', colors: ['#0A0A0F', '#00D4FF', '#8B5CF6'], themeType: 'tech_futuristic' },
-  { id: 'theme_tgref', name: 'TGRef Style', description: 'Tech-inspired with bold typography and terminal aesthetic', colors: ['#0A0A0F', '#00B4D8', '#00D4AA'], themeType: 'tgref' },
-  { id: 'theme_alipanel', name: 'AliPanel Style', description: 'Gradient hero with floating icons and vibrant colors', colors: ['#0A0A0F', '#EC4899', '#FF6B35'], themeType: 'alipanel' },
+  { id: 'theme_tgref', name: 'TGRef Style', description: 'Terminal/tech aesthetic with monospace fonts', colors: ['#1A1B26', '#00D4AA', '#0EA5E9'], themeType: 'tgref' },
+  { id: 'theme_alipanel', name: 'AliPanel Style', description: 'Pink-orange gradients with floating icons', colors: ['#0A0A0A', '#FF6B6B', '#FFCC70'], themeType: 'alipanel' },
+  { id: 'theme_flysmm', name: 'FlySMM Style', description: 'Light friendly with blue accents and illustrations', colors: ['#F8FAFC', '#2196F3', '#00BCD4'], themeType: 'flysmm' },
+  { id: 'theme_smmstay', name: 'SMMStay Style', description: 'Dark neon pink with bold uppercase typography', colors: ['#000000', '#FF4081', '#E040FB'], themeType: 'smmstay' },
+  { id: 'theme_smmvisit', name: 'SMMVisit Style', description: 'Light gray with yellow/gold accents', colors: ['#F5F5F5', '#FFD700', '#1A1A1A'], themeType: 'smmvisit' },
 ];
 
 // Live Preview Renderer - renders actual theme based on selectedTheme
@@ -515,6 +526,19 @@ function LivePreviewRenderer({ customization }: { customization: any }) {
     services: [],
     customization: customization,
     isPreview: true,
+  };
+
+  // Homepage props for buyer theme components
+  const homepageProps = {
+    panelName: customization.companyName || 'Your Panel',
+    services: [],
+    stats: {
+      totalOrders: 50000,
+      totalUsers: 10000,
+      servicesCount: 500,
+    },
+    customization: customization,
+    logoUrl: customization.logoUrl,
   };
 
   // Render appropriate theme based on selectedTheme
@@ -541,10 +565,19 @@ function LivePreviewRenderer({ customization }: { customization: any }) {
       return <ThemeFive {...themeProps} />;
     case 'theme_tgref':
     case 'tgref':
-      return <ThemeTGRef {...themeProps} />;
+      return <TGRefHomepage {...homepageProps} />;
     case 'theme_alipanel':
     case 'alipanel':
-      return <ThemeAliPanel {...themeProps} />;
+      return <AliPanelHomepage {...homepageProps} />;
+    case 'theme_flysmm':
+    case 'flysmm':
+      return <FlySMMHomepage {...homepageProps} />;
+    case 'theme_smmstay':
+    case 'smmstay':
+      return <SMMStayHomepage {...homepageProps} />;
+    case 'theme_smmvisit':
+    case 'smmvisit':
+      return <SMMVisitHomepage {...homepageProps} />;
     // ThemeOne is the default for all other cases
     case 'default':
     case 'theme_one':
