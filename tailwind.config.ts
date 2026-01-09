@@ -27,6 +27,7 @@ export default {
 			'space-mono': ['"Space Mono"', 'monospace'],
 			'space-grotesk': ['"Space Grotesk"', 'sans-serif'],
 			'luckiest': ['"Luckiest Guy"', 'cursive'],
+			'jetbrains': ['"JetBrains Mono"', 'monospace'],
 		},
 		colors: {
 				border: 'hsl(var(--border))',
