@@ -59,6 +59,7 @@ import StorefrontBlog from './storefront/StorefrontBlog';
 import FastOrder from './FastOrder';
 import BuyerBulkOrder from './buyer/BuyerBulkOrder';
 import TrackOrder from './TrackOrder';
+import Sitemap from './Sitemap';
 
 const queryClient = new QueryClient();
 
@@ -244,6 +245,9 @@ const TenantContent = () => {
 
                         {/* Tenant blog route */}
                         <Route path="/blog" element={<StorefrontBlog />} />
+                        
+                        {/* Sitemap route */}
+                        <Route path="/sitemap.xml" element={<Sitemap />} />
                         
                         {/* Protected buyer routes */}
                         <Route path="/dashboard" element={

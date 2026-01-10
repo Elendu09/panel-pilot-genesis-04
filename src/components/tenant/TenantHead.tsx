@@ -80,6 +80,9 @@ export const TenantHead = ({ title, description }: TenantHeadProps) => {
       {/* Canonical URL */}
       <link rel="canonical" href={currentUrl.split('?')[0]} />
       
+      {/* Sitemap */}
+      <link rel="sitemap" type="application/xml" href={`${canonicalUrl}/sitemap.xml`} />
+      
       {/* Favicon and Icons */}
       <link rel="icon" type="image/png" href={faviconUrl} />
       <link rel="apple-touch-icon" href={appleTouchIconUrl} />
