@@ -110,6 +110,12 @@ const PanelOverview = () => {
             .eq('panel_id', panel.id)
             .eq('is_active', true);
 
+          // Fetch actual customer count from client_users table
+          const { count: totalCustomersCount } = await supabase
+            .from('client_users')
+            .select('*', { count: 'exact', head: true })
+            .eq('panel_id', panel.id);
+
           // Fetch recent orders for live widget
           const { data: recentOrders } = await supabase
             .from('orders')
@@ -120,7 +126,7 @@ const PanelOverview = () => {
 
           setLiveOrders((recentOrders || []) as LiveOrder[]);
 
-          const uniqueCustomers = new Set(orders?.map(o => o.buyer_id) || []).size;
+          const totalCustomers = totalCustomersCount || 0;
           const totalRevenue = orders?.reduce((sum, order) => sum + Number(order.price), 0) || 0;
 
           // Fetch today's orders
@@ -181,7 +187,7 @@ const PanelOverview = () => {
             totalOrders: orders?.length || 0,
             totalRevenue,
             activeServices: activeServicesCount || 0,
-            totalCustomers: uniqueCustomers,
+            totalCustomers,
             todayOrders: todayOrderCount,
             todayRevenue: todayRevenueTotal,
             topServiceToday: topService
