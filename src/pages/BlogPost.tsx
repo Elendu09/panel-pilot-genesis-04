@@ -15,6 +15,7 @@ import { extractHeadings } from "@/lib/utils";
 import { useReadingProgress } from "@/hooks/use-reading-progress";
 import { useActiveSection } from "@/hooks/use-active-section";
 import { CalendarDays, Clock, ArrowLeft, User } from "lucide-react";
+import { ArticleSchema, BreadcrumbSchema } from "@/components/seo/JsonLdSchema";
 
 const BlogPost = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -44,9 +45,27 @@ const BlogPost = () => {
   }
 
   const fullUrl = `https://homeofsmm.com/blog/${post.slug}`;
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://homeofsmm.com';
 
   return (
     <>
+      {/* JSON-LD Structured Data */}
+      <ArticleSchema
+        headline={post.title}
+        description={post.excerpt}
+        image={post.image}
+        author={post.author}
+        datePublished={post.isoDate}
+        url={fullUrl}
+      />
+      <BreadcrumbSchema
+        items={[
+          { name: 'Home', url: baseUrl },
+          { name: 'Blog', url: `${baseUrl}/blog` },
+          { name: post.title, url: fullUrl },
+        ]}
+      />
+      
       <Helmet>
         {/* Basic Meta Tags */}
         <title>{post.title} | HOME OF SMM Blog</title>
@@ -81,14 +100,16 @@ const BlogPost = () => {
       <div className="min-h-screen bg-background">
         <Navigation />
 
-        {/* Hero Section */}
-        <div className="relative w-full aspect-[21/9] max-h-[400px] overflow-hidden">
-          <img
-            src={post.image}
-            alt={post.title}
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
+        {/* Hero Section with Curved Image */}
+        <div className="container mx-auto px-4 pt-8">
+          <div className="relative w-full aspect-[21/9] max-h-[450px] overflow-hidden rounded-3xl shadow-2xl">
+            <img
+              src={post.image}
+              alt={post.title}
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/30 to-transparent rounded-3xl" />
+          </div>
         </div>
 
         <div className="container mx-auto px-4">

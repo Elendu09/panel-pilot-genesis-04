@@ -56,6 +56,9 @@ export const SMMStayHomepage = ({
   const displayLogo = customization.logoUrl || logoUrl;
   const companyName = customization.companyName || panelName;
 
+  // Blog toggle
+  const showBlogInMenu = customization.showBlogInMenu === true;
+
   // Section toggles
   const showStats = customization.enableStats !== false;
   const showFeatures = customization.enableFeatures !== false;
@@ -128,6 +131,7 @@ export const SMMStayHomepage = ({
             <div className="hidden md:flex items-center gap-6">
               <Link to="/services" className="text-sm font-bold uppercase tracking-wider transition-colors" style={{ color: mutedColor }}>Services</Link>
               <Link to="/orders" className="text-sm font-bold uppercase tracking-wider transition-colors" style={{ color: mutedColor }}>Orders</Link>
+              {showBlogInMenu && <Link to="/blog" className="text-sm font-bold uppercase tracking-wider transition-colors" style={{ color: mutedColor }}>Blog</Link>}
               <Link to="/support" className="text-sm font-bold uppercase tracking-wider transition-colors" style={{ color: mutedColor }}>Support</Link>
             </div>
 

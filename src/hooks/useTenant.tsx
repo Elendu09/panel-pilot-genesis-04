@@ -97,7 +97,7 @@ interface TenantDetectionResult {
 
 // Cache for tenant data to avoid refetching on navigation
 const tenantCache = new Map<string, { panel: TenantPanel | null; timestamp: number }>();
-const CACHE_TTL = 60 * 1000; // 1 minute (keeps pages snappy but allows fast design syncing)
+const CACHE_TTL = 30 * 1000; // 30 seconds - fast sync for design updates while staying snappy
 
 // Retry function with exponential backoff
 async function fetchWithRetry<T>(

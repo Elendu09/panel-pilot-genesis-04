@@ -90,12 +90,14 @@ const StorefrontBlog = () => {
           {loading ? (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {Array.from({ length: 3 }).map((_, i) => (
-                <Card key={i} className="border-border/40 bg-card/60">
-                  <CardContent className="p-4 space-y-3">
-                    <Skeleton className="h-40 w-full rounded-xl" />
-                    <Skeleton className="h-4 w-3/4" />
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-2/3" />
+                <Card key={i} className="border-border/40 bg-card/60 overflow-hidden">
+                  <CardContent className="p-0">
+                    <Skeleton className="h-48 w-full rounded-t-3xl" />
+                    <div className="p-5 space-y-3">
+                      <Skeleton className="h-4 w-3/4" />
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-4 w-2/3" />
+                    </div>
                   </CardContent>
                 </Card>
               ))}
@@ -110,15 +112,16 @@ const StorefrontBlog = () => {
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {posts.map((post) => (
                 <article key={post.id} className="group">
-                  <Card className="h-full overflow-hidden border-border/40 bg-card/60 flex flex-col">
+                  <Card className="h-full overflow-hidden border-border/40 bg-card/60 flex flex-col hover:shadow-xl transition-all duration-300">
                     {post.featured_image_url && (
-                      <div className="relative h-40 w-full overflow-hidden">
+                      <div className="relative h-48 w-full overflow-hidden rounded-t-3xl">
                         <img
                           src={post.featured_image_url}
                           alt={post.title}
-                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
                           loading="lazy"
                         />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-t-3xl" />
                       </div>
                     )}
                     <CardContent className="flex-1 p-5 flex flex-col">
