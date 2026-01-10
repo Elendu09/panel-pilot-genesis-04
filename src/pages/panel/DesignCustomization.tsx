@@ -1229,72 +1229,6 @@ export default function DesignCustomization() {
               )}
             </div>
 
-            {/* Homepage Themes with Visual Mini Previews */}
-            <div className="pt-4 border-t border-border/60 space-y-3">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Homepage themes</p>
-                <Badge variant="outline" className="text-[10px]">Storefront layout</Badge>
-              </div>
-              <p className="text-[11px] text-muted-foreground">
-                These themes control your public storefront (homepage) layout and overall style. Each theme has a unique visual identity.
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                {storefrontThemes.map(theme => {
-                  const isActive = customization.selectedTheme === theme.themeType || customization.selectedTheme === theme.id;
-                  const isConfigured = savedStorefrontTheme === theme.themeType || savedStorefrontTheme === theme.id;
-                  // Get default colors for this theme
-                  const themeDefaults = getThemeDefaults(theme.themeType);
-                  return (
-                    <ThemeMiniPreview
-                      key={theme.id}
-                      themeId={theme.id}
-                      name={theme.name}
-                      description={theme.description}
-                      colors={theme.colors}
-                      isActive={isActive}
-                      isConfigured={isConfigured}
-                      hasUnsavedChanges={isActive && hasUnsavedChanges}
-                      onClick={() => {
-                        // Apply theme with its default colors
-                        setCustomization(prev => ({
-                          ...prev,
-                          selectedTheme: theme.themeType,
-                          ...themeDefaults,
-                        }));
-                        setHasUnsavedChanges(true);
-                        toast({ title: `Applied "${theme.name}" theme` });
-                      }}
-                    />
-                  );
-                })}
-              </div>
-
-              {/* Reset to Theme Default Button */}
-              {customization.selectedTheme && (
-                <Button 
-                  variant="outline" 
-                  className="w-full gap-2"
-                  onClick={() => {
-                    const currentTheme = storefrontThemes.find(
-                      t => t.themeType === customization.selectedTheme || t.id === customization.selectedTheme
-                    );
-                    if (currentTheme) {
-                      const themeDefaults = getThemeDefaults(currentTheme.themeType);
-                      setCustomization(prev => ({
-                        ...prev,
-                        ...themeDefaults,
-                      }));
-                      setHasUnsavedChanges(true);
-                      toast({ title: `Reset to "${currentTheme.name}" defaults` });
-                    }
-                  }}
-                >
-                  <RotateCcw className="w-4 h-4" />
-                  Reset to Theme Default Colors
-                </Button>
-              )}
-            </div>
-
             {/* Custom presets saved per tenant */}
             <div className="pt-4 border-t border-border/60 space-y-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">My presets</p>
@@ -1378,19 +1312,85 @@ export default function DesignCustomization() {
           </div>
         );
       case 'themes':
-        // Buyer dashboard theming is driven by the design preset colors (CSS variables),
-        // not by swapping full buyer layout themes.
+        // Theme section now contains Homepage Themes with visual previews
+        const savedTheme = panelData?.theme_type || 'dark_gradient';
         return (
-          <div className="space-y-4">
-            <div className="p-3 rounded-lg bg-secondary/10 border border-secondary/20">
-              <div className="flex items-center gap-2 mb-1">
-                <Users className="w-4 h-4 text-secondary" />
-                <span className="text-sm font-medium">Buyer Dashboard Theme</span>
+          <div className="space-y-6">
+            {/* Homepage Themes */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold">Homepage Theme</p>
+                <Badge variant="outline" className="text-[10px]">Storefront layout</Badge>
               </div>
               <p className="text-xs text-muted-foreground">
-                Your buyer dashboard now automatically uses the same colors you set in Presets/Colors.
-                (No separate buyer theme selector.)
+                These themes control your public storefront (homepage) layout and overall style. Each theme has a unique visual identity.
               </p>
+              <div className="grid grid-cols-2 gap-3">
+                {storefrontThemes.map(theme => {
+                  const isActive = customization.selectedTheme === theme.themeType || customization.selectedTheme === theme.id;
+                  const isConfigured = savedTheme === theme.themeType || savedTheme === theme.id;
+                  const themeDefaults = getThemeDefaults(theme.themeType);
+                  return (
+                    <ThemeMiniPreview
+                      key={theme.id}
+                      themeId={theme.id}
+                      name={theme.name}
+                      description={theme.description}
+                      colors={theme.colors}
+                      isActive={isActive}
+                      isConfigured={isConfigured}
+                      hasUnsavedChanges={isActive && hasUnsavedChanges}
+                      onClick={() => {
+                        setCustomization(prev => ({
+                          ...prev,
+                          selectedTheme: theme.themeType,
+                          ...themeDefaults,
+                        }));
+                        setHasUnsavedChanges(true);
+                        toast({ title: `Applied "${theme.name}" theme` });
+                      }}
+                    />
+                  );
+                })}
+              </div>
+
+              {/* Reset to Theme Default Button */}
+              {customization.selectedTheme && (
+                <Button 
+                  variant="outline" 
+                  className="w-full gap-2"
+                  onClick={() => {
+                    const currentTheme = storefrontThemes.find(
+                      t => t.themeType === customization.selectedTheme || t.id === customization.selectedTheme
+                    );
+                    if (currentTheme) {
+                      const themeDefaults = getThemeDefaults(currentTheme.themeType);
+                      setCustomization(prev => ({
+                        ...prev,
+                        ...themeDefaults,
+                      }));
+                      setHasUnsavedChanges(true);
+                      toast({ title: `Reset to "${currentTheme.name}" defaults` });
+                    }
+                  }}
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  Reset to Theme Default Colors
+                </Button>
+              )}
+            </div>
+
+            {/* Buyer Dashboard Info */}
+            <div className="pt-4 border-t border-border/60">
+              <div className="p-3 rounded-lg bg-secondary/10 border border-secondary/20">
+                <div className="flex items-center gap-2 mb-1">
+                  <Users className="w-4 h-4 text-secondary" />
+                  <span className="text-sm font-medium">Buyer Dashboard</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Your buyer dashboard automatically uses the same colors you set in Design Presets.
+                </p>
+              </div>
             </div>
           </div>
         );
@@ -1931,7 +1931,7 @@ export default function DesignCustomization() {
 
   const sections = [
     { id: 'presets', title: 'Design Presets', icon: Wand2 },
-    { id: 'themes', title: 'Theme Gallery', icon: Palette }, // Now contains buyer layout themes (FlySMM, SMMStay, etc.)
+    { id: 'themes', title: 'Theme', icon: Palette }, // Contains homepage layout themes + buyer dashboard info
     { id: 'branding', title: 'Branding', icon: Image },
     { id: 'colors', title: 'Colors', icon: Sparkles },
     { id: 'typography', title: 'Typography', icon: Type },
@@ -2029,7 +2029,7 @@ export default function DesignCustomization() {
                   <Info className="w-4 h-4 mt-0.5 text-primary shrink-0" />
                   <div>
                     <p className="font-medium">Where to change theme?</p>
-                    <p className="text-xs text-muted-foreground">Click here or scroll to "Theme Gallery" in the left panel to pick homepage layout themes.</p>
+                    <p className="text-xs text-muted-foreground">Click here or scroll to "Theme" in the left panel to pick homepage layout themes.</p>
                   </div>
                 </div>
               </TooltipContent>
