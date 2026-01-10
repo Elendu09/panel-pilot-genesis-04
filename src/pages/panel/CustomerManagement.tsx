@@ -150,6 +150,68 @@ const CustomerManagement = () => {
     }
   }, [panel?.id]);
 
+  // Real-time subscription for customer updates
+  useEffect(() => {
+    if (!panel?.id) return;
+
+    const channel = supabase
+      .channel('customer-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'client_users',
+          filter: `panel_id=eq.${panel.id}`
+        },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            const newCustomer = payload.new as any;
+            setCustomers(prev => [{
+              id: newCustomer.id,
+              name: newCustomer.full_name || newCustomer.email.split('@')[0],
+              email: newCustomer.email,
+              username: newCustomer.username,
+              status: newCustomer.is_active ? 'active' : 'suspended',
+              segment: (newCustomer.total_spent || 0) >= 1000 ? 'vip' : (newCustomer.total_spent || 0) >= 100 ? 'regular' : 'new',
+              balance: newCustomer.balance || 0,
+              totalSpent: newCustomer.total_spent || 0,
+              totalOrders: 0,
+              joinedAt: newCustomer.created_at,
+              lastActive: newCustomer.last_login_at || newCustomer.created_at,
+              isOnline: false,
+              referralCode: newCustomer.referral_code,
+              referralCount: newCustomer.referral_count || 0,
+              customDiscount: newCustomer.custom_discount || 0,
+            }, ...prev]);
+          } else if (payload.eventType === 'UPDATE') {
+            const updated = payload.new as any;
+            setCustomers(prev => prev.map(c => 
+              c.id === updated.id ? {
+                ...c,
+                name: updated.full_name || updated.email.split('@')[0],
+                email: updated.email,
+                status: updated.is_active ? 'active' : 'suspended',
+                segment: (updated.total_spent || 0) >= 1000 ? 'vip' : (updated.total_spent || 0) >= 100 ? 'regular' : 'new',
+                balance: updated.balance || 0,
+                totalSpent: updated.total_spent || 0,
+                lastActive: updated.last_login_at || updated.created_at,
+                isOnline: updated.last_login_at ? new Date(updated.last_login_at).getTime() > Date.now() - 15 * 60 * 1000 : false,
+                customDiscount: updated.custom_discount || 0,
+              } : c
+            ));
+          } else if (payload.eventType === 'DELETE') {
+            setCustomers(prev => prev.filter(c => c.id !== (payload.old as any).id));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [panel?.id]);
+
   const fetchCustomers = async () => {
     if (!panel?.id) return;
     

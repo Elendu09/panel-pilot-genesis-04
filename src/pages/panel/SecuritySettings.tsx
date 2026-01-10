@@ -48,15 +48,15 @@ const SecuritySettings = () => {
   const [loading, setLoading] = useState(true);
   const [panelId, setPanelId] = useState<string | null>(null);
   
-  // Security settings state
-  const [enforce2FA, setEnforce2FA] = useState(false);
+  // Security settings state - All MFA settings default to ON for maximum security
+  const [enforce2FA, setEnforce2FA] = useState(true);
   const [maxAttempts, setMaxAttempts] = useState("5");
   const [sessionTimeout, setSessionTimeout] = useState("60");
   const [passwordMinLength, setPasswordMinLength] = useState(true);
   const [passwordNumbers, setPasswordNumbers] = useState(true);
-  const [passwordSymbols, setPasswordSymbols] = useState(false);
+  const [passwordSymbols, setPasswordSymbols] = useState(true);
   const [notifyNewDevice, setNotifyNewDevice] = useState(true);
-  const [blockTorVpn, setBlockTorVpn] = useState(false);
+  const [blockTorVpn, setBlockTorVpn] = useState(true);
   const [ipAllowlist, setIpAllowlist] = useState("");
   const [countryBlocklist, setCountryBlocklist] = useState("");
   const [maxSessions, setMaxSessions] = useState("3");
