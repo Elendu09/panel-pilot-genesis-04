@@ -21,7 +21,11 @@ export const TenantHead = ({ title, description }: TenantHeadProps) => {
   const seoSettings = panel?.settings as any;
   const pageTitle = title || seoSettings?.seo_title || `${panelName} - Social Media Marketing Services`;
   const pageDescription = description || seoSettings?.seo_description || `Professional social media marketing services from ${panelName}. Buy followers, likes, and views.`;
-  const seoKeywords = seoSettings?.seo_keywords || `${panelName}, social media marketing, smm services`;
+  const seoKeywords = seoSettings?.seo_keywords || `${panelName}, social media marketing, smm services, instagram followers, youtube views`;
+  
+  // Canonical URL based on actual domain
+  const canonicalUrl = typeof window !== 'undefined' ? window.location.origin : '';
+  const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
   
   // CRITICAL: Set document title immediately using useLayoutEffect
   // This runs synchronously before paint, preventing "HOME OF SMM" flash
@@ -53,18 +57,56 @@ export const TenantHead = ({ title, description }: TenantHeadProps) => {
   
   return (
     <Helmet>
+      {/* Primary Meta Tags */}
       <title>{pageTitle}</title>
+      <meta name="title" content={pageTitle} />
       <meta name="description" content={pageDescription} />
       <meta name="keywords" content={seoKeywords} />
+      <meta name="author" content={panelName} />
+      
+      {/* Viewport and Mobile Optimization */}
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+      <meta name="format-detection" content="telephone=no" />
+      <meta name="mobile-web-app-capable" content="yes" />
+      <meta name="apple-mobile-web-app-capable" content="yes" />
+      <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+      <meta name="apple-mobile-web-app-title" content={panelName} />
+      
+      {/* Robots and Crawling */}
+      <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+      <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large" />
+      <meta name="bingbot" content="index, follow" />
+      
+      {/* Canonical URL */}
+      <link rel="canonical" href={currentUrl.split('?')[0]} />
+      
+      {/* Favicon and Icons */}
       <link rel="icon" type="image/png" href={faviconUrl} />
       <link rel="apple-touch-icon" href={appleTouchIconUrl} />
-      {ogImage && <meta property="og:image" content={ogImage} />}
+      
+      {/* Open Graph / Facebook */}
+      <meta property="og:type" content="website" />
+      <meta property="og:url" content={currentUrl} />
       <meta property="og:title" content={pageTitle} />
       <meta property="og:description" content={pageDescription} />
       <meta property="og:site_name" content={panelName} />
+      <meta property="og:locale" content="en_US" />
+      {ogImage && <meta property="og:image" content={ogImage} />}
+      {ogImage && <meta property="og:image:alt" content={`${panelName} logo`} />}
+      
+      {/* Twitter Card */}
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:title" content={pageTitle} />
       <meta name="twitter:description" content={pageDescription} />
+      {ogImage && <meta name="twitter:image" content={ogImage} />}
+      
+      {/* Theme Color */}
+      <meta name="theme-color" content={customBranding?.primaryColor || '#6366F1'} />
+      <meta name="msapplication-TileColor" content={customBranding?.primaryColor || '#6366F1'} />
+      
+      {/* Preconnect for Performance */}
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
     </Helmet>
   );
 };
