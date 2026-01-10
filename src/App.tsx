@@ -38,6 +38,7 @@ import SEOSettings from "./pages/panel/SEOSettings";
 import FastOrder from "./pages/FastOrder";
 import TrackOrder from "./pages/TrackOrder";
 import PromoManagement from "./pages/panel/PromoManagement";
+import Sitemap from "./pages/Sitemap";
 
 // Enhanced QueryClient with caching for faster page loads
 const queryClient = new QueryClient({
@@ -104,6 +105,7 @@ const App = () => (
                 <Route path="/tutorial" element={<Tutorial />} />
                 <Route path="/blog" element={<Blog />} />
                 <Route path="/blog/:slug" element={<BlogPost />} />
+                <Route path="/sitemap.xml" element={<Sitemap />} />
                 
                 {/* Public storefront route */}
                 <Route path="/store" element={<Storefront />} />
