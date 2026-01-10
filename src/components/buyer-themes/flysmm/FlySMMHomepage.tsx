@@ -58,6 +58,9 @@ export const FlySMMHomepage = ({
   const displayLogo = customization.logoUrl || logoUrl;
   const companyName = customization.companyName || panelName;
 
+  // Blog toggle
+  const showBlogInMenu = customization.showBlogInMenu === true;
+
   // Section toggles
   const showStats = customization.enableStats !== false;
   const showFeatures = customization.enableFeatures !== false;
@@ -114,6 +117,7 @@ export const FlySMMHomepage = ({
             <div className="hidden md:flex items-center gap-8">
               <Link to="/services" className="text-sm transition-colors font-medium" style={{ color: mutedColor }}>Services</Link>
               <Link to="/orders" className="text-sm transition-colors font-medium" style={{ color: mutedColor }}>My Orders</Link>
+              {showBlogInMenu && <Link to="/blog" className="text-sm transition-colors font-medium" style={{ color: mutedColor }}>Blog</Link>}
               <Link to="/support" className="text-sm transition-colors font-medium" style={{ color: mutedColor }}>Support</Link>
             </div>
 

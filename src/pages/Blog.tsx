@@ -149,14 +149,15 @@ const Blog = () => {
               {filteredPosts.map((post) => (
                 <Card
                   key={post.id}
-                  className="overflow-hidden hover:shadow-lg transition-shadow group"
+                  className="overflow-hidden hover:shadow-xl transition-all duration-300 group border-0 bg-card/80 backdrop-blur-sm"
                 >
                   <Link to={`/blog/${post.slug}`}>
-                    <div className="aspect-video overflow-hidden">
+                    <div className="aspect-video overflow-hidden rounded-t-3xl">
                       <img
                         src={post.image}
                         alt={post.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                        loading="lazy"
                       />
                     </div>
                   </Link>
@@ -204,7 +205,7 @@ const Blog = () => {
           )}
 
           {/* Newsletter Signup */}
-          <div className="mt-16 bg-gradient-to-r from-primary/10 via-primary/5 to-secondary/10 rounded-2xl p-8 text-center">
+          <div className="mt-16 bg-gradient-to-r from-primary/10 via-primary/5 to-secondary/10 rounded-3xl p-8 md:p-12 text-center shadow-lg">
             <h2 className="text-3xl font-bold mb-4">Stay Updated</h2>
             <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
               Subscribe to our newsletter and get the latest social media
@@ -214,9 +215,9 @@ const Blog = () => {
               <Input
                 type="email"
                 placeholder="Enter your email"
-                className="flex-1"
+                className="flex-1 rounded-xl"
               />
-              <Button>Subscribe</Button>
+              <Button className="rounded-xl">Subscribe</Button>
             </div>
           </div>
         </div>

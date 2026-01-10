@@ -58,6 +58,9 @@ export const TGRefHomepage = ({
   const displayLogo = customization.logoUrl || logoUrl;
   const companyName = customization.companyName || panelName;
 
+  // Blog toggle
+  const showBlogInMenu = customization.showBlogInMenu === true;
+
   // Section toggles
   const showStats = customization.enableStats !== false;
   const showFeatures = customization.enableFeatures !== false;
@@ -126,6 +129,7 @@ export const TGRefHomepage = ({
             <div className="hidden md:flex items-center gap-6">
               <Link to="/services" className="text-sm transition-colors" style={{ color: mutedColor }}>./services</Link>
               <Link to="/orders" className="text-sm transition-colors" style={{ color: mutedColor }}>./orders</Link>
+              {showBlogInMenu && <Link to="/blog" className="text-sm transition-colors" style={{ color: mutedColor }}>./blog</Link>}
               <Link to="/support" className="text-sm transition-colors" style={{ color: mutedColor }}>./support</Link>
             </div>
 
