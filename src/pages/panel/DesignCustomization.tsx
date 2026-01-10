@@ -1167,8 +1167,11 @@ export default function DesignCustomization() {
       }
     },
     onSuccess: () => {
+      // Invalidate all design-related queries for instant sync
       queryClient.invalidateQueries({ queryKey: ['panel-design-settings'] });
       queryClient.invalidateQueries({ queryKey: ['panel-customization', panelId] });
+      queryClient.invalidateQueries({ queryKey: ['panel-buyer-theme', panelId] });
+      queryClient.invalidateQueries({ queryKey: ['tenant'] });
       toast({ title: 'Design saved and applied!' });
       setHasUnsavedChanges(false);
     },

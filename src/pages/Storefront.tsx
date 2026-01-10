@@ -146,25 +146,35 @@ const Storefront = () => {
   // ThemeOne is ALWAYS the default - it's the primary/recommended theme
   const renderTheme = () => {
     try {
+      // Full customization object with all design settings
+      const fullCustomization = {
+        ...design,
+        logoUrl: customBranding?.logoUrl || panel?.logo_url,
+        faviconUrl: customBranding?.faviconUrl || panel?.logo_url,
+        companyName: customBranding?.companyName || panel?.name,
+        primaryColor: customBranding?.primaryColor || panel?.primary_color || '#6366F1',
+        secondaryColor: customBranding?.secondaryColor || panel?.secondary_color || '#8B5CF6',
+      };
+
       const themeProps = {
         panel,
         services,
-        customization: design
+        customization: fullCustomization
       };
 
       console.log('Rendering theme:', selectedTheme, 'with props:', { panelName: panel?.name, servicesCount: services?.length });
 
-      // Prepare homepage props with customization
+      // Prepare homepage props with FULL customization for buyer themes
       const homepageProps = {
-        panelName: panel?.name,
+        panelName: customBranding?.companyName || panel?.name,
         services,
         stats: {
           totalOrders: (panel as any)?.total_orders || 0,
           totalUsers: 0,
           servicesCount: services?.length || 0,
         },
-        customization: design,
-        logoUrl: panel?.logo_url,
+        customization: fullCustomization,
+        logoUrl: customBranding?.logoUrl || panel?.logo_url,
       };
 
       // Theme selection based on selectedTheme value
