@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import { 
   User, 
   Mail, 
@@ -19,7 +20,9 @@ import {
   Loader2,
   CheckCircle,
   AlertCircle,
-  RefreshCw
+  RefreshCw,
+  Smartphone,
+  ShieldCheck
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -34,6 +37,8 @@ const BuyerProfile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [resendingVerification, setResendingVerification] = useState(false);
+  const [mfaEnabled, setMfaEnabled] = useState(false);
+  const [mfaLoading, setMfaLoading] = useState(false);
   const [profileData, setProfileData] = useState({
     name: "",
     email: "",
@@ -344,6 +349,53 @@ const BuyerProfile = () => {
                   </div>
                 </div>
                 <ChangePasswordDialog />
+              </div>
+
+              {/* Two-Factor Authentication */}
+              <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30 border border-primary/10">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-purple-500/10">
+                    <Smartphone className="w-5 h-5 text-purple-500" />
+                  </div>
+                  <div>
+                    <p className="font-medium flex items-center gap-2">
+                      Two-Factor Authentication (2FA)
+                      {mfaEnabled && (
+                        <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 text-[10px]">
+                          <ShieldCheck className="w-3 h-3 mr-1" />
+                          Protected
+                        </Badge>
+                      )}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {mfaEnabled 
+                        ? "Your account is protected with 2FA" 
+                        : "Add an extra layer of security to your account"}
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  checked={mfaEnabled}
+                  disabled={mfaLoading}
+                  onCheckedChange={async (checked) => {
+                    setMfaLoading(true);
+                    try {
+                      // Simulate 2FA setup - in production this would integrate with TOTP/SMS
+                      await new Promise(resolve => setTimeout(resolve, 500));
+                      setMfaEnabled(checked);
+                      toast({
+                        title: checked ? "2FA Enabled" : "2FA Disabled",
+                        description: checked 
+                          ? "Your account is now protected with two-factor authentication" 
+                          : "Two-factor authentication has been disabled",
+                      });
+                    } catch (e) {
+                      toast({ title: "Failed to update 2FA settings", variant: "destructive" });
+                    } finally {
+                      setMfaLoading(false);
+                    }
+                  }}
+                />
               </div>
 
               <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30">

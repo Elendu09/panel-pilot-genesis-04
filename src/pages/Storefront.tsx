@@ -16,6 +16,7 @@ import {
   SMMVisitHomepage 
 } from '@/components/buyer-themes';
 import { FloatingChatWidget } from '@/components/storefront/FloatingChatWidget';
+import { BuyerHomepageSchemas, FAQPageSchema } from '@/components/seo/JsonLdSchema';
 import { supabase } from '@/integrations/supabase/client';
 import { AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -264,7 +265,19 @@ const Storefront = () => {
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={seoTitle} />
         <meta name="twitter:description" content={seoDescription} />
+        {/* Additional SEO meta tags */}
+        <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+        <meta name="googlebot" content="index, follow" />
+        <meta name="bingbot" content="index, follow" />
+        <meta name="format-detection" content="telephone=no" />
       </Helmet>
+      {/* JSON-LD Structured Data for rich search results */}
+      <BuyerHomepageSchemas
+        panelName={panel.name}
+        panelUrl={canonicalUrl}
+        logoUrl={panel.logo_url || undefined}
+        description={seoDescription}
+      />
       {/* Inject design preset colors as CSS variables */}
       {storefrontColorStyles && <style>{storefrontColorStyles}</style>}
       <div className="buyer-theme-wrapper">
