@@ -12,6 +12,7 @@ import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useTheme } from '@/hooks/use-theme';
+import { BuyerThemeWrapper } from '@/components/buyer-themes';
 
 interface Panel {
   id: string;
@@ -30,7 +31,7 @@ interface Service {
   max_quantity?: number;
 }
 
-// Enhanced Grid Background Pattern Component with multiple layers
+// Enhanced Grid Background Pattern Component with multiple layers - uses theme CSS variables
 const EnhancedGridPattern = ({ themeMode }: { themeMode: string }) => (
   <div className="absolute inset-0 pointer-events-none overflow-hidden">
     {/* Primary grid - 60px with theme-aware colors */}
@@ -41,7 +42,7 @@ const EnhancedGridPattern = ({ themeMode }: { themeMode: string }) => (
         "bg-[size:60px_60px]",
         themeMode === 'dark' 
           ? '[--grid-color:rgba(255,255,255,0.035)]' 
-          : '[--grid-color:rgba(59,130,246,0.08)]'
+          : '[--grid-color:hsl(var(--primary)/0.08)]'
       )}
     />
     
@@ -53,30 +54,21 @@ const EnhancedGridPattern = ({ themeMode }: { themeMode: string }) => (
         "bg-[size:120px_120px]",
         themeMode === 'dark' 
           ? '[--grid-color-lg:rgba(255,255,255,0.02)]' 
-          : '[--grid-color-lg:rgba(59,130,246,0.05)]'
+          : '[--grid-color-lg:hsl(var(--primary)/0.05)]'
       )}
     />
     
-    {/* Corner gradient accents */}
-    <div className={cn(
-      "absolute -top-32 -left-32 w-96 h-96 rounded-full blur-3xl",
-      themeMode === 'dark' ? 'bg-blue-500/5' : 'bg-blue-400/15'
-    )} />
-    <div className={cn(
-      "absolute -bottom-32 -right-32 w-96 h-96 rounded-full blur-3xl",
-      themeMode === 'dark' ? 'bg-purple-500/5' : 'bg-indigo-400/10'
-    )} />
-    <div className={cn(
-      "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full blur-3xl",
-      themeMode === 'dark' ? 'bg-blue-500/3' : 'bg-blue-300/10'
-    )} />
+    {/* Corner gradient accents - uses theme primary color */}
+    <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full blur-3xl bg-[hsl(var(--primary)/0.08)]" />
+    <div className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full blur-3xl bg-[hsl(var(--accent)/0.06)]" />
+    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full blur-3xl bg-[hsl(var(--primary)/0.04)]" />
     
     {/* Gradient fade at edges */}
     <div className={cn(
       "absolute inset-0",
       themeMode === 'dark'
-        ? 'bg-gradient-to-b from-gray-950/60 via-transparent to-gray-950/80'
-        : 'bg-gradient-to-b from-white/40 via-transparent to-gray-50/60'
+        ? 'bg-gradient-to-b from-background/60 via-transparent to-background/80'
+        : 'bg-gradient-to-b from-background/40 via-transparent to-background/60'
     )} />
   </div>
 );
@@ -108,20 +100,12 @@ const VerticalStepProgress = ({
     <aside
       className={cn(
         "hidden lg:flex flex-col w-72 h-full border-r p-6 flex-shrink-0 transition-colors duration-300 relative overflow-hidden",
-        themeMode === 'dark' 
-          ? 'bg-gray-950 border-white/[0.06]' 
-          : 'bg-white border-gray-200'
+        "bg-background border-border"
       )}
     >
-      {/* Subtle glow effect */}
-      <div className={cn(
-        "absolute top-0 right-0 w-40 h-40 rounded-full blur-3xl",
-        themeMode === 'dark' ? 'bg-blue-500/10' : 'bg-blue-400/20'
-      )} />
-      <div className={cn(
-        "absolute bottom-20 left-0 w-32 h-32 rounded-full blur-2xl",
-        themeMode === 'dark' ? 'bg-purple-500/5' : 'bg-indigo-400/10'
-      )} />
+      {/* Subtle glow effect - uses theme primary color */}
+      <div className="absolute top-0 right-0 w-40 h-40 rounded-full blur-3xl bg-[hsl(var(--primary)/0.1)]" />
+      <div className="absolute bottom-20 left-0 w-32 h-32 rounded-full blur-2xl bg-[hsl(var(--accent)/0.08)]" />
 
       {/* Panel Logo */}
       <div className="flex items-center gap-3 mb-8 relative z-10">
@@ -131,16 +115,10 @@ const VerticalStepProgress = ({
           className="h-10 w-10 rounded-xl object-cover"
         />
         <div>
-          <span className={cn(
-            "font-bold text-lg tracking-tight block",
-            themeMode === 'dark' ? 'text-white' : 'text-gray-900'
-          )}>
+          <span className="font-bold text-lg tracking-tight block text-foreground">
             {panelName}
           </span>
-          <span className={cn(
-            "text-xs font-medium",
-            themeMode === 'dark' ? 'text-gray-500' : 'text-gray-500'
-          )}>
+          <span className="text-xs font-medium text-muted-foreground">
             Fast Order
           </span>
         </div>
@@ -149,30 +127,17 @@ const VerticalStepProgress = ({
       {/* Progress Bar */}
       <div className="mb-6 relative z-10">
         <div className="flex items-center justify-between text-xs mb-2">
-          <span className={cn(
-            "font-semibold uppercase tracking-wider",
-            themeMode === 'dark' ? 'text-gray-500' : 'text-gray-500'
-          )}>
+          <span className="font-semibold uppercase tracking-wider text-muted-foreground">
             Progress
           </span>
-          <span className={cn(
-            "font-bold tabular-nums",
-            themeMode === 'dark' ? 'text-blue-400' : 'text-blue-600'
-          )}>
+          <span className="font-bold tabular-nums text-primary">
             {Math.round(progressPercent)}%
           </span>
         </div>
-        <div className={cn(
-          "h-1.5 rounded-full overflow-hidden",
-          themeMode === 'dark' ? 'bg-gray-800' : 'bg-gray-200'
-        )}>
+        <div className="h-1.5 rounded-full overflow-hidden bg-muted">
           <motion.div 
-            className={cn(
-              "h-full rounded-full",
-              themeMode === 'dark' 
-                ? 'bg-gradient-to-r from-blue-500 to-blue-400'
-                : 'bg-gradient-to-r from-blue-500 to-blue-600 shadow-[0_0_12px_rgba(59,130,246,0.5)]'
-            )}
+            className="h-full rounded-full bg-primary"
+            style={{ boxShadow: 'var(--step-glow)' }}
             initial={{ width: 0 }}
             animate={{ width: `${progressPercent}%` }}
             transition={{ duration: 0.5, ease: "easeOut" }}
@@ -184,19 +149,11 @@ const VerticalStepProgress = ({
       <div className="flex-1 relative z-10">
         <div className="relative pl-5">
           {/* Background connecting line */}
-          <div className={cn(
-            "absolute left-[11px] top-4 bottom-4 w-0.5",
-            themeMode === 'dark' ? 'bg-gray-800' : 'bg-gray-200'
-          )} />
+          <div className="absolute left-[11px] top-4 bottom-4 w-0.5 bg-border" />
           
           {/* Animated progress line */}
           <motion.div 
-            className={cn(
-              "absolute left-[11px] top-4 w-0.5",
-              themeMode === 'dark' 
-                ? 'bg-gradient-to-b from-blue-500 to-blue-400'
-                : 'bg-gradient-to-b from-blue-500 to-blue-600'
-            )}
+            className="absolute left-[11px] top-4 w-0.5 bg-primary"
             initial={{ height: 0 }}
             animate={{ height: `${Math.min(100, ((currentStep - 1) / (steps.length - 1)) * 100)}%` }}
             transition={{ duration: 0.5, ease: "easeOut" }}
@@ -525,7 +482,7 @@ const FastOrderContent = () => {
   const themeMode = resolvedTheme;
 
   return (
-    <>
+    <BuyerThemeWrapper panelId={resolvedPanelId || undefined}>
       <Helmet>
         <title>Fast Order - {panel.name}</title>
         <meta name="description" content={`Quick order process for ${panel.name}`} />
@@ -533,9 +490,7 @@ const FastOrderContent = () => {
 
       <div className={cn(
         "h-screen h-[100dvh] flex flex-col lg:flex-row overflow-hidden transition-colors duration-300 relative",
-        themeMode === 'dark' 
-          ? 'bg-gray-950' 
-          : 'bg-gray-50'
+        "bg-background"
       )}>
         {/* Enhanced Grid Background Pattern */}
         <EnhancedGridPattern themeMode={themeMode} />
@@ -631,7 +586,7 @@ const FastOrderContent = () => {
           </main>
         </div>
       </div>
-    </>
+    </BuyerThemeWrapper>
   );
 };
 

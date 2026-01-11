@@ -11,7 +11,7 @@ export const BuyerThemeAliPanel = ({ children, className }: BuyerThemeAliPanelPr
   return (
     <div 
       className={cn(
-        "buyer-theme-alipanel min-h-screen font-poppins",
+        "buyer-theme-alipanel buyer-theme-wrapper min-h-screen font-poppins",
         className
       )}
     >
@@ -28,6 +28,23 @@ export const BuyerThemeAliPanel = ({ children, className }: BuyerThemeAliPanelPr
           --theme-glow: 0 0 40px rgba(255, 107, 107, 0.3);
           background: var(--theme-background);
           color: var(--theme-text);
+        }
+        
+        /* Override panel variables for this theme */
+        .buyer-theme-alipanel {
+          --panel-primary: #FF6B6B;
+          --panel-secondary: #FF8E53;
+          --panel-accent: #FFCC70;
+          --panel-gradient: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%);
+          --panel-gradient-accent: linear-gradient(135deg, #FF6B6B 0%, #FFCC70 100%);
+          --panel-glow: 0 0 20px rgba(255, 107, 107, 0.4);
+          --panel-glow-lg: 0 0 40px rgba(255, 107, 107, 0.3);
+          --panel-nav-active-bg: rgba(255, 107, 107, 0.2);
+          --panel-nav-active-text: #FF6B6B;
+          --panel-bottom-nav-center-gradient: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%);
+          --step-active: #FF6B6B;
+          --step-completed: #FF6B6B;
+          --step-glow: 0 0 16px rgba(255, 107, 107, 0.6);
         }
         
         .buyer-theme-alipanel .theme-card {
@@ -73,11 +90,23 @@ export const BuyerThemeAliPanel = ({ children, className }: BuyerThemeAliPanelPr
                       radial-gradient(ellipse at bottom right, rgba(255, 142, 83, 0.1) 0%, transparent 50%);
         }
         
+        /* Light mode */
         .light .buyer-theme-alipanel {
           --theme-background: #FFFFFF;
           --theme-surface: #FFF5F5;
           --theme-text: #1A1A1A;
           --theme-muted: #6B7280;
+        }
+        
+        .light .buyer-theme-alipanel .theme-card {
+          background: rgba(255, 245, 245, 0.9);
+          border: 1px solid rgba(255, 107, 107, 0.2);
+        }
+        
+        .light .buyer-theme-alipanel .theme-nav {
+          background: rgba(255, 255, 255, 0.95);
+          backdrop-filter: blur(20px);
+          border-bottom: 1px solid rgba(255, 107, 107, 0.15);
         }
       `}</style>
       {children}

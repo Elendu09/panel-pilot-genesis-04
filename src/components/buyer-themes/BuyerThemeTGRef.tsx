@@ -11,7 +11,7 @@ export const BuyerThemeTGRef = ({ children, className }: BuyerThemeTGRefProps) =
   return (
     <div 
       className={cn(
-        "buyer-theme-tgref min-h-screen",
+        "buyer-theme-tgref buyer-theme-wrapper min-h-screen",
         className
       )}
     >
@@ -28,6 +28,23 @@ export const BuyerThemeTGRef = ({ children, className }: BuyerThemeTGRefProps) =
           background: var(--theme-background);
           color: var(--theme-text);
           font-family: 'Inter', sans-serif;
+        }
+        
+        /* Override panel variables for this theme */
+        .buyer-theme-tgref {
+          --panel-primary: #00D4AA;
+          --panel-secondary: #0EA5E9;
+          --panel-accent: #7C3AED;
+          --panel-gradient: linear-gradient(135deg, #00D4AA 0%, #0EA5E9 100%);
+          --panel-gradient-accent: linear-gradient(135deg, #00D4AA 0%, #7C3AED 100%);
+          --panel-glow: 0 0 20px rgba(0, 212, 170, 0.4);
+          --panel-glow-lg: 0 0 40px rgba(0, 212, 170, 0.3);
+          --panel-nav-active-bg: rgba(0, 212, 170, 0.15);
+          --panel-nav-active-text: #00D4AA;
+          --panel-bottom-nav-center-gradient: linear-gradient(135deg, #00D4AA 0%, #0EA5E9 100%);
+          --step-active: #00D4AA;
+          --step-completed: #00D4AA;
+          --step-glow: 0 0 16px rgba(0, 212, 170, 0.6);
         }
         
         .buyer-theme-tgref code,
@@ -145,6 +162,12 @@ export const BuyerThemeTGRef = ({ children, className }: BuyerThemeTGRefProps) =
         .light .buyer-theme-tgref .theme-card {
           background: white;
           border-color: rgba(0, 212, 170, 0.2);
+        }
+        
+        .light .buyer-theme-tgref .theme-nav {
+          background: rgba(255, 255, 255, 0.95);
+          backdrop-filter: blur(10px);
+          border-bottom: 1px solid rgba(0, 212, 170, 0.15);
         }
       `}</style>
       {children}
