@@ -469,24 +469,87 @@ export const TGRefHomepage = ({
         </section>
       </article>
 
-      {/* Footer */}
-      <footer className="py-12" style={{ borderTop: `1px solid ${primary}1a` }}>
-        <div className="mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-4" style={{ maxWidth: containerMax }}>
-          <div className="flex items-center gap-2 font-mono">
-            {displayLogo ? (
-              <img src={displayLogo} alt={companyName} className="w-5 h-5 rounded object-contain" loading="lazy" />
-            ) : (
-              <Terminal className="w-5 h-5" style={{ color: primary }} />
-            )}
-            <span style={{ color: mutedColor }}>© {new Date().getFullYear()} [{companyName}]</span>
+      {/* Enhanced Footer */}
+      {(customization.enableFooter !== false) && (
+        <footer className="py-16 font-mono" style={{ 
+          backgroundColor: isLightMode ? '#F8FAFC' : surfaceColor,
+          borderTop: `1px solid ${primary}1a` 
+        }}>
+          <div className="mx-auto px-4 sm:px-6 lg:px-8" style={{ maxWidth: containerMax }}>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
+              {/* Brand Column */}
+              <div className="col-span-2 md:col-span-1">
+                <div className="flex items-center gap-2 mb-4">
+                  {displayLogo ? (
+                    <img src={displayLogo} alt={companyName} className="w-8 h-8 rounded object-cover" />
+                  ) : (
+                    <Terminal className="w-8 h-8" style={{ color: primary }} />
+                  )}
+                  <span className="font-bold text-lg">[{companyName}]</span>
+                </div>
+                <p className="text-sm mb-4" style={{ color: mutedColor }}>
+                  {customization.footerAbout || '> Professional SMM services with instant delivery.'}
+                </p>
+                {customization.socialLinks && (
+                  <div className="flex gap-3">
+                    {customization.socialLinks.instagram && (
+                      <a href={customization.socialLinks.instagram} target="_blank" rel="noopener noreferrer" className="opacity-60 hover:opacity-100 transition-opacity">
+                        <Instagram className="w-5 h-5" />
+                      </a>
+                    )}
+                    {customization.socialLinks.twitter && (
+                      <a href={customization.socialLinks.twitter} target="_blank" rel="noopener noreferrer" className="opacity-60 hover:opacity-100 transition-opacity">
+                        <Twitter className="w-5 h-5" />
+                      </a>
+                    )}
+                    {customization.socialLinks.youtube && (
+                      <a href={customization.socialLinks.youtube} target="_blank" rel="noopener noreferrer" className="opacity-60 hover:opacity-100 transition-opacity">
+                        <Youtube className="w-5 h-5" />
+                      </a>
+                    )}
+                  </div>
+                )}
+              </div>
+              
+              {/* Services Column */}
+              <div>
+                <h4 className="font-semibold mb-4">./services</h4>
+                <ul className="space-y-2 text-sm" style={{ color: mutedColor }}>
+                  <li><Link to="/services" className="hover:opacity-80 transition-opacity">All Services</Link></li>
+                  <li><Link to="/services?platform=instagram" className="hover:opacity-80 transition-opacity">Instagram</Link></li>
+                  <li><Link to="/services?platform=youtube" className="hover:opacity-80 transition-opacity">YouTube</Link></li>
+                  <li><Link to="/services?platform=tiktok" className="hover:opacity-80 transition-opacity">TikTok</Link></li>
+                </ul>
+              </div>
+              
+              {/* Company Column */}
+              <div>
+                <h4 className="font-semibold mb-4">./company</h4>
+                <ul className="space-y-2 text-sm" style={{ color: mutedColor }}>
+                  <li><Link to="/support" className="hover:opacity-80 transition-opacity">About</Link></li>
+                  <li><Link to="/support" className="hover:opacity-80 transition-opacity">Contact</Link></li>
+                  {showBlogInMenu && <li><Link to="/blog" className="hover:opacity-80 transition-opacity">Blog</Link></li>}
+                </ul>
+              </div>
+              
+              {/* Support Column */}
+              <div>
+                <h4 className="font-semibold mb-4">./help</h4>
+                <ul className="space-y-2 text-sm" style={{ color: mutedColor }}>
+                  <li><a href="#faq" className="hover:opacity-80 transition-opacity">FAQ</a></li>
+                  <li><Link to="/terms" className="hover:opacity-80 transition-opacity">Terms</Link></li>
+                  <li><Link to="/privacy" className="hover:opacity-80 transition-opacity">Privacy</Link></li>
+                </ul>
+              </div>
+            </div>
+            
+            {/* Copyright */}
+            <div className="pt-8 text-center text-sm" style={{ borderTop: `1px solid ${primary}1a`, color: mutedColor }}>
+              {customization.footerText || `© ${new Date().getFullYear()} [${companyName}]. All rights reserved.`}
+            </div>
           </div>
-          <nav className="flex gap-6 text-sm font-mono" aria-label="Footer navigation">
-            <Link to="/terms" style={{ color: mutedColor }}>./terms</Link>
-            <Link to="/privacy" style={{ color: mutedColor }}>./privacy</Link>
-            <Link to="/support" style={{ color: mutedColor }}>./support</Link>
-          </nav>
-        </div>
-      </footer>
+        </footer>
+      )}
     </main>
   );
 };

@@ -228,12 +228,12 @@ const BuyerSupport = () => {
     { id: 'closed', title: 'Closed', tickets: filteredTickets.filter(t => t.status === 'closed') },
   ];
 
-  // Loading state
+  // Loading state - use neutral color to prevent blue flash
   if (panelLoading || authLoading) {
     return (
       <BuyerLayout>
         <div className="flex items-center justify-center min-h-[60vh]">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
         </div>
       </BuyerLayout>
     );
@@ -440,7 +440,7 @@ const BuyerSupport = () => {
                   placeholder="Brief description of your issue"
                   value={newTicket.subject}
                   onChange={(e) => setNewTicket({ ...newTicket, subject: e.target.value })}
-                  className="focus-visible:ring-primary"
+                  className="border-border focus:border-primary focus-visible:ring-primary/30"
                 />
               </div>
               <div className="space-y-2">
@@ -449,7 +449,7 @@ const BuyerSupport = () => {
                   value={newTicket.priority} 
                   onValueChange={(v) => setNewTicket({ ...newTicket, priority: v })}
                 >
-                  <SelectTrigger className="focus:ring-primary">
+                  <SelectTrigger className="border-border focus:ring-primary/30 focus:border-primary">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -467,7 +467,7 @@ const BuyerSupport = () => {
                   value={newTicket.message}
                   onChange={(e) => setNewTicket({ ...newTicket, message: e.target.value })}
                   rows={4}
-                  className="focus-visible:ring-primary"
+                  className="border-border focus:border-primary focus-visible:ring-primary/30"
                 />
               </div>
             </div>
@@ -533,8 +533,9 @@ const BuyerSupport = () => {
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                  className="border-border focus:border-primary focus-visible:ring-primary/30"
                 />
-                <Button onClick={handleSendMessage} disabled={submitting || !newMessage.trim()}>
+                <Button onClick={handleSendMessage} disabled={submitting || !newMessage.trim()} className="bg-primary hover:bg-primary/90">
                   <Send className="w-4 h-4" />
                 </Button>
               </div>
