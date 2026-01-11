@@ -340,8 +340,8 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
         )}
       </AnimatePresence>
 
-      {/* Mobile Bottom Navigation - uses themed primary color */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-card/95 backdrop-blur-xl border-t border-border/50 safe-area-bottom">
+      {/* Mobile Bottom Navigation */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-background/95 backdrop-blur-xl border-t border-border/50 safe-area-bottom">
         <div className="flex items-center justify-around py-1.5 px-0.5">
           {bottomNavItems.map((item, index) => {
             if (item.isMenu) {

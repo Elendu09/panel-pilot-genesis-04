@@ -11,7 +11,6 @@ import {
   ArrowLeft,
   ShoppingCart as ShoppingCartIcon,
   Repeat,
-  Loader2,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useTenant } from "@/hooks/useTenant";
@@ -278,7 +277,7 @@ const BuyerBulkOrder = () => {
           <CardContent className="p-6">
             {loading ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
               </div>
             ) : (
               <Tabs value={activeTab} onValueChange={setActiveTab}>
