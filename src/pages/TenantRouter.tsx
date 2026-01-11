@@ -149,7 +149,7 @@ const TenantContent = () => {
     if (isPlatformDomain) {
       return <App />;
     }
-    // For tenant domains, show centered logo loading with shimmer
+    // For tenant domains, show centered logo loading with shimmer (uses neutral colors)
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
         <div className="text-center">

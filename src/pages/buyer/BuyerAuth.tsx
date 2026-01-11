@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { User, Lock, Mail, Loader2, ArrowLeft, Sparkles, Shield, Zap, KeyRound } from "lucide-react";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
+import { BuyerThemeWrapper } from "@/components/buyer-themes";
 
 const BuyerAuth = () => {
   const navigate = useNavigate();
@@ -128,7 +129,8 @@ const BuyerAuth = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-950 py-12 px-4">
+    <BuyerThemeWrapper panelId={panelId}>
+    <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4">
       {/* Back to Storefront Link */}
       <motion.div 
         className="absolute top-6 left-6 z-10"
@@ -413,6 +415,7 @@ const BuyerAuth = () => {
         </DialogContent>
       </Dialog>
     </div>
+    </BuyerThemeWrapper>
   );
 };
 
