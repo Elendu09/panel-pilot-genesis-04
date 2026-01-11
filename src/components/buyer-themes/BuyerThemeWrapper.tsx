@@ -108,12 +108,37 @@ export const BuyerThemeWrapper = ({
     staleTime: 30000, // 30 seconds - allows quick refresh on design changes
   });
 
-  // Determine which theme to use
+  // Determine which theme to use - check buyer_theme column first, then fallback to custom_branding.selectedTheme
   const themeKey = useMemo(() => {
     if (propThemeKey) return propThemeKey;
-    if (panelData?.buyer_theme) return panelData.buyer_theme as BuyerThemeKey;
+    
+    // First check buyer_theme column
+    if (panelData?.buyer_theme && panelData.buyer_theme !== 'default') {
+      return panelData.buyer_theme as BuyerThemeKey;
+    }
+    
+    // Fallback to selectedTheme from custom_branding
+    const branding = panelData?.custom_branding as any;
+    if (branding?.selectedTheme) {
+      const themeMap: Record<string, BuyerThemeKey> = {
+        'theme_tgref': 'tgref',
+        'tgref': 'tgref',
+        'theme_alipanel': 'alipanel',
+        'alipanel': 'alipanel',
+        'theme_flysmm': 'flysmm',
+        'flysmm': 'flysmm',
+        'theme_smmstay': 'smmstay',
+        'smmstay': 'smmstay',
+        'theme_smmvisit': 'smmvisit',
+        'smmvisit': 'smmvisit',
+      };
+      if (themeMap[branding.selectedTheme]) {
+        return themeMap[branding.selectedTheme];
+      }
+    }
+    
     return 'default';
-  }, [propThemeKey, panelData?.buyer_theme]);
+  }, [propThemeKey, panelData?.buyer_theme, panelData?.custom_branding]);
 
   // Get theme component and config
   const ThemeComponent = themeComponents[themeKey] || themeComponents.default;

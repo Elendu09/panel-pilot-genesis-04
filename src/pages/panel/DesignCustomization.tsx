@@ -974,6 +974,10 @@ export default function DesignCustomization() {
         ...branding,
       };
       resetHistory(loadedCustomization);
+      // Sync preview theme mode with saved themeMode
+      if (branding.themeMode) {
+        setPreviewThemeMode(branding.themeMode);
+      }
       setLoading(false);
     }
   }, [panelData]);
@@ -1148,11 +1152,26 @@ export default function DesignCustomization() {
       const selectedTheme = String(customization.selectedTheme || 'dark_gradient');
       const themeTypeToPersist = safeThemeTypes.has(selectedTheme) ? selectedTheme : 'dark_gradient';
 
+      // Map selectedTheme to buyer_theme for storefront rendering
+      const themeToBuyerTheme: Record<string, string> = {
+        'theme_tgref': 'tgref',
+        'tgref': 'tgref',
+        'theme_alipanel': 'alipanel',
+        'alipanel': 'alipanel',
+        'theme_flysmm': 'flysmm',
+        'flysmm': 'flysmm',
+        'theme_smmstay': 'smmstay',
+        'smmstay': 'smmstay',
+        'theme_smmvisit': 'smmvisit',
+        'smmvisit': 'smmvisit',
+      };
+      const buyerThemeToPersist = themeToBuyerTheme[selectedTheme] || 'default';
+
       const { error } = await supabase.from('panels').update({
         custom_branding: customization as unknown as Json,
         theme_type: themeTypeToPersist as any,
-        // Buyer dashboard theme is driven by design preset colors (not the Ali/Fly/etc layouts)
-        buyer_theme: 'default',
+        // Map the homepage theme selection to buyer_theme column
+        buyer_theme: buyerThemeToPersist,
         // Also save colors to main columns for proper syncing
         primary_color: customization.primaryColor,
         secondary_color: customization.secondaryColor,
@@ -1509,8 +1528,44 @@ export default function DesignCustomization() {
           </div>
         );
       case 'colors':
+        const colorGroups = [
+          { 
+            label: 'Brand Colors', 
+            colors: ['primaryColor', 'secondaryColor', 'accentColor'] 
+          },
+          { 
+            label: 'Background', 
+            colors: ['backgroundColor', 'surfaceColor', 'cardColor'] 
+          },
+          { 
+            label: 'Text & UI', 
+            colors: ['textColor', 'mutedColor', 'borderColor'] 
+          },
+          { 
+            label: 'Status Colors', 
+            colors: ['successColor', 'warningColor', 'infoColor', 'errorColor'],
+            collapsible: true 
+          },
+        ];
+
+        const colorLabels: Record<string, string> = {
+          primaryColor: 'Primary',
+          secondaryColor: 'Secondary',
+          accentColor: 'Accent',
+          backgroundColor: 'Background',
+          surfaceColor: 'Surface/Cards',
+          cardColor: 'Card',
+          textColor: 'Text',
+          mutedColor: 'Muted Text',
+          borderColor: 'Border',
+          successColor: 'Success',
+          warningColor: 'Warning',
+          infoColor: 'Info',
+          errorColor: 'Error',
+        };
+
         return (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {/* Theme Mode Toggle */}
             <div className="flex items-center justify-between p-3 rounded-lg bg-accent/30">
               <div className="flex items-center gap-2">
@@ -1523,31 +1578,72 @@ export default function DesignCustomization() {
                 </span>
                 <Switch 
                   checked={customization.themeMode === 'light'} 
-                  onCheckedChange={(checked) => updateCustomization('themeMode', checked ? 'light' : 'dark')} 
+                  onCheckedChange={(checked) => {
+                    updateCustomization('themeMode', checked ? 'light' : 'dark');
+                    setPreviewThemeMode(checked ? 'light' : 'dark');
+                  }} 
                 />
               </div>
             </div>
             
-            {['primaryColor', 'secondaryColor', 'backgroundColor', 'textColor'].map(key => (
-              <div key={key} className="flex items-center gap-3">
-                <input 
-                  type="color" 
-                  value={(customization as any)[key]} 
-                  onChange={(e) => updateCustomization(key, e.target.value)} 
-                  className="w-10 h-10 rounded-lg border-0 cursor-pointer"
-                />
-                <div className="flex-1">
-                  <Label className="text-xs capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</Label>
-                  <Input 
-                    value={(customization as any)[key]} 
-                    onChange={(e) => updateCustomization(key, e.target.value)} 
-                    className="h-8 text-xs font-mono"
-                  />
-                </div>
+            {colorGroups.map((group) => (
+              <div key={group.label} className="space-y-2">
+                {group.collapsible ? (
+                  <Collapsible>
+                    <CollapsibleTrigger className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground w-full">
+                      <ChevronRight className="w-3 h-3 transition-transform data-[state=open]:rotate-90" />
+                      {group.label}
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="space-y-2 pt-2">
+                      {group.colors.map(key => (
+                        <div key={key} className="flex items-center gap-3">
+                          <input 
+                            type="color" 
+                            value={(customization as any)[key] || '#888888'} 
+                            onChange={(e) => updateCustomization(key, e.target.value)} 
+                            className="w-8 h-8 rounded-lg border-0 cursor-pointer"
+                          />
+                          <div className="flex-1">
+                            <Label className="text-xs">{colorLabels[key] || key}</Label>
+                            <Input 
+                              value={(customization as any)[key] || ''} 
+                              onChange={(e) => updateCustomization(key, e.target.value)} 
+                              className="h-7 text-xs font-mono"
+                              placeholder="#000000"
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </CollapsibleContent>
+                  </Collapsible>
+                ) : (
+                  <>
+                    <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{group.label}</Label>
+                    {group.colors.map(key => (
+                      <div key={key} className="flex items-center gap-3">
+                        <input 
+                          type="color" 
+                          value={(customization as any)[key] || '#888888'} 
+                          onChange={(e) => updateCustomization(key, e.target.value)} 
+                          className="w-8 h-8 rounded-lg border-0 cursor-pointer"
+                        />
+                        <div className="flex-1">
+                          <Label className="text-xs">{colorLabels[key] || key}</Label>
+                          <Input 
+                            value={(customization as any)[key] || ''} 
+                            onChange={(e) => updateCustomization(key, e.target.value)} 
+                            className="h-7 text-xs font-mono"
+                            placeholder="#000000"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
               </div>
             ))}
             <p className="text-[11px] text-muted-foreground">
-              These colors update the live preview on the right instantly. Save them as a preset from the "Design Presets" section.
+              These colors update the live preview instantly. Save as a preset from "Design Presets" section.
             </p>
           </div>
         );
