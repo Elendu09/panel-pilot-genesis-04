@@ -1,3 +1,4 @@
+import { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Terminal, Zap, Shield, Users, Star, ArrowRight, CheckCircle, Globe, Cpu, Play,
@@ -13,6 +14,7 @@ import {
   getDefaultStats, getDefaultFeatures, getDefaultTestimonials, getDefaultFAQs
 } from '@/lib/theme-utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { ThemeNavigation } from '../shared/ThemeNavigation';
 
 interface TGRefHomepageProps {
   panelName?: string;
@@ -36,20 +38,34 @@ export const TGRefHomepage = ({
 }: TGRefHomepageProps) => {
   const navigate = useNavigate();
   
+  // Theme mode state - from customization or default to dark
+  const [themeMode, setThemeMode] = useState<'light' | 'dark'>(customization.themeMode || 'dark');
+  const isLightMode = themeMode === 'light';
+  
   // Theme defaults for TGRef (teal/cyan terminal aesthetic)
   const defaultPrimary = '#00D4AA';
   const defaultSecondary = '#0EA5E9';
   const defaultAccent = '#7C3AED';
-  const defaultBg = '#1A1B26';
-  const defaultSurface = '#0D0E14';
+  const defaultBgDark = '#1A1B26';
+  const defaultBgLight = '#F8FAFC';
+  const defaultSurfaceDark = '#0D0E14';
+  const defaultSurfaceLight = '#FFFFFF';
 
   const primary = customization.primaryColor || defaultPrimary;
   const secondary = customization.secondaryColor || defaultSecondary;
   const accent = customization.accentColor || defaultAccent;
-  const bgColor = customization.backgroundColor || defaultBg;
-  const textCol = customization.textColor || '#FFFFFF';
-  const surfaceColor = customization.surfaceColor || defaultSurface;
-  const mutedColor = customization.mutedColor || '#9CA3AF';
+  const bgColor = isLightMode 
+    ? (customization.backgroundColor || defaultBgLight) 
+    : (customization.backgroundColor || defaultBgDark);
+  const textCol = isLightMode 
+    ? (customization.textColor || '#1F2937') 
+    : (customization.textColor || '#FFFFFF');
+  const surfaceColor = isLightMode 
+    ? (customization.surfaceColor || defaultSurfaceLight) 
+    : (customization.surfaceColor || defaultSurfaceDark);
+  const mutedColor = isLightMode 
+    ? (customization.mutedColor || '#6B7280') 
+    : (customization.mutedColor || '#9CA3AF');
 
   // Typography - TGRef prefers monospace
   const fontFamily = customization.fontFamily || 'mono';
@@ -97,8 +113,13 @@ export const TGRefHomepage = ({
   // Button styles
   const primaryButtonStyle = {
     ...getButtonStyles(customization, 'primary'),
-    color: bgColor,
+    color: isLightMode ? '#FFFFFF' : bgColor,
   };
+
+  // Theme mode change handler
+  const handleThemeModeChange = useCallback((mode: 'light' | 'dark') => {
+    setThemeMode(mode);
+  }, []);
 
   const platforms = [
     { name: 'Instagram', icon: Instagram, color: '#E4405F' },
@@ -138,40 +159,26 @@ export const TGRefHomepage = ({
       </div>
 
       {/* Navigation */}
-      <header>
-        <nav className="relative z-50 backdrop-blur-xl" style={{ borderBottom: `1px solid ${primary}33` }} aria-label="Main navigation">
-          <div className="mx-auto px-4 sm:px-6 lg:px-8" style={{ maxWidth: containerMax }}>
-            <div className="flex items-center justify-between h-16">
-              <Link to="/" className="flex items-center gap-2" aria-label={`${companyName} home`}>
-                {displayLogo ? (
-                  <img src={displayLogo} alt={companyName} className="w-8 h-8 rounded object-contain" loading="eager" />
-                ) : (
-                  <div className="w-8 h-8 rounded flex items-center justify-center" style={{ background: `linear-gradient(to bottom right, ${primary}, ${secondary})` }}>
-                    <Terminal className="w-5 h-5" style={{ color: bgColor }} />
-                  </div>
-                )}
-                <span className="text-lg font-bold" style={{ color: primary }}>[{companyName}]</span>
-              </Link>
-              
-              <div className="hidden md:flex items-center gap-6">
-                <Link to="/services" className="text-sm transition-colors" style={{ color: mutedColor }}>./services</Link>
-                <Link to="/orders" className="text-sm transition-colors" style={{ color: mutedColor }}>./orders</Link>
-                {showBlogInMenu && <Link to="/blog" className="text-sm transition-colors" style={{ color: mutedColor }}>./blog</Link>}
-                <Link to="/support" className="text-sm transition-colors" style={{ color: mutedColor }}>./support</Link>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Button variant="outline" size="sm" asChild className="font-mono" style={{ borderColor: `${primary}4d`, color: primary }}>
-                  <Link to="/auth">&gt; login</Link>
-                </Button>
-                <Button size="sm" asChild className="font-bold font-mono hover:opacity-90" style={primaryButtonStyle}>
-                  <Link to="/auth?tab=signup">&gt; register</Link>
-                </Button>
-              </div>
-            </div>
+      <ThemeNavigation
+        companyName={companyName}
+        logoUrl={displayLogo}
+        logoIcon={
+          <div className="w-8 h-8 rounded flex items-center justify-center" style={{ background: `linear-gradient(to bottom right, ${primary}, ${secondary})` }}>
+            <Terminal className="w-5 h-5" style={{ color: isLightMode ? '#FFFFFF' : bgColor }} />
           </div>
-        </nav>
-      </header>
+        }
+        showBlogInMenu={showBlogInMenu}
+        themeMode={themeMode}
+        onThemeModeChange={handleThemeModeChange}
+        containerMax={containerMax}
+        mutedColor={mutedColor}
+        primaryColor={primary}
+        textColor={textCol}
+        surfaceColor={surfaceColor}
+        bgColor={bgColor}
+        navStyle="terminal"
+        primaryButtonStyle={primaryButtonStyle}
+      />
 
       <article>
         {/* Hero Section */}

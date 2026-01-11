@@ -1,3 +1,4 @@
+import { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Rocket, Zap, Shield, Users, Star, ArrowRight, CheckCircle, Sparkles,
@@ -12,6 +13,7 @@ import {
   getDefaultFeatures, getDefaultTestimonials, getDefaultFAQs
 } from '@/lib/theme-utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { ThemeNavigation } from '../shared/ThemeNavigation';
 
 interface FlySMMHomepageProps {
   panelName?: string;
@@ -35,19 +37,32 @@ export const FlySMMHomepage = ({
 }: FlySMMHomepageProps) => {
   const navigate = useNavigate();
   
+  // Theme mode state - FlySMM defaults to light
+  const [themeMode, setThemeMode] = useState<'light' | 'dark'>(customization.themeMode || 'light');
+  const isLightMode = themeMode === 'light';
+  
   // Theme defaults for FlySMM (light, blue accents)
   const defaultPrimary = '#2196F3';
   const defaultSecondary = '#00BCD4';
-  const defaultBg = '#F8FAFC';
-  const defaultSurface = '#FFFFFF';
-  const defaultText = '#1F2937';
+  const defaultBgLight = '#F8FAFC';
+  const defaultBgDark = '#0F172A';
+  const defaultSurfaceLight = '#FFFFFF';
+  const defaultSurfaceDark = '#1E293B';
 
   const primary = customization.primaryColor || defaultPrimary;
   const secondary = customization.secondaryColor || defaultSecondary;
-  const bgColor = customization.backgroundColor || defaultBg;
-  const textCol = customization.textColor || defaultText;
-  const surfaceColor = customization.surfaceColor || defaultSurface;
-  const mutedColor = customization.mutedColor || '#6B7280';
+  const bgColor = isLightMode 
+    ? (customization.backgroundColor || defaultBgLight) 
+    : (customization.backgroundColor || defaultBgDark);
+  const textCol = isLightMode 
+    ? (customization.textColor || '#1F2937') 
+    : (customization.textColor || '#FFFFFF');
+  const surfaceColor = isLightMode 
+    ? (customization.surfaceColor || defaultSurfaceLight) 
+    : (customization.surfaceColor || defaultSurfaceDark);
+  const mutedColor = isLightMode 
+    ? (customization.mutedColor || '#6B7280') 
+    : (customization.mutedColor || '#9CA3AF');
 
   // Typography
   const fontFamily = customization.fontFamily || 'Nunito';
@@ -94,6 +109,11 @@ export const FlySMMHomepage = ({
   // Button styles
   const primaryButtonStyle = getButtonStyles(customization, 'primary');
 
+  // Theme mode change handler
+  const handleThemeModeChange = useCallback((mode: 'light' | 'dark') => {
+    setThemeMode(mode);
+  }, []);
+
   const steps = [
     { num: '1', title: 'Create Account', desc: 'Sign up for free in seconds' },
     { num: '2', title: 'Add Funds', desc: 'Deposit using your preferred method' },
@@ -125,41 +145,34 @@ export const FlySMMHomepage = ({
       )}
 
       {/* Navigation */}
-      <header>
-        <nav className="sticky top-0 z-50 shadow-sm" style={{ backgroundColor: surfaceColor }} aria-label="Main navigation">
-          <div className="mx-auto px-4 sm:px-6 lg:px-8" style={{ maxWidth: containerMax }}>
-            <div className="flex items-center justify-between h-16">
-              <Link to="/" className="flex items-center gap-2" aria-label={`${companyName} home`}>
-                {displayLogo ? (
-                  <img src={displayLogo} alt={companyName} className="w-10 h-10 rounded-2xl object-contain" loading="eager" />
-                ) : (
-                  <div className="w-10 h-10 rounded-2xl flex items-center justify-center shadow-lg"
-                    style={{ background: `linear-gradient(to bottom right, ${primary}, ${secondary})`, boxShadow: `0 10px 25px -5px ${primary}33` }}>
-                    <Rocket className="w-6 h-6 text-white" />
-                  </div>
-                )}
-                <span className="text-xl font-bold" style={{ color: primary }}>{companyName}</span>
-              </Link>
-              
-              <div className="hidden md:flex items-center gap-8">
-                <Link to="/services" className="text-sm transition-colors font-medium" style={{ color: mutedColor }}>Services</Link>
-                <Link to="/orders" className="text-sm transition-colors font-medium" style={{ color: mutedColor }}>My Orders</Link>
-                {showBlogInMenu && <Link to="/blog" className="text-sm transition-colors font-medium" style={{ color: mutedColor }}>Blog</Link>}
-                <Link to="/support" className="text-sm transition-colors font-medium" style={{ color: mutedColor }}>Support</Link>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Button variant="ghost" size="sm" asChild style={{ color: mutedColor }}>
-                  <Link to="/auth">Login</Link>
-                </Button>
-                <Button size="sm" asChild className="text-white font-semibold shadow-lg hover:opacity-90" style={primaryButtonStyle}>
-                  <Link to="/auth?tab=signup">Sign Up Free</Link>
-                </Button>
-              </div>
-            </div>
+      <ThemeNavigation
+        companyName={companyName}
+        logoUrl={displayLogo}
+        logoIcon={
+          <div className="w-10 h-10 rounded-2xl flex items-center justify-center shadow-lg"
+            style={{ background: `linear-gradient(to bottom right, ${primary}, ${secondary})`, boxShadow: `0 10px 25px -5px ${primary}33` }}>
+            <Rocket className="w-6 h-6 text-white" />
           </div>
-        </nav>
-      </header>
+        }
+        showBlogInMenu={showBlogInMenu}
+        themeMode={themeMode}
+        onThemeModeChange={handleThemeModeChange}
+        containerMax={containerMax}
+        mutedColor={mutedColor}
+        primaryColor={primary}
+        textColor={textCol}
+        surfaceColor={surfaceColor}
+        bgColor={bgColor}
+        navStyle="floating"
+        primaryButtonStyle={primaryButtonStyle}
+        signupLabel="Sign Up Free"
+        navLinks={[
+          { label: 'Services', to: '/services' },
+          { label: 'My Orders', to: '/orders' },
+          ...(showBlogInMenu ? [{ label: 'Blog', to: '/blog' }] : []),
+          { label: 'Support', to: '/support' },
+        ]}
+      />
 
       <article>
         {/* Hero Section */}
