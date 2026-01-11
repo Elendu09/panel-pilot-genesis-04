@@ -69,10 +69,10 @@ const StorefrontBlog = () => {
         <link rel="canonical" href={typeof window !== "undefined" ? window.location.href : ""} />
       </Helmet>
       <main className="min-h-screen bg-background text-foreground">
-        <section className="border-b border-border/40 bg-gradient-to-b from-background via-background/80 to-background">
+        <section className="border-b border-border/40 bg-gradient-to-b from-primary/5 via-background to-background">
           <div className="container mx-auto px-4 py-12 md:py-16">
             <div className="max-w-3xl">
-              <Badge variant="outline" className="mb-4">
+              <Badge variant="outline" className="mb-4 text-primary border-primary/30">
                 Blog
               </Badge>
               <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-3">
@@ -112,7 +112,7 @@ const StorefrontBlog = () => {
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {posts.map((post) => (
                 <article key={post.id} className="group">
-                  <Card className="h-full overflow-hidden border-border/40 bg-card/60 flex flex-col hover:shadow-xl transition-all duration-300">
+                  <Card className="h-full overflow-hidden border-border/40 bg-card/60 flex flex-col hover:shadow-xl hover:border-primary/30 transition-all duration-300">
                     {post.featured_image_url && (
                       <div className="relative h-48 w-full overflow-hidden rounded-t-3xl">
                         <img
@@ -127,7 +127,7 @@ const StorefrontBlog = () => {
                     <CardContent className="flex-1 p-5 flex flex-col">
                       <div className="flex items-center gap-3 text-xs text-muted-foreground mb-3">
                         {post.published_at && (
-                          <span className="inline-flex items-center gap-1">
+                          <span className="inline-flex items-center gap-1 text-primary">
                             <Calendar className="w-3 h-3" /> {formatDate(post.published_at)}
                           </span>
                         )}
@@ -138,7 +138,7 @@ const StorefrontBlog = () => {
                             : "Quick read"}
                         </span>
                       </div>
-                      <h2 className="text-lg font-semibold mb-2 line-clamp-2">
+                      <h2 className="text-lg font-semibold mb-2 line-clamp-2 group-hover:text-primary transition-colors">
                         {post.title}
                       </h2>
                       {post.excerpt && (
