@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Select,
   SelectContent,
@@ -23,12 +24,12 @@ import {
   Zap, ArrowRight, ArrowLeft, Lock, Loader2, Mail, User, CheckCircle, Check, 
   ChevronRight, Instagram, Youtube, Send, Twitter, Facebook, Linkedin, 
   Music2, Globe, Copy, AlertTriangle, Eye, EyeOff, CreditCard, Wallet,
-  DollarSign, Sparkles, Star, Users, Heart, MessageCircle, Share2, Bookmark, Play
+  DollarSign, Sparkles, Star, Users, Heart, MessageCircle, Share2, Bookmark, Play, Shield
 } from 'lucide-react';
 import { SOCIAL_ICONS_MAP, TikTokIcon } from '@/components/icons/SocialIcons';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { BuyerAuthContext } from '@/contexts/BuyerAuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -57,12 +58,21 @@ interface FastOrderSectionProps {
   onStepChange?: (step: number) => void;
 }
 
-// Payment methods
-const paymentMethods = [
-  { id: 'stripe', name: 'Credit Card', icon: CreditCard, color: 'bg-gradient-to-br from-blue-500 to-blue-600' },
-  { id: 'paypal', name: 'PayPal', icon: Wallet, color: 'bg-gradient-to-br from-blue-600 to-indigo-600' },
-  { id: 'crypto', name: 'Crypto', icon: DollarSign, color: 'bg-gradient-to-br from-orange-500 to-amber-500' },
+// Default payment methods - will be filtered based on panel settings
+const defaultPaymentMethods = [
+  { id: 'stripe', name: 'Credit Card', icon: CreditCard, color: 'bg-gradient-to-br from-blue-500 to-blue-600', badge: 'Instant' },
+  { id: 'paypal', name: 'PayPal', icon: Wallet, color: 'bg-gradient-to-br from-blue-600 to-indigo-600', badge: 'Instant' },
+  { id: 'crypto', name: 'Crypto', icon: DollarSign, color: 'bg-gradient-to-br from-orange-500 to-amber-500', badge: '5-30 min' },
+  { id: 'perfectmoney', name: 'Perfect Money', icon: Shield, color: 'bg-gradient-to-br from-green-500 to-emerald-500', badge: 'Instant' },
 ];
+
+interface PaymentMethod {
+  id: string;
+  name: string;
+  icon: any;
+  color: string;
+  badge?: string;
+}
 
 // Service type icons map
 const SERVICE_TYPE_ICONS: Record<string, any> = {
@@ -144,6 +154,9 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
   // Payment state
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('stripe');
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [loadingPaymentMethods, setLoadingPaymentMethods] = useState(true);
+  const [noPaymentGateway, setNoPaymentGateway] = useState(false);
   
   // Order tracking state
   const [placedOrderId, setPlacedOrderId] = useState<string | null>(null);
@@ -162,6 +175,56 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
   const [showPassword, setShowPassword] = useState(false);
   const [modalStep, setModalStep] = useState<'email' | 'credentials' | 'login'>('email');
   const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  // Fetch real payment methods from panel settings
+  useEffect(() => {
+    const fetchPaymentMethods = async () => {
+      if (!panelId) {
+        setLoadingPaymentMethods(false);
+        setNoPaymentGateway(true);
+        return;
+      }
+      
+      try {
+        const { data: panelData } = await supabase
+          .from('panels')
+          .select('settings')
+          .eq('id', panelId)
+          .single();
+        
+        const panelSettings = panelData?.settings as Record<string, any> || {};
+        const paymentSettings = panelSettings.payments || {};
+        const enabledMethods = paymentSettings.enabledMethods || [];
+        
+        if (enabledMethods.length > 0) {
+          const filteredMethods = defaultPaymentMethods.filter(m => 
+            enabledMethods.some((em: any) => 
+              (typeof em === 'string' ? em === m.id : em.id === m.id) && 
+              (typeof em === 'string' || em.enabled !== false)
+            )
+          );
+          if (filteredMethods.length > 0) {
+            setPaymentMethods(filteredMethods);
+            setNoPaymentGateway(false);
+            setSelectedPaymentMethod(filteredMethods[0].id);
+          } else {
+            setPaymentMethods([]);
+            setNoPaymentGateway(true);
+          }
+        } else {
+          setPaymentMethods([]);
+          setNoPaymentGateway(true);
+        }
+      } catch (error) {
+        console.error('Error fetching payment methods:', error);
+        setNoPaymentGateway(true);
+      } finally {
+        setLoadingPaymentMethods(false);
+      }
+    };
+
+    fetchPaymentMethods();
+  }, [panelId]);
 
   // Use unified services for consistent category ordering across all pages
   const { 
@@ -494,32 +557,10 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
     try {
       const orderNumber = generateOrderNumber();
 
-      // Create pending transaction
-      const { data: transaction, error: txError } = await supabase
-        .from('transactions')
-        .insert({
-          user_id: buyer.id,
-          amount: totalPrice,
-          type: 'payment',
-          payment_method: selectedPaymentMethod,
-          status: 'pending',
-          description: `Fast Order - ${selectedService.name}`,
-        })
-        .select()
-        .single();
-
-      if (txError) throw txError;
-
-      // Simulate payment processing (replace with real payment gateway)
+      // Simulate payment processing (replace with real payment gateway integration)
       await new Promise(resolve => setTimeout(resolve, 2000));
 
-      // Update transaction to completed
-      await supabase
-        .from('transactions')
-        .update({ status: 'completed' })
-        .eq('id', transaction.id);
-
-      // Create the order
+      // Create the order directly (skip transaction for balance-based payments)
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
@@ -922,64 +963,64 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                       </SelectContent>
                     </Select>
                     
-                    {/* Quick service buttons */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-                      {categoryServices.slice(0, 4).map((service, index) => (
-                        <motion.button
-                          key={service.id}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: index * 0.1 }}
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                          onClick={() => handleServiceSelect(service.id)}
-                          className={cn(
-                            "p-3 sm:p-4 rounded-xl border text-left transition-all",
-                            selectedServiceId === service.id
-                              ? themeMode === 'dark'
-                                ? "border-blue-500 bg-blue-500/10 ring-1 ring-blue-500/30"
-                                : "border-blue-500 bg-blue-50 ring-2 ring-blue-500/30 shadow-lg shadow-blue-500/10"
-                              : themeMode === 'dark'
-                                ? "border-gray-700 bg-gray-800/60 hover:border-blue-500/40"
-                                : "border-gray-200 bg-white hover:border-blue-400 hover:shadow-md"
-                          )}
-                        >
-                          <div className="flex justify-between items-start mb-2">
-                            <span className="text-lg sm:text-xl font-bold tabular-nums text-blue-500">
-                              ${service.price.toFixed(4)}
-                            </span>
-                            {selectedServiceId === service.id && (
-                              <motion.div
-                                initial={{ scale: 0 }}
-                                animate={{ scale: 1 }}
-                                className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center"
-                              >
-                                <Check className="w-3 h-3 text-white" />
-                              </motion.div>
+                    {/* All services in scrollable compact grid */}
+                    <ScrollArea className="h-[240px] sm:h-[300px] pr-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-2">
+                        {categoryServices.map((service, index) => (
+                          <motion.button
+                            key={service.id}
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: Math.min(index * 0.02, 0.3) }}
+                            whileHover={{ scale: 1.01 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => handleServiceSelect(service.id)}
+                            className={cn(
+                              "p-2 sm:p-2.5 rounded-lg border text-left transition-all",
+                              selectedServiceId === service.id
+                                ? themeMode === 'dark'
+                                  ? "border-blue-500 bg-blue-500/10 ring-1 ring-blue-500/30"
+                                  : "border-blue-500 bg-blue-50 ring-2 ring-blue-500/30"
+                                : themeMode === 'dark'
+                                  ? "border-gray-700 bg-gray-800/60 hover:border-blue-500/40"
+                                  : "border-gray-200 bg-white hover:border-blue-400"
                             )}
-                          </div>
-                          <div className="flex items-center gap-1.5 mb-0.5">
-                            <Badge variant="secondary" className="text-[8px] font-mono px-1 py-0 h-3.5">
-                              ID: {service.provider_service_id || service.id?.slice(0, 6)}
+                          >
+                            <div className="flex justify-between items-start mb-1">
+                              <span className="text-sm sm:text-base font-bold tabular-nums text-blue-500">
+                                ${service.price.toFixed(4)}
+                              </span>
+                              {selectedServiceId === service.id && (
+                                <motion.div
+                                  initial={{ scale: 0 }}
+                                  animate={{ scale: 1 }}
+                                  className="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center"
+                                >
+                                  <Check className="w-2.5 h-2.5 text-white" />
+                                </motion.div>
+                              )}
+                            </div>
+                            <Badge variant="secondary" className="text-[7px] font-mono px-0.5 py-0 h-3 mb-0.5">
+                              {service.provider_service_id || service.id?.slice(0, 6)}
                             </Badge>
-                          </div>
-                          <p className="text-xs sm:text-sm line-clamp-2" style={{ color: textMuted }}>
-                            {service.name}
-                          </p>
-                          <div className="flex items-center justify-between mt-1">
-                            <p className="text-[10px] sm:text-xs" style={{ color: textMuted }}>
-                              Min: {service.min_quantity || 100}
+                            <p className="text-[10px] sm:text-xs line-clamp-1" style={{ color: textMuted }}>
+                              {service.name}
                             </p>
-                            <SpeedGauge 
-                              estimatedTime={(service as any).average_time || (service as any).averageTime} 
-                              compact 
-                              size="sm"
-                              showEstimatedTime={false}
-                            />
-                          </div>
-                        </motion.button>
-                      ))}
-                    </div>
+                            <div className="flex items-center justify-between mt-0.5">
+                              <p className="text-[9px] sm:text-[10px]" style={{ color: textMuted }}>
+                                Min: {service.min_quantity || 100}
+                              </p>
+                              <SpeedGauge 
+                                estimatedTime={(service as any).average_time || (service as any).averageTime} 
+                                compact 
+                                size="sm"
+                                showEstimatedTime={false}
+                              />
+                            </div>
+                          </motion.button>
+                        ))}
+                      </div>
+                    </ScrollArea>
                   </motion.div>
                 )}
 
@@ -1191,46 +1232,86 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                     {/* Payment Methods */}
                     <div className="space-y-2 sm:space-y-3">
                       <Label className="font-semibold text-sm" style={{ color: textColor }}>Payment Method</Label>
-                      {paymentMethods.map((method, index) => {
-                        const MethodIcon = method.icon;
-                        return (
-                          <motion.button
-                            key={method.id}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.1 }}
-                            whileHover={{ scale: 1.01 }}
-                            whileTap={{ scale: 0.99 }}
-                            onClick={() => setSelectedPaymentMethod(method.id)}
-                            className={cn(
-                              "w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border transition-all",
-                              selectedPaymentMethod === method.id
-                                ? themeMode === 'dark'
-                                  ? "border-blue-500 bg-blue-500/10 ring-1 ring-blue-500/30"
-                                  : "border-blue-500 bg-blue-50 ring-2 ring-blue-500/30 shadow-lg shadow-blue-500/10"
-                                : themeMode === 'dark'
-                                  ? "border-gray-700 bg-gray-800/60 hover:border-blue-500/40"
-                                  : "border-gray-200 bg-white hover:border-blue-400 hover:shadow-md"
-                            )}
-                          >
-                            <div className={cn("p-2 sm:p-2.5 rounded-lg sm:rounded-xl shadow-lg", method.color)}>
-                              <MethodIcon className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-                            </div>
-                            <span className="font-semibold text-sm sm:text-base" style={{ color: textColor }}>
-                              {method.name}
-                            </span>
-                            {selectedPaymentMethod === method.id && (
-                              <motion.div
-                                initial={{ scale: 0 }}
-                                animate={{ scale: 1 }}
-                                className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center ml-auto"
-                              >
-                                <Check className="w-3 h-3 text-white" />
-                              </motion.div>
-                            )}
-                          </motion.button>
-                        );
-                      })}
+                      
+                      {loadingPaymentMethods ? (
+                        <div className="flex items-center justify-center py-8">
+                          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                        </div>
+                      ) : noPaymentGateway ? (
+                        <Card className={cn(
+                          "border",
+                          themeMode === 'dark' 
+                            ? "border-amber-500/30 bg-amber-500/5" 
+                            : "border-amber-400 bg-amber-50"
+                        )}>
+                          <CardContent className="p-4 sm:p-6 text-center">
+                            <AlertTriangle className={cn(
+                              "w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3",
+                              themeMode === 'dark' ? 'text-amber-400' : 'text-amber-500'
+                            )} />
+                            <h3 className="text-base sm:text-lg font-semibold mb-2" style={{ color: textColor }}>
+                              No Payment Gateway Available
+                            </h3>
+                            <p className="text-xs sm:text-sm mb-4" style={{ color: textMuted }}>
+                              Payment methods are currently being configured. Please contact support for assistance.
+                            </p>
+                            <Button asChild variant="outline" size="sm" className="gap-2">
+                              <Link to="/support">
+                                <MessageCircle className="w-4 h-4" />
+                                Contact Support
+                              </Link>
+                            </Button>
+                          </CardContent>
+                        </Card>
+                      ) : (
+                        paymentMethods.map((method, index) => {
+                          const MethodIcon = method.icon;
+                          return (
+                            <motion.button
+                              key={method.id}
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: index * 0.1 }}
+                              whileHover={{ scale: 1.01 }}
+                              whileTap={{ scale: 0.99 }}
+                              onClick={() => setSelectedPaymentMethod(method.id)}
+                              className={cn(
+                                "w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border transition-all",
+                                selectedPaymentMethod === method.id
+                                  ? themeMode === 'dark'
+                                    ? "border-blue-500 bg-blue-500/10 ring-1 ring-blue-500/30"
+                                    : "border-blue-500 bg-blue-50 ring-2 ring-blue-500/30 shadow-lg shadow-blue-500/10"
+                                  : themeMode === 'dark'
+                                    ? "border-gray-700 bg-gray-800/60 hover:border-blue-500/40"
+                                    : "border-gray-200 bg-white hover:border-blue-400 hover:shadow-md"
+                              )}
+                            >
+                              <div className={cn("p-2 sm:p-2.5 rounded-lg sm:rounded-xl shadow-lg", method.color)}>
+                                <MethodIcon className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                              </div>
+                              <div className="flex-1 text-left">
+                                <span className="font-semibold text-sm sm:text-base" style={{ color: textColor }}>
+                                  {method.name}
+                                </span>
+                                {method.badge && (
+                                  <Badge variant="secondary" className="ml-2 text-[9px] px-1 py-0 h-4">
+                                    {method.badge}
+                                  </Badge>
+                                )}
+                              </div>
+                              {selectedPaymentMethod === method.id && (
+                                <motion.div
+                                  initial={{ scale: 0 }}
+                                  animate={{ scale: 1 }}
+                                  className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center"
+                                >
+                                  <Check className="w-3 h-3 text-white" />
+                                </motion.div>
+                              )}
+                            </motion.button>
+                          );
+                        })
+                      )}
                     </div>
 
                     {/* Balance Info */}
@@ -1249,34 +1330,36 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                     )}
 
                     {/* Pay Button with glow in light mode */}
-                    <Button
-                      className={cn(
-                        "w-full h-12 sm:h-14 gap-2 text-base sm:text-lg rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 font-semibold text-white transition-all",
-                        themeMode === 'dark' 
-                          ? "shadow-lg shadow-green-500/25"
-                          : "shadow-[0_0_24px_rgba(34,197,94,0.4)] hover:shadow-[0_0_32px_rgba(34,197,94,0.5)]"
-                      )}
-                      size="lg"
-                      onClick={buyer ? handleProcessPayment : handlePlaceOrder}
-                      disabled={isProcessingPayment}
-                    >
-                      {isProcessingPayment ? (
-                        <>
-                          <Loader2 className="w-5 h-5 animate-spin" />
-                          Processing...
-                        </>
-                      ) : buyer ? (
-                        <>
-                          <Lock className="w-5 h-5" />
-                          Pay ${totalPrice.toFixed(2)} Now
-                        </>
-                      ) : (
-                        <>
-                          <Lock className="w-5 h-5" />
-                          Checkout ${totalPrice.toFixed(2)}
-                        </>
-                      )}
-                    </Button>
+                    {!noPaymentGateway && (
+                      <Button
+                        className={cn(
+                          "w-full h-12 sm:h-14 gap-2 text-base sm:text-lg rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 font-semibold text-white transition-all",
+                          themeMode === 'dark' 
+                            ? "shadow-lg shadow-green-500/25"
+                            : "shadow-[0_0_24px_rgba(34,197,94,0.4)] hover:shadow-[0_0_32px_rgba(34,197,94,0.5)]"
+                        )}
+                        size="lg"
+                        onClick={buyer ? handleProcessPayment : handlePlaceOrder}
+                        disabled={isProcessingPayment || loadingPaymentMethods}
+                      >
+                        {isProcessingPayment ? (
+                          <>
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                            Processing...
+                          </>
+                        ) : buyer ? (
+                          <>
+                            <Lock className="w-5 h-5" />
+                            Pay ${totalPrice.toFixed(2)} Now
+                          </>
+                        ) : (
+                          <>
+                            <Lock className="w-5 h-5" />
+                            Checkout ${totalPrice.toFixed(2)}
+                          </>
+                        )}
+                      </Button>
+                    )}
 
                     <p className="text-[10px] sm:text-xs text-center flex items-center justify-center gap-1.5" style={{ color: textMuted }}>
                       <Lock className="w-3 h-3" />
