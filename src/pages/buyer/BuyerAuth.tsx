@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { User, Lock, Mail, Loader2, ArrowLeft, Sparkles, Shield, Zap, KeyRound } from "lucide-react";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
+import { BuyerThemeWrapper } from "@/components/buyer-themes";
 
 const BuyerAuth = () => {
   const navigate = useNavigate();
@@ -128,7 +129,8 @@ const BuyerAuth = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-950 py-12 px-4">
+    <BuyerThemeWrapper panelId={panelId || undefined}>
+      <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4">
       {/* Back to Storefront Link */}
       <motion.div 
         className="absolute top-6 left-6 z-10"
@@ -155,7 +157,7 @@ const BuyerAuth = () => {
         transition={{ duration: 0.5 }}
         className="relative z-10 w-full max-w-md"
       >
-        <Card className="bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-800 shadow-xl">
+        <Card className="bg-card border-border shadow-xl">
           <CardHeader className="text-center pb-2">
             {/* Logo */}
             <motion.div 
@@ -167,24 +169,24 @@ const BuyerAuth = () => {
               <Sparkles className="w-8 h-8 text-white" />
             </motion.div>
             
-            <CardTitle className="text-2xl font-bold text-gray-900 dark:text-white">Welcome</CardTitle>
-            <CardDescription className="text-gray-500 dark:text-gray-400">
+            <CardTitle className="text-2xl font-bold text-foreground">Welcome</CardTitle>
+            <CardDescription className="text-muted-foreground">
               Sign in to your account or create a new one
             </CardDescription>
           </CardHeader>
           
           <CardContent className="pt-4">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-2 bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
+              <TabsList className="grid w-full grid-cols-2 bg-muted border border-border">
                 <TabsTrigger 
                   value="login" 
-                  className="data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:text-gray-900 dark:data-[state=active]:text-white data-[state=active]:shadow-sm"
+                  className="data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
                 >
                   Login
                 </TabsTrigger>
                 <TabsTrigger 
                   value="signup"
-                  className="data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:text-gray-900 dark:data-[state=active]:text-white data-[state=active]:shadow-sm"
+                  className="data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
                 >
                   Sign Up
                 </TabsTrigger>
@@ -412,7 +414,8 @@ const BuyerAuth = () => {
           </form>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </BuyerThemeWrapper>
   );
 };
 

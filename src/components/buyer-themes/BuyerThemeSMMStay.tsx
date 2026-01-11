@@ -11,7 +11,7 @@ export const BuyerThemeSMMStay = ({ children, className }: BuyerThemeSMMStayProp
   return (
     <div 
       className={cn(
-        "buyer-theme-smmstay min-h-screen font-montserrat",
+        "buyer-theme-smmstay buyer-theme-wrapper min-h-screen font-montserrat",
         className
       )}
     >
@@ -28,6 +28,23 @@ export const BuyerThemeSMMStay = ({ children, className }: BuyerThemeSMMStayProp
           --theme-glow: 0 0 60px rgba(255, 64, 129, 0.5);
           background: var(--theme-background);
           color: var(--theme-text);
+        }
+        
+        /* Override panel variables for this theme */
+        .buyer-theme-smmstay {
+          --panel-primary: #FF4081;
+          --panel-secondary: #FF80AB;
+          --panel-accent: #E040FB;
+          --panel-gradient: linear-gradient(135deg, #FF4081 0%, #E040FB 100%);
+          --panel-gradient-accent: linear-gradient(135deg, #FF4081 0%, #FF80AB 100%);
+          --panel-glow: 0 0 20px rgba(255, 64, 129, 0.5);
+          --panel-glow-lg: 0 0 60px rgba(255, 64, 129, 0.4);
+          --panel-nav-active-bg: rgba(255, 64, 129, 0.2);
+          --panel-nav-active-text: #FF4081;
+          --panel-bottom-nav-center-gradient: linear-gradient(135deg, #FF4081 0%, #E040FB 100%);
+          --step-active: #FF4081;
+          --step-completed: #FF4081;
+          --step-glow: 0 0 16px rgba(255, 64, 129, 0.6);
         }
         
         .buyer-theme-smmstay .theme-card {
@@ -118,6 +135,11 @@ export const BuyerThemeSMMStay = ({ children, className }: BuyerThemeSMMStayProp
         
         .light .buyer-theme-smmstay .theme-card {
           background: #FFF0F5;
+        }
+        
+        .light .buyer-theme-smmstay .theme-nav {
+          background: rgba(255, 255, 255, 0.95);
+          border-bottom: 1px solid rgba(255, 64, 129, 0.15);
         }
       `}</style>
       {children}

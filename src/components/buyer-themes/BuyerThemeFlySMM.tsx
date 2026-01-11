@@ -11,7 +11,7 @@ export const BuyerThemeFlySMM = ({ children, className }: BuyerThemeFlySMMProps)
   return (
     <div 
       className={cn(
-        "buyer-theme-flysmm min-h-screen font-nunito",
+        "buyer-theme-flysmm buyer-theme-wrapper min-h-screen font-nunito",
         className
       )}
     >
@@ -27,6 +27,23 @@ export const BuyerThemeFlySMM = ({ children, className }: BuyerThemeFlySMMProps)
           --theme-gradient: linear-gradient(135deg, #2196F3 0%, #00BCD4 100%);
           background: var(--theme-background);
           color: var(--theme-text);
+        }
+        
+        /* Override panel variables for this theme */
+        .buyer-theme-flysmm {
+          --panel-primary: #2196F3;
+          --panel-secondary: #64B5F6;
+          --panel-accent: #00BCD4;
+          --panel-gradient: linear-gradient(135deg, #2196F3 0%, #00BCD4 100%);
+          --panel-gradient-accent: linear-gradient(135deg, #2196F3 0%, #64B5F6 100%);
+          --panel-glow: 0 0 20px rgba(33, 150, 243, 0.4);
+          --panel-glow-lg: 0 0 40px rgba(33, 150, 243, 0.3);
+          --panel-nav-active-bg: rgba(33, 150, 243, 0.1);
+          --panel-nav-active-text: #2196F3;
+          --panel-bottom-nav-center-gradient: linear-gradient(135deg, #2196F3 0%, #00BCD4 100%);
+          --step-active: #2196F3;
+          --step-completed: #2196F3;
+          --step-glow: 0 0 16px rgba(33, 150, 243, 0.5);
         }
         
         .buyer-theme-flysmm .theme-card {
@@ -98,6 +115,10 @@ export const BuyerThemeFlySMM = ({ children, className }: BuyerThemeFlySMMProps)
           background: rgba(12, 25, 41, 0.95);
           backdrop-filter: blur(10px);
           border-color: rgba(33, 150, 243, 0.1);
+        }
+        
+        .dark .buyer-theme-flysmm .theme-hero {
+          background: radial-gradient(ellipse at top, rgba(33, 150, 243, 0.1) 0%, transparent 50%);
         }
       `}</style>
       {children}

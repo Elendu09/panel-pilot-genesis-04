@@ -182,12 +182,36 @@ export function generateBuyerThemeCSS(colors: Partial<ColorPalette>): string {
     /* Panel brand colors (shared across themes) */
     .buyer-theme-wrapper {
       --panel-primary: ${primary};
+      --panel-primary-hsl: ${hexToHSL(primary)};
       --panel-secondary: ${secondary};
+      --panel-secondary-hsl: ${hexToHSL(secondary)};
       --panel-accent: ${accent};
+      --panel-accent-hsl: ${hexToHSL(accent)};
       --panel-success: ${success};
       --panel-warning: ${warning};
       --panel-info: ${info};
       --panel-error: ${error};
+      
+      /* Theme gradients */
+      --panel-gradient: linear-gradient(135deg, ${primary} 0%, ${secondary} 100%);
+      --panel-gradient-accent: linear-gradient(135deg, ${primary} 0%, ${accent} 100%);
+      --panel-gradient-subtle: linear-gradient(135deg, ${primary}20 0%, ${secondary}20 100%);
+      
+      /* Theme glows */
+      --panel-glow: 0 0 20px ${primary}40;
+      --panel-glow-lg: 0 0 40px ${primary}30;
+      --panel-glow-accent: 0 0 20px ${accent}40;
+      
+      /* Nav & sidebar */
+      --panel-nav-bg: ${surface};
+      --panel-nav-active-bg: ${primary}20;
+      --panel-nav-active-text: ${primary};
+      --panel-nav-hover-bg: ${primary}10;
+      
+      /* Bottom nav */
+      --panel-bottom-nav-bg: ${surface}F0;
+      --panel-bottom-nav-active: ${primary};
+      --panel-bottom-nav-center-gradient: linear-gradient(135deg, ${primary} 0%, ${secondary} 100%);
     }
     
     /* Dark mode buyer theme (default) */
@@ -234,6 +258,13 @@ export function generateBuyerThemeCSS(colors: Partial<ColorPalette>): string {
       
       --glass-bg: ${hexToHSL(surface)} / 0.6;
       --glass-border: ${hexToHSL(border)} / 0.3;
+      
+      /* Fast order step colors */
+      --step-active: ${primary};
+      --step-completed: ${primary};
+      --step-pending: ${muted};
+      --step-line: ${border};
+      --step-glow: 0 0 16px ${primary}60;
     }
     
     /* Light mode buyer theme */
@@ -280,6 +311,13 @@ export function generateBuyerThemeCSS(colors: Partial<ColorPalette>): string {
       
       --glass-bg: ${hexToHSL(lightSurface)} / 0.85;
       --glass-border: ${hexToHSL(lightBorder)} / 0.6;
+      
+      /* Fast order step colors - light mode */
+      --step-active: ${primary};
+      --step-completed: ${primary};
+      --step-pending: ${lightMuted};
+      --step-line: ${lightBorder};
+      --step-glow: 0 0 20px ${primary}50;
     }
   `;
 }
