@@ -103,7 +103,7 @@ const BuyerOrders = () => {
 
   const statusConfig: Record<string, { label: string; icon: any; color: string; bgColor: string; spin?: boolean }> = {
     pending: { label: t('orders.pending'), icon: Clock, color: 'text-amber-500', bgColor: 'bg-amber-500/10 border-amber-500/20' },
-    in_progress: { label: t('orders.in_progress'), icon: Loader2, color: 'text-blue-500', bgColor: 'bg-blue-500/10 border-blue-500/20', spin: true },
+    in_progress: { label: t('orders.in_progress'), icon: Loader2, color: 'text-primary', bgColor: 'bg-primary/10 border-primary/20', spin: true },
     completed: { label: t('orders.completed'), icon: CheckCircle, color: 'text-emerald-500', bgColor: 'bg-emerald-500/10 border-emerald-500/20' },
     partial: { label: t('orders.partial'), icon: AlertCircle, color: 'text-orange-500', bgColor: 'bg-orange-500/10 border-orange-500/20' },
     cancelled: { label: t('orders.cancelled'), icon: XCircle, color: 'text-red-500', bgColor: 'bg-red-500/10 border-red-500/20' },
@@ -118,7 +118,7 @@ const BuyerOrders = () => {
 
   const kanbanColumns = [
     { title: t('orders.pending'), status: 'pending', icon: Clock, gradient: 'from-amber-500 to-amber-600', bg: 'bg-amber-500/10', textColor: 'text-amber-500', borderColor: 'border-amber-500/30' },
-    { title: t('orders.in_progress'), status: 'in_progress', icon: Loader2, gradient: 'from-blue-500 to-blue-600', bg: 'bg-blue-500/10', textColor: 'text-blue-500', borderColor: 'border-blue-500/30' },
+    { title: t('orders.in_progress'), status: 'in_progress', icon: Loader2, gradient: 'from-primary to-primary/80', bg: 'bg-primary/10', textColor: 'text-primary', borderColor: 'border-primary/30' },
     { title: t('orders.completed'), status: 'completed', icon: CheckCircle, gradient: 'from-emerald-500 to-emerald-600', bg: 'bg-emerald-500/10', textColor: 'text-emerald-500', borderColor: 'border-emerald-500/30' },
   ];
 

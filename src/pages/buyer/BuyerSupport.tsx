@@ -63,7 +63,7 @@ interface Message {
 }
 
 const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
-  open: { label: "Open", color: "bg-blue-500/10 text-blue-500 border-blue-500/20", icon: Inbox },
+  open: { label: "Open", color: "bg-primary/10 text-primary border-primary/20", icon: Inbox },
   in_progress: { label: "In Progress", color: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20", icon: Clock },
   resolved: { label: "Resolved", color: "bg-green-500/10 text-green-500 border-green-500/20", icon: CheckCircle },
   closed: { label: "Closed", color: "bg-muted text-muted-foreground border-border", icon: XCircle },
@@ -421,10 +421,17 @@ const BuyerSupport = () => {
 
         {/* New Ticket Dialog */}
         <Dialog open={isNewTicketOpen} onOpenChange={setIsNewTicketOpen}>
-          <DialogContent className="glass-card">
+          <DialogContent className="glass-card border-primary/20">
             <DialogHeader>
-              <DialogTitle>Create New Ticket</DialogTitle>
-              <DialogDescription>Describe your issue and we'll help you</DialogDescription>
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <MessageSquare className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <DialogTitle>Create New Ticket</DialogTitle>
+                  <DialogDescription>Describe your issue and we'll help you</DialogDescription>
+                </div>
+              </div>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
@@ -433,6 +440,7 @@ const BuyerSupport = () => {
                   placeholder="Brief description of your issue"
                   value={newTicket.subject}
                   onChange={(e) => setNewTicket({ ...newTicket, subject: e.target.value })}
+                  className="focus-visible:ring-primary"
                 />
               </div>
               <div className="space-y-2">
@@ -441,7 +449,7 @@ const BuyerSupport = () => {
                   value={newTicket.priority} 
                   onValueChange={(v) => setNewTicket({ ...newTicket, priority: v })}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="focus:ring-primary">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -459,12 +467,13 @@ const BuyerSupport = () => {
                   value={newTicket.message}
                   onChange={(e) => setNewTicket({ ...newTicket, message: e.target.value })}
                   rows={4}
+                  className="focus-visible:ring-primary"
                 />
               </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsNewTicketOpen(false)}>Cancel</Button>
-              <Button onClick={handleCreateTicket} disabled={submitting}>
+              <Button onClick={handleCreateTicket} disabled={submitting} className="bg-primary hover:bg-primary/90">
                 {submitting ? "Creating..." : "Create Ticket"}
               </Button>
             </DialogFooter>

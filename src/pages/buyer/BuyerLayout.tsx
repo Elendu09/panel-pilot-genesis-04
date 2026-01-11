@@ -362,7 +362,7 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
                     </SheetHeader>
                     <div className="space-y-2 pb-6 overflow-y-auto max-h-[65vh]">
                       {/* User Info */}
-                      <div className="flex items-center gap-3 p-4 rounded-xl bg-muted/50 mb-4">
+                      <div className="flex items-center gap-3 p-4 rounded-xl bg-primary/5 border border-primary/10 mb-4">
                         <Avatar className="w-12 h-12 border-2 border-primary/20">
                           <AvatarFallback className="bg-primary/10 text-primary font-semibold">
                             {userName.charAt(0).toUpperCase()}
@@ -451,6 +451,17 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
                           <Search className="w-5 h-5 text-muted-foreground" />
                           <span className="font-medium">{t('nav.track_order')}</span>
                         </Link>
+                        {/* Blog Link - Only show when enabled */}
+                        {blogEnabled && (
+                          <Link
+                            to="/blog"
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-all"
+                          >
+                            <BookOpen className="w-5 h-5 text-muted-foreground" />
+                            <span className="font-medium">{t('nav.blog') || 'Blog'}</span>
+                          </Link>
+                        )}
                         <Link
                           to="/profile"
                           onClick={() => setMobileMenuOpen(false)}

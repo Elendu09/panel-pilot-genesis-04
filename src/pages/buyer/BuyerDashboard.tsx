@@ -173,7 +173,7 @@ const BuyerDashboard = () => {
       case 'completed':
         return { label: 'Completed', icon: CheckCircle, gradient: 'from-emerald-500 to-emerald-600', bg: 'bg-emerald-500/10', text: 'text-emerald-500', border: 'border-emerald-500/30' };
       case 'in_progress':
-        return { label: 'In Progress', icon: Loader2, gradient: 'from-blue-500 to-blue-600', bg: 'bg-blue-500/10', text: 'text-blue-500', border: 'border-blue-500/30', spin: true };
+        return { label: 'In Progress', icon: Loader2, gradient: 'from-primary to-primary/80', bg: 'bg-primary/10', text: 'text-primary', border: 'border-primary/30', spin: true };
       case 'pending':
         return { label: 'Pending', icon: Clock, gradient: 'from-amber-500 to-amber-600', bg: 'bg-amber-500/10', text: 'text-amber-500', border: 'border-amber-500/30' };
       default:
@@ -196,8 +196,8 @@ const BuyerDashboard = () => {
       title: t('dashboard.total_orders'), 
       value: stats.totalOrders, 
       icon: ShoppingCart, 
-      gradient: 'from-blue-500 to-blue-600', 
-      bg: 'bg-blue-500/10',
+      gradient: 'from-primary to-primary/80', 
+      bg: 'bg-primary/10',
       action: { label: t('common.view_all'), href: '/orders' }
     },
     { 
@@ -218,12 +218,12 @@ const BuyerDashboard = () => {
 
   const kanbanColumns = [
     { title: t('dashboard.pending'), status: 'pending', icon: Clock, gradient: 'from-amber-500 to-amber-600', bg: 'bg-amber-500/10', textColor: 'text-amber-500', borderColor: 'border-amber-500/30' },
-    { title: t('dashboard.in_progress'), status: 'in_progress', icon: Loader2, gradient: 'from-blue-500 to-blue-600', bg: 'bg-blue-500/10', textColor: 'text-blue-500', borderColor: 'border-blue-500/30' },
+    { title: t('dashboard.in_progress'), status: 'in_progress', icon: Loader2, gradient: 'from-primary to-primary/80', bg: 'bg-primary/10', textColor: 'text-primary', borderColor: 'border-primary/30' },
     { title: t('dashboard.completed'), status: 'completed', icon: CheckCircle, gradient: 'from-emerald-500 to-emerald-600', bg: 'bg-emerald-500/10', textColor: 'text-emerald-500', borderColor: 'border-emerald-500/30' },
   ];
 
   const quickActions = [
-    { name: t('nav.orders'), icon: ClipboardList, href: '/orders', gradient: 'from-blue-500 to-blue-600' },
+    { name: t('nav.orders'), icon: ClipboardList, href: '/orders', gradient: 'from-primary to-primary/80' },
     { name: t('nav.new_order'), icon: Package, href: '/services', gradient: 'from-violet-500 to-violet-600' },
     { name: t('nav.deposit'), icon: CreditCard, href: '/deposit', gradient: 'from-emerald-500 to-emerald-600' },
     { name: t('nav.support'), icon: Zap, href: '/support', gradient: 'from-amber-500 to-amber-600' },
@@ -284,17 +284,17 @@ const BuyerDashboard = () => {
         animate="visible"
         className="space-y-4 md:space-y-6"
       >
-        {/* Compact Email Verification Banner - Blue theme */}
+        {/* Compact Email Verification Banner - Theme colors */}
         {showVerifyBanner && (
           <motion.div
             variants={itemVariants}
-            className="rounded-xl bg-blue-500/10 border border-blue-500/20 px-4 py-2.5 flex items-center justify-between gap-3"
+            className="rounded-xl bg-primary/10 border border-primary/20 px-4 py-2.5 flex items-center justify-between gap-3"
           >
             <div className="flex items-center gap-3">
-              <div className="p-1.5 rounded-lg bg-blue-500/20">
-                <Mail className="w-4 h-4 text-blue-500" />
+              <div className="p-1.5 rounded-lg bg-primary/20">
+                <Mail className="w-4 h-4 text-primary" />
               </div>
-              <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
+              <span className="text-sm font-medium text-primary">
                 {t('dashboard.verify_email')}
               </span>
             </div>
@@ -302,7 +302,7 @@ const BuyerDashboard = () => {
               <Button 
                 size="sm" 
                 onClick={handleSendVerification}
-                className="h-7 px-3 bg-blue-500 hover:bg-blue-600 text-white text-xs"
+                className="h-7 px-3 bg-primary hover:bg-primary/90 text-primary-foreground text-xs"
               >
                 {t('common.send')}
               </Button>
@@ -310,7 +310,7 @@ const BuyerDashboard = () => {
                 variant="ghost" 
                 size="icon" 
                 onClick={handleDismissVerifyBanner}
-                className="h-7 w-7 text-blue-500 hover:text-blue-600 hover:bg-blue-500/10"
+                className="h-7 w-7 text-primary hover:text-primary/80 hover:bg-primary/10"
               >
                 <X className="w-4 h-4" />
               </Button>
@@ -323,9 +323,9 @@ const BuyerDashboard = () => {
           <div>
             <h1 className="text-xl md:text-2xl lg:text-3xl font-bold flex items-center gap-2">
               {t('dashboard.welcome')}{buyer?.full_name ? `, ${buyer.full_name.split(' ')[0]}` : ''}! 👋
-              {/* Facebook-style blue checkmark for verified users */}
+              {/* Themed checkmark for verified users */}
               {!showVerifyBanner && (
-                <BadgeCheck className="w-5 h-5 md:w-6 md:h-6 text-blue-500 fill-blue-500/20" />
+                <BadgeCheck className="w-5 h-5 md:w-6 md:h-6 text-primary fill-primary/20" />
               )}
             </h1>
             <p className="text-sm text-muted-foreground">{t('dashboard.overview')}</p>

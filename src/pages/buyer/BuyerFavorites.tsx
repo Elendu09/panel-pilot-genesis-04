@@ -147,10 +147,10 @@ const BuyerFavorites = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <motion.div 
-              className="p-3 rounded-xl bg-blue-500/10 shadow-[0_0_15px_rgba(59,130,246,0.3)]"
+              className="p-3 rounded-xl bg-primary/10 shadow-[0_0_15px_var(--primary)]"
               whileHover={{ scale: 1.05 }}
             >
-              <Heart className="w-6 h-6 text-blue-500 fill-blue-500" />
+              <Heart className="w-6 h-6 text-primary fill-primary" />
             </motion.div>
             <div>
               <h1 className="text-2xl font-bold">My Favorites</h1>

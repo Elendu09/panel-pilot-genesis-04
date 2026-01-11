@@ -355,10 +355,10 @@ const BuyerServices = () => {
             {/* Total Services Widget */}
             <motion.div
               whileHover={{ scale: 1.02 }}
-              className="bg-gradient-to-br from-blue-500/10 to-blue-500/5 rounded-xl p-3 border border-blue-500/20"
+              className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl p-3 border border-primary/20"
             >
               <div className="flex items-center gap-2 mb-1">
-                <Package className="w-4 h-4 text-blue-500" />
+                <Package className="w-4 h-4 text-primary" />
                 <span className="text-xs text-muted-foreground">Services</span>
               </div>
               <p className="text-lg font-bold">{services.length.toLocaleString()}</p>

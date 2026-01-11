@@ -146,8 +146,8 @@ const BuyerContact = () => {
       label: "Email",
       value: contactInfo.email,
       href: contactInfo.email ? `mailto:${contactInfo.email}` : undefined,
-      color: "text-blue-500",
-      bgColor: "bg-blue-500/10",
+      color: "text-primary",
+      bgColor: "bg-primary/10",
     },
     {
       icon: Phone,
