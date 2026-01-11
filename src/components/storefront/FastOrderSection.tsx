@@ -50,6 +50,12 @@ interface Service {
   provider_service_id?: string;
 }
 
+// Smart price formatting: 4 decimals for < $1, 2 decimals for >= $1
+const formatPrice = (price: number): string => {
+  if (price === 0) return '0.00';
+  return price < 1 ? price.toFixed(4) : price.toFixed(2);
+};
+
 interface FastOrderSectionProps {
   services: Service[];
   panelId: string;
@@ -176,6 +182,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
   const [modalStep, setModalStep] = useState<'email' | 'credentials' | 'login'>('email');
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [serviceSearch, setServiceSearch] = useState('');
+  const [showOrderSuccess, setShowOrderSuccess] = useState(false);
 
   // Fetch real payment methods from panel settings
   useEffect(() => {
@@ -616,8 +623,12 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
         await navigator.clipboard.writeText(orderNumber);
       } catch {}
 
-      // Go to tracking step instead of redirecting
-      setCurrentStep(6);
+      // Show success celebration briefly, then go to tracking
+      setShowOrderSuccess(true);
+      setTimeout(() => {
+        setShowOrderSuccess(false);
+        setCurrentStep(6);
+      }, 2000);
 
     } catch (error: any) {
       console.error('Payment error:', error);
@@ -1120,9 +1131,9 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                           )}>
                             Estimated Total
                           </span>
-                          <div className="flex items-baseline gap-1 mt-1">
+                        <div className="flex items-baseline gap-1 mt-1">
                             <span className="text-2xl sm:text-3xl font-bold tabular-nums text-blue-500">
-                              ${totalPrice.toFixed(2)}
+                              ${formatPrice(totalPrice)}
                             </span>
                             <span className={cn("text-xs sm:text-sm", themeMode === 'dark' ? 'text-muted-foreground' : 'text-gray-500')}>USD</span>
                           </div>
@@ -1191,7 +1202,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                         <p className="text-[10px] sm:text-xs uppercase tracking-wider font-semibold mb-1" style={{ color: textMuted }}>
                           Order Total
                         </p>
-                        <p className="text-3xl sm:text-4xl font-bold tabular-nums text-green-500">${totalPrice.toFixed(2)}</p>
+                        <p className="text-3xl sm:text-4xl font-bold tabular-nums text-green-500">${formatPrice(totalPrice)}</p>
                       </div>
                       
                       <div className={cn(
@@ -1340,12 +1351,12 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                         ) : buyer ? (
                           <>
                             <Lock className="w-5 h-5" />
-                            Pay ${totalPrice.toFixed(2)} Now
+                            Pay ${formatPrice(totalPrice)} Now
                           </>
                         ) : (
                           <>
                             <Lock className="w-5 h-5" />
-                            Checkout ${totalPrice.toFixed(2)}
+                            Checkout ${formatPrice(totalPrice)}
                           </>
                         )}
                       </Button>
@@ -1358,8 +1369,47 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                   </motion.div>
                 )}
 
+                {/* Success Celebration */}
+                {showOrderSuccess && (
+                  <motion.div
+                    key="success"
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                    className="text-center py-12"
+                  >
+                    <Confetti isActive={showOrderSuccess} />
+                    <motion.div 
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ delay: 0.1, type: 'spring', stiffness: 400, damping: 15 }}
+                      className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-green-500/30"
+                    >
+                      <CheckCircle className="w-10 h-10 text-white" />
+                    </motion.div>
+                    <motion.h3 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.2 }}
+                      className="text-2xl font-bold mb-2"
+                      style={{ color: textColor }}
+                    >
+                      Order Placed!
+                    </motion.h3>
+                    <motion.p 
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.3 }}
+                      className="text-muted-foreground"
+                    >
+                      Order #{placedOrderNumber}
+                    </motion.p>
+                  </motion.div>
+                )}
+
                 {/* Step 6: Live Order Tracking */}
-                {currentStep === 6 && placedOrderId && placedOrderNumber && (
+                {currentStep === 6 && !showOrderSuccess && placedOrderId && placedOrderNumber && (
                   <motion.div
                     key="step6"
                     initial={{ opacity: 0, scale: 0.95 }}
@@ -1634,7 +1684,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                     </div>
                     <div className="flex justify-between text-sm mt-1 pt-1 border-t">
                       <span className="text-muted-foreground">Total:</span>
-                      <span className="font-bold text-blue-500 tabular-nums">${totalPrice.toFixed(2)}</span>
+                      <span className="font-bold text-blue-500 tabular-nums">${formatPrice(totalPrice)}</span>
                     </div>
                   </div>
                 )}
