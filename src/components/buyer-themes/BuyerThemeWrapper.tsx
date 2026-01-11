@@ -129,6 +129,45 @@ export const BuyerThemeWrapper = ({
       companyName: branding.companyName || panelData.name,
       primaryColor: branding.primaryColor || panelData.primary_color || '#6366F1',
       secondaryColor: branding.secondaryColor || panelData.secondary_color || '#8B5CF6',
+      // Ensure themeMode is included for light/dark switching
+      themeMode: branding.themeMode || 'dark',
+      // Ensure all color fields are propagated
+      accentColor: branding.accentColor || '#EC4899',
+      backgroundColor: branding.backgroundColor || '#0F172A',
+      surfaceColor: branding.surfaceColor || '#1E293B',
+      cardColor: branding.cardColor || branding.surfaceColor || '#1E293B',
+      textColor: branding.textColor || '#FFFFFF',
+      mutedColor: branding.mutedColor || '#94A3B8',
+      borderColor: branding.borderColor || '#334155',
+      successColor: branding.successColor || '#22C55E',
+      warningColor: branding.warningColor || '#F59E0B',
+      infoColor: branding.infoColor || '#3B82F6',
+      errorColor: branding.errorColor || '#EF4444',
+      // Typography
+      fontFamily: branding.fontFamily || 'Inter',
+      headingFont: branding.headingFont || 'Inter',
+      headingWeight: branding.headingWeight || '700',
+      // Section toggles
+      enableFastOrder: branding.enableFastOrder ?? true,
+      enablePlatformFeatures: branding.enablePlatformFeatures ?? true,
+      enableStats: branding.enableStats ?? true,
+      enableFeatures: branding.enableFeatures ?? true,
+      enableTestimonials: branding.enableTestimonials ?? true,
+      enableFAQs: branding.enableFAQs ?? true,
+      // Content
+      heroTitle: branding.heroTitle || '',
+      heroSubtitle: branding.heroSubtitle || '',
+      heroBadgeText: branding.heroBadgeText || '',
+      heroCTAText: branding.heroCTAText || 'Get Started',
+      heroSecondaryCTAText: branding.heroSecondaryCTAText || 'View Services',
+      featureCards: branding.featureCards || [],
+      testimonials: branding.testimonials || [],
+      faqs: branding.faqs || [],
+      showBlogInMenu: branding.showBlogInMenu ?? false,
+      // Spacing & animations
+      sectionPaddingY: branding.sectionPaddingY || 80,
+      containerMaxWidth: branding.containerMaxWidth || 1280,
+      enableAnimations: branding.enableAnimations ?? true,
     };
   }, [panelData]);
 

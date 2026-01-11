@@ -82,6 +82,38 @@ export function usePanelCustomization(panelId: string | undefined) {
         socialLinks: branding.socialLinks || {},
         // Layout
         homepageLayout: branding.homepageLayout || ['hero', 'platform', 'stats', 'features', 'testimonials', 'faqs'],
+        // Advanced settings
+        sectionPaddingY: branding.sectionPaddingY || 80,
+        containerMaxWidth: branding.containerMaxWidth || 1280,
+        cardSpacing: branding.cardSpacing || 24,
+        elementGap: branding.elementGap || 16,
+        enableAnimations: branding.enableAnimations ?? true,
+        animationStyle: branding.animationStyle || 'fade',
+        animationDuration: branding.animationDuration || 500,
+        enableParallax: branding.enableParallax ?? false,
+        hoverScale: branding.hoverScale || 1.02,
+        scrollReveal: branding.scrollReveal ?? true,
+        backgroundPattern: branding.backgroundPattern || 'none',
+        patternOpacity: branding.patternOpacity || 0.03,
+        patternColor: branding.patternColor || '#6366F1',
+        gradientAngle: branding.gradientAngle || 180,
+        backgroundImageUrl: branding.backgroundImageUrl || '',
+        backgroundOverlayOpacity: branding.backgroundOverlayOpacity || 0.5,
+        enableBackgroundBlur: branding.enableBackgroundBlur ?? false,
+        buttonRadius: branding.buttonRadius || 12,
+        buttonSize: branding.buttonSize || 'md',
+        buttonHoverEffect: branding.buttonHoverEffect || 'glow',
+        buttonStyle: branding.buttonStyle || 'solid',
+        buttonShadow: branding.buttonShadow ?? true,
+        shadowIntensity: branding.shadowIntensity || 'medium',
+        cardRadius: branding.cardRadius || 16,
+        cardBorder: branding.cardBorder ?? false,
+        glowEffects: branding.glowEffects ?? true,
+        // Branding
+        faviconUrl: branding.faviconUrl || '',
+        tagline: branding.tagline || '',
+        // Custom presets
+        customPresets: branding.customPresets || [],
       };
     },
     enabled: !!panelId,
@@ -92,11 +124,12 @@ export function usePanelCustomization(panelId: string | undefined) {
     mutationFn: async (updates: Record<string, any>) => {
       if (!panelId) throw new Error('No panel ID');
       
-      // Build the complete custom_branding object
+      // Build the complete custom_branding object with ALL fields
       const customBranding = {
-        // Spread all updates
+        // Spread all updates first
         ...updates,
-        // Ensure all critical fields are included
+        
+        // === COLORS ===
         primaryColor: updates.primaryColor,
         secondaryColor: updates.secondaryColor,
         accentColor: updates.accentColor,
@@ -110,7 +143,8 @@ export function usePanelCustomization(panelId: string | undefined) {
         warningColor: updates.warningColor,
         infoColor: updates.infoColor,
         errorColor: updates.errorColor,
-        // Typography
+        
+        // === TYPOGRAPHY ===
         fontFamily: updates.fontFamily,
         headingFont: updates.headingFont,
         baseFontSize: updates.baseFontSize,
@@ -119,9 +153,87 @@ export function usePanelCustomization(panelId: string | undefined) {
         lineHeight: updates.lineHeight,
         letterSpacing: updates.letterSpacing,
         borderRadius: updates.borderRadius,
-        // Theme
+        
+        // === THEME SETTINGS ===
         selectedTheme: updates.selectedTheme || updates.themeType,
         themeMode: updates.themeMode,
+        
+        // === SECTION TOGGLES ===
+        enableFastOrder: updates.enableFastOrder,
+        enablePlatformFeatures: updates.enablePlatformFeatures,
+        enableStats: updates.enableStats,
+        enableFeatures: updates.enableFeatures,
+        enableTestimonials: updates.enableTestimonials,
+        enableFAQs: updates.enableFAQs,
+        
+        // === CONTENT ARRAYS ===
+        platformFeatures: updates.platformFeatures,
+        stats: updates.stats,
+        featureCards: updates.featureCards,
+        testimonials: updates.testimonials,
+        faqs: updates.faqs,
+        
+        // === HERO CONTENT ===
+        heroTitle: updates.heroTitle,
+        heroSubtitle: updates.heroSubtitle,
+        heroBadgeText: updates.heroBadgeText,
+        heroCTAText: updates.heroCTAText,
+        heroSecondaryCTAText: updates.heroSecondaryCTAText,
+        heroAnimatedTexts: updates.heroAnimatedTexts,
+        
+        // === FOOTER ===
+        footerAbout: updates.footerAbout,
+        footerText: updates.footerText,
+        socialLinks: updates.socialLinks,
+        
+        // === LAYOUT ===
+        homepageLayout: updates.homepageLayout,
+        showBlogInMenu: updates.showBlogInMenu,
+        
+        // === SPACING & LAYOUT ===
+        sectionPaddingY: updates.sectionPaddingY,
+        containerMaxWidth: updates.containerMaxWidth,
+        cardSpacing: updates.cardSpacing,
+        elementGap: updates.elementGap,
+        
+        // === ANIMATIONS ===
+        enableAnimations: updates.enableAnimations,
+        animationStyle: updates.animationStyle,
+        animationDuration: updates.animationDuration,
+        enableParallax: updates.enableParallax,
+        hoverScale: updates.hoverScale,
+        scrollReveal: updates.scrollReveal,
+        
+        // === BACKGROUND ===
+        backgroundPattern: updates.backgroundPattern,
+        patternOpacity: updates.patternOpacity,
+        patternColor: updates.patternColor,
+        gradientAngle: updates.gradientAngle,
+        backgroundImageUrl: updates.backgroundImageUrl,
+        backgroundOverlayOpacity: updates.backgroundOverlayOpacity,
+        enableBackgroundBlur: updates.enableBackgroundBlur,
+        
+        // === BUTTON STYLES ===
+        buttonRadius: updates.buttonRadius,
+        buttonSize: updates.buttonSize,
+        buttonHoverEffect: updates.buttonHoverEffect,
+        buttonStyle: updates.buttonStyle,
+        buttonShadow: updates.buttonShadow,
+        
+        // === SHADOWS & EFFECTS ===
+        shadowIntensity: updates.shadowIntensity,
+        cardRadius: updates.cardRadius,
+        cardBorder: updates.cardBorder,
+        glowEffects: updates.glowEffects,
+        
+        // === BRANDING ===
+        logoUrl: updates.logoUrl,
+        faviconUrl: updates.faviconUrl,
+        companyName: updates.companyName,
+        tagline: updates.tagline,
+        
+        // === CUSTOM PRESETS ===
+        customPresets: updates.customPresets,
       };
       
       const { error } = await supabase
