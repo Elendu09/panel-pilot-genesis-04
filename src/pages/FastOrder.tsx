@@ -94,12 +94,12 @@ const VerticalStepProgress = ({
   themeMode: string;
 }) => {
   const steps = [
-    { id: 1, label: 'Categories', description: 'Choose platform' },
-    { id: 2, label: 'Service', description: 'Pick service' },
-    { id: 3, label: 'Order', description: 'Enter details' },
-    { id: 4, label: 'Review', description: 'Confirm order' },
+    { id: 1, label: 'Network', description: 'Choose platform' },
+    { id: 2, label: 'Category', description: 'Pick service type' },
+    { id: 3, label: 'Service', description: 'Select service' },
+    { id: 4, label: 'Order', description: 'Enter details' },
     { id: 5, label: 'Payment', description: 'Complete payment' },
-    { id: 6, label: 'Tracking', description: 'Live status' },
+    { id: 6, label: 'Track', description: 'Order status' },
   ];
 
   const progressPercent = ((currentStep - 1) / (steps.length - 1)) * 100;
@@ -320,7 +320,7 @@ const VerticalStepProgress = ({
 
 // Mobile Step Progress (compact horizontal) - always visible sticky
 const MobileStepProgress = ({ currentStep, themeMode }: { currentStep: number; themeMode: string }) => {
-  const steps = ['Category', 'Service', 'Order', 'Review', 'Pay', 'Track'];
+  const steps = ['Network', 'Category', 'Service', 'Order', 'Pay', 'Track'];
   
   return (
     <div className={cn(
