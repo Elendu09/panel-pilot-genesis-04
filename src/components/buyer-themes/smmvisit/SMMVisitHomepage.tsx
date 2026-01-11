@@ -1,3 +1,4 @@
+import { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Globe, Zap, Users, Star, ArrowRight, Award, TrendingUp,
@@ -12,6 +13,7 @@ import {
   getDefaultFeatures, getDefaultTestimonials, getDefaultFAQs
 } from '@/lib/theme-utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { ThemeNavigation } from '../shared/ThemeNavigation';
 
 interface SMMVisitHomepageProps {
   panelName?: string;
@@ -35,19 +37,32 @@ export const SMMVisitHomepage = ({
 }: SMMVisitHomepageProps) => {
   const navigate = useNavigate();
   
+  // Theme mode state - SMMVisit defaults to light
+  const [themeMode, setThemeMode] = useState<'light' | 'dark'>(customization.themeMode || 'light');
+  const isLightMode = themeMode === 'light';
+  
   // Theme defaults for SMMVisit (yellow/gold on light)
   const defaultPrimary = '#FFD700';
   const defaultSecondary = '#FFC107';
-  const defaultBg = '#F5F5F5';
-  const defaultSurface = '#FFFFFF';
-  const defaultText = '#1A1A1A';
+  const defaultBgLight = '#F5F5F5';
+  const defaultBgDark = '#1A1A1A';
+  const defaultSurfaceLight = '#FFFFFF';
+  const defaultSurfaceDark = '#262626';
 
   const primary = customization.primaryColor || defaultPrimary;
   const secondary = customization.secondaryColor || defaultSecondary;
-  const bgColor = customization.backgroundColor || defaultBg;
-  const textCol = customization.textColor || defaultText;
-  const surfaceColor = customization.surfaceColor || defaultSurface;
-  const mutedColor = customization.mutedColor || '#6B7280';
+  const bgColor = isLightMode 
+    ? (customization.backgroundColor || defaultBgLight) 
+    : (customization.backgroundColor || defaultBgDark);
+  const textCol = isLightMode 
+    ? (customization.textColor || '#1A1A1A') 
+    : (customization.textColor || '#FFFFFF');
+  const surfaceColor = isLightMode 
+    ? (customization.surfaceColor || defaultSurfaceLight) 
+    : (customization.surfaceColor || defaultSurfaceDark);
+  const mutedColor = isLightMode 
+    ? (customization.mutedColor || '#6B7280') 
+    : (customization.mutedColor || '#9CA3AF');
 
   // Typography
   const fontFamily = customization.fontFamily || 'Inter';
@@ -93,6 +108,11 @@ export const SMMVisitHomepage = ({
   // Button styles
   const primaryButtonStyle = getButtonStyles(customization, 'primary');
 
+  // Theme mode change handler
+  const handleThemeModeChange = useCallback((mode: 'light' | 'dark') => {
+    setThemeMode(mode);
+  }, []);
+
   const platforms = [
     { id: 'instagram', name: 'Instagram', icon: Instagram, color: '#E4405F' },
     { id: 'facebook', name: 'Facebook', icon: Facebook, color: '#1877F2' },
@@ -123,40 +143,27 @@ export const SMMVisitHomepage = ({
       )}
 
       {/* Navigation */}
-      <header>
-        <nav className="sticky top-0 z-50 rounded-b-2xl shadow-sm mx-4 mt-2" style={{ backgroundColor: surfaceColor }} aria-label="Main navigation">
-          <div className="mx-auto px-4 sm:px-6 lg:px-8" style={{ maxWidth: containerMax }}>
-            <div className="flex items-center justify-between h-16">
-              <Link to="/" className="flex items-center gap-2" aria-label={`${companyName} home`}>
-                {displayLogo ? (
-                  <img src={displayLogo} alt={companyName} className="w-10 h-10 rounded-xl object-contain" loading="eager" />
-                ) : (
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg" style={{ background: `linear-gradient(to bottom right, ${primary}, ${secondary})` }}>
-                    <Globe className="w-6 h-6 text-white" />
-                  </div>
-                )}
-                <span className="text-xl font-bold" style={{ color: textCol }}>{companyName}</span>
-              </Link>
-              
-              <div className="hidden md:flex items-center gap-8">
-                <Link to="/services" className="text-sm transition-colors font-medium" style={{ color: mutedColor }}>Services</Link>
-                <Link to="/orders" className="text-sm transition-colors font-medium" style={{ color: mutedColor }}>Orders</Link>
-                {showBlogInMenu && <Link to="/blog" className="text-sm transition-colors font-medium" style={{ color: mutedColor }}>Blog</Link>}
-                <Link to="/support" className="text-sm transition-colors font-medium" style={{ color: mutedColor }}>Support</Link>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Button variant="ghost" size="sm" asChild className="font-medium" style={{ color: textCol }}>
-                  <Link to="/auth">Login</Link>
-                </Button>
-                <Button size="sm" asChild className="font-semibold text-white shadow-lg hover:opacity-90" style={primaryButtonStyle}>
-                  <Link to="/auth?tab=signup">Sign Up</Link>
-                </Button>
-              </div>
-            </div>
+      <ThemeNavigation
+        companyName={companyName}
+        logoUrl={displayLogo}
+        logoIcon={
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg" style={{ background: `linear-gradient(to bottom right, ${primary}, ${secondary})` }}>
+            <Globe className="w-6 h-6 text-white" />
           </div>
-        </nav>
-      </header>
+        }
+        showBlogInMenu={showBlogInMenu}
+        themeMode={themeMode}
+        onThemeModeChange={handleThemeModeChange}
+        containerMax={containerMax}
+        mutedColor={mutedColor}
+        primaryColor={primary}
+        textColor={textCol}
+        surfaceColor={surfaceColor}
+        bgColor={bgColor}
+        navStyle="floating"
+        primaryButtonStyle={primaryButtonStyle}
+        signupLabel="Sign Up"
+      />
 
       <article>
         {/* Hero Section */}

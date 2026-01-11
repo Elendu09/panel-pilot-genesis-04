@@ -1,3 +1,4 @@
+import { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Flame, Zap, Shield, Users, Star, ArrowRight,
@@ -12,6 +13,7 @@ import {
   getDefaultFeatures, getDefaultTestimonials, getDefaultFAQs
 } from '@/lib/theme-utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { ThemeNavigation } from '../shared/ThemeNavigation';
 
 interface SMMStayHomepageProps {
   panelName?: string;
@@ -35,18 +37,32 @@ export const SMMStayHomepage = ({
 }: SMMStayHomepageProps) => {
   const navigate = useNavigate();
   
+  // Theme mode state - from customization or default to dark
+  const [themeMode, setThemeMode] = useState<'light' | 'dark'>(customization.themeMode || 'dark');
+  const isLightMode = themeMode === 'light';
+  
   // Theme defaults for SMMStay (neon pink/purple)
   const defaultPrimary = '#FF4081';
   const defaultSecondary = '#E040FB';
-  const defaultBg = '#000000';
-  const defaultSurface = '#0A0A0A';
+  const defaultBgDark = '#000000';
+  const defaultBgLight = '#FAFBFC';
+  const defaultSurfaceDark = '#0A0A0A';
+  const defaultSurfaceLight = '#FFFFFF';
 
   const primary = customization.primaryColor || defaultPrimary;
   const secondary = customization.secondaryColor || defaultSecondary;
-  const bgColor = customization.backgroundColor || defaultBg;
-  const textCol = customization.textColor || '#FFFFFF';
-  const surfaceColor = customization.surfaceColor || defaultSurface;
-  const mutedColor = customization.mutedColor || '#9CA3AF';
+  const bgColor = isLightMode 
+    ? (customization.backgroundColor || defaultBgLight) 
+    : (customization.backgroundColor || defaultBgDark);
+  const textCol = isLightMode 
+    ? (customization.textColor || '#1F2937') 
+    : (customization.textColor || '#FFFFFF');
+  const surfaceColor = isLightMode 
+    ? (customization.surfaceColor || defaultSurfaceLight) 
+    : (customization.surfaceColor || defaultSurfaceDark);
+  const mutedColor = isLightMode 
+    ? (customization.mutedColor || '#6B7280') 
+    : (customization.mutedColor || '#9CA3AF');
 
   // Typography
   const fontFamily = customization.fontFamily || 'Montserrat';
@@ -96,6 +112,11 @@ export const SMMStayHomepage = ({
     boxShadow: `0 0 30px ${primary}66`,
   };
 
+  // Theme mode change handler
+  const handleThemeModeChange = useCallback((mode: 'light' | 'dark') => {
+    setThemeMode(mode);
+  }, []);
+
   const platforms = [
     { name: 'Instagram', icon: Instagram, color: '#E4405F' },
     { name: 'YouTube', icon: Youtube, color: '#FF0000' },
@@ -135,45 +156,30 @@ export const SMMStayHomepage = ({
       </div>
 
       {/* Navigation */}
-      <header>
-        <nav className="relative z-50 py-4" style={{ borderBottom: `1px solid ${primary}33` }} aria-label="Main navigation">
-          <div className="mx-auto px-4 sm:px-6 lg:px-8" style={{ maxWidth: containerMax }}>
-            <div className="flex items-center justify-between">
-              <Link to="/" className="flex items-center gap-3" aria-label={`${companyName} home`}>
-                <div className="relative">
-                  {displayLogo ? (
-                    <img src={displayLogo} alt={companyName} className="w-10 h-10 rounded-lg object-contain" loading="eager" />
-                  ) : (
-                    <>
-                      <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: `linear-gradient(to bottom right, ${primary}, ${secondary})` }}>
-                        <Flame className="w-6 h-6 text-white" />
-                      </div>
-                      <div className="absolute inset-0 rounded-lg blur-lg opacity-50" style={{ backgroundColor: primary }} />
-                    </>
-                  )}
-                </div>
-                <span className="text-xl font-black uppercase tracking-wider">{companyName}</span>
-              </Link>
-
-              <div className="hidden md:flex items-center gap-6">
-                <Link to="/services" className="text-sm font-bold uppercase tracking-wider transition-colors" style={{ color: mutedColor }}>Services</Link>
-                <Link to="/orders" className="text-sm font-bold uppercase tracking-wider transition-colors" style={{ color: mutedColor }}>Orders</Link>
-                {showBlogInMenu && <Link to="/blog" className="text-sm font-bold uppercase tracking-wider transition-colors" style={{ color: mutedColor }}>Blog</Link>}
-                <Link to="/support" className="text-sm font-bold uppercase tracking-wider transition-colors" style={{ color: mutedColor }}>Support</Link>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Button variant="ghost" size="sm" asChild className="font-bold uppercase text-white hover:bg-white/10">
-                  <Link to="/auth">Login</Link>
-                </Button>
-                <Button size="sm" asChild className="font-black uppercase text-white shadow-lg hover:opacity-90" style={primaryButtonStyle}>
-                  <Link to="/auth?tab=signup">Join Now</Link>
-                </Button>
-              </div>
+      <ThemeNavigation
+        companyName={companyName}
+        logoUrl={displayLogo}
+        logoIcon={
+          <div className="relative">
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: `linear-gradient(to bottom right, ${primary}, ${secondary})` }}>
+              <Flame className="w-6 h-6 text-white" />
             </div>
+            <div className="absolute inset-0 rounded-lg blur-lg opacity-50" style={{ backgroundColor: primary }} />
           </div>
-        </nav>
-      </header>
+        }
+        showBlogInMenu={showBlogInMenu}
+        themeMode={themeMode}
+        onThemeModeChange={handleThemeModeChange}
+        containerMax={containerMax}
+        mutedColor={mutedColor}
+        primaryColor={primary}
+        textColor={textCol}
+        surfaceColor={surfaceColor}
+        bgColor={bgColor}
+        navStyle="neon"
+        primaryButtonStyle={primaryButtonStyle}
+        signupLabel="Join Now"
+      />
 
       <article>
         {/* Hero Section */}

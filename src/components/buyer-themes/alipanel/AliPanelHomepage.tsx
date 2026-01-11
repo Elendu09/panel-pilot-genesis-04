@@ -1,3 +1,4 @@
+import { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Sparkles, Zap, Shield, Users, Star, ArrowRight, CheckCircle, X,
@@ -13,6 +14,7 @@ import {
   getDefaultStats, getDefaultFeatures, getDefaultTestimonials, getDefaultFAQs
 } from '@/lib/theme-utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { ThemeNavigation } from '../shared/ThemeNavigation';
 
 interface AliPanelHomepageProps {
   panelName?: string;
@@ -36,21 +38,35 @@ export const AliPanelHomepage = ({
 }: AliPanelHomepageProps) => {
   const navigate = useNavigate();
   
+  // Theme mode state - from customization or default to dark
+  const [themeMode, setThemeMode] = useState<'light' | 'dark'>(customization.themeMode || 'dark');
+  const isLightMode = themeMode === 'light';
+  
   // Theme defaults for AliPanel (pink-orange gradient)
   const defaultPrimary = '#FF6B6B';
   const defaultSecondary = '#FF8E53';
   const defaultAccent = '#FFCC70';
-  const defaultBg = '#0A0A0A';
-  const defaultSurface = '#1A1A1A';
+  const defaultBgDark = '#0A0A0A';
+  const defaultBgLight = '#FAFBFC';
+  const defaultSurfaceDark = '#1A1A1A';
+  const defaultSurfaceLight = '#FFFFFF';
 
-  // Use customization colors or fallback to theme defaults
+  // Use customization colors with light/dark mode adjustments
   const primary = customization.primaryColor || defaultPrimary;
   const secondary = customization.secondaryColor || defaultSecondary;
   const accent = customization.accentColor || defaultAccent;
-  const bgColor = customization.backgroundColor || defaultBg;
-  const textCol = customization.textColor || '#FFFFFF';
-  const surfaceColor = customization.surfaceColor || defaultSurface;
-  const mutedColor = customization.mutedColor || '#A1A1AA';
+  const bgColor = isLightMode 
+    ? (customization.backgroundColor || defaultBgLight) 
+    : (customization.backgroundColor || defaultBgDark);
+  const textCol = isLightMode 
+    ? (customization.textColor || '#1F2937') 
+    : (customization.textColor || '#FFFFFF');
+  const surfaceColor = isLightMode 
+    ? (customization.surfaceColor || defaultSurfaceLight) 
+    : (customization.surfaceColor || defaultSurfaceDark);
+  const mutedColor = isLightMode 
+    ? (customization.mutedColor || '#6B7280') 
+    : (customization.mutedColor || '#A1A1AA');
 
   // Typography
   const fontFamily = customization.fontFamily || 'Poppins';
@@ -100,6 +116,11 @@ export const AliPanelHomepage = ({
   // Spacing
   const sectionPadding = customization.sectionPaddingY || 80;
   const containerMax = customization.containerMaxWidth || 1280;
+
+  // Theme mode change handler
+  const handleThemeModeChange = useCallback((mode: 'light' | 'dark') => {
+    setThemeMode(mode);
+  }, []);
 
   const floatingIcons = [
     { icon: Instagram, color: '#E4405F', delay: 0, x: -120, y: -80 },
@@ -153,43 +174,27 @@ export const AliPanelHomepage = ({
       </div>
 
       {/* Navigation */}
-      <header>
-        <nav className="relative z-50 py-4" aria-label="Main navigation">
-          <div className="mx-auto px-4 sm:px-6 lg:px-8" style={{ maxWidth: containerMax }}>
-            <div className="flex items-center justify-between">
-              <Link to="/" className="flex items-center gap-3" aria-label={`${companyName} home`}>
-                {displayLogo ? (
-                  <img src={displayLogo} alt={companyName} className="w-10 h-10 rounded-xl object-contain" loading="eager" />
-                ) : (
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg"
-                    style={{ background: `linear-gradient(to bottom right, ${primary}, ${secondary})`, boxShadow: `0 10px 25px -5px ${primary}4d` }}>
-                    <Sparkles className="w-6 h-6 text-white" />
-                  </div>
-                )}
-                <span className="text-xl font-bold" style={{ background: `linear-gradient(to right, ${primary}, ${accent})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontWeight: headingWeight }}>
-                  {companyName}
-                </span>
-              </Link>
-              
-              <div className="hidden md:flex items-center gap-8">
-                <Link to="/services" className="text-sm transition-colors font-medium" style={{ color: mutedColor }}>Services</Link>
-                <Link to="/orders" className="text-sm transition-colors font-medium" style={{ color: mutedColor }}>Orders</Link>
-                {showBlogInMenu && <Link to="/blog" className="text-sm transition-colors font-medium" style={{ color: mutedColor }}>Blog</Link>}
-                <Link to="/support" className="text-sm transition-colors font-medium" style={{ color: mutedColor }}>Support</Link>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Button variant="ghost" size="sm" asChild className="text-white hover:bg-white/10">
-                  <Link to="/auth">Login</Link>
-                </Button>
-                <Button size="sm" asChild className="text-white font-semibold shadow-lg hover:opacity-90" style={primaryButtonStyle}>
-                  <Link to="/auth?tab=signup">Get Started</Link>
-                </Button>
-              </div>
-            </div>
+      <ThemeNavigation
+        companyName={companyName}
+        logoUrl={displayLogo}
+        logoIcon={
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg"
+            style={{ background: `linear-gradient(to bottom right, ${primary}, ${secondary})`, boxShadow: `0 10px 25px -5px ${primary}4d` }}>
+            <Sparkles className="w-6 h-6 text-white" />
           </div>
-        </nav>
-      </header>
+        }
+        showBlogInMenu={showBlogInMenu}
+        themeMode={themeMode}
+        onThemeModeChange={handleThemeModeChange}
+        containerMax={containerMax}
+        mutedColor={mutedColor}
+        primaryColor={primary}
+        textColor={textCol}
+        surfaceColor={surfaceColor}
+        bgColor={bgColor}
+        primaryButtonStyle={primaryButtonStyle}
+        signupLabel="Get Started"
+      />
 
       <article>
         {/* Hero Section */}
