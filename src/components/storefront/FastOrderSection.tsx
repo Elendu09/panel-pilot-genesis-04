@@ -23,7 +23,7 @@ import {
   Zap, ArrowRight, ArrowLeft, Lock, Loader2, Mail, User, CheckCircle, Check, 
   ChevronRight, Instagram, Youtube, Send, Twitter, Facebook, Linkedin, 
   Music2, Globe, Copy, AlertTriangle, Eye, EyeOff, CreditCard, Wallet,
-  DollarSign, Sparkles, Star
+  DollarSign, Sparkles, Star, Users, Heart, MessageCircle, Share2, Bookmark, Play
 } from 'lucide-react';
 import { SOCIAL_ICONS_MAP, TikTokIcon } from '@/components/icons/SocialIcons';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -37,6 +37,7 @@ import { useUnifiedServices } from '@/hooks/useUnifiedServices';
 import { Confetti } from '@/components/effects/Confetti';
 import { useCategoryFilters } from '@/hooks/useCategoryFilters';
 import { SpeedGauge } from '@/components/buyer/SpeedGauge';
+import { detectServiceType } from '@/lib/service-icon-detection';
 
 interface Service {
   id: string;
@@ -62,6 +63,34 @@ const paymentMethods = [
   { id: 'paypal', name: 'PayPal', icon: Wallet, color: 'bg-gradient-to-br from-blue-600 to-indigo-600' },
   { id: 'crypto', name: 'Crypto', icon: DollarSign, color: 'bg-gradient-to-br from-orange-500 to-amber-500' },
 ];
+
+// Service type icons map
+const SERVICE_TYPE_ICONS: Record<string, any> = {
+  followers: Users,
+  subscribers: Users,
+  members: Users,
+  likes: Heart,
+  views: Eye,
+  plays: Play,
+  comments: MessageCircle,
+  shares: Share2,
+  saves: Bookmark,
+  general: Zap,
+};
+
+// Service type colors
+const SERVICE_TYPE_COLORS: Record<string, { bg: string; text: string }> = {
+  followers: { bg: 'bg-gradient-to-br from-blue-500 to-blue-600', text: 'text-blue-500' },
+  subscribers: { bg: 'bg-gradient-to-br from-red-500 to-red-600', text: 'text-red-500' },
+  members: { bg: 'bg-gradient-to-br from-purple-500 to-purple-600', text: 'text-purple-500' },
+  likes: { bg: 'bg-gradient-to-br from-pink-500 to-rose-500', text: 'text-pink-500' },
+  views: { bg: 'bg-gradient-to-br from-green-500 to-emerald-500', text: 'text-green-500' },
+  plays: { bg: 'bg-gradient-to-br from-orange-500 to-amber-500', text: 'text-orange-500' },
+  comments: { bg: 'bg-gradient-to-br from-cyan-500 to-teal-500', text: 'text-cyan-500' },
+  shares: { bg: 'bg-gradient-to-br from-indigo-500 to-violet-500', text: 'text-indigo-500' },
+  saves: { bg: 'bg-gradient-to-br from-yellow-500 to-amber-500', text: 'text-yellow-500' },
+  general: { bg: 'bg-gradient-to-br from-gray-500 to-gray-600', text: 'text-gray-500' },
+};
 
 export const FastOrderSection = ({ services, panelId, panelName, customization, onStepChange }: FastOrderSectionProps) => {
   // Safely access buyer auth context (may not be available in preview mode)
@@ -95,7 +124,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
     ? 'bg-blue-500 hover:bg-blue-600 shadow-lg shadow-blue-500/30'
     : 'bg-blue-500 hover:bg-blue-600 shadow-[0_0_20px_rgba(59,130,246,0.4)] hover:shadow-[0_0_28px_rgba(59,130,246,0.5)]';
   
-  // Step state (1-6: Categories, Service, Order, Review, Payment, Tracking)
+  // Step state (1-6: Network, Category, Service, Order, Payment, Tracking)
   const [currentStep, setCurrentStepInternal] = useState(1);
   
   // Wrapper to notify parent of step changes
@@ -104,7 +133,8 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
     onStepChange?.(step);
   };
   
-  // Order form state
+  // Order form state - 3-tier selection
+  const [selectedNetwork, setSelectedNetwork] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedServiceId, setSelectedServiceId] = useState<string>('');
   const [targetUrl, setTargetUrl] = useState('');
@@ -149,46 +179,95 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
     };
   }, []);
 
-  // Get unique categories from unified services (consistent ordering)
-  const categories = useMemo(() => {
-    if (unifiedCategories.length > 0) {
-      return unifiedCategories.map(cat => cat.slug);
-    }
-    // Fallback to extracting from services prop
-    const uniqueCats = [...new Set(services.map(s => s.category))];
-    return uniqueCats;
-  }, [unifiedCategories, services]);
+  // Tier 1: Get unique networks (platforms) from services
+  const networks = useMemo(() => {
+    const networkMap = new Map<string, { count: number }>();
+    services.forEach((s) => {
+      const network = s.category || 'other';
+      if (!networkMap.has(network)) {
+        networkMap.set(network, { count: 0 });
+      }
+      networkMap.get(network)!.count++;
+    });
+    
+    // Sort by count (most services first)
+    return Array.from(networkMap.entries())
+      .map(([id, data]) => ({
+        id,
+        ...hookGetCategoryData(id),
+        count: data.count,
+      }))
+      .sort((a, b) => b.count - a.count);
+  }, [services, hookGetCategoryData]);
   
-  // Get services for selected category
-  const categoryServices = selectedCategory 
-    ? services.filter(s => s.category === selectedCategory)
-    : [];
+  // Tier 2: Get categories (service types) for selected network
+  const categories = useMemo(() => {
+    if (!selectedNetwork) return [];
+    
+    const networkServices = services.filter(s => s.category === selectedNetwork);
+    const categoryMap = new Map<string, { count: number; services: Service[] }>();
+    
+    networkServices.forEach((s) => {
+      const serviceType = detectServiceType(s.name);
+      if (!categoryMap.has(serviceType)) {
+        categoryMap.set(serviceType, { count: 0, services: [] });
+      }
+      categoryMap.get(serviceType)!.count++;
+      categoryMap.get(serviceType)!.services.push(s);
+    });
+    
+    return Array.from(categoryMap.entries())
+      .map(([type, data]) => ({
+        id: type,
+        name: type.charAt(0).toUpperCase() + type.slice(1),
+        icon: SERVICE_TYPE_ICONS[type] || Zap,
+        colors: SERVICE_TYPE_COLORS[type] || SERVICE_TYPE_COLORS.general,
+        count: data.count,
+        services: data.services,
+      }))
+      .sort((a, b) => b.count - a.count);
+  }, [selectedNetwork, services]);
+  
+  // Tier 3: Get services for selected category
+  const categoryServices = useMemo(() => {
+    if (!selectedCategory) return [];
+    const category = categories.find(c => c.id === selectedCategory);
+    return category?.services || [];
+  }, [selectedCategory, categories]);
   
   const selectedService = services.find(s => s.id === selectedServiceId);
   const totalPrice = selectedService ? (selectedService.price * quantity) / 1000 : 0;
 
-  const getCategoryIcon = (category: string) => {
-    return hookGetCategoryData(category.toLowerCase());
-  };
-
   // Quantity presets
   const quantityPresets = [100, 500, 1000, 5000, 10000];
 
-  // Handle category selection
-  const handleCategorySelect = (category: string) => {
-    setSelectedCategory(category);
+  // Get selected network data for display
+  const selectedNetworkData = selectedNetwork ? hookGetCategoryData(selectedNetwork) : null;
+  const selectedCategoryData = selectedCategory ? categories.find(c => c.id === selectedCategory) : null;
+
+  // Handle network selection (Tier 1)
+  const handleNetworkSelect = (network: string) => {
+    setSelectedNetwork(network);
+    setSelectedCategory('');
     setSelectedServiceId('');
     setCurrentStep(2);
   };
 
-  // Handle service selection
+  // Handle category selection (Tier 2)
+  const handleCategorySelect = (category: string) => {
+    setSelectedCategory(category);
+    setSelectedServiceId('');
+    setCurrentStep(3);
+  };
+
+  // Handle service selection (Tier 3)
   const handleServiceSelect = (serviceId: string) => {
     setSelectedServiceId(serviceId);
     const service = services.find(s => s.id === serviceId);
     if (service?.min_quantity) {
       setQuantity(service.min_quantity);
     }
-    setCurrentStep(3);
+    setCurrentStep(4);
   };
 
   // Handle details confirmed
@@ -197,7 +276,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
       toast({ title: "Please enter a link", variant: "destructive" });
       return;
     }
-    setCurrentStep(4);
+    setCurrentStep(5); // Go directly to payment (no review step)
   };
 
   // Generate username for guest signup
@@ -353,6 +432,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
     if (!buyer) {
       // Save order state to localStorage before showing guest modal
       localStorage.setItem('fast_order_pending', JSON.stringify({
+        networkId: selectedNetwork,
         categoryId: selectedCategory,
         serviceId: selectedServiceId,
         quantity,
@@ -374,6 +454,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
           const data = JSON.parse(pending);
           const service = services.find(s => s.id === data.serviceId);
           if (service) {
+            setSelectedNetwork(data.networkId);
             setSelectedCategory(data.categoryId);
             setSelectedServiceId(data.serviceId);
             setQuantity(data.quantity || 1000);
@@ -404,7 +485,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
         description: "Please select a service again",
         variant: "destructive" 
       });
-      setCurrentStep(2);
+      setCurrentStep(3);
       return;
     }
 
@@ -500,16 +581,22 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
 
   // Back navigation
   const handleBack = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
+    if (currentStep === 2) {
+      setSelectedNetwork('');
+      setCurrentStep(1);
+    } else if (currentStep === 3) {
+      setSelectedCategory('');
+      setCurrentStep(2);
+    } else if (currentStep === 4) {
+      setSelectedServiceId('');
+      setCurrentStep(3);
+    } else if (currentStep === 5) {
+      setCurrentStep(4);
     }
   };
 
-  // Get category data for display
-  const selectedCategoryData = selectedCategory ? getCategoryIcon(selectedCategory) : null;
-
   // Show empty state if no services available
-  if (services.length === 0 || categories.length === 0) {
+  if (services.length === 0 || networks.length === 0) {
     return (
       <section className="flex-1 flex items-center justify-center p-4">
         <motion.div
@@ -570,16 +657,16 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                     )}
                   >
                     <ArrowLeft className="w-4 h-4" />
-                    {currentStep === 2 && 'Back to Categories'}
-                    {currentStep === 3 && 'Back to Services'}
-                    {currentStep === 4 && 'Back to Order'}
-                    {currentStep === 5 && 'Back to Review'}
+                    {currentStep === 2 && 'Back to Networks'}
+                    {currentStep === 3 && 'Back to Categories'}
+                    {currentStep === 4 && 'Back to Services'}
+                    {currentStep === 5 && 'Back to Order'}
                   </Button>
                 </motion.div>
               )}
 
               <AnimatePresence mode="wait">
-                {/* Step 1: Select Category */}
+                {/* Step 1: Select Network (Platform) */}
                 {currentStep === 1 && (
                   <motion.div
                     key="step1"
@@ -601,7 +688,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                         "text-xl sm:text-2xl font-bold mb-2 tracking-tight",
                         themeMode === 'dark' ? 'text-foreground' : 'text-gray-900'
                       )}>
-                        Select a Platform
+                        Select a Network
                       </h3>
                       <p className={cn(
                         "text-sm",
@@ -611,23 +698,21 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                       </p>
                     </div>
                     
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                      {categories.map((category, index) => {
-                        const categoryData = getCategoryIcon(category);
-                        const CategoryIcon = categoryData.icon;
-                        const serviceCount = services.filter(s => s.category === category).length;
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-3">
+                      {networks.map((network, index) => {
+                        const NetworkIcon = network.icon;
                         
                         return (
                           <motion.button
-                            key={category}
+                            key={network.id}
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.05 }}
+                            transition={{ delay: index * 0.03 }}
                             whileHover={{ scale: 1.03, y: -4 }}
                             whileTap={{ scale: 0.97 }}
-                            onClick={() => handleCategorySelect(category)}
+                            onClick={() => handleNetworkSelect(network.id)}
                             className={cn(
-                              "relative flex flex-col items-center gap-3 p-4 rounded-2xl border transition-all duration-300 group overflow-hidden",
+                              "relative flex flex-col items-center gap-2 sm:gap-3 p-3 sm:p-4 rounded-xl sm:rounded-2xl border transition-all duration-300 group overflow-hidden",
                               themeMode === 'dark'
                                 ? "border-gray-700 bg-gray-800/60 hover:bg-gray-800 hover:border-blue-500/50"
                                 : "border-gray-200 bg-white hover:bg-blue-50/50 hover:border-blue-400 shadow-sm hover:shadow-lg hover:shadow-blue-500/10"
@@ -636,28 +721,28 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                             {/* Glow effect on hover */}
                             <div className={cn(
                               "absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300",
-                              categoryData.bgColor,
+                              network.bgColor,
                               "blur-2xl"
                             )} style={{ opacity: 0.1 }} />
                             
                             <div className={cn(
-                              "relative p-3.5 rounded-xl shadow-lg transition-transform group-hover:scale-110",
-                              categoryData.bgColor
+                              "relative p-2.5 sm:p-3.5 rounded-lg sm:rounded-xl shadow-lg transition-transform group-hover:scale-110",
+                              network.bgColor
                             )}>
-                              <CategoryIcon className="w-6 h-6 text-white" size={24} />
+                              <NetworkIcon className="w-5 h-5 sm:w-6 sm:h-6 text-white" size={24} />
                             </div>
                             <div className="text-center relative">
                               <span className={cn(
-                                "text-sm font-semibold capitalize block tracking-tight",
+                                "text-xs sm:text-sm font-semibold capitalize block tracking-tight",
                                 themeMode === 'dark' ? 'text-foreground' : 'text-gray-900'
                               )}>
-                                {category}
+                                {network.label}
                               </span>
                               <span className={cn(
-                                "text-xs",
+                                "text-[10px] sm:text-xs",
                                 themeMode === 'dark' ? 'text-muted-foreground' : 'text-gray-600'
                               )}>
-                                {serviceCount} service{serviceCount !== 1 ? 's' : ''}
+                                {network.count} service{network.count !== 1 ? 's' : ''}
                               </span>
                             </div>
                           </motion.button>
@@ -667,7 +752,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                   </motion.div>
                 )}
 
-                {/* Step 2: Select Service */}
+                {/* Step 2: Select Category (Service Type) */}
                 {currentStep === 2 && (
                   <motion.div
                     key="step2"
@@ -686,13 +771,108 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                         Step 2 of 6
                       </Badge>
                       
-                      {/* Category Icon Display */}
-                      {selectedCategoryData && (
+                      {/* Network Icon Display */}
+                      {selectedNetworkData && (
                         <div className="flex items-center justify-center gap-2 mb-3">
-                          <div className={cn("p-2 rounded-lg", selectedCategoryData.bgColor)}>
-                            <selectedCategoryData.icon className="w-5 h-5 text-white" size={20} />
+                          <div className={cn("p-2 rounded-lg", selectedNetworkData.bgColor)}>
+                            <selectedNetworkData.icon className="w-5 h-5 text-white" size={20} />
                           </div>
-                          <span className="capitalize font-semibold text-blue-500">{selectedCategory}</span>
+                          <span className="capitalize font-semibold text-blue-500">{selectedNetworkData.label}</span>
+                        </div>
+                      )}
+                      
+                      <h3 className={cn(
+                        "text-xl sm:text-2xl font-bold mb-2 tracking-tight",
+                        themeMode === 'dark' ? 'text-foreground' : 'text-gray-900'
+                      )}>
+                        Select a Category
+                      </h3>
+                      <p className={cn(
+                        "text-sm",
+                        themeMode === 'dark' ? 'text-muted-foreground' : 'text-gray-600'
+                      )}>
+                        Choose the type of service you need
+                      </p>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
+                      {categories.map((category, index) => {
+                        const CategoryIcon = category.icon;
+                        
+                        return (
+                          <motion.button
+                            key={category.id}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: index * 0.05 }}
+                            whileHover={{ scale: 1.03, y: -4 }}
+                            whileTap={{ scale: 0.97 }}
+                            onClick={() => handleCategorySelect(category.id)}
+                            className={cn(
+                              "relative flex flex-col items-center gap-2 sm:gap-3 p-3 sm:p-4 rounded-xl sm:rounded-2xl border transition-all duration-300 group overflow-hidden",
+                              themeMode === 'dark'
+                                ? "border-gray-700 bg-gray-800/60 hover:bg-gray-800 hover:border-blue-500/50"
+                                : "border-gray-200 bg-white hover:bg-blue-50/50 hover:border-blue-400 shadow-sm hover:shadow-lg hover:shadow-blue-500/10"
+                            )}
+                          >
+                            <div className={cn(
+                              "relative p-2.5 sm:p-3 rounded-lg sm:rounded-xl shadow-lg transition-transform group-hover:scale-110",
+                              category.colors.bg
+                            )}>
+                              <CategoryIcon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                            </div>
+                            <div className="text-center relative">
+                              <span className={cn(
+                                "text-xs sm:text-sm font-semibold capitalize block tracking-tight",
+                                themeMode === 'dark' ? 'text-foreground' : 'text-gray-900'
+                              )}>
+                                {category.name}
+                              </span>
+                              <span className={cn(
+                                "text-[10px] sm:text-xs",
+                                themeMode === 'dark' ? 'text-muted-foreground' : 'text-gray-600'
+                              )}>
+                                {category.count} service{category.count !== 1 ? 's' : ''}
+                              </span>
+                            </div>
+                          </motion.button>
+                        );
+                      })}
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Step 3: Select Service */}
+                {currentStep === 3 && (
+                  <motion.div
+                    key="step3"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    className="space-y-6"
+                  >
+                    <div className="text-center">
+                      <Badge className={cn(
+                        "mb-3 font-semibold",
+                        themeMode === 'dark' 
+                          ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' 
+                          : 'bg-blue-50 text-blue-600 border-blue-200'
+                      )}>
+                        Step 3 of 6
+                      </Badge>
+                      
+                      {/* Network + Category Display */}
+                      {selectedNetworkData && selectedCategoryData && (
+                        <div className="flex items-center justify-center gap-2 mb-3 flex-wrap">
+                          <div className={cn("p-1.5 rounded-lg", selectedNetworkData.bgColor)}>
+                            <selectedNetworkData.icon className="w-4 h-4 text-white" size={16} />
+                          </div>
+                          <span className="text-sm font-medium text-muted-foreground">{selectedNetworkData.label}</span>
+                          <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                          <div className={cn("p-1.5 rounded-lg", selectedCategoryData.colors.bg)}>
+                            <selectedCategoryData.icon className="w-4 h-4 text-white" />
+                          </div>
+                          <span className="text-sm font-medium text-blue-500">{selectedCategoryData.name}</span>
                         </div>
                       )}
                       
@@ -743,7 +923,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                     </Select>
                     
                     {/* Quick service buttons */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                       {categoryServices.slice(0, 4).map((service, index) => (
                         <motion.button
                           key={service.id}
@@ -754,7 +934,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                           whileTap={{ scale: 0.98 }}
                           onClick={() => handleServiceSelect(service.id)}
                           className={cn(
-                            "p-4 rounded-xl border text-left transition-all",
+                            "p-3 sm:p-4 rounded-xl border text-left transition-all",
                             selectedServiceId === service.id
                               ? themeMode === 'dark'
                                 ? "border-blue-500 bg-blue-500/10 ring-1 ring-blue-500/30"
@@ -765,7 +945,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                           )}
                         >
                           <div className="flex justify-between items-start mb-2">
-                            <span className="text-xl font-bold tabular-nums text-blue-500">
+                            <span className="text-lg sm:text-xl font-bold tabular-nums text-blue-500">
                               ${service.price.toFixed(4)}
                             </span>
                             {selectedServiceId === service.id && (
@@ -783,11 +963,11 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                               ID: {service.provider_service_id || service.id?.slice(0, 6)}
                             </Badge>
                           </div>
-                          <p className="text-sm line-clamp-2" style={{ color: textMuted }}>
+                          <p className="text-xs sm:text-sm line-clamp-2" style={{ color: textMuted }}>
                             {service.name}
                           </p>
                           <div className="flex items-center justify-between mt-1">
-                            <p className="text-xs" style={{ color: textMuted }}>
+                            <p className="text-[10px] sm:text-xs" style={{ color: textMuted }}>
                               Min: {service.min_quantity || 100}
                             </p>
                             <SpeedGauge 
@@ -803,138 +983,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                   </motion.div>
                 )}
 
-                {/* Step 3: Enter Order Details */}
-                {currentStep === 3 && (
-                  <motion.div
-                    key="step3"
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20 }}
-                    className="space-y-6"
-                  >
-                    <div className="text-center">
-                      <Badge className={cn(
-                        "mb-3 font-semibold",
-                        themeMode === 'dark' 
-                          ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' 
-                          : 'bg-blue-50 text-blue-600 border-blue-200'
-                      )}>
-                        Step 3 of 6
-                      </Badge>
-                      
-                      {/* Category Icon Display */}
-                      {selectedCategoryData && (
-                        <div className="flex items-center justify-center gap-2 mb-3">
-                          <div className={cn("p-2 rounded-lg", selectedCategoryData.bgColor)}>
-                            <selectedCategoryData.icon className="w-5 h-5 text-white" size={20} />
-                          </div>
-                        </div>
-                      )}
-                      
-                      <h3 className={cn(
-                        "text-xl sm:text-2xl font-bold mb-2 tracking-tight",
-                        themeMode === 'dark' ? 'text-foreground' : 'text-gray-900'
-                      )}>
-                        Order Details
-                      </h3>
-                      <p className={cn(
-                        "text-sm truncate max-w-xs mx-auto",
-                        themeMode === 'dark' ? 'text-muted-foreground' : 'text-gray-600'
-                      )}>
-                        {selectedService?.name}
-                      </p>
-                    </div>
-                    
-                    {/* Target URL */}
-                    <div className="space-y-2">
-                      <Label className={cn("font-semibold", themeMode === 'dark' ? 'text-foreground' : 'text-gray-900')}>Link / Username *</Label>
-                      <Input
-                        placeholder="https://instagram.com/yourprofile"
-                        value={targetUrl}
-                        onChange={(e) => setTargetUrl(e.target.value)}
-                        className={cn("h-12 rounded-xl", inputBg)}
-                      />
-                    </div>
-
-                    {/* Quantity */}
-                    <div className="space-y-2">
-                      <Label className={cn("font-semibold", themeMode === 'dark' ? 'text-foreground' : 'text-gray-900')}>Quantity</Label>
-                      <div className="flex flex-wrap gap-2 mb-2">
-                        {quantityPresets.map((preset) => (
-                          <Button
-                            key={preset}
-                            type="button"
-                            variant={quantity === preset ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setQuantity(preset)}
-                            className={cn(
-                              "min-w-[60px] rounded-lg font-semibold tabular-nums",
-                              quantity === preset && "bg-blue-500 hover:bg-blue-600"
-                            )}
-                          >
-                            {preset >= 1000 ? `${preset / 1000}K` : preset}
-                          </Button>
-                        ))}
-                      </div>
-                      <Input
-                        type="number"
-                        value={quantity}
-                        onChange={(e) => setQuantity(parseInt(e.target.value) || 0)}
-                        min={selectedService?.min_quantity || 100}
-                        max={selectedService?.max_quantity || 100000}
-                        className={cn("rounded-xl tabular-nums", inputBg)}
-                      />
-                      {selectedService && (
-                        <p className="text-xs" style={{ color: textMuted }}>
-                          Min: {selectedService.min_quantity || 100} | Max: {(selectedService.max_quantity || 10000).toLocaleString()}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Price Preview */}
-                    <div className={cn(
-                      "p-5 rounded-2xl border",
-                      themeMode === 'dark' 
-                        ? "bg-gradient-to-br from-blue-500/10 to-purple-500/10 border-blue-500/20" 
-                        : "bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 shadow-lg shadow-blue-500/10"
-                    )}>
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <span className={cn(
-                            "text-xs uppercase tracking-wider font-semibold",
-                            themeMode === 'dark' ? 'text-muted-foreground' : 'text-gray-500'
-                          )}>
-                            Estimated Total
-                          </span>
-                          <div className="flex items-baseline gap-1 mt-1">
-                            <span className="text-2xl sm:text-3xl font-bold tabular-nums text-blue-500">
-                              ${totalPrice.toFixed(2)}
-                            </span>
-                            <span className={cn("text-sm", themeMode === 'dark' ? 'text-muted-foreground' : 'text-gray-500')}>USD</span>
-                          </div>
-                        </div>
-                        <Sparkles className={cn(
-                          "w-8 h-8",
-                          themeMode === 'dark' ? 'text-blue-400' : 'text-blue-500'
-                        )} />
-                      </div>
-                    </div>
-
-                    <Button
-                      className={cn(
-                        "w-full h-12 gap-2 rounded-xl font-semibold text-base text-white transition-all",
-                        glowButtonClass
-                      )}
-                      onClick={handleDetailsConfirmed}
-                      disabled={!targetUrl.trim()}
-                    >
-                      Continue to Review
-                      <ArrowRight className="w-4 h-4" />
-                    </Button>
-                  </motion.div>
-                )}
-
-                {/* Step 4: Review Order */}
+                {/* Step 4: Enter Order Details */}
                 {currentStep === 4 && (
                   <motion.div
                     key="step4"
@@ -952,106 +1001,122 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                       )}>
                         Step 4 of 6
                       </Badge>
+                      
+                      {/* Network + Category + Service breadcrumb */}
+                      {selectedNetworkData && selectedCategoryData && (
+                        <div className="flex items-center justify-center gap-1.5 mb-3 flex-wrap text-xs">
+                          <div className={cn("p-1 rounded", selectedNetworkData.bgColor)}>
+                            <selectedNetworkData.icon className="w-3 h-3 text-white" size={12} />
+                          </div>
+                          <span className="text-muted-foreground">{selectedNetworkData.label}</span>
+                          <ChevronRight className="w-3 h-3 text-muted-foreground" />
+                          <span className="text-muted-foreground">{selectedCategoryData.name}</span>
+                        </div>
+                      )}
+                      
                       <h3 className={cn(
                         "text-xl sm:text-2xl font-bold mb-2 tracking-tight",
                         themeMode === 'dark' ? 'text-foreground' : 'text-gray-900'
                       )}>
-                        Review Your Order
+                        Order Details
                       </h3>
                       <p className={cn(
-                        "text-sm",
+                        "text-xs sm:text-sm truncate max-w-xs mx-auto",
                         themeMode === 'dark' ? 'text-muted-foreground' : 'text-gray-600'
                       )}>
-                        Confirm your order details
+                        {selectedService?.name}
                       </p>
                     </div>
                     
-                    {/* Order Summary */}
+                    {/* Target URL */}
+                    <div className="space-y-2">
+                      <Label className={cn("font-semibold text-sm", themeMode === 'dark' ? 'text-foreground' : 'text-gray-900')}>Link / Username *</Label>
+                      <Input
+                        placeholder="https://instagram.com/yourprofile"
+                        value={targetUrl}
+                        onChange={(e) => setTargetUrl(e.target.value)}
+                        className={cn("h-11 sm:h-12 rounded-xl text-sm", inputBg)}
+                      />
+                    </div>
+
+                    {/* Quantity */}
+                    <div className="space-y-2">
+                      <Label className={cn("font-semibold text-sm", themeMode === 'dark' ? 'text-foreground' : 'text-gray-900')}>Quantity</Label>
+                      <div className="flex flex-wrap gap-1.5 sm:gap-2 mb-2">
+                        {quantityPresets.map((preset) => (
+                          <Button
+                            key={preset}
+                            type="button"
+                            variant={quantity === preset ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setQuantity(preset)}
+                            className={cn(
+                              "min-w-[50px] sm:min-w-[60px] rounded-lg font-semibold tabular-nums text-xs sm:text-sm h-8 sm:h-9",
+                              quantity === preset && "bg-blue-500 hover:bg-blue-600"
+                            )}
+                          >
+                            {preset >= 1000 ? `${preset / 1000}K` : preset}
+                          </Button>
+                        ))}
+                      </div>
+                      <Input
+                        type="number"
+                        value={quantity}
+                        onChange={(e) => setQuantity(parseInt(e.target.value) || 0)}
+                        min={selectedService?.min_quantity || 100}
+                        max={selectedService?.max_quantity || 100000}
+                        className={cn("rounded-xl tabular-nums text-sm", inputBg)}
+                      />
+                      {selectedService && (
+                        <p className="text-[10px] sm:text-xs" style={{ color: textMuted }}>
+                          Min: {selectedService.min_quantity || 100} | Max: {(selectedService.max_quantity || 10000).toLocaleString()}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Price Preview */}
                     <div className={cn(
-                      "p-5 rounded-2xl border space-y-4",
+                      "p-4 sm:p-5 rounded-2xl border",
                       themeMode === 'dark' 
-                        ? "bg-gray-800/60 border-gray-700" 
-                        : "bg-gray-50 border-gray-200 shadow-sm"
+                        ? "bg-gradient-to-br from-blue-500/10 to-purple-500/10 border-blue-500/20" 
+                        : "bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 shadow-lg shadow-blue-500/10"
                     )}>
-                      {/* Category & Service with Icon */}
-                      <div className="flex items-start gap-3">
-                        {selectedCategoryData && (
-                          <div className={cn("p-2.5 rounded-xl shrink-0", selectedCategoryData.bgColor)}>
-                            <selectedCategoryData.icon className="w-5 h-5 text-white" size={20} />
-                          </div>
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <span className="text-xs uppercase tracking-wider font-semibold" style={{ color: textMuted }}>
-                            Service
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <span className={cn(
+                            "text-[10px] sm:text-xs uppercase tracking-wider font-semibold",
+                            themeMode === 'dark' ? 'text-muted-foreground' : 'text-gray-500'
+                          )}>
+                            Estimated Total
                           </span>
-                          <p className="font-semibold truncate" style={{ color: textColor }}>
-                            {selectedService?.name}
-                          </p>
-                          <p className="text-sm capitalize" style={{ color: textMuted }}>
-                            {selectedCategory}
-                          </p>
+                          <div className="flex items-baseline gap-1 mt-1">
+                            <span className="text-2xl sm:text-3xl font-bold tabular-nums text-blue-500">
+                              ${totalPrice.toFixed(2)}
+                            </span>
+                            <span className={cn("text-xs sm:text-sm", themeMode === 'dark' ? 'text-muted-foreground' : 'text-gray-500')}>USD</span>
+                          </div>
                         </div>
-                      </div>
-                      
-                      <div className={cn(
-                        "h-px",
-                        themeMode === 'dark' ? 'bg-gray-700' : 'bg-gray-200'
-                      )} />
-                      
-                      <div className="flex justify-between items-start">
-                        <span style={{ color: textMuted }}>Link</span>
-                        <span className="text-right font-medium max-w-[200px] truncate text-blue-500">
-                          {targetUrl}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span style={{ color: textMuted }}>Quantity</span>
-                        <span className="font-semibold tabular-nums" style={{ color: textColor }}>
-                          {quantity.toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span style={{ color: textMuted }}>Price per 1K</span>
-                        <span className="font-medium tabular-nums" style={{ color: textColor }}>
-                          ${selectedService?.price.toFixed(4)}
-                        </span>
-                      </div>
-                      
-                      <div className={cn(
-                        "pt-4 border-t border-dashed flex justify-between items-center",
-                        themeMode === 'dark' ? 'border-gray-600' : 'border-gray-300'
-                      )}>
-                        <span className="font-semibold" style={{ color: textColor }}>Total</span>
-                        <span className="text-3xl font-bold tabular-nums text-blue-500">${totalPrice.toFixed(2)}</span>
+                        <Sparkles className={cn(
+                          "w-6 h-6 sm:w-8 sm:h-8",
+                          themeMode === 'dark' ? 'text-blue-400' : 'text-blue-500'
+                        )} />
                       </div>
                     </div>
 
                     <Button
                       className={cn(
-                        "w-full h-12 gap-2 rounded-xl font-semibold text-base text-white transition-all",
+                        "w-full h-11 sm:h-12 gap-2 rounded-xl font-semibold text-sm sm:text-base text-white transition-all",
                         glowButtonClass
                       )}
-                      size="lg"
-                      onClick={handlePlaceOrder}
-                      disabled={isOrdering}
+                      onClick={handleDetailsConfirmed}
+                      disabled={!targetUrl.trim()}
                     >
-                      {isOrdering ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : buyer ? (
-                        <>
-                          Continue to Payment
-                          <ArrowRight className="w-4 h-4" />
-                        </>
-                      ) : (
-                        <>
-                          <Lock className="w-4 h-4" />
-                          Checkout
-                        </>
-                      )}
+                      {buyer ? 'Continue to Payment' : 'Checkout'}
+                      <ArrowRight className="w-4 h-4" />
                     </Button>
                     
                     {!buyer && (
-                      <p className="text-xs text-center" style={{ color: textMuted }}>
+                      <p className="text-[10px] sm:text-xs text-center" style={{ color: textMuted }}>
                         Quick signup - no password required to get started
                       </p>
                     )}
@@ -1076,40 +1141,56 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                       )}>
                         Step 5 of 6
                       </Badge>
-                      <h3 className="text-2xl font-bold mb-2 tracking-tight" style={{ color: textColor }}>
+                      <h3 className="text-xl sm:text-2xl font-bold mb-2 tracking-tight" style={{ color: textColor }}>
                         Complete Payment
                       </h3>
-                      <p className="text-sm" style={{ color: textMuted }}>
+                      <p className="text-xs sm:text-sm" style={{ color: textMuted }}>
                         Select a payment method to complete your order
                       </p>
                     </div>
 
-                    {/* Order Total */}
+                    {/* Order Summary */}
                     <div className={cn(
-                      "p-5 rounded-2xl border text-center",
+                      "p-4 sm:p-5 rounded-2xl border",
                       themeMode === 'dark' 
                         ? "bg-gradient-to-br from-green-500/10 to-emerald-500/10 border-green-500/20" 
                         : "bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 shadow-lg shadow-green-500/10"
                     )}>
-                      <p className="text-xs uppercase tracking-wider font-semibold mb-1" style={{ color: textMuted }}>
-                        Order Total
-                      </p>
-                      <p className="text-4xl font-bold tabular-nums text-green-500">${totalPrice.toFixed(2)}</p>
-                      <div className="flex items-center justify-center gap-2 mt-3">
-                        {selectedCategoryData && (
-                          <div className={cn("p-1.5 rounded-lg", selectedCategoryData.bgColor)}>
-                            <selectedCategoryData.icon className="w-4 h-4 text-white" size={16} />
-                          </div>
-                        )}
-                        <p className="text-xs" style={{ color: textMuted }}>
-                          {selectedService?.name} • {quantity.toLocaleString()} units
+                      <div className="text-center mb-3">
+                        <p className="text-[10px] sm:text-xs uppercase tracking-wider font-semibold mb-1" style={{ color: textMuted }}>
+                          Order Total
                         </p>
+                        <p className="text-3xl sm:text-4xl font-bold tabular-nums text-green-500">${totalPrice.toFixed(2)}</p>
+                      </div>
+                      
+                      <div className={cn(
+                        "pt-3 border-t space-y-2 text-xs sm:text-sm",
+                        themeMode === 'dark' ? 'border-green-500/20' : 'border-green-200'
+                      )}>
+                        <div className="flex justify-between">
+                          <span style={{ color: textMuted }}>Service</span>
+                          <span className="font-medium truncate max-w-[180px] sm:max-w-[220px]" style={{ color: textColor }}>
+                            {selectedService?.name}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span style={{ color: textMuted }}>Quantity</span>
+                          <span className="font-semibold tabular-nums" style={{ color: textColor }}>
+                            {quantity.toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span style={{ color: textMuted }}>Link</span>
+                          <span className="font-medium truncate max-w-[180px] sm:max-w-[220px] text-blue-500">
+                            {targetUrl}
+                          </span>
+                        </div>
                       </div>
                     </div>
 
                     {/* Payment Methods */}
-                    <div className="space-y-3">
-                      <Label className="font-semibold" style={{ color: textColor }}>Payment Method</Label>
+                    <div className="space-y-2 sm:space-y-3">
+                      <Label className="font-semibold text-sm" style={{ color: textColor }}>Payment Method</Label>
                       {paymentMethods.map((method, index) => {
                         const MethodIcon = method.icon;
                         return (
@@ -1122,7 +1203,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                             whileTap={{ scale: 0.99 }}
                             onClick={() => setSelectedPaymentMethod(method.id)}
                             className={cn(
-                              "w-full flex items-center gap-4 p-4 rounded-xl border transition-all",
+                              "w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border transition-all",
                               selectedPaymentMethod === method.id
                                 ? themeMode === 'dark'
                                   ? "border-blue-500 bg-blue-500/10 ring-1 ring-blue-500/30"
@@ -1132,10 +1213,10 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                                   : "border-gray-200 bg-white hover:border-blue-400 hover:shadow-md"
                             )}
                           >
-                            <div className={cn("p-2.5 rounded-xl shadow-lg", method.color)}>
-                              <MethodIcon className="w-5 h-5 text-white" />
+                            <div className={cn("p-2 sm:p-2.5 rounded-lg sm:rounded-xl shadow-lg", method.color)}>
+                              <MethodIcon className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                             </div>
-                            <span className="font-semibold" style={{ color: textColor }}>
+                            <span className="font-semibold text-sm sm:text-base" style={{ color: textColor }}>
                               {method.name}
                             </span>
                             {selectedPaymentMethod === method.id && (
@@ -1158,7 +1239,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                         "p-3 rounded-xl border",
                         themeMode === 'dark' ? "bg-gray-800/50 border-gray-700" : "bg-gray-50 border-gray-200"
                       )}>
-                        <div className="flex justify-between text-sm">
+                        <div className="flex justify-between text-xs sm:text-sm">
                           <span style={{ color: textMuted }}>Your Balance:</span>
                           <span className="font-semibold tabular-nums" style={{ color: textColor }}>
                             ${(buyer.balance || 0).toFixed(2)}
@@ -1170,13 +1251,13 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                     {/* Pay Button with glow in light mode */}
                     <Button
                       className={cn(
-                        "w-full h-14 gap-2 text-lg rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 font-semibold text-white transition-all",
+                        "w-full h-12 sm:h-14 gap-2 text-base sm:text-lg rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 font-semibold text-white transition-all",
                         themeMode === 'dark' 
                           ? "shadow-lg shadow-green-500/25"
                           : "shadow-[0_0_24px_rgba(34,197,94,0.4)] hover:shadow-[0_0_32px_rgba(34,197,94,0.5)]"
                       )}
                       size="lg"
-                      onClick={handleProcessPayment}
+                      onClick={buyer ? handleProcessPayment : handlePlaceOrder}
                       disabled={isProcessingPayment}
                     >
                       {isProcessingPayment ? (
@@ -1184,15 +1265,20 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                           <Loader2 className="w-5 h-5 animate-spin" />
                           Processing...
                         </>
-                      ) : (
+                      ) : buyer ? (
                         <>
                           <Lock className="w-5 h-5" />
                           Pay ${totalPrice.toFixed(2)} Now
                         </>
+                      ) : (
+                        <>
+                          <Lock className="w-5 h-5" />
+                          Checkout ${totalPrice.toFixed(2)}
+                        </>
                       )}
                     </Button>
 
-                    <p className="text-xs text-center flex items-center justify-center gap-1.5" style={{ color: textMuted }}>
+                    <p className="text-[10px] sm:text-xs text-center flex items-center justify-center gap-1.5" style={{ color: textMuted }}>
                       <Lock className="w-3 h-3" />
                       Secure payment • Order will be processed immediately
                     </p>
@@ -1215,6 +1301,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                       onTrackAnother={() => {
                         // Reset all state for new order
                         setCurrentStep(1);
+                        setSelectedNetwork('');
                         setSelectedCategory('');
                         setSelectedServiceId('');
                         setTargetUrl('');
