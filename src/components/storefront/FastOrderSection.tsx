@@ -24,7 +24,7 @@ import {
   Zap, ArrowRight, ArrowLeft, Lock, Loader2, Mail, User, CheckCircle, Check, 
   ChevronRight, Instagram, Youtube, Send, Twitter, Facebook, Linkedin, 
   Music2, Globe, Copy, AlertTriangle, Eye, EyeOff, CreditCard, Wallet,
-  DollarSign, Sparkles, Star, Users, Heart, MessageCircle, Share2, Bookmark, Play, Shield
+  DollarSign, Sparkles, Star, Users, Heart, MessageCircle, Share2, Bookmark, Play, Shield, Search
 } from 'lucide-react';
 import { SOCIAL_ICONS_MAP, TikTokIcon } from '@/components/icons/SocialIcons';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -175,6 +175,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
   const [showPassword, setShowPassword] = useState(false);
   const [modalStep, setModalStep] = useState<'email' | 'credentials' | 'login'>('email');
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [serviceSearch, setServiceSearch] = useState('');
 
   // Fetch real payment methods from panel settings
   useEffect(() => {
@@ -295,8 +296,18 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
   const categoryServices = useMemo(() => {
     if (!selectedCategory) return [];
     const category = categories.find(c => c.id === selectedCategory);
-    return category?.services || [];
-  }, [selectedCategory, categories]);
+    const allServices = category?.services || [];
+    
+    // Filter by search if provided
+    if (serviceSearch.trim()) {
+      const search = serviceSearch.toLowerCase();
+      return allServices.filter(s => 
+        s.name.toLowerCase().includes(search) ||
+        (s.provider_service_id || '').toLowerCase().includes(search)
+      );
+    }
+    return allServices;
+  }, [selectedCategory, categories, serviceSearch]);
   
   const selectedService = services.find(s => s.id === selectedServiceId);
   const totalPrice = selectedService ? (selectedService.price * quantity) / 1000 : 0;
@@ -931,37 +942,16 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                       </p>
                     </div>
                     
-                    <Select value={selectedServiceId} onValueChange={handleServiceSelect}>
-                      <SelectTrigger className={cn("h-12 sm:h-14 text-left rounded-xl", inputBg)}>
-                        <SelectValue placeholder="Select a service..." />
-                      </SelectTrigger>
-                      <SelectContent className="max-h-[60vh] bg-background border shadow-lg z-50">
-                        {categoryServices.map((service) => (
-                          <SelectItem key={service.id} value={service.id} className="py-3">
-                            <div className="flex flex-col max-w-[280px] sm:max-w-none">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="font-medium text-sm truncate">{service.name}</span>
-                                <Badge variant="secondary" className="text-[9px] font-mono px-1 py-0 h-4 shrink-0">
-                                  ID: {service.provider_service_id || service.id?.slice(0, 6)}
-                                </Badge>
-                              </div>
-                              <div className="flex items-center gap-2 mt-1">
-                                <span className="text-xs text-muted-foreground">
-                                  ${service.price.toFixed(4)}/1K • Min: {service.min_quantity || 100}
-                                </span>
-                                <SpeedGauge 
-                                  estimatedTime={(service as any).average_time || (service as any).averageTime} 
-                                  compact 
-                                  size="sm"
-                                  showEstimatedTime={false}
-                                  className="shrink-0 ml-auto"
-                                />
-                              </div>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    {/* Search filter for services */}
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search services..."
+                        value={serviceSearch}
+                        onChange={(e) => setServiceSearch(e.target.value)}
+                        className={cn("pl-9 h-10 rounded-xl", inputBg)}
+                      />
+                    </div>
                     
                     {/* All services in scrollable compact grid */}
                     <ScrollArea className="h-[240px] sm:h-[300px] pr-2">
