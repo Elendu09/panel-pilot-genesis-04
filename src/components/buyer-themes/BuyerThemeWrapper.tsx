@@ -199,7 +199,7 @@ export const BuyerThemeWrapper = ({
   // Generate CSS variables for theme colors
   const themeCSS = useMemo(() => {
     if (!customization.primaryColor) return '';
-    return generateBuyerThemeCSS({
+    const css = generateBuyerThemeCSS({
       primaryColor: customization.primaryColor,
       secondaryColor: customization.secondaryColor || '#8B5CF6',
       accentColor: customization.accentColor || '#EC4899',
@@ -214,6 +214,13 @@ export const BuyerThemeWrapper = ({
       infoColor: customization.infoColor || '#3B82F6',
       errorColor: customization.errorColor || '#EF4444',
     });
+    
+    // Cache theme CSS for instant load on next visit
+    try {
+      localStorage.setItem('panel_theme_css', css);
+    } catch (e) {}
+    
+    return css;
   }, [customization]);
 
   const contextValue = useMemo(() => ({
