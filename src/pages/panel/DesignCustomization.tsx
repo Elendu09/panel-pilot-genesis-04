@@ -258,6 +258,7 @@ const defaultCustomization = {
   
   // Theme
   selectedTheme: 'dark_gradient',
+  themeMode: 'dark' as 'dark' | 'light',
 
   // UI helpers
   newPresetName: '',
@@ -1111,6 +1112,8 @@ export default function DesignCustomization() {
     setCustomization(prev => ({
       ...prev,
       ...preset.customization,
+      // Ensure selectedTheme is updated from preset if it has one
+      selectedTheme: preset.customization.selectedTheme || prev.selectedTheme,
     }));
     setHasUnsavedChanges(true);
     toast({ title: `Applied "${preset.name}" preset` });
@@ -1508,6 +1511,23 @@ export default function DesignCustomization() {
       case 'colors':
         return (
           <div className="space-y-3">
+            {/* Theme Mode Toggle */}
+            <div className="flex items-center justify-between p-3 rounded-lg bg-accent/30">
+              <div className="flex items-center gap-2">
+                {customization.themeMode === 'light' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                <span className="font-medium">Theme Mode</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">
+                  {customization.themeMode === 'light' ? 'Light' : 'Dark'}
+                </span>
+                <Switch 
+                  checked={customization.themeMode === 'light'} 
+                  onCheckedChange={(checked) => updateCustomization('themeMode', checked ? 'light' : 'dark')} 
+                />
+              </div>
+            </div>
+            
             {['primaryColor', 'secondaryColor', 'backgroundColor', 'textColor'].map(key => (
               <div key={key} className="flex items-center gap-3">
                 <input 
