@@ -252,6 +252,7 @@ const defaultCustomization = {
   ] as FAQ[],
   
   // Footer
+  enableFooter: true,
   footerAbout: '',
   footerText: '',
   socialLinks: { facebook: '', twitter: '', instagram: '', telegram: '', discord: '' },
@@ -3147,6 +3148,17 @@ export default function DesignCustomization() {
                   {/* Footer Section */}
                   {section.id === 'footer' && (
                     <div className="space-y-4">
+                      {/* Enable/Disable Footer Toggle */}
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-accent/30">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-sm">Show Footer</span>
+                          <span className="text-xs text-muted-foreground">(Toggle footer visibility on homepage)</span>
+                        </div>
+                        <Switch 
+                          checked={customization.enableFooter !== false} 
+                          onCheckedChange={(checked) => updateCustomization('enableFooter', checked)} 
+                        />
+                      </div>
                       <div>
                         <Label>Footer About Text</Label>
                         <Textarea 

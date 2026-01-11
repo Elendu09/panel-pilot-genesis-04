@@ -93,6 +93,7 @@ export interface ThemeCustomization {
   faqs?: FAQ[];
   
   // Footer
+  enableFooter?: boolean;
   footerAbout?: string;
   footerText?: string;
   socialLinks?: SocialLinks;
