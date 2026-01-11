@@ -141,7 +141,11 @@ const BuyerTerms = () => {
   const scrollToSection = (id: string) => {
     const el = sectionRefs.current[id];
     if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // Calculate offset accounting for sticky header and mobile TOC
+      const isMobile = window.innerWidth < 1024;
+      const offset = isMobile ? 180 : 100;
+      const y = el.getBoundingClientRect().top + window.scrollY - offset;
+      window.scrollTo({ top: y, behavior: 'smooth' });
     }
   };
 

@@ -42,7 +42,8 @@ export const LegalTableOfContents = ({
 
     const element = document.getElementById(id);
     if (element) {
-      const offset = 100; // Account for sticky header
+      // Use different offset for mobile (accounts for sticky header + TOC)
+      const offset = isMobile ? 180 : 100;
       const y = element.getBoundingClientRect().top + window.scrollY - offset;
       window.scrollTo({ top: y, behavior: "smooth" });
     }

@@ -20,10 +20,11 @@ import {
   Layers,
   ChevronDown,
   ChevronUp,
-  List
+  List,
+  ArrowUp
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 // Feature categories with all features
@@ -203,7 +204,21 @@ export default function Features() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeSection, setActiveSection] = useState("user-panel");
   const [isMobileTocOpen, setIsMobileTocOpen] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
   const sectionRefs = useRef<Map<string, HTMLElement>>(new Map());
+
+  // Track scroll position for scroll-to-top button
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 500);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   // Filter features based on search
   const filteredCategories = useMemo(() => {
@@ -428,6 +443,26 @@ export default function Features() {
           </aside>
         </div>
       </div>
+
+      {/* Scroll to Top Button */}
+      <AnimatePresence>
+        {showScrollTop && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            className="fixed bottom-6 right-6 z-50"
+          >
+            <Button
+              onClick={scrollToTop}
+              size="icon"
+              className="h-12 w-12 rounded-full shadow-lg bg-primary hover:bg-primary/90"
+            >
+              <ArrowUp className="h-5 w-5" />
+            </Button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <Footer />
     </div>
