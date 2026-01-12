@@ -40,11 +40,16 @@ export const LegalTableOfContents = ({
       history.replaceState(null, '', `#${id}`);
     }
 
-    // Let parent handler do the scrolling (avoids double-scroll conflicts)
-    onSectionClick(id);
-    
-    // Close mobile TOC after clicking
-    if (isMobile) setIsExpanded(false);
+    // Close mobile TOC first, then scroll after collapse
+    if (isMobile) {
+      setIsExpanded(false);
+      // Small delay to let TOC collapse before scrolling
+      setTimeout(() => {
+        onSectionClick(id);
+      }, 50);
+    } else {
+      onSectionClick(id);
+    }
   };
 
   const tocTitle = t('legal.table_of_contents') || 'Table of Contents';
