@@ -13,7 +13,7 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Save, ExternalLink, Smartphone, Tablet, Monitor, ChevronDown, Palette, Image, Layout, Zap, BarChart3, HelpCircle, MessageSquare, Loader2, Sparkles, Settings, Users, Star, Plus, Trash2, GripVertical, Shield, Headphones, Award, Clock, ShoppingCart, TrendingUp, CheckCircle, Heart, ThumbsUp, Undo2, Redo2, Wand2, Type, Maximize, Layers, MousePointer, Code, ChevronRight, Info, Sun, Moon, RotateCcw } from 'lucide-react';
+import { Save, ExternalLink, Smartphone, Tablet, Monitor, ChevronDown, Palette, Image, Layout, Zap, BarChart3, HelpCircle, MessageSquare, Loader2, Sparkles, Settings, Users, Star, Plus, Trash2, GripVertical, Shield, Headphones, Award, Clock, ShoppingCart, TrendingUp, CheckCircle, Heart, ThumbsUp, Undo2, Redo2, Wand2, Type, Maximize, Layers, MousePointer, Code, ChevronRight, Info, Sun, Moon, RotateCcw, Navigation, BookOpen, Facebook, Twitter, Instagram, Send, Youtube, Music, Linkedin, MessageCircle } from 'lucide-react';
 import { ImageUpload } from '@/components/panel/ImageUpload';
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
@@ -253,9 +253,27 @@ const defaultCustomization = {
   
   // Footer
   enableFooter: true,
-  footerAbout: '',
-  footerText: '',
-  socialLinks: { facebook: '', twitter: '', instagram: '', telegram: '', discord: '' },
+  footerAbout: 'Professional social media marketing services with high-quality results.',
+  footerText: '© 2025 {companyName}. All rights reserved.',
+  socialLinks: { facebook: '', twitter: '', instagram: '', telegram: '', discord: '', youtube: '', tiktok: '', linkedin: '', whatsapp: '' },
+  
+  // Mode-specific colors
+  darkModeColors: {
+    backgroundColor: '#0F172A',
+    surfaceColor: '#1E293B',
+    cardColor: '#1E293B',
+    textColor: '#FFFFFF',
+    mutedColor: '#94A3B8',
+    borderColor: '#334155',
+  },
+  lightModeColors: {
+    backgroundColor: '#FAFBFC',
+    surfaceColor: '#FFFFFF',
+    cardColor: '#FFFFFF',
+    textColor: '#1F2937',
+    mutedColor: '#6B7280',
+    borderColor: '#E5E7EB',
+  },
   
   // Theme
   selectedTheme: 'dark_gradient',
@@ -2082,6 +2100,7 @@ export default function DesignCustomization() {
     { id: 'animations', title: 'Animations', icon: Sparkles },
     { id: 'backgrounds', title: 'Background', icon: Layers },
     { id: 'buttons', title: 'Button Styles', icon: MousePointer },
+    { id: 'header', title: 'Header & Navigation', icon: Navigation },
     { id: 'hero', title: 'Hero Section', icon: Layout },
     { id: 'platform', title: 'Platform Features', icon: Zap },
     { id: 'stats', title: 'Statistics', icon: BarChart3 },
@@ -3185,7 +3204,7 @@ export default function DesignCustomization() {
                       <div>
                         <Label>Footer About Text</Label>
                         <Textarea 
-                          value={customization.footerAbout} 
+                          value={customization.footerAbout || 'Professional social media marketing services with high-quality results.'} 
                           onChange={(e) => updateCustomization('footerAbout', e.target.value)} 
                           rows={2}
                           placeholder="Brief description of your panel..."
@@ -3194,21 +3213,65 @@ export default function DesignCustomization() {
                       <div>
                         <Label>Copyright Text</Label>
                         <Input 
-                          value={customization.footerText} 
+                          value={customization.footerText || `© ${new Date().getFullYear()} ${customization.companyName || 'Your Panel'}. All rights reserved.`} 
                           onChange={(e) => updateCustomization('footerText', e.target.value)} 
-                          placeholder="© 2024 Your Panel. All rights reserved."
+                          placeholder="© 2025 Your Panel. All rights reserved."
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">Use {'{companyName}'} to auto-insert your panel name</p>
+                      </div>
+                      <div className="space-y-3">
+                        <Label className="flex items-center gap-2">
+                          Social Media Links
+                          <span className="text-xs text-muted-foreground">(Add URLs to display in footer)</span>
+                        </Label>
+                        {[
+                          { id: 'instagram', label: 'Instagram URL', icon: Instagram, placeholder: 'https://instagram.com/yourpanel' },
+                          { id: 'facebook', label: 'Facebook URL', icon: Facebook, placeholder: 'https://facebook.com/yourpanel' },
+                          { id: 'twitter', label: 'Twitter/X URL', icon: Twitter, placeholder: 'https://x.com/yourpanel' },
+                          { id: 'youtube', label: 'YouTube URL', icon: Youtube, placeholder: 'https://youtube.com/@yourpanel' },
+                          { id: 'tiktok', label: 'TikTok URL', icon: Music, placeholder: 'https://tiktok.com/@yourpanel' },
+                          { id: 'telegram', label: 'Telegram URL', icon: Send, placeholder: 'https://t.me/yourpanel' },
+                          { id: 'discord', label: 'Discord URL', icon: MessageCircle, placeholder: 'https://discord.gg/yourpanel' },
+                          { id: 'linkedin', label: 'LinkedIn URL', icon: Linkedin, placeholder: 'https://linkedin.com/company/yourpanel' },
+                          { id: 'whatsapp', label: 'WhatsApp URL', icon: MessageSquare, placeholder: 'https://wa.me/1234567890' },
+                        ].map(social => (
+                          <div key={social.id} className="flex items-center gap-2">
+                            <div className="p-2 rounded-lg bg-muted/50">
+                              <social.icon className="w-4 h-4 text-muted-foreground" />
+                            </div>
+                            <Input
+                              className="flex-1"
+                              placeholder={social.placeholder}
+                              value={(customization.socialLinks as any)?.[social.id] || ''}
+                              onChange={(e) => updateCustomization('socialLinks', { ...customization.socialLinks, [social.id]: e.target.value })}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Header Section - NEW */}
+                  {section.id === 'header' && (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-accent/30">
+                        <div className="flex items-center gap-2">
+                          <BookOpen className="w-4 h-4 text-primary" />
+                          <span className="font-medium text-sm">Show Blog in Menu</span>
+                        </div>
+                        <Switch 
+                          checked={customization.showBlogInMenu === true} 
+                          onCheckedChange={(checked) => updateCustomization('showBlogInMenu', checked)} 
                         />
                       </div>
-                      <div className="space-y-2">
-                        <Label>Social Links</Label>
-                        {['facebook', 'twitter', 'instagram', 'telegram', 'discord'].map(social => (
-                          <Input
-                            key={social}
-                            placeholder={`${social.charAt(0).toUpperCase() + social.slice(1)} URL`}
-                            value={(customization.socialLinks as any)?.[social] || ''}
-                            onChange={(e) => updateCustomization('socialLinks', { ...customization.socialLinks, [social]: e.target.value })}
-                          />
-                        ))}
+                      <p className="text-xs text-muted-foreground">
+                        When enabled, a "Blog" link will appear in the navigation menu on your storefront. Make sure you have blog posts published.
+                      </p>
+                      
+                      <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                        <p className="text-sm">
+                          💡 <strong>Tip:</strong> The header navigation automatically shows "Dashboard" and "Sign Out" buttons when a customer is logged in, and "Login" / "Sign Up" buttons for guests.
+                        </p>
                       </div>
                     </div>
                   )}

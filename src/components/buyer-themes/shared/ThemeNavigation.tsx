@@ -1,9 +1,10 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useContext } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Sun, Moon } from 'lucide-react';
+import { Menu, X, Sun, Moon, LayoutDashboard, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { BuyerAuthContext } from '@/contexts/BuyerAuthContext';
 
 interface ThemeNavigationProps {
   companyName: string;
@@ -45,6 +46,12 @@ export const ThemeNavigation = ({
   navLinks,
 }: ThemeNavigationProps) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const navigate = useNavigate();
+  
+  // Try to get buyer auth context - may not be available in preview mode
+  const buyerAuthContext = useContext(BuyerAuthContext);
+  const buyer = buyerAuthContext?.buyer || null;
+  const signOut = buyerAuthContext?.signOut;
   
   const isLight = themeMode === 'light';
   
@@ -59,6 +66,11 @@ export const ThemeNavigation = ({
 
   const toggleTheme = () => {
     onThemeModeChange?.(isLight ? 'dark' : 'light');
+  };
+
+  const handleSignOut = () => {
+    signOut?.();
+    navigate('/');
   };
 
   const navBgStyle = navStyle === 'floating' 
@@ -136,35 +148,73 @@ export const ThemeNavigation = ({
                 )}
               </Button>
               
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                asChild 
-                className={cn(
-                  "font-medium hover:bg-white/10",
-                  navStyle === 'terminal' ? 'font-mono' : '',
-                  navStyle === 'neon' ? 'uppercase font-bold' : ''
-                )}
-                style={{ color: textColor }}
-              >
-                <Link to="/auth">
-                  {navStyle === 'terminal' ? '> login' : loginLabel}
-                </Link>
-              </Button>
-              <Button 
-                size="sm" 
-                asChild 
-                className={cn(
-                  "font-semibold shadow-lg hover:opacity-90",
-                  navStyle === 'terminal' ? 'font-mono font-bold' : '',
-                  navStyle === 'neon' ? 'uppercase font-black' : ''
-                )}
-                style={{ ...primaryButtonStyle, color: navStyle === 'terminal' ? bgColor : 'white' }}
-              >
-                <Link to="/auth?tab=signup">
-                  {navStyle === 'terminal' ? '> register' : signupLabel}
-                </Link>
-              </Button>
+              {buyer ? (
+                // Logged-in user: Show Dashboard & Sign Out
+                <>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    asChild 
+                    className={cn(
+                      "font-medium hover:bg-white/10",
+                      navStyle === 'terminal' ? 'font-mono' : '',
+                      navStyle === 'neon' ? 'uppercase font-bold' : ''
+                    )}
+                    style={{ color: textColor }}
+                  >
+                    <Link to="/dashboard" className="flex items-center gap-2">
+                      <LayoutDashboard className="w-4 h-4" />
+                      {navStyle === 'terminal' ? '> dashboard' : 'Dashboard'}
+                    </Link>
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    onClick={handleSignOut}
+                    className={cn(
+                      "font-semibold shadow-lg hover:opacity-90",
+                      navStyle === 'terminal' ? 'font-mono font-bold' : '',
+                      navStyle === 'neon' ? 'uppercase font-black' : ''
+                    )}
+                    style={{ ...primaryButtonStyle, color: navStyle === 'terminal' ? bgColor : 'white' }}
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    {navStyle === 'terminal' ? '> logout' : 'Sign Out'}
+                  </Button>
+                </>
+              ) : (
+                // Not logged in: Show Login & Sign Up
+                <>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    asChild 
+                    className={cn(
+                      "font-medium hover:bg-white/10",
+                      navStyle === 'terminal' ? 'font-mono' : '',
+                      navStyle === 'neon' ? 'uppercase font-bold' : ''
+                    )}
+                    style={{ color: textColor }}
+                  >
+                    <Link to="/auth">
+                      {navStyle === 'terminal' ? '> login' : loginLabel}
+                    </Link>
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    asChild 
+                    className={cn(
+                      "font-semibold shadow-lg hover:opacity-90",
+                      navStyle === 'terminal' ? 'font-mono font-bold' : '',
+                      navStyle === 'neon' ? 'uppercase font-black' : ''
+                    )}
+                    style={{ ...primaryButtonStyle, color: navStyle === 'terminal' ? bgColor : 'white' }}
+                  >
+                    <Link to="/auth?tab=signup">
+                      {navStyle === 'terminal' ? '> register' : signupLabel}
+                    </Link>
+                  </Button>
+                </>
+              )}
             </div>
 
             {/* Mobile Menu Button */}
@@ -230,33 +280,72 @@ export const ThemeNavigation = ({
                 ))}
                 
                 <div className="pt-4 border-t space-y-2" style={{ borderColor: `${primaryColor}1a` }}>
-                  <Button 
-                    variant="ghost" 
-                    asChild 
-                    className={cn(
-                      "w-full justify-center font-medium",
-                      navStyle === 'terminal' ? 'font-mono' : '',
-                      navStyle === 'neon' ? 'uppercase font-bold' : ''
-                    )}
-                    style={{ color: textColor }}
-                  >
-                    <Link to="/auth" onClick={() => setMobileMenuOpen(false)}>
-                      {navStyle === 'terminal' ? '> login' : loginLabel}
-                    </Link>
-                  </Button>
-                  <Button 
-                    asChild 
-                    className={cn(
-                      "w-full justify-center font-semibold shadow-lg",
-                      navStyle === 'terminal' ? 'font-mono font-bold' : '',
-                      navStyle === 'neon' ? 'uppercase font-black' : ''
-                    )}
-                    style={{ ...primaryButtonStyle, color: navStyle === 'terminal' ? bgColor : 'white' }}
-                  >
-                    <Link to="/auth?tab=signup" onClick={() => setMobileMenuOpen(false)}>
-                      {navStyle === 'terminal' ? '> register' : signupLabel}
-                    </Link>
-                  </Button>
+                  {buyer ? (
+                    // Logged-in user mobile buttons
+                    <>
+                      <Button 
+                        variant="ghost" 
+                        asChild 
+                        className={cn(
+                          "w-full justify-center font-medium",
+                          navStyle === 'terminal' ? 'font-mono' : '',
+                          navStyle === 'neon' ? 'uppercase font-bold' : ''
+                        )}
+                        style={{ color: textColor }}
+                      >
+                        <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2">
+                          <LayoutDashboard className="w-4 h-4" />
+                          {navStyle === 'terminal' ? '> dashboard' : 'Dashboard'}
+                        </Link>
+                      </Button>
+                      <Button 
+                        onClick={() => {
+                          handleSignOut();
+                          setMobileMenuOpen(false);
+                        }}
+                        className={cn(
+                          "w-full justify-center font-semibold shadow-lg",
+                          navStyle === 'terminal' ? 'font-mono font-bold' : '',
+                          navStyle === 'neon' ? 'uppercase font-black' : ''
+                        )}
+                        style={{ ...primaryButtonStyle, color: navStyle === 'terminal' ? bgColor : 'white' }}
+                      >
+                        <LogOut className="w-4 h-4 mr-2" />
+                        {navStyle === 'terminal' ? '> logout' : 'Sign Out'}
+                      </Button>
+                    </>
+                  ) : (
+                    // Not logged in mobile buttons
+                    <>
+                      <Button 
+                        variant="ghost" 
+                        asChild 
+                        className={cn(
+                          "w-full justify-center font-medium",
+                          navStyle === 'terminal' ? 'font-mono' : '',
+                          navStyle === 'neon' ? 'uppercase font-bold' : ''
+                        )}
+                        style={{ color: textColor }}
+                      >
+                        <Link to="/auth" onClick={() => setMobileMenuOpen(false)}>
+                          {navStyle === 'terminal' ? '> login' : loginLabel}
+                        </Link>
+                      </Button>
+                      <Button 
+                        asChild 
+                        className={cn(
+                          "w-full justify-center font-semibold shadow-lg",
+                          navStyle === 'terminal' ? 'font-mono font-bold' : '',
+                          navStyle === 'neon' ? 'uppercase font-black' : ''
+                        )}
+                        style={{ ...primaryButtonStyle, color: navStyle === 'terminal' ? bgColor : 'white' }}
+                      >
+                        <Link to="/auth?tab=signup" onClick={() => setMobileMenuOpen(false)}>
+                          {navStyle === 'terminal' ? '> register' : signupLabel}
+                        </Link>
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
             </motion.div>
