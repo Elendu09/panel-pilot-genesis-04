@@ -10,7 +10,8 @@ import { Helmet } from 'react-helmet-async';
 import { ThemeCustomization } from '@/types/theme-customization';
 import { 
   getButtonStyles, getHoverScale, getLucideIcon,
-  getDefaultFeatures, getDefaultTestimonials, getDefaultFAQs
+  getDefaultFeatures, getDefaultTestimonials, getDefaultFAQs,
+  getModeColors, getGlowBoxStyle
 } from '@/lib/theme-utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { ThemeNavigation } from '../shared/ThemeNavigation';
@@ -44,25 +45,27 @@ export const SMMVisitHomepage = ({
   // Theme defaults for SMMVisit (yellow/gold on light)
   const defaultPrimary = '#FFD700';
   const defaultSecondary = '#FFC107';
-  const defaultBgLight = '#F5F5F5';
-  const defaultBgDark = '#1A1A1A';
-  const defaultSurfaceLight = '#FFFFFF';
-  const defaultSurfaceDark = '#262626';
+
+  // SMMVisit theme color defaults
+  const themeDefaults = {
+    lightBg: '#F5F5F5',
+    darkBg: '#1A1A1A',
+    lightSurface: '#FFFFFF',
+    darkSurface: '#262626',
+    lightText: '#1A1A1A',
+    darkText: '#FFFFFF',
+    lightMuted: '#6B7280',
+    darkMuted: '#9CA3AF',
+    lightBorder: '#E5E7EB',
+    darkBorder: '#333333',
+  };
 
   const primary = customization.primaryColor || defaultPrimary;
   const secondary = customization.secondaryColor || defaultSecondary;
-  const bgColor = isLightMode 
-    ? (customization.backgroundColor || defaultBgLight) 
-    : (customization.backgroundColor || defaultBgDark);
-  const textCol = isLightMode 
-    ? (customization.textColor || '#1A1A1A') 
-    : (customization.textColor || '#FFFFFF');
-  const surfaceColor = isLightMode 
-    ? (customization.surfaceColor || defaultSurfaceLight) 
-    : (customization.surfaceColor || defaultSurfaceDark);
-  const mutedColor = isLightMode 
-    ? (customization.mutedColor || '#6B7280') 
-    : (customization.mutedColor || '#9CA3AF');
+  
+  // Get mode-specific colors
+  const modeColors = getModeColors(customization, isLightMode, themeDefaults);
+  const { backgroundColor: bgColor, surfaceColor, textColor: textCol, mutedColor } = modeColors;
 
   // Typography
   const fontFamily = customization.fontFamily || 'Inter';
@@ -173,6 +176,16 @@ export const SMMVisitHomepage = ({
               <h1 className="text-4xl md:text-5xl lg:text-6xl mb-6" style={{ fontWeight: headingWeight }}>
                 {heroTitle}
                 <span style={{ background: `linear-gradient(to right, ${primary}, ${secondary})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}> Social Media</span>
+                {customization.heroAnimatedTextStyle === 'glow-box' && (
+                  <motion.span 
+                    className="ml-2 inline-block"
+                    style={getGlowBoxStyle(customization, primary)}
+                    animate={{ boxShadow: [`0 0 20px ${primary}50`, `0 0 30px ${primary}70`, `0 0 20px ${primary}50`] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  >
+                    Today
+                  </motion.span>
+                )}
               </h1>
               <p className="text-lg mb-8 max-w-2xl mx-auto" style={{ color: mutedColor }}>{heroSubtitle}</p>
               

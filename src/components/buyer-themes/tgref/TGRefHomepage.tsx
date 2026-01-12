@@ -11,7 +11,8 @@ import { ThemeCustomization } from '@/types/theme-customization';
 import { 
   getAnimationVariants, getContainerVariants, getItemVariants,
   getButtonStyles, getHoverScale, getLucideIcon,
-  getDefaultStats, getDefaultFeatures, getDefaultTestimonials, getDefaultFAQs
+  getDefaultStats, getDefaultFeatures, getDefaultTestimonials, getDefaultFAQs,
+  getModeColors, getGlowBoxStyle
 } from '@/lib/theme-utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { ThemeNavigation } from '../shared/ThemeNavigation';
@@ -46,26 +47,28 @@ export const TGRefHomepage = ({
   const defaultPrimary = '#00D4AA';
   const defaultSecondary = '#0EA5E9';
   const defaultAccent = '#7C3AED';
-  const defaultBgDark = '#1A1B26';
-  const defaultBgLight = '#F8FAFC';
-  const defaultSurfaceDark = '#0D0E14';
-  const defaultSurfaceLight = '#FFFFFF';
+
+  // TGRef theme color defaults
+  const themeDefaults = {
+    lightBg: '#F8FAFC',
+    darkBg: '#1A1B26',
+    lightSurface: '#FFFFFF',
+    darkSurface: '#0D0E14',
+    lightText: '#1F2937',
+    darkText: '#FFFFFF',
+    lightMuted: '#6B7280',
+    darkMuted: '#9CA3AF',
+    lightBorder: '#E5E7EB',
+    darkBorder: '#2D2E3A',
+  };
 
   const primary = customization.primaryColor || defaultPrimary;
   const secondary = customization.secondaryColor || defaultSecondary;
   const accent = customization.accentColor || defaultAccent;
-  const bgColor = isLightMode 
-    ? (customization.backgroundColor || defaultBgLight) 
-    : (customization.backgroundColor || defaultBgDark);
-  const textCol = isLightMode 
-    ? (customization.textColor || '#1F2937') 
-    : (customization.textColor || '#FFFFFF');
-  const surfaceColor = isLightMode 
-    ? (customization.surfaceColor || defaultSurfaceLight) 
-    : (customization.surfaceColor || defaultSurfaceDark);
-  const mutedColor = isLightMode 
-    ? (customization.mutedColor || '#6B7280') 
-    : (customization.mutedColor || '#9CA3AF');
+  
+  // Get mode-specific colors
+  const modeColors = getModeColors(customization, isLightMode, themeDefaults);
+  const { backgroundColor: bgColor, surfaceColor, textColor: textCol, mutedColor } = modeColors;
 
   // Typography - TGRef prefers monospace
   const fontFamily = customization.fontFamily || 'mono';
@@ -203,8 +206,16 @@ export const TGRefHomepage = ({
                 <span style={{ background: `linear-gradient(to right, ${primary}, ${secondary}, ${accent})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                   {heroTitle}
                 </span>
-                <br />
-                <span>Made Simple</span>
+                {customization.heroAnimatedTextStyle === 'glow-box' && (
+                  <motion.span 
+                    className="ml-2"
+                    style={getGlowBoxStyle(customization, primary)}
+                    animate={{ boxShadow: [`0 0 20px ${primary}50`, `0 0 30px ${primary}70`, `0 0 20px ${primary}50`] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  >
+                    Now
+                  </motion.span>
+                )}
                 <span className="animate-pulse" style={{ color: primary }}>_</span>
               </h1>
 

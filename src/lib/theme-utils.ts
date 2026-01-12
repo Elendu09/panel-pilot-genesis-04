@@ -1,5 +1,5 @@
 // Theme utility functions for generating dynamic styles from customization
-import { ThemeCustomization } from '@/types/theme-customization';
+import { ThemeCustomization, ModeColorPalette } from '@/types/theme-customization';
 import { 
   Zap, Shield, Users, Star, Clock, Globe, Award, TrendingUp, 
   CheckCircle, Heart, DollarSign, BarChart3, Sparkles, Rocket,
@@ -323,4 +323,87 @@ export const getSocialLinks = (socialLinks: Record<string, any> | undefined): So
       };
     })
     .filter((link): link is SocialLinkData => link !== null && link.enabled && !!link.url);
+};
+
+// Get mode-specific colors based on current theme mode
+export interface ModeColors {
+  backgroundColor: string;
+  surfaceColor: string;
+  cardColor: string;
+  textColor: string;
+  mutedColor: string;
+  borderColor: string;
+}
+
+export const getModeColors = (
+  customization: ThemeCustomization,
+  isLightMode: boolean,
+  themeDefaults: {
+    lightBg: string;
+    darkBg: string;
+    lightSurface: string;
+    darkSurface: string;
+    lightText: string;
+    darkText: string;
+    lightMuted: string;
+    darkMuted: string;
+    lightBorder: string;
+    darkBorder: string;
+  }
+): ModeColors => {
+  // First check mode-specific palettes from customization
+  const modePalette = isLightMode ? customization.lightModeColors : customization.darkModeColors;
+  
+  if (modePalette) {
+    return {
+      backgroundColor: modePalette.backgroundColor || (isLightMode ? themeDefaults.lightBg : themeDefaults.darkBg),
+      surfaceColor: modePalette.surfaceColor || (isLightMode ? themeDefaults.lightSurface : themeDefaults.darkSurface),
+      cardColor: modePalette.cardColor || modePalette.surfaceColor || (isLightMode ? themeDefaults.lightSurface : themeDefaults.darkSurface),
+      textColor: modePalette.textColor || (isLightMode ? themeDefaults.lightText : themeDefaults.darkText),
+      mutedColor: modePalette.mutedColor || (isLightMode ? themeDefaults.lightMuted : themeDefaults.darkMuted),
+      borderColor: modePalette.borderColor || (isLightMode ? themeDefaults.lightBorder : themeDefaults.darkBorder),
+    };
+  }
+  
+  // Fall back to shared/legacy colors or theme defaults
+  return {
+    backgroundColor: customization.backgroundColor || (isLightMode ? themeDefaults.lightBg : themeDefaults.darkBg),
+    surfaceColor: customization.surfaceColor || (isLightMode ? themeDefaults.lightSurface : themeDefaults.darkSurface),
+    cardColor: customization.cardColor || customization.surfaceColor || (isLightMode ? themeDefaults.lightSurface : themeDefaults.darkSurface),
+    textColor: customization.textColor || (isLightMode ? themeDefaults.lightText : themeDefaults.darkText),
+    mutedColor: customization.mutedColor || (isLightMode ? themeDefaults.lightMuted : themeDefaults.darkMuted),
+    borderColor: customization.borderColor || (isLightMode ? themeDefaults.lightBorder : themeDefaults.darkBorder),
+  };
+};
+
+// Get glow box style for animated text
+export const getGlowBoxStyle = (
+  customization: ThemeCustomization,
+  primaryColor: string
+): React.CSSProperties => {
+  const style = customization.heroAnimatedTextStyle || 'plain';
+  
+  if (style === 'glow-box') {
+    return {
+      display: 'inline-block',
+      padding: '0.25rem 1rem',
+      border: `2px solid ${primaryColor}`,
+      borderRadius: '8px',
+      boxShadow: `0 0 20px ${primaryColor}50, inset 0 0 20px ${primaryColor}20`,
+      background: `${primaryColor}15`,
+    };
+  } else if (style === 'underline') {
+    return {
+      display: 'inline-block',
+      borderBottom: `3px solid ${primaryColor}`,
+      paddingBottom: '0.25rem',
+    };
+  } else if (style === 'highlight') {
+    return {
+      display: 'inline-block',
+      background: `linear-gradient(transparent 60%, ${primaryColor}40 60%)`,
+    };
+  }
+  
+  return {};
 };
