@@ -3094,6 +3094,7 @@ export type Database = {
         }
         Returns: number
       }
+      cleanup_expired_domain_verifications: { Args: never; Returns: number }
       create_panel_notification: {
         Args: {
           p_message: string
