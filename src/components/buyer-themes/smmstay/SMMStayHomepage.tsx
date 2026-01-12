@@ -11,7 +11,7 @@ import { ThemeCustomization } from '@/types/theme-customization';
 import { 
   getButtonStyles, getHoverScale, getLucideIcon,
   getDefaultFeatures, getDefaultTestimonials, getDefaultFAQs,
-  getModeColors, getGlowBoxStyle
+  getModeColors, getGlowBoxStyle, getSocialLinks
 } from '@/lib/theme-utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { ThemeNavigation } from '../shared/ThemeNavigation';
@@ -422,8 +422,7 @@ export const SMMStayHomepage = ({
                 <p className="text-sm mb-4" style={{ color: mutedColor }}>
                   {customization.footerAbout || 'THE #1 SMM PANEL FOR SERIOUS GROWTH.'}
                 </p>
-                {(() => {
-                  const { getSocialLinks } = require('@/lib/theme-utils');
+{(() => {
                   const socialLinks = getSocialLinks(customization.socialLinks);
                   const iconMap: Record<string, any> = { instagram: Instagram, twitter: Twitter, youtube: Youtube };
                   return socialLinks.length > 0 && (

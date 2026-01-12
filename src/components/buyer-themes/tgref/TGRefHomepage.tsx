@@ -12,7 +12,7 @@ import {
   getAnimationVariants, getContainerVariants, getItemVariants,
   getButtonStyles, getHoverScale, getLucideIcon,
   getDefaultStats, getDefaultFeatures, getDefaultTestimonials, getDefaultFAQs,
-  getModeColors, getGlowBoxStyle
+  getModeColors, getGlowBoxStyle, getSocialLinks
 } from '@/lib/theme-utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { ThemeNavigation } from '../shared/ThemeNavigation';
@@ -506,8 +506,7 @@ export const TGRefHomepage = ({
                 <p className="text-sm mb-4" style={{ color: mutedColor }}>
                   {customization.footerAbout || '> Professional SMM services with instant delivery.'}
                 </p>
-                {(() => {
-                  const { getSocialLinks } = require('@/lib/theme-utils');
+{(() => {
                   const socialLinks = getSocialLinks(customization.socialLinks);
                   const iconMap: Record<string, any> = { instagram: Instagram, twitter: Twitter, youtube: Youtube };
                   return socialLinks.length > 0 && (
