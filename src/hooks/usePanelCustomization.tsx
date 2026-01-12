@@ -56,6 +56,23 @@ export function usePanelCustomization(panelId: string | undefined) {
         borderRadius: branding.borderRadius || '12',
         // Theme mode
         themeMode: branding.themeMode || 'dark',
+        // Mode-specific colors (NEW)
+        lightModeColors: branding.lightModeColors || {
+          backgroundColor: '#FAFBFC',
+          surfaceColor: '#FFFFFF',
+          cardColor: '#FFFFFF',
+          textColor: '#1F2937',
+          mutedColor: '#6B7280',
+          borderColor: '#E5E7EB',
+        },
+        darkModeColors: branding.darkModeColors || {
+          backgroundColor: branding.backgroundColor || '#0F172A',
+          surfaceColor: branding.surfaceColor || '#1E293B',
+          cardColor: branding.cardColor || '#1E293B',
+          textColor: branding.textColor || '#FFFFFF',
+          mutedColor: branding.mutedColor || '#94A3B8',
+          borderColor: branding.borderColor || '#334155',
+        },
         // Section toggles
         enableFastOrder: branding.enableFastOrder ?? true,
         enablePlatformFeatures: branding.enablePlatformFeatures ?? true,
@@ -77,8 +94,9 @@ export function usePanelCustomization(panelId: string | undefined) {
         heroSecondaryCTAText: branding.heroSecondaryCTAText || 'View Services',
         heroAnimatedTexts: branding.heroAnimatedTexts || [],
         // Footer
-        footerAbout: branding.footerAbout || '',
-        footerText: branding.footerText || '',
+        enableFooter: branding.enableFooter ?? true,
+        footerAbout: branding.footerAbout || 'Professional social media marketing services with high-quality results.',
+        footerText: branding.footerText || `© ${new Date().getFullYear()} ${branding.companyName || data?.name || 'Your Panel'}. All rights reserved.`,
         socialLinks: branding.socialLinks || {},
         // Layout
         homepageLayout: branding.homepageLayout || ['hero', 'platform', 'stats', 'features', 'testimonials', 'faqs'],
@@ -182,9 +200,14 @@ export function usePanelCustomization(panelId: string | undefined) {
         heroAnimatedTexts: updates.heroAnimatedTexts,
         
         // === FOOTER ===
+        enableFooter: updates.enableFooter,
         footerAbout: updates.footerAbout,
         footerText: updates.footerText,
         socialLinks: updates.socialLinks,
+        
+        // === MODE-SPECIFIC COLORS ===
+        lightModeColors: updates.lightModeColors,
+        darkModeColors: updates.darkModeColors,
         
         // === LAYOUT ===
         homepageLayout: updates.homepageLayout,

@@ -1,6 +1,16 @@
 // Comprehensive theme customization interface for all homepage themes
 // This interface allows full design system integration with all buyer themes
 
+// Mode-specific color palettes for light and dark modes
+export interface ModeColorPalette {
+  backgroundColor?: string;
+  surfaceColor?: string;
+  cardColor?: string;
+  textColor?: string;
+  mutedColor?: string;
+  borderColor?: string;
+}
+
 export interface ThemeCustomization {
   // Branding
   logoUrl?: string;
@@ -8,7 +18,7 @@ export interface ThemeCustomization {
   companyName?: string;
   tagline?: string;
   
-  // Full Color Palette
+  // Full Color Palette (shared/legacy - used as fallback)
   primaryColor?: string;
   secondaryColor?: string;
   accentColor?: string;
@@ -22,6 +32,10 @@ export interface ThemeCustomization {
   warningColor?: string;
   infoColor?: string;
   errorColor?: string;
+  
+  // Mode-specific color palettes (NEW)
+  lightModeColors?: ModeColorPalette;
+  darkModeColors?: ModeColorPalette;
   
   // Typography
   fontFamily?: string;
@@ -151,6 +165,7 @@ export interface SocialLinks {
   youtube?: string;
   tiktok?: string;
   linkedin?: string;
+  whatsapp?: string;
 }
 
 // Default theme values for fallback
@@ -192,4 +207,21 @@ export const defaultThemeCustomization: Partial<ThemeCustomization> = {
   enableFeatures: true,
   enableTestimonials: true,
   enableFAQs: true,
+  // Mode-specific color defaults
+  darkModeColors: {
+    backgroundColor: '#0F172A',
+    surfaceColor: '#1E293B',
+    cardColor: '#1E293B',
+    textColor: '#FFFFFF',
+    mutedColor: '#94A3B8',
+    borderColor: '#334155',
+  },
+  lightModeColors: {
+    backgroundColor: '#FAFBFC',
+    surfaceColor: '#FFFFFF',
+    cardColor: '#FFFFFF',
+    textColor: '#1F2937',
+    mutedColor: '#6B7280',
+    borderColor: '#E5E7EB',
+  },
 };
