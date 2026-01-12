@@ -134,87 +134,6 @@ export const BuyerThemeAliPanel = ({ children, className }: BuyerThemeAliPanelPr
           background: rgba(255, 107, 107, 0.05) !important;
         }
         
-        /* Buttons - Dark mode */
-        .buyer-theme-alipanel button[class*="primary"],
-        .buyer-theme-alipanel [class*="Button"][class*="primary"] {
-          background: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%) !important;
-          color: white !important;
-          border: none !important;
-        }
-        
-        .buyer-theme-alipanel button[class*="secondary"],
-        .buyer-theme-alipanel [class*="Button"][class*="secondary"] {
-          background: rgba(255, 107, 107, 0.15) !important;
-          color: #FF6B6B !important;
-          border: 1px solid rgba(255, 107, 107, 0.3) !important;
-        }
-        
-        .buyer-theme-alipanel button[class*="outline"],
-        .buyer-theme-alipanel [class*="Button"][class*="outline"] {
-          background: transparent !important;
-          color: #FF6B6B !important;
-          border: 1px solid #FF6B6B !important;
-        }
-        
-        .buyer-theme-alipanel button[class*="ghost"],
-        .buyer-theme-alipanel [class*="Button"][class*="ghost"] {
-          background: transparent !important;
-          color: #FFFFFF !important;
-        }
-        
-        .buyer-theme-alipanel button[class*="ghost"]:hover,
-        .buyer-theme-alipanel [class*="Button"][class*="ghost"]:hover {
-          background: rgba(255, 107, 107, 0.1) !important;
-        }
-        
-        /* Labels - Dark mode */
-        .buyer-theme-alipanel label {
-          color: #E5E5E5 !important;
-        }
-        
-        /* Progress bars - Dark mode */
-        .buyer-theme-alipanel [class*="Progress"] {
-          background: rgba(255, 107, 107, 0.15) !important;
-        }
-        
-        .buyer-theme-alipanel [class*="Progress"] > div {
-          background: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%) !important;
-        }
-        
-        /* Tooltips - Dark mode */
-        .buyer-theme-alipanel [role="tooltip"] {
-          background: #1A1A1A !important;
-          color: #FFFFFF !important;
-          border: 1px solid rgba(255, 107, 107, 0.2) !important;
-        }
-        
-        /* Tabs - Dark mode */
-        .buyer-theme-alipanel [role="tablist"] {
-          background: rgba(20, 20, 20, 0.6) !important;
-          border: 1px solid rgba(255, 107, 107, 0.1) !important;
-        }
-        
-        .buyer-theme-alipanel [role="tab"][data-state="active"] {
-          background: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%) !important;
-          color: white !important;
-        }
-        
-        .buyer-theme-alipanel [role="tab"]:not([data-state="active"]) {
-          color: #A1A1AA !important;
-        }
-        
-        /* Bottom navigation - Dark mode */
-        .buyer-theme-alipanel .bottom-nav,
-        .buyer-theme-alipanel [class*="BottomNav"] {
-          background: rgba(10, 10, 10, 0.95) !important;
-          border-top: 1px solid rgba(255, 107, 107, 0.1) !important;
-        }
-        
-        /* Switch toggle - Dark mode */
-        .buyer-theme-alipanel [role="switch"][data-state="checked"] {
-          background: #FF6B6B !important;
-        }
-        
         /* ===== COMPREHENSIVE LIGHT MODE ===== */
         .light .buyer-theme-alipanel {
           --theme-background: #FFFBFB;
@@ -325,59 +244,6 @@ export const BuyerThemeAliPanel = ({ children, className }: BuyerThemeAliPanelPr
           border-top: 1px solid rgba(255, 107, 107, 0.1) !important;
         }
         
-        /* Light mode buttons */
-        .light .buyer-theme-alipanel button[class*="secondary"],
-        .light .buyer-theme-alipanel [class*="Button"][class*="secondary"] {
-          background: rgba(255, 107, 107, 0.1) !important;
-          color: #FF6B6B !important;
-          border: 1px solid rgba(255, 107, 107, 0.2) !important;
-        }
-        
-        .light .buyer-theme-alipanel button[class*="ghost"],
-        .light .buyer-theme-alipanel [class*="Button"][class*="ghost"] {
-          color: #1A1A1A !important;
-        }
-        
-        .light .buyer-theme-alipanel button[class*="ghost"]:hover,
-        .light .buyer-theme-alipanel [class*="Button"][class*="ghost"]:hover {
-          background: rgba(255, 107, 107, 0.08) !important;
-        }
-        
-        /* Light mode labels */
-        .light .buyer-theme-alipanel label {
-          color: #374151 !important;
-        }
-        
-        /* Light mode progress bars */
-        .light .buyer-theme-alipanel [class*="Progress"] {
-          background: rgba(255, 107, 107, 0.1) !important;
-        }
-        
-        /* Light mode tooltips */
-        .light .buyer-theme-alipanel [role="tooltip"] {
-          background: #FFFFFF !important;
-          color: #1A1A1A !important;
-          border: 1px solid rgba(255, 107, 107, 0.15) !important;
-          box-shadow: 0 4px 20px rgba(255, 107, 107, 0.1) !important;
-        }
-        
-        /* Light mode tabs */
-        .light .buyer-theme-alipanel [role="tablist"] {
-          background: rgba(255, 107, 107, 0.05) !important;
-          border: 1px solid rgba(255, 107, 107, 0.1) !important;
-        }
-        
-        .light .buyer-theme-alipanel [role="tab"]:not([data-state="active"]) {
-          color: #6B7280 !important;
-        }
-        
-        /* Light mode bottom navigation */
-        .light .buyer-theme-alipanel .bottom-nav,
-        .light .buyer-theme-alipanel [class*="BottomNav"] {
-          background: rgba(255, 255, 255, 0.95) !important;
-          border-top: 1px solid rgba(255, 107, 107, 0.1) !important;
-        }
-        
         /* Light mode dropdowns and popovers */
         .light .buyer-theme-alipanel [data-radix-popper-content-wrapper] > div,
         .light .buyer-theme-alipanel [role="listbox"],
@@ -385,19 +251,6 @@ export const BuyerThemeAliPanel = ({ children, className }: BuyerThemeAliPanelPr
           background: #FFFFFF !important;
           border-color: rgba(255, 107, 107, 0.15) !important;
           box-shadow: 0 10px 40px rgba(255, 107, 107, 0.12) !important;
-        }
-        
-        /* Light mode dropdown items */
-        .light .buyer-theme-alipanel [role="option"],
-        .light .buyer-theme-alipanel [role="menuitem"] {
-          color: #1A1A1A !important;
-        }
-        
-        .light .buyer-theme-alipanel [role="option"]:hover,
-        .light .buyer-theme-alipanel [role="menuitem"]:hover,
-        .light .buyer-theme-alipanel [role="option"][data-highlighted],
-        .light .buyer-theme-alipanel [role="menuitem"][data-highlighted] {
-          background: rgba(255, 107, 107, 0.08) !important;
         }
         
         /* Light mode skeleton loading */
@@ -417,17 +270,6 @@ export const BuyerThemeAliPanel = ({ children, className }: BuyerThemeAliPanelPr
         /* Light mode accordion */
         .light .buyer-theme-alipanel [data-state="open"] {
           background: rgba(255, 107, 107, 0.04) !important;
-        }
-        
-        /* Light mode dialogs */
-        .light .buyer-theme-alipanel [role="dialog"] {
-          background: #FFFFFF !important;
-          border: 1px solid rgba(255, 107, 107, 0.15) !important;
-        }
-        
-        /* Light mode alert dialogs */
-        .light .buyer-theme-alipanel [role="alertdialog"] {
-          background: #FFFFFF !important;
         }
       `}</style>
       {children}

@@ -1134,12 +1134,6 @@ export default function DesignCustomization() {
       const currentTheme = prev.selectedTheme;
       const isBuyerTheme = buyerThemes.includes(currentTheme);
       
-      // Show toast inside callback to use correct theme value
-      toast({ 
-        title: `Applied "${preset.name}" colors${isBuyerTheme ? ` to ${currentTheme}` : ''}`,
-        description: isBuyerTheme ? 'Theme preserved, colors updated' : undefined
-      });
-      
       return {
         ...prev,
         ...preset.customization,
@@ -1148,6 +1142,9 @@ export default function DesignCustomization() {
       };
     });
     setHasUnsavedChanges(true);
+    // Use prev.selectedTheme inside the callback to avoid stale closure
+    const isBuyerThemeNow = buyerThemes.includes(customization.selectedTheme || '');
+    toast({ title: `Applied "${preset.name}" colors${isBuyerThemeNow ? ' to current theme' : ''}` });
   };
 
   const handleUndo = () => {
