@@ -276,6 +276,34 @@ export const BuyerThemeFlySMM = ({ children, className }: BuyerThemeFlySMMProps)
           background: linear-gradient(180deg, #0C1929 0%, #0A1422 100%) !important;
           border-top: 1px solid rgba(33, 150, 243, 0.1) !important;
         }
+        
+        /* Dark mode dropdowns and popovers */
+        .dark .buyer-theme-flysmm [data-radix-popper-content-wrapper] > div,
+        .dark .buyer-theme-flysmm [role="listbox"],
+        .dark .buyer-theme-flysmm [role="menu"] {
+          background: #132337 !important;
+          border-color: rgba(33, 150, 243, 0.2) !important;
+          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3) !important;
+        }
+        
+        /* Dark mode skeleton loading */
+        .dark .buyer-theme-flysmm .skeleton,
+        .dark .buyer-theme-flysmm [class*="Skeleton"] {
+          background: rgba(33, 150, 243, 0.15) !important;
+        }
+        
+        /* Dark mode scrollbar */
+        .dark .buyer-theme-flysmm ::-webkit-scrollbar-thumb {
+          background: rgba(33, 150, 243, 0.3);
+        }
+        .dark .buyer-theme-flysmm ::-webkit-scrollbar-track {
+          background: rgba(33, 150, 243, 0.08);
+        }
+        
+        /* Dark mode accordion */
+        .dark .buyer-theme-flysmm [data-state="open"] {
+          background: rgba(33, 150, 243, 0.08) !important;
+        }
       `}</style>
       {children}
     </div>

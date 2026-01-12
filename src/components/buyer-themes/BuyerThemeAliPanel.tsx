@@ -243,6 +243,34 @@ export const BuyerThemeAliPanel = ({ children, className }: BuyerThemeAliPanelPr
           background: linear-gradient(180deg, #FFFBFB 0%, #FFF0F0 100%) !important;
           border-top: 1px solid rgba(255, 107, 107, 0.1) !important;
         }
+        
+        /* Light mode dropdowns and popovers */
+        .light .buyer-theme-alipanel [data-radix-popper-content-wrapper] > div,
+        .light .buyer-theme-alipanel [role="listbox"],
+        .light .buyer-theme-alipanel [role="menu"] {
+          background: #FFFFFF !important;
+          border-color: rgba(255, 107, 107, 0.15) !important;
+          box-shadow: 0 10px 40px rgba(255, 107, 107, 0.12) !important;
+        }
+        
+        /* Light mode skeleton loading */
+        .light .buyer-theme-alipanel .skeleton,
+        .light .buyer-theme-alipanel [class*="Skeleton"] {
+          background: rgba(255, 107, 107, 0.08) !important;
+        }
+        
+        /* Light mode scrollbar */
+        .light .buyer-theme-alipanel ::-webkit-scrollbar-thumb {
+          background: rgba(255, 107, 107, 0.3);
+        }
+        .light .buyer-theme-alipanel ::-webkit-scrollbar-track {
+          background: rgba(255, 107, 107, 0.05);
+        }
+        
+        /* Light mode accordion */
+        .light .buyer-theme-alipanel [data-state="open"] {
+          background: rgba(255, 107, 107, 0.04) !important;
+        }
       `}</style>
       {children}
     </div>

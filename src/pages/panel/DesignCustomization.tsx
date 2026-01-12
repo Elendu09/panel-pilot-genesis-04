@@ -914,7 +914,13 @@ export default function DesignCustomization() {
   const useMobileLayout = isMobile || isTablet;
 
   const togglePreviewTheme = () => {
-    setPreviewThemeMode(prev => prev === 'dark' ? 'light' : 'dark');
+    setPreviewThemeMode(prev => {
+      const newMode = prev === 'dark' ? 'light' : 'dark';
+      // Sync preview theme mode with customization so homepage components react
+      setCustomization(c => ({ ...c, themeMode: newMode }));
+      setHasUnsavedChanges(true);
+      return newMode;
+    });
   };
 
   // Use the design history hook for undo/redo
@@ -1136,7 +1142,9 @@ export default function DesignCustomization() {
       };
     });
     setHasUnsavedChanges(true);
-    toast({ title: `Applied "${preset.name}" colors${customization.selectedTheme && buyerThemes.includes(customization.selectedTheme) ? ' to current theme' : ''}` });
+    // Use prev.selectedTheme inside the callback to avoid stale closure
+    const isBuyerThemeNow = buyerThemes.includes(customization.selectedTheme || '');
+    toast({ title: `Applied "${preset.name}" colors${isBuyerThemeNow ? ' to current theme' : ''}` });
   };
 
   const handleUndo = () => {

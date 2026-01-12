@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Sparkles, Zap, Shield, Users, Star, ArrowRight, CheckCircle, X,
@@ -38,8 +38,8 @@ export const AliPanelHomepage = ({
 }: AliPanelHomepageProps) => {
   const navigate = useNavigate();
   
-  // Theme mode state - from customization or default to dark
-  const [themeMode, setThemeMode] = useState<'light' | 'dark'>(customization.themeMode || 'dark');
+  // Theme mode - reactive to customization prop (no local state)
+  const themeMode = customization.themeMode || 'dark';
   const isLightMode = themeMode === 'light';
   
   // Theme defaults for AliPanel (pink-orange gradient)
@@ -117,9 +117,9 @@ export const AliPanelHomepage = ({
   const sectionPadding = customization.sectionPaddingY || 80;
   const containerMax = customization.containerMaxWidth || 1280;
 
-  // Theme mode change handler
+  // Theme mode change handler (no-op since we read from customization prop)
   const handleThemeModeChange = useCallback((mode: 'light' | 'dark') => {
-    setThemeMode(mode);
+    // Theme mode is controlled by parent via customization.themeMode
   }, []);
 
   const floatingIcons = [
@@ -146,7 +146,7 @@ export const AliPanelHomepage = ({
   ];
 
   return (
-    <main role="main" className={`min-h-screen overflow-hidden font-${fontFamily.toLowerCase()}`} style={{ backgroundColor: bgColor, color: textCol }}>
+    <main role="main" className={`min-h-screen overflow-hidden font-${fontFamily.toLowerCase()} ${themeMode}`} style={{ backgroundColor: bgColor, color: textCol }}>
       {/* FAQPage JSON-LD Schema for rich snippets */}
       {showFAQs && faqs.length > 0 && (
         <Helmet>

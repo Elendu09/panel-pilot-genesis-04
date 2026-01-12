@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Globe, Zap, Users, Star, ArrowRight, Award, TrendingUp,
@@ -37,8 +37,8 @@ export const SMMVisitHomepage = ({
 }: SMMVisitHomepageProps) => {
   const navigate = useNavigate();
   
-  // Theme mode state - SMMVisit defaults to light
-  const [themeMode, setThemeMode] = useState<'light' | 'dark'>(customization.themeMode || 'light');
+  // Theme mode - reactive to customization prop (no local state), SMMVisit defaults to light
+  const themeMode = customization.themeMode || 'light';
   const isLightMode = themeMode === 'light';
   
   // Theme defaults for SMMVisit (yellow/gold on light)
@@ -108,9 +108,9 @@ export const SMMVisitHomepage = ({
   // Button styles
   const primaryButtonStyle = getButtonStyles(customization, 'primary');
 
-  // Theme mode change handler
+  // Theme mode change handler (no-op since we read from customization prop)
   const handleThemeModeChange = useCallback((mode: 'light' | 'dark') => {
-    setThemeMode(mode);
+    // Theme mode is controlled by parent via customization.themeMode
   }, []);
 
   const platforms = [
@@ -121,7 +121,7 @@ export const SMMVisitHomepage = ({
   ];
 
   return (
-    <main role="main" className={`min-h-screen font-${fontFamily.toLowerCase()}`} style={{ backgroundColor: bgColor, color: textCol }}>
+    <main role="main" className={`min-h-screen font-${fontFamily.toLowerCase()} ${themeMode}`} style={{ backgroundColor: bgColor, color: textCol }}>
       {/* FAQPage JSON-LD Schema for rich snippets */}
       {showFAQs && faqs.length > 0 && (
         <Helmet>

@@ -280,7 +280,8 @@ const Storefront = () => {
       />
       {/* Inject design preset colors as CSS variables */}
       {storefrontColorStyles && <style>{storefrontColorStyles}</style>}
-      <div className="buyer-theme-wrapper">
+      {/* Theme mode wrapper - applies 'light' or 'dark' class for CSS selectors */}
+      <div className={`buyer-theme-wrapper ${(customBranding?.themeMode) || 'dark'}`}>
         {/* Removed PromotionalBanner - "Welcome bonus! Claim now" removed per SEO requirements */}
         {renderTheme()}
         {/* Floating Chat Widget - Consolidated chat with AI, WhatsApp, Telegram, etc. */}
