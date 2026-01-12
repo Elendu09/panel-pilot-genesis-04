@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Rocket, Zap, Shield, Users, Star, ArrowRight, CheckCircle, Sparkles,
@@ -37,8 +37,8 @@ export const FlySMMHomepage = ({
 }: FlySMMHomepageProps) => {
   const navigate = useNavigate();
   
-  // Theme mode state - FlySMM defaults to light
-  const [themeMode, setThemeMode] = useState<'light' | 'dark'>(customization.themeMode || 'light');
+  // Theme mode - reactive to customization prop (no local state), FlySMM defaults to light
+  const themeMode = customization.themeMode || 'light';
   const isLightMode = themeMode === 'light';
   
   // Theme defaults for FlySMM (light, blue accents)
@@ -109,9 +109,9 @@ export const FlySMMHomepage = ({
   // Button styles
   const primaryButtonStyle = getButtonStyles(customization, 'primary');
 
-  // Theme mode change handler
+  // Theme mode change handler (no-op since we read from customization prop)
   const handleThemeModeChange = useCallback((mode: 'light' | 'dark') => {
-    setThemeMode(mode);
+    // Theme mode is controlled by parent via customization.themeMode
   }, []);
 
   const steps = [
@@ -123,7 +123,7 @@ export const FlySMMHomepage = ({
   const paymentMethods = ['Visa', 'Mastercard', 'PayPal', 'Crypto', 'Apple Pay', 'Google Pay'];
 
   return (
-    <main role="main" className={`min-h-screen font-${fontFamily.toLowerCase()}`} style={{ backgroundColor: bgColor, color: textCol }}>
+    <main role="main" className={`min-h-screen font-${fontFamily.toLowerCase()} ${themeMode}`} style={{ backgroundColor: bgColor, color: textCol }}>
       {/* FAQPage JSON-LD Schema for rich snippets */}
       {showFAQs && faqs.length > 0 && (
         <Helmet>

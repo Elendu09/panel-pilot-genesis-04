@@ -326,6 +326,34 @@ export const BuyerThemeTGRef = ({ children, className }: BuyerThemeTGRefProps) =
           background: linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 100%) !important;
           border-top: 1px solid rgba(0, 212, 170, 0.1) !important;
         }
+        
+        /* Light mode dropdowns and popovers */
+        .light .buyer-theme-tgref [data-radix-popper-content-wrapper] > div,
+        .light .buyer-theme-tgref [role="listbox"],
+        .light .buyer-theme-tgref [role="menu"] {
+          background: #FFFFFF !important;
+          border-color: rgba(0, 212, 170, 0.2) !important;
+          box-shadow: 0 10px 40px rgba(0, 212, 170, 0.1) !important;
+        }
+        
+        /* Light mode skeleton loading */
+        .light .buyer-theme-tgref .skeleton,
+        .light .buyer-theme-tgref [class*="Skeleton"] {
+          background: rgba(0, 212, 170, 0.08) !important;
+        }
+        
+        /* Light mode scrollbar */
+        .light .buyer-theme-tgref ::-webkit-scrollbar-thumb {
+          background: rgba(0, 212, 170, 0.3);
+        }
+        .light .buyer-theme-tgref ::-webkit-scrollbar-track {
+          background: rgba(0, 212, 170, 0.05);
+        }
+        
+        /* Light mode accordion */
+        .light .buyer-theme-tgref [data-state="open"] {
+          background: rgba(0, 212, 170, 0.04) !important;
+        }
       `}</style>
       {children}
     </div>

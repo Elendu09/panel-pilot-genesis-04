@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Terminal, Zap, Shield, Users, Star, ArrowRight, CheckCircle, Globe, Cpu, Play,
@@ -38,8 +38,8 @@ export const TGRefHomepage = ({
 }: TGRefHomepageProps) => {
   const navigate = useNavigate();
   
-  // Theme mode state - from customization or default to dark
-  const [themeMode, setThemeMode] = useState<'light' | 'dark'>(customization.themeMode || 'dark');
+  // Theme mode - reactive to customization prop (no local state)
+  const themeMode = customization.themeMode || 'dark';
   const isLightMode = themeMode === 'light';
   
   // Theme defaults for TGRef (teal/cyan terminal aesthetic)
@@ -116,9 +116,9 @@ export const TGRefHomepage = ({
     color: isLightMode ? '#FFFFFF' : bgColor,
   };
 
-  // Theme mode change handler
+  // Theme mode change handler (no-op since we read from customization prop)
   const handleThemeModeChange = useCallback((mode: 'light' | 'dark') => {
-    setThemeMode(mode);
+    // Theme mode is controlled by parent via customization.themeMode
   }, []);
 
   const platforms = [
@@ -129,7 +129,7 @@ export const TGRefHomepage = ({
   ];
 
   return (
-    <main role="main" className="min-h-screen font-mono" style={{ backgroundColor: bgColor, color: textCol }}>
+    <main role="main" className={`min-h-screen font-mono ${themeMode}`} style={{ backgroundColor: bgColor, color: textCol }}>
       {/* FAQPage JSON-LD Schema for rich snippets */}
       {showFAQs && faqs.length > 0 && (
         <Helmet>

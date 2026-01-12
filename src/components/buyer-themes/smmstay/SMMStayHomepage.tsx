@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Flame, Zap, Shield, Users, Star, ArrowRight,
@@ -37,8 +37,8 @@ export const SMMStayHomepage = ({
 }: SMMStayHomepageProps) => {
   const navigate = useNavigate();
   
-  // Theme mode state - from customization or default to dark
-  const [themeMode, setThemeMode] = useState<'light' | 'dark'>(customization.themeMode || 'dark');
+  // Theme mode - reactive to customization prop (no local state)
+  const themeMode = customization.themeMode || 'dark';
   const isLightMode = themeMode === 'light';
   
   // Theme defaults for SMMStay (neon pink/purple)
@@ -112,9 +112,9 @@ export const SMMStayHomepage = ({
     boxShadow: `0 0 30px ${primary}66`,
   };
 
-  // Theme mode change handler
+  // Theme mode change handler (no-op since we read from customization prop)
   const handleThemeModeChange = useCallback((mode: 'light' | 'dark') => {
-    setThemeMode(mode);
+    // Theme mode is controlled by parent via customization.themeMode
   }, []);
 
   const platforms = [
@@ -125,7 +125,7 @@ export const SMMStayHomepage = ({
   ];
 
   return (
-    <main role="main" className={`min-h-screen font-${fontFamily.toLowerCase()} overflow-hidden`} style={{ backgroundColor: bgColor, color: textCol }}>
+    <main role="main" className={`min-h-screen font-${fontFamily.toLowerCase()} overflow-hidden ${themeMode}`} style={{ backgroundColor: bgColor, color: textCol }}>
       {/* FAQPage JSON-LD Schema for rich snippets */}
       {showFAQs && faqs.length > 0 && (
         <Helmet>

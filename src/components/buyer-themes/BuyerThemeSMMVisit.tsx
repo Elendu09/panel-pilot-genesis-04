@@ -252,6 +252,34 @@ export const BuyerThemeSMMVisit = ({ children, className }: BuyerThemeSMMVisitPr
           background: linear-gradient(180deg, #1A1A1A 0%, #141414 100%) !important;
           border-top: 1px solid rgba(255, 215, 0, 0.1) !important;
         }
+        
+        /* Dark mode dropdowns and popovers */
+        .dark .buyer-theme-smmvisit [data-radix-popper-content-wrapper] > div,
+        .dark .buyer-theme-smmvisit [role="listbox"],
+        .dark .buyer-theme-smmvisit [role="menu"] {
+          background: #262626 !important;
+          border-color: rgba(255, 215, 0, 0.2) !important;
+          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35) !important;
+        }
+        
+        /* Dark mode skeleton loading */
+        .dark .buyer-theme-smmvisit .skeleton,
+        .dark .buyer-theme-smmvisit [class*="Skeleton"] {
+          background: rgba(255, 215, 0, 0.15) !important;
+        }
+        
+        /* Dark mode scrollbar */
+        .dark .buyer-theme-smmvisit ::-webkit-scrollbar-thumb {
+          background: rgba(255, 215, 0, 0.3);
+        }
+        .dark .buyer-theme-smmvisit ::-webkit-scrollbar-track {
+          background: rgba(255, 215, 0, 0.08);
+        }
+        
+        /* Dark mode accordion */
+        .dark .buyer-theme-smmvisit [data-state="open"] {
+          background: rgba(255, 215, 0, 0.08) !important;
+        }
       `}</style>
       {children}
     </div>

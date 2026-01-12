@@ -302,6 +302,34 @@ export const BuyerThemeSMMStay = ({ children, className }: BuyerThemeSMMStayProp
           background: linear-gradient(180deg, #FFFAFC 0%, #FFF0F5 100%) !important;
           border-top: 2px solid rgba(255, 64, 129, 0.1) !important;
         }
+        
+        /* Light mode dropdowns and popovers */
+        .light .buyer-theme-smmstay [data-radix-popper-content-wrapper] > div,
+        .light .buyer-theme-smmstay [role="listbox"],
+        .light .buyer-theme-smmstay [role="menu"] {
+          background: #FFFFFF !important;
+          border: 2px solid rgba(255, 64, 129, 0.15) !important;
+          box-shadow: 0 10px 40px rgba(255, 64, 129, 0.1) !important;
+        }
+        
+        /* Light mode skeleton loading */
+        .light .buyer-theme-smmstay .skeleton,
+        .light .buyer-theme-smmstay [class*="Skeleton"] {
+          background: rgba(255, 64, 129, 0.08) !important;
+        }
+        
+        /* Light mode scrollbar */
+        .light .buyer-theme-smmstay ::-webkit-scrollbar-thumb {
+          background: rgba(255, 64, 129, 0.3);
+        }
+        .light .buyer-theme-smmstay ::-webkit-scrollbar-track {
+          background: rgba(255, 64, 129, 0.05);
+        }
+        
+        /* Light mode accordion */
+        .light .buyer-theme-smmstay [data-state="open"] {
+          background: rgba(255, 64, 129, 0.04) !important;
+        }
       `}</style>
       {children}
     </div>
