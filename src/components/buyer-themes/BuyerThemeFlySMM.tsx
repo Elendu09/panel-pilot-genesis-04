@@ -99,7 +99,7 @@ export const BuyerThemeFlySMM = ({ children, className }: BuyerThemeFlySMMProps)
           font-weight: 600;
         }
         
-        /* Dashboard elements - Light mode (default) */
+        /* Dashboard elements - Light mode */
         .buyer-theme-flysmm .glass-card,
         .buyer-theme-flysmm [class*="Card"] {
           background: #FFFFFF !important;
@@ -143,117 +143,6 @@ export const BuyerThemeFlySMM = ({ children, className }: BuyerThemeFlySMMProps)
         
         .buyer-theme-flysmm tbody tr:hover {
           background: rgba(33, 150, 243, 0.03) !important;
-        }
-        
-        /* Buttons - Light mode */
-        .buyer-theme-flysmm button[class*="primary"],
-        .buyer-theme-flysmm [class*="Button"][class*="primary"] {
-          background: linear-gradient(135deg, #2196F3 0%, #00BCD4 100%) !important;
-          color: white !important;
-          border: none !important;
-        }
-        
-        .buyer-theme-flysmm button[class*="secondary"],
-        .buyer-theme-flysmm [class*="Button"][class*="secondary"] {
-          background: rgba(33, 150, 243, 0.1) !important;
-          color: #2196F3 !important;
-          border: 1px solid rgba(33, 150, 243, 0.2) !important;
-        }
-        
-        .buyer-theme-flysmm button[class*="outline"],
-        .buyer-theme-flysmm [class*="Button"][class*="outline"] {
-          background: transparent !important;
-          color: #2196F3 !important;
-          border: 1px solid #2196F3 !important;
-        }
-        
-        .buyer-theme-flysmm button[class*="ghost"],
-        .buyer-theme-flysmm [class*="Button"][class*="ghost"] {
-          background: transparent !important;
-          color: #1E293B !important;
-        }
-        
-        .buyer-theme-flysmm button[class*="ghost"]:hover,
-        .buyer-theme-flysmm [class*="Button"][class*="ghost"]:hover {
-          background: rgba(33, 150, 243, 0.08) !important;
-        }
-        
-        /* Labels - Light mode */
-        .buyer-theme-flysmm label {
-          color: #334155 !important;
-        }
-        
-        /* Progress bars - Light mode */
-        .buyer-theme-flysmm [class*="Progress"] {
-          background: rgba(33, 150, 243, 0.1) !important;
-        }
-        
-        .buyer-theme-flysmm [class*="Progress"] > div {
-          background: linear-gradient(135deg, #2196F3 0%, #00BCD4 100%) !important;
-        }
-        
-        /* Tooltips - Light mode */
-        .buyer-theme-flysmm [role="tooltip"] {
-          background: #FFFFFF !important;
-          color: #1E293B !important;
-          border: 1px solid #E2E8F0 !important;
-          box-shadow: 0 4px 20px rgba(33, 150, 243, 0.1) !important;
-        }
-        
-        /* Tabs - Light mode */
-        .buyer-theme-flysmm [role="tablist"] {
-          background: rgba(33, 150, 243, 0.05) !important;
-          border: 1px solid #E2E8F0 !important;
-        }
-        
-        .buyer-theme-flysmm [role="tab"][data-state="active"] {
-          background: linear-gradient(135deg, #2196F3 0%, #00BCD4 100%) !important;
-          color: white !important;
-        }
-        
-        .buyer-theme-flysmm [role="tab"]:not([data-state="active"]) {
-          color: #64748B !important;
-        }
-        
-        /* Bottom navigation - Light mode */
-        .buyer-theme-flysmm .bottom-nav,
-        .buyer-theme-flysmm [class*="BottomNav"] {
-          background: rgba(255, 255, 255, 0.95) !important;
-          border-top: 1px solid #E2E8F0 !important;
-        }
-        
-        /* Switch toggle - Light mode */
-        .buyer-theme-flysmm [role="switch"][data-state="checked"] {
-          background: #2196F3 !important;
-        }
-        
-        /* Badges - Light mode */
-        .buyer-theme-flysmm [class*="Badge"],
-        .buyer-theme-flysmm .badge {
-          background: rgba(33, 150, 243, 0.1) !important;
-          color: #2196F3 !important;
-          border-color: rgba(33, 150, 243, 0.2) !important;
-        }
-        
-        /* Dropdowns - Light mode */
-        .buyer-theme-flysmm [data-radix-popper-content-wrapper] > div,
-        .buyer-theme-flysmm [role="listbox"],
-        .buyer-theme-flysmm [role="menu"] {
-          background: #FFFFFF !important;
-          border-color: #E2E8F0 !important;
-          box-shadow: 0 10px 40px rgba(33, 150, 243, 0.1) !important;
-        }
-        
-        .buyer-theme-flysmm [role="option"],
-        .buyer-theme-flysmm [role="menuitem"] {
-          color: #1E293B !important;
-        }
-        
-        .buyer-theme-flysmm [role="option"]:hover,
-        .buyer-theme-flysmm [role="menuitem"]:hover,
-        .buyer-theme-flysmm [role="option"][data-highlighted],
-        .buyer-theme-flysmm [role="menuitem"][data-highlighted] {
-          background: rgba(33, 150, 243, 0.08) !important;
         }
         
         /* ===== COMPREHENSIVE DARK MODE ===== */
@@ -374,58 +263,6 @@ export const BuyerThemeFlySMM = ({ children, className }: BuyerThemeFlySMMProps)
           color: #94A3B8 !important;
         }
         
-        /* Dark mode buttons */
-        .dark .buyer-theme-flysmm button[class*="secondary"],
-        .dark .buyer-theme-flysmm [class*="Button"][class*="secondary"] {
-          background: rgba(33, 150, 243, 0.2) !important;
-          color: #64B5F6 !important;
-          border: 1px solid rgba(33, 150, 243, 0.3) !important;
-        }
-        
-        .dark .buyer-theme-flysmm button[class*="ghost"],
-        .dark .buyer-theme-flysmm [class*="Button"][class*="ghost"] {
-          color: #F1F5F9 !important;
-        }
-        
-        .dark .buyer-theme-flysmm button[class*="ghost"]:hover,
-        .dark .buyer-theme-flysmm [class*="Button"][class*="ghost"]:hover {
-          background: rgba(33, 150, 243, 0.15) !important;
-        }
-        
-        /* Dark mode labels */
-        .dark .buyer-theme-flysmm label {
-          color: #CBD5E1 !important;
-        }
-        
-        /* Dark mode progress bars */
-        .dark .buyer-theme-flysmm [class*="Progress"] {
-          background: rgba(33, 150, 243, 0.15) !important;
-        }
-        
-        /* Dark mode tooltips */
-        .dark .buyer-theme-flysmm [role="tooltip"] {
-          background: #132337 !important;
-          color: #F1F5F9 !important;
-          border: 1px solid rgba(33, 150, 243, 0.2) !important;
-        }
-        
-        /* Dark mode tabs */
-        .dark .buyer-theme-flysmm [role="tablist"] {
-          background: rgba(19, 35, 55, 0.6) !important;
-          border: 1px solid rgba(33, 150, 243, 0.1) !important;
-        }
-        
-        .dark .buyer-theme-flysmm [role="tab"]:not([data-state="active"]) {
-          color: #94A3B8 !important;
-        }
-        
-        /* Dark mode bottom navigation */
-        .dark .buyer-theme-flysmm .bottom-nav,
-        .dark .buyer-theme-flysmm [class*="BottomNav"] {
-          background: rgba(12, 25, 41, 0.95) !important;
-          border-top: 1px solid rgba(33, 150, 243, 0.1) !important;
-        }
-        
         /* Dark mode badges */
         .dark .buyer-theme-flysmm [class*="Badge"],
         .dark .buyer-theme-flysmm .badge {
@@ -449,19 +286,6 @@ export const BuyerThemeFlySMM = ({ children, className }: BuyerThemeFlySMMProps)
           box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3) !important;
         }
         
-        /* Dark mode dropdown items */
-        .dark .buyer-theme-flysmm [role="option"],
-        .dark .buyer-theme-flysmm [role="menuitem"] {
-          color: #F1F5F9 !important;
-        }
-        
-        .dark .buyer-theme-flysmm [role="option"]:hover,
-        .dark .buyer-theme-flysmm [role="menuitem"]:hover,
-        .dark .buyer-theme-flysmm [role="option"][data-highlighted],
-        .dark .buyer-theme-flysmm [role="menuitem"][data-highlighted] {
-          background: rgba(33, 150, 243, 0.15) !important;
-        }
-        
         /* Dark mode skeleton loading */
         .dark .buyer-theme-flysmm .skeleton,
         .dark .buyer-theme-flysmm [class*="Skeleton"] {
@@ -479,12 +303,6 @@ export const BuyerThemeFlySMM = ({ children, className }: BuyerThemeFlySMMProps)
         /* Dark mode accordion */
         .dark .buyer-theme-flysmm [data-state="open"] {
           background: rgba(33, 150, 243, 0.08) !important;
-        }
-        
-        /* Dark mode dialogs */
-        .dark .buyer-theme-flysmm [role="dialog"] {
-          background: #132337 !important;
-          border: 1px solid rgba(33, 150, 243, 0.2) !important;
         }
       `}</style>
       {children}
