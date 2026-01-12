@@ -7,11 +7,11 @@ export { default as BuyerThemeTGRef, tgRefThemeConfig } from './BuyerThemeTGRef'
 export { default as BuyerThemeSMMVisit, smmVisitThemeConfig } from './BuyerThemeSMMVisit';
 
 // Homepage Components
-export { default as TGRefHomepage } from './tgref/TGRefHomepage';
-export { default as AliPanelHomepage } from './alipanel/AliPanelHomepage';
-export { default as FlySMMHomepage } from './flysmm/FlySMMHomepage';
-export { default as SMMStayHomepage } from './smmstay/SMMStayHomepage';
-export { default as SMMVisitHomepage } from './smmvisit/SMMVisitHomepage';
+export { TGRefHomepage } from './tgref/TGRefHomepage';
+export { AliPanelHomepage } from './alipanel/AliPanelHomepage';
+export { FlySMMHomepage } from './flysmm/FlySMMHomepage';
+export { SMMStayHomepage } from './smmstay/SMMStayHomepage';
+export { SMMVisitHomepage } from './smmvisit/SMMVisitHomepage';
 
 // Theme Wrapper and Utilities
 export { 
