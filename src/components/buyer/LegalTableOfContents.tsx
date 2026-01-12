@@ -40,15 +40,10 @@ export const LegalTableOfContents = ({
       history.replaceState(null, '', `#${id}`);
     }
 
-    const element = document.getElementById(id);
-    if (element) {
-      // Use different offset for mobile (accounts for sticky header + TOC)
-      const offset = isMobile ? 180 : 100;
-      const y = element.getBoundingClientRect().top + window.scrollY - offset;
-      window.scrollTo({ top: y, behavior: "smooth" });
-    }
-
+    // Let parent handler do the scrolling (avoids double-scroll conflicts)
     onSectionClick(id);
+    
+    // Close mobile TOC after clicking
     if (isMobile) setIsExpanded(false);
   };
 
