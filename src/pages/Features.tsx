@@ -268,11 +268,14 @@ export default function Features() {
   const scrollToSection = (id: string) => {
     const element = document.getElementById(id);
     if (element) {
-      const offset = 100;
+      // Use larger offset for mobile/tablet to account for sticky header + TOC
+      const isMobile = window.innerWidth < 1024;
+      const offset = isMobile ? 180 : 100;
       const y = element.getBoundingClientRect().top + window.scrollY - offset;
       window.scrollTo({ top: y, behavior: "smooth" });
-      setIsMobileTocOpen(false);
     }
+    setActiveSection(id);
+    setIsMobileTocOpen(false);
   };
 
   return (
