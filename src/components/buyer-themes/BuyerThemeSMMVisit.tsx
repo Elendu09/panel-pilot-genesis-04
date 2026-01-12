@@ -86,7 +86,7 @@ export const BuyerThemeSMMVisit = ({ children, className }: BuyerThemeSMMVisitPr
           background: linear-gradient(180deg, #FFFBEB 0%, #F5F5F5 100%);
         }
         
-        /* Dashboard elements - Light mode (default) */
+        /* Dashboard elements - Light mode */
         .buyer-theme-smmvisit .glass-card,
         .buyer-theme-smmvisit [class*="Card"] {
           background: #FFFFFF !important;
@@ -130,117 +130,6 @@ export const BuyerThemeSMMVisit = ({ children, className }: BuyerThemeSMMVisitPr
         
         .buyer-theme-smmvisit tbody tr:hover {
           background: rgba(255, 215, 0, 0.05) !important;
-        }
-        
-        /* Buttons - Light mode */
-        .buyer-theme-smmvisit button[class*="primary"],
-        .buyer-theme-smmvisit [class*="Button"][class*="primary"] {
-          background: linear-gradient(135deg, #FFD700 0%, #FFC107 100%) !important;
-          color: #1A1A1A !important;
-          border: none !important;
-        }
-        
-        .buyer-theme-smmvisit button[class*="secondary"],
-        .buyer-theme-smmvisit [class*="Button"][class*="secondary"] {
-          background: rgba(255, 215, 0, 0.15) !important;
-          color: #92780C !important;
-          border: 1px solid rgba(255, 215, 0, 0.3) !important;
-        }
-        
-        .buyer-theme-smmvisit button[class*="outline"],
-        .buyer-theme-smmvisit [class*="Button"][class*="outline"] {
-          background: transparent !important;
-          color: #92780C !important;
-          border: 1px solid #FFD700 !important;
-        }
-        
-        .buyer-theme-smmvisit button[class*="ghost"],
-        .buyer-theme-smmvisit [class*="Button"][class*="ghost"] {
-          background: transparent !important;
-          color: #1A1A1A !important;
-        }
-        
-        .buyer-theme-smmvisit button[class*="ghost"]:hover,
-        .buyer-theme-smmvisit [class*="Button"][class*="ghost"]:hover {
-          background: rgba(255, 215, 0, 0.1) !important;
-        }
-        
-        /* Labels - Light mode */
-        .buyer-theme-smmvisit label {
-          color: #374151 !important;
-        }
-        
-        /* Progress bars - Light mode */
-        .buyer-theme-smmvisit [class*="Progress"] {
-          background: rgba(255, 215, 0, 0.15) !important;
-        }
-        
-        .buyer-theme-smmvisit [class*="Progress"] > div {
-          background: linear-gradient(135deg, #FFD700 0%, #FFC107 100%) !important;
-        }
-        
-        /* Tooltips - Light mode */
-        .buyer-theme-smmvisit [role="tooltip"] {
-          background: #FFFFFF !important;
-          color: #1A1A1A !important;
-          border: 1px solid #E5E7EB !important;
-          box-shadow: 0 4px 20px rgba(255, 215, 0, 0.1) !important;
-        }
-        
-        /* Tabs - Light mode */
-        .buyer-theme-smmvisit [role="tablist"] {
-          background: rgba(255, 215, 0, 0.08) !important;
-          border: 1px solid #E5E7EB !important;
-        }
-        
-        .buyer-theme-smmvisit [role="tab"][data-state="active"] {
-          background: linear-gradient(135deg, #FFD700 0%, #FFC107 100%) !important;
-          color: #1A1A1A !important;
-        }
-        
-        .buyer-theme-smmvisit [role="tab"]:not([data-state="active"]) {
-          color: #6B7280 !important;
-        }
-        
-        /* Bottom navigation - Light mode */
-        .buyer-theme-smmvisit .bottom-nav,
-        .buyer-theme-smmvisit [class*="BottomNav"] {
-          background: rgba(255, 255, 255, 0.95) !important;
-          border-top: 1px solid #E5E7EB !important;
-        }
-        
-        /* Switch toggle - Light mode */
-        .buyer-theme-smmvisit [role="switch"][data-state="checked"] {
-          background: #FFD700 !important;
-        }
-        
-        /* Badges - Light mode */
-        .buyer-theme-smmvisit [class*="Badge"],
-        .buyer-theme-smmvisit .badge {
-          background: rgba(255, 215, 0, 0.15) !important;
-          color: #92780C !important;
-          border-color: rgba(255, 215, 0, 0.3) !important;
-        }
-        
-        /* Dropdowns - Light mode */
-        .buyer-theme-smmvisit [data-radix-popper-content-wrapper] > div,
-        .buyer-theme-smmvisit [role="listbox"],
-        .buyer-theme-smmvisit [role="menu"] {
-          background: #FFFFFF !important;
-          border-color: #E5E7EB !important;
-          box-shadow: 0 10px 40px rgba(255, 215, 0, 0.1) !important;
-        }
-        
-        .buyer-theme-smmvisit [role="option"],
-        .buyer-theme-smmvisit [role="menuitem"] {
-          color: #1A1A1A !important;
-        }
-        
-        .buyer-theme-smmvisit [role="option"]:hover,
-        .buyer-theme-smmvisit [role="menuitem"]:hover,
-        .buyer-theme-smmvisit [role="option"][data-highlighted],
-        .buyer-theme-smmvisit [role="menuitem"][data-highlighted] {
-          background: rgba(255, 215, 0, 0.1) !important;
         }
         
         /* ===== COMPREHENSIVE DARK MODE ===== */
@@ -350,63 +239,6 @@ export const BuyerThemeSMMVisit = ({ children, className }: BuyerThemeSMMVisitPr
           color: #9CA3AF !important;
         }
         
-        /* Dark mode buttons */
-        .dark .buyer-theme-smmvisit button[class*="secondary"],
-        .dark .buyer-theme-smmvisit [class*="Button"][class*="secondary"] {
-          background: rgba(255, 215, 0, 0.2) !important;
-          color: #FFD700 !important;
-          border: 1px solid rgba(255, 215, 0, 0.3) !important;
-        }
-        
-        .dark .buyer-theme-smmvisit button[class*="outline"],
-        .dark .buyer-theme-smmvisit [class*="Button"][class*="outline"] {
-          color: #FFD700 !important;
-        }
-        
-        .dark .buyer-theme-smmvisit button[class*="ghost"],
-        .dark .buyer-theme-smmvisit [class*="Button"][class*="ghost"] {
-          color: #FFFFFF !important;
-        }
-        
-        .dark .buyer-theme-smmvisit button[class*="ghost"]:hover,
-        .dark .buyer-theme-smmvisit [class*="Button"][class*="ghost"]:hover {
-          background: rgba(255, 215, 0, 0.15) !important;
-        }
-        
-        /* Dark mode labels */
-        .dark .buyer-theme-smmvisit label {
-          color: #D1D5DB !important;
-        }
-        
-        /* Dark mode progress bars */
-        .dark .buyer-theme-smmvisit [class*="Progress"] {
-          background: rgba(255, 215, 0, 0.15) !important;
-        }
-        
-        /* Dark mode tooltips */
-        .dark .buyer-theme-smmvisit [role="tooltip"] {
-          background: #262626 !important;
-          color: #FFFFFF !important;
-          border: 1px solid rgba(255, 215, 0, 0.2) !important;
-        }
-        
-        /* Dark mode tabs */
-        .dark .buyer-theme-smmvisit [role="tablist"] {
-          background: rgba(38, 38, 38, 0.6) !important;
-          border: 1px solid rgba(255, 215, 0, 0.1) !important;
-        }
-        
-        .dark .buyer-theme-smmvisit [role="tab"]:not([data-state="active"]) {
-          color: #9CA3AF !important;
-        }
-        
-        /* Dark mode bottom navigation */
-        .dark .buyer-theme-smmvisit .bottom-nav,
-        .dark .buyer-theme-smmvisit [class*="BottomNav"] {
-          background: rgba(26, 26, 26, 0.95) !important;
-          border-top: 1px solid rgba(255, 215, 0, 0.1) !important;
-        }
-        
         /* Dark mode badges */
         .dark .buyer-theme-smmvisit [class*="Badge"],
         .dark .buyer-theme-smmvisit .badge {
@@ -430,19 +262,6 @@ export const BuyerThemeSMMVisit = ({ children, className }: BuyerThemeSMMVisitPr
           box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35) !important;
         }
         
-        /* Dark mode dropdown items */
-        .dark .buyer-theme-smmvisit [role="option"],
-        .dark .buyer-theme-smmvisit [role="menuitem"] {
-          color: #FFFFFF !important;
-        }
-        
-        .dark .buyer-theme-smmvisit [role="option"]:hover,
-        .dark .buyer-theme-smmvisit [role="menuitem"]:hover,
-        .dark .buyer-theme-smmvisit [role="option"][data-highlighted],
-        .dark .buyer-theme-smmvisit [role="menuitem"][data-highlighted] {
-          background: rgba(255, 215, 0, 0.15) !important;
-        }
-        
         /* Dark mode skeleton loading */
         .dark .buyer-theme-smmvisit .skeleton,
         .dark .buyer-theme-smmvisit [class*="Skeleton"] {
@@ -460,12 +279,6 @@ export const BuyerThemeSMMVisit = ({ children, className }: BuyerThemeSMMVisitPr
         /* Dark mode accordion */
         .dark .buyer-theme-smmvisit [data-state="open"] {
           background: rgba(255, 215, 0, 0.08) !important;
-        }
-        
-        /* Dark mode dialogs */
-        .dark .buyer-theme-smmvisit [role="dialog"] {
-          background: #262626 !important;
-          border: 1px solid rgba(255, 215, 0, 0.2) !important;
         }
       `}</style>
       {children}
