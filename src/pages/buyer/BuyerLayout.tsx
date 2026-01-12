@@ -296,7 +296,7 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
             alt={panel?.name || 'Panel'} 
             className="w-7 h-7 rounded-lg object-cover flex-shrink-0" 
           />
-          <span className="font-bold text-xs truncate max-w-[80px]">{panel?.name || 'Panel'}</span>
+          <span className="font-bold text-xs truncate max-w-[120px]">{panel?.name || 'Panel'}</span>
         </div>
         <div className="flex items-center gap-1 flex-shrink-0">
           {/* Balance + Add Funds Button */}

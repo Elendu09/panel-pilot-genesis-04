@@ -12,7 +12,7 @@ import {
   getAnimationVariants, getContainerVariants, getItemVariants,
   getButtonStyles, getCardStyles, getHoverScale, getLucideIcon,
   getDefaultStats, getDefaultFeatures, getDefaultTestimonials, getDefaultFAQs,
-  getSocialLinks
+  getSocialLinks, getModeColors, getGlowBoxStyle
 } from '@/lib/theme-utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { ThemeNavigation } from '../shared/ThemeNavigation';
@@ -47,27 +47,29 @@ export const AliPanelHomepage = ({
   const defaultPrimary = '#FF6B6B';
   const defaultSecondary = '#FF8E53';
   const defaultAccent = '#FFCC70';
-  const defaultBgDark = '#0A0A0A';
-  const defaultBgLight = '#FAFBFC';
-  const defaultSurfaceDark = '#1A1A1A';
-  const defaultSurfaceLight = '#FFFFFF';
+  
+  // AliPanel theme color defaults
+  const themeDefaults = {
+    lightBg: '#FAFBFC',
+    darkBg: '#0A0A0A',
+    lightSurface: '#FFFFFF',
+    darkSurface: '#1A1A1A',
+    lightText: '#1F2937',
+    darkText: '#FFFFFF',
+    lightMuted: '#6B7280',
+    darkMuted: '#A1A1AA',
+    lightBorder: '#E5E7EB',
+    darkBorder: '#333333',
+  };
 
   // Use customization colors with light/dark mode adjustments
   const primary = customization.primaryColor || defaultPrimary;
   const secondary = customization.secondaryColor || defaultSecondary;
   const accent = customization.accentColor || defaultAccent;
-  const bgColor = isLightMode 
-    ? (customization.backgroundColor || defaultBgLight) 
-    : (customization.backgroundColor || defaultBgDark);
-  const textCol = isLightMode 
-    ? (customization.textColor || '#1F2937') 
-    : (customization.textColor || '#FFFFFF');
-  const surfaceColor = isLightMode 
-    ? (customization.surfaceColor || defaultSurfaceLight) 
-    : (customization.surfaceColor || defaultSurfaceDark);
-  const mutedColor = isLightMode 
-    ? (customization.mutedColor || '#6B7280') 
-    : (customization.mutedColor || '#A1A1AA');
+  
+  // Get mode-specific colors
+  const modeColors = getModeColors(customization, isLightMode, themeDefaults);
+  const { backgroundColor: bgColor, surfaceColor, textColor: textCol, mutedColor } = modeColors;
 
   // Typography
   const fontFamily = customization.fontFamily || 'Poppins';
@@ -213,10 +215,18 @@ export const AliPanelHomepage = ({
                   <span style={{ background: `linear-gradient(to right, ${primary}, ${secondary})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                     {heroTitle}
                   </span>
-                  <br />
-                  <span>Social Media</span>
-                  <br />
-                  <span>Presence</span>
+                  {customization.heroAnimatedTextStyle === 'glow-box' && (
+                    <>
+                      <br />
+                      <motion.span 
+                        style={getGlowBoxStyle(customization, primary)}
+                        animate={{ boxShadow: [`0 0 20px ${primary}50`, `0 0 30px ${primary}70`, `0 0 20px ${primary}50`] }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                      >
+                        Presence
+                      </motion.span>
+                    </>
+                  )}
                 </h1>
 
                 <p className="text-lg mb-8 max-w-lg" style={{ color: mutedColor }}>{heroSubtitle}</p>

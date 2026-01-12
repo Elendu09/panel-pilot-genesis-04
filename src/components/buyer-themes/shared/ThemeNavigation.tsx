@@ -1,15 +1,17 @@
 import { useState, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Sun, Moon, LayoutDashboard, LogOut } from 'lucide-react';
+import { Menu, X, Sun, Moon, LayoutDashboard, LogOut, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { BuyerAuthContext } from '@/contexts/BuyerAuthContext';
+import { LanguageSelector } from '@/components/buyer/LanguageSelector';
 
 interface ThemeNavigationProps {
   companyName: string;
   logoUrl?: string;
   logoIcon: React.ReactNode;
+  defaultIcon?: React.ReactNode;
   showBlogInMenu?: boolean;
   themeMode?: 'light' | 'dark';
   onThemeModeChange?: (mode: 'light' | 'dark') => void;
@@ -30,6 +32,7 @@ export const ThemeNavigation = ({
   companyName,
   logoUrl,
   logoIcon,
+  defaultIcon,
   showBlogInMenu = false,
   themeMode = 'dark',
   onThemeModeChange,
@@ -99,7 +102,7 @@ export const ThemeNavigation = ({
               {logoUrl ? (
                 <img src={logoUrl} alt={companyName} className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl object-contain" loading="eager" />
               ) : (
-                logoIcon
+                defaultIcon || logoIcon
               )}
               <span 
                 className={cn(
@@ -133,6 +136,9 @@ export const ThemeNavigation = ({
 
             {/* Desktop Actions */}
             <div className="hidden md:flex items-center gap-2 sm:gap-3">
+              {/* Language Selector */}
+              <LanguageSelector />
+              
               {/* Theme Toggle */}
               <Button 
                 variant="ghost" 
@@ -219,6 +225,9 @@ export const ThemeNavigation = ({
 
             {/* Mobile Menu Button */}
             <div className="flex md:hidden items-center gap-2">
+              {/* Mobile Language Selector */}
+              <LanguageSelector />
+              
               {/* Mobile Theme Toggle */}
               <Button 
                 variant="ghost" 

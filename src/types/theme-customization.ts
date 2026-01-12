@@ -61,6 +61,9 @@ export interface ThemeCustomization {
   hoverScale?: number;
   scrollReveal?: boolean;
   
+  // Hero animated text styling
+  heroAnimatedTextStyle?: 'plain' | 'glow-box' | 'underline' | 'highlight';
+  
   // Background
   backgroundPattern?: string;
   patternOpacity?: number;

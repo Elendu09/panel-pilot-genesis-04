@@ -10,7 +10,8 @@ import { Helmet } from 'react-helmet-async';
 import { ThemeCustomization } from '@/types/theme-customization';
 import { 
   getAnimationVariants, getButtonStyles, getHoverScale, getLucideIcon,
-  getDefaultFeatures, getDefaultTestimonials, getDefaultFAQs, getSocialLinks
+  getDefaultFeatures, getDefaultTestimonials, getDefaultFAQs, getSocialLinks,
+  getModeColors, getGlowBoxStyle
 } from '@/lib/theme-utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { ThemeNavigation } from '../shared/ThemeNavigation';
@@ -44,25 +45,27 @@ export const FlySMMHomepage = ({
   // Theme defaults for FlySMM (light, blue accents)
   const defaultPrimary = '#2196F3';
   const defaultSecondary = '#00BCD4';
-  const defaultBgLight = '#F8FAFC';
-  const defaultBgDark = '#0F172A';
-  const defaultSurfaceLight = '#FFFFFF';
-  const defaultSurfaceDark = '#1E293B';
+
+  // FlySMM theme color defaults
+  const themeDefaults = {
+    lightBg: '#F8FAFC',
+    darkBg: '#0F172A',
+    lightSurface: '#FFFFFF',
+    darkSurface: '#1E293B',
+    lightText: '#1F2937',
+    darkText: '#FFFFFF',
+    lightMuted: '#6B7280',
+    darkMuted: '#9CA3AF',
+    lightBorder: '#E5E7EB',
+    darkBorder: '#334155',
+  };
 
   const primary = customization.primaryColor || defaultPrimary;
   const secondary = customization.secondaryColor || defaultSecondary;
-  const bgColor = isLightMode 
-    ? (customization.backgroundColor || defaultBgLight) 
-    : (customization.backgroundColor || defaultBgDark);
-  const textCol = isLightMode 
-    ? (customization.textColor || '#1F2937') 
-    : (customization.textColor || '#FFFFFF');
-  const surfaceColor = isLightMode 
-    ? (customization.surfaceColor || defaultSurfaceLight) 
-    : (customization.surfaceColor || defaultSurfaceDark);
-  const mutedColor = isLightMode 
-    ? (customization.mutedColor || '#6B7280') 
-    : (customization.mutedColor || '#9CA3AF');
+  
+  // Get mode-specific colors
+  const modeColors = getModeColors(customization, isLightMode, themeDefaults);
+  const { backgroundColor: bgColor, surfaceColor, textColor: textCol, mutedColor } = modeColors;
 
   // Typography
   const fontFamily = customization.fontFamily || 'Nunito';
@@ -191,8 +194,22 @@ export const FlySMMHomepage = ({
                   <span style={{ background: `linear-gradient(to right, ${primary}, ${secondary})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                     Social Media
                   </span>
-                  <br />
-                  Today! 🚀
+                  {customization.heroAnimatedTextStyle === 'glow-box' && (
+                    <motion.span 
+                      className="ml-2"
+                      style={getGlowBoxStyle(customization, primary)}
+                      animate={{ boxShadow: [`0 0 20px ${primary}50`, `0 0 30px ${primary}70`, `0 0 20px ${primary}50`] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                    >
+                      🚀
+                    </motion.span>
+                  )}
+                  {!customization.heroAnimatedTextStyle && (
+                    <>
+                      <br />
+                      Today! 🚀
+                    </>
+                  )}
                 </h1>
 
                 <p className="text-lg mb-8 max-w-lg" style={{ color: mutedColor }}>{heroSubtitle}</p>
