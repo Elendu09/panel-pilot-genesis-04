@@ -10,7 +10,7 @@ import { Helmet } from 'react-helmet-async';
 import { ThemeCustomization } from '@/types/theme-customization';
 import { 
   getAnimationVariants, getButtonStyles, getHoverScale, getLucideIcon,
-  getDefaultFeatures, getDefaultTestimonials, getDefaultFAQs
+  getDefaultFeatures, getDefaultTestimonials, getDefaultFAQs, getSocialLinks
 } from '@/lib/theme-utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { ThemeNavigation } from '../shared/ThemeNavigation';
@@ -458,20 +458,22 @@ export const FlySMMHomepage = ({
                 <p className="text-sm mb-4" style={{ color: mutedColor }}>
                   {customization.footerAbout || 'Your trusted partner for social media growth.'}
                 </p>
-                {customization.socialLinks && (
-                  <div className="flex gap-3">
-                    {customization.socialLinks.instagram && (
-                      <a href={customization.socialLinks.instagram} target="_blank" rel="noopener noreferrer" className="opacity-60 hover:opacity-100 transition-opacity">
-                        <Sparkles className="w-5 h-5" />
-                      </a>
-                    )}
-                    {customization.socialLinks.twitter && (
-                      <a href={customization.socialLinks.twitter} target="_blank" rel="noopener noreferrer" className="opacity-60 hover:opacity-100 transition-opacity">
-                        <Users className="w-5 h-5" />
-                      </a>
-                    )}
-                  </div>
-                )}
+                {(() => {
+                  const socialLinks = getSocialLinks(customization.socialLinks);
+                  const iconMap: Record<string, any> = { instagram: Sparkles, twitter: Users };
+                  return socialLinks.length > 0 && (
+                    <div className="flex gap-3">
+                      {socialLinks.map(link => {
+                        const Icon = iconMap[link.id] || Sparkles;
+                        return (
+                          <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" className="opacity-60 hover:opacity-100 transition-opacity">
+                            <Icon className="w-5 h-5" />
+                          </a>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
               </div>
               
               {/* Services Column */}

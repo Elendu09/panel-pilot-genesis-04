@@ -11,7 +11,8 @@ import { ThemeCustomization } from '@/types/theme-customization';
 import { 
   getAnimationVariants, getContainerVariants, getItemVariants,
   getButtonStyles, getCardStyles, getHoverScale, getLucideIcon,
-  getDefaultStats, getDefaultFeatures, getDefaultTestimonials, getDefaultFAQs
+  getDefaultStats, getDefaultFeatures, getDefaultTestimonials, getDefaultFAQs,
+  getSocialLinks
 } from '@/lib/theme-utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { ThemeNavigation } from '../shared/ThemeNavigation';
@@ -486,25 +487,22 @@ export const AliPanelHomepage = ({
                   {customization.footerAbout || 'Professional SMM services with instant delivery and 24/7 support.'}
                 </p>
                 {/* Social Links */}
-                {customization.socialLinks && (
-                  <div className="flex gap-3">
-                    {customization.socialLinks.instagram && (
-                      <a href={customization.socialLinks.instagram} target="_blank" rel="noopener noreferrer" className="opacity-60 hover:opacity-100 transition-opacity">
-                        <Instagram className="w-5 h-5" />
-                      </a>
-                    )}
-                    {customization.socialLinks.twitter && (
-                      <a href={customization.socialLinks.twitter} target="_blank" rel="noopener noreferrer" className="opacity-60 hover:opacity-100 transition-opacity">
-                        <Twitter className="w-5 h-5" />
-                      </a>
-                    )}
-                    {customization.socialLinks.youtube && (
-                      <a href={customization.socialLinks.youtube} target="_blank" rel="noopener noreferrer" className="opacity-60 hover:opacity-100 transition-opacity">
-                        <Youtube className="w-5 h-5" />
-                      </a>
-                    )}
-                  </div>
-                )}
+                {(() => {
+                  const socialLinks = getSocialLinks(customization.socialLinks);
+                  const iconMap: Record<string, any> = { instagram: Instagram, twitter: Twitter, youtube: Youtube };
+                  return socialLinks.length > 0 && (
+                    <div className="flex gap-3">
+                      {socialLinks.map(link => {
+                        const Icon = iconMap[link.id] || Sparkles;
+                        return (
+                          <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" className="opacity-60 hover:opacity-100 transition-opacity">
+                            <Icon className="w-5 h-5" />
+                          </a>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
               </div>
               
               {/* Services Column */}

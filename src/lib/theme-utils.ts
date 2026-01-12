@@ -288,3 +288,39 @@ export const getDefaultFAQs = () => [
   { question: 'Is there a refill guarantee?', answer: 'Yes! Most of our services come with a refill guarantee. If you experience any drops, we will refill them for free.' },
   { question: 'What payment methods do you accept?', answer: 'We accept all major credit cards, PayPal, cryptocurrency, and various local payment methods.' },
 ];
+
+// Social link helper - handles both old format (string) and new format ({ enabled, url })
+export interface SocialLinkData {
+  id: string;
+  url: string;
+  enabled: boolean;
+}
+
+export const getSocialLinks = (socialLinks: Record<string, any> | undefined): SocialLinkData[] => {
+  if (!socialLinks) return [];
+  
+  const platforms = ['instagram', 'facebook', 'twitter', 'youtube', 'tiktok', 'telegram', 'discord', 'linkedin', 'whatsapp'];
+  
+  return platforms
+    .map(id => {
+      const value = socialLinks[id];
+      if (!value) return null;
+      
+      // Handle new format: { enabled: boolean, url: string }
+      if (typeof value === 'object' && value !== null) {
+        return {
+          id,
+          url: value.url || '',
+          enabled: value.enabled !== false
+        };
+      }
+      
+      // Handle old format: string (URL directly)
+      return {
+        id,
+        url: value as string,
+        enabled: true
+      };
+    })
+    .filter((link): link is SocialLinkData => link !== null && link.enabled && !!link.url);
+};

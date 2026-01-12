@@ -403,25 +403,23 @@ export const SMMStayHomepage = ({
                 <p className="text-sm mb-4" style={{ color: mutedColor }}>
                   {customization.footerAbout || 'THE #1 SMM PANEL FOR SERIOUS GROWTH.'}
                 </p>
-                {customization.socialLinks && (
-                  <div className="flex gap-3">
-                    {customization.socialLinks.instagram && (
-                      <a href={customization.socialLinks.instagram} target="_blank" rel="noopener noreferrer" className="opacity-60 hover:opacity-100 transition-opacity">
-                        <Instagram className="w-5 h-5" />
-                      </a>
-                    )}
-                    {customization.socialLinks.twitter && (
-                      <a href={customization.socialLinks.twitter} target="_blank" rel="noopener noreferrer" className="opacity-60 hover:opacity-100 transition-opacity">
-                        <Twitter className="w-5 h-5" />
-                      </a>
-                    )}
-                    {customization.socialLinks.youtube && (
-                      <a href={customization.socialLinks.youtube} target="_blank" rel="noopener noreferrer" className="opacity-60 hover:opacity-100 transition-opacity">
-                        <Youtube className="w-5 h-5" />
-                      </a>
-                    )}
-                  </div>
-                )}
+                {(() => {
+                  const { getSocialLinks } = require('@/lib/theme-utils');
+                  const socialLinks = getSocialLinks(customization.socialLinks);
+                  const iconMap: Record<string, any> = { instagram: Instagram, twitter: Twitter, youtube: Youtube };
+                  return socialLinks.length > 0 && (
+                    <div className="flex gap-3">
+                      {socialLinks.map((link: any) => {
+                        const Icon = iconMap[link.id] || Instagram;
+                        return (
+                          <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" className="opacity-60 hover:opacity-100 transition-opacity">
+                            <Icon className="w-5 h-5" />
+                          </a>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
               </div>
               
               {/* Services Column */}

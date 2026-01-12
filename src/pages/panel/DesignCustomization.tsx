@@ -3225,28 +3225,53 @@ export default function DesignCustomization() {
                           <span className="text-xs text-muted-foreground">(Add URLs to display in footer)</span>
                         </Label>
                         {[
-                          { id: 'instagram', label: 'Instagram URL', icon: Instagram, placeholder: 'https://instagram.com/yourpanel' },
-                          { id: 'facebook', label: 'Facebook URL', icon: Facebook, placeholder: 'https://facebook.com/yourpanel' },
-                          { id: 'twitter', label: 'Twitter/X URL', icon: Twitter, placeholder: 'https://x.com/yourpanel' },
-                          { id: 'youtube', label: 'YouTube URL', icon: Youtube, placeholder: 'https://youtube.com/@yourpanel' },
-                          { id: 'tiktok', label: 'TikTok URL', icon: Music, placeholder: 'https://tiktok.com/@yourpanel' },
-                          { id: 'telegram', label: 'Telegram URL', icon: Send, placeholder: 'https://t.me/yourpanel' },
-                          { id: 'discord', label: 'Discord URL', icon: MessageCircle, placeholder: 'https://discord.gg/yourpanel' },
-                          { id: 'linkedin', label: 'LinkedIn URL', icon: Linkedin, placeholder: 'https://linkedin.com/company/yourpanel' },
-                          { id: 'whatsapp', label: 'WhatsApp URL', icon: MessageSquare, placeholder: 'https://wa.me/1234567890' },
-                        ].map(social => (
-                          <div key={social.id} className="flex items-center gap-2">
-                            <div className="p-2 rounded-lg bg-muted/50">
-                              <social.icon className="w-4 h-4 text-muted-foreground" />
+                          { id: 'instagram', label: 'Instagram', icon: Instagram, placeholder: 'https://instagram.com/yourpanel' },
+                          { id: 'facebook', label: 'Facebook', icon: Facebook, placeholder: 'https://facebook.com/yourpanel' },
+                          { id: 'twitter', label: 'Twitter/X', icon: Twitter, placeholder: 'https://x.com/yourpanel' },
+                          { id: 'youtube', label: 'YouTube', icon: Youtube, placeholder: 'https://youtube.com/@yourpanel' },
+                          { id: 'tiktok', label: 'TikTok', icon: Music, placeholder: 'https://tiktok.com/@yourpanel' },
+                          { id: 'telegram', label: 'Telegram', icon: Send, placeholder: 'https://t.me/yourpanel' },
+                          { id: 'discord', label: 'Discord', icon: MessageCircle, placeholder: 'https://discord.gg/yourpanel' },
+                          { id: 'linkedin', label: 'LinkedIn', icon: Linkedin, placeholder: 'https://linkedin.com/company/yourpanel' },
+                          { id: 'whatsapp', label: 'WhatsApp', icon: MessageSquare, placeholder: 'https://wa.me/1234567890' },
+                        ].map(social => {
+                          const socialData = (customization.socialLinks as any)?.[social.id];
+                          const isEnabled = typeof socialData === 'object' ? socialData?.enabled !== false : !!socialData;
+                          const urlValue = typeof socialData === 'object' ? socialData?.url || '' : socialData || '';
+                          
+                          return (
+                            <div key={social.id} className="p-3 rounded-lg bg-muted/30 space-y-2">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <div className="p-2 rounded-lg bg-muted/50">
+                                    <social.icon className="w-4 h-4 text-muted-foreground" />
+                                  </div>
+                                  <span className="text-sm font-medium">{social.label}</span>
+                                </div>
+                                <Switch 
+                                  checked={isEnabled}
+                                  onCheckedChange={(checked) => {
+                                    updateCustomization('socialLinks', { 
+                                      ...customization.socialLinks, 
+                                      [social.id]: { enabled: checked, url: urlValue } 
+                                    });
+                                  }}
+                                />
+                              </div>
+                              {isEnabled && (
+                                <Input
+                                  className="flex-1"
+                                  placeholder={social.placeholder}
+                                  value={urlValue}
+                                  onChange={(e) => updateCustomization('socialLinks', { 
+                                    ...customization.socialLinks, 
+                                    [social.id]: { enabled: true, url: e.target.value } 
+                                  })}
+                                />
+                              )}
                             </div>
-                            <Input
-                              className="flex-1"
-                              placeholder={social.placeholder}
-                              value={(customization.socialLinks as any)?.[social.id] || ''}
-                              onChange={(e) => updateCustomization('socialLinks', { ...customization.socialLinks, [social.id]: e.target.value })}
-                            />
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   )}
