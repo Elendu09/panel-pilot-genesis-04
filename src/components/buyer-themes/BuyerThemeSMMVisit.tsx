@@ -86,21 +86,74 @@ export const BuyerThemeSMMVisit = ({ children, className }: BuyerThemeSMMVisitPr
           background: linear-gradient(180deg, #FFFBEB 0%, #F5F5F5 100%);
         }
         
-        /* Dark mode */
+        /* Dashboard elements - Light mode */
+        .buyer-theme-smmvisit .glass-card,
+        .buyer-theme-smmvisit [class*="Card"] {
+          background: #FFFFFF !important;
+          border-color: #E5E7EB !important;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+        }
+        
+        .buyer-theme-smmvisit .glass-sidebar {
+          background: #FFFFFF !important;
+          border-color: #E5E7EB !important;
+          box-shadow: 2px 0 20px rgba(0, 0, 0, 0.03) !important;
+        }
+        
+        .buyer-theme-smmvisit input,
+        .buyer-theme-smmvisit textarea,
+        .buyer-theme-smmvisit select {
+          background: #FFFFFF !important;
+          border-color: #E5E7EB !important;
+          color: #1A1A1A !important;
+        }
+        
+        .buyer-theme-smmvisit input::placeholder,
+        .buyer-theme-smmvisit textarea::placeholder {
+          color: #9CA3AF !important;
+        }
+        
+        .buyer-theme-smmvisit input:focus,
+        .buyer-theme-smmvisit textarea:focus,
+        .buyer-theme-smmvisit select:focus {
+          border-color: #FFD700 !important;
+          box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.2) !important;
+        }
+        
+        .buyer-theme-smmvisit table {
+          background: #FFFFFF !important;
+        }
+        
+        .buyer-theme-smmvisit thead {
+          background: rgba(255, 215, 0, 0.08) !important;
+        }
+        
+        .buyer-theme-smmvisit tbody tr:hover {
+          background: rgba(255, 215, 0, 0.05) !important;
+        }
+        
+        /* ===== COMPREHENSIVE DARK MODE ===== */
         .dark .buyer-theme-smmvisit {
           --theme-background: #1A1A1A;
           --theme-surface: #262626;
           --theme-text: #FFFFFF;
           --theme-muted: #9CA3AF;
+          --panel-nav-active-text: #FFD700;
+        }
+        
+        .dark .buyer-theme-smmvisit {
+          background: linear-gradient(180deg, #1A1A1A 0%, #141414 100%);
         }
         
         .dark .buyer-theme-smmvisit .theme-card {
           background: #262626;
-          border-color: rgba(255, 215, 0, 0.2);
+          border: 1px solid rgba(255, 215, 0, 0.2);
+          box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
         }
         
         .dark .buyer-theme-smmvisit .theme-nav {
           background: rgba(26, 26, 26, 0.95);
+          backdrop-filter: blur(10px);
           border-color: rgba(255, 215, 0, 0.1);
         }
         
@@ -108,8 +161,96 @@ export const BuyerThemeSMMVisit = ({ children, className }: BuyerThemeSMMVisitPr
           background: radial-gradient(ellipse at top, rgba(255, 215, 0, 0.1) 0%, transparent 50%);
         }
         
-        .dark .buyer-theme-smmvisit {
-          --panel-nav-active-text: #FFD700;
+        .dark .buyer-theme-smmvisit .theme-button-primary {
+          box-shadow: 0 4px 20px rgba(255, 215, 0, 0.35);
+        }
+        
+        .dark .buyer-theme-smmvisit .theme-button-primary:hover {
+          box-shadow: 0 6px 30px rgba(255, 215, 0, 0.5);
+        }
+        
+        /* Dark mode dashboard elements */
+        .dark .buyer-theme-smmvisit .glass-card,
+        .dark .buyer-theme-smmvisit [class*="Card"] {
+          background: #262626 !important;
+          border-color: rgba(255, 215, 0, 0.15) !important;
+          box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3) !important;
+        }
+        
+        .dark .buyer-theme-smmvisit .glass-sidebar {
+          background: rgba(26, 26, 26, 0.98) !important;
+          border-color: rgba(255, 215, 0, 0.1) !important;
+          box-shadow: 2px 0 20px rgba(0, 0, 0, 0.4) !important;
+        }
+        
+        .dark .buyer-theme-smmvisit input,
+        .dark .buyer-theme-smmvisit textarea,
+        .dark .buyer-theme-smmvisit select {
+          background: #1A1A1A !important;
+          border-color: rgba(255, 215, 0, 0.2) !important;
+          color: #FFFFFF !important;
+        }
+        
+        .dark .buyer-theme-smmvisit input::placeholder,
+        .dark .buyer-theme-smmvisit textarea::placeholder {
+          color: #6B7280 !important;
+        }
+        
+        .dark .buyer-theme-smmvisit input:focus,
+        .dark .buyer-theme-smmvisit textarea:focus,
+        .dark .buyer-theme-smmvisit select:focus {
+          border-color: #FFD700 !important;
+          box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.25) !important;
+        }
+        
+        .dark .buyer-theme-smmvisit table {
+          background: #262626 !important;
+        }
+        
+        .dark .buyer-theme-smmvisit thead {
+          background: rgba(255, 215, 0, 0.1) !important;
+        }
+        
+        .dark .buyer-theme-smmvisit tbody tr:hover {
+          background: rgba(255, 215, 0, 0.08) !important;
+        }
+        
+        .dark .buyer-theme-smmvisit .nav-item.active,
+        .dark .buyer-theme-smmvisit .nav-item:hover {
+          background: rgba(255, 215, 0, 0.15) !important;
+        }
+        
+        /* Dark mode text colors */
+        .dark .buyer-theme-smmvisit h1,
+        .dark .buyer-theme-smmvisit h2,
+        .dark .buyer-theme-smmvisit h3,
+        .dark .buyer-theme-smmvisit h4,
+        .dark .buyer-theme-smmvisit h5,
+        .dark .buyer-theme-smmvisit h6 {
+          color: #FFFFFF;
+        }
+        
+        .dark .buyer-theme-smmvisit p,
+        .dark .buyer-theme-smmvisit span:not(.theme-gradient-text) {
+          color: #D1D5DB;
+        }
+        
+        .dark .buyer-theme-smmvisit .text-muted-foreground {
+          color: #9CA3AF !important;
+        }
+        
+        /* Dark mode badges */
+        .dark .buyer-theme-smmvisit [class*="Badge"],
+        .dark .buyer-theme-smmvisit .badge {
+          background: rgba(255, 215, 0, 0.2) !important;
+          color: #FFD700 !important;
+          border-color: rgba(255, 215, 0, 0.3) !important;
+        }
+        
+        /* Dark mode footer */
+        .dark .buyer-theme-smmvisit footer {
+          background: linear-gradient(180deg, #1A1A1A 0%, #141414 100%) !important;
+          border-top: 1px solid rgba(255, 215, 0, 0.1) !important;
         }
       `}</style>
       {children}

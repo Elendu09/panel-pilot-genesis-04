@@ -90,23 +90,158 @@ export const BuyerThemeAliPanel = ({ children, className }: BuyerThemeAliPanelPr
                       radial-gradient(ellipse at bottom right, rgba(255, 142, 83, 0.1) 0%, transparent 50%);
         }
         
-        /* Light mode */
+        /* Dashboard elements - Dark mode */
+        .buyer-theme-alipanel .glass-card,
+        .buyer-theme-alipanel [class*="Card"] {
+          background: rgba(20, 20, 20, 0.8) !important;
+          border-color: rgba(255, 107, 107, 0.15) !important;
+        }
+        
+        .buyer-theme-alipanel .glass-sidebar {
+          background: rgba(10, 10, 10, 0.95) !important;
+          border-color: rgba(255, 107, 107, 0.1) !important;
+        }
+        
+        .buyer-theme-alipanel input,
+        .buyer-theme-alipanel textarea,
+        .buyer-theme-alipanel select {
+          background: rgba(20, 20, 20, 0.9) !important;
+          border-color: rgba(255, 107, 107, 0.2) !important;
+          color: #FFFFFF !important;
+        }
+        
+        .buyer-theme-alipanel input::placeholder,
+        .buyer-theme-alipanel textarea::placeholder {
+          color: #71717A !important;
+        }
+        
+        .buyer-theme-alipanel input:focus,
+        .buyer-theme-alipanel textarea:focus,
+        .buyer-theme-alipanel select:focus {
+          border-color: #FF6B6B !important;
+          box-shadow: 0 0 0 2px rgba(255, 107, 107, 0.2) !important;
+        }
+        
+        .buyer-theme-alipanel table {
+          background: rgba(20, 20, 20, 0.5) !important;
+        }
+        
+        .buyer-theme-alipanel thead {
+          background: rgba(255, 107, 107, 0.1) !important;
+        }
+        
+        .buyer-theme-alipanel tbody tr:hover {
+          background: rgba(255, 107, 107, 0.05) !important;
+        }
+        
+        /* ===== COMPREHENSIVE LIGHT MODE ===== */
         .light .buyer-theme-alipanel {
-          --theme-background: #FFFFFF;
-          --theme-surface: #FFF5F5;
+          --theme-background: #FFFBFB;
+          --theme-surface: #FFFFFF;
           --theme-text: #1A1A1A;
           --theme-muted: #6B7280;
+          --panel-nav-active-text: #FF6B6B;
+        }
+        
+        .light .buyer-theme-alipanel {
+          background: linear-gradient(180deg, #FFFBFB 0%, #FFF5F5 100%);
         }
         
         .light .buyer-theme-alipanel .theme-card {
-          background: rgba(255, 245, 245, 0.9);
-          border: 1px solid rgba(255, 107, 107, 0.2);
+          background: #FFFFFF;
+          border: 1px solid rgba(255, 107, 107, 0.15);
+          box-shadow: 0 4px 20px rgba(255, 107, 107, 0.08);
         }
         
         .light .buyer-theme-alipanel .theme-nav {
           background: rgba(255, 255, 255, 0.95);
           backdrop-filter: blur(20px);
-          border-bottom: 1px solid rgba(255, 107, 107, 0.15);
+          border-bottom: 1px solid rgba(255, 107, 107, 0.12);
+        }
+        
+        .light .buyer-theme-alipanel .theme-hero {
+          background: linear-gradient(180deg, #FFF0F0 0%, #FFFBFB 100%);
+        }
+        
+        .light .buyer-theme-alipanel .theme-button-primary {
+          box-shadow: 0 4px 20px rgba(255, 107, 107, 0.25);
+        }
+        
+        /* Light mode dashboard elements */
+        .light .buyer-theme-alipanel .glass-card,
+        .light .buyer-theme-alipanel [class*="Card"] {
+          background: #FFFFFF !important;
+          border-color: rgba(255, 107, 107, 0.12) !important;
+          box-shadow: 0 4px 20px rgba(255, 107, 107, 0.06) !important;
+        }
+        
+        .light .buyer-theme-alipanel .glass-sidebar {
+          background: #FFFFFF !important;
+          border-color: rgba(255, 107, 107, 0.1) !important;
+          box-shadow: 2px 0 20px rgba(255, 107, 107, 0.05) !important;
+        }
+        
+        .light .buyer-theme-alipanel input,
+        .light .buyer-theme-alipanel textarea,
+        .light .buyer-theme-alipanel select {
+          background: #FFFFFF !important;
+          border-color: rgba(255, 107, 107, 0.2) !important;
+          color: #1A1A1A !important;
+        }
+        
+        .light .buyer-theme-alipanel input::placeholder,
+        .light .buyer-theme-alipanel textarea::placeholder {
+          color: #9CA3AF !important;
+        }
+        
+        .light .buyer-theme-alipanel table {
+          background: #FFFFFF !important;
+        }
+        
+        .light .buyer-theme-alipanel thead {
+          background: rgba(255, 107, 107, 0.08) !important;
+        }
+        
+        .light .buyer-theme-alipanel tbody tr:hover {
+          background: rgba(255, 107, 107, 0.04) !important;
+        }
+        
+        .light .buyer-theme-alipanel .nav-item.active,
+        .light .buyer-theme-alipanel .nav-item:hover {
+          background: rgba(255, 107, 107, 0.1) !important;
+        }
+        
+        /* Light mode text colors */
+        .light .buyer-theme-alipanel h1,
+        .light .buyer-theme-alipanel h2,
+        .light .buyer-theme-alipanel h3,
+        .light .buyer-theme-alipanel h4,
+        .light .buyer-theme-alipanel h5,
+        .light .buyer-theme-alipanel h6 {
+          color: #1A1A1A;
+        }
+        
+        .light .buyer-theme-alipanel p,
+        .light .buyer-theme-alipanel span:not(.theme-gradient-text) {
+          color: #374151;
+        }
+        
+        .light .buyer-theme-alipanel .text-muted-foreground {
+          color: #6B7280 !important;
+        }
+        
+        /* Light mode badges and chips */
+        .light .buyer-theme-alipanel [class*="Badge"],
+        .light .buyer-theme-alipanel .badge {
+          background: rgba(255, 107, 107, 0.1) !important;
+          color: #FF6B6B !important;
+          border-color: rgba(255, 107, 107, 0.2) !important;
+        }
+        
+        /* Light mode footer */
+        .light .buyer-theme-alipanel footer {
+          background: linear-gradient(180deg, #FFFBFB 0%, #FFF0F0 100%) !important;
+          border-top: 1px solid rgba(255, 107, 107, 0.1) !important;
         }
       `}</style>
       {children}
@@ -134,8 +269,8 @@ export const aliPanelThemeConfig = {
       muted: '#A1A1AA',
     },
     light: {
-      background: '#FFFFFF',
-      surface: '#FFF5F5',
+      background: '#FFFBFB',
+      surface: '#FFFFFF',
       primary: '#FF6B6B',
       secondary: '#FF8E53',
       accent: '#FFCC70',

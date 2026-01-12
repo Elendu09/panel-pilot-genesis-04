@@ -126,20 +126,181 @@ export const BuyerThemeSMMStay = ({ children, className }: BuyerThemeSMMStayProp
           letter-spacing: 1px;
         }
         
+        /* Dashboard elements - Dark mode */
+        .buyer-theme-smmstay .glass-card,
+        .buyer-theme-smmstay [class*="Card"] {
+          background: #0D0D0D !important;
+          border: 1px solid rgba(255, 64, 129, 0.2) !important;
+        }
+        
+        .buyer-theme-smmstay .glass-sidebar {
+          background: rgba(0, 0, 0, 0.98) !important;
+          border-color: rgba(255, 64, 129, 0.15) !important;
+        }
+        
+        .buyer-theme-smmstay input,
+        .buyer-theme-smmstay textarea,
+        .buyer-theme-smmstay select {
+          background: #0D0D0D !important;
+          border: 2px solid rgba(255, 64, 129, 0.2) !important;
+          color: #FFFFFF !important;
+          text-transform: uppercase !important;
+          letter-spacing: 0.5px !important;
+        }
+        
+        .buyer-theme-smmstay input::placeholder,
+        .buyer-theme-smmstay textarea::placeholder {
+          color: #6B7280 !important;
+          text-transform: uppercase !important;
+        }
+        
+        .buyer-theme-smmstay input:focus,
+        .buyer-theme-smmstay textarea:focus,
+        .buyer-theme-smmstay select:focus {
+          border-color: #FF4081 !important;
+          box-shadow: 0 0 20px rgba(255, 64, 129, 0.3) !important;
+        }
+        
+        .buyer-theme-smmstay table {
+          background: #0D0D0D !important;
+        }
+        
+        .buyer-theme-smmstay thead {
+          background: rgba(255, 64, 129, 0.1) !important;
+          text-transform: uppercase !important;
+          letter-spacing: 1px !important;
+        }
+        
+        .buyer-theme-smmstay tbody tr:hover {
+          background: rgba(255, 64, 129, 0.08) !important;
+        }
+        
+        /* ===== COMPREHENSIVE LIGHT MODE ===== */
         .light .buyer-theme-smmstay {
-          --theme-background: #FFFFFF;
-          --theme-surface: #FFF0F5;
+          --theme-background: #FFFAFC;
+          --theme-surface: #FFFFFF;
           --theme-text: #1A1A1A;
           --theme-muted: #6B7280;
+          --panel-nav-active-text: #FF4081;
+        }
+        
+        .light .buyer-theme-smmstay {
+          background: linear-gradient(180deg, #FFFAFC 0%, #FFF0F5 100%);
         }
         
         .light .buyer-theme-smmstay .theme-card {
-          background: #FFF0F5;
+          background: #FFFFFF;
+          border: 2px solid rgba(255, 64, 129, 0.15);
+          box-shadow: 0 4px 24px rgba(255, 64, 129, 0.08);
+        }
+        
+        .light .buyer-theme-smmstay .theme-card::before {
+          filter: blur(30px);
+          opacity: 0.5;
         }
         
         .light .buyer-theme-smmstay .theme-nav {
           background: rgba(255, 255, 255, 0.95);
-          border-bottom: 1px solid rgba(255, 64, 129, 0.15);
+          backdrop-filter: blur(20px);
+          border-bottom: 2px solid rgba(255, 64, 129, 0.1);
+        }
+        
+        .light .buyer-theme-smmstay .theme-hero {
+          background: radial-gradient(ellipse at center, rgba(255, 64, 129, 0.08) 0%, transparent 60%);
+        }
+        
+        .light .buyer-theme-smmstay .theme-button-primary {
+          border-color: #FF4081;
+          color: #FF4081;
+        }
+        
+        .light .buyer-theme-smmstay .theme-button-primary:hover {
+          background: #FF4081;
+          color: white;
+          box-shadow: 0 0 30px rgba(255, 64, 129, 0.4);
+        }
+        
+        /* Light mode dashboard elements */
+        .light .buyer-theme-smmstay .glass-card,
+        .light .buyer-theme-smmstay [class*="Card"] {
+          background: #FFFFFF !important;
+          border: 2px solid rgba(255, 64, 129, 0.12) !important;
+          box-shadow: 0 4px 24px rgba(255, 64, 129, 0.06) !important;
+        }
+        
+        .light .buyer-theme-smmstay .glass-sidebar {
+          background: #FFFFFF !important;
+          border-color: rgba(255, 64, 129, 0.1) !important;
+          box-shadow: 2px 0 24px rgba(255, 64, 129, 0.05) !important;
+        }
+        
+        .light .buyer-theme-smmstay input,
+        .light .buyer-theme-smmstay textarea,
+        .light .buyer-theme-smmstay select {
+          background: #FFFFFF !important;
+          border: 2px solid rgba(255, 64, 129, 0.15) !important;
+          color: #1A1A1A !important;
+        }
+        
+        .light .buyer-theme-smmstay input::placeholder,
+        .light .buyer-theme-smmstay textarea::placeholder {
+          color: #9CA3AF !important;
+        }
+        
+        .light .buyer-theme-smmstay table {
+          background: #FFFFFF !important;
+        }
+        
+        .light .buyer-theme-smmstay thead {
+          background: rgba(255, 64, 129, 0.08) !important;
+        }
+        
+        .light .buyer-theme-smmstay tbody tr:hover {
+          background: rgba(255, 64, 129, 0.04) !important;
+        }
+        
+        .light .buyer-theme-smmstay .nav-item.active,
+        .light .buyer-theme-smmstay .nav-item:hover {
+          background: rgba(255, 64, 129, 0.1) !important;
+        }
+        
+        /* Light mode text colors */
+        .light .buyer-theme-smmstay h1,
+        .light .buyer-theme-smmstay h2,
+        .light .buyer-theme-smmstay h3,
+        .light .buyer-theme-smmstay h4,
+        .light .buyer-theme-smmstay h5,
+        .light .buyer-theme-smmstay h6 {
+          color: #1A1A1A;
+        }
+        
+        .light .buyer-theme-smmstay p,
+        .light .buyer-theme-smmstay span:not(.theme-gradient-text):not(.theme-outline-text) {
+          color: #374151;
+        }
+        
+        .light .buyer-theme-smmstay .text-muted-foreground {
+          color: #6B7280 !important;
+        }
+        
+        .light .buyer-theme-smmstay .theme-outline-text {
+          -webkit-text-stroke-color: #FF4081;
+        }
+        
+        /* Light mode badges */
+        .light .buyer-theme-smmstay [class*="Badge"],
+        .light .buyer-theme-smmstay .badge {
+          background: rgba(255, 64, 129, 0.1) !important;
+          color: #FF4081 !important;
+          border: 2px solid rgba(255, 64, 129, 0.2) !important;
+          text-transform: uppercase !important;
+          letter-spacing: 1px !important;
+        }
+        
+        /* Light mode footer */
+        .light .buyer-theme-smmstay footer {
+          background: linear-gradient(180deg, #FFFAFC 0%, #FFF0F5 100%) !important;
+          border-top: 2px solid rgba(255, 64, 129, 0.1) !important;
         }
       `}</style>
       {children}
@@ -167,8 +328,8 @@ export const smmStayThemeConfig = {
       muted: '#9E9E9E',
     },
     light: {
-      background: '#FFFFFF',
-      surface: '#FFF0F5',
+      background: '#FFFAFC',
+      surface: '#FFFFFF',
       primary: '#FF4081',
       secondary: '#FF80AB',
       accent: '#E040FB',
