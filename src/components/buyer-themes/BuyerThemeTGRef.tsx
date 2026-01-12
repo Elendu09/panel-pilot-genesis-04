@@ -152,22 +152,179 @@ export const BuyerThemeTGRef = ({ children, className }: BuyerThemeTGRefProps) =
           color: #00D4AA;
         }
         
+        /* Dashboard elements - Dark mode */
+        .buyer-theme-tgref .glass-card,
+        .buyer-theme-tgref [class*="Card"] {
+          background: #24283B !important;
+          border-color: rgba(0, 212, 170, 0.15) !important;
+        }
+        
+        .buyer-theme-tgref .glass-sidebar {
+          background: rgba(26, 27, 38, 0.98) !important;
+          border-color: rgba(0, 212, 170, 0.1) !important;
+        }
+        
+        .buyer-theme-tgref input,
+        .buyer-theme-tgref textarea,
+        .buyer-theme-tgref select {
+          background: #1A1B26 !important;
+          border-color: rgba(0, 212, 170, 0.2) !important;
+          color: #C0CAF5 !important;
+          font-family: 'Space Mono', monospace !important;
+        }
+        
+        .buyer-theme-tgref input::placeholder,
+        .buyer-theme-tgref textarea::placeholder {
+          color: #565F89 !important;
+        }
+        
+        .buyer-theme-tgref input:focus,
+        .buyer-theme-tgref textarea:focus,
+        .buyer-theme-tgref select:focus {
+          border-color: #00D4AA !important;
+          box-shadow: 0 0 0 2px rgba(0, 212, 170, 0.2) !important;
+        }
+        
+        .buyer-theme-tgref table {
+          background: #24283B !important;
+          font-family: 'Space Mono', monospace !important;
+        }
+        
+        .buyer-theme-tgref thead {
+          background: rgba(0, 212, 170, 0.1) !important;
+        }
+        
+        .buyer-theme-tgref tbody tr:hover {
+          background: rgba(0, 212, 170, 0.05) !important;
+        }
+        
+        /* ===== COMPREHENSIVE LIGHT MODE ===== */
         .light .buyer-theme-tgref {
           --theme-background: #F8FAFC;
           --theme-surface: #FFFFFF;
           --theme-text: #1E293B;
           --theme-muted: #64748B;
+          --panel-nav-active-text: #00A88A;
+        }
+        
+        .light .buyer-theme-tgref {
+          background: linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 100%);
         }
         
         .light .buyer-theme-tgref .theme-card {
-          background: white;
-          border-color: rgba(0, 212, 170, 0.2);
+          background: #FFFFFF;
+          border: 1px solid rgba(0, 212, 170, 0.2);
+          box-shadow: 0 4px 20px rgba(0, 212, 170, 0.06);
+        }
+        
+        .light .buyer-theme-tgref .theme-card::before,
+        .light .buyer-theme-tgref .theme-card::after {
+          color: #00A88A;
+          opacity: 0.7;
         }
         
         .light .buyer-theme-tgref .theme-nav {
           background: rgba(255, 255, 255, 0.95);
           backdrop-filter: blur(10px);
           border-bottom: 1px solid rgba(0, 212, 170, 0.15);
+        }
+        
+        .light .buyer-theme-tgref .theme-hero {
+          background: 
+            linear-gradient(180deg, rgba(0, 212, 170, 0.08) 0%, transparent 50%),
+            repeating-linear-gradient(0deg, transparent, transparent 50px, rgba(0, 212, 170, 0.03) 50px, rgba(0, 212, 170, 0.03) 51px);
+        }
+        
+        .light .buyer-theme-tgref .theme-button-primary {
+          border-color: #00A88A;
+          color: #00A88A;
+        }
+        
+        .light .buyer-theme-tgref .theme-button-primary:hover {
+          background: rgba(0, 212, 170, 0.08);
+        }
+        
+        .light .buyer-theme-tgref .theme-terminal {
+          background: #F1F5F9;
+          border-color: rgba(0, 212, 170, 0.25);
+          color: #1E293B;
+        }
+        
+        /* Light mode dashboard elements */
+        .light .buyer-theme-tgref .glass-card,
+        .light .buyer-theme-tgref [class*="Card"] {
+          background: #FFFFFF !important;
+          border-color: rgba(0, 212, 170, 0.15) !important;
+          box-shadow: 0 4px 20px rgba(0, 212, 170, 0.05) !important;
+        }
+        
+        .light .buyer-theme-tgref .glass-sidebar {
+          background: #FFFFFF !important;
+          border-color: rgba(0, 212, 170, 0.1) !important;
+          box-shadow: 2px 0 20px rgba(0, 212, 170, 0.04) !important;
+        }
+        
+        .light .buyer-theme-tgref input,
+        .light .buyer-theme-tgref textarea,
+        .light .buyer-theme-tgref select {
+          background: #FFFFFF !important;
+          border-color: rgba(0, 212, 170, 0.2) !important;
+          color: #1E293B !important;
+        }
+        
+        .light .buyer-theme-tgref input::placeholder,
+        .light .buyer-theme-tgref textarea::placeholder {
+          color: #94A3B8 !important;
+        }
+        
+        .light .buyer-theme-tgref table {
+          background: #FFFFFF !important;
+        }
+        
+        .light .buyer-theme-tgref thead {
+          background: rgba(0, 212, 170, 0.08) !important;
+        }
+        
+        .light .buyer-theme-tgref tbody tr:hover {
+          background: rgba(0, 212, 170, 0.04) !important;
+        }
+        
+        .light .buyer-theme-tgref .nav-item.active,
+        .light .buyer-theme-tgref .nav-item:hover {
+          background: rgba(0, 212, 170, 0.1) !important;
+        }
+        
+        /* Light mode text colors */
+        .light .buyer-theme-tgref h1,
+        .light .buyer-theme-tgref h2,
+        .light .buyer-theme-tgref h3,
+        .light .buyer-theme-tgref h4,
+        .light .buyer-theme-tgref h5,
+        .light .buyer-theme-tgref h6 {
+          color: #1E293B;
+        }
+        
+        .light .buyer-theme-tgref p,
+        .light .buyer-theme-tgref span:not(.theme-gradient-text) {
+          color: #334155;
+        }
+        
+        .light .buyer-theme-tgref .text-muted-foreground {
+          color: #64748B !important;
+        }
+        
+        /* Light mode badges */
+        .light .buyer-theme-tgref [class*="Badge"],
+        .light .buyer-theme-tgref .badge {
+          background: rgba(0, 212, 170, 0.1) !important;
+          color: #00A88A !important;
+          border-color: rgba(0, 212, 170, 0.2) !important;
+        }
+        
+        /* Light mode footer */
+        .light .buyer-theme-tgref footer {
+          background: linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 100%) !important;
+          border-top: 1px solid rgba(0, 212, 170, 0.1) !important;
         }
       `}</style>
       {children}

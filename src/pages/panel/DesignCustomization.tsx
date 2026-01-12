@@ -1114,14 +1114,29 @@ export default function DesignCustomization() {
   };
 
   const applyPreset = (preset: typeof designPresets[0]) => {
-    setCustomization(prev => ({
-      ...prev,
-      ...preset.customization,
-      // Ensure selectedTheme is updated from preset if it has one
-      selectedTheme: preset.customization.selectedTheme || prev.selectedTheme,
-    }));
+    // Check if current theme is a buyer-specific theme (tgref, alipanel, etc.)
+    // These should be preserved when applying color presets
+    const buyerThemes = [
+      'theme_tgref', 'tgref', 
+      'theme_alipanel', 'alipanel', 
+      'theme_flysmm', 'flysmm', 
+      'theme_smmstay', 'smmstay', 
+      'theme_smmvisit', 'smmvisit'
+    ];
+    
+    setCustomization(prev => {
+      const currentTheme = prev.selectedTheme;
+      const isBuyerTheme = buyerThemes.includes(currentTheme);
+      
+      return {
+        ...prev,
+        ...preset.customization,
+        // PRESERVE the buyer theme - only apply preset colors, not theme type
+        selectedTheme: isBuyerTheme ? prev.selectedTheme : (preset.customization.selectedTheme || prev.selectedTheme),
+      };
+    });
     setHasUnsavedChanges(true);
-    toast({ title: `Applied "${preset.name}" preset` });
+    toast({ title: `Applied "${preset.name}" colors${customization.selectedTheme && buyerThemes.includes(customization.selectedTheme) ? ' to current theme' : ''}` });
   };
 
   const handleUndo = () => {
