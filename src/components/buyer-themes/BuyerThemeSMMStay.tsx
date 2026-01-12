@@ -175,6 +175,99 @@ export const BuyerThemeSMMStay = ({ children, className }: BuyerThemeSMMStayProp
           background: rgba(255, 64, 129, 0.08) !important;
         }
         
+        /* Buttons - Dark mode */
+        .buyer-theme-smmstay button[class*="primary"],
+        .buyer-theme-smmstay [class*="Button"][class*="primary"] {
+          background: linear-gradient(135deg, #FF4081 0%, #E040FB 100%) !important;
+          color: white !important;
+          border: none !important;
+          text-transform: uppercase !important;
+          letter-spacing: 1px !important;
+          font-weight: 700 !important;
+        }
+        
+        .buyer-theme-smmstay button[class*="secondary"],
+        .buyer-theme-smmstay [class*="Button"][class*="secondary"] {
+          background: rgba(255, 64, 129, 0.15) !important;
+          color: #FF4081 !important;
+          border: 2px solid rgba(255, 64, 129, 0.3) !important;
+          text-transform: uppercase !important;
+        }
+        
+        .buyer-theme-smmstay button[class*="outline"],
+        .buyer-theme-smmstay [class*="Button"][class*="outline"] {
+          background: transparent !important;
+          color: #FF4081 !important;
+          border: 2px solid #FF4081 !important;
+          text-transform: uppercase !important;
+        }
+        
+        .buyer-theme-smmstay button[class*="ghost"],
+        .buyer-theme-smmstay [class*="Button"][class*="ghost"] {
+          background: transparent !important;
+          color: #FFFFFF !important;
+          text-transform: uppercase !important;
+        }
+        
+        .buyer-theme-smmstay button[class*="ghost"]:hover,
+        .buyer-theme-smmstay [class*="Button"][class*="ghost"]:hover {
+          background: rgba(255, 64, 129, 0.15) !important;
+        }
+        
+        /* Labels - Dark mode */
+        .buyer-theme-smmstay label {
+          color: #FFFFFF !important;
+          text-transform: uppercase !important;
+          letter-spacing: 1px !important;
+          font-weight: 600 !important;
+        }
+        
+        /* Progress bars - Dark mode */
+        .buyer-theme-smmstay [class*="Progress"] {
+          background: rgba(255, 64, 129, 0.15) !important;
+        }
+        
+        .buyer-theme-smmstay [class*="Progress"] > div {
+          background: linear-gradient(135deg, #FF4081 0%, #E040FB 100%) !important;
+        }
+        
+        /* Tooltips - Dark mode */
+        .buyer-theme-smmstay [role="tooltip"] {
+          background: #0D0D0D !important;
+          color: #FFFFFF !important;
+          border: 2px solid rgba(255, 64, 129, 0.3) !important;
+          text-transform: uppercase !important;
+        }
+        
+        /* Tabs - Dark mode */
+        .buyer-theme-smmstay [role="tablist"] {
+          background: rgba(13, 13, 13, 0.8) !important;
+          border: 2px solid rgba(255, 64, 129, 0.15) !important;
+        }
+        
+        .buyer-theme-smmstay [role="tab"][data-state="active"] {
+          background: linear-gradient(135deg, #FF4081 0%, #E040FB 100%) !important;
+          color: white !important;
+          text-transform: uppercase !important;
+        }
+        
+        .buyer-theme-smmstay [role="tab"]:not([data-state="active"]) {
+          color: #9E9E9E !important;
+          text-transform: uppercase !important;
+        }
+        
+        /* Bottom navigation - Dark mode */
+        .buyer-theme-smmstay .bottom-nav,
+        .buyer-theme-smmstay [class*="BottomNav"] {
+          background: rgba(0, 0, 0, 0.98) !important;
+          border-top: 2px solid rgba(255, 64, 129, 0.15) !important;
+        }
+        
+        /* Switch toggle - Dark mode */
+        .buyer-theme-smmstay [role="switch"][data-state="checked"] {
+          background: linear-gradient(135deg, #FF4081 0%, #E040FB 100%) !important;
+        }
+        
         /* ===== COMPREHENSIVE LIGHT MODE ===== */
         .light .buyer-theme-smmstay {
           --theme-background: #FFFAFC;
@@ -303,6 +396,59 @@ export const BuyerThemeSMMStay = ({ children, className }: BuyerThemeSMMStayProp
           border-top: 2px solid rgba(255, 64, 129, 0.1) !important;
         }
         
+        /* Light mode buttons */
+        .light .buyer-theme-smmstay button[class*="secondary"],
+        .light .buyer-theme-smmstay [class*="Button"][class*="secondary"] {
+          background: rgba(255, 64, 129, 0.1) !important;
+          color: #FF4081 !important;
+          border: 2px solid rgba(255, 64, 129, 0.2) !important;
+        }
+        
+        .light .buyer-theme-smmstay button[class*="ghost"],
+        .light .buyer-theme-smmstay [class*="Button"][class*="ghost"] {
+          color: #1A1A1A !important;
+        }
+        
+        .light .buyer-theme-smmstay button[class*="ghost"]:hover,
+        .light .buyer-theme-smmstay [class*="Button"][class*="ghost"]:hover {
+          background: rgba(255, 64, 129, 0.08) !important;
+        }
+        
+        /* Light mode labels */
+        .light .buyer-theme-smmstay label {
+          color: #374151 !important;
+        }
+        
+        /* Light mode progress bars */
+        .light .buyer-theme-smmstay [class*="Progress"] {
+          background: rgba(255, 64, 129, 0.1) !important;
+        }
+        
+        /* Light mode tooltips */
+        .light .buyer-theme-smmstay [role="tooltip"] {
+          background: #FFFFFF !important;
+          color: #1A1A1A !important;
+          border: 2px solid rgba(255, 64, 129, 0.15) !important;
+          box-shadow: 0 4px 20px rgba(255, 64, 129, 0.1) !important;
+        }
+        
+        /* Light mode tabs */
+        .light .buyer-theme-smmstay [role="tablist"] {
+          background: rgba(255, 64, 129, 0.05) !important;
+          border: 2px solid rgba(255, 64, 129, 0.1) !important;
+        }
+        
+        .light .buyer-theme-smmstay [role="tab"]:not([data-state="active"]) {
+          color: #6B7280 !important;
+        }
+        
+        /* Light mode bottom navigation */
+        .light .buyer-theme-smmstay .bottom-nav,
+        .light .buyer-theme-smmstay [class*="BottomNav"] {
+          background: rgba(255, 255, 255, 0.95) !important;
+          border-top: 2px solid rgba(255, 64, 129, 0.1) !important;
+        }
+        
         /* Light mode dropdowns and popovers */
         .light .buyer-theme-smmstay [data-radix-popper-content-wrapper] > div,
         .light .buyer-theme-smmstay [role="listbox"],
@@ -310,6 +456,19 @@ export const BuyerThemeSMMStay = ({ children, className }: BuyerThemeSMMStayProp
           background: #FFFFFF !important;
           border: 2px solid rgba(255, 64, 129, 0.15) !important;
           box-shadow: 0 10px 40px rgba(255, 64, 129, 0.1) !important;
+        }
+        
+        /* Light mode dropdown items */
+        .light .buyer-theme-smmstay [role="option"],
+        .light .buyer-theme-smmstay [role="menuitem"] {
+          color: #1A1A1A !important;
+        }
+        
+        .light .buyer-theme-smmstay [role="option"]:hover,
+        .light .buyer-theme-smmstay [role="menuitem"]:hover,
+        .light .buyer-theme-smmstay [role="option"][data-highlighted],
+        .light .buyer-theme-smmstay [role="menuitem"][data-highlighted] {
+          background: rgba(255, 64, 129, 0.08) !important;
         }
         
         /* Light mode skeleton loading */
@@ -329,6 +488,12 @@ export const BuyerThemeSMMStay = ({ children, className }: BuyerThemeSMMStayProp
         /* Light mode accordion */
         .light .buyer-theme-smmstay [data-state="open"] {
           background: rgba(255, 64, 129, 0.04) !important;
+        }
+        
+        /* Light mode dialogs */
+        .light .buyer-theme-smmstay [role="dialog"] {
+          background: #FFFFFF !important;
+          border: 2px solid rgba(255, 64, 129, 0.15) !important;
         }
       `}</style>
       {children}
