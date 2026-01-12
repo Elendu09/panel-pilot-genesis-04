@@ -5,7 +5,7 @@ import {
   CheckCircle, Heart, DollarSign, BarChart3, Sparkles, Rocket,
   Instagram, Youtube, Twitter, Facebook, MessageCircle, Music, Video, Camera,
   Terminal, Flame, ThumbsUp, Eye, UserPlus, Cpu, Play, Headphones,
-  ShoppingCart, CreditCard
+  ShoppingCart, CreditCard, Linkedin, Send
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -15,7 +15,7 @@ const iconMap: Record<string, LucideIcon> = {
   CheckCircle, Heart, DollarSign, BarChart3, Sparkles, Rocket,
   Instagram, Youtube, Twitter, Facebook, MessageCircle, Music, Video, Camera,
   Terminal, Flame, ThumbsUp, Eye, UserPlus, Cpu, Play, Headphones,
-  ShoppingCart, CreditCard
+  ShoppingCart, CreditCard, Linkedin, Send
 };
 
 // Get Lucide icon component by name
@@ -406,4 +406,29 @@ export const getGlowBoxStyle = (
   }
   
   return {};
+};
+
+// Helper to extract last word from hero title for glow-box styling
+export const getLastWordFromTitle = (title: string): { prefix: string; lastWord: string } => {
+  const words = title.trim().split(' ');
+  if (words.length <= 1) {
+    return { prefix: '', lastWord: title };
+  }
+  const lastWord = words.pop() || '';
+  return { prefix: words.join(' '), lastWord };
+};
+
+// Complete icon map for social links in all themes
+export const getSocialIconMap = (): Record<string, LucideIcon> => {
+  return {
+    instagram: Instagram,
+    twitter: Twitter,
+    youtube: Youtube,
+    facebook: Facebook,
+    telegram: Send,
+    discord: MessageCircle,
+    linkedin: Linkedin,
+    whatsapp: MessageCircle,
+    tiktok: Music,
+  };
 };

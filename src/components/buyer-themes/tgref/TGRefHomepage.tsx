@@ -12,7 +12,7 @@ import {
   getAnimationVariants, getContainerVariants, getItemVariants,
   getButtonStyles, getHoverScale, getLucideIcon,
   getDefaultStats, getDefaultFeatures, getDefaultTestimonials, getDefaultFAQs,
-  getModeColors, getGlowBoxStyle, getSocialLinks
+  getModeColors, getGlowBoxStyle, getSocialLinks, getLastWordFromTitle, getSocialIconMap
 } from '@/lib/theme-utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { ThemeNavigation } from '../shared/ThemeNavigation';
@@ -208,19 +208,31 @@ export const TGRefHomepage = ({
 
               <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6">
                 <span style={{ color: mutedColor }}>&gt; </span>
-                <span style={{ background: `linear-gradient(to right, ${primary}, ${secondary}, ${accent})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                  {heroTitle}
-                </span>
-                {customization.heroAnimatedTextStyle === 'glow-box' && (
-                  <motion.span 
-                    className="ml-2"
-                    style={getGlowBoxStyle(customization, primary)}
-                    animate={{ boxShadow: [`0 0 20px ${primary}50`, `0 0 30px ${primary}70`, `0 0 20px ${primary}50`] }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                  >
-                    Now
-                  </motion.span>
-                )}
+                {(() => {
+                  const { prefix, lastWord } = getLastWordFromTitle(heroTitle);
+                  return (
+                    <>
+                      {prefix && (
+                        <span style={{ background: `linear-gradient(to right, ${primary}, ${secondary}, ${accent})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                          {prefix}{' '}
+                        </span>
+                      )}
+                      <span style={{ background: `linear-gradient(to right, ${primary}, ${secondary}, ${accent})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                        {lastWord}
+                      </span>
+                      {customization.heroAnimatedTextStyle === 'glow-box' && (
+                        <motion.span 
+                          className="ml-2"
+                          style={getGlowBoxStyle(customization, primary)}
+                          animate={{ boxShadow: [`0 0 20px ${primary}50`, `0 0 30px ${primary}70`, `0 0 20px ${primary}50`] }}
+                          transition={{ duration: 2, repeat: Infinity }}
+                        >
+                          _
+                        </motion.span>
+                      )}
+                    </>
+                  );
+                })()}
                 <span className="animate-pulse" style={{ color: primary }}>_</span>
               </h1>
 
@@ -506,9 +518,9 @@ export const TGRefHomepage = ({
                 <p className="text-sm mb-4" style={{ color: mutedColor }}>
                   {customization.footerAbout || '> Professional SMM services with instant delivery.'}
                 </p>
-{(() => {
+                {(() => {
                   const socialLinks = getSocialLinks(customization.socialLinks);
-                  const iconMap: Record<string, any> = { instagram: Instagram, twitter: Twitter, youtube: Youtube };
+                  const iconMap = getSocialIconMap();
                   return socialLinks.length > 0 && (
                     <div className="flex gap-3">
                       {socialLinks.map((link: any) => {

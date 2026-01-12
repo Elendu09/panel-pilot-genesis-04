@@ -11,7 +11,7 @@ import { ThemeCustomization } from '@/types/theme-customization';
 import { 
   getButtonStyles, getHoverScale, getLucideIcon,
   getDefaultFeatures, getDefaultTestimonials, getDefaultFAQs,
-  getModeColors, getGlowBoxStyle, getSocialLinks
+  getModeColors, getGlowBoxStyle, getSocialLinks, getLastWordFromTitle, getSocialIconMap
 } from '@/lib/theme-utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { ThemeNavigation } from '../shared/ThemeNavigation';
@@ -201,17 +201,31 @@ export const SMMStayHomepage = ({
             {...(enableAnimations ? { initial: { opacity: 0, y: 30 }, animate: { opacity: 1, y: 0 } } : {})}
           >
             <h1 className="text-5xl md:text-7xl lg:text-8xl font-black uppercase mb-6">
-              <span style={{ background: `linear-gradient(to right, ${primary}, ${secondary})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{heroTitle}</span>
-              {customization.heroAnimatedTextStyle === 'glow-box' && (
-                <motion.span 
-                  className="ml-3"
-                  style={getGlowBoxStyle(customization, primary)}
-                  animate={{ boxShadow: [`0 0 20px ${primary}50`, `0 0 30px ${primary}70`, `0 0 20px ${primary}50`] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                >
-                  NOW
-                </motion.span>
-              )}
+              {(() => {
+                const { prefix, lastWord } = getLastWordFromTitle(heroTitle);
+                return (
+                  <>
+                    {prefix && (
+                      <span style={{ background: `linear-gradient(to right, ${primary}, ${secondary})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                        {prefix}{' '}
+                      </span>
+                    )}
+                    <span style={{ background: `linear-gradient(to right, ${primary}, ${secondary})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                      {lastWord}
+                    </span>
+                    {customization.heroAnimatedTextStyle === 'glow-box' && (
+                      <motion.span 
+                        className="ml-3"
+                        style={getGlowBoxStyle(customization, primary)}
+                        animate={{ boxShadow: [`0 0 20px ${primary}50`, `0 0 30px ${primary}70`, `0 0 20px ${primary}50`] }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                      >
+                        🔥
+                      </motion.span>
+                    )}
+                  </>
+                );
+              })()}
             </h1>
             <p className="text-xl mb-8 max-w-2xl mx-auto uppercase tracking-wide" style={{ color: mutedColor }}>{heroSubtitle}</p>
             
@@ -422,9 +436,9 @@ export const SMMStayHomepage = ({
                 <p className="text-sm mb-4" style={{ color: mutedColor }}>
                   {customization.footerAbout || 'THE #1 SMM PANEL FOR SERIOUS GROWTH.'}
                 </p>
-{(() => {
+                {(() => {
                   const socialLinks = getSocialLinks(customization.socialLinks);
-                  const iconMap: Record<string, any> = { instagram: Instagram, twitter: Twitter, youtube: Youtube };
+                  const iconMap = getSocialIconMap();
                   return socialLinks.length > 0 && (
                     <div className="flex gap-3">
                       {socialLinks.map((link: any) => {

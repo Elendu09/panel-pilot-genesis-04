@@ -11,7 +11,7 @@ import { ThemeCustomization } from '@/types/theme-customization';
 import { 
   getButtonStyles, getHoverScale, getLucideIcon,
   getDefaultFeatures, getDefaultTestimonials, getDefaultFAQs,
-  getModeColors, getGlowBoxStyle, getSocialLinks
+  getModeColors, getGlowBoxStyle, getSocialLinks, getLastWordFromTitle, getSocialIconMap
 } from '@/lib/theme-utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { ThemeNavigation } from '../shared/ThemeNavigation';
@@ -179,18 +179,27 @@ export const SMMVisitHomepage = ({
           <div className="mx-auto px-4 sm:px-6 lg:px-8 text-center" style={{ maxWidth: containerMax }}>
             <motion.div {...(enableAnimations ? { initial: { opacity: 0, y: 30 }, animate: { opacity: 1, y: 0 } } : {})}>
               <h1 className="text-4xl md:text-5xl lg:text-6xl mb-6" style={{ fontWeight: headingWeight }}>
-                {heroTitle}
-                <span style={{ background: `linear-gradient(to right, ${primary}, ${secondary})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}> Social Media</span>
-                {customization.heroAnimatedTextStyle === 'glow-box' && (
-                  <motion.span 
-                    className="ml-2 inline-block"
-                    style={getGlowBoxStyle(customization, primary)}
-                    animate={{ boxShadow: [`0 0 20px ${primary}50`, `0 0 30px ${primary}70`, `0 0 20px ${primary}50`] }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                  >
-                    Today
-                  </motion.span>
-                )}
+                {(() => {
+                  const { prefix, lastWord } = getLastWordFromTitle(heroTitle);
+                  return (
+                    <>
+                      {prefix && <span>{prefix} </span>}
+                      <span style={{ background: `linear-gradient(to right, ${primary}, ${secondary})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                        {lastWord}
+                      </span>
+                      {customization.heroAnimatedTextStyle === 'glow-box' && (
+                        <motion.span 
+                          className="ml-2 inline-block"
+                          style={getGlowBoxStyle(customization, primary)}
+                          animate={{ boxShadow: [`0 0 20px ${primary}50`, `0 0 30px ${primary}70`, `0 0 20px ${primary}50`] }}
+                          transition={{ duration: 2, repeat: Infinity }}
+                        >
+                          ✨
+                        </motion.span>
+                      )}
+                    </>
+                  );
+                })()}
               </h1>
               <p className="text-lg mb-8 max-w-2xl mx-auto" style={{ color: mutedColor }}>{heroSubtitle}</p>
               
@@ -378,9 +387,9 @@ export const SMMVisitHomepage = ({
                 <p className="text-sm mb-4" style={{ color: mutedColor }}>
                   {customization.footerAbout || 'Professional SMM services trusted worldwide.'}
                 </p>
-{(() => {
+                {(() => {
                   const socialLinks = getSocialLinks(customization.socialLinks);
-                  const iconMap: Record<string, any> = { instagram: Instagram, twitter: Twitter, youtube: Youtube, facebook: Facebook };
+                  const iconMap = getSocialIconMap();
                   return socialLinks.length > 0 && (
                     <div className="flex gap-3">
                       {socialLinks.map((link: any) => {
