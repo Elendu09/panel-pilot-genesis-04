@@ -11,7 +11,7 @@ import { ThemeCustomization } from '@/types/theme-customization';
 import { 
   getButtonStyles, getHoverScale, getLucideIcon,
   getDefaultFeatures, getDefaultTestimonials, getDefaultFAQs,
-  getModeColors, getGlowBoxStyle
+  getModeColors, getGlowBoxStyle, getSocialLinks
 } from '@/lib/theme-utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { ThemeNavigation } from '../shared/ThemeNavigation';
@@ -378,8 +378,7 @@ export const SMMVisitHomepage = ({
                 <p className="text-sm mb-4" style={{ color: mutedColor }}>
                   {customization.footerAbout || 'Professional SMM services trusted worldwide.'}
                 </p>
-                {(() => {
-                  const { getSocialLinks } = require('@/lib/theme-utils');
+{(() => {
                   const socialLinks = getSocialLinks(customization.socialLinks);
                   const iconMap: Record<string, any> = { instagram: Instagram, twitter: Twitter, youtube: Youtube, facebook: Facebook };
                   return socialLinks.length > 0 && (
