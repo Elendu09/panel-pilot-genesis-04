@@ -170,6 +170,14 @@ export const SMMStayHomepage = ({
             <div className="absolute inset-0 rounded-lg blur-lg opacity-50" style={{ backgroundColor: primary }} />
           </div>
         }
+        defaultIcon={
+          <div className="relative">
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: `linear-gradient(to bottom right, ${primary}, ${secondary})` }}>
+              <Flame className="w-6 h-6 text-white" />
+            </div>
+            <div className="absolute inset-0 rounded-lg blur-lg opacity-50" style={{ backgroundColor: primary }} />
+          </div>
+        }
         showBlogInMenu={showBlogInMenu}
         themeMode={themeMode}
         onThemeModeChange={handleThemeModeChange}

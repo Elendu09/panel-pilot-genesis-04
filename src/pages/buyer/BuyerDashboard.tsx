@@ -229,12 +229,12 @@ const BuyerDashboard = () => {
     { name: t('nav.support'), icon: Zap, href: '/support', gradient: 'from-amber-500 to-amber-600' },
   ];
 
-  // Show loading state while auth/panel is being determined
+  // Show loading state while auth/panel is being determined - uses theme primary color
   if (panelLoading || authLoading) {
     return (
       <BuyerLayout>
         <div className="flex items-center justify-center min-h-[60vh]">
-          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
       </BuyerLayout>
     );

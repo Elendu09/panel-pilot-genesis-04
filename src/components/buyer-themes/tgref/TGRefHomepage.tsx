@@ -170,6 +170,11 @@ export const TGRefHomepage = ({
             <Terminal className="w-5 h-5" style={{ color: isLightMode ? '#FFFFFF' : bgColor }} />
           </div>
         }
+        defaultIcon={
+          <div className="w-8 h-8 rounded flex items-center justify-center" style={{ background: `linear-gradient(to bottom right, ${primary}, ${secondary})` }}>
+            <Terminal className="w-5 h-5" style={{ color: isLightMode ? '#FFFFFF' : bgColor }} />
+          </div>
+        }
         showBlogInMenu={showBlogInMenu}
         themeMode={themeMode}
         onThemeModeChange={handleThemeModeChange}
