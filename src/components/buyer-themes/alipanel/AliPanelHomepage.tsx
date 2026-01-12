@@ -12,7 +12,7 @@ import {
   getAnimationVariants, getContainerVariants, getItemVariants,
   getButtonStyles, getCardStyles, getHoverScale, getLucideIcon,
   getDefaultStats, getDefaultFeatures, getDefaultTestimonials, getDefaultFAQs,
-  getSocialLinks, getModeColors, getGlowBoxStyle
+  getSocialLinks, getModeColors, getGlowBoxStyle, getLastWordFromTitle, getSocialIconMap
 } from '@/lib/theme-utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { ThemeNavigation } from '../shared/ThemeNavigation';
@@ -218,21 +218,33 @@ export const AliPanelHomepage = ({
                 </div>
 
                 <h1 className="text-4xl md:text-5xl lg:text-6xl mb-6 leading-tight" style={{ fontWeight: headingWeight, fontFamily: headingFont }}>
-                  <span style={{ background: `linear-gradient(to right, ${primary}, ${secondary})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                    {heroTitle}
-                  </span>
-                  {customization.heroAnimatedTextStyle === 'glow-box' && (
-                    <>
-                      <br />
-                      <motion.span 
-                        style={getGlowBoxStyle(customization, primary)}
-                        animate={{ boxShadow: [`0 0 20px ${primary}50`, `0 0 30px ${primary}70`, `0 0 20px ${primary}50`] }}
-                        transition={{ duration: 2, repeat: Infinity }}
-                      >
-                        Presence
-                      </motion.span>
-                    </>
-                  )}
+                  {(() => {
+                    const { prefix, lastWord } = getLastWordFromTitle(heroTitle);
+                    return (
+                      <>
+                        {prefix && (
+                          <span style={{ background: `linear-gradient(to right, ${primary}, ${secondary})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                            {prefix}{' '}
+                          </span>
+                        )}
+                        <span style={{ background: `linear-gradient(to right, ${primary}, ${secondary})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                          {lastWord}
+                        </span>
+                        {customization.heroAnimatedTextStyle === 'glow-box' && (
+                          <>
+                            <br />
+                            <motion.span 
+                              style={getGlowBoxStyle(customization, primary)}
+                              animate={{ boxShadow: [`0 0 20px ${primary}50`, `0 0 30px ${primary}70`, `0 0 20px ${primary}50`] }}
+                              transition={{ duration: 2, repeat: Infinity }}
+                            >
+                              ✨
+                            </motion.span>
+                          </>
+                        )}
+                      </>
+                    );
+                  })()}
                 </h1>
 
                 <p className="text-lg mb-8 max-w-lg" style={{ color: mutedColor }}>{heroSubtitle}</p>
@@ -505,7 +517,7 @@ export const AliPanelHomepage = ({
                 {/* Social Links */}
                 {(() => {
                   const socialLinks = getSocialLinks(customization.socialLinks);
-                  const iconMap: Record<string, any> = { instagram: Instagram, twitter: Twitter, youtube: Youtube };
+                  const iconMap = getSocialIconMap();
                   return socialLinks.length > 0 && (
                     <div className="flex gap-3">
                       {socialLinks.map(link => {

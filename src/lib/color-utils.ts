@@ -202,6 +202,11 @@ export function generateBuyerThemeCSS(colors: Partial<ColorPalette>): string {
       --panel-glow-lg: 0 0 40px ${primary}30;
       --panel-glow-accent: 0 0 20px ${accent}40;
       
+      /* Loading states - uses primary color */
+      --loading-primary: ${primary};
+      --skeleton-bg: ${primary}15;
+      --skeleton-shimmer: ${primary}25;
+      
       /* Nav & sidebar */
       --panel-nav-bg: ${surface};
       --panel-nav-active-bg: ${primary}20;

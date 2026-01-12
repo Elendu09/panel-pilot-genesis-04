@@ -14,7 +14,9 @@ function Skeleton({
     <div
       className={cn(
         "animate-pulse rounded-md",
-        themed ? "bg-primary/10" : "bg-muted",
+        themed 
+          ? "bg-[hsl(var(--primary)/0.15)] dark:bg-[hsl(var(--primary)/0.1)]" 
+          : "bg-muted",
         className
       )}
       {...props}

@@ -11,7 +11,7 @@ import { ThemeCustomization } from '@/types/theme-customization';
 import { 
   getAnimationVariants, getButtonStyles, getHoverScale, getLucideIcon,
   getDefaultFeatures, getDefaultTestimonials, getDefaultFAQs, getSocialLinks,
-  getModeColors, getGlowBoxStyle
+  getModeColors, getGlowBoxStyle, getLastWordFromTitle, getSocialIconMap
 } from '@/lib/theme-utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { ThemeNavigation } from '../shared/ThemeNavigation';
@@ -195,27 +195,27 @@ export const FlySMMHomepage = ({
                 </div>
 
                 <h1 className="text-4xl md:text-5xl lg:text-6xl mb-6 leading-tight" style={{ color: textCol, fontWeight: headingWeight }}>
-                  {heroTitle}
-                  <br />
-                  <span style={{ background: `linear-gradient(to right, ${primary}, ${secondary})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                    Social Media
-                  </span>
-                  {customization.heroAnimatedTextStyle === 'glow-box' && (
-                    <motion.span 
-                      className="ml-2"
-                      style={getGlowBoxStyle(customization, primary)}
-                      animate={{ boxShadow: [`0 0 20px ${primary}50`, `0 0 30px ${primary}70`, `0 0 20px ${primary}50`] }}
-                      transition={{ duration: 2, repeat: Infinity }}
-                    >
-                      🚀
-                    </motion.span>
-                  )}
-                  {!customization.heroAnimatedTextStyle && (
-                    <>
-                      <br />
-                      Today! 🚀
-                    </>
-                  )}
+                  {(() => {
+                    const { prefix, lastWord } = getLastWordFromTitle(heroTitle);
+                    return (
+                      <>
+                        {prefix && <span>{prefix} </span>}
+                        <span style={{ background: `linear-gradient(to right, ${primary}, ${secondary})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                          {lastWord}
+                        </span>
+                        {customization.heroAnimatedTextStyle === 'glow-box' && (
+                          <motion.span 
+                            className="ml-2"
+                            style={getGlowBoxStyle(customization, primary)}
+                            animate={{ boxShadow: [`0 0 20px ${primary}50`, `0 0 30px ${primary}70`, `0 0 20px ${primary}50`] }}
+                            transition={{ duration: 2, repeat: Infinity }}
+                          >
+                            🚀
+                          </motion.span>
+                        )}
+                      </>
+                    );
+                  })()}
                 </h1>
 
                 <p className="text-lg mb-8 max-w-lg" style={{ color: mutedColor }}>{heroSubtitle}</p>
@@ -483,7 +483,7 @@ export const FlySMMHomepage = ({
                 </p>
                 {(() => {
                   const socialLinks = getSocialLinks(customization.socialLinks);
-                  const iconMap: Record<string, any> = { instagram: Sparkles, twitter: Users };
+                  const iconMap = getSocialIconMap();
                   return socialLinks.length > 0 && (
                     <div className="flex gap-3">
                       {socialLinks.map(link => {

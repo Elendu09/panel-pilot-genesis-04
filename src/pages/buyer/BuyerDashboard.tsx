@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
 import { 
   ShoppingCart, 
   Package, 
@@ -229,12 +230,25 @@ const BuyerDashboard = () => {
     { name: t('nav.support'), icon: Zap, href: '/support', gradient: 'from-amber-500 to-amber-600' },
   ];
 
-  // Show loading state while auth/panel is being determined - uses theme primary color
+  // Show loading state while auth/panel is being determined - uses themed skeletons
   if (panelLoading || authLoading) {
     return (
       <BuyerLayout>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <div className="space-y-4 md:space-y-6 p-4">
+          {/* Stats skeleton */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+            {[...Array(4)].map((_, i) => (
+              <Skeleton key={i} themed className="h-28 md:h-32 rounded-2xl" />
+            ))}
+          </div>
+          {/* Quick actions skeleton */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
+            {[...Array(4)].map((_, i) => (
+              <Skeleton key={i} themed className="h-20 rounded-xl" />
+            ))}
+          </div>
+          {/* Orders skeleton */}
+          <Skeleton themed className="h-48 rounded-2xl" />
         </div>
       </BuyerLayout>
     );
