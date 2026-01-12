@@ -154,6 +154,11 @@ export const SMMVisitHomepage = ({
             <Globe className="w-6 h-6 text-white" />
           </div>
         }
+        defaultIcon={
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg" style={{ background: `linear-gradient(to bottom right, ${primary}, ${secondary})` }}>
+            <Globe className="w-6 h-6 text-white" />
+          </div>
+        }
         showBlogInMenu={showBlogInMenu}
         themeMode={themeMode}
         onThemeModeChange={handleThemeModeChange}

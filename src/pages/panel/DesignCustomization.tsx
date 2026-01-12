@@ -179,6 +179,7 @@ const defaultCustomization = {
   heroCTAText: 'Get Started',
   heroSecondaryCTAText: 'View Services',
   heroAnimatedTexts: ['Instagram Growth', 'TikTok Viral', 'YouTube Success', 'Telegram Boost'],
+  heroAnimatedTextStyle: 'plain' as 'plain' | 'glow-box' | 'underline' | 'highlight',
   
   // Section Toggles
   enablePlatformFeatures: true,
@@ -1728,6 +1729,29 @@ export default function DesignCustomization() {
             <div className="flex items-center justify-between p-3 rounded-lg bg-accent/30">
               <span className="font-medium">Enable Fast Order</span>
               <Switch checked={customization.enableFastOrder} onCheckedChange={(c) => updateCustomization('enableFastOrder', c)} />
+            </div>
+            
+            {/* Animated Text Style */}
+            <div className="pt-2 border-t border-border/50">
+              <Label className="mb-2 block">Animated Text Style</Label>
+              <p className="text-xs text-muted-foreground mb-3">Add visual flair to highlighted text in the hero section</p>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { id: 'plain', label: 'Plain', desc: 'No special styling' },
+                  { id: 'glow-box', label: 'Glow Box', desc: 'Glowing border effect' },
+                  { id: 'underline', label: 'Underline', desc: 'Colored underline' },
+                  { id: 'highlight', label: 'Highlight', desc: 'Background highlight' },
+                ].map(style => (
+                  <button 
+                    key={style.id} 
+                    onClick={() => updateCustomization('heroAnimatedTextStyle', style.id)} 
+                    className={`p-3 rounded-lg border-2 text-left transition-all ${customization.heroAnimatedTextStyle === style.id ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/50'}`}
+                  >
+                    <span className="text-sm font-medium block">{style.label}</span>
+                    <span className="text-xs text-muted-foreground">{style.desc}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         );
