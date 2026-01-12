@@ -266,16 +266,21 @@ export default function Features() {
   }, []);
 
   const scrollToSection = (id: string) => {
-    const element = document.getElementById(id);
-    if (element) {
-      // Use larger offset for mobile/tablet to account for sticky header + TOC
-      const isMobile = window.innerWidth < 1024;
-      const offset = isMobile ? 180 : 100;
-      const y = element.getBoundingClientRect().top + window.scrollY - offset;
-      window.scrollTo({ top: y, behavior: "smooth" });
-    }
-    setActiveSection(id);
+    // Close mobile TOC first so it collapses before scrolling
     setIsMobileTocOpen(false);
+    
+    // Small delay to let TOC collapse, then scroll
+    setTimeout(() => {
+      const element = document.getElementById(id);
+      if (element) {
+        // Use larger offset for mobile/tablet to account for sticky header + collapsed TOC
+        const isMobile = window.innerWidth < 1024;
+        const offset = isMobile ? 140 : 100;
+        const y = element.getBoundingClientRect().top + window.scrollY - offset;
+        window.scrollTo({ top: y, behavior: "smooth" });
+      }
+      setActiveSection(id);
+    }, 50);
   };
 
   return (

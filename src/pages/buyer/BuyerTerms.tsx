@@ -141,12 +141,13 @@ const BuyerTerms = () => {
   const scrollToSection = (id: string) => {
     const el = sectionRefs.current[id];
     if (el) {
-      // Calculate offset accounting for sticky header and mobile TOC
+      // Use smaller offset since TOC is already collapsed when this is called on mobile
       const isMobile = window.innerWidth < 1024;
-      const offset = isMobile ? 180 : 100;
+      const offset = isMobile ? 120 : 100;
       const y = el.getBoundingClientRect().top + window.scrollY - offset;
       window.scrollTo({ top: y, behavior: 'smooth' });
     }
+    setActiveSection(id);
   };
 
   const handlePrint = () => {

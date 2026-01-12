@@ -699,6 +699,12 @@
   scroll-margin-top: 100px;
 }
 
+@media (max-width: 1023px) {
+  .scroll-mt-header {
+    scroll-margin-top: 200px;
+  }
+}
+
 /* Shimmer/Shine Effect */
 .shimmer-effect {
   background: linear-gradient(
