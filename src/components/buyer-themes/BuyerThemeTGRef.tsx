@@ -198,6 +198,89 @@ export const BuyerThemeTGRef = ({ children, className }: BuyerThemeTGRefProps) =
           background: rgba(0, 212, 170, 0.05) !important;
         }
         
+        /* Buttons - Dark mode */
+        .buyer-theme-tgref button[class*="primary"],
+        .buyer-theme-tgref [class*="Button"][class*="primary"] {
+          background: linear-gradient(135deg, #00D4AA 0%, #0EA5E9 100%) !important;
+          color: #1A1B26 !important;
+          border: none !important;
+        }
+        
+        .buyer-theme-tgref button[class*="secondary"],
+        .buyer-theme-tgref [class*="Button"][class*="secondary"] {
+          background: rgba(0, 212, 170, 0.15) !important;
+          color: #00D4AA !important;
+          border: 1px solid rgba(0, 212, 170, 0.3) !important;
+        }
+        
+        .buyer-theme-tgref button[class*="outline"],
+        .buyer-theme-tgref [class*="Button"][class*="outline"] {
+          background: transparent !important;
+          color: #00D4AA !important;
+          border: 1px solid #00D4AA !important;
+        }
+        
+        .buyer-theme-tgref button[class*="ghost"],
+        .buyer-theme-tgref [class*="Button"][class*="ghost"] {
+          background: transparent !important;
+          color: #C0CAF5 !important;
+        }
+        
+        .buyer-theme-tgref button[class*="ghost"]:hover,
+        .buyer-theme-tgref [class*="Button"][class*="ghost"]:hover {
+          background: rgba(0, 212, 170, 0.1) !important;
+        }
+        
+        /* Labels - Dark mode */
+        .buyer-theme-tgref label {
+          color: #C0CAF5 !important;
+          font-family: 'Space Mono', monospace !important;
+        }
+        
+        /* Progress bars - Dark mode */
+        .buyer-theme-tgref [class*="Progress"] {
+          background: rgba(0, 212, 170, 0.15) !important;
+        }
+        
+        .buyer-theme-tgref [class*="Progress"] > div {
+          background: linear-gradient(135deg, #00D4AA 0%, #0EA5E9 100%) !important;
+        }
+        
+        /* Tooltips - Dark mode */
+        .buyer-theme-tgref [role="tooltip"] {
+          background: #24283B !important;
+          color: #C0CAF5 !important;
+          border: 1px solid rgba(0, 212, 170, 0.2) !important;
+          font-family: 'Space Mono', monospace !important;
+        }
+        
+        /* Tabs - Dark mode */
+        .buyer-theme-tgref [role="tablist"] {
+          background: rgba(36, 40, 59, 0.6) !important;
+          border: 1px solid rgba(0, 212, 170, 0.1) !important;
+        }
+        
+        .buyer-theme-tgref [role="tab"][data-state="active"] {
+          background: linear-gradient(135deg, #00D4AA 0%, #0EA5E9 100%) !important;
+          color: #1A1B26 !important;
+        }
+        
+        .buyer-theme-tgref [role="tab"]:not([data-state="active"]) {
+          color: #565F89 !important;
+        }
+        
+        /* Bottom navigation - Dark mode */
+        .buyer-theme-tgref .bottom-nav,
+        .buyer-theme-tgref [class*="BottomNav"] {
+          background: rgba(26, 27, 38, 0.95) !important;
+          border-top: 1px solid rgba(0, 212, 170, 0.1) !important;
+        }
+        
+        /* Switch toggle - Dark mode */
+        .buyer-theme-tgref [role="switch"][data-state="checked"] {
+          background: #00D4AA !important;
+        }
+        
         /* ===== COMPREHENSIVE LIGHT MODE ===== */
         .light .buyer-theme-tgref {
           --theme-background: #F8FAFC;
@@ -327,6 +410,59 @@ export const BuyerThemeTGRef = ({ children, className }: BuyerThemeTGRefProps) =
           border-top: 1px solid rgba(0, 212, 170, 0.1) !important;
         }
         
+        /* Light mode buttons */
+        .light .buyer-theme-tgref button[class*="secondary"],
+        .light .buyer-theme-tgref [class*="Button"][class*="secondary"] {
+          background: rgba(0, 212, 170, 0.1) !important;
+          color: #00A88A !important;
+          border: 1px solid rgba(0, 212, 170, 0.2) !important;
+        }
+        
+        .light .buyer-theme-tgref button[class*="ghost"],
+        .light .buyer-theme-tgref [class*="Button"][class*="ghost"] {
+          color: #1E293B !important;
+        }
+        
+        .light .buyer-theme-tgref button[class*="ghost"]:hover,
+        .light .buyer-theme-tgref [class*="Button"][class*="ghost"]:hover {
+          background: rgba(0, 212, 170, 0.08) !important;
+        }
+        
+        /* Light mode labels */
+        .light .buyer-theme-tgref label {
+          color: #334155 !important;
+        }
+        
+        /* Light mode progress bars */
+        .light .buyer-theme-tgref [class*="Progress"] {
+          background: rgba(0, 212, 170, 0.1) !important;
+        }
+        
+        /* Light mode tooltips */
+        .light .buyer-theme-tgref [role="tooltip"] {
+          background: #FFFFFF !important;
+          color: #1E293B !important;
+          border: 1px solid rgba(0, 212, 170, 0.2) !important;
+          box-shadow: 0 4px 20px rgba(0, 212, 170, 0.08) !important;
+        }
+        
+        /* Light mode tabs */
+        .light .buyer-theme-tgref [role="tablist"] {
+          background: rgba(0, 212, 170, 0.05) !important;
+          border: 1px solid rgba(0, 212, 170, 0.1) !important;
+        }
+        
+        .light .buyer-theme-tgref [role="tab"]:not([data-state="active"]) {
+          color: #64748B !important;
+        }
+        
+        /* Light mode bottom navigation */
+        .light .buyer-theme-tgref .bottom-nav,
+        .light .buyer-theme-tgref [class*="BottomNav"] {
+          background: rgba(255, 255, 255, 0.95) !important;
+          border-top: 1px solid rgba(0, 212, 170, 0.1) !important;
+        }
+        
         /* Light mode dropdowns and popovers */
         .light .buyer-theme-tgref [data-radix-popper-content-wrapper] > div,
         .light .buyer-theme-tgref [role="listbox"],
@@ -334,6 +470,19 @@ export const BuyerThemeTGRef = ({ children, className }: BuyerThemeTGRefProps) =
           background: #FFFFFF !important;
           border-color: rgba(0, 212, 170, 0.2) !important;
           box-shadow: 0 10px 40px rgba(0, 212, 170, 0.1) !important;
+        }
+        
+        /* Light mode dropdown items */
+        .light .buyer-theme-tgref [role="option"],
+        .light .buyer-theme-tgref [role="menuitem"] {
+          color: #1E293B !important;
+        }
+        
+        .light .buyer-theme-tgref [role="option"]:hover,
+        .light .buyer-theme-tgref [role="menuitem"]:hover,
+        .light .buyer-theme-tgref [role="option"][data-highlighted],
+        .light .buyer-theme-tgref [role="menuitem"][data-highlighted] {
+          background: rgba(0, 212, 170, 0.08) !important;
         }
         
         /* Light mode skeleton loading */
@@ -353,6 +502,12 @@ export const BuyerThemeTGRef = ({ children, className }: BuyerThemeTGRefProps) =
         /* Light mode accordion */
         .light .buyer-theme-tgref [data-state="open"] {
           background: rgba(0, 212, 170, 0.04) !important;
+        }
+        
+        /* Light mode dialogs */
+        .light .buyer-theme-tgref [role="dialog"] {
+          background: #FFFFFF !important;
+          border: 1px solid rgba(0, 212, 170, 0.15) !important;
         }
       `}</style>
       {children}
