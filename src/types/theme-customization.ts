@@ -63,6 +63,7 @@ export interface ThemeCustomization {
   
   // Hero animated text styling
   heroAnimatedTextStyle?: 'plain' | 'glow-box' | 'underline' | 'highlight' | 'typewriter' | 'gradient-wave' | 'text-reveal' | 'bounce';
+  heroAnimatedTextPosition?: 'first' | 'middle' | 'last';
   
   // Background
   backgroundPattern?: string;

@@ -96,17 +96,19 @@ export const ThemeNavigation = ({
         aria-label="Main navigation"
       >
         <div className="mx-auto px-4 sm:px-6 lg:px-8" style={{ maxWidth: containerMax }}>
-          <div className="flex items-center justify-between h-16">
+          <div className="flex items-center justify-between h-14 sm:h-16">
             {/* Logo */}
-            <Link to="/" className="flex items-center gap-2 sm:gap-3" aria-label={`${companyName} home`}>
+            <Link to="/" className="flex items-center gap-1.5 sm:gap-3 min-w-0" aria-label={`${companyName} home`}>
               {logoUrl ? (
-                <img src={logoUrl} alt={companyName} className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl object-contain" loading="eager" />
+                <img src={logoUrl} alt={companyName} className="w-7 h-7 sm:w-10 sm:h-10 rounded-xl object-contain flex-shrink-0" loading="eager" />
               ) : (
-                defaultIcon || logoIcon
+                <div className="flex-shrink-0">
+                  {defaultIcon || logoIcon}
+                </div>
               )}
               <span 
                 className={cn(
-                  "text-lg sm:text-xl font-bold truncate max-w-[120px] sm:max-w-none",
+                  "text-sm sm:text-xl font-bold whitespace-nowrap",
                   navStyle === 'terminal' ? 'font-mono' : '',
                   navStyle === 'neon' ? 'uppercase tracking-wider' : ''
                 )}

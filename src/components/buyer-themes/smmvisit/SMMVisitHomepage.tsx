@@ -11,11 +11,11 @@ import { ThemeCustomization } from '@/types/theme-customization';
 import { 
   getButtonStyles, getHoverScale, getLucideIcon,
   getDefaultFeatures, getDefaultTestimonials, getDefaultFAQs,
-  getModeColors, getSocialLinks, getLastWordFromTitle, getSocialIconMap
+  getModeColors, getSocialLinks, getSocialIconMap
 } from '@/lib/theme-utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { ThemeNavigation } from '../shared/ThemeNavigation';
-import { AnimatedHeroText, getThemeDefaultAnimationStyle } from '../shared/AnimatedHeroText';
+import { AnimatedHeroText, getThemeDefaultAnimationStyle, getAnimatedWordFromTitle } from '../shared/AnimatedHeroText';
 
 interface SMMVisitHomepageProps {
   panelName?: string;
@@ -181,18 +181,20 @@ export const SMMVisitHomepage = ({
             <motion.div {...(enableAnimations ? { initial: { opacity: 0, y: 30 }, animate: { opacity: 1, y: 0 } } : {})}>
               <h1 className="text-4xl md:text-5xl lg:text-6xl mb-6" style={{ fontWeight: headingWeight }}>
                 {(() => {
-                  const { prefix, lastWord } = getLastWordFromTitle(heroTitle);
+                  const position = customization.heroAnimatedTextPosition || 'last';
+                  const { before, animatedWord, after } = getAnimatedWordFromTitle(heroTitle, position);
                   const effectiveAnimStyle = customization.heroAnimatedTextStyle || getThemeDefaultAnimationStyle('smmvisit');
                   return (
                     <>
-                      {prefix && <span>{prefix} </span>}
+                      {before && <span>{before} </span>}
                       <AnimatedHeroText 
-                        text={lastWord}
+                        text={animatedWord}
                         animationStyle={effectiveAnimStyle}
                         primaryColor={primary}
                         secondaryColor={secondary}
                         enableAnimations={enableAnimations}
                       />
+                      {after && <span> {after}</span>}
                     </>
                   );
                 })()}

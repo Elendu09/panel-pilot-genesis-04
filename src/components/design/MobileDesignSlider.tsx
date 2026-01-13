@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -83,6 +83,10 @@ export function MobileDesignSlider({
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(1);
   const [viewMode, setViewMode] = useState<'preview' | 'controls'>('preview');
+  
+  // Debounce swipe handlers to prevent rapid navigation
+  const lastSwipeTime = useRef(0);
+  const SWIPE_DEBOUNCE_MS = 250;
 
   const devices = deviceMode === 'mobileOnly'
     ? ([{ key: 'mobile' as const, icon: Smartphone, label: 'Mobile' }] as const)
@@ -107,6 +111,10 @@ export function MobileDesignSlider({
   }, [currentPreviewIndex, setPreviewDevice, deviceMode, devices]);
 
   const handleSectionSwipe = useCallback((direction: 'left' | 'right') => {
+    const now = Date.now();
+    if (now - lastSwipeTime.current < SWIPE_DEBOUNCE_MS) return;
+    lastSwipeTime.current = now;
+    
     if (direction === 'left' && currentSectionIndex < sections.length - 1) {
       setCurrentSectionIndex(prev => prev + 1);
     } else if (direction === 'right' && currentSectionIndex > 0) {
@@ -369,11 +377,12 @@ export function MobileDesignSlider({
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={currentSection.id}
-                    initial={{ opacity: 0, x: 30 }}
+                    initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -30 }}
-                    transition={{ duration: 0.15 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.1 }}
                     className="p-4"
+                    style={{ willChange: 'transform, opacity' }}
                   >
                     {renderSection(currentSection.id)}
                   </motion.div>

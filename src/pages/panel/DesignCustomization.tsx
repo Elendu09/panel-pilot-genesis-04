@@ -179,7 +179,8 @@ const defaultCustomization = {
   heroCTAText: 'Get Started',
   heroSecondaryCTAText: 'View Services',
   heroAnimatedTexts: ['Instagram Growth', 'TikTok Viral', 'YouTube Success', 'Telegram Boost'],
-  heroAnimatedTextStyle: 'plain' as 'plain' | 'glow-box' | 'underline' | 'highlight' | 'typewriter' | 'gradient-wave' | 'text-reveal' | 'bounce',
+  heroAnimatedTextStyle: 'gradient-wave' as 'plain' | 'glow-box' | 'underline' | 'highlight' | 'typewriter' | 'gradient-wave' | 'text-reveal' | 'bounce',
+  heroAnimatedTextPosition: 'last' as 'first' | 'middle' | 'last',
   
   // Section Toggles
   enablePlatformFeatures: true,
@@ -1731,10 +1732,31 @@ export default function DesignCustomization() {
               <Switch checked={customization.enableFastOrder} onCheckedChange={(c) => updateCustomization('enableFastOrder', c)} />
             </div>
             
+            {/* Animated Text Position */}
+            <div className="pt-2 border-t border-border/50">
+              <Label className="mb-2 block">Animated Text Position</Label>
+              <p className="text-xs text-muted-foreground mb-3">Choose which word to animate in your hero title</p>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { id: 'first', label: 'First Word' },
+                  { id: 'middle', label: 'Middle Word' },
+                  { id: 'last', label: 'Last Word' },
+                ].map(pos => (
+                  <button 
+                    key={pos.id} 
+                    onClick={() => updateCustomization('heroAnimatedTextPosition', pos.id)} 
+                    className={`p-3 rounded-lg border-2 text-sm transition-all ${(customization.heroAnimatedTextPosition || 'last') === pos.id ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/50'}`}
+                  >
+                    {pos.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            
             {/* Animated Text Style */}
             <div className="pt-2 border-t border-border/50">
               <Label className="mb-2 block">Animated Text Style</Label>
-              <p className="text-xs text-muted-foreground mb-3">Add visual flair to the last word in your hero title</p>
+              <p className="text-xs text-muted-foreground mb-3">Add visual flair to the selected word in your hero title</p>
               <div className="grid grid-cols-2 gap-2">
                 {[
                   { id: 'plain', label: 'Plain', desc: 'Simple gradient text' },
@@ -1749,7 +1771,7 @@ export default function DesignCustomization() {
                   <button 
                     key={style.id} 
                     onClick={() => updateCustomization('heroAnimatedTextStyle', style.id)} 
-                    className={`p-3 rounded-lg border-2 text-left transition-all ${customization.heroAnimatedTextStyle === style.id ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/50'}`}
+                    className={`p-3 rounded-lg border-2 text-left transition-all ${(customization.heroAnimatedTextStyle || 'gradient-wave') === style.id ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/50'}`}
                   >
                     <span className="text-sm font-medium block">{style.label}</span>
                     <span className="text-xs text-muted-foreground">{style.desc}</span>
