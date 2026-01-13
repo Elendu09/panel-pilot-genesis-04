@@ -57,6 +57,7 @@ interface PanelDomain {
   expected_target?: string;
   txt_verification_record?: string;
   txt_verified_at?: string | null;
+  verification_token?: string;
 }
 
 const DomainSettings = () => {
@@ -86,7 +87,8 @@ const DomainSettings = () => {
   // TXT Verification state
   const [verifyingTxt, setVerifyingTxt] = useState<Set<string>>(new Set());
 
-  const LOVABLE_IP = "185.158.133.1";
+  const VERCEL_IP = "76.76.21.21";
+  const VERCEL_CNAME = "cname.vercel-dns.com";
 
   useEffect(() => {
     fetchData();
@@ -162,7 +164,7 @@ const DomainSettings = () => {
           toast({
             variant: "destructive",
             title: "DNS Not Configured",
-            description: `Your domain must have an A record pointing to ${LOVABLE_IP}. Detected: ${(health?.a_records || []).join(", ") || "none"}`,
+            description: `Your domain must have an A record pointing to ${VERCEL_IP}. Detected: ${(health?.a_records || []).join(", ") || "none"}`,
           });
         }
         return false;
@@ -554,46 +556,46 @@ const DomainSettings = () => {
                       {/* DNS Instructions for pending domains */}
                       {domain.verification_status === 'pending' && (
                         <div className="mt-4 space-y-3">
-                          <Alert>
-                            <Info className="w-4 h-4" />
-                            <AlertDescription>
-                              <strong>Option 1 - DNS A Record:</strong> Add an A record pointing to <code className="bg-muted px-1 rounded">{LOVABLE_IP}</code>
+                          <Alert className="border-amber-500/30 bg-amber-500/5">
+                            <AlertCircle className="w-4 h-4 text-amber-500" />
+                            <AlertDescription className="text-sm">
+                              <strong>Action Required:</strong> Add these DNS records at your domain registrar to verify ownership.
                             </AlertDescription>
                           </Alert>
-                          <Alert>
-                            <Info className="w-4 h-4" />
-                            <AlertDescription className="space-y-2">
-                              <div><strong>Option 2 - TXT Verification:</strong> Add a TXT record to prove domain ownership</div>
-                              <div className="flex flex-wrap items-center gap-2 mt-2">
-                                <Badge variant="outline">TXT</Badge>
-                                <code className="text-xs bg-muted px-2 py-1 rounded">_smmpilot.{domain.domain}</code>
-                                <ArrowRight className="w-3 h-3" />
-                                <code className="text-xs bg-muted px-2 py-1 rounded break-all">smmpilot-verify={panel?.id}</code>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  className="h-6"
-                                  onClick={() => copyToClipboard(`smmpilot-verify=${panel?.id}`)}
-                                >
-                                  <Copy className="w-3 h-3" />
-                                </Button>
-                              </div>
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                className="mt-2"
-                                onClick={() => verifyDomainWithTxt(domain.id, domain.domain)}
-                                disabled={verifyingTxt.has(domain.id)}
-                              >
-                                {verifyingTxt.has(domain.id) ? (
-                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                ) : (
-                                  <Check className="w-4 h-4 mr-2" />
-                                )}
-                                Verify TXT Record
+                          
+                          <div className="bg-muted/30 rounded-lg p-3 space-y-2">
+                            <div className="flex items-center gap-3 flex-wrap">
+                              <Badge variant="outline">A</Badge>
+                              <code className="text-xs">@</code>
+                              <ArrowRight className="w-3 h-3" />
+                              <code className="text-xs bg-muted px-2 py-0.5 rounded">{VERCEL_IP}</code>
+                              <Button variant="ghost" size="sm" className="h-6" onClick={() => copyToClipboard(VERCEL_IP)}>
+                                <Copy className="w-3 h-3" />
                               </Button>
-                            </AlertDescription>
-                          </Alert>
+                            </div>
+                            <div className="flex items-center gap-3 flex-wrap">
+                              <Badge variant="outline">CNAME</Badge>
+                              <code className="text-xs">www</code>
+                              <ArrowRight className="w-3 h-3" />
+                              <code className="text-xs bg-muted px-2 py-0.5 rounded">{VERCEL_CNAME}</code>
+                              <Button variant="ghost" size="sm" className="h-6" onClick={() => copyToClipboard(VERCEL_CNAME)}>
+                                <Copy className="w-3 h-3" />
+                              </Button>
+                            </div>
+                            <div className="flex items-center gap-3 flex-wrap">
+                              <Badge variant="outline">TXT</Badge>
+                              <code className="text-xs">_homeofsmm</code>
+                              <ArrowRight className="w-3 h-3" />
+                              <code className="text-xs bg-muted px-2 py-0.5 rounded break-all">homeofsmm-verify={domain.verification_token || panel?.id?.substring(0, 8)}</code>
+                              <Button variant="ghost" size="sm" className="h-6" onClick={() => copyToClipboard(`homeofsmm-verify=${domain.verification_token || panel?.id?.substring(0, 8)}`)}>
+                                <Copy className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          </div>
+                          
+                          <p className="text-xs text-muted-foreground">
+                            ⚠️ <strong>Do NOT change your nameservers.</strong> Only add these records.
+                          </p>
                         </div>
                       )}
                       
@@ -610,71 +612,87 @@ const DomainSettings = () => {
             </div>
           )}
 
-          {/* DNS Configuration Guide */}
+          {/* DNS Configuration Guide - Simplified */}
           <Card className="glass-card">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Server className="w-5 h-5 text-primary" />
                 DNS Configuration Guide
               </CardTitle>
+              <CardDescription>
+                Add these records at your domain registrar (Namecheap, GoDaddy, Cloudflare, etc.)
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                To connect a custom domain, you have two options:
-              </p>
-              
-              {/* Option 1: DNS A Records */}
-              <div className="space-y-2">
-                <h4 className="font-medium text-sm">Option 1: DNS A Records (Recommended)</h4>
-                <p className="text-xs text-muted-foreground">Point your domain directly to our servers</p>
-                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                  <div className="flex items-center gap-4">
-                    <Badge variant="outline">A</Badge>
-                    <code className="text-sm">@</code>
-                    <ArrowRight className="w-4 h-4 text-muted-foreground" />
-                    <code className="text-sm">{LOVABLE_IP}</code>
-                  </div>
-                  <Button variant="ghost" size="sm" onClick={() => copyToClipboard(LOVABLE_IP)}>
-                    <Copy className="w-4 h-4" />
-                  </Button>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                  <div className="flex items-center gap-4">
-                    <Badge variant="outline">A</Badge>
-                    <code className="text-sm">www</code>
-                    <ArrowRight className="w-4 h-4 text-muted-foreground" />
-                    <code className="text-sm">{LOVABLE_IP}</code>
-                  </div>
-                  <Button variant="ghost" size="sm" onClick={() => copyToClipboard(LOVABLE_IP)}>
-                    <Copy className="w-4 h-4" />
-                  </Button>
-                </div>
+              {/* Warning */}
+              <Alert className="border-amber-500/30 bg-amber-500/5">
+                <AlertCircle className="w-4 h-4 text-amber-500" />
+                <AlertDescription className="text-sm">
+                  <strong>⚠️ Important:</strong> Only add the records below. Do NOT change your nameservers!
+                </AlertDescription>
+              </Alert>
+
+              {/* DNS Records Table */}
+              <div className="border rounded-lg overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/50">
+                    <tr>
+                      <th className="text-left p-3 font-medium">Type</th>
+                      <th className="text-left p-3 font-medium">Name</th>
+                      <th className="text-left p-3 font-medium">Value</th>
+                      <th className="p-3 w-12"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-t">
+                      <td className="p-3"><Badge variant="outline">A</Badge></td>
+                      <td className="p-3"><code className="text-xs bg-muted px-2 py-1 rounded">@</code></td>
+                      <td className="p-3"><code className="text-xs bg-muted px-2 py-1 rounded">{VERCEL_IP}</code></td>
+                      <td className="p-3">
+                        <Button variant="ghost" size="sm" onClick={() => copyToClipboard(VERCEL_IP)}>
+                          <Copy className="w-4 h-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                    <tr className="border-t">
+                      <td className="p-3"><Badge variant="outline">CNAME</Badge></td>
+                      <td className="p-3"><code className="text-xs bg-muted px-2 py-1 rounded">www</code></td>
+                      <td className="p-3"><code className="text-xs bg-muted px-2 py-1 rounded">{VERCEL_CNAME}</code></td>
+                      <td className="p-3">
+                        <Button variant="ghost" size="sm" onClick={() => copyToClipboard(VERCEL_CNAME)}>
+                          <Copy className="w-4 h-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                    <tr className="border-t">
+                      <td className="p-3"><Badge variant="outline">TXT</Badge></td>
+                      <td className="p-3"><code className="text-xs bg-muted px-2 py-1 rounded">_homeofsmm</code></td>
+                      <td className="p-3"><code className="text-xs bg-muted px-2 py-1 rounded break-all">homeofsmm-verify={panel?.id?.substring(0, 8) || 'xxxxx'}</code></td>
+                      <td className="p-3">
+                        <Button variant="ghost" size="sm" onClick={() => copyToClipboard(`homeofsmm-verify=${panel?.id?.substring(0, 8) || 'xxxxx'}`)}>
+                          <Copy className="w-4 h-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
               
-              {/* Option 2: TXT Verification */}
-              <div className="space-y-2 pt-4 border-t">
-                <h4 className="font-medium text-sm">Option 2: TXT Record Verification</h4>
-                <p className="text-xs text-muted-foreground">Prove domain ownership without changing DNS pointing (for external hosting)</p>
-                <div className="flex flex-col gap-2 p-3 bg-muted/50 rounded-lg">
-                  <div className="flex items-center gap-4 flex-wrap">
-                    <Badge variant="outline">TXT</Badge>
-                    <code className="text-sm">_smmpilot</code>
-                    <ArrowRight className="w-4 h-4 text-muted-foreground" />
-                    <code className="text-sm break-all">smmpilot-verify={panel?.id || 'your-panel-id'}</code>
-                  </div>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="w-fit"
-                    onClick={() => copyToClipboard(`smmpilot-verify=${panel?.id}`)}
-                  >
-                    <Copy className="w-4 h-4 mr-2" /> Copy TXT Value
-                  </Button>
-                </div>
+              <div className="text-sm text-muted-foreground space-y-2">
+                <p>
+                  <strong>📝 Quick Guide:</strong>
+                </p>
+                <ol className="list-decimal list-inside space-y-1 ml-2">
+                  <li>Log into your domain registrar (where you bought your domain)</li>
+                  <li>Find the DNS settings or DNS management section</li>
+                  <li>Add each record from the table above</li>
+                  <li>Save changes and wait up to 48 hours for propagation</li>
+                  <li>Come back here and click "Verify" on your domain</li>
+                </ol>
               </div>
               
-              <p className="text-xs text-muted-foreground">
-                DNS changes can take up to 48 hours to propagate. We'll automatically verify your domain once the records are detected.
+              <p className="text-xs text-muted-foreground border-t pt-4">
+                💡 <strong>Tip:</strong> DNS changes typically take 15 minutes to 48 hours to propagate. We'll automatically detect when your domain is ready.
               </p>
             </CardContent>
           </Card>
@@ -883,20 +901,20 @@ const DomainSettings = () => {
                     <Badge variant="outline">A</Badge>
                     <code>@</code>
                     <ArrowRight className="w-4 h-4" />
-                    <code>{LOVABLE_IP}</code>
+                    <code>{VERCEL_IP}</code>
                   </div>
-                  <Button variant="ghost" size="sm" onClick={() => copyToClipboard(LOVABLE_IP)}>
+                  <Button variant="ghost" size="sm" onClick={() => copyToClipboard(VERCEL_IP)}>
                     <Copy className="w-4 h-4" />
                   </Button>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                   <div className="flex items-center gap-3">
-                    <Badge variant="outline">A</Badge>
+                    <Badge variant="outline">CNAME</Badge>
                     <code>www</code>
                     <ArrowRight className="w-4 h-4" />
-                    <code>{LOVABLE_IP}</code>
+                    <code>{VERCEL_CNAME}</code>
                   </div>
-                  <Button variant="ghost" size="sm" onClick={() => copyToClipboard(LOVABLE_IP)}>
+                  <Button variant="ghost" size="sm" onClick={() => copyToClipboard(VERCEL_CNAME)}>
                     <Copy className="w-4 h-4" />
                   </Button>
                 </div>

@@ -33,11 +33,14 @@ export const OnboardingCurrencySelector = ({ value, onChange }: OnboardingCurren
   const selectedCurrency = currencies.find(c => c.code === value);
 
   return (
-    <div className="space-y-2">
-      <Label>Panel Currency</Label>
-      <p className="text-sm text-muted-foreground mb-2">
-        Choose the currency for your panel's pricing and transactions
-      </p>
+    <div className="space-y-3">
+      <div>
+        <Label className="text-base font-medium">Default Panel Currency</Label>
+        <p className="text-sm text-muted-foreground mt-1">
+          This is the primary currency for your SMM panel. All service prices will be displayed in this currency by default.
+        </p>
+      </div>
+      
       <Select value={value} onValueChange={onChange}>
         <SelectTrigger className="bg-background/50">
           <SelectValue>
@@ -66,6 +69,16 @@ export const OnboardingCurrencySelector = ({ value, onChange }: OnboardingCurren
           ))}
         </SelectContent>
       </Select>
+
+      <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground space-y-1">
+        <p><strong>💡 How this works:</strong></p>
+        <ul className="list-disc list-inside space-y-0.5 ml-1">
+          <li>Service prices will display in {selectedCurrency?.code || 'your selected currency'}</li>
+          <li>Buyers see prices in this currency when browsing your services</li>
+          <li>You can enable multi-currency later to let buyers switch currencies</li>
+          <li>All transactions and earnings are tracked in this currency</li>
+        </ul>
+      </div>
     </div>
   );
 };
