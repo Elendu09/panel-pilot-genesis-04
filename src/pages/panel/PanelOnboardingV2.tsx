@@ -50,6 +50,8 @@ const PanelOnboardingV2 = () => {
   const [secondaryColor, setSecondaryColor] = useState('#8B5CF6');
   const [createdPanelId, setCreatedPanelId] = useState<string | null>(null);
   const [paymentCompleted, setPaymentCompleted] = useState(false);
+  const [currency, setCurrency] = useState('USD');
+  const [loadingProgress, setLoadingProgress] = useState(false);
 
   const steps = [
     { id: 0, title: 'Basic Info', icon: Settings, description: 'Name your panel' },
@@ -78,6 +80,7 @@ const PanelOnboardingV2 = () => {
       }
       
       try {
+        // Check for completed panel
         const { data: existingPanel } = await supabase
           .from('panels')
           .select('*')
@@ -88,6 +91,41 @@ const PanelOnboardingV2 = () => {
         if (existingPanel) {
           navigate('/panel');
           return;
+        }
+
+        // Check for incomplete onboarding to resume
+        const { data: incompletePanel } = await supabase
+          .from('panels')
+          .select('onboarding_step, onboarding_data, default_currency')
+          .eq('owner_id', profile.id)
+          .eq('onboarding_completed', false)
+          .maybeSingle();
+
+        if (incompletePanel) {
+          const savedStep = incompletePanel.onboarding_step || 0;
+          const savedData = incompletePanel.onboarding_data as Record<string, any> | null;
+          
+          if (savedStep > 0) {
+            setCurrentStep(savedStep);
+            // Mark previous steps as completed
+            setCompletedSteps(Array.from({ length: savedStep }, (_, i) => i));
+          }
+          
+          if (savedData) {
+            if (savedData.panelName) setPanelName(savedData.panelName);
+            if (savedData.description) setDescription(savedData.description);
+            if (savedData.selectedPlan) setSelectedPlan(savedData.selectedPlan);
+            if (savedData.subdomain) setSubdomain(savedData.subdomain);
+            if (savedData.customDomain) setCustomDomain(savedData.customDomain);
+            if (savedData.domainType) setDomainType(savedData.domainType);
+            if (savedData.primaryColor) setPrimaryColor(savedData.primaryColor);
+            if (savedData.secondaryColor) setSecondaryColor(savedData.secondaryColor);
+            if (savedData.paymentCompleted) setPaymentCompleted(savedData.paymentCompleted);
+          }
+          
+          if (incompletePanel.default_currency) {
+            setCurrency(incompletePanel.default_currency);
+          }
         }
       } catch (error) {
         console.error('Error checking panel:', error);
@@ -153,16 +191,43 @@ const PanelOnboardingV2 = () => {
     }
   };
 
-  const handleNext = () => {
+  // Save progress to database
+  const saveProgress = async (step: number) => {
+    if (!profile?.id) return;
+    
+    const progressData = {
+      panelName, description, selectedPlan, subdomain, customDomain, 
+      domainType, primaryColor, secondaryColor, paymentCompleted
+    };
+
+    try {
+      await supabase.from('panels').upsert({
+        owner_id: profile.id,
+        name: panelName || 'My Panel',
+        subdomain: subdomain || 'temp-' + profile.id.slice(0, 8),
+        onboarding_step: step,
+        onboarding_data: progressData,
+        default_currency: currency,
+        onboarding_completed: false,
+        status: 'pending'
+      }, { onConflict: 'owner_id' });
+    } catch (error) {
+      console.error('Error saving progress:', error);
+    }
+  };
+
+  const handleNext = async () => {
     if (currentStep === 0 && !panelName.trim()) {
       toast({ variant: "destructive", title: "Panel name required" });
       return;
     }
     
     markStepComplete(currentStep);
+    const nextStep = currentStep + 1;
     
-    if (currentStep < steps.length - 1) {
-      setCurrentStep(currentStep + 1);
+    if (nextStep < steps.length) {
+      setCurrentStep(nextStep);
+      await saveProgress(nextStep);
     }
   };
 
@@ -366,6 +431,8 @@ const PanelOnboardingV2 = () => {
               onDomainTypeChange={setDomainType}
               subdomainAvailable={subdomainAvailable}
               checkingSubdomain={checkingSubdomain}
+              currency={currency}
+              onCurrencyChange={setCurrency}
             />
           </motion.div>
         );

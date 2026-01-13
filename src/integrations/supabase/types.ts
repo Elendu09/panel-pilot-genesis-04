@@ -1804,6 +1804,7 @@ export type Database = {
           created_at: string
           custom_branding: Json | null
           custom_domain: string | null
+          default_currency: string | null
           description: string | null
           dns_records: Json | null
           domain: string | null
@@ -1818,6 +1819,8 @@ export type Database = {
           monthly_revenue: number | null
           name: string
           onboarding_completed: boolean | null
+          onboarding_data: Json | null
+          onboarding_step: number | null
           owner_id: string | null
           primary_color: string | null
           secondary_color: string | null
@@ -1842,6 +1845,7 @@ export type Database = {
           created_at?: string
           custom_branding?: Json | null
           custom_domain?: string | null
+          default_currency?: string | null
           description?: string | null
           dns_records?: Json | null
           domain?: string | null
@@ -1856,6 +1860,8 @@ export type Database = {
           monthly_revenue?: number | null
           name: string
           onboarding_completed?: boolean | null
+          onboarding_data?: Json | null
+          onboarding_step?: number | null
           owner_id?: string | null
           primary_color?: string | null
           secondary_color?: string | null
@@ -1880,6 +1886,7 @@ export type Database = {
           created_at?: string
           custom_branding?: Json | null
           custom_domain?: string | null
+          default_currency?: string | null
           description?: string | null
           dns_records?: Json | null
           domain?: string | null
@@ -1894,6 +1901,8 @@ export type Database = {
           monthly_revenue?: number | null
           name?: string
           onboarding_completed?: boolean | null
+          onboarding_data?: Json | null
+          onboarding_step?: number | null
           owner_id?: string | null
           primary_color?: string | null
           secondary_color?: string | null
@@ -1919,6 +1928,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      platform_config: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          encrypted_value: Json | null
+          id: string
+          is_sensitive: boolean | null
+          key: string
+          updated_at: string | null
+          value: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          encrypted_value?: Json | null
+          id?: string
+          is_sensitive?: boolean | null
+          key: string
+          updated_at?: string | null
+          value?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          encrypted_value?: Json | null
+          id?: string
+          is_sensitive?: boolean | null
+          key?: string
+          updated_at?: string | null
+          value?: string | null
+        }
+        Relationships: []
       }
       platform_fees: {
         Row: {
