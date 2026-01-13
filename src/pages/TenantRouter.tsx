@@ -55,6 +55,7 @@ import BuyerTerms from './buyer/BuyerTerms';
 import BuyerAPI from './buyer/BuyerAPI';
 import BuyerContact from './buyer/BuyerContact';
 import BuyerBlog from './buyer/BuyerBlog';
+import BuyerBlogPost from './buyer/BuyerBlogPost';
 import Storefront from './Storefront';
 import StorefrontBlog from './storefront/StorefrontBlog';
 import FastOrder from './FastOrder';
@@ -244,8 +245,9 @@ const TenantContent = () => {
                         <Route path="/api" element={<BuyerAPI />} />
                         <Route path="/contact" element={<BuyerContact />} />
 
-                        {/* Blog route - uses BuyerBlog for authenticated layout */}
+                        {/* Blog routes */}
                         <Route path="/blog" element={<BuyerBlog />} />
+                        <Route path="/blog/:slug" element={<BuyerBlogPost />} />
 
                         {/* Sitemap route */}
                         <Route path="/sitemap.xml" element={<Sitemap />} />
