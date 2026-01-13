@@ -11,10 +11,11 @@ import { ThemeCustomization } from '@/types/theme-customization';
 import { 
   getAnimationVariants, getButtonStyles, getHoverScale, getLucideIcon,
   getDefaultFeatures, getDefaultTestimonials, getDefaultFAQs, getSocialLinks,
-  getModeColors, getGlowBoxStyle, getLastWordFromTitle, getSocialIconMap
+  getModeColors, getLastWordFromTitle, getSocialIconMap
 } from '@/lib/theme-utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { ThemeNavigation } from '../shared/ThemeNavigation';
+import { AnimatedHeroText, getThemeDefaultAnimationStyle } from '../shared/AnimatedHeroText';
 
 interface FlySMMHomepageProps {
   panelName?: string;
@@ -197,22 +198,17 @@ export const FlySMMHomepage = ({
                 <h1 className="text-4xl md:text-5xl lg:text-6xl mb-6 leading-tight" style={{ color: textCol, fontWeight: headingWeight }}>
                   {(() => {
                     const { prefix, lastWord } = getLastWordFromTitle(heroTitle);
+                    const effectiveAnimStyle = customization.heroAnimatedTextStyle || getThemeDefaultAnimationStyle('flysmm');
                     return (
                       <>
                         {prefix && <span>{prefix} </span>}
-                        <span style={{ background: `linear-gradient(to right, ${primary}, ${secondary})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                          {lastWord}
-                        </span>
-                        {customization.heroAnimatedTextStyle === 'glow-box' && (
-                          <motion.span 
-                            className="ml-2"
-                            style={getGlowBoxStyle(customization, primary)}
-                            animate={{ boxShadow: [`0 0 20px ${primary}50`, `0 0 30px ${primary}70`, `0 0 20px ${primary}50`] }}
-                            transition={{ duration: 2, repeat: Infinity }}
-                          >
-                            🚀
-                          </motion.span>
-                        )}
+                        <AnimatedHeroText 
+                          text={lastWord}
+                          animationStyle={effectiveAnimStyle}
+                          primaryColor={primary}
+                          secondaryColor={secondary}
+                          enableAnimations={enableAnimations}
+                        />
                       </>
                     );
                   })()}

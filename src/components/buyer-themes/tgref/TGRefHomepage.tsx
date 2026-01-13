@@ -12,10 +12,11 @@ import {
   getAnimationVariants, getContainerVariants, getItemVariants,
   getButtonStyles, getHoverScale, getLucideIcon,
   getDefaultStats, getDefaultFeatures, getDefaultTestimonials, getDefaultFAQs,
-  getModeColors, getGlowBoxStyle, getSocialLinks, getLastWordFromTitle, getSocialIconMap
+  getModeColors, getSocialLinks, getLastWordFromTitle, getSocialIconMap
 } from '@/lib/theme-utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { ThemeNavigation } from '../shared/ThemeNavigation';
+import { AnimatedHeroText, getThemeDefaultAnimationStyle } from '../shared/AnimatedHeroText';
 
 interface TGRefHomepageProps {
   panelName?: string;
@@ -210,6 +211,7 @@ export const TGRefHomepage = ({
                 <span style={{ color: mutedColor }}>&gt; </span>
                 {(() => {
                   const { prefix, lastWord } = getLastWordFromTitle(heroTitle);
+                  const effectiveAnimStyle = customization.heroAnimatedTextStyle || getThemeDefaultAnimationStyle('tgref');
                   return (
                     <>
                       {prefix && (
@@ -217,19 +219,13 @@ export const TGRefHomepage = ({
                           {prefix}{' '}
                         </span>
                       )}
-                      <span style={{ background: `linear-gradient(to right, ${primary}, ${secondary}, ${accent})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                        {lastWord}
-                      </span>
-                      {customization.heroAnimatedTextStyle === 'glow-box' && (
-                        <motion.span 
-                          className="ml-2"
-                          style={getGlowBoxStyle(customization, primary)}
-                          animate={{ boxShadow: [`0 0 20px ${primary}50`, `0 0 30px ${primary}70`, `0 0 20px ${primary}50`] }}
-                          transition={{ duration: 2, repeat: Infinity }}
-                        >
-                          _
-                        </motion.span>
-                      )}
+                      <AnimatedHeroText 
+                        text={lastWord}
+                        animationStyle={effectiveAnimStyle}
+                        primaryColor={primary}
+                        secondaryColor={secondary}
+                        enableAnimations={enableAnimations}
+                      />
                     </>
                   );
                 })()}

@@ -12,10 +12,11 @@ import {
   getAnimationVariants, getContainerVariants, getItemVariants,
   getButtonStyles, getCardStyles, getHoverScale, getLucideIcon,
   getDefaultStats, getDefaultFeatures, getDefaultTestimonials, getDefaultFAQs,
-  getSocialLinks, getModeColors, getGlowBoxStyle, getLastWordFromTitle, getSocialIconMap
+  getSocialLinks, getModeColors, getLastWordFromTitle, getSocialIconMap
 } from '@/lib/theme-utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { ThemeNavigation } from '../shared/ThemeNavigation';
+import { AnimatedHeroText, getThemeDefaultAnimationStyle } from '../shared/AnimatedHeroText';
 
 interface AliPanelHomepageProps {
   panelName?: string;
@@ -220,6 +221,7 @@ export const AliPanelHomepage = ({
                 <h1 className="text-4xl md:text-5xl lg:text-6xl mb-6 leading-tight" style={{ fontWeight: headingWeight, fontFamily: headingFont }}>
                   {(() => {
                     const { prefix, lastWord } = getLastWordFromTitle(heroTitle);
+                    const effectiveAnimStyle = customization.heroAnimatedTextStyle || getThemeDefaultAnimationStyle('alipanel');
                     return (
                       <>
                         {prefix && (
@@ -227,21 +229,13 @@ export const AliPanelHomepage = ({
                             {prefix}{' '}
                           </span>
                         )}
-                        <span style={{ background: `linear-gradient(to right, ${primary}, ${secondary})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                          {lastWord}
-                        </span>
-                        {customization.heroAnimatedTextStyle === 'glow-box' && (
-                          <>
-                            <br />
-                            <motion.span 
-                              style={getGlowBoxStyle(customization, primary)}
-                              animate={{ boxShadow: [`0 0 20px ${primary}50`, `0 0 30px ${primary}70`, `0 0 20px ${primary}50`] }}
-                              transition={{ duration: 2, repeat: Infinity }}
-                            >
-                              ✨
-                            </motion.span>
-                          </>
-                        )}
+                        <AnimatedHeroText 
+                          text={lastWord}
+                          animationStyle={effectiveAnimStyle}
+                          primaryColor={primary}
+                          secondaryColor={secondary}
+                          enableAnimations={enableAnimations}
+                        />
                       </>
                     );
                   })()}
