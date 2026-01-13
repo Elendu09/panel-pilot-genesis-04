@@ -12,11 +12,11 @@ import {
   getAnimationVariants, getContainerVariants, getItemVariants,
   getButtonStyles, getCardStyles, getHoverScale, getLucideIcon,
   getDefaultStats, getDefaultFeatures, getDefaultTestimonials, getDefaultFAQs,
-  getSocialLinks, getModeColors, getLastWordFromTitle, getSocialIconMap
+  getSocialLinks, getModeColors, getSocialIconMap
 } from '@/lib/theme-utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { ThemeNavigation } from '../shared/ThemeNavigation';
-import { AnimatedHeroText, getThemeDefaultAnimationStyle } from '../shared/AnimatedHeroText';
+import { AnimatedHeroText, getThemeDefaultAnimationStyle, getAnimatedWordFromTitle } from '../shared/AnimatedHeroText';
 
 interface AliPanelHomepageProps {
   panelName?: string;
@@ -220,22 +220,28 @@ export const AliPanelHomepage = ({
 
                 <h1 className="text-4xl md:text-5xl lg:text-6xl mb-6 leading-tight" style={{ fontWeight: headingWeight, fontFamily: headingFont }}>
                   {(() => {
-                    const { prefix, lastWord } = getLastWordFromTitle(heroTitle);
+                    const position = customization.heroAnimatedTextPosition || 'last';
+                    const { before, animatedWord, after } = getAnimatedWordFromTitle(heroTitle, position);
                     const effectiveAnimStyle = customization.heroAnimatedTextStyle || getThemeDefaultAnimationStyle('alipanel');
                     return (
                       <>
-                        {prefix && (
+                        {before && (
                           <span style={{ background: `linear-gradient(to right, ${primary}, ${secondary})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                            {prefix}{' '}
+                            {before}{' '}
                           </span>
                         )}
                         <AnimatedHeroText 
-                          text={lastWord}
+                          text={animatedWord}
                           animationStyle={effectiveAnimStyle}
                           primaryColor={primary}
                           secondaryColor={secondary}
                           enableAnimations={enableAnimations}
                         />
+                        {after && (
+                          <span style={{ background: `linear-gradient(to right, ${primary}, ${secondary})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                            {' '}{after}
+                          </span>
+                        )}
                       </>
                     );
                   })()}

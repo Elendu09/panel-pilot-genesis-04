@@ -11,11 +11,11 @@ import { ThemeCustomization } from '@/types/theme-customization';
 import { 
   getAnimationVariants, getButtonStyles, getHoverScale, getLucideIcon,
   getDefaultFeatures, getDefaultTestimonials, getDefaultFAQs, getSocialLinks,
-  getModeColors, getLastWordFromTitle, getSocialIconMap
+  getModeColors, getSocialIconMap
 } from '@/lib/theme-utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { ThemeNavigation } from '../shared/ThemeNavigation';
-import { AnimatedHeroText, getThemeDefaultAnimationStyle } from '../shared/AnimatedHeroText';
+import { AnimatedHeroText, getThemeDefaultAnimationStyle, getAnimatedWordFromTitle } from '../shared/AnimatedHeroText';
 
 interface FlySMMHomepageProps {
   panelName?: string;
@@ -197,18 +197,20 @@ export const FlySMMHomepage = ({
 
                 <h1 className="text-4xl md:text-5xl lg:text-6xl mb-6 leading-tight" style={{ color: textCol, fontWeight: headingWeight }}>
                   {(() => {
-                    const { prefix, lastWord } = getLastWordFromTitle(heroTitle);
+                    const position = customization.heroAnimatedTextPosition || 'last';
+                    const { before, animatedWord, after } = getAnimatedWordFromTitle(heroTitle, position);
                     const effectiveAnimStyle = customization.heroAnimatedTextStyle || getThemeDefaultAnimationStyle('flysmm');
                     return (
                       <>
-                        {prefix && <span>{prefix} </span>}
+                        {before && <span>{before} </span>}
                         <AnimatedHeroText 
-                          text={lastWord}
+                          text={animatedWord}
                           animationStyle={effectiveAnimStyle}
                           primaryColor={primary}
                           secondaryColor={secondary}
                           enableAnimations={enableAnimations}
                         />
+                        {after && <span> {after}</span>}
                       </>
                     );
                   })()}

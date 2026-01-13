@@ -12,11 +12,11 @@ import {
   getAnimationVariants, getContainerVariants, getItemVariants,
   getButtonStyles, getHoverScale, getLucideIcon,
   getDefaultStats, getDefaultFeatures, getDefaultTestimonials, getDefaultFAQs,
-  getModeColors, getSocialLinks, getLastWordFromTitle, getSocialIconMap
+  getModeColors, getSocialLinks, getSocialIconMap
 } from '@/lib/theme-utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { ThemeNavigation } from '../shared/ThemeNavigation';
-import { AnimatedHeroText, getThemeDefaultAnimationStyle } from '../shared/AnimatedHeroText';
+import { AnimatedHeroText, getThemeDefaultAnimationStyle, getAnimatedWordFromTitle } from '../shared/AnimatedHeroText';
 
 interface TGRefHomepageProps {
   panelName?: string;
@@ -210,22 +210,28 @@ export const TGRefHomepage = ({
               <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6">
                 <span style={{ color: mutedColor }}>&gt; </span>
                 {(() => {
-                  const { prefix, lastWord } = getLastWordFromTitle(heroTitle);
+                  const position = customization.heroAnimatedTextPosition || 'last';
+                  const { before, animatedWord, after } = getAnimatedWordFromTitle(heroTitle, position);
                   const effectiveAnimStyle = customization.heroAnimatedTextStyle || getThemeDefaultAnimationStyle('tgref');
                   return (
                     <>
-                      {prefix && (
+                      {before && (
                         <span style={{ background: `linear-gradient(to right, ${primary}, ${secondary}, ${accent})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                          {prefix}{' '}
+                          {before}{' '}
                         </span>
                       )}
                       <AnimatedHeroText 
-                        text={lastWord}
+                        text={animatedWord}
                         animationStyle={effectiveAnimStyle}
                         primaryColor={primary}
                         secondaryColor={secondary}
                         enableAnimations={enableAnimations}
                       />
+                      {after && (
+                        <span style={{ background: `linear-gradient(to right, ${primary}, ${secondary}, ${accent})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                          {' '}{after}
+                        </span>
+                      )}
                     </>
                   );
                 })()}

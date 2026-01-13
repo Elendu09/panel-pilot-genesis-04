@@ -11,11 +11,11 @@ import { ThemeCustomization } from '@/types/theme-customization';
 import { 
   getButtonStyles, getHoverScale, getLucideIcon,
   getDefaultFeatures, getDefaultTestimonials, getDefaultFAQs,
-  getModeColors, getSocialLinks, getLastWordFromTitle, getSocialIconMap
+  getModeColors, getSocialLinks, getSocialIconMap
 } from '@/lib/theme-utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { ThemeNavigation } from '../shared/ThemeNavigation';
-import { AnimatedHeroText, getThemeDefaultAnimationStyle } from '../shared/AnimatedHeroText';
+import { AnimatedHeroText, getThemeDefaultAnimationStyle, getAnimatedWordFromTitle } from '../shared/AnimatedHeroText';
 
 interface SMMStayHomepageProps {
   panelName?: string;
@@ -203,22 +203,28 @@ export const SMMStayHomepage = ({
           >
             <h1 className="text-5xl md:text-7xl lg:text-8xl font-black uppercase mb-6">
               {(() => {
-                const { prefix, lastWord } = getLastWordFromTitle(heroTitle);
+                const position = customization.heroAnimatedTextPosition || 'last';
+                const { before, animatedWord, after } = getAnimatedWordFromTitle(heroTitle, position);
                 const effectiveAnimStyle = customization.heroAnimatedTextStyle || getThemeDefaultAnimationStyle('smmstay');
                 return (
                   <>
-                    {prefix && (
+                    {before && (
                       <span style={{ background: `linear-gradient(to right, ${primary}, ${secondary})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                        {prefix}{' '}
+                        {before}{' '}
                       </span>
                     )}
                     <AnimatedHeroText 
-                      text={lastWord}
+                      text={animatedWord}
                       animationStyle={effectiveAnimStyle}
                       primaryColor={primary}
                       secondaryColor={secondary}
                       enableAnimations={enableAnimations}
                     />
+                    {after && (
+                      <span style={{ background: `linear-gradient(to right, ${primary}, ${secondary})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                        {' '}{after}
+                      </span>
+                    )}
                   </>
                 );
               })()}

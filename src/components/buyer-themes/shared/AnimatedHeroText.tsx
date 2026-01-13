@@ -19,9 +19,39 @@ export const getThemeDefaultAnimationStyle = (themeKey: string): HeroAnimationSt
     'tgref': 'typewriter',
     'alipanel': 'highlight',
     'smmvisit': 'text-reveal',
-    'default': 'plain',
+    'default': 'gradient-wave',
+    'dark_gradient': 'gradient-wave',
+    'theme_one': 'bounce',
+    'theme_two': 'underline',
+    'theme_three': 'glow-box',
+    'theme_four': 'highlight',
+    'theme_five': 'text-reveal',
   };
-  return defaults[themeKey] || 'plain';
+  return defaults[themeKey] || 'gradient-wave';
+};
+
+// Extract animated word from title based on position
+export const getAnimatedWordFromTitle = (
+  title: string, 
+  position: 'first' | 'middle' | 'last' = 'last'
+): { before: string; animatedWord: string; after: string } => {
+  const words = title.trim().split(/\s+/);
+  if (words.length === 1) return { before: '', animatedWord: words[0], after: '' };
+  
+  switch (position) {
+    case 'first':
+      return { before: '', animatedWord: words[0], after: words.slice(1).join(' ') };
+    case 'middle':
+      const midIndex = Math.floor(words.length / 2);
+      return { 
+        before: words.slice(0, midIndex).join(' '), 
+        animatedWord: words[midIndex], 
+        after: words.slice(midIndex + 1).join(' ') 
+      };
+    case 'last':
+    default:
+      return { before: words.slice(0, -1).join(' '), animatedWord: words[words.length - 1], after: '' };
+  }
 };
 
 // Typewriter animation component

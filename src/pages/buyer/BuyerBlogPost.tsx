@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Calendar, Clock, Share2 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import DOMPurify from "dompurify";
+import { ThemeCustomization } from "@/types/theme-customization";
 
 interface BlogPost {
   id: string;
@@ -39,6 +40,35 @@ const calculateReadTime = (content: string | null) => {
   const words = content.split(/\s+/).length;
   const minutes = Math.max(1, Math.round(words / 200));
   return `${minutes} min read`;
+};
+
+// Get mode-specific colors for blog styling
+const getModeColors = (customization: ThemeCustomization, isLight: boolean) => {
+  if (isLight && customization.lightModeColors) {
+    return {
+      bgColor: customization.lightModeColors.backgroundColor || '#FAFBFC',
+      surfaceColor: customization.lightModeColors.surfaceColor || '#FFFFFF',
+      textColor: customization.lightModeColors.textColor || '#1F2937',
+      mutedColor: customization.lightModeColors.mutedColor || '#6B7280',
+      borderColor: customization.lightModeColors.borderColor || '#E5E7EB',
+    };
+  }
+  if (!isLight && customization.darkModeColors) {
+    return {
+      bgColor: customization.darkModeColors.backgroundColor || '#0F172A',
+      surfaceColor: customization.darkModeColors.surfaceColor || '#1E293B',
+      textColor: customization.darkModeColors.textColor || '#FFFFFF',
+      mutedColor: customization.darkModeColors.mutedColor || '#94A3B8',
+      borderColor: customization.darkModeColors.borderColor || '#334155',
+    };
+  }
+  return {
+    bgColor: customization.backgroundColor || (isLight ? '#FAFBFC' : '#0F172A'),
+    surfaceColor: customization.surfaceColor || (isLight ? '#FFFFFF' : '#1E293B'),
+    textColor: customization.textColor || (isLight ? '#1F2937' : '#FFFFFF'),
+    mutedColor: customization.mutedColor || (isLight ? '#6B7280' : '#94A3B8'),
+    borderColor: customization.borderColor || (isLight ? '#E5E7EB' : '#334155'),
+  };
 };
 
 const BuyerBlogPost = () => {
@@ -79,6 +109,13 @@ const BuyerBlogPost = () => {
   const pageTitle = post?.seo_title || post?.title || "Blog Post";
   const pageDescription = post?.seo_description || post?.excerpt || `Read this article on ${panelName}`;
 
+  // Get customization and theme-aware colors
+  const customization = ((panel as any)?.customization_json as ThemeCustomization) || {};
+  const themeMode = customization.themeMode || 'dark';
+  const isLight = themeMode === 'light';
+  const { bgColor, surfaceColor, textColor, mutedColor, borderColor } = getModeColors(customization, isLight);
+  const primaryColor = customization.primaryColor || '#6366F1';
+
   const handleShare = async () => {
     if (navigator.share) {
       try {
@@ -97,7 +134,7 @@ const BuyerBlogPost = () => {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-background text-foreground">
+      <main className="min-h-screen" style={{ backgroundColor: bgColor, color: textColor }}>
         <div className="container mx-auto px-4 py-8 max-w-4xl">
           <Skeleton className="h-8 w-32 mb-6" />
           <Skeleton className="h-12 w-3/4 mb-4" />
@@ -115,16 +152,16 @@ const BuyerBlogPost = () => {
 
   if (error || !post) {
     return (
-      <main className="min-h-screen bg-background text-foreground flex items-center justify-center">
+      <main className="min-h-screen flex items-center justify-center" style={{ backgroundColor: bgColor, color: textColor }}>
         <div className="text-center max-w-md px-4">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-destructive/10 flex items-center justify-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center" style={{ backgroundColor: `${primaryColor}1a` }}>
             <span className="text-3xl">📄</span>
           </div>
           <h1 className="text-2xl font-bold mb-2">Post Not Found</h1>
-          <p className="text-muted-foreground mb-6">
+          <p className="mb-6" style={{ color: mutedColor }}>
             The blog post you're looking for doesn't exist or has been removed.
           </p>
-          <Button asChild>
+          <Button asChild style={{ backgroundColor: primaryColor, color: '#fff' }}>
             <Link to="/blog">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Blog
@@ -147,29 +184,29 @@ const BuyerBlogPost = () => {
         <meta property="og:type" content="article" />
       </Helmet>
       
-      <main className="min-h-screen bg-background text-foreground">
+      <main className="min-h-screen" style={{ backgroundColor: bgColor, color: textColor }}>
         {/* Header */}
-        <section className="border-b border-border/40 bg-gradient-to-b from-primary/5 via-background to-background">
+        <section style={{ borderBottom: `1px solid ${borderColor}`, background: `linear-gradient(to bottom, ${surfaceColor}, ${bgColor})` }}>
           <div className="container mx-auto px-4 py-8 max-w-4xl">
-            <Button variant="ghost" size="sm" asChild className="mb-6 -ml-2">
+            <Button variant="ghost" size="sm" asChild className="mb-6 -ml-2 hover:bg-white/10" style={{ color: textColor }}>
               <Link to="/blog">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back to Blog
               </Link>
             </Button>
             
-            <Badge variant="outline" className="mb-4 text-primary border-primary/30">
+            <Badge className="mb-4" style={{ backgroundColor: `${primaryColor}1a`, color: primaryColor, borderColor: `${primaryColor}4d` }}>
               Article
             </Badge>
             
-            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight mb-4">
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight mb-4" style={{ color: textColor }}>
               {post.title}
             </h1>
             
-            <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-4 text-sm" style={{ color: mutedColor }}>
               {post.published_at && (
                 <span className="inline-flex items-center gap-1.5">
-                  <Calendar className="w-4 h-4 text-primary" />
+                  <Calendar className="w-4 h-4" style={{ color: primaryColor }} />
                   {formatDate(post.published_at)}
                 </span>
               )}
@@ -181,7 +218,8 @@ const BuyerBlogPost = () => {
                 variant="ghost" 
                 size="sm" 
                 onClick={handleShare}
-                className="ml-auto"
+                className="ml-auto hover:bg-white/10"
+                style={{ color: mutedColor }}
               >
                 <Share2 className="w-4 h-4 mr-1.5" />
                 Share
@@ -206,7 +244,23 @@ const BuyerBlogPost = () => {
 
         {/* Content */}
         <section className="container mx-auto px-4 py-10 max-w-4xl">
-          <article className="prose prose-lg dark:prose-invert max-w-none">
+          <article 
+            className="prose prose-lg max-w-none"
+            style={{ 
+              '--tw-prose-body': textColor,
+              '--tw-prose-headings': textColor,
+              '--tw-prose-links': primaryColor,
+              '--tw-prose-bold': textColor,
+              '--tw-prose-counters': mutedColor,
+              '--tw-prose-bullets': mutedColor,
+              '--tw-prose-hr': borderColor,
+              '--tw-prose-quotes': textColor,
+              '--tw-prose-quote-borders': primaryColor,
+              '--tw-prose-code': primaryColor,
+              '--tw-prose-pre-code': textColor,
+              '--tw-prose-pre-bg': surfaceColor,
+            } as React.CSSProperties}
+          >
             {post.content ? (
               <div 
                 dangerouslySetInnerHTML={{ 
@@ -214,13 +268,13 @@ const BuyerBlogPost = () => {
                 }} 
               />
             ) : (
-              <p className="text-muted-foreground">No content available.</p>
+              <p style={{ color: mutedColor }}>No content available.</p>
             )}
           </article>
           
           {/* Back to blog CTA */}
-          <div className="mt-12 pt-8 border-t border-border/40">
-            <Button asChild variant="outline">
+          <div className="mt-12 pt-8" style={{ borderTop: `1px solid ${borderColor}` }}>
+            <Button asChild variant="outline" style={{ borderColor: primaryColor, color: primaryColor }}>
               <Link to="/blog">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back to all articles
