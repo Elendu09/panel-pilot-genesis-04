@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/hooks/useTenant";
 import { Card, CardContent } from "@/components/ui/card";
@@ -152,10 +153,10 @@ const StorefrontBlog = () => {
                           className="px-0 text-primary hover:text-primary flex items-center gap-1 text-sm"
                           asChild
                         >
-                          <a href={`/blog/${post.slug}`}>
+                          <Link to={`/blog/${post.slug}`}>
                             Read article
                             <ArrowRight className="w-3 h-3" />
-                          </a>
+                          </Link>
                         </Button>
                       </div>
                     </CardContent>
