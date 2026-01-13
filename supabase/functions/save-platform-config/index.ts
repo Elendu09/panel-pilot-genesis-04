@@ -43,7 +43,7 @@ serve(async (req) => {
     // Check if user is admin
     const { data: profile, error: profileError } = await userClient
       .from('profiles')
-      .select('role')
+      .select('id, role')
       .eq('user_id', user.id)
       .single();
 
