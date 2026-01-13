@@ -15,7 +15,9 @@ import {
   ShoppingCart,
   Search,
   AlertCircle,
-  RefreshCw
+  RefreshCw,
+  ExternalLink,
+  Sparkles
 } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -40,13 +42,25 @@ interface OnboardingDomainStepProps {
 
 type DomainOption = 'have-domain' | 'register-new';
 
-const tldOptions = ['.com', '.net', '.org', '.io', '.store', '.shop', '.online', '.co', '.app', '.dev'];
+const tldOptions = [
+  { value: '.com', label: '.com', price: '$10-15/yr' },
+  { value: '.net', label: '.net', price: '$12-15/yr' },
+  { value: '.org', label: '.org', price: '$12-15/yr' },
+  { value: '.io', label: '.io', price: '$30-50/yr' },
+  { value: '.store', label: '.store', price: '$5-20/yr' },
+  { value: '.shop', label: '.shop', price: '$5-15/yr' },
+  { value: '.online', label: '.online', price: '$3-10/yr' },
+  { value: '.co', label: '.co', price: '$20-30/yr' },
+  { value: '.app', label: '.app', price: '$15-20/yr' },
+  { value: '.dev', label: '.dev', price: '$15-20/yr' }
+];
 
 interface DnsRecord {
   type: string;
   name: string;
   value: string;
   ttl: number;
+  description?: string;
 }
 
 interface DnsStatus {
@@ -81,8 +95,8 @@ export const OnboardingDomainStep = ({
   const [searchDomain, setSearchDomain] = useState('');
   const [selectedTld, setSelectedTld] = useState('.com');
   const [dnsRecords, setDnsRecords] = useState<DnsRecord[]>([
-    { type: 'A', name: '@', value: '76.76.21.21', ttl: 3600 },
-    { type: 'CNAME', name: 'www', value: 'cname.vercel-dns.com', ttl: 3600 }
+    { type: 'A', name: '@', value: '76.76.21.21', ttl: 3600, description: 'Root domain' },
+    { type: 'CNAME', name: 'www', value: 'cname.vercel-dns.com', ttl: 3600, description: 'WWW subdomain' }
   ]);
   const [verificationToken, setVerificationToken] = useState<string | null>(null);
   const [addingDomain, setAddingDomain] = useState(false);
@@ -160,51 +174,61 @@ export const OnboardingDomainStep = ({
   if (selectedPlan === 'free') {
     return (
       <div className="space-y-6">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-2">Set Up Your Domain</h2>
+        <div className="text-center space-y-2">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-500 text-sm font-medium mb-2">
+            <Sparkles className="w-4 h-4" />
+            <span>Free Forever</span>
+          </div>
+          <h2 className="text-2xl font-bold">Set Up Your Domain</h2>
           <p className="text-muted-foreground">Your panel will be available on a free subdomain</p>
         </div>
 
-        <Card className="border-primary/30 bg-primary/5">
-          <CardContent className="p-6 space-y-4">
-            <div className="flex items-center gap-3">
-              <Globe className="w-6 h-6 text-primary" />
-              <div>
-                <h3 className="font-semibold">Free Subdomain</h3>
-                <p className="text-sm text-muted-foreground">Included with your plan</p>
+        <Card className="border-2 border-primary/30 bg-gradient-to-br from-primary/5 to-transparent overflow-hidden">
+          <CardContent className="p-6 space-y-5">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-primary/20 flex items-center justify-center">
+                <Globe className="w-7 h-7 text-primary" />
               </div>
-              <Badge className="ml-auto bg-emerald-500/10 text-emerald-500">Free</Badge>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold">Free Subdomain</h3>
+                <p className="text-sm text-muted-foreground">Included with your plan • SSL Included</p>
+              </div>
+              <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20">Free</Badge>
             </div>
 
-            <div className="space-y-2">
-              <Label>Choose Your Subdomain</Label>
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Choose Your Subdomain</Label>
               <div className="flex items-center gap-2">
-                <Input
-                  value={subdomain}
-                  onChange={(e) => onSubdomainChange(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ''))}
-                  placeholder="mysmm"
-                  className="bg-background/50"
-                />
-                <span className="text-sm text-muted-foreground whitespace-nowrap">.homeofsmm.com</span>
+                <div className="relative flex-1">
+                  <Input
+                    value={subdomain}
+                    onChange={(e) => onSubdomainChange(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ''))}
+                    placeholder="mysmm"
+                    className="pr-4 bg-background/50 h-12 text-lg"
+                  />
+                </div>
+                <div className="px-4 h-12 flex items-center bg-muted/50 rounded-lg border border-border">
+                  <span className="text-muted-foreground font-medium">.homeofsmm.com</span>
+                </div>
               </div>
               
               {checkingSubdomain && (
                 <p className="text-sm text-muted-foreground flex items-center gap-2">
-                  <Loader2 className="w-3 h-3 animate-spin" />
+                  <Loader2 className="w-4 h-4 animate-spin" />
                   Checking availability...
                 </p>
               )}
               {subdomainAvailable === true && subdomain.length >= 3 && (
-                <p className="text-sm text-emerald-500 flex items-center gap-1">
-                  <CheckCircle className="w-4 h-4" />
-                  Subdomain available!
-                </p>
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-500/10 text-emerald-600">
+                  <CheckCircle className="w-5 h-5" />
+                  <span className="font-medium">Subdomain available!</span>
+                </div>
               )}
               {subdomainAvailable === false && (
-                <p className="text-sm text-destructive flex items-center gap-1">
-                  <XCircle className="w-4 h-4" />
-                  Subdomain already taken
-                </p>
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 text-destructive">
+                  <XCircle className="w-5 h-5" />
+                  <span className="font-medium">Subdomain already taken</span>
+                </div>
               )}
             </div>
           </CardContent>
@@ -216,13 +240,15 @@ export const OnboardingDomainStep = ({
         )}
 
         {/* Preview */}
-        <Card className="bg-card/60 backdrop-blur-xl border-border/50">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <Globe className="w-5 h-5 text-primary" />
+        <Card className="bg-gradient-to-r from-primary/5 via-primary/10 to-secondary/5 border-primary/20">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
+                <Globe className="w-6 h-6 text-primary" />
+              </div>
               <div>
-                <p className="text-sm text-muted-foreground">Your panel will be available at:</p>
-                <p className="font-medium text-primary">
+                <p className="text-sm text-muted-foreground mb-1">Your panel will be available at:</p>
+                <p className="text-lg font-semibold text-primary">
                   https://{subdomain || 'yourname'}.homeofsmm.com
                 </p>
               </div>
@@ -426,7 +452,12 @@ export const OnboardingDomainStep = ({
                     </SelectTrigger>
                     <SelectContent>
                       {tldOptions.map(tld => (
-                        <SelectItem key={tld} value={tld}>{tld}</SelectItem>
+                        <SelectItem key={tld.value} value={tld.value}>
+                          <span className="flex items-center justify-between gap-2">
+                            <span>{tld.label}</span>
+                            <span className="text-[10px] text-muted-foreground">{tld.price}</span>
+                          </span>
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
