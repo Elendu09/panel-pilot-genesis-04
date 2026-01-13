@@ -179,7 +179,7 @@ const defaultCustomization = {
   heroCTAText: 'Get Started',
   heroSecondaryCTAText: 'View Services',
   heroAnimatedTexts: ['Instagram Growth', 'TikTok Viral', 'YouTube Success', 'Telegram Boost'],
-  heroAnimatedTextStyle: 'plain' as 'plain' | 'glow-box' | 'underline' | 'highlight',
+  heroAnimatedTextStyle: 'plain' as 'plain' | 'glow-box' | 'underline' | 'highlight' | 'typewriter' | 'gradient-wave' | 'text-reveal' | 'bounce',
   
   // Section Toggles
   enablePlatformFeatures: true,
@@ -1734,13 +1734,17 @@ export default function DesignCustomization() {
             {/* Animated Text Style */}
             <div className="pt-2 border-t border-border/50">
               <Label className="mb-2 block">Animated Text Style</Label>
-              <p className="text-xs text-muted-foreground mb-3">Add visual flair to highlighted text in the hero section</p>
+              <p className="text-xs text-muted-foreground mb-3">Add visual flair to the last word in your hero title</p>
               <div className="grid grid-cols-2 gap-2">
                 {[
-                  { id: 'plain', label: 'Plain', desc: 'No special styling' },
-                  { id: 'glow-box', label: 'Glow Box', desc: 'Glowing border effect' },
-                  { id: 'underline', label: 'Underline', desc: 'Colored underline' },
+                  { id: 'plain', label: 'Plain', desc: 'Simple gradient text' },
+                  { id: 'glow-box', label: 'Glow Box', desc: 'Neon glowing border' },
+                  { id: 'underline', label: 'Underline', desc: 'Animated underline' },
                   { id: 'highlight', label: 'Highlight', desc: 'Background highlight' },
+                  { id: 'typewriter', label: 'Typewriter', desc: 'Letter by letter typing' },
+                  { id: 'gradient-wave', label: 'Gradient Wave', desc: 'Animated color shift' },
+                  { id: 'text-reveal', label: 'Text Reveal', desc: 'Slide up animation' },
+                  { id: 'bounce', label: 'Bounce', desc: 'Bouncy spring entrance' },
                 ].map(style => (
                   <button 
                     key={style.id} 

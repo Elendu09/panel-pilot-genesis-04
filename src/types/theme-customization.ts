@@ -62,7 +62,7 @@ export interface ThemeCustomization {
   scrollReveal?: boolean;
   
   // Hero animated text styling
-  heroAnimatedTextStyle?: 'plain' | 'glow-box' | 'underline' | 'highlight';
+  heroAnimatedTextStyle?: 'plain' | 'glow-box' | 'underline' | 'highlight' | 'typewriter' | 'gradient-wave' | 'text-reveal' | 'bounce';
   
   // Background
   backgroundPattern?: string;
