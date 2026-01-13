@@ -1,0 +1,186 @@
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Check, Zap, Crown, Sparkles } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
+
+interface Plan {
+  id: 'free' | 'basic' | 'pro';
+  name: string;
+  price: number;
+  period: string;
+  description: string;
+  icon: React.ElementType;
+  color: string;
+  features: string[];
+  highlighted: boolean;
+  domainType: 'subdomain' | 'custom';
+}
+
+const plans: Plan[] = [
+  {
+    id: 'free',
+    name: 'Free',
+    price: 0,
+    period: 'forever',
+    description: 'Get started with basic features',
+    icon: Zap,
+    color: 'from-slate-500 to-slate-600',
+    features: [
+      'Subdomain only',
+      '1 Active Service',
+      '100 Orders/month',
+      'Basic Analytics',
+      'Email Support'
+    ],
+    highlighted: false,
+    domainType: 'subdomain'
+  },
+  {
+    id: 'basic',
+    name: 'Basic',
+    price: 5,
+    period: 'month',
+    description: 'Perfect for growing panels',
+    icon: Sparkles,
+    color: 'from-blue-500 to-blue-600',
+    features: [
+      '10 Active Services',
+      'Full Analytics Dashboard',
+      'Priority Email Support',
+      'Custom Domain',
+      '1,000 Orders/month',
+      'API Access'
+    ],
+    highlighted: false,
+    domainType: 'custom'
+  },
+  {
+    id: 'pro',
+    name: 'Pro',
+    price: 15,
+    period: 'month',
+    description: 'For serious SMM businesses',
+    icon: Crown,
+    color: 'from-amber-500 to-amber-600',
+    features: [
+      'Unlimited Services',
+      'Advanced Analytics + Reports',
+      '24/7 Priority Support',
+      'Multiple Custom Domains',
+      'Unlimited Orders',
+      'Full API Access',
+      'White-label Branding',
+      'Custom Integrations'
+    ],
+    highlighted: true,
+    domainType: 'custom'
+  }
+];
+
+interface OnboardingPlanSelectorProps {
+  selectedPlan: 'free' | 'basic' | 'pro';
+  onSelectPlan: (plan: 'free' | 'basic' | 'pro') => void;
+}
+
+export const OnboardingPlanSelector = ({ selectedPlan, onSelectPlan }: OnboardingPlanSelectorProps) => {
+  return (
+    <div className="space-y-6">
+      <div className="text-center">
+        <h2 className="text-2xl font-bold mb-2">Choose Your Plan</h2>
+        <p className="text-muted-foreground">Select a plan that fits your business needs</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {plans.map((plan) => {
+          const Icon = plan.icon;
+          const isSelected = selectedPlan === plan.id;
+          
+          return (
+            <motion.div
+              key={plan.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: plans.indexOf(plan) * 0.1 }}
+              className="relative"
+            >
+              {plan.highlighted && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
+                  <Badge className="bg-primary text-primary-foreground px-3">
+                    Most Popular
+                  </Badge>
+                </div>
+              )}
+              <Card 
+                className={cn(
+                  "bg-card/60 backdrop-blur-xl border-2 h-full cursor-pointer transition-all duration-300",
+                  plan.highlighted && "border-primary/50 shadow-lg shadow-primary/10",
+                  isSelected && "ring-2 ring-primary border-primary",
+                  !isSelected && "border-border/50 hover:border-primary/30"
+                )}
+                onClick={() => onSelectPlan(plan.id)}
+              >
+                <div className={cn(
+                  "absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl opacity-30",
+                  `bg-gradient-to-br ${plan.color}`
+                )} />
+                
+                <CardHeader className="text-center pb-2">
+                  <div className={cn(
+                    "w-12 h-12 mx-auto rounded-xl flex items-center justify-center mb-3 bg-gradient-to-br",
+                    plan.color
+                  )}>
+                    <Icon className="w-6 h-6 text-white" />
+                  </div>
+                  <CardTitle className="text-lg">{plan.name}</CardTitle>
+                  <CardDescription className="text-xs">{plan.description}</CardDescription>
+                </CardHeader>
+                
+                <CardContent className="space-y-4">
+                  <div className="text-center">
+                    <span className="text-3xl font-bold">${plan.price}</span>
+                    <span className="text-muted-foreground text-sm">/{plan.period}</span>
+                  </div>
+                  
+                  <ul className="space-y-2">
+                    {plan.features.slice(0, 5).map((feature, i) => (
+                      <li key={i} className="flex items-center gap-2 text-xs">
+                        <Check className="w-3 h-3 text-emerald-500 shrink-0" />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                    {plan.features.length > 5 && (
+                      <li className="text-xs text-muted-foreground">
+                        +{plan.features.length - 5} more features
+                      </li>
+                    )}
+                  </ul>
+                  
+                  <Button
+                    className={cn(
+                      "w-full gap-2",
+                      isSelected && "bg-primary"
+                    )}
+                    variant={isSelected ? 'default' : 'outline'}
+                    size="sm"
+                  >
+                    {isSelected ? 'Selected' : 'Select Plan'}
+                  </Button>
+                </CardContent>
+              </Card>
+            </motion.div>
+          );
+        })}
+      </div>
+
+      {selectedPlan !== 'free' && (
+        <div className="p-4 rounded-xl border border-primary/20 bg-primary/5">
+          <p className="text-sm text-center text-muted-foreground">
+            💳 You'll be redirected to payment after completing basic setup
+          </p>
+        </div>
+      )}
+    </div>
+  );
+};

@@ -15,6 +15,7 @@ import Services from "./pages/Services";
 import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 import PanelOwnerDashboard from "./pages/PanelOwnerDashboard";
 import PanelOnboarding from "./pages/panel/PanelOnboarding";
+import PanelOnboardingV2 from "./pages/panel/PanelOnboardingV2";
 import NotFound from "./pages/NotFound";
 import NewOrder from "./pages/NewOrder";
 import OrderManagement from "./pages/OrderManagement";
@@ -91,6 +92,11 @@ const App = () => (
                 
                 {/* Panel Management - Panel Owner Dashboard */}
                 <Route path="/panel/onboarding" element={
+                  <ProtectedRoute requiredRole="panel_owner">
+                    <PanelOnboardingV2 />
+                  </ProtectedRoute>
+                } />
+                <Route path="/panel/onboarding-legacy" element={
                   <ProtectedRoute requiredRole="panel_owner">
                     <PanelOnboarding />
                   </ProtectedRoute>

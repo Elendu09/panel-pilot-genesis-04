@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { DollarSign, CreditCard, Landmark, Coins, Save, CheckCircle2, Search, Filter, Loader2, XCircle, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { SubscriptionProviderManager } from "@/components/admin/SubscriptionProviderManager";
 
 // Payment method types
 type Method = {
@@ -289,13 +290,29 @@ const PaymentManagement = () => {
         </Card>
       </div>
 
-      <Tabs defaultValue="gateways" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+      <Tabs defaultValue="subscription-providers" className="w-full">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="subscription-providers">Subscription Providers</TabsTrigger>
           <TabsTrigger value="gateways">Gateways</TabsTrigger>
           <TabsTrigger value="methods">Methods</TabsTrigger>
           <TabsTrigger value="fees">Fees</TabsTrigger>
           <TabsTrigger value="payouts">Payouts</TabsTrigger>
         </TabsList>
+
+        {/* NEW: Subscription Payment Providers Tab */}
+        <TabsContent value="subscription-providers" className="space-y-6">
+          <Card className="bg-gradient-card border-border shadow-card">
+            <CardHeader>
+              <CardTitle>Subscription Payment Providers</CardTitle>
+              <CardDescription>
+                Configure payment gateways for panel owner subscriptions. These providers will be available during onboarding.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <SubscriptionProviderManager />
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="gateways" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

@@ -166,12 +166,13 @@ const Analytics = () => {
         startDate.setDate(startDate.getDate() - daysAgo);
       }
 
-      // Fetch orders with service names
+      // Fetch orders with service names - FIXED: Add end date filter
       const { data: orders } = await supabase
         .from('orders')
         .select('*, services(name, category)')
         .eq('panel_id', panel.id)
-        .gte('created_at', startDate.toISOString());
+        .gte('created_at', startDate.toISOString())
+        .lte('created_at', endDate.toISOString());
 
       // Fetch customers - FILTER BY DATE RANGE for new customers analytics
       const { data: customers } = await supabase
@@ -185,11 +186,12 @@ const Analytics = () => {
         return createdDate >= startDate && createdDate <= endDate;
       }) || [];
 
-      // Fetch transactions for payment analytics
+      // Fetch transactions for payment analytics - FIXED: Add panel filter and end date
       const { data: transactions } = await supabase
         .from('transactions')
         .select('*')
         .gte('created_at', startDate.toISOString())
+        .lte('created_at', endDate.toISOString())
         .order('created_at', { ascending: false });
 
       // Fetch custom pricing data
@@ -289,9 +291,19 @@ const Analytics = () => {
       const activeUsers = customers?.filter(c => c.is_active)?.length || 0;
       const conversionRate = customers?.length ? (totalOrders / customers.length * 100) : 0;
 
-      // Calculate previous period for comparison
-      const daysAgo = dateRange === "7d" ? 7 : dateRange === "30d" ? 30 : dateRange === "90d" ? 90 : 365;
-      const { startDate: prevStart, endDate: prevEnd } = getPreviousPeriodRange(daysAgo);
+      // Calculate previous period for comparison - FIXED: Handle custom date range
+      let prevStart: Date, prevEnd: Date;
+      if (dateRange === "custom" && customStartDate && customEndDate) {
+        const periodDays = Math.ceil((customEndDate.getTime() - customStartDate.getTime()) / (1000 * 60 * 60 * 24));
+        prevEnd = new Date(customStartDate);
+        prevStart = new Date(customStartDate);
+        prevStart.setDate(prevStart.getDate() - periodDays);
+      } else {
+        const daysAgo = dateRange === "7d" ? 7 : dateRange === "30d" ? 30 : dateRange === "90d" ? 90 : 365;
+        const prev = getPreviousPeriodRange(daysAgo);
+        prevStart = prev.startDate;
+        prevEnd = prev.endDate;
+      }
 
       const { data: prevOrders } = await supabase
         .from('orders')

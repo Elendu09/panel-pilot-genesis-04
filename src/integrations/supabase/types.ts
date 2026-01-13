@@ -1824,9 +1824,14 @@ export type Database = {
           settings: Json | null
           ssl_status: string | null
           status: Database["public"]["Enums"]["panel_status"] | null
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
           subdomain: string
+          subscription_status: string | null
+          subscription_tier: string | null
           theme_type: Database["public"]["Enums"]["theme_type"] | null
           total_orders: number | null
+          trial_ends_at: string | null
           updated_at: string
         }
         Insert: {
@@ -1857,9 +1862,14 @@ export type Database = {
           settings?: Json | null
           ssl_status?: string | null
           status?: Database["public"]["Enums"]["panel_status"] | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           subdomain: string
+          subscription_status?: string | null
+          subscription_tier?: string | null
           theme_type?: Database["public"]["Enums"]["theme_type"] | null
           total_orders?: number | null
+          trial_ends_at?: string | null
           updated_at?: string
         }
         Update: {
@@ -1890,9 +1900,14 @@ export type Database = {
           settings?: Json | null
           ssl_status?: string | null
           status?: Database["public"]["Enums"]["panel_status"] | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           subdomain?: string
+          subscription_status?: string | null
+          subscription_tier?: string | null
           theme_type?: Database["public"]["Enums"]["theme_type"] | null
           total_orders?: number | null
+          trial_ends_at?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1952,6 +1967,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      platform_payment_providers: {
+        Row: {
+          category: string
+          config: Json | null
+          created_at: string | null
+          display_name: string
+          fee_percentage: number | null
+          fixed_fee: number | null
+          id: string
+          is_enabled: boolean | null
+          logo_url: string | null
+          provider_name: string
+          regions: string[] | null
+          supports_subscriptions: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          category: string
+          config?: Json | null
+          created_at?: string | null
+          display_name: string
+          fee_percentage?: number | null
+          fixed_fee?: number | null
+          id?: string
+          is_enabled?: boolean | null
+          logo_url?: string | null
+          provider_name: string
+          regions?: string[] | null
+          supports_subscriptions?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string
+          config?: Json | null
+          created_at?: string | null
+          display_name?: string
+          fee_percentage?: number | null
+          fixed_fee?: number | null
+          id?: string
+          is_enabled?: boolean | null
+          logo_url?: string | null
+          provider_name?: string
+          regions?: string[] | null
+          supports_subscriptions?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       platform_providers: {
         Row: {
