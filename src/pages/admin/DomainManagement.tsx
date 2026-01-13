@@ -2,8 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TabsContent } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { 
@@ -15,23 +14,20 @@ import {
   RefreshCw,
   CheckCircle,
   Clock,
-  AlertCircle,
-  Search,
   ShoppingCart,
   Loader2,
   Activity,
   Network,
-  Lock,
   Eye
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { motion } from "framer-motion";
 import { SubdomainManager } from "@/components/domain/SubdomainManager";
 import { DomainPurchaseLinks } from "@/components/domain/DomainPurchaseLinks";
 import { SSLMonitoringDashboard } from "@/components/domain/SSLMonitoringDashboard";
 import { DomainTroubleshootingGuide } from "@/components/domain/DomainTroubleshootingGuide";
-import { VERCEL_NAMESERVERS, VERCEL_A_RECORDS, VERCEL_CNAME } from "@/lib/hosting-config";
+import { VERCEL_NAMESERVERS } from "@/lib/hosting-config";
+import { ResponsiveTabs } from "@/components/admin/ResponsiveTabs";
 
 interface PanelData {
   id: string;
@@ -164,15 +160,18 @@ const DomainManagement = () => {
         ))}
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="glass-card p-1 flex-wrap">
-          <TabsTrigger value="overview"><Activity className="w-4 h-4 mr-2" /> Overview</TabsTrigger>
-          <TabsTrigger value="subdomains"><Server className="w-4 h-4 mr-2" /> Subdomains</TabsTrigger>
-          <TabsTrigger value="custom"><Globe className="w-4 h-4 mr-2" /> Custom Domains</TabsTrigger>
-          <TabsTrigger value="monitoring"><Eye className="w-4 h-4 mr-2" /> Monitoring</TabsTrigger>
-          <TabsTrigger value="vercel"><Network className="w-4 h-4 mr-2" /> Vercel Setup</TabsTrigger>
-          <TabsTrigger value="buy"><ShoppingCart className="w-4 h-4 mr-2" /> Buy Domains</TabsTrigger>
-        </TabsList>
+      <ResponsiveTabs 
+        value={activeTab} 
+        onValueChange={setActiveTab}
+        tabs={[
+          { value: "overview", label: "Overview", icon: Activity },
+          { value: "subdomains", label: "Subdomains", icon: Server },
+          { value: "custom", label: "Custom Domains", icon: Globe },
+          { value: "monitoring", label: "Monitoring", icon: Eye },
+          { value: "vercel", label: "Vercel Setup", icon: Network },
+          { value: "buy", label: "Buy Domains", icon: ShoppingCart },
+        ]}
+      >
 
         <TabsContent value="overview" className="space-y-6">
           <div className="grid md:grid-cols-2 gap-6">
@@ -270,7 +269,7 @@ const DomainManagement = () => {
         </TabsContent>
 
         <TabsContent value="buy"><DomainPurchaseLinks /></TabsContent>
-      </Tabs>
+      </ResponsiveTabs>
     </div>
   );
 };

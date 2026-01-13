@@ -5,13 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { DollarSign, CreditCard, Landmark, Coins, Save, CheckCircle2, Search, Filter, Loader2, XCircle, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { SubscriptionProviderManager } from "@/components/admin/SubscriptionProviderManager";
+import { ResponsiveTabs } from "@/components/admin/ResponsiveTabs";
 
 // Payment method types
 type Method = {
@@ -68,6 +69,7 @@ const PaymentManagement = () => {
   const [exposeToPanels, setExposeToPanels] = useState(true);
   const [query, setQuery] = useState("");
   const [catFilter, setCatFilter] = useState<Method["category"] | "all">("all");
+  const [activeTab, setActiveTab] = useState("subscription-providers");
   
   // Real data states
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -290,14 +292,17 @@ const PaymentManagement = () => {
         </Card>
       </div>
 
-      <Tabs defaultValue="subscription-providers" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="subscription-providers">Subscription Providers</TabsTrigger>
-          <TabsTrigger value="gateways">Gateways</TabsTrigger>
-          <TabsTrigger value="methods">Methods</TabsTrigger>
-          <TabsTrigger value="fees">Fees</TabsTrigger>
-          <TabsTrigger value="payouts">Payouts</TabsTrigger>
-        </TabsList>
+      <ResponsiveTabs 
+        value={activeTab} 
+        onValueChange={setActiveTab}
+        tabs={[
+          { value: "subscription-providers", label: "Subscription Providers", icon: CreditCard },
+          { value: "gateways", label: "Gateways", icon: Landmark },
+          { value: "methods", label: "Methods", icon: Coins },
+          { value: "fees", label: "Fees", icon: DollarSign },
+          { value: "payouts", label: "Payouts", icon: DollarSign },
+        ]}
+      >
 
         {/* NEW: Subscription Payment Providers Tab */}
         <TabsContent value="subscription-providers" className="space-y-6">
@@ -596,7 +601,7 @@ const PaymentManagement = () => {
             </Card>
           </div>
         </TabsContent>
-      </Tabs>
+      </ResponsiveTabs>
     </div>
   );
 };
