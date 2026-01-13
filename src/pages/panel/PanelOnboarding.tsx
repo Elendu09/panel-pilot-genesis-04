@@ -48,7 +48,9 @@ const PanelOnboarding = () => {
   const [subdomainAvailable, setSubdomainAvailable] = useState<boolean | null>(null);
   const [checkingSubdomain, setCheckingSubdomain] = useState(false);
 
-  // Step 3: Branding
+  // Step 3: Theme & Branding
+  const [selectedTheme, setSelectedTheme] = useState<'default' | 'alipanel' | 'flysmm' | 'smmstay' | 'tgref' | 'smmvisit'>('default');
+  const [brandingMode, setBrandingMode] = useState<'preset' | 'custom'>('preset');
   const [primaryColor, setPrimaryColor] = useState('#3b82f6');
   const [secondaryColor, setSecondaryColor] = useState('#1e40af');
 
@@ -57,10 +59,20 @@ const PanelOnboarding = () => {
   const [seoDescription, setSeoDescription] = useState('');
   const [seoKeywords, setSeoKeywords] = useState('');
 
+  // Theme presets with colors
+  const themePresets = [
+    { key: 'default' as const, name: 'Modern Default', description: 'Clean and professional', primary: '#6366F1', secondary: '#8B5CF6', preview: 'bg-gradient-to-br from-indigo-500 to-purple-500' },
+    { key: 'alipanel' as const, name: 'AliPanel', description: 'Bold orange energy', primary: '#F97316', secondary: '#EA580C', preview: 'bg-gradient-to-br from-orange-500 to-orange-600' },
+    { key: 'flysmm' as const, name: 'FlySMM', description: 'Deep purple luxury', primary: '#7C3AED', secondary: '#5B21B6', preview: 'bg-gradient-to-br from-violet-600 to-violet-800' },
+    { key: 'smmstay' as const, name: 'SMMStay', description: 'Neon pink vibrant', primary: '#FF4081', secondary: '#E040FB', preview: 'bg-gradient-to-br from-pink-500 to-fuchsia-500' },
+    { key: 'tgref' as const, name: 'TGRef', description: 'Terminal hacker', primary: '#22C55E', secondary: '#16A34A', preview: 'bg-gradient-to-br from-green-500 to-green-600' },
+    { key: 'smmvisit' as const, name: 'SMMVisit', description: 'Ocean blue calm', primary: '#0EA5E9', secondary: '#0284C7', preview: 'bg-gradient-to-br from-sky-500 to-sky-600' },
+  ];
+
   const steps = [
     { id: 0, title: 'Basic Info', icon: Settings, description: 'Name your panel' },
     { id: 1, title: 'Domain', icon: Globe, description: 'Choose your URL' },
-    { id: 2, title: 'Branding Color', icon: Palette, description: 'Choose colors' },
+    { id: 2, title: 'Theme & Style', icon: Palette, description: 'Choose look & feel' },
     { id: 3, title: 'SEO', icon: Search, description: 'Optimize search' },
   ];
 
@@ -226,6 +238,14 @@ const PanelOnboarding = () => {
         ? subdomain 
         : panelName.toLowerCase().replace(/[^a-zA-Z0-9]/g, '').substring(0, 20) || 'panel';
 
+      // Get colors from preset or custom
+      const finalPrimaryColor = brandingMode === 'preset' 
+        ? themePresets.find(t => t.key === selectedTheme)?.primary || primaryColor 
+        : primaryColor;
+      const finalSecondaryColor = brandingMode === 'preset' 
+        ? themePresets.find(t => t.key === selectedTheme)?.secondary || secondaryColor 
+        : secondaryColor;
+
       const { error } = await supabase
         .from('panels')
         .insert([
@@ -236,10 +256,11 @@ const PanelOnboarding = () => {
             status: 'active',
             is_approved: true,
             theme_type: 'dark_gradient',
+            buyer_theme: selectedTheme,
             subdomain: finalSubdomain,
             custom_domain: domainType === 'custom' ? customDomain : null,
-            primary_color: primaryColor,
-            secondary_color: secondaryColor,
+            primary_color: finalPrimaryColor,
+            secondary_color: finalSecondaryColor,
             onboarding_completed: true
           }
         ]);
@@ -436,54 +457,108 @@ const PanelOnboarding = () => {
             <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/5 border border-primary/20">
               <Palette className="w-5 h-5 text-primary" />
               <p className="text-sm text-muted-foreground">
-                Choose your brand colors. You can customize logo, favicon, and more in Design Settings after setup.
+                Choose a theme preset or customize colors manually. You can fine-tune everything in <strong>Design Customization</strong> after setup.
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Primary Color</Label>
-                <div className="flex items-center gap-2">
-                  <div 
-                    className="w-12 h-12 rounded-xl border-2 border-border cursor-pointer overflow-hidden"
-                    style={{ backgroundColor: primaryColor }}
-                  >
-                    <input
-                      type="color"
-                      value={primaryColor}
-                      onChange={(e) => setPrimaryColor(e.target.value)}
-                      className="w-full h-full opacity-0 cursor-pointer"
-                    />
-                  </div>
-                  <Input
-                    value={primaryColor}
-                    onChange={(e) => setPrimaryColor(e.target.value)}
-                    className="bg-background/50"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Secondary Color</Label>
-                <div className="flex items-center gap-2">
-                  <div 
-                    className="w-12 h-12 rounded-xl border-2 border-border cursor-pointer overflow-hidden"
-                    style={{ backgroundColor: secondaryColor }}
-                  >
-                    <input
-                      type="color"
-                      value={secondaryColor}
-                      onChange={(e) => setSecondaryColor(e.target.value)}
-                      className="w-full h-full opacity-0 cursor-pointer"
-                    />
-                  </div>
-                  <Input
-                    value={secondaryColor}
-                    onChange={(e) => setSecondaryColor(e.target.value)}
-                    className="bg-background/50"
-                  />
-                </div>
-              </div>
+            {/* Mode Toggle */}
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant={brandingMode === 'preset' ? 'default' : 'outline'}
+                onClick={() => setBrandingMode('preset')}
+                className="flex-1"
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                Theme Presets
+              </Button>
+              <Button
+                type="button"
+                variant={brandingMode === 'custom' ? 'default' : 'outline'}
+                onClick={() => setBrandingMode('custom')}
+                className="flex-1"
+              >
+                <Palette className="w-4 h-4 mr-2" />
+                Custom Colors
+              </Button>
             </div>
+
+            {brandingMode === 'preset' ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {themePresets.map((preset) => (
+                  <div
+                    key={preset.key}
+                    onClick={() => {
+                      setSelectedTheme(preset.key);
+                      setPrimaryColor(preset.primary);
+                      setSecondaryColor(preset.secondary);
+                    }}
+                    className={cn(
+                      "relative rounded-xl border-2 p-3 cursor-pointer transition-all hover:scale-[1.02]",
+                      selectedTheme === preset.key 
+                        ? "border-primary ring-2 ring-primary/20" 
+                        : "border-border hover:border-primary/50"
+                    )}
+                  >
+                    <div className={cn("h-16 rounded-lg mb-2", preset.preview)} />
+                    <p className="font-medium text-sm">{preset.name}</p>
+                    <p className="text-xs text-muted-foreground">{preset.description}</p>
+                    {selectedTheme === preset.key && (
+                      <div className="absolute top-2 right-2 w-5 h-5 bg-primary rounded-full flex items-center justify-center">
+                        <CheckCircle className="w-3 h-3 text-white" />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Primary Color</Label>
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="w-12 h-12 rounded-xl border-2 border-border cursor-pointer overflow-hidden"
+                        style={{ backgroundColor: primaryColor }}
+                      >
+                        <input
+                          type="color"
+                          value={primaryColor}
+                          onChange={(e) => setPrimaryColor(e.target.value)}
+                          className="w-full h-full opacity-0 cursor-pointer"
+                        />
+                      </div>
+                      <Input
+                        value={primaryColor}
+                        onChange={(e) => setPrimaryColor(e.target.value)}
+                        className="bg-background/50"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Secondary Color</Label>
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="w-12 h-12 rounded-xl border-2 border-border cursor-pointer overflow-hidden"
+                        style={{ backgroundColor: secondaryColor }}
+                      >
+                        <input
+                          type="color"
+                          value={secondaryColor}
+                          onChange={(e) => setSecondaryColor(e.target.value)}
+                          className="w-full h-full opacity-0 cursor-pointer"
+                        />
+                      </div>
+                      <Input
+                        value={secondaryColor}
+                        onChange={(e) => setSecondaryColor(e.target.value)}
+                        className="bg-background/50"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Preview */}
             <div className="p-4 rounded-xl border border-border">
