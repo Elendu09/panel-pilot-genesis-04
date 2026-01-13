@@ -22,8 +22,10 @@ import {
   Loader2,
   Plus,
   Trash2,
-  ExternalLink
+  ExternalLink,
+  Server
 } from "lucide-react";
+import { VercelIntegrationSettings } from "@/components/admin/VercelIntegrationSettings";
 
 interface PlatformSetting {
   id: string;
@@ -458,45 +460,7 @@ const PlatformSettings = () => {
 
         {/* Vercel Integration Tab */}
         <TabsContent value="vercel" className="space-y-6">
-          <Card className="bg-gradient-card border-border shadow-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2"><Globe className="w-5 h-5" /> Vercel Integration</CardTitle>
-              <CardDescription>Configure Vercel API for automatic custom domain management</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 text-sm">
-                <p className="text-amber-600 font-medium mb-2">⚠️ Sensitive Configuration</p>
-                <p className="text-muted-foreground">
-                  These credentials are stored securely and used by edge functions to automatically add panel owner domains to your Vercel project.
-                </p>
-              </div>
-              
-              <div className="space-y-4">
-                <div>
-                  <Label>Vercel API Token</Label>
-                  <p className="text-xs text-muted-foreground mb-2">Get from Vercel Dashboard → Settings → Tokens</p>
-                  <Input type="password" placeholder="••••••••••••••••" disabled />
-                  <p className="text-xs text-muted-foreground mt-1">Contact support to configure this setting securely.</p>
-                </div>
-                <div>
-                  <Label>Project ID</Label>
-                  <p className="text-xs text-muted-foreground mb-2">Your Vercel project ID (prj_xxxxx)</p>
-                  <Input placeholder="prj_..." disabled />
-                </div>
-                <div>
-                  <Label>Team ID (Optional)</Label>
-                  <p className="text-xs text-muted-foreground mb-2">Required if project belongs to a team</p>
-                  <Input placeholder="team_..." disabled />
-                </div>
-              </div>
-
-              <div className="pt-4 border-t">
-                <p className="text-sm text-muted-foreground">
-                  <strong>How it works:</strong> When panel owners add custom domains, the system automatically registers them with Vercel and provides DNS instructions. Panel owners only need to add A and CNAME records—no nameserver changes required.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          <VercelIntegrationSettings />
         </TabsContent>
       </Tabs>
     </div>
