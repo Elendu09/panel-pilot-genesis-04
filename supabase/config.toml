@@ -113,3 +113,9 @@ verify_jwt = false
 
 [functions.generate-sitemap]
 verify_jwt = false
+
+[functions.verify-domain-dns]
+verify_jwt = false
+
+[functions.add-vercel-domain]
+verify_jwt = false
