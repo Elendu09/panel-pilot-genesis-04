@@ -1,27 +1,33 @@
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Info } from "lucide-react";
+import { 
+  FlagUS, FlagEU, FlagGB, FlagNG, FlagIN, FlagZA, FlagKE, FlagGH, 
+  FlagBR, FlagCA, FlagAU, FlagRU, FlagTR, FlagPK, FlagBD, FlagID, 
+  FlagPH, FlagVN, FlagMX, FlagAE 
+} from "@/components/icons/FlagIcons";
 
 const currencies = [
-  { code: 'USD', name: 'United States Dollar', symbol: '$', flag: '🇺🇸' },
-  { code: 'EUR', name: 'Euro', symbol: '€', flag: '🇪🇺' },
-  { code: 'GBP', name: 'British Pound', symbol: '£', flag: '🇬🇧' },
-  { code: 'NGN', name: 'Nigerian Naira', symbol: '₦', flag: '🇳🇬' },
-  { code: 'INR', name: 'Indian Rupee', symbol: '₹', flag: '🇮🇳' },
-  { code: 'ZAR', name: 'South African Rand', symbol: 'R', flag: '🇿🇦' },
-  { code: 'KES', name: 'Kenyan Shilling', symbol: 'KSh', flag: '🇰🇪' },
-  { code: 'GHS', name: 'Ghanaian Cedi', symbol: 'GH₵', flag: '🇬🇭' },
-  { code: 'BRL', name: 'Brazilian Real', symbol: 'R$', flag: '🇧🇷' },
-  { code: 'CAD', name: 'Canadian Dollar', symbol: 'CA$', flag: '🇨🇦' },
-  { code: 'AUD', name: 'Australian Dollar', symbol: 'A$', flag: '🇦🇺' },
-  { code: 'RUB', name: 'Russian Ruble', symbol: '₽', flag: '🇷🇺' },
-  { code: 'TRY', name: 'Turkish Lira', symbol: '₺', flag: '🇹🇷' },
-  { code: 'PKR', name: 'Pakistani Rupee', symbol: '₨', flag: '🇵🇰' },
-  { code: 'BDT', name: 'Bangladeshi Taka', symbol: '৳', flag: '🇧🇩' },
-  { code: 'IDR', name: 'Indonesian Rupiah', symbol: 'Rp', flag: '🇮🇩' },
-  { code: 'PHP', name: 'Philippine Peso', symbol: '₱', flag: '🇵🇭' },
-  { code: 'VND', name: 'Vietnamese Dong', symbol: '₫', flag: '🇻🇳' },
-  { code: 'MXN', name: 'Mexican Peso', symbol: 'MX$', flag: '🇲🇽' },
-  { code: 'AED', name: 'UAE Dirham', symbol: 'د.إ', flag: '🇦🇪' },
+  { code: 'USD', name: 'United States Dollar', symbol: '$', FlagIcon: FlagUS },
+  { code: 'EUR', name: 'Euro', symbol: '€', FlagIcon: FlagEU },
+  { code: 'GBP', name: 'British Pound', symbol: '£', FlagIcon: FlagGB },
+  { code: 'NGN', name: 'Nigerian Naira', symbol: '₦', FlagIcon: FlagNG },
+  { code: 'INR', name: 'Indian Rupee', symbol: '₹', FlagIcon: FlagIN },
+  { code: 'ZAR', name: 'South African Rand', symbol: 'R', FlagIcon: FlagZA },
+  { code: 'KES', name: 'Kenyan Shilling', symbol: 'KSh', FlagIcon: FlagKE },
+  { code: 'GHS', name: 'Ghanaian Cedi', symbol: 'GH₵', FlagIcon: FlagGH },
+  { code: 'BRL', name: 'Brazilian Real', symbol: 'R$', FlagIcon: FlagBR },
+  { code: 'CAD', name: 'Canadian Dollar', symbol: 'CA$', FlagIcon: FlagCA },
+  { code: 'AUD', name: 'Australian Dollar', symbol: 'A$', FlagIcon: FlagAU },
+  { code: 'RUB', name: 'Russian Ruble', symbol: '₽', FlagIcon: FlagRU },
+  { code: 'TRY', name: 'Turkish Lira', symbol: '₺', FlagIcon: FlagTR },
+  { code: 'PKR', name: 'Pakistani Rupee', symbol: '₨', FlagIcon: FlagPK },
+  { code: 'BDT', name: 'Bangladeshi Taka', symbol: '৳', FlagIcon: FlagBD },
+  { code: 'IDR', name: 'Indonesian Rupiah', symbol: 'Rp', FlagIcon: FlagID },
+  { code: 'PHP', name: 'Philippine Peso', symbol: '₱', FlagIcon: FlagPH },
+  { code: 'VND', name: 'Vietnamese Dong', symbol: '₫', FlagIcon: FlagVN },
+  { code: 'MXN', name: 'Mexican Peso', symbol: 'MX$', FlagIcon: FlagMX },
+  { code: 'AED', name: 'UAE Dirham', symbol: 'د.إ', FlagIcon: FlagAE },
 ];
 
 interface OnboardingCurrencySelectorProps {
@@ -46,7 +52,7 @@ export const OnboardingCurrencySelector = ({ value, onChange }: OnboardingCurren
           <SelectValue>
             {selectedCurrency ? (
               <span className="flex items-center gap-2">
-                <span>{selectedCurrency.flag}</span>
+                <selectedCurrency.FlagIcon className="w-5 h-4 rounded-sm" />
                 <span>{selectedCurrency.code}</span>
                 <span className="text-muted-foreground">({selectedCurrency.symbol})</span>
               </span>
@@ -59,7 +65,7 @@ export const OnboardingCurrencySelector = ({ value, onChange }: OnboardingCurren
           {currencies.map((currency) => (
             <SelectItem key={currency.code} value={currency.code}>
               <span className="flex items-center gap-2">
-                <span>{currency.flag}</span>
+                <currency.FlagIcon className="w-5 h-4 rounded-sm" />
                 <span className="font-medium">{currency.code}</span>
                 <span className="text-muted-foreground">
                   {currency.name} ({currency.symbol})
@@ -71,7 +77,10 @@ export const OnboardingCurrencySelector = ({ value, onChange }: OnboardingCurren
       </Select>
 
       <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground space-y-1">
-        <p><strong>💡 How this works:</strong></p>
+        <p className="flex items-center gap-1.5 font-medium">
+          <Info className="w-3.5 h-3.5" />
+          How this works:
+        </p>
         <ul className="list-disc list-inside space-y-0.5 ml-1">
           <li>Service prices will display in {selectedCurrency?.code || 'your selected currency'}</li>
           <li>Buyers see prices in this currency when browsing your services</li>

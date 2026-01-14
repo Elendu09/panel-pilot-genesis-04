@@ -12,6 +12,7 @@ import { BuyerAuthProvider } from '@/contexts/BuyerAuthContext';
 import { BuyerProtectedRoute } from '@/components/buyer/BuyerProtectedRoute';
 import { CurrencyProvider } from '@/contexts/CurrencyContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
+import { Rocket, Sparkles } from 'lucide-react';
 import App from '../App';
 
 // Set initial title immediately based on domain (prevents "Loading..." flash)
@@ -185,7 +186,7 @@ const TenantContent = () => {
             <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-primary/5 to-secondary/10">
               <div className="text-center max-w-md px-6">
                 <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-yellow-500/20 flex items-center justify-center">
-                  <span className="text-3xl">⚠️</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8 text-yellow-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
                 </div>
                 <h1 className="text-2xl font-bold text-foreground mb-2">Connection Timeout</h1>
                 <p className="text-muted-foreground mb-4">
@@ -346,7 +347,7 @@ const TenantContent = () => {
                 <div className="text-center max-w-lg p-8 relative z-10">
                   {/* Clean Logo/Icon */}
                   <div className="w-24 h-24 mx-auto mb-8 rounded-2xl bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center border border-slate-700/50">
-                    <span className="text-5xl">🚀</span>
+                    <Rocket className="w-12 h-12 text-emerald-400" />
                   </div>
                   
                   <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 mb-6">
@@ -369,7 +370,7 @@ const TenantContent = () => {
                       onClick={() => window.location.href = `https://${platformDomain}/auth?subdomain=${requestedSubdomain}`}
                       className="flex items-center justify-center gap-3 w-full px-8 py-4 bg-white text-slate-900 font-semibold rounded-xl hover:bg-slate-100 hover:-translate-y-0.5 transition-all duration-300 group"
                     >
-                      <span className="text-xl group-hover:scale-110 transition-transform">✨</span>
+                      <Sparkles className="w-5 h-5 group-hover:scale-110 transition-transform" />
                       Claim This Subdomain
                     </button>
                     <button 

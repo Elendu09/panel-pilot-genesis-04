@@ -618,15 +618,15 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
   const getCardPosition = () => {
     const position = getPosition();
     
-    // Welcome and complete steps: ALWAYS center
+    // Welcome and complete steps: ALWAYS center with safe area padding
     if (currentStep === 0 || step?.id === 'complete') {
       return { 
         position: "fixed" as const,
         top: "50%",
         left: "50%",
         transform: "translate(-50%, -50%)",
-        maxWidth: isMobile ? "min(340px, calc(100vw - 32px))" : undefined,
-        width: isMobile ? "100%" : undefined,
+        width: isMobile ? "calc(100vw - 32px)" : undefined,
+        maxWidth: isMobile ? "340px" : undefined,
       };
     }
     
@@ -637,22 +637,25 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
         top: "50%",
         left: "50%",
         transform: "translate(-50%, -50%)",
-        maxWidth: isMobile ? "min(340px, calc(100vw - 32px))" : undefined,
-        width: isMobile ? "100%" : undefined,
+        width: isMobile ? "calc(100vw - 32px)" : undefined,
+        maxWidth: isMobile ? "340px" : undefined,
       };
     }
     
     // MOBILE: Position above bottom nav for targeted steps
     if (isMobile) {
       if (position === "top" && targetRect) {
-        const bottomNavHeight = 80;
+        const bottomNavHeight = 72; // Standard bottom nav height
+        const safeAreaBottom = 16; // Safe area padding
         return {
           position: "fixed" as const,
-          bottom: bottomNavHeight + 16,
-          left: "50%",
-          transform: "translateX(-50%)",
-          maxWidth: "min(340px, calc(100vw - 32px))",
-          width: "100%",
+          bottom: bottomNavHeight + safeAreaBottom,
+          left: "16px",
+          right: "16px",
+          width: "auto",
+          maxWidth: "340px",
+          marginLeft: "auto",
+          marginRight: "auto",
         };
       }
       return {
@@ -660,8 +663,8 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
         top: "50%",
         left: "50%",
         transform: "translate(-50%, -50%)",
-        maxWidth: "min(340px, calc(100vw - 32px))",
-        width: "100%",
+        width: "calc(100vw - 32px)",
+        maxWidth: "340px",
       };
     }
 
@@ -760,7 +763,7 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: -20 }}
           transition={{ duration: 0.3 }}
-          className={`z-[101] ${isCompact ? 'w-auto' : isDesktop ? 'w-full max-w-lg mx-4' : 'w-full max-w-md mx-4'}`}
+          className={`z-[101] ${isCompact ? 'w-full max-w-[340px] mx-4' : isDesktop ? 'w-full max-w-lg mx-4' : 'w-full max-w-md mx-4'}`}
           style={getCardPosition()}
         >
           <Card className={`bg-card/95 backdrop-blur-xl border-primary/30 shadow-2xl ${isCompact ? 'p-4 space-y-3' : isDesktop ? 'p-8 space-y-6' : 'p-6 space-y-5'}`}>
