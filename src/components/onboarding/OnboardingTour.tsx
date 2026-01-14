@@ -624,10 +624,23 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
   const getCardPosition = () => {
     const position = getPosition();
     
+    // Welcome step (step 0) and complete step: ALWAYS center on ALL devices
+    // This is the highest priority - ensures proper centering regardless of device
+    if (currentStep === 0 || step?.id === 'complete' || step?.id === 'welcome') {
+      return { 
+        position: "fixed" as const,
+        top: "50%",
+        left: "50%",
+        transform: "translate(-50%, -50%)",
+        width: isMobile ? "calc(100% - 32px)" : isTablet ? "400px" : "480px",
+        maxWidth: isMobile ? "340px" : isTablet ? "400px" : "480px",
+      };
+    }
+    
     // MOBILE: Always use consistent centered positioning
     if (isMobile) {
-      // Welcome and complete steps: center vertically and horizontally
-      if (currentStep === 0 || step?.id === 'complete' || position === "center") {
+      // Center position for non-targeted steps
+      if (position === "center") {
         return { 
           position: "fixed" as const,
           top: "50%",
@@ -663,33 +676,25 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
       };
     }
     
-    // Welcome and complete steps: ALWAYS center with safe area padding
-    if (currentStep === 0 || step?.id === 'complete') {
-      return { 
-        position: "fixed" as const,
-        top: "50%",
-        left: "50%",
-        transform: "translate(-50%, -50%)",
-      };
-    }
-    
-    // Center position
+    // Center position for tablet/desktop
     if (position === "center") {
       return { 
         position: "fixed" as const,
         top: "50%",
         left: "50%",
         transform: "translate(-50%, -50%)",
+        width: isTablet ? "400px" : "480px",
       };
     }
 
-    // TABLET & DESKTOP
+    // TABLET & DESKTOP: targeted element positioning
     if (!targetRect) {
       return { 
         position: "fixed" as const,
         top: "50%",
         left: "50%",
-        transform: "translate(-50%, -50%)"
+        transform: "translate(-50%, -50%)",
+        width: isTablet ? "400px" : "480px",
       };
     }
 
@@ -703,31 +708,36 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
           position: "fixed" as const,
           top: Math.max(padding, Math.min(targetRect.top, window.innerHeight - cardHeight - padding)),
           left: Math.min(targetRect.right + padding, window.innerWidth - cardWidth - padding),
+          width: isTablet ? "380px" : "450px",
         };
       case "left":
         return {
           position: "fixed" as const,
           top: Math.max(padding, Math.min(targetRect.top, window.innerHeight - cardHeight - padding)),
           right: window.innerWidth - targetRect.left + padding,
+          width: isTablet ? "380px" : "450px",
         };
       case "bottom":
         return {
           position: "fixed" as const,
           top: Math.min(targetRect.bottom + padding, window.innerHeight - cardHeight - padding),
           left: Math.max(padding, Math.min(targetRect.left, window.innerWidth - cardWidth - padding)),
+          width: isTablet ? "380px" : "450px",
         };
       case "top":
         return {
           position: "fixed" as const,
           bottom: window.innerHeight - targetRect.top + padding,
           left: Math.max(padding, Math.min(targetRect.left, window.innerWidth - cardWidth - padding)),
+          width: isTablet ? "380px" : "450px",
         };
       default:
         return {
           position: "fixed" as const,
           top: "50%",
           left: "50%",
-          transform: "translate(-50%, -50%)"
+          transform: "translate(-50%, -50%)",
+          width: isTablet ? "400px" : "480px",
         };
     }
   };

@@ -1981,13 +1981,6 @@ const ServicesManagement = () => {
               color: "blue-500",
               tooltip: `Total orders placed across all services (${totalOrders} orders)`
             },
-            { 
-              label: "Avg Price", 
-              value: `$${avgPrice}`, 
-              icon: DollarSign, 
-              color: "amber-500",
-              tooltip: `Mean price across all ${totalServices} services: Sum of all prices ÷ Number of services`
-            },
           ].map((stat, index) => (
             <motion.div
               key={stat.label}

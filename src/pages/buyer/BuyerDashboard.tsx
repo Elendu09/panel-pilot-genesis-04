@@ -25,7 +25,8 @@ import {
   Mail,
   X,
   BadgeCheck,
-  ClipboardList
+  ClipboardList,
+  Hand
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -347,6 +348,14 @@ const BuyerDashboard = () => {
                       : '';
                 return displayName ? `, ${displayName}` : '';
               })()}!
+              {/* Animated waving hand icon */}
+              <motion.span 
+                animate={{ rotate: [0, 14, -8, 14, -4, 10, 0] }}
+                transition={{ duration: 2.5, repeat: Infinity, repeatDelay: 1 }}
+                className="inline-block origin-[70%_70%]"
+              >
+                <Hand className="w-5 h-5 md:w-6 md:h-6 text-amber-500" />
+              </motion.span>
               {/* Themed checkmark for verified users */}
               {!showVerifyBanner && (
                 <BadgeCheck className="w-5 h-5 md:w-6 md:h-6 text-primary fill-primary/20" />
