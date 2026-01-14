@@ -109,3 +109,6 @@ verify_jwt = false
 
 [functions.update-security-settings]
 verify_jwt = false
+
+[functions.panel-customers]
+verify_jwt = false

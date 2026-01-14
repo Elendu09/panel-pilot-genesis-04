@@ -65,7 +65,20 @@ const BuyerAuth = () => {
       toast.success("Welcome back!");
       navigate("/dashboard");
     } else {
-      toast.error(result.error.message || "Login failed");
+      // Handle special cases
+      const errorMsg = result.error.message || "Login failed";
+      const reason = result.error.reason;
+      
+      // Check for password reset requirement
+      if (reason === 'requiresPasswordReset' || errorMsg.includes('reset your password')) {
+        toast.error("Please reset your password to continue");
+        setShowForgotPassword(true);
+        setForgotPasswordEmail(loginData.identifier.includes('@') ? loginData.identifier : '');
+        return;
+      }
+      
+      // Show user-friendly error messages
+      toast.error(errorMsg);
     }
   };
 

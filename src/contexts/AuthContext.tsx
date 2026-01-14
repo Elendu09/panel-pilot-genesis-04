@@ -199,10 +199,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             error.message?.toLowerCase().includes('email_not_confirmed')) {
           return { error, emailNotVerified: true, email: loginEmail };
         }
+        
+        // Normalize Supabase error messages to user-friendly text
+        let friendlyMessage = error.message;
+        const lowerMsg = error.message?.toLowerCase() || '';
+        
+        if (lowerMsg.includes('invalid login credentials') || lowerMsg.includes('invalid_credentials')) {
+          friendlyMessage = 'Invalid email/username or password. Please check and try again.';
+        } else if (lowerMsg.includes('too many requests') || lowerMsg.includes('rate limit')) {
+          friendlyMessage = 'Too many login attempts. Please wait a moment and try again.';
+        } else if (lowerMsg.includes('user not found')) {
+          friendlyMessage = 'No account found with this email. Please sign up first.';
+        } else if (lowerMsg.includes('network') || lowerMsg.includes('fetch')) {
+          friendlyMessage = 'Network error. Please check your connection and try again.';
+        }
+        
         toast({
           variant: "destructive",
-          title: "Sign In Error",
-          description: error.message
+          title: "Sign In Failed",
+          description: friendlyMessage
         });
       }
       
