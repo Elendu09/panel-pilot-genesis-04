@@ -63,6 +63,8 @@ import FastOrder from './FastOrder';
 import BuyerBulkOrder from './buyer/BuyerBulkOrder';
 import TrackOrder from './TrackOrder';
 import Sitemap from './Sitemap';
+import TeamAuth from './buyer/TeamAuth';
+import TeamDashboard from './panel/TeamDashboard';
 
 const queryClient = new QueryClient();
 
@@ -299,6 +301,10 @@ const TenantContent = () => {
                             <BuyerBulkOrder />
                           </BuyerProtectedRoute>
                         } />
+                        
+                        {/* Team member routes */}
+                        <Route path="/team-login" element={<TeamAuth />} />
+                        <Route path="/team-dashboard" element={<TeamDashboard />} />
                         
                         {/* Catch all - redirect to storefront */}
                         <Route path="*" element={<Navigate to="/" replace />} />
