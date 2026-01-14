@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Users, Mail, Lock, Eye, EyeOff, Loader2, Shield, ArrowRight } from 'lucide-react';
+import { Users, Mail, Lock, Eye, EyeOff, Loader2, Shield, ArrowRight, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,11 +16,13 @@ const TeamAuth = () => {
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [needsPasswordSetup, setNeedsPasswordSetup] = useState(false);
+  const [mustChangePassword, setMustChangePassword] = useState(false);
   const [memberId, setMemberId] = useState<string | null>(null);
+  const [memberRole, setMemberRole] = useState<string | null>(null);
 
   // Check for existing team session
   useEffect(() => {
@@ -80,15 +82,20 @@ const TeamAuth = () => {
 
       if (error) throw error;
 
-      if (data?.needsPasswordSetup) {
-        setNeedsPasswordSetup(true);
-        setMemberId(data.memberId);
-        toast({ title: 'Welcome!', description: 'Please set your password to continue.' });
+      if (data?.error) {
+        toast({ variant: 'destructive', title: 'Login failed', description: data.error });
         return;
       }
 
-      if (data?.error) {
-        toast({ variant: 'destructive', title: 'Login failed', description: data.error });
+      // Check if must change password (first login with temp password)
+      if (data?.mustChangePassword) {
+        setMustChangePassword(true);
+        setMemberId(data.memberId);
+        setMemberRole(data.role);
+        toast({ 
+          title: 'Password Change Required', 
+          description: 'Please create a new secure password to continue.' 
+        });
         return;
       }
 
@@ -115,15 +122,15 @@ const TeamAuth = () => {
     }
   };
 
-  const handleSetPassword = async (e: React.FormEvent) => {
+  const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (password.length < 8) {
+    if (newPassword.length < 8) {
       toast({ variant: 'destructive', title: 'Password must be at least 8 characters' });
       return;
     }
 
-    if (password !== confirmPassword) {
+    if (newPassword !== confirmPassword) {
       toast({ variant: 'destructive', title: 'Passwords do not match' });
       return;
     }
@@ -134,16 +141,16 @@ const TeamAuth = () => {
       const { data, error } = await supabase.functions.invoke('team-auth', {
         body: {
           panelId: panel?.id,
-          action: 'set-password',
+          action: 'change-password',
           memberId,
-          password
+          newPassword
         }
       });
 
       if (error) throw error;
 
       if (data?.error) {
-        toast({ variant: 'destructive', title: 'Failed to set password', description: data.error });
+        toast({ variant: 'destructive', title: 'Failed to change password', description: data.error });
         return;
       }
 
@@ -158,12 +165,12 @@ const TeamAuth = () => {
           expiresAt: Date.now() + (data.expiresIn * 1000)
         }));
 
-        toast({ title: 'Password set successfully!', description: 'Welcome to the team dashboard.' });
+        toast({ title: 'Password changed successfully!', description: 'Welcome to the team dashboard.' });
         navigate('/team-dashboard');
       }
     } catch (error: any) {
-      console.error('Set password error:', error);
-      toast({ variant: 'destructive', title: 'Failed to set password', description: error.message });
+      console.error('Change password error:', error);
+      toast({ variant: 'destructive', title: 'Failed to change password', description: error.message });
     } finally {
       setLoading(false);
     }
@@ -191,10 +198,12 @@ const TeamAuth = () => {
               <Users className="w-8 h-8 text-primary-foreground" />
             </div>
             <div>
-              <CardTitle className="text-2xl font-bold">Team Login</CardTitle>
+              <CardTitle className="text-2xl font-bold">
+                {mustChangePassword ? 'Change Password' : 'Team Login'}
+              </CardTitle>
               <CardDescription className="mt-2">
-                {needsPasswordSetup 
-                  ? 'Set your password to access the dashboard'
+                {mustChangePassword 
+                  ? 'Create a new secure password to access the dashboard'
                   : `Sign in to ${panel?.name || 'Panel'} team dashboard`
                 }
               </CardDescription>
@@ -202,56 +211,46 @@ const TeamAuth = () => {
           </CardHeader>
 
           <CardContent>
-            <form onSubmit={needsPasswordSetup ? handleSetPassword : handleLogin} className="space-y-4">
-              {!needsPasswordSetup && (
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="your@email.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="pl-10"
-                      disabled={loading}
-                    />
+            {mustChangePassword ? (
+              // Password change form
+              <form onSubmit={handleChangePassword} className="space-y-4">
+                {/* Warning about temporary password */}
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
+                  <AlertTriangle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm">
+                    <p className="font-medium text-yellow-600 dark:text-yellow-400">First Time Login</p>
+                    <p className="text-muted-foreground">
+                      You're using a temporary password. Please create a secure password to continue.
+                    </p>
                   </div>
                 </div>
-              )}
 
-              <div className="space-y-2">
-                <Label htmlFor="password">
-                  {needsPasswordSetup ? 'Create Password' : 'Password'}
-                </Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10 pr-10"
-                    disabled={loading}
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </Button>
-                </div>
-                {needsPasswordSetup && (
+                <div className="space-y-2">
+                  <Label htmlFor="newPassword">New Password</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      id="newPassword"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="pl-10 pr-10"
+                      disabled={loading}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </Button>
+                  </div>
                   <p className="text-xs text-muted-foreground">Minimum 8 characters</p>
-                )}
-              </div>
+                </div>
 
-              {needsPasswordSetup && (
                 <div className="space-y-2">
                   <Label htmlFor="confirmPassword">Confirm Password</Label>
                   <div className="relative">
@@ -267,19 +266,88 @@ const TeamAuth = () => {
                     />
                   </div>
                 </div>
-              )}
 
-              <Button type="submit" className="w-full gap-2" disabled={loading}>
-                {loading ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <>
-                    {needsPasswordSetup ? 'Set Password & Continue' : 'Sign In'}
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
-              </Button>
-            </form>
+                <Button type="submit" className="w-full gap-2" disabled={loading}>
+                  {loading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      Change Password & Continue
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </Button>
+
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  className="w-full"
+                  onClick={() => {
+                    setMustChangePassword(false);
+                    setMemberId(null);
+                    setNewPassword('');
+                    setConfirmPassword('');
+                  }}
+                >
+                  Back to Login
+                </Button>
+              </form>
+            ) : (
+              // Login form
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="your@email.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="pl-10"
+                      disabled={loading}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="pl-10 pr-10"
+                      disabled={loading}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </Button>
+                  </div>
+                </div>
+
+                <Button type="submit" className="w-full gap-2" disabled={loading}>
+                  {loading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      Sign In
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </Button>
+              </form>
+            )}
 
             <div className="mt-6 pt-6 border-t border-border/50">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">

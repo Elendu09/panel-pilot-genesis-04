@@ -9,6 +9,13 @@ const corsHeaders = {
 const JWT_SECRET = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || 'fallback-secret-key';
 const JWT_EXPIRY_SECONDS = 28800; // 8 hours for team members
 
+// Default temporary passwords based on role
+const DEFAULT_PASSWORDS: Record<string, string> = {
+  'panel_admin': 'admin123',
+  'manager': 'manager123',
+  'agent': 'agent123'
+};
+
 // Rate limiting
 const failedAttempts = new Map<string, { count: number; lastAttempt: number }>();
 const MAX_FAILED_ATTEMPTS = 5;
@@ -215,6 +222,10 @@ serve(async (req) => {
         return await handleVerifyToken(body);
       case 'set-password':
         return await handleSetPassword(supabaseAdmin, body);
+      case 'change-password':
+        return await handleChangePassword(supabaseAdmin, body);
+      case 'create-member':
+        return await handleCreateMember(supabaseAdmin, body);
       case 'fetch':
         return await handleFetch(supabaseAdmin, body);
       default:
@@ -277,12 +288,9 @@ async function handleLogin(supabaseAdmin: any, body: any, req: Request) {
 
   // Check if password is set
   if (!member.password_hash) {
-    // First login - need to set password
-    return jsonResponse({ 
-      needsPasswordSetup: true,
-      memberId: member.id,
-      message: 'Please set your password to continue'
-    });
+    console.log('No password set for member:', member.id);
+    recordFailedAttempt(rateLimitKey);
+    return jsonResponse({ error: 'Invalid credentials. Please contact the panel owner.' });
   }
 
   // Verify password
@@ -295,15 +303,24 @@ async function handleLogin(supabaseAdmin: any, body: any, req: Request) {
 
   clearFailedAttempts(rateLimitKey);
 
-  // Update last login and accepted_at if not set
-  const updates: any = { updated_at: new Date().toISOString() };
-  if (!member.accepted_at) {
-    updates.accepted_at = new Date().toISOString();
-  }
+  // Check if this is first login (accepted_at is null) - must change password
+  const isFirstLogin = !member.accepted_at;
   
+  if (isFirstLogin) {
+    console.log('First login detected, requiring password change for member:', member.id);
+    return jsonResponse({
+      success: true,
+      mustChangePassword: true,
+      memberId: member.id,
+      role: member.role,
+      message: 'Please change your temporary password to continue.'
+    });
+  }
+
+  // Update last login
   await supabaseAdmin
     .from('panel_team_members')
-    .update(updates)
+    .update({ updated_at: new Date().toISOString() })
     .eq('id', member.id);
 
   console.log('Team login successful for member:', member.id);
@@ -343,7 +360,73 @@ async function handleVerifyToken(body: any) {
   return jsonResponse({ valid: true, payload: verification.payload });
 }
 
-// Handle setting password for first-time login
+// Handle password change on first login
+async function handleChangePassword(supabaseAdmin: any, body: any) {
+  const { panelId, memberId, newPassword } = body;
+  
+  if (!memberId || !newPassword) {
+    return jsonResponse({ error: 'Member ID and new password are required' });
+  }
+
+  if (newPassword.length < 8) {
+    return jsonResponse({ error: 'Password must be at least 8 characters' });
+  }
+
+  // Verify member exists and belongs to panel
+  const { data: member, error: queryError } = await supabaseAdmin
+    .from('panel_team_members')
+    .select('*')
+    .eq('id', memberId)
+    .eq('panel_id', panelId)
+    .maybeSingle();
+
+  if (queryError || !member) {
+    return jsonResponse({ error: 'Team member not found' });
+  }
+
+  // Hash and save new password, mark as accepted
+  const hashedPassword = await hashPassword(newPassword);
+  
+  const { error: updateError } = await supabaseAdmin
+    .from('panel_team_members')
+    .update({ 
+      password_hash: hashedPassword,
+      accepted_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', memberId);
+
+  if (updateError) {
+    console.error('Error changing password:', updateError);
+    return jsonResponse({ error: 'Failed to change password' });
+  }
+
+  console.log('Password changed successfully for member:', memberId);
+
+  // Generate token and log them in
+  const token = await createJWT({
+    sub: member.id,
+    email: member.email,
+    panelId: panelId,
+    role: member.role,
+    type: 'team_member'
+  });
+
+  return jsonResponse({ 
+    success: true,
+    message: 'Password changed successfully',
+    token: token,
+    member: {
+      id: member.id,
+      email: member.email,
+      full_name: member.full_name,
+      role: member.role
+    },
+    expiresIn: JWT_EXPIRY_SECONDS
+  });
+}
+
+// Handle setting password for first-time login (legacy - kept for compatibility)
 async function handleSetPassword(supabaseAdmin: any, body: any) {
   const { panelId, memberId, password } = body;
   
@@ -404,6 +487,74 @@ async function handleSetPassword(supabaseAdmin: any, body: any) {
       role: member.role
     },
     expiresIn: JWT_EXPIRY_SECONDS
+  });
+}
+
+// Handle creating a new team member with default password
+async function handleCreateMember(supabaseAdmin: any, body: any) {
+  const { panelId, email, role } = body;
+  
+  if (!email || !role) {
+    return jsonResponse({ error: 'Email and role are required' });
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+  const validRoles = ['panel_admin', 'manager', 'agent'];
+  
+  if (!validRoles.includes(role)) {
+    return jsonResponse({ error: 'Invalid role' });
+  }
+
+  // Check if member already exists
+  const { data: existingMember } = await supabaseAdmin
+    .from('panel_team_members')
+    .select('id')
+    .eq('panel_id', panelId)
+    .eq('email', normalizedEmail)
+    .maybeSingle();
+
+  if (existingMember) {
+    return jsonResponse({ error: 'This email is already a team member' });
+  }
+
+  // Get default password for role and hash it
+  const defaultPassword = DEFAULT_PASSWORDS[role] || 'password123';
+  const hashedPassword = await hashPassword(defaultPassword);
+
+  // Create member with hashed default password
+  const { data: newMember, error: insertError } = await supabaseAdmin
+    .from('panel_team_members')
+    .insert({
+      panel_id: panelId,
+      email: normalizedEmail,
+      role,
+      password_hash: hashedPassword,
+      is_active: true,
+      invited_at: new Date().toISOString()
+      // accepted_at is NULL - indicating first login required
+    })
+    .select()
+    .single();
+
+  if (insertError) {
+    console.error('Error creating team member:', insertError);
+    if (insertError.code === '23505') {
+      return jsonResponse({ error: 'This email is already a team member' });
+    }
+    return jsonResponse({ error: 'Failed to create team member' });
+  }
+
+  console.log('Team member created:', newMember.id, 'with role:', role);
+
+  return jsonResponse({ 
+    success: true, 
+    member: {
+      id: newMember.id,
+      email: newMember.email,
+      role: newMember.role,
+      is_active: newMember.is_active
+    },
+    tempPassword: defaultPassword
   });
 }
 
