@@ -37,25 +37,32 @@ export function useTeamMembers(panelId: string | undefined) {
     staleTime: 30000, // Cache for 30 seconds
   });
 
+  // Create member via edge function (which handles password hashing)
   const inviteMutation = useMutation({
-    mutationFn: async ({ email, fullName, role }: { email: string; fullName: string; role: PanelRole }) => {
+    mutationFn: async ({ email, role }: { email: string; role: PanelRole }) => {
       if (!panelId) throw new Error('No panel ID');
-      const { error } = await supabase
-        .from('panel_team_members')
-        .insert({
-          panel_id: panelId,
+      
+      const { data, error } = await supabase.functions.invoke('team-auth', {
+        body: {
+          panelId,
+          action: 'create-member',
           email: email.toLowerCase().trim(),
-          full_name: fullName.trim() || null,
-          role,
-        });
-      if (error) {
-        if (error.code === '23505') throw new Error('This email is already a team member');
-        throw error;
-      }
+          role
+        }
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['team-members', panelId] });
-      toast({ title: 'Team member added!' });
+      const tempPass = data?.tempPassword || 'role123';
+      toast({ 
+        title: 'Team member added!',
+        description: `Temporary password: ${tempPass} (must be changed on first login)`
+      });
     },
     onError: (error: any) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });

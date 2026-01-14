@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Users, Plus, MoreVertical, Shield, UserCog, Headphones, Trash2, Mail, Clock, CheckCircle, Loader2, Eye, EyeOff, Search } from 'lucide-react';
+import { Users, Plus, MoreVertical, Shield, UserCog, Headphones, Trash2, Mail, Clock, CheckCircle, Loader2, Info } from 'lucide-react';
 
 // Role configuration - maps to database roles
 const roleConfig: Record<PanelRole, {
@@ -18,24 +18,28 @@ const roleConfig: Record<PanelRole, {
   description: string;
   color: string;
   permissions: string[];
+  tempPassword: string;
 }> = {
   panel_admin: {
     label: 'Admin',
     description: 'Same rights as of main account',
     color: 'border-primary bg-primary/10',
-    permissions: ['Full access', 'Billing', 'Settings', 'Team']
+    permissions: ['Full access', 'Billing', 'Settings', 'Team'],
+    tempPassword: 'admin123'
   },
   manager: {
-    label: 'Moderator',
+    label: 'Manager',
     description: "Can't see balance, providers and panel settings. Can work with orders, edit services and answer in support.",
     color: 'border-muted bg-muted/50',
-    permissions: ['Orders', 'Services', 'Support']
+    permissions: ['Orders', 'Services', 'Support'],
+    tempPassword: 'manager123'
   },
   agent: {
     label: 'Agent',
     description: "Has SEO rights. Can answer in support, see orders and services but cant edit. Doesn't see provider and panel settings.",
     color: 'border-muted bg-muted/50',
-    permissions: ['View Orders', 'View Services', 'Support', 'SEO']
+    permissions: ['View Orders', 'View Services', 'Support', 'SEO'],
+    tempPassword: 'agent123'
   }
 };
 
@@ -49,7 +53,7 @@ const AdminIllustration = () => (
   </svg>
 );
 
-const ModeratorIllustration = () => (
+const ManagerIllustration = () => (
   <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
     <circle cx="24" cy="16" r="8" stroke="currentColor" strokeWidth="2" fill="none"/>
     <path d="M12 40C12 33.3726 17.3726 28 24 28C30.6274 28 36 33.3726 36 40" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round"/>
@@ -70,7 +74,7 @@ const AgentIllustration = () => (
 
 const roleIllustrations: Record<PanelRole, React.FC> = {
   panel_admin: AdminIllustration,
-  manager: ModeratorIllustration,
+  manager: ManagerIllustration,
   agent: AgentIllustration
 };
 
@@ -176,7 +180,7 @@ const MemberRow = memo(({
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onRoleChange(member.id, 'manager')}>
               <UserCog className="w-4 h-4 mr-2" />
-              Set as Moderator
+              Set as Manager
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onRoleChange(member.id, 'agent')}>
               <Headphones className="w-4 h-4 mr-2" />
@@ -241,6 +245,9 @@ const RoleSelectCard = memo(({
           <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
             {config.description}
           </p>
+          <p className="text-xs text-primary mt-2">
+            Temp password: <code className="bg-muted px-1 py-0.5 rounded">{config.tempPassword}</code>
+          </p>
         </div>
       </div>
     </button>
@@ -254,24 +261,23 @@ export default function TeamManagement() {
   
   const [inviteOpen, setInviteOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [inviteLogin, setInviteLogin] = useState('');
-  const [invitePassword, setInvitePassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<PanelRole>('agent');
 
   const handleInvite = useCallback(() => {
+    if (!inviteEmail) return;
+    
     invite(
-      { email: inviteLogin, fullName: '', role: inviteRole },
+      { email: inviteEmail, role: inviteRole },
       {
         onSuccess: () => {
           setInviteOpen(false);
-          setInviteLogin('');
-          setInvitePassword('');
+          setInviteEmail('');
           setInviteRole('agent');
         }
       }
     );
-  }, [invite, inviteLogin, inviteRole]);
+  }, [invite, inviteEmail, inviteRole]);
 
   const handleRoleChange = useCallback((memberId: string, newRole: PanelRole) => {
     updateRole({ memberId, newRole });
@@ -289,10 +295,8 @@ export default function TeamManagement() {
   }, [deleteMember, deleteId]);
 
   const resetForm = useCallback(() => {
-    setInviteLogin('');
-    setInvitePassword('');
+    setInviteEmail('');
     setInviteRole('agent');
-    setShowPassword(false);
   }, []);
 
   if (isLoading) {
@@ -302,6 +306,8 @@ export default function TeamManagement() {
       </div>
     );
   }
+
+  const selectedRoleConfig = roleConfig[inviteRole];
 
   return (
     <div className="space-y-6">
@@ -321,46 +327,26 @@ export default function TeamManagement() {
           <DialogContent className="sm:max-w-lg p-0 overflow-hidden">
             <DialogHeader className="px-6 pt-6 pb-4 border-b">
               <div className="flex items-center justify-between">
-                <DialogTitle className="text-xl font-semibold">Add manager</DialogTitle>
+                <DialogTitle className="text-xl font-semibold">Add Team Member</DialogTitle>
               </div>
             </DialogHeader>
             
             <div className="px-6 py-5 space-y-5 max-h-[70vh] overflow-y-auto">
-              {/* Login field */}
+              {/* Email field only */}
               <div className="space-y-2">
-                <Label className="text-sm font-medium">Login</Label>
+                <Label className="text-sm font-medium">Email Address</Label>
                 <Input
-                  placeholder="Username or email"
-                  value={inviteLogin}
-                  onChange={(e) => setInviteLogin(e.target.value)}
+                  type="email"
+                  placeholder="team@example.com"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
                   className="h-11"
                 />
               </div>
               
-              {/* Password field */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Password</Label>
-                <div className="relative">
-                  <Input
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="Enter password"
-                    value={invitePassword}
-                    onChange={(e) => setInvitePassword(e.target.value)}
-                    className="h-11 pr-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-              
               {/* Role selection cards */}
               <div className="space-y-3">
-                <Label className="text-sm font-medium">Select role</Label>
+                <Label className="text-sm font-medium">Select Role</Label>
                 <div className="grid gap-3">
                   {(Object.entries(roleConfig) as [PanelRole, typeof roleConfig[PanelRole]][]).map(([key, config]) => (
                     <RoleSelectCard
@@ -374,12 +360,14 @@ export default function TeamManagement() {
                 </div>
               </div>
               
-              {/* Select accessible panels - placeholder */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Select accessible panels</Label>
-                <div className="p-4 rounded-lg border border-dashed border-border bg-muted/30 text-center">
-                  <p className="text-sm text-muted-foreground">
-                    All panels accessible by default
+              {/* Info about temporary password */}
+              <div className="flex items-start gap-3 p-4 rounded-lg bg-primary/5 border border-primary/20">
+                <Info className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                <div className="text-sm">
+                  <p className="font-medium text-foreground">Temporary Password</p>
+                  <p className="text-muted-foreground mt-1">
+                    The team member will use <code className="bg-muted px-1.5 py-0.5 rounded font-mono">{selectedRoleConfig.tempPassword}</code> to log in. 
+                    They'll be required to change it on first login.
                   </p>
                 </div>
               </div>
@@ -389,11 +377,11 @@ export default function TeamManagement() {
             <div className="px-6 py-4 border-t bg-muted/30">
               <Button 
                 onClick={handleInvite} 
-                disabled={!inviteLogin || !invitePassword || isInviting}
+                disabled={!inviteEmail || isInviting}
                 className="w-full h-11"
               >
                 {isInviting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                Add
+                Add Team Member
               </Button>
             </div>
           </DialogContent>
