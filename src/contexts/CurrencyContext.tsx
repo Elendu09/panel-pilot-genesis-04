@@ -26,6 +26,7 @@ export const currencies: Record<Currency, CurrencyConfig> = {
 interface CurrencyContextType {
   currency: Currency;
   setCurrency: (currency: Currency) => void;
+  setDefaultFromPanel: (panelCurrency: string) => void;
   formatPrice: (usdAmount: number) => string;
   convertPrice: (usdAmount: number) => number;
   currencyConfig: CurrencyConfig;
@@ -51,6 +52,15 @@ export const CurrencyProvider = ({ children }: { children: ReactNode }) => {
 
   const setCurrency = (newCurrency: Currency) => {
     setCurrencyState(newCurrency);
+    localStorage.setItem('currency_user_set', 'true');
+  };
+
+  // Set currency from panel default (only if user hasn't manually set one)
+  const setDefaultFromPanel = (panelCurrency: string) => {
+    const hasUserPreference = localStorage.getItem('currency_user_set');
+    if (!hasUserPreference && currencies[panelCurrency as Currency]) {
+      setCurrencyState(panelCurrency as Currency);
+    }
   };
 
   const convertPrice = (usdAmount: number): number => {
@@ -94,6 +104,7 @@ export const CurrencyProvider = ({ children }: { children: ReactNode }) => {
     <CurrencyContext.Provider value={{
       currency,
       setCurrency,
+      setDefaultFromPanel,
       formatPrice,
       convertPrice,
       currencyConfig,

@@ -66,6 +66,7 @@ interface TenantPanel {
   logo_url?: string;
   status: string;
   custom_branding?: DesignCustomization;
+  default_currency?: string;
   settings?: {
     seo_title?: string;
     seo_description?: string;

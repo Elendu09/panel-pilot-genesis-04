@@ -39,6 +39,7 @@ import { TenantHead } from "@/components/tenant/TenantHead";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { BuyerThemeWrapper } from "@/components/buyer-themes";
 import { generateBuyerThemeCSS } from "@/lib/color-utils";
+import { useCurrency } from "@/contexts/CurrencyContext";
 
 interface BuyerLayoutProps {
   children?: React.ReactNode;
@@ -57,8 +58,16 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
   const { panel } = useTenant();
   const { buyer, signOut } = useBuyerAuth();
   const { t } = useLanguage();
+  const { setDefaultFromPanel } = useCurrency();
   const [panelSettings, setPanelSettings] = useState<PanelSettings | null>(null);
   const [cartCount, setCartCount] = useState(0);
+
+  // Set currency from panel's default currency setting
+  useEffect(() => {
+    if (panel?.default_currency) {
+      setDefaultFromPanel(panel.default_currency);
+    }
+  }, [panel?.default_currency, setDefaultFromPanel]);
 
   // Fetch panel settings for WhatsApp
   useEffect(() => {
