@@ -356,6 +356,78 @@ export const BuyerThemeTGRef = ({ children, className, themeMode = 'dark' }: Buy
         .light .buyer-theme-tgref [data-state="open"] {
           background: rgba(0, 212, 170, 0.04) !important;
         }
+        
+        /* Light mode buttons - comprehensive */
+        .light .buyer-theme-tgref button:not(.theme-button-primary):not(.theme-button-filled):not([class*="gradient"]) {
+          color: #1E293B;
+        }
+        
+        .light .buyer-theme-tgref a {
+          color: #334155;
+        }
+        
+        .light .buyer-theme-tgref a:hover {
+          color: #00A88A;
+        }
+        
+        /* Light mode secondary buttons */
+        .light .buyer-theme-tgref .btn-secondary,
+        .light .buyer-theme-tgref button[variant="secondary"],
+        .light .buyer-theme-tgref button[variant="outline"],
+        .light .buyer-theme-tgref button[variant="ghost"] {
+          background: rgba(0, 212, 170, 0.08) !important;
+          color: #00A88A !important;
+          border-color: rgba(0, 212, 170, 0.2) !important;
+        }
+        
+        .light .buyer-theme-tgref .btn-secondary:hover,
+        .light .buyer-theme-tgref button[variant="secondary"]:hover,
+        .light .buyer-theme-tgref button[variant="outline"]:hover,
+        .light .buyer-theme-tgref button[variant="ghost"]:hover {
+          background: rgba(0, 212, 170, 0.15) !important;
+        }
+        
+        /* Light mode icons */
+        .light .buyer-theme-tgref svg:not([class*="gradient"]) {
+          color: inherit;
+        }
+        
+        /* Light mode dialog/modal */
+        .light .buyer-theme-tgref [role="dialog"] {
+          background: #FFFFFF !important;
+          border-color: rgba(0, 212, 170, 0.15) !important;
+        }
+        
+        /* Light mode tabs */
+        .light .buyer-theme-tgref [role="tablist"] {
+          background: rgba(0, 212, 170, 0.05) !important;
+        }
+        
+        .light .buyer-theme-tgref [role="tab"][data-state="active"] {
+          background: #FFFFFF !important;
+          color: #00A88A !important;
+        }
+        
+        /* Light mode links in nav */
+        .light .buyer-theme-tgref nav a,
+        .light .buyer-theme-tgref header a {
+          color: #334155;
+        }
+        
+        .light .buyer-theme-tgref nav a:hover,
+        .light .buyer-theme-tgref header a:hover {
+          color: #00A88A;
+        }
+        
+        /* Ensure proper color inheritance */
+        .light .buyer-theme-tgref * {
+          border-color: inherit;
+        }
+        
+        .light .buyer-theme-tgref,
+        .light .buyer-theme-tgref .buyer-theme-wrapper {
+          color: #1E293B;
+        }
       `}</style>
         {children}
       </div>

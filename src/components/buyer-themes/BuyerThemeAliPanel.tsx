@@ -273,6 +273,78 @@ export const BuyerThemeAliPanel = ({ children, className, themeMode = 'dark' }: 
         .light .buyer-theme-alipanel [data-state="open"] {
           background: rgba(255, 107, 107, 0.04) !important;
         }
+        
+        /* Light mode buttons - comprehensive */
+        .light .buyer-theme-alipanel button:not(.theme-button-primary):not([class*="gradient"]) {
+          color: #1A1A1A;
+        }
+        
+        .light .buyer-theme-alipanel a {
+          color: #374151;
+        }
+        
+        .light .buyer-theme-alipanel a:hover {
+          color: #FF6B6B;
+        }
+        
+        /* Light mode secondary buttons */
+        .light .buyer-theme-alipanel .btn-secondary,
+        .light .buyer-theme-alipanel button[variant="secondary"],
+        .light .buyer-theme-alipanel button[variant="outline"],
+        .light .buyer-theme-alipanel button[variant="ghost"] {
+          background: rgba(255, 107, 107, 0.08) !important;
+          color: #FF6B6B !important;
+          border-color: rgba(255, 107, 107, 0.2) !important;
+        }
+        
+        .light .buyer-theme-alipanel .btn-secondary:hover,
+        .light .buyer-theme-alipanel button[variant="secondary"]:hover,
+        .light .buyer-theme-alipanel button[variant="outline"]:hover,
+        .light .buyer-theme-alipanel button[variant="ghost"]:hover {
+          background: rgba(255, 107, 107, 0.15) !important;
+        }
+        
+        /* Light mode icons */
+        .light .buyer-theme-alipanel svg:not([class*="gradient"]) {
+          color: inherit;
+        }
+        
+        /* Light mode dialog/modal */
+        .light .buyer-theme-alipanel [role="dialog"] {
+          background: #FFFFFF !important;
+          border-color: rgba(255, 107, 107, 0.15) !important;
+        }
+        
+        /* Light mode tabs */
+        .light .buyer-theme-alipanel [role="tablist"] {
+          background: rgba(255, 107, 107, 0.05) !important;
+        }
+        
+        .light .buyer-theme-alipanel [role="tab"][data-state="active"] {
+          background: #FFFFFF !important;
+          color: #FF6B6B !important;
+        }
+        
+        /* Light mode links in nav */
+        .light .buyer-theme-alipanel nav a,
+        .light .buyer-theme-alipanel header a {
+          color: #374151;
+        }
+        
+        .light .buyer-theme-alipanel nav a:hover,
+        .light .buyer-theme-alipanel header a:hover {
+          color: #FF6B6B;
+        }
+        
+        /* Ensure proper color inheritance */
+        .light .buyer-theme-alipanel * {
+          border-color: inherit;
+        }
+        
+        .light .buyer-theme-alipanel,
+        .light .buyer-theme-alipanel .buyer-theme-wrapper {
+          color: #1A1A1A;
+        }
       `}</style>
         {children}
       </div>

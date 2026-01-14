@@ -73,6 +73,133 @@ export const BuyerThemeDefault = ({ children, className, themeMode = 'dark' }: B
         .buyer-theme-default .theme-hero {
           background: linear-gradient(180deg, hsl(var(--primary) / 0.05) 0%, transparent 50%);
         }
+        
+        /* ===== DARK MODE ===== */
+        .dark .buyer-theme-default {
+          background: hsl(var(--background));
+          color: hsl(var(--foreground));
+        }
+        
+        .dark .buyer-theme-default .theme-card {
+          background: hsl(var(--card));
+          border-color: hsl(var(--border));
+        }
+        
+        .dark .buyer-theme-default .theme-nav {
+          background: hsl(var(--background) / 0.95);
+          border-color: hsl(var(--border));
+        }
+        
+        .dark .buyer-theme-default input,
+        .dark .buyer-theme-default textarea,
+        .dark .buyer-theme-default select {
+          background: hsl(var(--background)) !important;
+          border-color: hsl(var(--border)) !important;
+          color: hsl(var(--foreground)) !important;
+        }
+        
+        .dark .buyer-theme-default button:not(.theme-button-primary):not([class*="gradient"]) {
+          color: hsl(var(--foreground));
+        }
+        
+        .dark .buyer-theme-default a {
+          color: hsl(var(--muted-foreground));
+        }
+        
+        .dark .buyer-theme-default a:hover {
+          color: hsl(var(--primary));
+        }
+        
+        .dark .buyer-theme-default [class*="Card"] {
+          background: hsl(var(--card)) !important;
+          border-color: hsl(var(--border)) !important;
+        }
+        
+        .dark .buyer-theme-default [role="dialog"] {
+          background: hsl(var(--card)) !important;
+          border-color: hsl(var(--border)) !important;
+        }
+        
+        .dark .buyer-theme-default nav a,
+        .dark .buyer-theme-default header a {
+          color: hsl(var(--muted-foreground));
+        }
+        
+        .dark .buyer-theme-default nav a:hover,
+        .dark .buyer-theme-default header a:hover {
+          color: hsl(var(--primary));
+        }
+        
+        /* ===== LIGHT MODE ===== */
+        .light .buyer-theme-default {
+          background: hsl(var(--background));
+          color: hsl(var(--foreground));
+        }
+        
+        .light .buyer-theme-default .theme-card {
+          background: hsl(var(--card));
+          border-color: hsl(var(--border));
+          box-shadow: 0 4px 20px hsl(var(--primary) / 0.05);
+        }
+        
+        .light .buyer-theme-default .theme-nav {
+          background: hsl(var(--background) / 0.95);
+          border-color: hsl(var(--border));
+        }
+        
+        .light .buyer-theme-default input,
+        .light .buyer-theme-default textarea,
+        .light .buyer-theme-default select {
+          background: hsl(var(--background)) !important;
+          border-color: hsl(var(--border)) !important;
+          color: hsl(var(--foreground)) !important;
+        }
+        
+        .light .buyer-theme-default button:not(.theme-button-primary):not([class*="gradient"]) {
+          color: hsl(var(--foreground));
+        }
+        
+        .light .buyer-theme-default a {
+          color: hsl(var(--muted-foreground));
+        }
+        
+        .light .buyer-theme-default a:hover {
+          color: hsl(var(--primary));
+        }
+        
+        .light .buyer-theme-default [class*="Card"] {
+          background: hsl(var(--card)) !important;
+          border-color: hsl(var(--border)) !important;
+        }
+        
+        .light .buyer-theme-default [role="dialog"] {
+          background: hsl(var(--card)) !important;
+          border-color: hsl(var(--border)) !important;
+        }
+        
+        .light .buyer-theme-default nav a,
+        .light .buyer-theme-default header a {
+          color: hsl(var(--muted-foreground));
+        }
+        
+        .light .buyer-theme-default nav a:hover,
+        .light .buyer-theme-default header a:hover {
+          color: hsl(var(--primary));
+        }
+        
+        .light .buyer-theme-default h1,
+        .light .buyer-theme-default h2,
+        .light .buyer-theme-default h3,
+        .light .buyer-theme-default h4,
+        .light .buyer-theme-default h5,
+        .light .buyer-theme-default h6 {
+          color: hsl(var(--foreground));
+        }
+        
+        .light .buyer-theme-default p,
+        .light .buyer-theme-default span:not(.theme-gradient-text) {
+          color: hsl(var(--muted-foreground));
+        }
       `}</style>
         {children}
       </div>
