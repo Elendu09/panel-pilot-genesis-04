@@ -40,6 +40,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { BuyerThemeWrapper } from "@/components/buyer-themes";
 import { generateBuyerThemeCSS } from "@/lib/color-utils";
 import { useCurrency } from "@/contexts/CurrencyContext";
+import { BuyerOnboardingTour } from "@/components/buyer/BuyerOnboardingTour";
 
 interface BuyerLayoutProps {
   children?: React.ReactNode;
@@ -165,6 +166,8 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
   return (
     <BuyerThemeWrapper panelId={panel?.id}>
       <TenantHead />
+      {/* Mobile Onboarding Tour */}
+      <BuyerOnboardingTour />
       <div className="buyer-theme-wrapper min-h-screen bg-background">
       {/* Inject panel theme colors */}
       <style>{panelColorStyles}</style>

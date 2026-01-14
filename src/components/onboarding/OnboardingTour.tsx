@@ -471,19 +471,33 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
   const screenSize = useScreenSize();
   const isMobile = screenSize === 'mobile';
   const isTablet = screenSize === 'tablet';
+  const isDesktop = screenSize === 'desktop';
   
   const [currentStep, setCurrentStep] = useState(0);
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
   const [clickPosition, setClickPosition] = useState<{ x: number; y: number } | null>(null);
   
-  // Filter steps based on screen size
+  // FIXED: Proper step filtering logic for all device modes
   const filteredSteps = useMemo(() => {
     return tourSteps.filter(step => {
-      if (isMobile && step.desktopOnly) return false;
-      if (!isMobile && step.mobileOnly) return false;
+      // Mobile mode: exclude desktopOnly and tabletOnly
+      if (isMobile) {
+        if (step.desktopOnly || step.tabletOnly) return false;
+        return true;
+      }
+      // Tablet mode: exclude mobileOnly (show desktopOnly and tabletOnly)
+      if (isTablet) {
+        if (step.mobileOnly) return false;
+        return true;
+      }
+      // Desktop mode: exclude mobileOnly and tabletOnly
+      if (isDesktop) {
+        if (step.mobileOnly || step.tabletOnly) return false;
+        return true;
+      }
       return true;
     });
-  }, [isMobile]);
+  }, [isMobile, isTablet, isDesktop]);
   
   const step = filteredSteps[currentStep];
   const progress = ((currentStep + 1) / filteredSteps.length) * 100;
@@ -620,81 +634,62 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
     }
   };
 
-  // Calculate card position based on target and device
-  const getCardPosition = () => {
-    const position = getPosition();
-    
-    // Welcome step (step 0) and complete step: ALWAYS center on ALL devices
-    // This is the highest priority - ensures proper centering regardless of device
-    if (currentStep === 0 || step?.id === 'complete' || step?.id === 'welcome') {
-      return { 
-        position: "fixed" as const,
-        top: "50%",
-        left: "50%",
-        transform: "translate(-50%, -50%)",
-        width: isMobile ? "calc(100% - 32px)" : isTablet ? "400px" : "480px",
-        maxWidth: isMobile ? "340px" : isTablet ? "400px" : "480px",
-      };
-    }
-    
-    // MOBILE: Always use consistent centered positioning
-    if (isMobile) {
-      // Center position for non-targeted steps
-      if (position === "center") {
-        return { 
-          position: "fixed" as const,
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
-          width: "calc(100% - 32px)",
-          maxWidth: "340px",
-        };
-      }
-      
-      // Targeted steps: position above bottom nav, centered horizontally
-      if (position === "top" && targetRect) {
-        const bottomNavHeight = 72;
-        const safeAreaBottom = 16;
-        return {
-          position: "fixed" as const,
-          bottom: bottomNavHeight + safeAreaBottom,
-          left: "50%",
-          transform: "translateX(-50%)",
-          width: "calc(100% - 32px)",
-          maxWidth: "340px",
-        };
-      }
-      
-      // Default mobile fallback: centered
+  // Check if this is a centered step (welcome or complete)
+  const isCenteredStep = step?.id === 'welcome' || step?.id === 'complete' || currentStep === 0;
+  const position = getPosition();
+
+  // FIXED: Calculate positioning using a wrapper div (no transform conflicts with Framer Motion)
+  const getPositionStyles = useMemo(() => {
+    // Welcome and complete steps: ALWAYS center
+    if (isCenteredStep || position === "center") {
       return {
         position: "fixed" as const,
-        top: "50%",
-        left: "50%",
-        transform: "translate(-50%, -50%)",
-        width: "calc(100% - 32px)",
-        maxWidth: "340px",
-      };
-    }
-    
-    // Center position for tablet/desktop
-    if (position === "center") {
-      return { 
-        position: "fixed" as const,
-        top: "50%",
-        left: "50%",
-        transform: "translate(-50%, -50%)",
-        width: isTablet ? "400px" : "480px",
+        inset: 0,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: isMobile ? "16px" : "24px",
+        pointerEvents: "none" as const,
       };
     }
 
-    // TABLET & DESKTOP: targeted element positioning
-    if (!targetRect) {
-      return { 
+    // MOBILE: Position above bottom nav for targeted steps
+    if (isMobile && position === "top" && targetRect) {
+      return {
         position: "fixed" as const,
-        top: "50%",
-        left: "50%",
-        transform: "translate(-50%, -50%)",
-        width: isTablet ? "400px" : "480px",
+        left: 0,
+        right: 0,
+        bottom: 88, // Bottom nav (64px) + safe area (24px)
+        display: "flex",
+        justifyContent: "center",
+        padding: "0 16px",
+        pointerEvents: "none" as const,
+      };
+    }
+
+    // MOBILE fallback: Center
+    if (isMobile) {
+      return {
+        position: "fixed" as const,
+        inset: 0,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "16px",
+        pointerEvents: "none" as const,
+      };
+    }
+
+    // TABLET/DESKTOP: Positioned relative to target
+    if (!targetRect) {
+      return {
+        position: "fixed" as const,
+        inset: 0,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "24px",
+        pointerEvents: "none" as const,
       };
     }
 
@@ -708,56 +703,77 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
           position: "fixed" as const,
           top: Math.max(padding, Math.min(targetRect.top, window.innerHeight - cardHeight - padding)),
           left: Math.min(targetRect.right + padding, window.innerWidth - cardWidth - padding),
-          width: isTablet ? "380px" : "450px",
+          pointerEvents: "none" as const,
         };
       case "left":
         return {
           position: "fixed" as const,
           top: Math.max(padding, Math.min(targetRect.top, window.innerHeight - cardHeight - padding)),
           right: window.innerWidth - targetRect.left + padding,
-          width: isTablet ? "380px" : "450px",
+          pointerEvents: "none" as const,
         };
       case "bottom":
         return {
           position: "fixed" as const,
           top: Math.min(targetRect.bottom + padding, window.innerHeight - cardHeight - padding),
           left: Math.max(padding, Math.min(targetRect.left, window.innerWidth - cardWidth - padding)),
-          width: isTablet ? "380px" : "450px",
+          pointerEvents: "none" as const,
         };
       case "top":
         return {
           position: "fixed" as const,
           bottom: window.innerHeight - targetRect.top + padding,
           left: Math.max(padding, Math.min(targetRect.left, window.innerWidth - cardWidth - padding)),
-          width: isTablet ? "380px" : "450px",
+          pointerEvents: "none" as const,
         };
       default:
         return {
           position: "fixed" as const,
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
-          width: isTablet ? "400px" : "480px",
+          inset: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "24px",
+          pointerEvents: "none" as const,
         };
     }
-  };
+  }, [isCenteredStep, position, isMobile, isTablet, targetRect]);
+
+  // Card width styles (separate from positioning)
+  const cardWidthStyle = useMemo(() => {
+    if (isMobile) {
+      return {
+        width: "100%",
+        maxWidth: "340px",
+      };
+    }
+    if (isTablet) {
+      return {
+        width: "400px",
+        maxWidth: "400px",
+      };
+    }
+    return {
+      width: "480px",
+      maxWidth: "480px",
+    };
+  }, [isMobile, isTablet]);
 
   if (!isOpen || !step) return null;
 
   const isCompact = isMobile;
-  const isDesktop = screenSize === 'desktop';
 
   return (
     <AnimatePresence mode="wait">
       <div className="fixed inset-0 z-[98]">
-        {/* Backdrop for non-targeted steps */}
+        {/* Backdrop for non-targeted steps - Don't close on welcome */}
         {!targetRect && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="absolute inset-0 bg-background/80 backdrop-blur-md"
-            onClick={handleSkip}
+            onClick={isCenteredStep ? undefined : handleSkip}
           />
         )}
 
@@ -781,158 +797,166 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
           />
         </div>
 
-        {/* Tour Card */}
-        <motion.div
-          key={currentStep}
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: -20 }}
-          transition={{ duration: 0.3 }}
-          className={`z-[101] ${isDesktop ? 'w-full max-w-lg' : isTablet ? 'w-full max-w-md' : ''}`}
-          style={getCardPosition()}
+        {/* FIXED: Positioning wrapper (no animation transforms here) */}
+        <div
+          className="z-[101]"
+          style={getPositionStyles}
         >
-          <Card className={`bg-card/95 backdrop-blur-xl border-primary/30 shadow-2xl ${isCompact ? 'p-4 space-y-3' : isDesktop ? 'p-8 space-y-6' : 'p-6 space-y-5'}`}>
-            {/* Header with close */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className={`px-2 py-1 font-medium bg-primary/10 text-primary rounded-full ${isCompact ? 'text-[10px]' : 'text-xs'}`}>
-                  Step {currentStep + 1} of {filteredSteps.length}
-                </span>
-                {step.action && !isCompact && (
-                  <span className="px-2 py-1 text-xs font-medium bg-accent/10 text-accent-foreground rounded-full flex items-center gap-1">
-                    <MousePointer2 className="w-3 h-3" />
-                    Interactive
+          {/* Tour Card (animations happen here, separate from positioning) */}
+          <motion.div
+            key={currentStep}
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: -20 }}
+            transition={{ duration: 0.3 }}
+            style={{ 
+              ...cardWidthStyle, 
+              pointerEvents: "auto" 
+            }}
+          >
+            <Card className={`bg-card/95 backdrop-blur-xl border-primary/30 shadow-2xl ${isCompact ? 'p-4 space-y-3' : isDesktop ? 'p-8 space-y-6' : 'p-6 space-y-5'}`}>
+              {/* Header with close */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className={`px-2 py-1 font-medium bg-primary/10 text-primary rounded-full ${isCompact ? 'text-[10px]' : 'text-xs'}`}>
+                    Step {currentStep + 1} of {filteredSteps.length}
                   </span>
-                )}
+                  {step.action && !isCompact && (
+                    <span className="px-2 py-1 text-xs font-medium bg-accent/10 text-accent-foreground rounded-full flex items-center gap-1">
+                      <MousePointer2 className="w-3 h-3" />
+                      Interactive
+                    </span>
+                  )}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleSkip}
+                  className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleSkip}
-                className="h-8 w-8 text-muted-foreground hover:text-foreground"
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
 
-            {/* Progress */}
-            <Progress value={progress} className={isDesktop ? "h-2" : "h-1.5"} />
+              {/* Progress */}
+              <Progress value={progress} className={isDesktop ? "h-2" : "h-1.5"} />
 
-            {/* Icon */}
-            <div className="flex justify-center">
-              <motion.div
-                initial={{ scale: 0, rotate: -180 }}
-                animate={{ scale: 1, rotate: 0 }}
-                transition={{ delay: 0.2, type: "spring", stiffness: 200, damping: 15 }}
-                className={`rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 ${isCompact ? 'p-3' : isDesktop ? 'p-6' : 'p-5'}`}
-              >
-                <step.icon className={`text-primary ${isCompact ? 'w-8 h-8' : isDesktop ? 'w-14 h-14' : 'w-10 h-10'}`} />
-              </motion.div>
-            </div>
-
-            {/* Content */}
-            <div className="text-center space-y-2">
-              <motion.h2
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-                className={`font-bold ${isCompact ? 'text-lg' : isDesktop ? 'text-2xl' : 'text-xl'}`}
-              >
-                {step.title}
-              </motion.h2>
-              <motion.p
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className={`text-muted-foreground leading-relaxed ${isCompact ? 'text-xs' : isDesktop ? 'text-base' : 'text-sm'}`}
-              >
-                {getDescription()}
-              </motion.p>
-              
-              {/* Action hint */}
-              {getActionText() && (
+              {/* Icon */}
+              <div className="flex justify-center">
                 <motion.div
+                  initial={{ scale: 0, rotate: -180 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ delay: 0.2, type: "spring", stiffness: 200, damping: 15 }}
+                  className={`rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 ${isCompact ? 'p-3' : isDesktop ? 'p-6' : 'p-5'}`}
+                >
+                  <step.icon className={`text-primary ${isCompact ? 'w-8 h-8' : isDesktop ? 'w-14 h-14' : 'w-10 h-10'}`} />
+                </motion.div>
+              </div>
+
+              {/* Content */}
+              <div className="text-center space-y-2">
+                <motion.h2
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
-                  className="pt-2"
+                  transition={{ delay: 0.1 }}
+                  className={`font-bold ${isCompact ? 'text-lg' : isDesktop ? 'text-2xl' : 'text-xl'}`}
                 >
-                  <span className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-primary/10 text-primary rounded-full">
-                    <Hand className="w-3 h-3" />
-                    {getActionText()}
-                  </span>
-                </motion.div>
-              )}
-            </div>
-
-            {/* Step Progress Indicator */}
-            <div className={`${isCompact ? 'space-y-2' : 'space-y-3'}`}>
-              <div className={`flex items-center justify-between text-muted-foreground ${isCompact ? 'text-[10px]' : 'text-xs'}`}>
-                <span>{currentStep + 1} of {filteredSteps.length} steps</span>
-                <span>{filteredSteps.length - currentStep - 1} remaining</span>
-              </div>
-              
-              {/* Simplified progress bar */}
-              <div className="flex items-center gap-1">
-                {filteredSteps.map((_, index) => (
+                  {step.title}
+                </motion.h2>
+                <motion.p
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className={`text-muted-foreground leading-relaxed ${isCompact ? 'text-xs' : isDesktop ? 'text-base' : 'text-sm'}`}
+                >
+                  {getDescription()}
+                </motion.p>
+                
+                {/* Action hint */}
+                {getActionText() && (
                   <motion.div
-                    key={index}
-                    initial={false}
-                    animate={{
-                      backgroundColor: index <= currentStep 
-                        ? "hsl(var(--primary))" 
-                        : "hsl(var(--muted))"
-                    }}
-                    className={`h-1 flex-1 rounded-full transition-colors cursor-pointer ${
-                      index === currentStep ? "bg-primary" : ""
-                    }`}
-                    onClick={() => handleStepClick(index)}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* Navigation buttons */}
-            <div className="flex items-center gap-2 pt-2">
-              <Button
-                variant="ghost"
-                onClick={handleSkip}
-                className={`text-muted-foreground ${isCompact ? 'text-xs h-9' : ''}`}
-              >
-                Skip Tour
-              </Button>
-              
-              <div className="flex-1" />
-              
-              <Button
-                variant="outline"
-                onClick={handlePrev}
-                disabled={currentStep === 0}
-                className={`gap-1 ${isCompact ? 'text-xs h-9 px-3' : ''}`}
-              >
-                <ChevronLeft className="w-4 h-4" />
-                {!isCompact && "Back"}
-              </Button>
-              
-              <Button
-                onClick={handleNext}
-                className={`gap-1 min-w-[100px] ${isCompact ? 'text-xs h-9' : ''}`}
-              >
-                {currentStep === filteredSteps.length - 1 ? (
-                  <>
-                    <Check className="w-4 h-4" />
-                    {isCompact ? "Done" : "Complete Tour"}
-                  </>
-                ) : (
-                  <>
-                    Next
-                    <ChevronRight className="w-4 h-4" />
-                  </>
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                    className="pt-2"
+                  >
+                    <span className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-primary/10 text-primary rounded-full">
+                      <Hand className="w-3 h-3" />
+                      {getActionText()}
+                    </span>
+                  </motion.div>
                 )}
-              </Button>
-            </div>
-          </Card>
-        </motion.div>
+              </div>
+
+              {/* Step Progress Indicator */}
+              <div className={`${isCompact ? 'space-y-2' : 'space-y-3'}`}>
+                <div className={`flex items-center justify-between text-muted-foreground ${isCompact ? 'text-[10px]' : 'text-xs'}`}>
+                  <span>{currentStep + 1} of {filteredSteps.length} steps</span>
+                  <span>{filteredSteps.length - currentStep - 1} remaining</span>
+                </div>
+                
+                {/* Simplified progress bar */}
+                <div className="flex items-center gap-1">
+                  {filteredSteps.map((_, index) => (
+                    <motion.div
+                      key={index}
+                      initial={false}
+                      animate={{
+                        backgroundColor: index <= currentStep 
+                          ? "hsl(var(--primary))" 
+                          : "hsl(var(--muted))"
+                      }}
+                      className={`h-1 flex-1 rounded-full transition-colors cursor-pointer ${
+                        index === currentStep ? "bg-primary" : ""
+                      }`}
+                      onClick={() => handleStepClick(index)}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Navigation buttons */}
+              <div className="flex items-center gap-2 pt-2">
+                <Button
+                  variant="ghost"
+                  onClick={handleSkip}
+                  className={`text-muted-foreground ${isCompact ? 'text-xs h-9' : ''}`}
+                >
+                  Skip Tour
+                </Button>
+                
+                <div className="flex-1" />
+                
+                <Button
+                  variant="outline"
+                  onClick={handlePrev}
+                  disabled={currentStep === 0}
+                  className={`gap-1 ${isCompact ? 'text-xs h-9 px-3' : ''}`}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  {!isCompact && "Back"}
+                </Button>
+                
+                <Button
+                  onClick={handleNext}
+                  className={`gap-1 min-w-[100px] ${isCompact ? 'text-xs h-9' : ''}`}
+                >
+                  {currentStep === filteredSteps.length - 1 ? (
+                    <>
+                      <Check className="w-4 h-4" />
+                      {isCompact ? "Done" : "Complete Tour"}
+                    </>
+                  ) : (
+                    <>
+                      Next
+                      <ChevronRight className="w-4 h-4" />
+                    </>
+                  )}
+                </Button>
+              </div>
+            </Card>
+          </motion.div>
+        </div>
       </div>
     </AnimatePresence>
   );
