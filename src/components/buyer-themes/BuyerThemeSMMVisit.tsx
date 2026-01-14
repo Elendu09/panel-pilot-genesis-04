@@ -10,13 +10,13 @@ interface BuyerThemeSMMVisitProps {
 // SMMVisit Theme: Light gray with yellow/gold accents
 export const BuyerThemeSMMVisit = ({ children, className, themeMode = 'light' }: BuyerThemeSMMVisitProps) => {
   return (
-    <div 
-      className={cn(
-        "buyer-theme-smmvisit buyer-theme-wrapper min-h-screen font-sans",
-        themeMode === 'light' ? 'light' : 'dark',
-        className
-      )}
-    >
+    <div className={themeMode === 'light' ? 'light' : 'dark'}>
+      <div 
+        className={cn(
+          "buyer-theme-smmvisit buyer-theme-wrapper min-h-screen font-sans",
+          className
+        )}
+      >
       <style>{`
         .buyer-theme-smmvisit {
           --theme-background: #F5F5F5;
@@ -283,7 +283,8 @@ export const BuyerThemeSMMVisit = ({ children, className, themeMode = 'light' }:
           background: rgba(255, 215, 0, 0.08) !important;
         }
       `}</style>
-      {children}
+        {children}
+      </div>
     </div>
   );
 };

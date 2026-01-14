@@ -10,13 +10,13 @@ interface BuyerThemeTGRefProps {
 // TGRef Theme: Dark blue-gray with teal/cyan gradients, tech/monospace feel
 export const BuyerThemeTGRef = ({ children, className, themeMode = 'dark' }: BuyerThemeTGRefProps) => {
   return (
-    <div 
-      className={cn(
-        "buyer-theme-tgref buyer-theme-wrapper min-h-screen",
-        themeMode === 'light' ? 'light' : 'dark',
-        className
-      )}
-    >
+    <div className={themeMode === 'light' ? 'light' : 'dark'}>
+      <div 
+        className={cn(
+          "buyer-theme-tgref buyer-theme-wrapper min-h-screen",
+          className
+        )}
+      >
       <style>{`
         .buyer-theme-tgref {
           --theme-background: #1A1B26;
@@ -357,7 +357,8 @@ export const BuyerThemeTGRef = ({ children, className, themeMode = 'dark' }: Buy
           background: rgba(0, 212, 170, 0.04) !important;
         }
       `}</style>
-      {children}
+        {children}
+      </div>
     </div>
   );
 };
