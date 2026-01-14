@@ -10,13 +10,13 @@ interface BuyerThemeSMMStayProps {
 // SMMStay Theme: Deep black with hot pink neon accents, bold typography
 export const BuyerThemeSMMStay = ({ children, className, themeMode = 'dark' }: BuyerThemeSMMStayProps) => {
   return (
-    <div 
-      className={cn(
-        "buyer-theme-smmstay buyer-theme-wrapper min-h-screen font-montserrat",
-        themeMode === 'light' ? 'light' : 'dark',
-        className
-      )}
-    >
+    <div className={themeMode === 'light' ? 'light' : 'dark'}>
+      <div 
+        className={cn(
+          "buyer-theme-smmstay buyer-theme-wrapper min-h-screen font-montserrat",
+          className
+        )}
+      >
       <style>{`
         .buyer-theme-smmstay {
           --theme-background: #000000;
@@ -333,7 +333,8 @@ export const BuyerThemeSMMStay = ({ children, className, themeMode = 'dark' }: B
           background: rgba(255, 64, 129, 0.04) !important;
         }
       `}</style>
-      {children}
+        {children}
+      </div>
     </div>
   );
 };

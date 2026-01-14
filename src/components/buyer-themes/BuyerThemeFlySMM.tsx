@@ -10,13 +10,13 @@ interface BuyerThemeFlySMMProps {
 // FlySMM Theme: Light/white background with blue primary and illustrated cards
 export const BuyerThemeFlySMM = ({ children, className, themeMode = 'light' }: BuyerThemeFlySMMProps) => {
   return (
-    <div 
-      className={cn(
-        "buyer-theme-flysmm buyer-theme-wrapper min-h-screen font-nunito",
-        themeMode === 'light' ? 'light' : 'dark',
-        className
-      )}
-    >
+    <div className={themeMode === 'light' ? 'light' : 'dark'}>
+      <div 
+        className={cn(
+          "buyer-theme-flysmm buyer-theme-wrapper min-h-screen font-nunito",
+          className
+        )}
+      >
       <style>{`
         .buyer-theme-flysmm {
           --theme-background: #F8FAFC;
@@ -307,7 +307,8 @@ export const BuyerThemeFlySMM = ({ children, className, themeMode = 'light' }: B
           background: rgba(33, 150, 243, 0.08) !important;
         }
       `}</style>
-      {children}
+        {children}
+      </div>
     </div>
   );
 };

@@ -10,13 +10,13 @@ interface BuyerThemeDefaultProps {
 // Default Theme: Clean modern design with blue-purple gradients
 export const BuyerThemeDefault = ({ children, className, themeMode = 'dark' }: BuyerThemeDefaultProps) => {
   return (
-    <div 
-      className={cn(
-        "buyer-theme-default buyer-theme-wrapper min-h-screen font-inter",
-        themeMode === 'light' ? 'light' : 'dark',
-        className
-      )}
-    >
+    <div className={themeMode === 'light' ? 'light' : 'dark'}>
+      <div 
+        className={cn(
+          "buyer-theme-default buyer-theme-wrapper min-h-screen font-inter",
+          className
+        )}
+      >
       <style>{`
         .buyer-theme-default {
           --theme-background: hsl(var(--background));
@@ -74,7 +74,8 @@ export const BuyerThemeDefault = ({ children, className, themeMode = 'dark' }: B
           background: linear-gradient(180deg, hsl(var(--primary) / 0.05) 0%, transparent 50%);
         }
       `}</style>
-      {children}
+        {children}
+      </div>
     </div>
   );
 };

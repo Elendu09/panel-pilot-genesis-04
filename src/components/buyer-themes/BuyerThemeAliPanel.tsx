@@ -10,13 +10,13 @@ interface BuyerThemeAliPanelProps {
 // AliPanel Theme: Dark with pink-to-orange gradients, 3D floating icons
 export const BuyerThemeAliPanel = ({ children, className, themeMode = 'dark' }: BuyerThemeAliPanelProps) => {
   return (
-    <div 
-      className={cn(
-        "buyer-theme-alipanel buyer-theme-wrapper min-h-screen font-poppins",
-        themeMode === 'light' ? 'light' : 'dark',
-        className
-      )}
-    >
+    <div className={themeMode === 'light' ? 'light' : 'dark'}>
+      <div 
+        className={cn(
+          "buyer-theme-alipanel buyer-theme-wrapper min-h-screen font-poppins",
+          className
+        )}
+      >
       <style>{`
         .buyer-theme-alipanel {
           --theme-background: #0A0A0A;
@@ -274,7 +274,8 @@ export const BuyerThemeAliPanel = ({ children, className, themeMode = 'dark' }: 
           background: rgba(255, 107, 107, 0.04) !important;
         }
       `}</style>
-      {children}
+        {children}
+      </div>
     </div>
   );
 };
