@@ -88,6 +88,7 @@ export const ThemeFive = ({ panel, services = [], customization = {}, isPreview 
     glowColor: palette.glow,
     themeMode,
     setThemeMode,
+    showBlogInMenu: customization.showBlogInMenu ?? panel?.blog_enabled,
     // Theme Five specific variants
     heroVariant: 'tech_futuristic',
     navVariant: 'floating_glass',

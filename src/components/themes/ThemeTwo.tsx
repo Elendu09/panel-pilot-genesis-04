@@ -86,6 +86,7 @@ export const ThemeTwo = ({ panel, services = [], customization = {}, isPreview =
     glowColor: palette.glow,
     themeMode,
     setThemeMode,
+    showBlogInMenu: customization.showBlogInMenu ?? panel?.blog_enabled,
   };
 
   const themeStyles = `
