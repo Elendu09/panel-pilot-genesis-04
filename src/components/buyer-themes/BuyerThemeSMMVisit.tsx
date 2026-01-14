@@ -4,14 +4,16 @@ import { cn } from '@/lib/utils';
 interface BuyerThemeSMMVisitProps {
   children: ReactNode;
   className?: string;
+  themeMode?: 'light' | 'dark';
 }
 
 // SMMVisit Theme: Light gray with yellow/gold accents
-export const BuyerThemeSMMVisit = ({ children, className }: BuyerThemeSMMVisitProps) => {
+export const BuyerThemeSMMVisit = ({ children, className, themeMode = 'light' }: BuyerThemeSMMVisitProps) => {
   return (
     <div 
       className={cn(
         "buyer-theme-smmvisit buyer-theme-wrapper min-h-screen font-sans",
+        themeMode === 'light' ? 'light' : 'dark',
         className
       )}
     >

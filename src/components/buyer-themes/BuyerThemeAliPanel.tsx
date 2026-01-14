@@ -4,14 +4,16 @@ import { cn } from '@/lib/utils';
 interface BuyerThemeAliPanelProps {
   children: ReactNode;
   className?: string;
+  themeMode?: 'light' | 'dark';
 }
 
 // AliPanel Theme: Dark with pink-to-orange gradients, 3D floating icons
-export const BuyerThemeAliPanel = ({ children, className }: BuyerThemeAliPanelProps) => {
+export const BuyerThemeAliPanel = ({ children, className, themeMode = 'dark' }: BuyerThemeAliPanelProps) => {
   return (
     <div 
       className={cn(
         "buyer-theme-alipanel buyer-theme-wrapper min-h-screen font-poppins",
+        themeMode === 'light' ? 'light' : 'dark',
         className
       )}
     >

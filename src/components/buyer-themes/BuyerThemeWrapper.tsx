@@ -26,7 +26,7 @@ const BuyerThemeContext = createContext<BuyerThemeContextValue>({
 export const useBuyerTheme = () => useContext(BuyerThemeContext);
 
 // Theme components map
-const themeComponents: Record<BuyerThemeKey, React.FC<{ children: ReactNode; className?: string }>> = {
+const themeComponents: Record<BuyerThemeKey, React.FC<{ children: ReactNode; className?: string; themeMode?: 'light' | 'dark' }>> = {
   default: BuyerThemeDefault,
   alipanel: BuyerThemeAliPanel,
   flysmm: BuyerThemeFlySMM,
@@ -225,7 +225,7 @@ export const BuyerThemeWrapper = ({
   return (
     <BuyerThemeContext.Provider value={contextValue}>
       {themeCSS && <style>{themeCSS}</style>}
-      <ThemeComponent className={className}>
+      <ThemeComponent className={className} themeMode={customization.themeMode || 'dark'}>
         {children}
       </ThemeComponent>
     </BuyerThemeContext.Provider>

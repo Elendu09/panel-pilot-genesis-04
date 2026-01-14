@@ -4,14 +4,16 @@ import { cn } from '@/lib/utils';
 interface BuyerThemeFlySMMProps {
   children: ReactNode;
   className?: string;
+  themeMode?: 'light' | 'dark';
 }
 
 // FlySMM Theme: Light/white background with blue primary and illustrated cards
-export const BuyerThemeFlySMM = ({ children, className }: BuyerThemeFlySMMProps) => {
+export const BuyerThemeFlySMM = ({ children, className, themeMode = 'light' }: BuyerThemeFlySMMProps) => {
   return (
     <div 
       className={cn(
         "buyer-theme-flysmm buyer-theme-wrapper min-h-screen font-nunito",
+        themeMode === 'light' ? 'light' : 'dark',
         className
       )}
     >

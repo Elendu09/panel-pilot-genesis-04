@@ -4,14 +4,16 @@ import { cn } from '@/lib/utils';
 interface BuyerThemeSMMStayProps {
   children: ReactNode;
   className?: string;
+  themeMode?: 'light' | 'dark';
 }
 
 // SMMStay Theme: Deep black with hot pink neon accents, bold typography
-export const BuyerThemeSMMStay = ({ children, className }: BuyerThemeSMMStayProps) => {
+export const BuyerThemeSMMStay = ({ children, className, themeMode = 'dark' }: BuyerThemeSMMStayProps) => {
   return (
     <div 
       className={cn(
         "buyer-theme-smmstay buyer-theme-wrapper min-h-screen font-montserrat",
+        themeMode === 'light' ? 'light' : 'dark',
         className
       )}
     >

@@ -4,14 +4,16 @@ import { cn } from '@/lib/utils';
 interface BuyerThemeDefaultProps {
   children: ReactNode;
   className?: string;
+  themeMode?: 'light' | 'dark';
 }
 
 // Default Theme: Clean modern design with blue-purple gradients
-export const BuyerThemeDefault = ({ children, className }: BuyerThemeDefaultProps) => {
+export const BuyerThemeDefault = ({ children, className, themeMode = 'dark' }: BuyerThemeDefaultProps) => {
   return (
     <div 
       className={cn(
         "buyer-theme-default buyer-theme-wrapper min-h-screen font-inter",
+        themeMode === 'light' ? 'light' : 'dark',
         className
       )}
     >
