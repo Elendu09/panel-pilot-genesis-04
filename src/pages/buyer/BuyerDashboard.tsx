@@ -336,7 +336,17 @@ const BuyerDashboard = () => {
         <motion.div variants={itemVariants} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h1 className="text-xl md:text-2xl lg:text-3xl font-bold flex items-center gap-2">
-              {t('dashboard.welcome')}{buyer?.full_name ? `, ${buyer.full_name.split(' ')[0]}` : ''}! 👋
+              {t('dashboard.welcome')}{(() => {
+                // Display name fallback: full_name -> username -> email prefix -> nothing
+                const displayName = buyer?.full_name 
+                  ? buyer.full_name.split(' ')[0]
+                  : buyer?.username 
+                    ? buyer.username 
+                    : buyer?.email 
+                      ? buyer.email.split('@')[0] 
+                      : '';
+                return displayName ? `, ${displayName}` : '';
+              })()}!
               {/* Themed checkmark for verified users */}
               {!showVerifyBanner && (
                 <BadgeCheck className="w-5 h-5 md:w-6 md:h-6 text-primary fill-primary/20" />

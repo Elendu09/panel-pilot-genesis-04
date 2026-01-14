@@ -585,10 +585,16 @@ export const OnboardingTour = ({ onComplete, isOpen }: OnboardingTourProps) => {
     }
   }, [isOpen, currentStep, updateTargetRect]);
 
-  // Reset step when switching device modes
+  // Track previous isOpen state to reset only when tour opens fresh
+  const [prevIsOpen, setPrevIsOpen] = useState(false);
+  
+  // Reset step only when tour is opened (not on every resize)
   useEffect(() => {
-    setCurrentStep(0);
-  }, [screenSize]);
+    if (isOpen && !prevIsOpen) {
+      setCurrentStep(0);
+    }
+    setPrevIsOpen(isOpen);
+  }, [isOpen, prevIsOpen]);
 
   const handleNext = () => {
     if (currentStep < filteredSteps.length - 1) {

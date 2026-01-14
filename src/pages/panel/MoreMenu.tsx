@@ -30,6 +30,15 @@ import { useOnboardingTour } from "@/contexts/OnboardingTourContext";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
+import { BarChart3 } from "lucide-react";
+
+// Quick access tiles for top of More menu
+const quickAccessTiles = [
+  { name: "Analytics", href: "/panel/analytics", icon: BarChart3, gradient: "from-primary to-primary/80" },
+  { name: "Providers", href: "/panel/providers", icon: Plug, gradient: "from-purple-500 to-purple-600" },
+  { name: "Payments", href: "/panel/payments", icon: CreditCard, gradient: "from-green-500 to-green-600" },
+];
+
 // Kanban-style grouped menu items
 const menuGroups = [
   {
@@ -38,8 +47,6 @@ const menuGroups = [
     color: "from-blue-500 to-blue-600",
     items: [
       { name: "Customers", href: "/panel/customers", icon: Users, color: "text-blue-500", bgColor: "bg-blue-500/10" },
-      { name: "Providers", href: "/panel/providers", icon: Plug, color: "text-purple-500", bgColor: "bg-purple-500/10" },
-      { name: "Payments", href: "/panel/payments", icon: CreditCard, color: "text-green-500", bgColor: "bg-green-500/10" },
       { name: "Promotions", href: "/panel/promotions", icon: Sparkles, color: "text-pink-500", bgColor: "bg-pink-500/10" },
       { name: "Billing", href: "/panel/billing", icon: Sparkles, color: "text-amber-500", bgColor: "bg-amber-500/10" },
       { name: "Integrations", href: "/panel/integrations", icon: Plug, color: "text-teal-500", bgColor: "bg-teal-500/10" },
@@ -105,6 +112,27 @@ const MoreMenu = () => {
       <motion.div variants={itemVariants} className="text-center pt-2">
         <h1 className="text-2xl font-bold">More</h1>
         <p className="text-muted-foreground text-sm">Quick access to all features</p>
+      </motion.div>
+
+      {/* Quick Access Tiles - Analytics, Providers, Payments */}
+      <motion.div variants={itemVariants}>
+        <div className="grid grid-cols-3 gap-2">
+          {quickAccessTiles.map((tile) => {
+            const Icon = tile.icon;
+            return (
+              <Link key={tile.name} to={tile.href}>
+                <Card className="glass-stat-card overflow-hidden hover:bg-accent/50 transition-colors cursor-pointer">
+                  <CardContent className="p-3 flex flex-col items-center gap-2">
+                    <div className={cn("p-2.5 rounded-xl bg-gradient-to-br", tile.gradient)}>
+                      <Icon className="w-5 h-5 text-white" />
+                    </div>
+                    <span className="text-xs font-medium text-center">{tile.name}</span>
+                  </CardContent>
+                </Card>
+              </Link>
+            );
+          })}
+        </div>
       </motion.div>
 
       {/* Help Center Quick Access */}

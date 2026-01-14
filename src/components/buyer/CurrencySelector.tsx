@@ -6,19 +6,29 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { DollarSign, Check } from "lucide-react";
+import { Check } from "lucide-react";
+import { 
+  FlagUS, FlagEU, FlagGB, FlagNG, FlagIN, FlagBR, FlagTR, FlagRU, FlagAE, FlagCA 
+} from "@/components/icons/FlagIcons";
 
-const currencyList: { code: Currency; name: string; symbol: string; flag: string }[] = [
-  { code: 'USD', name: 'US Dollar', symbol: '$', flag: '🇺🇸' },
-  { code: 'EUR', name: 'Euro', symbol: '€', flag: '🇪🇺' },
-  { code: 'GBP', name: 'British Pound', symbol: '£', flag: '🇬🇧' },
-  { code: 'NGN', name: 'Nigerian Naira', symbol: '₦', flag: '🇳🇬' },
-  { code: 'INR', name: 'Indian Rupee', symbol: '₹', flag: '🇮🇳' },
-  { code: 'BRL', name: 'Brazilian Real', symbol: 'R$', flag: '🇧🇷' },
-  { code: 'TRY', name: 'Turkish Lira', symbol: '₺', flag: '🇹🇷' },
-  { code: 'RUB', name: 'Russian Ruble', symbol: '₽', flag: '🇷🇺' },
-  { code: 'AED', name: 'UAE Dirham', symbol: 'د.إ', flag: '🇦🇪' },
-  { code: 'CAD', name: 'Canadian Dollar', symbol: 'C$', flag: '🇨🇦' },
+interface CurrencyItem {
+  code: Currency;
+  name: string;
+  symbol: string;
+  FlagIcon: React.FC<{ className?: string }>;
+}
+
+const currencyList: CurrencyItem[] = [
+  { code: 'USD', name: 'US Dollar', symbol: '$', FlagIcon: FlagUS },
+  { code: 'EUR', name: 'Euro', symbol: '€', FlagIcon: FlagEU },
+  { code: 'GBP', name: 'British Pound', symbol: '£', FlagIcon: FlagGB },
+  { code: 'NGN', name: 'Nigerian Naira', symbol: '₦', FlagIcon: FlagNG },
+  { code: 'INR', name: 'Indian Rupee', symbol: '₹', FlagIcon: FlagIN },
+  { code: 'BRL', name: 'Brazilian Real', symbol: 'R$', FlagIcon: FlagBR },
+  { code: 'TRY', name: 'Turkish Lira', symbol: '₺', FlagIcon: FlagTR },
+  { code: 'RUB', name: 'Russian Ruble', symbol: '₽', FlagIcon: FlagRU },
+  { code: 'AED', name: 'UAE Dirham', symbol: 'د.إ', FlagIcon: FlagAE },
+  { code: 'CAD', name: 'Canadian Dollar', symbol: 'C$', FlagIcon: FlagCA },
 ];
 
 export const CurrencySelector = () => {
@@ -32,20 +42,23 @@ export const CurrencySelector = () => {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
-        {currencyList.map((curr) => (
-          <DropdownMenuItem
-            key={curr.code}
-            onClick={() => setCurrency(curr.code)}
-            className="flex items-center justify-between cursor-pointer"
-          >
-            <div className="flex items-center gap-2">
-              <span>{curr.flag}</span>
-              <span>{curr.code}</span>
-              <span className="text-muted-foreground text-xs">({curr.symbol})</span>
-            </div>
-            {currency === curr.code && <Check className="w-4 h-4 text-primary" />}
-          </DropdownMenuItem>
-        ))}
+        {currencyList.map((curr) => {
+          const FlagComponent = curr.FlagIcon;
+          return (
+            <DropdownMenuItem
+              key={curr.code}
+              onClick={() => setCurrency(curr.code)}
+              className="flex items-center justify-between cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                <FlagComponent className="w-5 h-4 rounded-sm" />
+                <span>{curr.code}</span>
+                <span className="text-muted-foreground text-xs">({curr.symbol})</span>
+              </div>
+              {currency === curr.code && <Check className="w-4 h-4 text-primary" />}
+            </DropdownMenuItem>
+          );
+        })}
       </DropdownMenuContent>
     </DropdownMenu>
   );

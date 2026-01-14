@@ -629,44 +629,62 @@ const CustomerManagement = () => {
     if (!panel?.id) return;
 
     try {
-      const { data, error } = await supabase
-        .from('client_users')
-        .insert({
-          panel_id: panel.id,
-          email: newCustomer.email,
-          full_name: newCustomer.fullName,
-          username: newCustomer.username,
-          is_active: newCustomer.status === 'active',
-          balance: newCustomer.balance,
-          password_temp: newCustomer.password, // Use the password from the form
-        })
-        .select()
-        .single();
+      // Use edge function to bypass RLS
+      const { data, error } = await supabase.functions.invoke('panel-customers', {
+        body: {
+          action: 'create',
+          panelId: panel.id,
+          customer: {
+            email: newCustomer.email,
+            fullName: newCustomer.fullName,
+            username: newCustomer.username,
+            password: newCustomer.password,
+            balance: newCustomer.balance,
+            status: newCustomer.status,
+          }
+        }
+      });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Edge function error:', error);
+        toast({ variant: 'destructive', title: 'Error', description: 'Failed to connect to server. Please try again.' });
+        return;
+      }
 
+      if (data?.error) {
+        console.error('Customer creation error:', data.error);
+        toast({ variant: 'destructive', title: 'Error', description: data.error });
+        return;
+      }
+
+      if (!data?.customer) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Failed to create customer' });
+        return;
+      }
+
+      const customerData = data.customer;
       const customer: Customer = {
-        id: data.id,
-        name: data.full_name || data.email.split('@')[0],
-        email: data.email,
-        username: data.username || undefined,
-        status: data.is_active ? 'active' : 'suspended',
+        id: customerData.id,
+        name: customerData.full_name || customerData.email.split('@')[0],
+        email: customerData.email,
+        username: customerData.username || undefined,
+        status: customerData.is_active ? 'active' : 'suspended',
         segment: 'new',
-        balance: data.balance || 0,
+        balance: customerData.balance || 0,
         totalSpent: 0,
         totalOrders: 0,
-        joinedAt: data.created_at,
-        lastActive: data.created_at,
+        joinedAt: customerData.created_at,
+        lastActive: customerData.created_at,
       };
 
       setCustomers(prev => [customer, ...prev]);
       toast({ 
         title: "Customer Created", 
-        description: `${newCustomer.fullName} has been added successfully.` 
+        description: `${newCustomer.fullName || newCustomer.email} has been added successfully.` 
       });
     } catch (error) {
       console.error('Error adding customer:', error);
-      toast({ variant: 'destructive', title: 'Error', description: 'Failed to add customer' });
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to add customer. Please try again.' });
     }
   };
 

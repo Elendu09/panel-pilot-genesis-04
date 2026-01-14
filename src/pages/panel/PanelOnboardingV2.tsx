@@ -949,25 +949,25 @@ const PanelOnboardingV2 = () => {
   const isPaymentStep = currentStepKey === STEP_KEYS.PAYMENT;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-secondary/10">
+    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-secondary/10 pb-24 sm:pb-8">
       <Helmet>
         <title>Create Your Panel | HOME OF SMM</title>
         <meta name="robots" content="noindex,nofollow" />
       </Helmet>
 
-      <div className="container max-w-3xl mx-auto px-4 py-8">
+      <div className="container max-w-3xl mx-auto px-4 py-4 sm:py-8">
         {/* Progress Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-xl font-bold">Create Your Panel</h1>
-            <span className="text-sm text-muted-foreground">
+        <div className="mb-4 sm:mb-8">
+          <div className="flex items-center justify-between mb-3 sm:mb-4">
+            <h1 className="text-lg sm:text-xl font-bold">Create Your Panel</h1>
+            <span className="text-xs sm:text-sm text-muted-foreground">
               Step {visibleStepIndex + 1} of {visibleSteps.length}
             </span>
           </div>
           <Progress value={progress} className="h-2" />
           
           {/* Step Indicators - Mobile Optimized */}
-          <div className="flex justify-between mt-4 gap-1 sm:gap-2">
+          <div className="flex justify-between mt-3 sm:mt-4 gap-1 sm:gap-2">
             {visibleSteps.map((step, index) => {
               const Icon = step.icon;
               const isCompleted = completedSteps.includes(step.id);
@@ -1043,16 +1043,16 @@ const PanelOnboardingV2 = () => {
 
         {/* Step Content */}
         <Card className="bg-card/60 backdrop-blur-xl border-border/50">
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <AnimatePresence mode="wait">
               {renderStepContent()}
             </AnimatePresence>
           </CardContent>
         </Card>
 
-        {/* Navigation Buttons */}
+        {/* Desktop Navigation Buttons - hidden on mobile, shown inline on desktop */}
         {!isLastStep && !isPaymentStep && (
-          <div className="flex justify-between mt-6">
+          <div className="hidden sm:flex justify-between mt-6">
             <Button
               variant="outline"
               onClick={handlePrevious}
@@ -1069,6 +1069,27 @@ const PanelOnboardingV2 = () => {
           </div>
         )}
       </div>
+
+      {/* Mobile Sticky Navigation Buttons */}
+      {!isLastStep && !isPaymentStep && (
+        <div className="fixed bottom-0 left-0 right-0 sm:hidden bg-background/95 backdrop-blur-md border-t border-border/50 p-4 pb-safe z-50">
+          <div className="flex gap-3 max-w-3xl mx-auto">
+            <Button
+              variant="outline"
+              onClick={handlePrevious}
+              disabled={currentStep === 0}
+              className="flex-1 h-12"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back
+            </Button>
+            <Button onClick={handleNext} className="flex-1 h-12">
+              Next
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
