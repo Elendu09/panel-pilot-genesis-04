@@ -74,9 +74,9 @@ const Storefront = () => {
   }, [tenantLoading, tenantError, panel, services]);
 
   const design = panel?.custom_branding || {};
-  const themeType = panel?.theme_type || 'dark_gradient';
   const customBranding = panel?.custom_branding as any;
-  const selectedTheme = customBranding?.selectedTheme || themeType;
+  // Theme priority: custom_branding.selectedTheme > buyer_theme > theme_type > fallback
+  const selectedTheme = customBranding?.selectedTheme || panel?.buyer_theme || panel?.theme_type || 'default';
 
   // Generate CSS variables for design preset colors - ensures colors sync across storefront
   const storefrontColorStyles = useMemo(() => {

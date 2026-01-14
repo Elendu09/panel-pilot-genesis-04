@@ -60,6 +60,7 @@ interface TenantPanel {
   subdomain: string;
   custom_domain?: string;
   theme_type: string;
+  buyer_theme?: string;
   primary_color: string;
   secondary_color: string;
   logo_url?: string;

@@ -312,6 +312,24 @@ const PanelOnboardingV2 = () => {
       toast({ variant: "destructive", title: "Please choose an available subdomain" });
       return;
     }
+
+    // Validate SEO before leaving SEO step
+    if (currentStepKey === STEP_KEYS.SEO) {
+      const titlePx = measureTextPx(seoTitle || '');
+      const descPx = measureTextPx(seoDescription || '');
+      const titleOk = !!seoTitle.trim() && isInRange(titlePx, SEO_TITLE_PX_RANGE);
+      const descOk = !!seoDescription.trim() && isInRange(descPx, SEO_DESC_PX_RANGE);
+      const keywordsOk = !!seoKeywords.trim() && seoKeywords.split(',').length >= 3;
+      
+      if (!titleOk || !descOk || !keywordsOk) {
+        toast({ 
+          variant: "destructive", 
+          title: "Complete SEO settings", 
+          description: "Title, description, and keywords (min 3) are required with correct lengths."
+        });
+        return;
+      }
+    }
     
     markStepComplete(currentStep);
     
@@ -396,8 +414,8 @@ const PanelOnboardingV2 = () => {
             owner_id: profile?.id,
             status: 'active',
             is_approved: true,
-            theme_type: 'dark_gradient',
-            buyer_theme: selectedTheme,
+            theme_type: 'dark_gradient', // Always use dark_gradient for base type
+            buyer_theme: selectedTheme, // Store actual theme selection
             subdomain: finalSubdomain,
             custom_domain: domainType === 'custom' ? customDomain : null,
             primary_color: finalPrimaryColor,
@@ -407,6 +425,7 @@ const PanelOnboardingV2 = () => {
             onboarding_completed: true,
             default_currency: currency,
             custom_branding: {
+              selectedTheme: selectedTheme, // CRITICAL: Save selectedTheme for Storefront.tsx
               heroAnimationStyle: defaultAnimationStyle,
               enableAnimations: true,
               primaryColor: finalPrimaryColor,
@@ -510,6 +529,9 @@ const PanelOnboardingV2 = () => {
                 rows={3}
                 className="bg-background/50"
               />
+              <p className="text-xs text-muted-foreground">
+                Brief description of your panel used for SEO and marketing context.
+              </p>
             </div>
           </motion.div>
         );
