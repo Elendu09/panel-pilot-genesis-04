@@ -306,6 +306,78 @@ export const BuyerThemeFlySMM = ({ children, className, themeMode = 'light' }: B
         .dark .buyer-theme-flysmm [data-state="open"] {
           background: rgba(33, 150, 243, 0.08) !important;
         }
+        
+        /* Dark mode buttons - comprehensive */
+        .dark .buyer-theme-flysmm button:not(.theme-button-primary):not([class*="gradient"]) {
+          color: #F1F5F9;
+        }
+        
+        .dark .buyer-theme-flysmm a {
+          color: #CBD5E1;
+        }
+        
+        .dark .buyer-theme-flysmm a:hover {
+          color: #64B5F6;
+        }
+        
+        /* Dark mode secondary buttons */
+        .dark .buyer-theme-flysmm .btn-secondary,
+        .dark .buyer-theme-flysmm button[variant="secondary"],
+        .dark .buyer-theme-flysmm button[variant="outline"],
+        .dark .buyer-theme-flysmm button[variant="ghost"] {
+          background: rgba(33, 150, 243, 0.1) !important;
+          color: #64B5F6 !important;
+          border-color: rgba(33, 150, 243, 0.25) !important;
+        }
+        
+        .dark .buyer-theme-flysmm .btn-secondary:hover,
+        .dark .buyer-theme-flysmm button[variant="secondary"]:hover,
+        .dark .buyer-theme-flysmm button[variant="outline"]:hover,
+        .dark .buyer-theme-flysmm button[variant="ghost"]:hover {
+          background: rgba(33, 150, 243, 0.2) !important;
+        }
+        
+        /* Dark mode icons */
+        .dark .buyer-theme-flysmm svg:not([class*="gradient"]) {
+          color: inherit;
+        }
+        
+        /* Dark mode dialog/modal */
+        .dark .buyer-theme-flysmm [role="dialog"] {
+          background: #132337 !important;
+          border-color: rgba(33, 150, 243, 0.2) !important;
+        }
+        
+        /* Dark mode tabs */
+        .dark .buyer-theme-flysmm [role="tablist"] {
+          background: rgba(33, 150, 243, 0.08) !important;
+        }
+        
+        .dark .buyer-theme-flysmm [role="tab"][data-state="active"] {
+          background: #132337 !important;
+          color: #64B5F6 !important;
+        }
+        
+        /* Dark mode links in nav */
+        .dark .buyer-theme-flysmm nav a,
+        .dark .buyer-theme-flysmm header a {
+          color: #CBD5E1;
+        }
+        
+        .dark .buyer-theme-flysmm nav a:hover,
+        .dark .buyer-theme-flysmm header a:hover {
+          color: #64B5F6;
+        }
+        
+        /* Ensure proper color inheritance */
+        .dark .buyer-theme-flysmm * {
+          border-color: inherit;
+        }
+        
+        .dark .buyer-theme-flysmm,
+        .dark .buyer-theme-flysmm .buyer-theme-wrapper {
+          color: #F1F5F9;
+        }
       `}</style>
         {children}
       </div>

@@ -332,6 +332,78 @@ export const BuyerThemeSMMStay = ({ children, className, themeMode = 'dark' }: B
         .light .buyer-theme-smmstay [data-state="open"] {
           background: rgba(255, 64, 129, 0.04) !important;
         }
+        
+        /* Light mode buttons - comprehensive */
+        .light .buyer-theme-smmstay button:not(.theme-button-primary):not(.theme-button-filled):not([class*="gradient"]) {
+          color: #1A1A1A;
+        }
+        
+        .light .buyer-theme-smmstay a {
+          color: #374151;
+        }
+        
+        .light .buyer-theme-smmstay a:hover {
+          color: #FF4081;
+        }
+        
+        /* Light mode secondary buttons */
+        .light .buyer-theme-smmstay .btn-secondary,
+        .light .buyer-theme-smmstay button[variant="secondary"],
+        .light .buyer-theme-smmstay button[variant="outline"],
+        .light .buyer-theme-smmstay button[variant="ghost"] {
+          background: rgba(255, 64, 129, 0.08) !important;
+          color: #FF4081 !important;
+          border-color: rgba(255, 64, 129, 0.2) !important;
+        }
+        
+        .light .buyer-theme-smmstay .btn-secondary:hover,
+        .light .buyer-theme-smmstay button[variant="secondary"]:hover,
+        .light .buyer-theme-smmstay button[variant="outline"]:hover,
+        .light .buyer-theme-smmstay button[variant="ghost"]:hover {
+          background: rgba(255, 64, 129, 0.15) !important;
+        }
+        
+        /* Light mode icons */
+        .light .buyer-theme-smmstay svg:not([class*="gradient"]) {
+          color: inherit;
+        }
+        
+        /* Light mode dialog/modal */
+        .light .buyer-theme-smmstay [role="dialog"] {
+          background: #FFFFFF !important;
+          border-color: rgba(255, 64, 129, 0.15) !important;
+        }
+        
+        /* Light mode tabs */
+        .light .buyer-theme-smmstay [role="tablist"] {
+          background: rgba(255, 64, 129, 0.05) !important;
+        }
+        
+        .light .buyer-theme-smmstay [role="tab"][data-state="active"] {
+          background: #FFFFFF !important;
+          color: #FF4081 !important;
+        }
+        
+        /* Light mode links in nav */
+        .light .buyer-theme-smmstay nav a,
+        .light .buyer-theme-smmstay header a {
+          color: #374151;
+        }
+        
+        .light .buyer-theme-smmstay nav a:hover,
+        .light .buyer-theme-smmstay header a:hover {
+          color: #FF4081;
+        }
+        
+        /* Ensure proper color inheritance */
+        .light .buyer-theme-smmstay * {
+          border-color: inherit;
+        }
+        
+        .light .buyer-theme-smmstay,
+        .light .buyer-theme-smmstay .buyer-theme-wrapper {
+          color: #1A1A1A;
+        }
       `}</style>
         {children}
       </div>

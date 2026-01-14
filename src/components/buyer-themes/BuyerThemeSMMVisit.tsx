@@ -282,6 +282,78 @@ export const BuyerThemeSMMVisit = ({ children, className, themeMode = 'light' }:
         .dark .buyer-theme-smmvisit [data-state="open"] {
           background: rgba(255, 215, 0, 0.08) !important;
         }
+        
+        /* Dark mode buttons - comprehensive */
+        .dark .buyer-theme-smmvisit button:not(.theme-button-primary):not([class*="gradient"]) {
+          color: #FFFFFF;
+        }
+        
+        .dark .buyer-theme-smmvisit a {
+          color: #D1D5DB;
+        }
+        
+        .dark .buyer-theme-smmvisit a:hover {
+          color: #FFD700;
+        }
+        
+        /* Dark mode secondary buttons */
+        .dark .buyer-theme-smmvisit .btn-secondary,
+        .dark .buyer-theme-smmvisit button[variant="secondary"],
+        .dark .buyer-theme-smmvisit button[variant="outline"],
+        .dark .buyer-theme-smmvisit button[variant="ghost"] {
+          background: rgba(255, 215, 0, 0.1) !important;
+          color: #FFD700 !important;
+          border-color: rgba(255, 215, 0, 0.25) !important;
+        }
+        
+        .dark .buyer-theme-smmvisit .btn-secondary:hover,
+        .dark .buyer-theme-smmvisit button[variant="secondary"]:hover,
+        .dark .buyer-theme-smmvisit button[variant="outline"]:hover,
+        .dark .buyer-theme-smmvisit button[variant="ghost"]:hover {
+          background: rgba(255, 215, 0, 0.2) !important;
+        }
+        
+        /* Dark mode icons */
+        .dark .buyer-theme-smmvisit svg:not([class*="gradient"]) {
+          color: inherit;
+        }
+        
+        /* Dark mode dialog/modal */
+        .dark .buyer-theme-smmvisit [role="dialog"] {
+          background: #262626 !important;
+          border-color: rgba(255, 215, 0, 0.2) !important;
+        }
+        
+        /* Dark mode tabs */
+        .dark .buyer-theme-smmvisit [role="tablist"] {
+          background: rgba(255, 215, 0, 0.08) !important;
+        }
+        
+        .dark .buyer-theme-smmvisit [role="tab"][data-state="active"] {
+          background: #262626 !important;
+          color: #FFD700 !important;
+        }
+        
+        /* Dark mode links in nav */
+        .dark .buyer-theme-smmvisit nav a,
+        .dark .buyer-theme-smmvisit header a {
+          color: #D1D5DB;
+        }
+        
+        .dark .buyer-theme-smmvisit nav a:hover,
+        .dark .buyer-theme-smmvisit header a:hover {
+          color: #FFD700;
+        }
+        
+        /* Ensure proper color inheritance */
+        .dark .buyer-theme-smmvisit * {
+          border-color: inherit;
+        }
+        
+        .dark .buyer-theme-smmvisit,
+        .dark .buyer-theme-smmvisit .buyer-theme-wrapper {
+          color: #FFFFFF;
+        }
       `}</style>
         {children}
       </div>
