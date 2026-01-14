@@ -13,6 +13,7 @@ import { TikTokIcon } from "@/components/icons/SocialIcons";
 import { useDeviceKey, defaultHeroShowFloatingCards, defaultHeroShowCategories } from "@/hooks/use-device-key";
 import { BuyerAuthContext } from "@/contexts/BuyerAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { AnimatedHeroText, getThemeDefaultAnimationStyle, getAnimatedWordFromTitle } from "@/components/buyer-themes/shared/AnimatedHeroText";
 
 interface StorefrontHeroSectionProps {
   panel?: any;
@@ -133,6 +134,16 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
   // Per-device settings
   const heroShowFloatingCards = customization.heroShowFloatingCards?.[deviceKey] ?? defaultHeroShowFloatingCards[deviceKey];
   const heroShowCategories = customization.heroShowCategories?.[deviceKey] ?? defaultHeroShowCategories[deviceKey];
+  
+  // Animation settings for hero text
+  const buyerTheme = panel?.buyer_theme || 'default';
+  const heroAnimationStyle = customization.heroAnimationStyle || getThemeDefaultAnimationStyle(buyerTheme);
+  const enableAnimations = customization.enableAnimations ?? true;
+  const primaryColor = customization.primaryColor || '#8B5CF6';
+  const secondaryColor = customization.secondaryColor || '#EC4899';
+  
+  // Extract animated word from title
+  const { before: heroTextBefore, animatedWord: heroAnimatedWord, after: heroTextAfter } = getAnimatedWordFromTitle(heroTitle, 'last');
 
   const animatedPhrases = customization.animatedPhrases || [
     { static: "grow your audience", bold: "for profit" },
@@ -248,7 +259,7 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
             </span>
           </motion.div>
 
-          {/* Main Heading - SEO: Single H1 with semantic structure */}
+          {/* Main Heading - SEO: Single H1 with semantic structure and AnimatedHeroText */}
           <motion.h1 
             className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-bold mb-4 sm:mb-6 leading-tight px-2"
             style={{ color: textColor }}
@@ -256,20 +267,15 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3, duration: 0.6 }}
           >
-            <span>{heroTitle.split(' ').slice(0, Math.ceil(heroTitle.split(' ').length / 2)).join(' ')}</span>
-            {' '}
-            <motion.span 
-              className="bg-clip-text text-transparent inline-block"
-              style={{ 
-                backgroundImage: `linear-gradient(135deg, ${customization.primaryColor || '#8B5CF6'}, ${customization.secondaryColor || '#EC4899'})` 
-              }}
-              animate={{ 
-                backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"]
-              }}
-              transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
-            >
-              {heroTitle.split(' ').slice(Math.ceil(heroTitle.split(' ').length / 2)).join(' ') || 'Presence'}
-            </motion.span>
+            {heroTextBefore && <span>{heroTextBefore} </span>}
+            <AnimatedHeroText
+              text={heroAnimatedWord}
+              animationStyle={heroAnimationStyle}
+              primaryColor={primaryColor}
+              secondaryColor={secondaryColor}
+              enableAnimations={enableAnimations}
+            />
+            {heroTextAfter && <span> {heroTextAfter}</span>}
           </motion.h1>
 
           {/* Subtitle */}

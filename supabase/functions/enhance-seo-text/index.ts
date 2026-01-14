@@ -5,6 +5,121 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Generate template-based SEO with intelligent panel name matching
+function generateTemplateBasedSEO(panelName: string, description?: string) {
+  const name = panelName.trim();
+  const nameLower = name.toLowerCase().replace(/\s+/g, '');
+  
+  // Generate compelling title variants based on panel name length
+  let title: string;
+  if (name.length <= 15) {
+    title = `${name} - #1 SMM Panel | Buy Real Followers & Likes`;
+  } else if (name.length <= 25) {
+    title = `${name} | Best SMM Panel - Instant Delivery`;
+  } else {
+    title = `${name} - Premium SMM Services`;
+  }
+  
+  // Ensure title is under 60 chars
+  if (title.length > 60) {
+    title = `${name} - Best SMM Panel`;
+  }
+  
+  // Generate description with context
+  const descBase = description 
+    ? `${name}: ${description.substring(0, 80)}. `
+    : `${name} offers premium SMM services. `;
+  
+  const descSuffix = 'Get real followers, likes & views with instant delivery. 24/7 support, best prices. Start growing today!';
+  let desc = descBase + descSuffix;
+  
+  // Trim to 155 chars max
+  if (desc.length > 155) {
+    desc = desc.substring(0, 152) + '...';
+  }
+  
+  // Generate comprehensive keywords based on panel name
+  const baseKeywords = [
+    nameLower,
+    `${nameLower} smm panel`,
+    'smm panel',
+    'buy followers',
+    'instagram followers',
+    'tiktok followers',
+    'youtube subscribers',
+    'twitter followers',
+    'telegram members',
+    'social media marketing',
+    'buy likes',
+    'buy views',
+    'instant delivery smm',
+    'cheap smm panel',
+    'best smm panel'
+  ];
+  
+  const keywords = baseKeywords.join(', ');
+  
+  return { title, description: desc, keywords };
+}
+
+// Validate and fix title to ensure panel name is present
+function validateTitle(title: string | undefined, panelName: string): string {
+  if (!title) return `${panelName} - #1 SMM Panel | Buy Followers`;
+  
+  // Ensure panel name is at the start
+  if (!title.toLowerCase().includes(panelName.toLowerCase())) {
+    return `${panelName} - ${title}`.substring(0, 60);
+  }
+  
+  // Trim if too long
+  if (title.length > 60) {
+    return title.substring(0, 57) + '...';
+  }
+  
+  return title;
+}
+
+// Validate and fix description
+function validateDescription(desc: string | undefined, panelName: string): string {
+  if (!desc) {
+    return `${panelName} offers premium SMM services. Real followers, instant delivery, 24/7 support. Start growing today!`;
+  }
+  
+  // Trim if too long
+  if (desc.length > 160) {
+    return desc.substring(0, 157) + '...';
+  }
+  
+  // Pad if too short
+  if (desc.length < 100) {
+    return `${desc} Get instant delivery, 24/7 support, and best prices.`.substring(0, 160);
+  }
+  
+  return desc;
+}
+
+// Validate and enhance keywords
+function validateKeywords(keywords: string | undefined, panelName: string): string {
+  const nameLower = panelName.toLowerCase().replace(/\s+/g, '');
+  const essentialKeywords = [nameLower, 'smm panel', 'buy followers', 'instagram', 'tiktok'];
+  
+  if (!keywords) {
+    return essentialKeywords.concat(['youtube', 'social media marketing', 'likes', 'views']).join(', ');
+  }
+  
+  // Ensure essential keywords are present
+  const keywordList = keywords.split(',').map(k => k.trim().toLowerCase());
+  const missingEssentials = essentialKeywords.filter(ek => 
+    !keywordList.some(k => k.includes(ek))
+  );
+  
+  if (missingEssentials.length > 0) {
+    return missingEssentials.join(', ') + ', ' + keywords;
+  }
+  
+  return keywords;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -19,33 +134,50 @@ serve(async (req) => {
       console.log('Generating complete SEO for panel:', panelName);
       
       const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+      const cleanPanelName = (panelName || 'SMM Panel').trim();
       
       if (!LOVABLE_API_KEY) {
-        // Return template-based fallback
-        const title = `${panelName} - #1 SMM Panel | Buy Followers, Likes & Views`;
-        const desc = `${panelName} offers premium social media marketing services. Get real followers, likes, views with instant delivery. 24/7 support, best prices guaranteed.`;
-        const keywords = `${panelName.toLowerCase()}, SMM panel, buy followers, social media marketing, instagram likes, tiktok views, youtube subscribers, twitter followers`;
-        
+        // Return enhanced template-based fallback
+        const seoData = generateTemplateBasedSEO(cleanPanelName, description);
         console.log('Using template fallback for SEO generation');
         return new Response(
-          JSON.stringify({ title, description: desc, keywords, source: 'template' }),
+          JSON.stringify({ ...seoData, source: 'template' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
       try {
-        const systemPrompt = `You are an expert SEO specialist for SMM (Social Media Marketing) panels. Generate optimized SEO metadata for a panel.
+        const systemPrompt = `You are a top-tier SEO expert specializing in SMM (Social Media Marketing) panels.
 
-Rules:
-- Title: Max 60 characters, include panel name at start, include "SMM Panel" or similar
-- Description: 120-155 characters, highlight key benefits (instant delivery, 24/7 support, best prices), include CTA
-- Keywords: 8-12 comma-separated relevant keywords for SMM services
+Your task: Generate highly optimized, conversion-focused SEO metadata for "${cleanPanelName}".
 
-Panel Name: ${panelName}
-${description ? `Panel Description: ${description}` : ''}
+CRITICAL RULES:
+1. TITLE (max 55 chars):
+   - MUST start with "${cleanPanelName}"
+   - Include power words: "Best", "#1", "Premium", "Top", "Trusted"
+   - Include "SMM Panel" or "SMM Services"
+   - Example formats:
+     - "${cleanPanelName} - #1 SMM Panel | Real Followers"
+     - "${cleanPanelName} | Best SMM Panel - Instant Delivery"
+     - "${cleanPanelName} - Premium SMM Services & Growth"
 
-Return ONLY a JSON object with this exact format:
-{"title": "...", "description": "...", "keywords": "..."}`;
+2. DESCRIPTION (130-155 chars):
+   - Lead with key benefit (instant delivery, real engagement)
+   - Include: "real followers", "instant delivery", "24/7 support", "best prices"
+   - End with subtle CTA (Start growing today, Join now, Try us)
+   - Use active voice, be compelling
+
+3. KEYWORDS (12-15 comma-separated):
+   - MUST include: "${cleanPanelName.toLowerCase()}" as first keyword
+   - Include platforms: instagram, tiktok, youtube, twitter, telegram, facebook
+   - Include services: followers, likes, views, comments, subscribers, shares
+   - Include action words: buy, get, increase, boost, grow
+   - Include niche terms: smm panel, social media marketing, engagement, growth
+
+${description ? `Panel Description Context: ${description}` : 'This is a professional SMM panel offering social media marketing services.'}
+
+Return ONLY valid JSON (no markdown, no explanation):
+{"title":"...","description":"...","keywords":"..."}`;
 
         const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
@@ -57,51 +189,57 @@ Return ONLY a JSON object with this exact format:
             model: "google/gemini-2.5-flash",
             messages: [
               { role: "system", content: systemPrompt },
-              { role: "user", content: "Generate the SEO metadata now." }
+              { role: "user", content: `Generate SEO metadata for ${cleanPanelName}. Return only JSON.` }
             ],
-            max_tokens: 200,
-            temperature: 0.7,
+            max_tokens: 300,
+            temperature: 0.6,
           }),
         });
 
         if (!response.ok) {
+          const errorText = await response.text();
+          console.error('AI gateway error:', response.status, errorText);
           throw new Error(`AI gateway error: ${response.status}`);
         }
 
         const data = await response.json();
         const content = data.choices?.[0]?.message?.content?.trim() || '';
+        console.log('AI raw response:', content);
         
         // Parse JSON response
         try {
           // Extract JSON from response (handle markdown code blocks)
-          const jsonMatch = content.match(/\{[\s\S]*\}/);
+          const jsonMatch = content.match(/\{[\s\S]*?\}/);
           if (jsonMatch) {
             const parsed = JSON.parse(jsonMatch[0]);
-            console.log('AI-generated SEO:', parsed);
+            
+            // Validate and enhance the response
+            const finalTitle = validateTitle(parsed.title, cleanPanelName);
+            const finalDesc = validateDescription(parsed.description, cleanPanelName);
+            const finalKeywords = validateKeywords(parsed.keywords, cleanPanelName);
+            
+            console.log('AI-generated SEO:', { title: finalTitle, description: finalDesc, keywords: finalKeywords });
             return new Response(
               JSON.stringify({ 
-                title: parsed.title || `${panelName} - SMM Panel`,
-                description: parsed.description || `${panelName} offers premium SMM services.`,
-                keywords: parsed.keywords || `${panelName.toLowerCase()}, SMM panel, buy followers`,
+                title: finalTitle,
+                description: finalDesc,
+                keywords: finalKeywords,
                 source: 'ai'
               }),
               { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
             );
           }
         } catch (parseError) {
-          console.error('Failed to parse AI response:', parseError);
+          console.error('Failed to parse AI response:', parseError, 'Content:', content);
         }
       } catch (aiError) {
         console.error('AI generation failed:', aiError);
       }
 
-      // Fallback to template
-      const title = `${panelName} - #1 SMM Panel | Buy Followers, Likes & Views`;
-      const desc = `${panelName} offers premium social media marketing services. Get real followers, likes, views with instant delivery. 24/7 support, best prices guaranteed.`;
-      const keywords = `${panelName.toLowerCase()}, SMM panel, buy followers, social media marketing, instagram likes, tiktok views, youtube subscribers, twitter followers`;
-      
+      // Fallback to enhanced template
+      const seoData = generateTemplateBasedSEO(cleanPanelName, description);
       return new Response(
-        JSON.stringify({ title, description: desc, keywords, source: 'template' }),
+        JSON.stringify({ ...seoData, source: 'template' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
