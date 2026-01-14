@@ -4,14 +4,16 @@ import { cn } from '@/lib/utils';
 interface BuyerThemeTGRefProps {
   children: ReactNode;
   className?: string;
+  themeMode?: 'light' | 'dark';
 }
 
 // TGRef Theme: Dark blue-gray with teal/cyan gradients, tech/monospace feel
-export const BuyerThemeTGRef = ({ children, className }: BuyerThemeTGRefProps) => {
+export const BuyerThemeTGRef = ({ children, className, themeMode = 'dark' }: BuyerThemeTGRefProps) => {
   return (
     <div 
       className={cn(
         "buyer-theme-tgref buyer-theme-wrapper min-h-screen",
+        themeMode === 'light' ? 'light' : 'dark',
         className
       )}
     >

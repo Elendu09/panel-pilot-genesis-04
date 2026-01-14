@@ -63,7 +63,8 @@ import {
   Copy,
   Circle,
   RefreshCw,
-  Loader2
+  Loader2,
+  Trash2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
@@ -609,6 +610,27 @@ const CustomerManagement = () => {
     }
   };
 
+  const handleDeleteCustomer = async (customerId: string) => {
+    if (!confirm('Are you sure you want to delete this customer? This action cannot be undone.')) {
+      return;
+    }
+    
+    try {
+      const { error } = await supabase
+        .from('client_users')
+        .delete()
+        .eq('id', customerId);
+
+      if (error) throw error;
+
+      setCustomers(prev => prev.filter(c => c.id !== customerId));
+      toast({ title: "Customer Deleted", description: "Customer has been permanently deleted" });
+    } catch (error) {
+      console.error('Error deleting customer:', error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to delete customer' });
+    }
+  };
+
   const handleViewDetails = (customer: Customer) => {
     setSelectedCustomer(customer);
     setShowDetailsSheet(true);
@@ -927,6 +949,13 @@ const CustomerManagement = () => {
                             >
                               <Ban className="w-4 h-4 mr-2" /> 
                               {customer.status === 'suspended' ? 'Activate' : 'Suspend'}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              className="text-destructive"
+                              onClick={() => handleDeleteCustomer(customer.id)}
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" /> 
+                              Delete Customer
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
