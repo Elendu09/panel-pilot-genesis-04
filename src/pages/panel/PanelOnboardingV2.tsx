@@ -33,6 +33,7 @@ import { OnboardingPaymentStep } from '@/components/onboarding/OnboardingPayment
 import { OnboardingDomainStep } from '@/components/onboarding/OnboardingDomainStep';
 import { ThemeMiniPreview } from '@/components/design/ThemeMiniPreview';
 import { SEO_DESC_PX_RANGE, SEO_TITLE_PX_RANGE, isInRange, measureTextPx } from '@/lib/seo-metrics';
+import { getThemeDefaultAnimationStyle } from '@/components/buyer-themes/shared/AnimatedHeroText';
 
 // Fixed step definitions - NEVER change this array dynamically
 const STEP_KEYS = {
@@ -382,6 +383,9 @@ const PanelOnboardingV2 = () => {
       const finalSecondaryColor = brandingMode === 'preset' 
         ? selectedPreset?.colors[2] || secondaryColor 
         : secondaryColor;
+      
+      // Get default animation style for the selected theme
+      const defaultAnimationStyle = getThemeDefaultAnimationStyle(selectedTheme);
 
       const { data: panelData, error } = await supabase
         .from('panels')
@@ -401,7 +405,13 @@ const PanelOnboardingV2 = () => {
             subscription_tier: selectedPlan,
             subscription_status: 'active',
             onboarding_completed: true,
-            default_currency: currency
+            default_currency: currency,
+            custom_branding: {
+              heroAnimationStyle: defaultAnimationStyle,
+              enableAnimations: true,
+              primaryColor: finalPrimaryColor,
+              secondaryColor: finalSecondaryColor
+            }
           }
         ])
         .select()
