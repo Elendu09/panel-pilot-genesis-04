@@ -966,28 +966,54 @@ const PanelOnboardingV2 = () => {
           </div>
           <Progress value={progress} className="h-2" />
           
-          {/* Step Indicators */}
-          <div className="flex justify-between mt-4 gap-1">
-            {visibleSteps.map((step) => {
+          {/* Step Indicators - Mobile Optimized */}
+          <div className="flex justify-between mt-4 gap-1 sm:gap-2">
+            {visibleSteps.map((step, index) => {
               const Icon = step.icon;
               const isCompleted = completedSteps.includes(step.id);
               const isCurrent = currentStep === step.id;
+              
+              // Find current step index in visible steps
+              const currentVisibleIndex = visibleSteps.findIndex(s => s.id === currentStep);
+              
+              // On mobile, only show current step + immediate neighbors (3 max)
+              const isAdjacentOnMobile = 
+                isCurrent || 
+                index === currentVisibleIndex - 1 ||
+                index === currentVisibleIndex + 1;
+              
+              // Show dots for hidden steps on mobile
+              const isFirstHidden = index === currentVisibleIndex - 2 && currentVisibleIndex > 1;
+              const isLastHidden = index === currentVisibleIndex + 2 && currentVisibleIndex < visibleSteps.length - 2;
               
               return (
                 <div 
                   key={step.id} 
                   className={cn(
-                    "flex flex-col items-center gap-1 flex-1",
+                    "flex flex-col items-center gap-1 transition-all",
+                    // On mobile: show current + neighbors, hide others
+                    isAdjacentOnMobile ? "flex-1" : "hidden sm:flex sm:flex-1",
+                    // Show ellipsis indicators on mobile for hidden steps
+                    (isFirstHidden || isLastHidden) && "flex sm:flex flex-none w-6",
                     isCurrent && "text-primary",
                     isCompleted && "text-emerald-500",
                     !isCurrent && !isCompleted && "text-muted-foreground"
                   )}
                 >
+                  {/* Ellipsis for hidden steps on mobile */}
+                  {(isFirstHidden || isLastHidden) ? (
+                    <div className="w-6 h-8 flex items-center justify-center sm:hidden">
+                      <span className="text-muted-foreground text-lg">···</span>
+                    </div>
+                  ) : null}
+                  
+                  {/* Regular step indicator */}
                   <div className={cn(
-                    "w-8 h-8 rounded-full flex items-center justify-center border-2 transition-colors",
-                    isCurrent && "border-primary bg-primary/10",
+                    "w-8 h-8 sm:w-8 sm:h-8 rounded-full flex items-center justify-center border-2 transition-all",
+                    isCurrent && "border-primary bg-primary/10 scale-110 sm:scale-100",
                     isCompleted && "border-emerald-500 bg-emerald-500/10",
-                    !isCurrent && !isCompleted && "border-muted"
+                    !isCurrent && !isCompleted && "border-muted",
+                    (isFirstHidden || isLastHidden) && "hidden sm:flex"
                   )}>
                     {isCompleted ? (
                       <CheckCircle className="w-4 h-4" />
@@ -995,10 +1021,23 @@ const PanelOnboardingV2 = () => {
                       <Icon className="w-4 h-4" />
                     )}
                   </div>
-                  <span className="text-xs hidden sm:block text-center">{step.title}</span>
+                  <span className={cn(
+                    "text-xs text-center whitespace-nowrap",
+                    // Hide titles on mobile except for current step
+                    isCurrent ? "block" : "hidden sm:block"
+                  )}>
+                    {step.title}
+                  </span>
                 </div>
               );
             })}
+          </div>
+          
+          {/* Mobile step counter */}
+          <div className="flex sm:hidden justify-center mt-2">
+            <span className="text-xs text-muted-foreground bg-muted/50 px-3 py-1 rounded-full">
+              Step {visibleStepIndex + 1} of {visibleSteps.length}
+            </span>
           </div>
         </div>
 
