@@ -1715,6 +1715,7 @@ export type Database = {
           invited_by: string | null
           is_active: boolean | null
           panel_id: string
+          password_hash: string | null
           permissions: Json | null
           role: Database["public"]["Enums"]["panel_role"]
           updated_at: string
@@ -1729,6 +1730,7 @@ export type Database = {
           invited_by?: string | null
           is_active?: boolean | null
           panel_id: string
+          password_hash?: string | null
           permissions?: Json | null
           role?: Database["public"]["Enums"]["panel_role"]
           updated_at?: string
@@ -1743,6 +1745,7 @@ export type Database = {
           invited_by?: string | null
           is_active?: boolean | null
           panel_id?: string
+          password_hash?: string | null
           permissions?: Json | null
           role?: Database["public"]["Enums"]["panel_role"]
           updated_at?: string
