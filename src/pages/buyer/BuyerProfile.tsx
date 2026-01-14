@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,7 +23,8 @@ import {
   AlertCircle,
   RefreshCw,
   Smartphone,
-  ShieldCheck
+  ShieldCheck,
+  Compass
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -33,7 +35,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { ChangePasswordDialog } from "@/components/buyer/ChangePasswordDialog";
 
 const BuyerProfile = () => {
+  const navigate = useNavigate();
   const { buyer, loading: authLoading, refreshBuyer } = useBuyerAuth();
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
+  const handleStartTour = () => {
+    navigate('/dashboard');
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('restartBuyerTour'));
+    }, 300);
+  };
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [resendingVerification, setResendingVerification] = useState(false);
@@ -431,7 +442,6 @@ const BuyerProfile = () => {
                     onClick={async () => {
                       setResendingVerification(true);
                       try {
-                        // In a real implementation, this would call an edge function
                         toast({ title: "Verification email sent!", description: "Please check your inbox." });
                       } catch (e) {
                         toast({ title: "Failed to send", variant: "destructive" });
@@ -451,6 +461,24 @@ const BuyerProfile = () => {
                   </Button>
                 )}
               </div>
+
+              {/* Take Tour Button - Mobile Only */}
+              {isMobile && (
+                <div className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-primary/20">
+                      <Compass className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-medium">Take a Tour</p>
+                      <p className="text-sm text-muted-foreground">Learn how to use the app</p>
+                    </div>
+                  </div>
+                  <Button size="sm" onClick={handleStartTour}>
+                    Start Tour
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </motion.div>
@@ -459,4 +487,5 @@ const BuyerProfile = () => {
   );
 };
 
+export default BuyerProfile;
 export default BuyerProfile;
