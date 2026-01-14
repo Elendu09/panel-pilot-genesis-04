@@ -287,7 +287,12 @@ const PanelOnboarding = () => {
       }
 
       toast({
-        title: "Panel Created! 🎉",
+        title: (
+          <span className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4" />
+            Panel Created Successfully!
+          </span>
+        ) as any,
         description: "Your subdomain is live now. If you added a custom domain, complete DNS setup to go live."
       });
 
