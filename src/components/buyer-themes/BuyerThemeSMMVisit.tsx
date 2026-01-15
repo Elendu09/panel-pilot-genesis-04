@@ -465,6 +465,76 @@ export const BuyerThemeSMMVisit = ({ children, className, themeMode = 'light' }:
         .dark .buyer-theme-smmvisit button .text-muted-foreground {
           color: rgba(255, 255, 255, 0.65) !important;
         }
+        
+        /* ===== HERO BUTTONS DARK MODE - Fast Order & View Services ===== */
+        /* Fast Order button - dark themed with gold accent */
+        .dark .buyer-theme-smmvisit .theme-hero button:not(.theme-button-primary),
+        .dark .buyer-theme-smmvisit .theme-hero .rounded-full:not([class*="gradient"]):not(.theme-button-primary) {
+          background: #1A1A1A !important;
+          border: 2px solid rgba(255, 215, 0, 0.3) !important;
+          color: #FFD700 !important;
+        }
+        
+        .dark .buyer-theme-smmvisit .theme-hero button:not(.theme-button-primary):hover,
+        .dark .buyer-theme-smmvisit .theme-hero .rounded-full:not([class*="gradient"]):not(.theme-button-primary):hover {
+          background: rgba(255, 215, 0, 0.15) !important;
+          border-color: rgba(255, 215, 0, 0.5) !important;
+        }
+        
+        .dark .buyer-theme-smmvisit .theme-hero button:not(.theme-button-primary) span,
+        .dark .buyer-theme-smmvisit .theme-hero .rounded-full:not(.theme-button-primary) span {
+          color: #FFD700 !important;
+        }
+        
+        /* View Services button - outline style dark mode fix */
+        .dark .buyer-theme-smmvisit button.border-2,
+        .dark .buyer-theme-smmvisit .border-2.rounded-full,
+        .dark .buyer-theme-smmvisit button[data-variant="outline"],
+        .dark .buyer-theme-smmvisit section button:not([style*="background"]):not([class*="gradient"]) {
+          background: #1A1A1A !important;
+          border: 2px solid rgba(255, 215, 0, 0.5) !important;
+          color: #FFD700 !important;
+        }
+        
+        .dark .buyer-theme-smmvisit button.border-2:hover,
+        .dark .buyer-theme-smmvisit .border-2.rounded-full:hover,
+        .dark .buyer-theme-smmvisit button[data-variant="outline"]:hover,
+        .dark .buyer-theme-smmvisit section button:not([style*="background"]):not([class*="gradient"]):hover {
+          background: rgba(255, 215, 0, 0.15) !important;
+          border-color: #FFD700 !important;
+        }
+        
+        .dark .buyer-theme-smmvisit button.border-2 span,
+        .dark .buyer-theme-smmvisit section button:not([style*="background"]) span,
+        .dark .buyer-theme-smmvisit section button:not([style*="background"]) a {
+          color: #FFD700 !important;
+        }
+        
+        /* Fix gradient buttons to keep their proper style */
+        .dark .buyer-theme-smmvisit button[class*="bg-gradient"],
+        .dark .buyer-theme-smmvisit .bg-gradient-to-r,
+        .dark .buyer-theme-smmvisit section button[style*="background"] {
+          border: none !important;
+          color: #1A1A1A !important;
+          box-shadow: 0 4px 20px rgba(255, 215, 0, 0.35) !important;
+        }
+        
+        .dark .buyer-theme-smmvisit button[class*="bg-gradient"] span,
+        .dark .buyer-theme-smmvisit .bg-gradient-to-r span,
+        .dark .buyer-theme-smmvisit section button[style*="background"] span {
+          color: #1A1A1A !important;
+        }
+        
+        .dark .buyer-theme-smmvisit button[class*="bg-gradient"]:hover,
+        .dark .buyer-theme-smmvisit .bg-gradient-to-r:hover {
+          box-shadow: 0 6px 30px rgba(255, 215, 0, 0.5) !important;
+        }
+        
+        /* Specific fix for hero section outline buttons (View Services) */
+        .dark .buyer-theme-smmvisit section#hero button[class*="variant"],
+        .dark .buyer-theme-smmvisit section button a:not([class*="gradient"]) {
+          color: #FFD700 !important;
+        }
       `}</style>
         {children}
       </div>
