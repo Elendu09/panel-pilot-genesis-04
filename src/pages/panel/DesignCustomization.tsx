@@ -2317,9 +2317,7 @@ export default function DesignCustomization() {
               <TooltipContent>Redo (Ctrl+Shift+Z)</TooltipContent>
             </Tooltip>
 
-            <Button variant="outline" size="sm" onClick={createPreview}>
-              <ExternalLink className="w-4 h-4 mr-2" />Preview
-            </Button>
+
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button 
