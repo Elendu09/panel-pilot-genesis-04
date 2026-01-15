@@ -1,4 +1,4 @@
-import { useState, useContext, useCallback } from 'react';
+import { useState, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, Sun, Moon, LayoutDashboard, LogOut, Sparkles } from 'lucide-react';
@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { BuyerAuthContext } from '@/contexts/BuyerAuthContext';
 import { LanguageSelector } from '@/components/buyer/LanguageSelector';
-import { useBuyerThemeMode } from '@/contexts/BuyerThemeContext';
 
 interface ThemeNavigationProps {
   companyName: string;
@@ -35,7 +34,7 @@ export const ThemeNavigation = ({
   logoIcon,
   defaultIcon,
   showBlogInMenu = false,
-  themeMode: propThemeMode,
+  themeMode = 'dark',
   onThemeModeChange,
   containerMax = 1280,
   mutedColor = '#9CA3AF',
@@ -51,12 +50,6 @@ export const ThemeNavigation = ({
 }: ThemeNavigationProps) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
-  
-  // Use the buyer theme context for consistent theme mode across all pages
-  const { themeMode: contextThemeMode, toggleThemeMode } = useBuyerThemeMode();
-  
-  // Use prop value if provided, otherwise use context
-  const themeMode = propThemeMode || contextThemeMode;
   
   // Try to get buyer auth context - may not be available in preview mode
   const buyerAuthContext = useContext(BuyerAuthContext);
@@ -74,12 +67,9 @@ export const ThemeNavigation = ({
   
   const links = navLinks || defaultLinks;
 
-  const handleToggleTheme = useCallback(() => {
-    // Use context toggle which persists to localStorage
-    toggleThemeMode();
-    // Also call prop callback if provided
+  const toggleTheme = () => {
     onThemeModeChange?.(isLight ? 'dark' : 'light');
-  }, [toggleThemeMode, onThemeModeChange, isLight]);
+  };
 
   const handleSignOut = () => {
     signOut?.();
@@ -155,7 +145,7 @@ export const ThemeNavigation = ({
               <Button 
                 variant="ghost" 
                 size="icon"
-                onClick={handleToggleTheme}
+                onClick={toggleTheme}
                 className="hover:bg-white/10"
                 aria-label={`Switch to ${isLight ? 'dark' : 'light'} mode`}
               >
@@ -244,7 +234,7 @@ export const ThemeNavigation = ({
               <Button 
                 variant="ghost" 
                 size="icon"
-                onClick={handleToggleTheme}
+                onClick={toggleTheme}
                 className="hover:bg-white/10"
                 aria-label={`Switch to ${isLight ? 'dark' : 'light'} mode`}
               >

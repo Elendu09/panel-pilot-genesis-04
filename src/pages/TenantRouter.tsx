@@ -9,7 +9,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { BuyerAuthProvider } from '@/contexts/BuyerAuthContext';
-import { BuyerThemeProvider } from '@/contexts/BuyerThemeContext';
 import { BuyerProtectedRoute } from '@/components/buyer/BuyerProtectedRoute';
 import { CurrencyProvider } from '@/contexts/CurrencyContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
@@ -225,10 +224,6 @@ const TenantContent = () => {
   // If this is a tenant domain and we found a panel, show PUBLIC storefront first
   if (isTenantDomain && panel) {
     // Favicon is handled globally by the useEffect above
-    
-    // Get panel owner's default theme mode from custom_branding
-    const customBranding = panel.custom_branding as any;
-    const panelDefaultTheme: 'light' | 'dark' = customBranding?.themeMode === 'light' ? 'light' : 'dark';
 
     return (
       <QueryClientProvider client={queryClient}>
@@ -240,83 +235,81 @@ const TenantContent = () => {
                 <Sonner />
                 <LanguageProvider>
                   <BuyerAuthProvider panelId={panel.id}>
-                    <BuyerThemeProvider panelId={panel.id} defaultThemeMode={panelDefaultTheme}>
-                      <BrowserRouter>
-                        <Routes>
-                          {/* PUBLIC routes - Storefront accessible without login */}
-                          <Route path="/" element={<Storefront />} />
-                          <Route path="/auth" element={<BuyerAuth />} />
-                          <Route path="/services" element={<BuyerPublicServices />} />
-                          <Route path="/fast-order" element={<FastOrder />} />
-                          <Route path="/track-order" element={<TrackOrder />} />
-                          <Route path="/privacy" element={<BuyerPrivacy />} />
-                          <Route path="/terms" element={<BuyerTerms />} />
-                          <Route path="/api" element={<BuyerAPI />} />
-                          <Route path="/contact" element={<BuyerContact />} />
+                    <BrowserRouter>
+                      <Routes>
+                        {/* PUBLIC routes - Storefront accessible without login */}
+                        <Route path="/" element={<Storefront />} />
+                        <Route path="/auth" element={<BuyerAuth />} />
+                        <Route path="/services" element={<BuyerPublicServices />} />
+                        <Route path="/fast-order" element={<FastOrder />} />
+                        <Route path="/track-order" element={<TrackOrder />} />
+                        <Route path="/privacy" element={<BuyerPrivacy />} />
+                        <Route path="/terms" element={<BuyerTerms />} />
+                        <Route path="/api" element={<BuyerAPI />} />
+                        <Route path="/contact" element={<BuyerContact />} />
 
-                          {/* Blog routes */}
-                          <Route path="/blog" element={<BuyerBlog />} />
-                          <Route path="/blog/:slug" element={<BuyerBlogPost />} />
+                        {/* Blog routes */}
+                        <Route path="/blog" element={<BuyerBlog />} />
+                        <Route path="/blog/:slug" element={<BuyerBlogPost />} />
 
-                          {/* Sitemap route */}
-                          <Route path="/sitemap.xml" element={<Sitemap />} />
-                          
-                          {/* Protected buyer routes */}
-                          <Route path="/dashboard" element={
-                            <BuyerProtectedRoute>
-                              <BuyerDashboard />
-                            </BuyerProtectedRoute>
-                          } />
-                          <Route path="/new-order" element={
-                            <BuyerProtectedRoute>
-                              <BuyerNewOrder />
-                            </BuyerProtectedRoute>
-                          } />
-                          <Route path="/orders" element={
-                            <BuyerProtectedRoute>
-                              <BuyerOrders />
-                            </BuyerProtectedRoute>
-                          } />
-                          <Route path="/orders/:orderId" element={
-                            <BuyerProtectedRoute>
-                              <BuyerOrderTracking />
-                            </BuyerProtectedRoute>
-                          } />
-                          <Route path="/profile" element={
-                            <BuyerProtectedRoute>
-                              <BuyerProfile />
-                            </BuyerProtectedRoute>
-                          } />
-                          <Route path="/deposit" element={
-                            <BuyerProtectedRoute>
-                              <BuyerDeposit />
-                            </BuyerProtectedRoute>
-                          } />
-                          <Route path="/support" element={
-                            <BuyerProtectedRoute>
-                              <BuyerSupport />
-                            </BuyerProtectedRoute>
-                          } />
-                          <Route path="/favorites" element={
-                            <BuyerProtectedRoute>
-                              <BuyerFavorites />
-                            </BuyerProtectedRoute>
-                          } />
-                          <Route path="/bulk-order" element={
-                            <BuyerProtectedRoute>
-                              <BuyerBulkOrder />
-                            </BuyerProtectedRoute>
-                          } />
-                          
-                          {/* Team member routes */}
-                          <Route path="/team-login" element={<TeamAuth />} />
-                          <Route path="/team-dashboard" element={<TeamDashboard />} />
-                          
-                          {/* Catch all - redirect to storefront */}
-                          <Route path="*" element={<Navigate to="/" replace />} />
-                        </Routes>
-                      </BrowserRouter>
-                    </BuyerThemeProvider>
+                        {/* Sitemap route */}
+                        <Route path="/sitemap.xml" element={<Sitemap />} />
+                        
+                        {/* Protected buyer routes */}
+                        <Route path="/dashboard" element={
+                          <BuyerProtectedRoute>
+                            <BuyerDashboard />
+                          </BuyerProtectedRoute>
+                        } />
+                        <Route path="/new-order" element={
+                          <BuyerProtectedRoute>
+                            <BuyerNewOrder />
+                          </BuyerProtectedRoute>
+                        } />
+                        <Route path="/orders" element={
+                          <BuyerProtectedRoute>
+                            <BuyerOrders />
+                          </BuyerProtectedRoute>
+                        } />
+                        <Route path="/orders/:orderId" element={
+                          <BuyerProtectedRoute>
+                            <BuyerOrderTracking />
+                          </BuyerProtectedRoute>
+                        } />
+                        <Route path="/profile" element={
+                          <BuyerProtectedRoute>
+                            <BuyerProfile />
+                          </BuyerProtectedRoute>
+                        } />
+                        <Route path="/deposit" element={
+                          <BuyerProtectedRoute>
+                            <BuyerDeposit />
+                          </BuyerProtectedRoute>
+                        } />
+                        <Route path="/support" element={
+                          <BuyerProtectedRoute>
+                            <BuyerSupport />
+                          </BuyerProtectedRoute>
+                        } />
+                        <Route path="/favorites" element={
+                          <BuyerProtectedRoute>
+                            <BuyerFavorites />
+                          </BuyerProtectedRoute>
+                        } />
+                        <Route path="/bulk-order" element={
+                          <BuyerProtectedRoute>
+                            <BuyerBulkOrder />
+                          </BuyerProtectedRoute>
+                        } />
+                        
+                        {/* Team member routes */}
+                        <Route path="/team-login" element={<TeamAuth />} />
+                        <Route path="/team-dashboard" element={<TeamDashboard />} />
+                        
+                        {/* Catch all - redirect to storefront */}
+                        <Route path="*" element={<Navigate to="/" replace />} />
+                      </Routes>
+                    </BrowserRouter>
                   </BuyerAuthProvider>
                 </LanguageProvider>
               </CurrencyProvider>

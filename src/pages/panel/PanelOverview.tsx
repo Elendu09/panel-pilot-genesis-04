@@ -439,32 +439,25 @@ const PanelOverview = () => {
         <meta name="robots" content="noindex,nofollow" />
       </Helmet>
 
-      {/* Enhanced Welcome Header with Stacked Cards Effect */}
-      <motion.div variants={itemVariants} className="relative pt-12 md:pt-14">
-        {/* Stacked card layers behind - creates depth effect */}
-        <div className="absolute inset-x-12 md:inset-x-16 top-0 h-[calc(100%-12px)] rounded-2xl bg-primary/5 border border-primary/10 backdrop-blur-sm" />
-        <div className="absolute inset-x-8 md:inset-x-10 top-4 md:top-5 h-[calc(100%-16px)] rounded-2xl bg-primary/8 border border-primary/15 backdrop-blur-sm" />
-        <div className="absolute inset-x-4 md:inset-x-5 top-8 md:top-10 h-[calc(100%-20px)] rounded-2xl bg-primary/10 border border-primary/20 backdrop-blur-sm" />
+      {/* Enhanced Welcome Header with Hero-like Design */}
+      <motion.div variants={itemVariants} className="relative overflow-hidden rounded-2xl border border-primary/20">
+        {/* Background gradient layers */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/10 to-primary/5" />
         
-        {/* Main card */}
-        <div className="relative z-10 overflow-hidden rounded-2xl border border-primary/20 bg-card">
-          {/* Background gradient layers */}
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/10 to-primary/5" />
-          
-          {/* Animated glow orbs */}
-          <div className="absolute -top-20 -right-20 w-64 h-64 bg-primary/30 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute -bottom-20 -left-20 w-48 h-48 bg-primary/20 rounded-full blur-3xl" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-32 bg-primary/10 rounded-full blur-3xl" />
-          
-          {/* Grid pattern overlay */}
-          <div 
-            className="absolute inset-0 opacity-[0.03]" 
-            style={{ 
-              backgroundImage: 'radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)',
-              backgroundSize: '24px 24px'
-            }} 
-          />
+        {/* Animated glow orbs */}
+        <div className="absolute -top-20 -right-20 w-64 h-64 bg-primary/30 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute -bottom-20 -left-20 w-48 h-48 bg-primary/20 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-32 bg-primary/10 rounded-full blur-3xl" />
+        
+        {/* Grid pattern overlay */}
+        <div 
+          className="absolute inset-0 opacity-[0.03]" 
+          style={{ 
+            backgroundImage: 'radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)',
+            backgroundSize: '24px 24px'
+          }} 
+        />
         
         <div className="relative z-10 p-6 md:p-8">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
@@ -571,7 +564,6 @@ const PanelOverview = () => {
               </Button>
             </div>
           </div>
-        </div>
         </div>
       </motion.div>
 
