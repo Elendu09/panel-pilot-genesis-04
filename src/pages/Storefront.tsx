@@ -26,6 +26,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { generateBuyerThemeCSS } from '@/lib/color-utils';
+import { useBuyerThemeMode } from '@/contexts/BuyerThemeContext';
 
 // Error Boundary Component
 const ErrorFallback = ({ error, panelName }: { error: string; panelName?: string }) => (
@@ -56,6 +57,9 @@ const Storefront = () => {
   const { panel, loading: tenantLoading, error: tenantError } = useTenant();
   const { services } = useTenantServices(panel?.id);
   const [renderError, setRenderError] = useState<string | null>(null);
+  
+  // Use the buyer theme context for light/dark mode (allows buyers to toggle)
+  const { themeMode, setThemeMode } = useBuyerThemeMode();
 
   // Immediately update document title when panel loads (before React Helmet)
   useEffect(() => {
@@ -74,16 +78,15 @@ const Storefront = () => {
       panelId: panel?.id,
       panelName: panel?.name,
       themeType: panel?.theme_type,
+      themeMode,
       servicesCount: services?.length
     });
-  }, [tenantLoading, tenantError, panel, services]);
+  }, [tenantLoading, tenantError, panel, services, themeMode]);
 
   const design = panel?.custom_branding || {};
   const customBranding = panel?.custom_branding as any;
   // Theme priority: custom_branding.selectedTheme > buyer_theme > theme_type > fallback
   const selectedTheme = customBranding?.selectedTheme || panel?.buyer_theme || panel?.theme_type || 'default';
-  // Theme mode from customization - used for light/dark CSS selectors
-  const themeMode: 'light' | 'dark' = customBranding?.themeMode === 'light' ? 'light' : 'dark';
 
   // Generate CSS variables for design preset colors - ensures colors sync across storefront
   const storefrontColorStyles = useMemo(() => {
@@ -150,7 +153,7 @@ const Storefront = () => {
 
   const canonicalUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
-  // Full customization object with all design settings
+  // Full customization object with all design settings - include setThemeMode for toggle
   const fullCustomization = {
     ...design,
     logoUrl: customBranding?.logoUrl || panel?.logo_url,
@@ -158,7 +161,8 @@ const Storefront = () => {
     companyName: customBranding?.companyName || panel?.name,
     primaryColor: customBranding?.primaryColor || panel?.primary_color || '#6366F1',
     secondaryColor: customBranding?.secondaryColor || panel?.secondary_color || '#8B5CF6',
-    themeMode, // Pass theme mode explicitly
+    themeMode, // Pass current theme mode
+    setThemeMode, // Pass setter so components can toggle
   };
 
   const themeProps = {
