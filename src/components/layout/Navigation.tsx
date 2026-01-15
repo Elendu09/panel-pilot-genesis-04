@@ -70,9 +70,11 @@ export const Navigation = () => {
                 <Button asChild variant="outline" size="sm">
                   <Link to={getDashboardPath()}>Dashboard</Link>
                 </Button>
-                <Button asChild variant="outline" size="sm">
-                  <Link to="/services">Service Tools</Link>
-                </Button>
+                {profile?.role !== 'panel_owner' && (
+                  <Button asChild variant="outline" size="sm">
+                    <Link to="/services">Service Tools</Link>
+                  </Button>
+                )}
                 <Button variant="destructive" size="sm" onClick={signOut}>
                   <LogOut className="h-4 w-4 mr-1" />
                   Logout
@@ -144,9 +146,11 @@ export const Navigation = () => {
                     <Button asChild variant="outline" className="w-full justify-start">
                       <Link to={getDashboardPath()}>Dashboard</Link>
                     </Button>
-                    <Button asChild variant="outline" className="w-full justify-start">
-                      <Link to="/services">Service Tools</Link>
-                    </Button>
+                    {profile?.role !== 'panel_owner' && (
+                      <Button asChild variant="outline" className="w-full justify-start">
+                        <Link to="/services">Service Tools</Link>
+                      </Button>
+                    )}
                     <Button variant="ghost" onClick={signOut} className="w-full justify-start">
                       <LogOut className="h-4 w-4 mr-2" />
                       Sign Out
