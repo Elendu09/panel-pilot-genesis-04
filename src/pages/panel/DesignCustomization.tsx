@@ -910,10 +910,14 @@ function LivePreviewRenderer({ customization }: { customization: any }) {
       break;
   }
 
+  // Wrapper structure: outer div has theme mode class, inner div has theme wrapper class
+  // This ensures CSS selectors like `.light .buyer-theme-wrapper` work correctly
   return (
-    <div className={cn('buyer-theme-wrapper min-h-full', themeMode)}>
-      <style>{previewCSS}</style>
-      {rendered}
+    <div className={themeMode}>
+      <div className="buyer-theme-wrapper min-h-full">
+        <style>{previewCSS}</style>
+        {rendered}
+      </div>
     </div>
   );
 }
@@ -3433,26 +3437,103 @@ export default function DesignCustomization() {
               </div>
             </div>
 
-            {/* Live Preview Container - Fully Responsive */}
-            <div className="flex-1 overflow-hidden p-2 sm:p-4 flex items-start justify-center bg-gradient-to-b from-[#0a0a12] to-[#0f0f1a]">
-              <div
-                className={cn(
-                  'transition-all duration-500 ease-out origin-top rounded-lg sm:rounded-xl overflow-hidden shadow-2xl ring-1 ring-white/10 w-full',
-                  previewDevice === 'mobile' && 'max-w-[400px]',
-                  previewDevice === 'tablet' && 'max-w-[900px]',
-                  previewDevice === 'desktop' && 'max-w-[1200px]'
-                )}
-              >
-                <div
-                  className="w-full h-full overflow-auto scrollbar-thin scrollbar-thumb-primary/20 bg-background"
-                  style={{
-                    height: 'calc(100vh - 180px)',
-                    maxHeight: 'calc(100vh - 160px)',
-                  }}
-                >
-                  <LivePreviewRenderer customization={{ ...customization, themeMode: previewThemeMode }} />
+            {/* Live Preview Container - Enhanced Device Frames */}
+            <div className="flex-1 overflow-hidden p-2 sm:p-4 lg:p-6 flex items-start justify-center bg-gradient-to-b from-[#0a0a12] to-[#0f0f1a]">
+              {/* Mobile Device Frame */}
+              {previewDevice === 'mobile' && (
+                <div className="flex flex-col items-center">
+                  <div 
+                    className="relative bg-[#1a1a1a] rounded-[40px] p-2 shadow-2xl"
+                    style={{ 
+                      boxShadow: '0 25px 80px -12px rgba(0, 0, 0, 0.8), inset 0 0 0 1px rgba(255,255,255,0.1)',
+                      width: '320px',
+                    }}
+                  >
+                    {/* Dynamic Island / Notch */}
+                    <div className="absolute top-3 left-1/2 -translate-x-1/2 w-24 h-6 bg-black rounded-full z-10 flex items-center justify-center gap-2">
+                      <div className="w-2 h-2 bg-gray-800 rounded-full" />
+                      <div className="w-8 h-3 bg-gray-900 rounded-full" />
+                    </div>
+                    {/* Screen */}
+                    <div 
+                      className="rounded-[32px] overflow-hidden bg-background"
+                      style={{ height: '640px' }}
+                    >
+                      <div className="w-full h-full overflow-auto scrollbar-thin scrollbar-thumb-primary/20">
+                        <LivePreviewRenderer customization={{ ...customization, themeMode: previewThemeMode }} />
+                      </div>
+                    </div>
+                    {/* Home Indicator */}
+                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-28 h-1 bg-white/30 rounded-full" />
+                  </div>
+                  <p className="mt-3 text-xs text-muted-foreground">iPhone 14 Pro • 320×640</p>
                 </div>
-              </div>
+              )}
+
+              {/* Tablet Device Frame */}
+              {previewDevice === 'tablet' && (
+                <div className="flex flex-col items-center">
+                  <div 
+                    className="relative bg-[#1a1a1a] rounded-[24px] p-2 shadow-2xl"
+                    style={{ 
+                      boxShadow: '0 25px 80px -12px rgba(0, 0, 0, 0.8), inset 0 0 0 1px rgba(255,255,255,0.1)',
+                      width: '680px',
+                      maxWidth: 'calc(100vw - 420px)',
+                    }}
+                  >
+                    {/* Camera */}
+                    <div className="absolute top-3 left-1/2 -translate-x-1/2 w-3 h-3 bg-gray-800 rounded-full z-10" />
+                    {/* Screen */}
+                    <div 
+                      className="rounded-[16px] overflow-hidden bg-background"
+                      style={{ height: 'calc(100vh - 220px)', maxHeight: '800px' }}
+                    >
+                      <div className="w-full h-full overflow-auto scrollbar-thin scrollbar-thumb-primary/20">
+                        <LivePreviewRenderer customization={{ ...customization, themeMode: previewThemeMode }} />
+                      </div>
+                    </div>
+                    {/* Home Indicator */}
+                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-20 h-1 bg-white/30 rounded-full" />
+                  </div>
+                  <p className="mt-3 text-xs text-muted-foreground">iPad • Tablet View</p>
+                </div>
+              )}
+
+              {/* Desktop Preview */}
+              {previewDevice === 'desktop' && (
+                <div className="flex flex-col items-center w-full">
+                  <div 
+                    className="relative bg-[#1a1a1a] rounded-xl p-1.5 shadow-2xl w-full max-w-[1200px]"
+                    style={{ 
+                      boxShadow: '0 25px 80px -12px rgba(0, 0, 0, 0.8), inset 0 0 0 1px rgba(255,255,255,0.1)',
+                    }}
+                  >
+                    {/* Browser Chrome */}
+                    <div className="flex items-center gap-2 px-3 py-2 bg-[#252525] rounded-t-lg">
+                      <div className="flex gap-1.5">
+                        <div className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
+                        <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/80" />
+                        <div className="w-2.5 h-2.5 rounded-full bg-green-500/80" />
+                      </div>
+                      <div className="flex-1 flex justify-center">
+                        <div className="px-4 py-1 bg-[#1a1a1a] rounded-md text-[10px] text-muted-foreground font-mono">
+                          {customization.companyName?.toLowerCase().replace(/\s+/g, '') || 'yourpanel'}.homeofsmm.com
+                        </div>
+                      </div>
+                    </div>
+                    {/* Screen */}
+                    <div 
+                      className="rounded-b-lg overflow-hidden bg-background"
+                      style={{ height: 'calc(100vh - 220px)', maxHeight: '800px' }}
+                    >
+                      <div className="w-full h-full overflow-auto scrollbar-thin scrollbar-thumb-primary/20">
+                        <LivePreviewRenderer customization={{ ...customization, themeMode: previewThemeMode }} />
+                      </div>
+                    </div>
+                  </div>
+                  <p className="mt-3 text-xs text-muted-foreground">Desktop • Full Width</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
