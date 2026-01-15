@@ -16,6 +16,7 @@ import {
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { ThemeNavigation } from '../shared/ThemeNavigation';
 import { AnimatedHeroText, getThemeDefaultAnimationStyle, getAnimatedWordFromTitle } from '../shared/AnimatedHeroText';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface FlySMMHomepageProps {
   panelName?: string;
@@ -38,6 +39,7 @@ export const FlySMMHomepage = ({
   logoUrl 
 }: FlySMMHomepageProps) => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   
   // Theme mode - reactive to customization prop (no local state), FlySMM defaults to light
   const themeMode = customization.themeMode || 'light';
@@ -72,11 +74,11 @@ export const FlySMMHomepage = ({
   const fontFamily = customization.fontFamily || 'Nunito';
   const headingWeight = customization.headingWeight || '700';
 
-  // Content
-  const heroTitle = customization.heroTitle || 'Grow Your';
-  const heroSubtitle = customization.heroSubtitle || 'Get real followers, likes, and views at the best prices. Fast delivery, premium quality, 24/7 support.';
-  const heroCTA = customization.heroCTAText || 'Get Started';
-  const heroSecondaryCTA = customization.heroSecondaryCTAText || 'View Prices';
+  // Content - use translations as fallback
+  const heroTitle = customization.heroTitle || t('storefront.hero.defaultTitle');
+  const heroSubtitle = customization.heroSubtitle || t('storefront.hero.defaultSubtitle');
+  const heroCTA = customization.heroCTAText || t('storefront.hero.getStarted');
+  const heroSecondaryCTA = customization.heroSecondaryCTAText || t('storefront.hero.viewServices');
   const displayLogo = customization.logoUrl || logoUrl;
   const companyName = customization.companyName || panelName;
 
