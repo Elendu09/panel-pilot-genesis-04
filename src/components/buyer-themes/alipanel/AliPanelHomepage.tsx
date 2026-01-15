@@ -17,6 +17,7 @@ import {
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { ThemeNavigation } from '../shared/ThemeNavigation';
 import { AnimatedHeroText, getThemeDefaultAnimationStyle, getAnimatedWordFromTitle } from '../shared/AnimatedHeroText';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface AliPanelHomepageProps {
   panelName?: string;
@@ -39,6 +40,7 @@ export const AliPanelHomepage = ({
   logoUrl 
 }: AliPanelHomepageProps) => {
   const navigate = useNavigate();
+  const { t, isRTL } = useLanguage();
   
   // Theme mode - reactive to customization prop (no local state)
   const themeMode = customization.themeMode || 'dark';
@@ -77,12 +79,12 @@ export const AliPanelHomepage = ({
   const headingFont = customization.headingFont || fontFamily;
   const headingWeight = customization.headingWeight || '700';
 
-  // Content from customization or defaults
-  const heroTitle = customization.heroTitle || 'Boost Your';
-  const heroSubtitle = customization.heroSubtitle || 'Get real followers, likes, and views at the lowest prices. Trusted by over 10,000+ customers worldwide.';
-  const heroBadge = customization.heroBadgeText || '#1 Rated SMM Panel';
-  const heroCTA = customization.heroCTAText || 'Start Growing';
-  const heroSecondaryCTA = customization.heroSecondaryCTAText || 'View Prices';
+  // Content from customization or translations (fallback to translation keys)
+  const heroTitle = customization.heroTitle || t('buyer.hero.title');
+  const heroSubtitle = customization.heroSubtitle || t('buyer.hero.subtitle');
+  const heroBadge = customization.heroBadgeText || t('buyer.hero.badge');
+  const heroCTA = customization.heroCTAText || t('buyer.hero.cta');
+  const heroSecondaryCTA = customization.heroSecondaryCTAText || t('buyer.hero.ctaSecondary');
   const displayLogo = customization.logoUrl || logoUrl;
   const companyName = customization.companyName || panelName;
 

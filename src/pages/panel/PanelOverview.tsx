@@ -439,93 +439,128 @@ const PanelOverview = () => {
         <meta name="robots" content="noindex,nofollow" />
       </Helmet>
 
-      {/* Welcome Header with Glass Effect */}
-      <motion.div variants={itemVariants} className="relative overflow-hidden rounded-2xl glass-card p-6">
-        <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-transparent to-primary/5 pointer-events-none" />
-        <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary/20 rounded-full blur-3xl" />
+      {/* Enhanced Welcome Header with Hero-like Design */}
+      <motion.div variants={itemVariants} className="relative overflow-hidden rounded-2xl border border-primary/20">
+        {/* Background gradient layers */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/10 to-primary/5" />
         
-        <div className="relative z-10">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                {(panelData?.custom_branding as any)?.faviconUrl || panelData?.logo_url ? (
-                  <div className="w-12 h-12 rounded-xl overflow-hidden shadow-lg shadow-primary/20">
+        {/* Animated glow orbs */}
+        <div className="absolute -top-20 -right-20 w-64 h-64 bg-primary/30 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute -bottom-20 -left-20 w-48 h-48 bg-primary/20 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-32 bg-primary/10 rounded-full blur-3xl" />
+        
+        {/* Grid pattern overlay */}
+        <div 
+          className="absolute inset-0 opacity-[0.03]" 
+          style={{ 
+            backgroundImage: 'radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)',
+            backgroundSize: '24px 24px'
+          }} 
+        />
+        
+        <div className="relative z-10 p-6 md:p-8">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            {/* Left side - Branding & Info */}
+            <div className="flex items-start gap-4">
+              {/* Panel Logo/Icon */}
+              {(panelData?.custom_branding as any)?.faviconUrl || panelData?.logo_url ? (
+                <div className="relative">
+                  <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl overflow-hidden shadow-2xl shadow-primary/30 ring-2 ring-primary/20">
                     <img 
                       src={(panelData?.custom_branding as any)?.faviconUrl || panelData?.logo_url} 
                       alt="Panel Icon"
                       className="w-full h-full object-cover"
                     />
                   </div>
-                ) : (
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shadow-lg shadow-primary/20">
-                    <Sparkles className="w-6 h-6 text-primary-foreground" />
+                  {/* Active indicator */}
+                  <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 border-2 border-background flex items-center justify-center">
+                    <CheckCircle className="w-3 h-3 text-white" />
                   </div>
-                )}
-                <div>
-                  <h1 className="text-xl md:text-2xl font-bold flex items-center gap-2">
+                </div>
+              ) : (
+                <div className="relative">
+                  <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-primary via-primary/80 to-primary/60 flex items-center justify-center shadow-2xl shadow-primary/30 ring-2 ring-primary/20">
+                    <Sparkles className="w-8 h-8 md:w-10 md:h-10 text-primary-foreground" />
+                  </div>
+                  <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 border-2 border-background flex items-center justify-center">
+                    <CheckCircle className="w-3 h-3 text-white" />
+                  </div>
+                </div>
+              )}
+              
+              {/* Text Content */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-3 mb-1">
+                  <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
                     Welcome back!
-                    <motion.div
-                      animate={{ 
-                        scale: [1, 1.15, 1],
-                        filter: ["brightness(1)", "brightness(1.4)", "brightness(1)"]
-                      }}
-                      transition={{ 
-                        duration: 2, 
-                        repeat: Infinity,
-                        ease: "easeInOut"
-                      }}
-                      className="relative"
-                    >
-                      <Sparkles className="w-6 h-6 text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.8)]" />
-                      <div className="absolute inset-0 animate-ping opacity-50">
-                        <Sparkles className="w-6 h-6 text-amber-400/50" />
-                      </div>
-                    </motion.div>
                   </h1>
-                  <p className="text-sm text-muted-foreground">
-                    Here's what's happening with <span className="font-semibold text-foreground">{panelData?.name || 'your panel'}</span>
-                  </p>
+                  <motion.div
+                    animate={{ 
+                      scale: [1, 1.2, 1],
+                      rotate: [0, 10, -10, 0]
+                    }}
+                    transition={{ 
+                      duration: 2, 
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    }}
+                  >
+                    <Sparkles className="w-6 h-6 md:w-7 md:h-7 text-amber-400 drop-shadow-[0_0_12px_rgba(251,191,36,0.9)]" />
+                  </motion.div>
+                </div>
+                <p className="text-sm md:text-base text-muted-foreground">
+                  Manage <span className="font-semibold text-foreground">{panelData?.name || 'your panel'}</span> and track performance
+                </p>
+                
+                {/* Status Badges */}
+                <div className="flex items-center gap-2 mt-4 flex-wrap">
+                  <Badge variant="outline" className="bg-background/50 backdrop-blur-sm border-primary/30 gap-1.5 px-3 py-1">
+                    <Globe className="w-3.5 h-3.5 text-primary" />
+                    <span className="text-xs font-medium">{panelData?.subdomain}.smmpilot.online</span>
+                  </Badge>
+                  <Badge 
+                    variant="outline" 
+                    className={cn(
+                      "gap-1.5 px-3 py-1 backdrop-blur-sm",
+                      panelData?.status === 'active' 
+                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30' 
+                        : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
+                    )}
+                  >
+                    {panelData?.status === 'active' ? <Zap className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />}
+                    <span className="text-xs font-medium">{panelData?.status === 'active' ? 'Active' : panelData?.status}</span>
+                  </Badge>
+                  <Badge variant="outline" className="gap-1.5 px-3 py-1 bg-background/50 backdrop-blur-sm">
+                    <div className={cn(
+                      "w-2 h-2 rounded-full", 
+                      isLive ? "bg-emerald-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" : "bg-amber-500 animate-pulse"
+                    )} />
+                    <span className="text-xs font-medium">{isLive ? 'Live' : 'Connecting'}</span>
+                  </Badge>
                 </div>
               </div>
-              <div className="flex items-center gap-2 mt-3 flex-wrap">
-                <Badge variant="outline" className="pill-primary gap-1">
-                  <Activity className="w-3 h-3" />
-                  {panelData?.subdomain}.smmpilot.online
-                </Badge>
-                <Badge 
-                  variant="outline" 
-                  className={cn(
-                    "pill gap-1",
-                    panelData?.status === 'active' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30' : 'bg-amber-500/10 text-amber-500 border-amber-500/30'
-                  )}
-                >
-                  {panelData?.status === 'active' ? <CheckCircle className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
-                  {panelData?.status === 'active' ? 'Active' : panelData?.status}
-                </Badge>
-                <Badge variant="outline" className="gap-1">
-                  <div className={cn("w-2 h-2 rounded-full", isLive ? "bg-emerald-500 animate-pulse" : "bg-amber-500")} />
-                  {isLive ? 'Live' : 'Connecting'}
-                </Badge>
-              </div>
             </div>
-            <div className="flex gap-2 self-start md:self-auto">
+            
+            {/* Right side - Action Buttons */}
+            <div className="flex items-center gap-3 self-start lg:self-center">
               <Button 
                 variant="outline" 
-                size="sm" 
+                size="default"
                 onClick={handleManualRefresh}
                 disabled={refreshing}
-                className="gap-2"
+                className="gap-2 bg-background/50 backdrop-blur-sm hover:bg-background/80 border-border/50"
               >
                 <RefreshCw className={cn("w-4 h-4", refreshing && "animate-spin")} />
                 <span className="hidden sm:inline">Refresh</span>
               </Button>
               <Button 
-                size="sm" 
+                size="default"
                 onClick={handleViewPanel}
-                className="gap-2 bg-gradient-to-r from-primary to-primary/80"
+                className="gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/25"
               >
-                <Eye className="w-4 h-4" />
-                View Panel
+                <ExternalLink className="w-4 h-4" />
+                <span>View Panel</span>
               </Button>
             </div>
           </div>
