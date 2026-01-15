@@ -313,8 +313,8 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
         <div className="flex items-center gap-1 flex-shrink-0">
           {/* Balance + Add Funds Button */}
           <motion.div whileTap={{ scale: 0.95 }}>
-            <Link to="/deposit" className="flex items-center gap-1 px-2 py-1 rounded-full bg-slate-800/90 dark:bg-slate-800/90">
-              <span className="text-xs font-bold text-white">${userBalance.toFixed(2)}</span>
+            <Link to="/deposit" className="flex items-center gap-1 px-2 py-1 rounded-full bg-slate-200 dark:bg-slate-800/90 border border-border/50">
+              <span className="text-xs font-bold text-foreground">${userBalance.toFixed(2)}</span>
               <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
                 <Plus className="w-3 h-3 text-primary-foreground" />
               </div>
