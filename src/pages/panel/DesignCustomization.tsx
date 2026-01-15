@@ -31,6 +31,11 @@ import {
   FlySMMHomepage,
   SMMStayHomepage,
   SMMVisitHomepage,
+  BuyerThemeTGRef,
+  BuyerThemeAliPanel,
+  BuyerThemeFlySMM,
+  BuyerThemeSMMStay,
+  BuyerThemeSMMVisit,
 } from '@/components/buyer-themes';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { generateBuyerThemeCSS } from '@/lib/color-utils';
@@ -853,8 +858,10 @@ function LivePreviewRenderer({ customization }: { customization: any }) {
     errorColor: customization.errorColor,
   });
 
-  // Render appropriate theme based on selectedTheme
+  // Render appropriate theme based on selectedTheme with proper wrapper
   let rendered: React.ReactNode;
+  let ThemeWrapper: React.FC<{ children: React.ReactNode; themeMode: 'light' | 'dark' }> | null = null;
+  
   switch (selectedTheme) {
     case 'theme_two':
     case 'professional':
@@ -883,22 +890,27 @@ function LivePreviewRenderer({ customization }: { customization: any }) {
     case 'theme_tgref':
     case 'tgref':
       rendered = <TGRefHomepage {...homepageProps} />;
+      ThemeWrapper = BuyerThemeTGRef;
       break;
     case 'theme_alipanel':
     case 'alipanel':
       rendered = <AliPanelHomepage {...homepageProps} />;
+      ThemeWrapper = BuyerThemeAliPanel;
       break;
     case 'theme_flysmm':
     case 'flysmm':
       rendered = <FlySMMHomepage {...homepageProps} />;
+      ThemeWrapper = BuyerThemeFlySMM;
       break;
     case 'theme_smmstay':
     case 'smmstay':
       rendered = <SMMStayHomepage {...homepageProps} />;
+      ThemeWrapper = BuyerThemeSMMStay;
       break;
     case 'theme_smmvisit':
     case 'smmvisit':
       rendered = <SMMVisitHomepage {...homepageProps} />;
+      ThemeWrapper = BuyerThemeSMMVisit;
       break;
     // ThemeOne is the default for all other cases
     case 'default':
@@ -910,8 +922,18 @@ function LivePreviewRenderer({ customization }: { customization: any }) {
       break;
   }
 
-  // Wrapper structure: outer div has theme mode class, inner div has theme wrapper class
-  // This ensures CSS selectors like `.light .buyer-theme-wrapper` work correctly
+  // Wrapper structure: Use theme-specific wrapper for buyer themes (contains CSS for light/dark mode)
+  // This ensures CSS selectors like `.light .buyer-theme-alipanel` work correctly
+  if (ThemeWrapper) {
+    return (
+      <ThemeWrapper themeMode={themeMode}>
+        <style>{previewCSS}</style>
+        {rendered}
+      </ThemeWrapper>
+    );
+  }
+  
+  // Default wrapper for non-buyer themes
   return (
     <div className={themeMode}>
       <div className="buyer-theme-wrapper min-h-full">
@@ -930,6 +952,7 @@ export default function DesignCustomization() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [previewThemeMode, setPreviewThemeMode] = useState<'dark' | 'light'>('dark');
+  const [previewDirection, setPreviewDirection] = useState<'ltr' | 'rtl'>('ltr');
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({ presets: true, themes: true });
   const [showAllPresets, setShowAllPresets] = useState(false);
   const { toast } = useToast();
@@ -3399,6 +3422,21 @@ export default function DesignCustomization() {
                   )}
                 </Button>
 
+                {/* RTL/LTR Toggle */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    "h-7 w-7 sm:h-8 sm:w-auto sm:px-2 p-0 transition-colors font-mono text-xs",
+                    previewDirection === 'rtl' 
+                      ? "bg-primary/20 text-primary" 
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                  onClick={() => setPreviewDirection(prev => prev === 'ltr' ? 'rtl' : 'ltr')}
+                  title={previewDirection === 'ltr' ? 'Switch to RTL (Arabic/Hebrew)' : 'Switch to LTR'}
+                >
+                  <span className="text-[10px] sm:text-xs font-semibold">{previewDirection.toUpperCase()}</span>
+                </Button>
                 {/* Device Toggle */}
                 <div className="flex bg-background/50 rounded-lg p-0.5 sm:p-1 border border-border/30">
                   {(['desktop', 'tablet', 'mobile'] as const).map((device) => (
@@ -3437,9 +3475,9 @@ export default function DesignCustomization() {
               </div>
             </div>
 
-            {/* Live Preview Container - Enhanced Device Frames */}
+            {/* Live Preview Container - Enhanced Device Frames with Scaling */}
             <div className="flex-1 overflow-hidden p-2 sm:p-4 lg:p-6 flex items-start justify-center bg-gradient-to-b from-[#0a0a12] to-[#0f0f1a]">
-              {/* Mobile Device Frame */}
+              {/* Mobile Device Frame with Scaling */}
               {previewDevice === 'mobile' && (
                 <div className="flex flex-col items-center">
                   <div 
@@ -3454,48 +3492,69 @@ export default function DesignCustomization() {
                       <div className="w-2 h-2 bg-gray-800 rounded-full" />
                       <div className="w-8 h-3 bg-gray-900 rounded-full" />
                     </div>
-                    {/* Screen */}
+                    {/* Screen with Scaling */}
                     <div 
                       className="rounded-[32px] overflow-hidden bg-background"
                       style={{ height: '640px' }}
                     >
-                      <div className="w-full h-full overflow-auto scrollbar-thin scrollbar-thumb-primary/20">
+                      <div 
+                        className="origin-top-left overflow-auto scrollbar-thin scrollbar-thumb-primary/20"
+                        style={{ 
+                          width: '375px', 
+                          height: '752px',
+                          transform: 'scale(0.8)',
+                        }}
+                        dir={previewDirection}
+                      >
                         <LivePreviewRenderer customization={{ ...customization, themeMode: previewThemeMode }} />
                       </div>
                     </div>
                     {/* Home Indicator */}
                     <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-28 h-1 bg-white/30 rounded-full" />
                   </div>
-                  <p className="mt-3 text-xs text-muted-foreground">iPhone 14 Pro • 320×640</p>
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    iPhone 14 Pro • 375×812 {previewDirection === 'rtl' && '• RTL'}
+                  </p>
                 </div>
               )}
 
-              {/* Tablet Device Frame */}
+              {/* Tablet Device Frame with Scaling */}
               {previewDevice === 'tablet' && (
                 <div className="flex flex-col items-center">
                   <div 
                     className="relative bg-[#1a1a1a] rounded-[24px] p-2 shadow-2xl"
                     style={{ 
                       boxShadow: '0 25px 80px -12px rgba(0, 0, 0, 0.8), inset 0 0 0 1px rgba(255,255,255,0.1)',
-                      width: '680px',
+                      width: '560px',
                       maxWidth: 'calc(100vw - 420px)',
                     }}
                   >
                     {/* Camera */}
                     <div className="absolute top-3 left-1/2 -translate-x-1/2 w-3 h-3 bg-gray-800 rounded-full z-10" />
-                    {/* Screen */}
+                    {/* Screen with Scaling */}
                     <div 
                       className="rounded-[16px] overflow-hidden bg-background"
-                      style={{ height: 'calc(100vh - 220px)', maxHeight: '800px' }}
+                      style={{ height: 'calc(100vh - 240px)', maxHeight: '720px' }}
                     >
-                      <div className="w-full h-full overflow-auto scrollbar-thin scrollbar-thumb-primary/20">
+                      <div 
+                        className="origin-top-left overflow-auto scrollbar-thin scrollbar-thumb-primary/20"
+                        style={{ 
+                          width: '768px', 
+                          height: 'calc((100vh - 240px) / 0.72)',
+                          maxHeight: '1000px',
+                          transform: 'scale(0.72)',
+                        }}
+                        dir={previewDirection}
+                      >
                         <LivePreviewRenderer customization={{ ...customization, themeMode: previewThemeMode }} />
                       </div>
                     </div>
                     {/* Home Indicator */}
                     <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-20 h-1 bg-white/30 rounded-full" />
                   </div>
-                  <p className="mt-3 text-xs text-muted-foreground">iPad • Tablet View</p>
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    iPad • 768×1024 {previewDirection === 'rtl' && '• RTL'}
+                  </p>
                 </div>
               )}
 
@@ -3520,18 +3579,26 @@ export default function DesignCustomization() {
                           {customization.companyName?.toLowerCase().replace(/\s+/g, '') || 'yourpanel'}.homeofsmm.com
                         </div>
                       </div>
+                      {previewDirection === 'rtl' && (
+                        <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded">RTL</span>
+                      )}
                     </div>
                     {/* Screen */}
                     <div 
                       className="rounded-b-lg overflow-hidden bg-background"
                       style={{ height: 'calc(100vh - 220px)', maxHeight: '800px' }}
                     >
-                      <div className="w-full h-full overflow-auto scrollbar-thin scrollbar-thumb-primary/20">
+                      <div 
+                        className="w-full h-full overflow-auto scrollbar-thin scrollbar-thumb-primary/20"
+                        dir={previewDirection}
+                      >
                         <LivePreviewRenderer customization={{ ...customization, themeMode: previewThemeMode }} />
                       </div>
                     </div>
                   </div>
-                  <p className="mt-3 text-xs text-muted-foreground">Desktop • Full Width</p>
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    Desktop • Full Width {previewDirection === 'rtl' && '• RTL Mode'}
+                  </p>
                 </div>
               )}
             </div>
