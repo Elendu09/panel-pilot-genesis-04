@@ -443,10 +443,10 @@ const PanelOverview = () => {
       </Helmet>
 
       {/* Enhanced Welcome Header with Stacked Cards Effect */}
-      <div className="relative pt-6 md:pt-8">
-        {/* Stacked card layers behind - hidden on mobile for cleaner look */}
-        <div className="hidden sm:block absolute inset-x-6 md:inset-x-8 -top-2 h-full rounded-2xl bg-primary/5 border border-primary/10" />
-        <div className="hidden sm:block absolute inset-x-3 md:inset-x-4 -top-1 h-full rounded-2xl bg-primary/8 border border-primary/12" />
+      <div className="relative pt-4 sm:pt-6 md:pt-8">
+        {/* Stacked card layers behind - visible on all devices but smaller on mobile */}
+        <div className="absolute inset-x-3 sm:inset-x-6 md:inset-x-8 -top-1 sm:-top-2 h-[calc(100%-8px)] rounded-xl sm:rounded-2xl bg-primary/5 border border-primary/10 -z-10" />
+        <div className="absolute inset-x-1.5 sm:inset-x-3 md:inset-x-4 -top-0.5 sm:-top-1 h-[calc(100%-4px)] rounded-xl sm:rounded-2xl bg-primary/8 border border-primary/12 -z-10" />
         
         {/* Main card */}
         <motion.div variants={itemVariants} className="relative z-10 overflow-hidden rounded-2xl border border-primary/20">

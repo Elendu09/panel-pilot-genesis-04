@@ -290,39 +290,52 @@ export const BuyerThemeSMMVisit = ({ children, className, themeMode = 'light' }:
         
         /* Fix quick action buttons in dashboard - tall buttons with h-auto class */
         .dark .buyer-theme-smmvisit button.h-auto,
-        .dark .buyer-theme-smmvisit .h-auto.rounded-xl {
+        .dark .buyer-theme-smmvisit .h-auto.rounded-xl,
+        .dark .buyer-theme-smmvisit button[class*="h-auto"] {
           background: #262626 !important;
-          border-color: rgba(255, 215, 0, 0.2) !important;
+          border-color: rgba(255, 215, 0, 0.25) !important;
         }
         
-        .dark .buyer-theme-smmvisit button.h-auto:hover {
-          background: rgba(255, 215, 0, 0.12) !important;
-          border-color: rgba(255, 215, 0, 0.35) !important;
+        .dark .buyer-theme-smmvisit button.h-auto:hover,
+        .dark .buyer-theme-smmvisit button[class*="h-auto"]:hover {
+          background: rgba(255, 215, 0, 0.15) !important;
+          border-color: rgba(255, 215, 0, 0.4) !important;
         }
         
         .dark .buyer-theme-smmvisit button.h-auto span,
         .dark .buyer-theme-smmvisit button.h-auto .font-medium,
-        .dark .buyer-theme-smmvisit button.h-auto p {
+        .dark .buyer-theme-smmvisit button.h-auto p,
+        .dark .buyer-theme-smmvisit button[class*="h-auto"] span,
+        .dark .buyer-theme-smmvisit button[class*="h-auto"] p {
           color: #FFFFFF !important;
         }
         
         .dark .buyer-theme-smmvisit button.h-auto .text-muted-foreground,
-        .dark .buyer-theme-smmvisit button.h-auto p.text-muted-foreground {
+        .dark .buyer-theme-smmvisit button.h-auto p.text-muted-foreground,
+        .dark .buyer-theme-smmvisit button[class*="h-auto"] .text-muted-foreground {
           color: rgba(255, 255, 255, 0.65) !important;
         }
         
-        /* Fix outline/ghost variant buttons */
+        /* Fix outline/ghost variant buttons - using class substring matching */
         .dark .buyer-theme-smmvisit button[class*="outline"],
-        .dark .buyer-theme-smmvisit button[class*="ghost"] {
-          background: rgba(38, 38, 38, 0.9) !important;
-          border-color: rgba(255, 215, 0, 0.25) !important;
+        .dark .buyer-theme-smmvisit button[class*="ghost"],
+        .dark .buyer-theme-smmvisit button[class*="secondary"] {
+          background: rgba(38, 38, 38, 0.95) !important;
+          border-color: rgba(255, 215, 0, 0.3) !important;
           color: #FFFFFF !important;
         }
         
         .dark .buyer-theme-smmvisit button[class*="outline"]:hover,
-        .dark .buyer-theme-smmvisit button[class*="ghost"]:hover {
+        .dark .buyer-theme-smmvisit button[class*="ghost"]:hover,
+        .dark .buyer-theme-smmvisit button[class*="secondary"]:hover {
           background: rgba(255, 215, 0, 0.15) !important;
-          border-color: rgba(255, 215, 0, 0.4) !important;
+          border-color: rgba(255, 215, 0, 0.5) !important;
+        }
+        
+        .dark .buyer-theme-smmvisit button[class*="outline"] span,
+        .dark .buyer-theme-smmvisit button[class*="ghost"] span,
+        .dark .buyer-theme-smmvisit button[class*="secondary"] span {
+          color: #FFFFFF !important;
         }
         
         /* Fix "Alle anzeigen" / "View All" buttons */
@@ -331,6 +344,9 @@ export const BuyerThemeSMMVisit = ({ children, className, themeMode = 'light' }:
           color: #FFD700 !important;
         }
         
+        .dark .buyer-theme-smmvisit a button span {
+          color: #FFD700 !important;
+        }
         
         .dark .buyer-theme-smmvisit a {
           color: #D1D5DB;
@@ -341,19 +357,13 @@ export const BuyerThemeSMMVisit = ({ children, className, themeMode = 'light' }:
         }
         
         /* Dark mode secondary buttons */
-        .dark .buyer-theme-smmvisit .btn-secondary,
-        .dark .buyer-theme-smmvisit button[variant="secondary"],
-        .dark .buyer-theme-smmvisit button[variant="outline"],
-        .dark .buyer-theme-smmvisit button[variant="ghost"] {
+        .dark .buyer-theme-smmvisit .btn-secondary {
           background: rgba(255, 215, 0, 0.1) !important;
           color: #FFD700 !important;
           border-color: rgba(255, 215, 0, 0.25) !important;
         }
         
-        .dark .buyer-theme-smmvisit .btn-secondary:hover,
-        .dark .buyer-theme-smmvisit button[variant="secondary"]:hover,
-        .dark .buyer-theme-smmvisit button[variant="outline"]:hover,
-        .dark .buyer-theme-smmvisit button[variant="ghost"]:hover {
+        .dark .buyer-theme-smmvisit .btn-secondary:hover {
           background: rgba(255, 215, 0, 0.2) !important;
         }
         
@@ -397,6 +407,63 @@ export const BuyerThemeSMMVisit = ({ children, className, themeMode = 'light' }:
         .dark .buyer-theme-smmvisit,
         .dark .buyer-theme-smmvisit .buyer-theme-wrapper {
           color: #FFFFFF;
+        }
+        
+        /* ===== COMPREHENSIVE DASHBOARD DARK MODE FIXES ===== */
+        /* Fix all card content text */
+        .dark .buyer-theme-smmvisit [class*="CardContent"] h1,
+        .dark .buyer-theme-smmvisit [class*="CardContent"] h2,
+        .dark .buyer-theme-smmvisit [class*="CardContent"] h3,
+        .dark .buyer-theme-smmvisit [class*="CardContent"] h4,
+        .dark .buyer-theme-smmvisit [class*="CardContent"] p,
+        .dark .buyer-theme-smmvisit [class*="CardContent"] span {
+          color: #FFFFFF;
+        }
+        
+        .dark .buyer-theme-smmvisit [class*="CardContent"] .text-muted-foreground {
+          color: rgba(255, 255, 255, 0.7) !important;
+        }
+        
+        /* Fix stats cards numeric values */
+        .dark .buyer-theme-smmvisit .text-2xl,
+        .dark .buyer-theme-smmvisit .text-3xl,
+        .dark .buyer-theme-smmvisit .text-4xl {
+          color: #FFFFFF !important;
+        }
+        
+        /* Fix small muted text labels */
+        .dark .buyer-theme-smmvisit .text-xs.text-muted-foreground,
+        .dark .buyer-theme-smmvisit .text-sm.text-muted-foreground {
+          color: rgba(255, 255, 255, 0.6) !important;
+        }
+        
+        /* Fix flex column button groups (quick actions) */
+        .dark .buyer-theme-smmvisit .flex.flex-col.gap-3 > button,
+        .dark .buyer-theme-smmvisit .flex.flex-col.gap-4 > button,
+        .dark .buyer-theme-smmvisit .grid button {
+          background: #262626 !important;
+          border-color: rgba(255, 215, 0, 0.2) !important;
+        }
+        
+        .dark .buyer-theme-smmvisit .flex.flex-col.gap-3 > button:hover,
+        .dark .buyer-theme-smmvisit .flex.flex-col.gap-4 > button:hover,
+        .dark .buyer-theme-smmvisit .grid button:hover {
+          background: rgba(255, 215, 0, 0.12) !important;
+          border-color: rgba(255, 215, 0, 0.35) !important;
+        }
+        
+        /* Force white text on all interactive elements in dark mode */
+        .dark .buyer-theme-smmvisit button:not([class*="primary"]):not([class*="gradient"]) {
+          color: #FFFFFF;
+        }
+        
+        .dark .buyer-theme-smmvisit button:not([class*="primary"]):not([class*="gradient"]) * {
+          color: inherit;
+        }
+        
+        /* Special fix for buttons with muted text inside */
+        .dark .buyer-theme-smmvisit button .text-muted-foreground {
+          color: rgba(255, 255, 255, 0.65) !important;
         }
       `}</style>
         {children}
