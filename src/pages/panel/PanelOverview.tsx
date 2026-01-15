@@ -28,12 +28,14 @@ import {
   Globe,
   Sparkles,
   ChevronRight,
-  Palette
+  Palette,
+  Wallet,
+  Crown
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { RealtimeChannel } from '@supabase/supabase-js';
@@ -51,6 +53,7 @@ interface LiveOrder {
 }
 
 const PanelOverview = () => {
+  const navigate = useNavigate();
   const { profile } = useAuth();
   const [panelData, setPanelData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -441,9 +444,9 @@ const PanelOverview = () => {
 
       {/* Enhanced Welcome Header with Stacked Cards Effect */}
       <div className="relative pt-6 md:pt-8">
-        {/* Stacked card layers behind */}
-        <div className="absolute inset-x-8 md:inset-x-12 top-0 h-full rounded-2xl bg-primary/5 border border-primary/10" />
-        <div className="absolute inset-x-4 md:inset-x-6 top-2 md:top-3 h-full rounded-2xl bg-primary/10 border border-primary/15" />
+        {/* Stacked card layers behind - hidden on mobile for cleaner look */}
+        <div className="hidden sm:block absolute inset-x-6 md:inset-x-8 -top-2 h-full rounded-2xl bg-primary/5 border border-primary/10" />
+        <div className="hidden sm:block absolute inset-x-3 md:inset-x-4 -top-1 h-full rounded-2xl bg-primary/8 border border-primary/12" />
         
         {/* Main card */}
         <motion.div variants={itemVariants} className="relative z-10 overflow-hidden rounded-2xl border border-primary/20">
@@ -549,24 +552,42 @@ const PanelOverview = () => {
             </div>
             
             {/* Right side - Action Buttons */}
-            <div className="flex items-center gap-3 self-start lg:self-center">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 self-start lg:self-center">
               <Button 
                 variant="outline" 
-                size="default"
-                onClick={handleManualRefresh}
-                disabled={refreshing}
-                className="gap-2 bg-background/50 backdrop-blur-sm hover:bg-background/80 border-border/50"
+                size="sm"
+                onClick={() => navigate('/billing')}
+                className="gap-1.5 bg-background/50 backdrop-blur-sm hover:bg-primary/10 border-primary/30"
               >
-                <RefreshCw className={cn("w-4 h-4", refreshing && "animate-spin")} />
-                <span className="hidden sm:inline">Refresh</span>
+                <Wallet className="w-4 h-4" />
+                <span className="hidden md:inline">Add Funds</span>
               </Button>
               <Button 
-                size="default"
+                variant="outline" 
+                size="sm"
+                onClick={() => navigate('/billing')}
+                className="gap-1.5 bg-background/50 backdrop-blur-sm hover:bg-amber-500/10 border-amber-500/30"
+              >
+                <Crown className="w-4 h-4 text-amber-500" />
+                <span className="hidden md:inline">Upgrade</span>
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleManualRefresh}
+                disabled={refreshing}
+                className="gap-1.5 bg-background/50 backdrop-blur-sm hover:bg-background/80 border-border/50"
+              >
+                <RefreshCw className={cn("w-4 h-4", refreshing && "animate-spin")} />
+                <span className="hidden lg:inline">Refresh</span>
+              </Button>
+              <Button 
+                size="sm"
                 onClick={handleViewPanel}
-                className="gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/25"
+                className="gap-1.5 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/25"
               >
                 <ExternalLink className="w-4 h-4" />
-                <span>View Panel</span>
+                <span className="hidden sm:inline">View Panel</span>
               </Button>
             </div>
           </div>

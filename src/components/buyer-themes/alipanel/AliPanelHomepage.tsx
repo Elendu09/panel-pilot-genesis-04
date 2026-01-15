@@ -100,8 +100,13 @@ export const AliPanelHomepage = ({
   const showTestimonials = customization.enableTestimonials !== false;
   const showFAQs = customization.enableFAQs !== false;
 
-  // Content arrays from customization
-  const featureCards = customization.featureCards || getDefaultFeatures();
+  // Content arrays with translations
+  const featureCards = customization.featureCards || [
+    { title: t('buyer.features.instantStart'), description: t('buyer.features.instantStartDesc'), icon: 'Zap' },
+    { title: t('buyer.features.highQuality'), description: t('buyer.features.highQualityDesc'), icon: 'Award' },
+    { title: t('buyer.features.bestPrices'), description: t('buyer.features.bestPricesDesc'), icon: 'TrendingUp' },
+    { title: t('buyer.features.support'), description: t('buyer.features.supportDesc'), icon: 'Users' },
+  ];
   const testimonials = customization.testimonials || getDefaultTestimonials();
   const faqs = customization.faqs || getDefaultFAQs();
 

@@ -93,12 +93,12 @@ export const SMMVisitHomepage = ({
   const showTestimonials = customization.enableTestimonials !== false;
   const showFAQs = customization.enableFAQs !== false;
 
-  // Content arrays
+  // Content arrays with translations
   const featureCards = customization.featureCards || [
-    { title: 'Instant Start', description: 'Orders begin processing immediately', icon: 'Zap' },
-    { title: 'High Quality', description: 'Real and active accounts', icon: 'Award' },
-    { title: 'Best Prices', description: 'Most competitive rates', icon: 'TrendingUp' },
-    { title: '24/7 Support', description: 'Always here to help', icon: 'Users' },
+    { title: t('buyer.features.instantStart'), description: t('buyer.features.instantStartDesc'), icon: 'Zap' },
+    { title: t('buyer.features.highQuality'), description: t('buyer.features.highQualityDesc'), icon: 'Award' },
+    { title: t('buyer.features.bestPrices'), description: t('buyer.features.bestPricesDesc'), icon: 'TrendingUp' },
+    { title: t('buyer.features.support'), description: t('buyer.features.supportDesc'), icon: 'Users' },
   ];
   const testimonials = customization.testimonials || getDefaultTestimonials();
   const faqs = customization.faqs || getDefaultFAQs();
