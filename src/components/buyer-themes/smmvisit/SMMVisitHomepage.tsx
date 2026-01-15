@@ -16,6 +16,7 @@ import {
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { ThemeNavigation } from '../shared/ThemeNavigation';
 import { AnimatedHeroText, getThemeDefaultAnimationStyle, getAnimatedWordFromTitle } from '../shared/AnimatedHeroText';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface SMMVisitHomepageProps {
   panelName?: string;
@@ -38,6 +39,7 @@ export const SMMVisitHomepage = ({
   logoUrl 
 }: SMMVisitHomepageProps) => {
   const navigate = useNavigate();
+  const { t, isRTL } = useLanguage();
   
   // Theme mode - reactive to customization prop (no local state), SMMVisit defaults to light
   const themeMode = customization.themeMode || 'light';
@@ -72,10 +74,10 @@ export const SMMVisitHomepage = ({
   const fontFamily = customization.fontFamily || 'Inter';
   const headingWeight = customization.headingWeight || '700';
 
-  // Content
-  const heroTitle = customization.heroTitle || 'Boost Your';
-  const heroSubtitle = customization.heroSubtitle || 'Get real followers, likes, and views at the lowest prices. Trusted by over 100,000+ users worldwide.';
-  const heroCTA = customization.heroCTAText || 'Get Started';
+  // Content - use translations for fallback text
+  const heroTitle = customization.heroTitle || t('buyer.hero.title');
+  const heroSubtitle = customization.heroSubtitle || t('buyer.hero.subtitle');
+  const heroCTA = customization.heroCTAText || t('buyer.hero.cta');
   const displayLogo = customization.logoUrl || logoUrl;
   const companyName = customization.companyName || panelName;
 

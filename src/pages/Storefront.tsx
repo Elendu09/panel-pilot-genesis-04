@@ -13,7 +13,12 @@ import {
   AliPanelHomepage, 
   FlySMMHomepage, 
   SMMStayHomepage, 
-  SMMVisitHomepage 
+  SMMVisitHomepage,
+  BuyerThemeTGRef,
+  BuyerThemeAliPanel,
+  BuyerThemeFlySMM,
+  BuyerThemeSMMStay,
+  BuyerThemeSMMVisit,
 } from '@/components/buyer-themes';
 import { FloatingChatWidget } from '@/components/storefront/FloatingChatWidget';
 import { BuyerHomepageSchemas, FAQPageSchema } from '@/components/seo/JsonLdSchema';
@@ -77,6 +82,8 @@ const Storefront = () => {
   const customBranding = panel?.custom_branding as any;
   // Theme priority: custom_branding.selectedTheme > buyer_theme > theme_type > fallback
   const selectedTheme = customBranding?.selectedTheme || panel?.buyer_theme || panel?.theme_type || 'default';
+  // Theme mode from customization - used for light/dark CSS selectors
+  const themeMode: 'light' | 'dark' = customBranding?.themeMode === 'light' ? 'light' : 'dark';
 
   // Generate CSS variables for design preset colors - ensures colors sync across storefront
   const storefrontColorStyles = useMemo(() => {
@@ -143,41 +150,41 @@ const Storefront = () => {
 
   const canonicalUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
-  // Render appropriate theme based on panel.theme_type or custom_branding.selectedTheme
-  // ThemeOne is ALWAYS the default - it's the primary/recommended theme
-  const renderTheme = () => {
+  // Full customization object with all design settings
+  const fullCustomization = {
+    ...design,
+    logoUrl: customBranding?.logoUrl || panel?.logo_url,
+    faviconUrl: customBranding?.faviconUrl || panel?.logo_url,
+    companyName: customBranding?.companyName || panel?.name,
+    primaryColor: customBranding?.primaryColor || panel?.primary_color || '#6366F1',
+    secondaryColor: customBranding?.secondaryColor || panel?.secondary_color || '#8B5CF6',
+    themeMode, // Pass theme mode explicitly
+  };
+
+  const themeProps = {
+    panel,
+    services,
+    customization: fullCustomization
+  };
+
+  // Homepage props for buyer theme components
+  const homepageProps = {
+    panelName: customBranding?.companyName || panel?.name,
+    services,
+    stats: {
+      totalOrders: (panel as any)?.total_orders || 0,
+      totalUsers: 0,
+      servicesCount: services?.length || 0,
+    },
+    customization: fullCustomization,
+    logoUrl: customBranding?.logoUrl || panel?.logo_url,
+  };
+
+  console.log('Rendering theme:', selectedTheme, 'mode:', themeMode, 'with props:', { panelName: panel?.name, servicesCount: services?.length });
+
+  // Render appropriate theme based on selectedTheme value with proper wrappers
+  const renderThemeContent = () => {
     try {
-      // Full customization object with all design settings
-      const fullCustomization = {
-        ...design,
-        logoUrl: customBranding?.logoUrl || panel?.logo_url,
-        faviconUrl: customBranding?.faviconUrl || panel?.logo_url,
-        companyName: customBranding?.companyName || panel?.name,
-        primaryColor: customBranding?.primaryColor || panel?.primary_color || '#6366F1',
-        secondaryColor: customBranding?.secondaryColor || panel?.secondary_color || '#8B5CF6',
-      };
-
-      const themeProps = {
-        panel,
-        services,
-        customization: fullCustomization
-      };
-
-      console.log('Rendering theme:', selectedTheme, 'with props:', { panelName: panel?.name, servicesCount: services?.length });
-
-      // Prepare homepage props with FULL customization for buyer themes
-      const homepageProps = {
-        panelName: customBranding?.companyName || panel?.name,
-        services,
-        stats: {
-          totalOrders: (panel as any)?.total_orders || 0,
-          totalUsers: 0,
-          servicesCount: services?.length || 0,
-        },
-        customization: fullCustomization,
-        logoUrl: customBranding?.logoUrl || panel?.logo_url,
-      };
-
       // Theme selection based on selectedTheme value
       switch (selectedTheme) {
         case 'theme_two':
@@ -185,55 +192,57 @@ const Storefront = () => {
         case 'light_minimal':
         case 'corporate':
         case 'ocean_blue':
-          return <ThemeTwo {...themeProps} />;
+          return { content: <ThemeTwo {...themeProps} />, wrapper: null };
         case 'theme_three':
         case 'vibrant':
         case 'neon_glow':
         case 'sunset_orange':
         case 'royal_purple':
-          return <ThemeThree {...themeProps} />;
+          return { content: <ThemeThree {...themeProps} />, wrapper: null };
         case 'theme_four':
         case 'grace':
         case 'grace_cometh':
         case 'forest_earth':
-          return <ThemeFour {...themeProps} />;
+          return { content: <ThemeFour {...themeProps} />, wrapper: null };
         case 'theme_five':
         case 'tech_futuristic':
-          return <ThemeFive {...themeProps} />;
+          return { content: <ThemeFive {...themeProps} />, wrapper: null };
         // TGRef theme - terminal/tech aesthetic
         case 'theme_tgref':
         case 'tgref':
-          return <TGRefHomepage {...homepageProps} />;
+          return { content: <TGRefHomepage {...homepageProps} />, wrapper: BuyerThemeTGRef };
         // AliPanel theme - pink-orange gradients, floating icons
         case 'theme_alipanel':
         case 'alipanel':
-          return <AliPanelHomepage {...homepageProps} />;
+          return { content: <AliPanelHomepage {...homepageProps} />, wrapper: BuyerThemeAliPanel };
         // FlySMM theme - light, friendly, blue accents
         case 'theme_flysmm':
         case 'flysmm':
-          return <FlySMMHomepage {...homepageProps} />;
+          return { content: <FlySMMHomepage {...homepageProps} />, wrapper: BuyerThemeFlySMM };
         // SMMStay theme - dark neon pink
         case 'theme_smmstay':
         case 'smmstay':
-          return <SMMStayHomepage {...homepageProps} />;
+          return { content: <SMMStayHomepage {...homepageProps} />, wrapper: BuyerThemeSMMStay };
         // SMMVisit theme - light gray, yellow/gold
         case 'theme_smmvisit':
         case 'smmvisit':
-          return <SMMVisitHomepage {...homepageProps} />;
+          return { content: <SMMVisitHomepage {...homepageProps} />, wrapper: BuyerThemeSMMVisit };
         // ThemeOne is the default for all other cases (default, theme_one, dark_gradient, etc.)
         case 'default':
         case 'theme_one':
         case 'dark_gradient':
         case 'cosmic_purple':
         default:
-          return <ThemeOne {...themeProps} />;
+          return { content: <ThemeOne {...themeProps} />, wrapper: null };
       }
     } catch (err: any) {
       console.error('Theme render error:', err);
       setRenderError(err.message || 'Failed to render theme');
-      return null;
+      return { content: null, wrapper: null };
     }
   };
+
+  const { content: themeContent, wrapper: ThemeWrapper } = renderThemeContent();
 
   // Check if Fast Order is enabled
   const enableFastOrder = (design as any)?.enableFastOrder !== false;
@@ -280,13 +289,18 @@ const Storefront = () => {
       />
       {/* Inject design preset colors as CSS variables */}
       {storefrontColorStyles && <style>{storefrontColorStyles}</style>}
-      {/* Theme mode wrapper - applies 'light' or 'dark' class for CSS selectors */}
-      <div className={`buyer-theme-wrapper ${(customBranding?.themeMode) || 'dark'}`}>
-        {/* Removed PromotionalBanner - "Welcome bonus! Claim now" removed per SEO requirements */}
-        {renderTheme()}
-        {/* Floating Chat Widget - Consolidated chat with AI, WhatsApp, Telegram, etc. */}
-        <FloatingChatWidget panelId={panel?.id} panelName={panel?.name} />
-      </div>
+      {/* Theme mode wrapper - uses BuyerTheme* wrapper for buyer themes (enables CSS light/dark selectors) */}
+      {ThemeWrapper ? (
+        <ThemeWrapper themeMode={themeMode}>
+          {themeContent}
+          <FloatingChatWidget panelId={panel?.id} panelName={panel?.name} />
+        </ThemeWrapper>
+      ) : (
+        <div className={`buyer-theme-wrapper ${themeMode}`}>
+          {themeContent}
+          <FloatingChatWidget panelId={panel?.id} panelName={panel?.name} />
+        </div>
+      )}
     </>
   );
 };
