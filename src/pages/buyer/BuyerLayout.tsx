@@ -25,7 +25,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { BuyerThemeToggle } from "@/components/buyer/BuyerThemeToggle";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { useTenant, type DesignCustomization } from "@/hooks/useTenant";
@@ -245,7 +245,7 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
             <CurrencySelector />
             <LanguageSelector />
             <BuyerNotifications />
-            <ThemeToggle />
+            <BuyerThemeToggle />
             <Button variant="ghost" size="icon" className="h-9 w-9">
               <HelpCircle className="w-4 h-4" />
             </Button>
@@ -288,7 +288,7 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
         </nav>
 
         <div className="flex flex-col items-center gap-2">
-          <ThemeToggle />
+          <BuyerThemeToggle />
           <Button 
             variant="ghost" 
             size="icon" 
@@ -322,7 +322,7 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
           </motion.div>
           <BuyerNotifications />
           <LanguageSelector />
-          <ThemeToggle />
+          <BuyerThemeToggle />
         </div>
       </header>
 
