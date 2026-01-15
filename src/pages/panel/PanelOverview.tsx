@@ -439,14 +439,8 @@ const PanelOverview = () => {
         <meta name="robots" content="noindex,nofollow" />
       </Helmet>
 
-      {/* Enhanced Welcome Header with Stacked Cards Effect */}
-      <div className="relative pt-6 md:pt-8">
-        {/* Stacked card layers behind */}
-        <div className="absolute inset-x-8 md:inset-x-12 top-0 h-full rounded-2xl bg-primary/5 border border-primary/10" />
-        <div className="absolute inset-x-4 md:inset-x-6 top-2 md:top-3 h-full rounded-2xl bg-primary/10 border border-primary/15" />
-        
-        {/* Main card */}
-        <motion.div variants={itemVariants} className="relative z-10 overflow-hidden rounded-2xl border border-primary/20">
+      {/* Enhanced Welcome Header with Hero-like Design */}
+      <motion.div variants={itemVariants} className="relative overflow-hidden rounded-2xl border border-primary/20">
         {/* Background gradient layers */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent" />
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/10 to-primary/5" />
@@ -571,8 +565,7 @@ const PanelOverview = () => {
             </div>
           </div>
         </div>
-        </motion.div>
-      </div>
+      </motion.div>
 
       {/* Stats Grid - Modern Cards */}
       <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
