@@ -26,6 +26,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { generateBuyerThemeCSS } from '@/lib/color-utils';
+import { useTheme } from '@/hooks/use-theme';
 
 // Error Boundary Component
 const ErrorFallback = ({ error, panelName }: { error: string; panelName?: string }) => (
@@ -82,8 +83,15 @@ const Storefront = () => {
   const customBranding = panel?.custom_branding as any;
   // Theme priority: custom_branding.selectedTheme > buyer_theme > theme_type > fallback
   const selectedTheme = customBranding?.selectedTheme || panel?.buyer_theme || panel?.theme_type || 'default';
-  // Theme mode from customization - used for light/dark CSS selectors
-  const themeMode: 'light' | 'dark' = customBranding?.themeMode === 'light' ? 'light' : 'dark';
+  
+  // Theme mode from global ThemeProvider (respects user's toggle) instead of hardcoded customization
+  const { theme: globalTheme } = useTheme();
+  const themeMode: 'light' | 'dark' = useMemo(() => {
+    if (globalTheme === 'system') {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    return globalTheme as 'light' | 'dark';
+  }, [globalTheme]);
 
   // Generate CSS variables for design preset colors - ensures colors sync across storefront
   const storefrontColorStyles = useMemo(() => {
