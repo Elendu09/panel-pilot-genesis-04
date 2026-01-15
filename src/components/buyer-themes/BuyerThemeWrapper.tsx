@@ -2,6 +2,7 @@ import { ReactNode, createContext, useContext, useMemo, useEffect, useState } fr
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { generateBuyerThemeCSS } from '@/lib/color-utils';
+import { useBuyerThemeMode } from '@/contexts/BuyerThemeContext';
 import BuyerThemeDefault, { defaultThemeConfig } from './BuyerThemeDefault';
 import BuyerThemeAliPanel, { aliPanelThemeConfig } from './BuyerThemeAliPanel';
 import BuyerThemeFlySMM, { flySMMThemeConfig } from './BuyerThemeFlySMM';
@@ -70,6 +71,9 @@ export const BuyerThemeWrapper = ({
 }: BuyerThemeWrapperProps) => {
   const queryClient = useQueryClient();
   const [refreshKey, setRefreshKey] = useState(0);
+  
+  // Use the buyer theme context for consistent theme mode
+  const { themeMode } = useBuyerThemeMode();
 
   // Listen for design updates to refresh theme instantly
   useEffect(() => {
@@ -154,8 +158,8 @@ export const BuyerThemeWrapper = ({
       companyName: branding.companyName || panelData.name,
       primaryColor: branding.primaryColor || panelData.primary_color || '#6366F1',
       secondaryColor: branding.secondaryColor || panelData.secondary_color || '#8B5CF6',
-      // Ensure themeMode is included for light/dark switching
-      themeMode: branding.themeMode || 'dark',
+      // Use themeMode from context (buyer's choice) instead of database
+      themeMode,
       // Ensure all color fields are propagated
       accentColor: branding.accentColor || '#EC4899',
       backgroundColor: branding.backgroundColor || '#0F172A',
@@ -194,7 +198,7 @@ export const BuyerThemeWrapper = ({
       containerMaxWidth: branding.containerMaxWidth || 1280,
       enableAnimations: branding.enableAnimations ?? true,
     };
-  }, [panelData]);
+  }, [panelData, themeMode]);
 
   // Generate CSS variables for theme colors
   const themeCSS = useMemo(() => {
@@ -225,7 +229,7 @@ export const BuyerThemeWrapper = ({
   return (
     <BuyerThemeContext.Provider value={contextValue}>
       {themeCSS && <style>{themeCSS}</style>}
-      <ThemeComponent className={className} themeMode={customization.themeMode || 'dark'}>
+      <ThemeComponent className={className} themeMode={themeMode}>
         {children}
       </ThemeComponent>
     </BuyerThemeContext.Provider>
