@@ -17,6 +17,7 @@ import {
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { ThemeNavigation } from '../shared/ThemeNavigation';
 import { AnimatedHeroText, getThemeDefaultAnimationStyle, getAnimatedWordFromTitle } from '../shared/AnimatedHeroText';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface TGRefHomepageProps {
   panelName?: string;
@@ -39,6 +40,7 @@ export const TGRefHomepage = ({
   logoUrl 
 }: TGRefHomepageProps) => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   
   // Theme mode - reactive to customization prop (no local state)
   const themeMode = customization.themeMode || 'dark';
@@ -75,9 +77,9 @@ export const TGRefHomepage = ({
   const fontFamily = customization.fontFamily || 'mono';
   const headingWeight = customization.headingWeight || '700';
 
-  // Content
-  const heroTitle = customization.heroTitle || 'Social Growth';
-  const heroSubtitle = customization.heroSubtitle || 'Execute powerful SMM commands. Instant delivery, premium quality, unbeatable prices.';
+  // Content - use translations for fallback text
+  const heroTitle = customization.heroTitle || t('buyer.hero.title');
+  const heroSubtitle = customization.heroSubtitle || t('buyer.hero.subtitle');
   const displayLogo = customization.logoUrl || logoUrl;
   const companyName = customization.companyName || panelName;
 
@@ -94,12 +96,12 @@ export const TGRefHomepage = ({
   const showTestimonials = customization.enableTestimonials !== false;
   const showFAQs = customization.enableFAQs !== false;
 
-  // Content arrays
+  // Content arrays with translations
   const featureCards = customization.featureCards || [
-    { title: 'instant-delivery', description: 'Orders start within seconds', icon: 'Zap' },
-    { title: 'secure-payment', description: 'Encrypted transactions', icon: 'Shield' },
-    { title: 'live-support', description: '24/7 customer assistance', icon: 'Users' },
-    { title: 'auto-refill', description: 'Guaranteed delivery', icon: 'CheckCircle' },
+    { title: t('buyer.features.instantStart'), description: t('buyer.features.instantStartDesc'), icon: 'Zap' },
+    { title: t('buyer.features.bestPrices'), description: t('buyer.features.bestPricesDesc'), icon: 'Shield' },
+    { title: t('buyer.features.support'), description: t('buyer.features.supportDesc'), icon: 'Users' },
+    { title: t('buyer.features.highQuality'), description: t('buyer.features.highQualityDesc'), icon: 'CheckCircle' },
   ];
   const testimonials = customization.testimonials || getDefaultTestimonials();
   const faqs = customization.faqs || getDefaultFAQs();

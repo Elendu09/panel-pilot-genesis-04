@@ -16,6 +16,7 @@ import {
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { ThemeNavigation } from '../shared/ThemeNavigation';
 import { AnimatedHeroText, getThemeDefaultAnimationStyle, getAnimatedWordFromTitle } from '../shared/AnimatedHeroText';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface SMMStayHomepageProps {
   panelName?: string;
@@ -38,6 +39,7 @@ export const SMMStayHomepage = ({
   logoUrl 
 }: SMMStayHomepageProps) => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   
   // Theme mode - reactive to customization prop (no local state)
   const themeMode = customization.themeMode || 'dark';
@@ -72,10 +74,10 @@ export const SMMStayHomepage = ({
   const fontFamily = customization.fontFamily || 'Montserrat';
   const headingWeight = customization.headingWeight || '900';
 
-  // Content
-  const heroTitle = customization.heroTitle || 'Dominate';
-  const heroSubtitle = customization.heroSubtitle || 'Premium followers, likes & views at unbeatable prices';
-  const heroCTA = customization.heroCTAText || 'Get Started';
+  // Content - use translations for fallback text
+  const heroTitle = customization.heroTitle || t('buyer.hero.title');
+  const heroSubtitle = customization.heroSubtitle || t('buyer.hero.subtitle');
+  const heroCTA = customization.heroCTAText || t('buyer.hero.cta');
   const displayLogo = customization.logoUrl || logoUrl;
   const companyName = customization.companyName || panelName;
 
@@ -92,12 +94,12 @@ export const SMMStayHomepage = ({
   const showTestimonials = customization.enableTestimonials !== false;
   const showFAQs = customization.enableFAQs !== false;
 
-  // Content arrays
+  // Content arrays with translations
   const featureCards = customization.featureCards || [
-    { title: 'INSTANT START', description: 'Orders begin within seconds', icon: 'Zap' },
-    { title: 'PREMIUM QUALITY', description: 'Real accounts only', icon: 'Star' },
-    { title: '24/7 SUPPORT', description: 'Always here for you', icon: 'Users' },
-    { title: 'REFILL GUARANTEE', description: 'Drop protection included', icon: 'Shield' },
+    { title: t('buyer.features.instantStart'), description: t('buyer.features.instantStartDesc'), icon: 'Zap' },
+    { title: t('buyer.features.highQuality'), description: t('buyer.features.highQualityDesc'), icon: 'Star' },
+    { title: t('buyer.features.support'), description: t('buyer.features.supportDesc'), icon: 'Users' },
+    { title: t('buyer.features.bestPrices'), description: t('buyer.features.bestPricesDesc'), icon: 'Shield' },
   ];
   const testimonials = customization.testimonials || getDefaultTestimonials();
   const faqs = customization.faqs || getDefaultFAQs();

@@ -16,6 +16,7 @@ import {
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { ThemeNavigation } from '../shared/ThemeNavigation';
 import { AnimatedHeroText, getThemeDefaultAnimationStyle, getAnimatedWordFromTitle } from '../shared/AnimatedHeroText';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface FlySMMHomepageProps {
   panelName?: string;
@@ -38,6 +39,7 @@ export const FlySMMHomepage = ({
   logoUrl 
 }: FlySMMHomepageProps) => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   
   // Theme mode - reactive to customization prop (no local state), FlySMM defaults to light
   const themeMode = customization.themeMode || 'light';
@@ -72,11 +74,11 @@ export const FlySMMHomepage = ({
   const fontFamily = customization.fontFamily || 'Nunito';
   const headingWeight = customization.headingWeight || '700';
 
-  // Content
-  const heroTitle = customization.heroTitle || 'Grow Your';
-  const heroSubtitle = customization.heroSubtitle || 'Get real followers, likes, and views at the best prices. Fast delivery, premium quality, 24/7 support.';
-  const heroCTA = customization.heroCTAText || 'Get Started';
-  const heroSecondaryCTA = customization.heroSecondaryCTAText || 'View Prices';
+  // Content - use translations for fallback text
+  const heroTitle = customization.heroTitle || t('buyer.hero.title');
+  const heroSubtitle = customization.heroSubtitle || t('buyer.hero.subtitle');
+  const heroCTA = customization.heroCTAText || t('buyer.hero.cta');
+  const heroSecondaryCTA = customization.heroSecondaryCTAText || t('buyer.hero.ctaSecondary');
   const displayLogo = customization.logoUrl || logoUrl;
   const companyName = customization.companyName || panelName;
 
@@ -92,12 +94,12 @@ export const FlySMMHomepage = ({
   const showTestimonials = customization.enableTestimonials !== false;
   const showFAQs = customization.enableFAQs !== false;
 
-  // Content arrays
+  // Content arrays with translations
   const featureCards = customization.featureCards || [
-    { title: 'Instant Delivery', description: 'Your order starts processing immediately', icon: 'Zap', color: primary },
-    { title: 'Secure Payments', description: 'Protected by industry-standard encryption', icon: 'Shield', color: secondary },
-    { title: '24/7 Support', description: 'Our team is always here to help you', icon: 'Users', color: '#4CAF50' },
-    { title: 'Best Prices', description: 'Competitive rates for premium services', icon: 'Star', color: '#FF9800' },
+    { title: t('buyer.features.instantStart'), description: t('buyer.features.instantStartDesc'), icon: 'Zap', color: primary },
+    { title: t('buyer.features.bestPrices'), description: t('buyer.features.bestPricesDesc'), icon: 'Shield', color: secondary },
+    { title: t('buyer.features.support'), description: t('buyer.features.supportDesc'), icon: 'Users', color: '#4CAF50' },
+    { title: t('buyer.features.highQuality'), description: t('buyer.features.highQualityDesc'), icon: 'Star', color: '#FF9800' },
   ];
   const testimonials = customization.testimonials || getDefaultTestimonials();
   const faqs = customization.faqs || getDefaultFAQs();

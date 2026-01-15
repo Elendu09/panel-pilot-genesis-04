@@ -312,6 +312,31 @@ export const BuyerThemeFlySMM = ({ children, className, themeMode = 'light' }: B
           color: #F1F5F9;
         }
         
+        /* Fix quick action buttons in dashboard */
+        .dark .buyer-theme-flysmm button.h-auto,
+        .dark .buyer-theme-flysmm button[class*="h-auto"] {
+          background: #132337 !important;
+          border-color: rgba(33, 150, 243, 0.25) !important;
+        }
+        
+        .dark .buyer-theme-flysmm button.h-auto:hover,
+        .dark .buyer-theme-flysmm button[class*="h-auto"]:hover {
+          background: rgba(33, 150, 243, 0.15) !important;
+          border-color: rgba(33, 150, 243, 0.4) !important;
+        }
+        
+        .dark .buyer-theme-flysmm button.h-auto span,
+        .dark .buyer-theme-flysmm button.h-auto p,
+        .dark .buyer-theme-flysmm button[class*="h-auto"] span,
+        .dark .buyer-theme-flysmm button[class*="h-auto"] p {
+          color: #F1F5F9 !important;
+        }
+        
+        .dark .buyer-theme-flysmm button.h-auto .text-muted-foreground,
+        .dark .buyer-theme-flysmm button[class*="h-auto"] .text-muted-foreground {
+          color: rgba(241, 245, 249, 0.65) !important;
+        }
+        
         .dark .buyer-theme-flysmm a {
           color: #CBD5E1;
         }
@@ -320,21 +345,28 @@ export const BuyerThemeFlySMM = ({ children, className, themeMode = 'light' }: B
           color: #64B5F6;
         }
         
-        /* Dark mode secondary buttons */
-        .dark .buyer-theme-flysmm .btn-secondary,
-        .dark .buyer-theme-flysmm button[variant="secondary"],
-        .dark .buyer-theme-flysmm button[variant="outline"],
-        .dark .buyer-theme-flysmm button[variant="ghost"] {
-          background: rgba(33, 150, 243, 0.1) !important;
+        .dark .buyer-theme-flysmm a button span {
           color: #64B5F6 !important;
+        }
+        
+        /* Dark mode secondary buttons - using class matching */
+        .dark .buyer-theme-flysmm button[class*="outline"],
+        .dark .buyer-theme-flysmm button[class*="ghost"],
+        .dark .buyer-theme-flysmm button[class*="secondary"] {
+          background: rgba(33, 150, 243, 0.1) !important;
+          color: #F1F5F9 !important;
           border-color: rgba(33, 150, 243, 0.25) !important;
         }
         
-        .dark .buyer-theme-flysmm .btn-secondary:hover,
-        .dark .buyer-theme-flysmm button[variant="secondary"]:hover,
-        .dark .buyer-theme-flysmm button[variant="outline"]:hover,
-        .dark .buyer-theme-flysmm button[variant="ghost"]:hover {
+        .dark .buyer-theme-flysmm button[class*="outline"]:hover,
+        .dark .buyer-theme-flysmm button[class*="ghost"]:hover,
+        .dark .buyer-theme-flysmm button[class*="secondary"]:hover {
           background: rgba(33, 150, 243, 0.2) !important;
+        }
+        
+        .dark .buyer-theme-flysmm button[class*="outline"] span,
+        .dark .buyer-theme-flysmm button[class*="ghost"] span {
+          color: #F1F5F9 !important;
         }
         
         /* Dark mode icons */
@@ -367,6 +399,21 @@ export const BuyerThemeFlySMM = ({ children, className, themeMode = 'light' }: B
         .dark .buyer-theme-flysmm nav a:hover,
         .dark .buyer-theme-flysmm header a:hover {
           color: #64B5F6;
+        }
+        
+        /* Comprehensive dashboard fixes */
+        .dark .buyer-theme-flysmm [class*="CardContent"] .text-muted-foreground {
+          color: rgba(241, 245, 249, 0.7) !important;
+        }
+        
+        .dark .buyer-theme-flysmm .text-2xl,
+        .dark .buyer-theme-flysmm .text-3xl,
+        .dark .buyer-theme-flysmm .text-4xl {
+          color: #F1F5F9 !important;
+        }
+        
+        .dark .buyer-theme-flysmm button .text-muted-foreground {
+          color: rgba(241, 245, 249, 0.65) !important;
         }
         
         /* Ensure proper color inheritance */
