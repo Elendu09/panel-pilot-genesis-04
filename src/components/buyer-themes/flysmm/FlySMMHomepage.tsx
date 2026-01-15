@@ -74,11 +74,11 @@ export const FlySMMHomepage = ({
   const fontFamily = customization.fontFamily || 'Nunito';
   const headingWeight = customization.headingWeight || '700';
 
-  // Content - use translations as fallback
-  const heroTitle = customization.heroTitle || t('storefront.hero.defaultTitle');
-  const heroSubtitle = customization.heroSubtitle || t('storefront.hero.defaultSubtitle');
-  const heroCTA = customization.heroCTAText || t('storefront.hero.getStarted');
-  const heroSecondaryCTA = customization.heroSecondaryCTAText || t('storefront.hero.viewServices');
+  // Content - use buyer.hero translations as fallback (supports all languages)
+  const heroTitle = customization.heroTitle || t('buyer.hero.title');
+  const heroSubtitle = customization.heroSubtitle || t('buyer.hero.subtitle');
+  const heroCTA = customization.heroCTAText || t('buyer.hero.cta');
+  const heroSecondaryCTA = customization.heroSecondaryCTAText || t('buyer.hero.ctaSecondary');
   const displayLogo = customization.logoUrl || logoUrl;
   const companyName = customization.companyName || panelName;
 

@@ -2,6 +2,7 @@ import { ReactNode, createContext, useContext, useMemo, useEffect, useState } fr
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { generateBuyerThemeCSS } from '@/lib/color-utils';
+import { useTheme } from '@/hooks/use-theme';
 import BuyerThemeDefault, { defaultThemeConfig } from './BuyerThemeDefault';
 import BuyerThemeAliPanel, { aliPanelThemeConfig } from './BuyerThemeAliPanel';
 import BuyerThemeFlySMM, { flySMMThemeConfig } from './BuyerThemeFlySMM';
@@ -222,10 +223,19 @@ export const BuyerThemeWrapper = ({
     customization,
   }), [themeKey, themeConfig, customization]);
 
+  // Get the actual theme from the global ThemeProvider (respects the user's toggle)
+  const { theme: globalTheme } = useTheme();
+  const effectiveThemeMode = useMemo(() => {
+    if (globalTheme === 'system') {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    return globalTheme as 'light' | 'dark';
+  }, [globalTheme]);
+
   return (
     <BuyerThemeContext.Provider value={contextValue}>
       {themeCSS && <style>{themeCSS}</style>}
-      <ThemeComponent className={className} themeMode={customization.themeMode || 'dark'}>
+      <ThemeComponent className={className} themeMode={effectiveThemeMode}>
         {children}
       </ThemeComponent>
     </BuyerThemeContext.Provider>

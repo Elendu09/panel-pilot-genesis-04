@@ -77,9 +77,9 @@ export const TGRefHomepage = ({
   const fontFamily = customization.fontFamily || 'mono';
   const headingWeight = customization.headingWeight || '700';
 
-  // Content - use translations as fallback
-  const heroTitle = customization.heroTitle || t('storefront.hero.defaultTitle');
-  const heroSubtitle = customization.heroSubtitle || t('storefront.hero.defaultSubtitle');
+  // Content - use buyer.hero translations as fallback (supports all languages)
+  const heroTitle = customization.heroTitle || t('buyer.hero.title');
+  const heroSubtitle = customization.heroSubtitle || t('buyer.hero.subtitle');
   const displayLogo = customization.logoUrl || logoUrl;
   const companyName = customization.companyName || panelName;
 
