@@ -17,7 +17,6 @@ import {
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { ThemeNavigation } from '../shared/ThemeNavigation';
 import { AnimatedHeroText, getThemeDefaultAnimationStyle, getAnimatedWordFromTitle } from '../shared/AnimatedHeroText';
-import { useLanguage } from '@/contexts/LanguageContext';
 
 interface TGRefHomepageProps {
   panelName?: string;
@@ -40,7 +39,6 @@ export const TGRefHomepage = ({
   logoUrl 
 }: TGRefHomepageProps) => {
   const navigate = useNavigate();
-  const { t } = useLanguage();
   
   // Theme mode - reactive to customization prop (no local state)
   const themeMode = customization.themeMode || 'dark';
@@ -77,9 +75,9 @@ export const TGRefHomepage = ({
   const fontFamily = customization.fontFamily || 'mono';
   const headingWeight = customization.headingWeight || '700';
 
-  // Content - use buyer.hero translations as fallback (supports all languages)
-  const heroTitle = customization.heroTitle || t('buyer.hero.title');
-  const heroSubtitle = customization.heroSubtitle || t('buyer.hero.subtitle');
+  // Content
+  const heroTitle = customization.heroTitle || 'Social Growth';
+  const heroSubtitle = customization.heroSubtitle || 'Execute powerful SMM commands. Instant delivery, premium quality, unbeatable prices.';
   const displayLogo = customization.logoUrl || logoUrl;
   const companyName = customization.companyName || panelName;
 

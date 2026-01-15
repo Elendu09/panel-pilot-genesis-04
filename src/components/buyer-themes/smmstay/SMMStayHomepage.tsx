@@ -16,7 +16,6 @@ import {
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { ThemeNavigation } from '../shared/ThemeNavigation';
 import { AnimatedHeroText, getThemeDefaultAnimationStyle, getAnimatedWordFromTitle } from '../shared/AnimatedHeroText';
-import { useLanguage } from '@/contexts/LanguageContext';
 
 interface SMMStayHomepageProps {
   panelName?: string;
@@ -39,7 +38,6 @@ export const SMMStayHomepage = ({
   logoUrl 
 }: SMMStayHomepageProps) => {
   const navigate = useNavigate();
-  const { t } = useLanguage();
   
   // Theme mode - reactive to customization prop (no local state)
   const themeMode = customization.themeMode || 'dark';
@@ -74,10 +72,10 @@ export const SMMStayHomepage = ({
   const fontFamily = customization.fontFamily || 'Montserrat';
   const headingWeight = customization.headingWeight || '900';
 
-  // Content - use buyer.hero translations as fallback (supports all languages)
-  const heroTitle = customization.heroTitle || t('buyer.hero.title');
-  const heroSubtitle = customization.heroSubtitle || t('buyer.hero.subtitle');
-  const heroCTA = customization.heroCTAText || t('buyer.hero.cta');
+  // Content
+  const heroTitle = customization.heroTitle || 'Dominate';
+  const heroSubtitle = customization.heroSubtitle || 'Premium followers, likes & views at unbeatable prices';
+  const heroCTA = customization.heroCTAText || 'Get Started';
   const displayLogo = customization.logoUrl || logoUrl;
   const companyName = customization.companyName || panelName;
 

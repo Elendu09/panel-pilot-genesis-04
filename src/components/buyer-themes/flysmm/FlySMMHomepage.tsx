@@ -16,7 +16,6 @@ import {
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { ThemeNavigation } from '../shared/ThemeNavigation';
 import { AnimatedHeroText, getThemeDefaultAnimationStyle, getAnimatedWordFromTitle } from '../shared/AnimatedHeroText';
-import { useLanguage } from '@/contexts/LanguageContext';
 
 interface FlySMMHomepageProps {
   panelName?: string;
@@ -39,7 +38,6 @@ export const FlySMMHomepage = ({
   logoUrl 
 }: FlySMMHomepageProps) => {
   const navigate = useNavigate();
-  const { t } = useLanguage();
   
   // Theme mode - reactive to customization prop (no local state), FlySMM defaults to light
   const themeMode = customization.themeMode || 'light';
@@ -74,11 +72,11 @@ export const FlySMMHomepage = ({
   const fontFamily = customization.fontFamily || 'Nunito';
   const headingWeight = customization.headingWeight || '700';
 
-  // Content - use buyer.hero translations as fallback (supports all languages)
-  const heroTitle = customization.heroTitle || t('buyer.hero.title');
-  const heroSubtitle = customization.heroSubtitle || t('buyer.hero.subtitle');
-  const heroCTA = customization.heroCTAText || t('buyer.hero.cta');
-  const heroSecondaryCTA = customization.heroSecondaryCTAText || t('buyer.hero.ctaSecondary');
+  // Content
+  const heroTitle = customization.heroTitle || 'Grow Your';
+  const heroSubtitle = customization.heroSubtitle || 'Get real followers, likes, and views at the best prices. Fast delivery, premium quality, 24/7 support.';
+  const heroCTA = customization.heroCTAText || 'Get Started';
+  const heroSecondaryCTA = customization.heroSecondaryCTAText || 'View Prices';
   const displayLogo = customization.logoUrl || logoUrl;
   const companyName = customization.companyName || panelName;
 

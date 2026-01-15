@@ -732,39 +732,20 @@ const PanelOnboarding = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-sky-400 via-blue-500 to-indigo-600 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-secondary/10 flex items-center justify-center p-4">
       <Helmet>
         <title>Setup Your Panel - HOME OF SMM</title>
         <meta name="robots" content="noindex,nofollow" />
       </Helmet>
       
       <div className="w-full max-w-4xl">
-        {/* Header Card with Stacked Windows Effect */}
-        <div className="relative mb-8">
-          {/* Stacked floating windows effect */}
-          <div className="absolute inset-x-8 -top-6 h-8 bg-white/20 backdrop-blur-sm rounded-t-2xl opacity-30 transform scale-[0.92]" />
-          <div className="absolute inset-x-4 -top-4 h-6 bg-white/30 backdrop-blur-sm rounded-t-2xl opacity-50 transform scale-[0.96]" />
-          <div className="absolute inset-x-2 -top-2 h-4 bg-white/40 backdrop-blur-sm rounded-t-2xl opacity-70 scale-[0.98]" />
-          
-          {/* Main Header Card */}
-          <div className="relative bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-2xl p-6 shadow-2xl border border-white/20">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shadow-lg">
-                  <Sparkles className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-xl font-bold text-foreground">Create Your Panel</h1>
-                  <p className="text-sm text-muted-foreground">Step {currentStep + 1} of {steps.length}</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-2xl font-bold text-primary">{Math.round(progress)}%</p>
-                <p className="text-xs text-muted-foreground">Complete</p>
-              </div>
-            </div>
-            <Progress value={progress} className="h-2 mt-4" />
+        {/* Progress Bar */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm text-muted-foreground">Step {currentStep + 1} of {steps.length}</p>
+            <p className="text-sm font-medium">{Math.round(progress)}% Complete</p>
           </div>
+          <Progress value={progress} className="h-2" />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -849,7 +830,7 @@ const PanelOnboarding = () => {
           </div>
 
           {/* Main Content Card */}
-          <Card className="lg:col-span-3 bg-white/90 dark:bg-card/90 backdrop-blur-xl border-white/20 shadow-xl">
+          <Card className="lg:col-span-3 bg-card/80 backdrop-blur-xl border-border/50 shadow-xl">
             <CardHeader>
               <CardTitle className="flex items-center gap-3">
                 <Sparkles className="w-6 h-6 text-primary" />
