@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Menu, X, LogOut } from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { LanguageSelector } from "@/components/buyer/LanguageSelector";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -11,8 +11,14 @@ export const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { user, profile, signOut } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const isHomepage = location.pathname === '/';
   const { t } = useLanguage();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/');
+  };
 
   const getDashboardPath = () => {
     switch (profile?.role) {
@@ -70,7 +76,7 @@ export const Navigation = () => {
                 <Button asChild variant="outline" size="sm">
                   <Link to={getDashboardPath()}>Dashboard</Link>
                 </Button>
-                <Button variant="destructive" size="sm" onClick={signOut}>
+                <Button variant="destructive" size="sm" onClick={handleSignOut}>
                   <LogOut className="h-4 w-4 mr-1" />
                   Logout
                 </Button>
@@ -141,7 +147,7 @@ export const Navigation = () => {
                     <Button asChild variant="outline" className="w-full justify-start">
                       <Link to={getDashboardPath()}>Dashboard</Link>
                     </Button>
-                    <Button variant="ghost" onClick={signOut} className="w-full justify-start">
+                    <Button variant="ghost" onClick={handleSignOut} className="w-full justify-start">
                       <LogOut className="h-4 w-4 mr-2" />
                       Sign Out
                     </Button>
