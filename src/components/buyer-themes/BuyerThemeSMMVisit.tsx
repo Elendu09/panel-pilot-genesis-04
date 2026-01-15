@@ -288,6 +288,50 @@ export const BuyerThemeSMMVisit = ({ children, className, themeMode = 'light' }:
           color: #FFFFFF;
         }
         
+        /* Fix quick action buttons in dashboard - tall buttons with h-auto class */
+        .dark .buyer-theme-smmvisit button.h-auto,
+        .dark .buyer-theme-smmvisit .h-auto.rounded-xl {
+          background: #262626 !important;
+          border-color: rgba(255, 215, 0, 0.2) !important;
+        }
+        
+        .dark .buyer-theme-smmvisit button.h-auto:hover {
+          background: rgba(255, 215, 0, 0.12) !important;
+          border-color: rgba(255, 215, 0, 0.35) !important;
+        }
+        
+        .dark .buyer-theme-smmvisit button.h-auto span,
+        .dark .buyer-theme-smmvisit button.h-auto .font-medium,
+        .dark .buyer-theme-smmvisit button.h-auto p {
+          color: #FFFFFF !important;
+        }
+        
+        .dark .buyer-theme-smmvisit button.h-auto .text-muted-foreground,
+        .dark .buyer-theme-smmvisit button.h-auto p.text-muted-foreground {
+          color: rgba(255, 255, 255, 0.65) !important;
+        }
+        
+        /* Fix outline/ghost variant buttons */
+        .dark .buyer-theme-smmvisit button[class*="outline"],
+        .dark .buyer-theme-smmvisit button[class*="ghost"] {
+          background: rgba(38, 38, 38, 0.9) !important;
+          border-color: rgba(255, 215, 0, 0.25) !important;
+          color: #FFFFFF !important;
+        }
+        
+        .dark .buyer-theme-smmvisit button[class*="outline"]:hover,
+        .dark .buyer-theme-smmvisit button[class*="ghost"]:hover {
+          background: rgba(255, 215, 0, 0.15) !important;
+          border-color: rgba(255, 215, 0, 0.4) !important;
+        }
+        
+        /* Fix "Alle anzeigen" / "View All" buttons */
+        .dark .buyer-theme-smmvisit a button,
+        .dark .buyer-theme-smmvisit a > .inline-flex {
+          color: #FFD700 !important;
+        }
+        
+        
         .dark .buyer-theme-smmvisit a {
           color: #D1D5DB;
         }
