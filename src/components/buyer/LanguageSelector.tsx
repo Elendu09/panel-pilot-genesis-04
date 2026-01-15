@@ -62,8 +62,8 @@ export const LanguageSelector = () => {
   const setLanguage = languageContext?.setLanguage ?? ((lang: Language) => {
     setFallbackLanguage(lang);
     localStorage.setItem('preferred_language', lang);
-    // Force page reload to apply language change when context is not available
-    window.location.reload();
+    // Dispatch custom event so preview/themes can react without page reload
+    window.dispatchEvent(new CustomEvent('languageChanged', { detail: { language: lang } }));
   });
   const buyer = buyerAuthContext?.buyer ?? null;
   const panelId = buyerAuthContext?.panelId ?? null;
