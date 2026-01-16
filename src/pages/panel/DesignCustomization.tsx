@@ -1494,12 +1494,12 @@ export default function DesignCustomization() {
       case 'branding':
         return (
           <div className="space-y-5">
-            {/* Favicon Section */}
+            {/* Favicon & Icons Section */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <Label className="flex items-center gap-2">
-                  <span>Favicon</span>
-                  <Badge variant="outline" className="text-[10px]">32x32</Badge>
+                  <span>Favicon & Site Icons</span>
+                  <Badge variant="outline" className="text-[10px]">Browser Tab</Badge>
                 </Label>
               </div>
               
@@ -1538,11 +1538,52 @@ export default function DesignCustomization() {
                         {customization.faviconUrl ? 'Custom Favicon' : 'Default Favicon'}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        PNG or ICO, 32x32px recommended
+                        PNG, JPG or ICO • 512x512px recommended
                       </p>
                     </div>
                   </div>
                 </div>
+              </div>
+              
+              {/* Favicon Generation Options */}
+              <div className="grid grid-cols-2 gap-2">
+                {/* Use Logo as Favicon Button */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!customization.logoUrl}
+                  onClick={() => {
+                    if (customization.logoUrl) {
+                      updateCustomization('faviconUrl', customization.logoUrl);
+                      toast({
+                        title: 'Logo applied as favicon',
+                        description: 'Your logo is now set as your favicon. Save to apply changes.',
+                      });
+                    }
+                  }}
+                  className="gap-2 text-xs"
+                >
+                  <Wand2 className="w-3 h-3" />
+                  Use Logo
+                </Button>
+                
+                {/* Reset to default button */}
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => {
+                    updateCustomization('faviconUrl', '');
+                    toast({
+                      title: 'Favicon reset',
+                      description: 'Using default favicon. Save to apply changes.',
+                    });
+                  }}
+                  className="gap-2 text-xs"
+                  disabled={!customization.faviconUrl}
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  Reset Default
+                </Button>
               </div>
               
               {/* Upload Component */}
@@ -1552,23 +1593,16 @@ export default function DesignCustomization() {
                 onChange={(url) => updateCustomization('faviconUrl', url)}
                 panelId={panelId || ''}
                 folder="favicon"
-                placeholder="Upload favicon (PNG, ICO, 32x32 recommended)"
+                placeholder="Upload favicon image (PNG, JPG, ICO)"
                 aspectRatio="square"
-                maxSizeMB={1}
+                maxSizeMB={2}
               />
               
-              {/* Reset to default button */}
-              {customization.faviconUrl && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => updateCustomization('faviconUrl', '')}
-                  className="w-full gap-2"
-                >
-                  <RotateCcw className="w-3 h-3" />
-                  Reset to Default Favicon
-                </Button>
-              )}
+              {/* Help Text */}
+              <p className="text-xs text-muted-foreground bg-muted/30 rounded-lg p-3">
+                <strong>Tips:</strong> For best results, upload a square image (512x512px). 
+                You can also use your logo as favicon, or upload a dedicated .ico file.
+              </p>
             </div>
             
             {/* Divider */}
