@@ -13,7 +13,7 @@ export const TenantHead = ({ title, description }: TenantHeadProps) => {
   
   // Favicon URLs with fallbacks: custom favicon -> default (NOT logo_url as that's the brand logo)
   const faviconUrl = customBranding?.faviconUrl || '/default-panel-favicon.png';
-  const appleTouchIconUrl = customBranding?.appleTouchIconUrl || faviconUrl;
+  const appleTouchIconUrl = customBranding?.appleTouchIconUrl || '/default-panel-apple-touch-icon.png';
   const ogImage = customBranding?.ogImageUrl || panel?.logo_url;
   
   // Generate proper SEO title - use panel name, never hardcoded "SMM Panel"

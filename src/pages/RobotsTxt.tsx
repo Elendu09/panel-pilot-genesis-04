@@ -30,9 +30,17 @@ const RobotsTxt = () => {
     const generateRobots = async () => {
       try {
         const hostname = window.location.hostname.toLowerCase();
+        const hostnameWithoutWww = hostname.startsWith('www.') ? hostname.slice(4) : hostname;
+        
+        // Platform detection - must be EXACT match to root domain, not subdomains
+        const isPlatformRoot = hostnameWithoutWww === 'homeofsmm.com' || 
+                               hostnameWithoutWww === 'smmpilot.online' ||
+                               hostname.includes('lovableproject.com') ||
+                               hostname.includes('lovable.app') ||
+                               hostname === 'localhost';
         
         // For platform domains, use static robots.txt content
-        if (isPlatformDomain) {
+        if (isPlatformRoot) {
           const response = await supabase.functions.invoke('generate-robots', {
             body: { type: 'platform' }
           });
