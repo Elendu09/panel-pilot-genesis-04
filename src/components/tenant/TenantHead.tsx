@@ -10,18 +10,25 @@ interface TenantHeadProps {
 export const TenantHead = ({ title, description }: TenantHeadProps) => {
   const { panel } = useTenant();
   const customBranding = panel?.custom_branding as any;
+  const panelSettings = panel?.settings as any;
   
-  // Favicon URLs with fallbacks: custom favicon -> default (NOT logo_url as that's the brand logo)
-  const faviconUrl = customBranding?.faviconUrl || '/default-panel-favicon.png';
+  // Favicon URLs - prioritize .ico for Google compatibility, then custom, then defaults
+  const faviconIcoUrl = customBranding?.faviconIcoUrl || '/default-tenant-favicon.ico';
+  const faviconPngUrl = customBranding?.faviconUrl || '/default-panel-favicon.png';
   const appleTouchIconUrl = customBranding?.appleTouchIconUrl || '/default-panel-apple-touch-icon.png';
   const ogImage = customBranding?.ogImageUrl || panel?.logo_url;
   
-  // Generate proper SEO title - use panel name, never hardcoded "SMM Panel"
+  // Generate proper SEO title/description from panel settings (set during onboarding)
   const panelName = panel?.name || 'Panel';
-  const seoSettings = panel?.settings as any;
-  const pageTitle = title || seoSettings?.seo_title || `${panelName} - Social Media Marketing Services`;
-  const pageDescription = description || seoSettings?.seo_description || `Professional social media marketing services from ${panelName}. Buy followers, likes, and views.`;
-  const seoKeywords = seoSettings?.seo_keywords || `${panelName}, social media marketing, smm services, instagram followers, youtube views`;
+  
+  // Priority: 1. Page-specific props, 2. Panel SEO settings, 3. Auto-generated
+  const seoTitle = panelSettings?.seo_title || `${panelName} - Social Media Marketing Services`;
+  const seoDescription = panelSettings?.seo_description || `Professional social media marketing services from ${panelName}. Buy followers, likes, and views.`;
+  const seoKeywords = panelSettings?.seo_keywords || `${panelName}, social media marketing, smm services, instagram followers, youtube views`;
+  
+  // Final values (page-specific title/description overrides panel defaults)
+  const pageTitle = title || seoTitle;
+  const pageDescription = description || seoDescription;
   
   // Canonical URL based on actual domain
   const canonicalUrl = typeof window !== 'undefined' ? window.location.origin : '';
@@ -36,24 +43,40 @@ export const TenantHead = ({ title, description }: TenantHeadProps) => {
   }, [panel?.name, pageTitle]);
   
   // Force favicon update via DOM manipulation (overrides index.html)
-  // Always apply default favicon for tenant domains, even if panel is loading
+  // Prioritize .ico format for Google crawler compatibility
   useEffect(() => {
     // Remove all existing favicon links
     document.querySelectorAll('link[rel*="icon"], link[rel="apple-touch-icon"]').forEach(el => el.remove());
     
-    // Add new favicon (defaults to default-panel-favicon.png if no custom favicon)
-    const favicon = document.createElement('link');
-    favicon.rel = 'icon';
-    favicon.type = faviconUrl.endsWith('.ico') ? 'image/x-icon' : 'image/png';
-    favicon.href = faviconUrl;
-    document.head.appendChild(favicon);
+    // Add primary .ico favicon (best for Google)
+    const faviconIco = document.createElement('link');
+    faviconIco.rel = 'icon';
+    faviconIco.type = 'image/x-icon';
+    faviconIco.href = faviconIcoUrl;
+    document.head.appendChild(faviconIco);
+    
+    // Add shortcut icon (legacy browser support)
+    const shortcutIcon = document.createElement('link');
+    shortcutIcon.rel = 'shortcut icon';
+    shortcutIcon.type = 'image/x-icon';
+    shortcutIcon.href = faviconIcoUrl;
+    document.head.appendChild(shortcutIcon);
+    
+    // Add PNG favicon for other sizes
+    const faviconPng32 = document.createElement('link');
+    faviconPng32.rel = 'icon';
+    faviconPng32.type = 'image/png';
+    faviconPng32.sizes = '32x32';
+    faviconPng32.href = faviconPngUrl;
+    document.head.appendChild(faviconPng32);
     
     // Add apple touch icon
     const appleIcon = document.createElement('link');
     appleIcon.rel = 'apple-touch-icon';
+    appleIcon.sizes = '180x180';
     appleIcon.href = appleTouchIconUrl;
     document.head.appendChild(appleIcon);
-  }, [faviconUrl, appleTouchIconUrl]);
+  }, [faviconIcoUrl, faviconPngUrl, appleTouchIconUrl]);
   
   return (
     <Helmet>
@@ -86,9 +109,11 @@ export const TenantHead = ({ title, description }: TenantHeadProps) => {
       {/* Sitemap */}
       <link rel="sitemap" type="application/xml" href={`${canonicalUrl}/sitemap.xml`} />
       
-      {/* Favicon and Icons */}
-      <link rel="icon" type="image/png" href={faviconUrl} />
-      <link rel="apple-touch-icon" href={appleTouchIconUrl} />
+      {/* Favicon and Icons - .ico format for Google compatibility */}
+      <link rel="icon" type="image/x-icon" href={faviconIcoUrl} />
+      <link rel="shortcut icon" type="image/x-icon" href={faviconIcoUrl} />
+      <link rel="icon" type="image/png" sizes="32x32" href={faviconPngUrl} />
+      <link rel="apple-touch-icon" sizes="180x180" href={appleTouchIconUrl} />
       
       {/* Open Graph / Facebook */}
       <meta property="og:type" content="website" />
@@ -137,6 +162,20 @@ export const TenantHead = ({ title, description }: TenantHeadProps) => {
           "url": canonicalUrl,
           ...(ogImage ? { "logo": ogImage } : {}),
           "sameAs": []
+        })}
+      </script>
+      {/* Local Business schema for SMM Panel services */}
+      <script type="application/ld+json">
+        {JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "LocalBusiness",
+          "name": panelName,
+          "url": canonicalUrl,
+          "description": pageDescription,
+          ...(ogImage ? { "image": ogImage } : {}),
+          "priceRange": "$$",
+          "openingHours": "Mo-Su 00:00-24:00",
+          "@id": canonicalUrl
         })}
       </script>
     </Helmet>
