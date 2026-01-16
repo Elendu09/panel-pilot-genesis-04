@@ -80,6 +80,9 @@ export const TenantHead = ({ title, description }: TenantHeadProps) => {
       {/* Canonical URL */}
       <link rel="canonical" href={currentUrl.split('?')[0]} />
       
+      {/* Robots.txt */}
+      <link rel="robots" href={`${canonicalUrl}/robots.txt`} />
+      
       {/* Sitemap */}
       <link rel="sitemap" type="application/xml" href={`${canonicalUrl}/sitemap.xml`} />
       
@@ -110,6 +113,32 @@ export const TenantHead = ({ title, description }: TenantHeadProps) => {
       {/* Preconnect for Performance */}
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      
+      {/* JSON-LD Structured Data for Organization/WebSite */}
+      <script type="application/ld+json">
+        {JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          "name": panelName,
+          "url": canonicalUrl,
+          "description": pageDescription,
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": `${canonicalUrl}/services?q={search_term_string}`,
+            "query-input": "required name=search_term_string"
+          }
+        })}
+      </script>
+      <script type="application/ld+json">
+        {JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          "name": panelName,
+          "url": canonicalUrl,
+          ...(ogImage ? { "logo": ogImage } : {}),
+          "sameAs": []
+        })}
+      </script>
     </Helmet>
   );
 };

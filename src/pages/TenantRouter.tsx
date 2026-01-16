@@ -16,8 +16,9 @@ import { LanguageProvider } from '@/contexts/LanguageContext';
 import { Rocket, Sparkles } from 'lucide-react';
 import App from '../App';
 
-// Set initial title immediately based on domain (prevents "Loading..." flash)
-(function setInitialTitle() {
+// CRITICAL: Set initial branding immediately based on domain
+// This prevents "HOME OF SMM" from flashing on tenant domains
+(function setInitialBranding() {
   if (typeof window === 'undefined') return;
   const hostname = window.location.hostname.toLowerCase();
   const hostnameWithoutWww = hostname.startsWith('www.') ? hostname.slice(4) : hostname;
@@ -26,17 +27,52 @@ import App from '../App';
   const platformDomains = ['homeofsmm.com', 'smmpilot.online'];
   const isPlatform = platformDomains.some(d => hostnameWithoutWww === d);
   
+  // Check if development/preview domain
+  const isDevDomain = hostname.includes('lovableproject.com') || 
+                       hostname.includes('lovable.app') || 
+                       hostname === 'localhost' ||
+                       hostname.startsWith('localhost:');
+  
   if (isPlatform) {
     document.title = 'HOME OF SMM - Advanced SMM Panel Platform';
-  } else {
-    // Extract subdomain for tenant domains
+  } else if (!isDevDomain) {
+    // TENANT DOMAIN - Remove ALL platform branding immediately
+    
+    // 1. Set neutral title based on subdomain or hostname
     const parts = hostname.split('.');
-    if (parts.length > 2 || (parts.length === 2 && !platformDomains.includes(hostname))) {
-      const subdomain = parts[0];
-      if (subdomain && subdomain !== 'www') {
-        document.title = `${subdomain.charAt(0).toUpperCase() + subdomain.slice(1)} - SMM Panel`;
-      }
+    let tenantName = 'SMM Panel';
+    
+    // Check for subdomain pattern (xxx.homeofsmm.com, xxx.smmpilot.online)
+    const isSubdomain = platformDomains.some(d => hostname.endsWith(`.${d}`));
+    if (isSubdomain && parts.length > 2) {
+      tenantName = parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
+    } else if (!isSubdomain) {
+      // Custom domain - use first part of hostname
+      tenantName = parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
     }
+    
+    document.title = `${tenantName} - Loading...`;
+    
+    // 2. Remove ALL existing favicons (prevents platform favicon flash)
+    document.querySelectorAll('link[rel*="icon"], link[rel="apple-touch-icon"]').forEach(el => el.remove());
+    
+    // 3. Add neutral default favicon immediately
+    const favicon = document.createElement('link');
+    favicon.rel = 'icon';
+    favicon.type = 'image/png';
+    favicon.href = '/default-panel-favicon.png';
+    document.head.appendChild(favicon);
+    
+    // 4. Remove any platform-specific meta tags
+    document.querySelectorAll('meta[property="og:title"], meta[property="og:site_name"], meta[name="title"]').forEach(el => {
+      const content = el.getAttribute('content') || '';
+      if (content.toLowerCase().includes('home of smm') || content.toLowerCase().includes('homeofsmm')) {
+        el.remove();
+      }
+    });
+    
+    // 5. Hide body briefly to prevent any visual flash (will be shown once React renders)
+    document.documentElement.style.visibility = 'hidden';
   }
 })();
 
@@ -64,6 +100,7 @@ import FastOrder from './FastOrder';
 import BuyerBulkOrder from './buyer/BuyerBulkOrder';
 import TrackOrder from './TrackOrder';
 import Sitemap from './Sitemap';
+import RobotsTxt from './RobotsTxt';
 import TeamAuth from './buyer/TeamAuth';
 import TeamDashboard from './panel/TeamDashboard';
 
@@ -113,9 +150,12 @@ const TenantContent = () => {
     setLoadingTimeout(false);
   }, [loading]);
 
-  // Always set default favicon for tenant domains (regardless of panel state)
+  // Always set default favicon for tenant domains and make document visible
   useEffect(() => {
     if (isTenantDomain && typeof document !== 'undefined') {
+      // Make document visible (was hidden by IIFE to prevent branding flash)
+      document.documentElement.style.visibility = 'visible';
+      
       const faviconUrl = '/default-panel-favicon.png';
       
       // Remove existing favicons
@@ -258,8 +298,9 @@ const TenantContent = () => {
                           <Route path="/blog" element={<BuyerBlog />} />
                           <Route path="/blog/:slug" element={<BuyerBlogPost />} />
 
-                          {/* Sitemap route */}
+                          {/* Sitemap and robots.txt routes */}
                           <Route path="/sitemap.xml" element={<Sitemap />} />
+                          <Route path="/robots.txt" element={<RobotsTxt />} />
                           
                           {/* Protected buyer routes */}
                           <Route path="/dashboard" element={
