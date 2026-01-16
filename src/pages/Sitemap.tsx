@@ -1,14 +1,30 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useLayoutEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 /**
  * Dynamic Sitemap Page Component
  * This component fetches and renders sitemap.xml content for both platform and tenant domains
+ * Renders as clean XML text directly - no blob URLs
  */
 const Sitemap = () => {
   const [sitemapXml, setSitemapXml] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Set document styling for XML display immediately
+  useLayoutEffect(() => {
+    // Apply XML-friendly styling to body
+    document.body.style.margin = '0';
+    document.body.style.padding = '0';
+    document.body.style.backgroundColor = '#1e1e1e';
+    
+    return () => {
+      // Cleanup on unmount
+      document.body.style.margin = '';
+      document.body.style.padding = '';
+      document.body.style.backgroundColor = '';
+    };
+  }, []);
 
   useEffect(() => {
     const generateSitemap = async () => {
@@ -49,10 +65,19 @@ const Sitemap = () => {
           setSitemapXml(xml);
         } else {
           // Tenant sitemap - call edge function
-          const subdomain = hostname.split('.')[0];
+          // Detect if this is a subdomain or custom domain
+          const isSubdomain = hostname.endsWith('.homeofsmm.com') || hostname.endsWith('.smmpilot.online');
+          
+          const params: Record<string, string> = {};
+          if (isSubdomain) {
+            params.subdomain = hostname.split('.')[0];
+          } else {
+            // Custom domain
+            params.domain = hostname;
+          }
           
           const { data, error: fnError } = await supabase.functions.invoke('generate-sitemap', {
-            body: { subdomain }
+            body: params
           });
 
           if (fnError) throw fnError;
@@ -61,6 +86,28 @@ const Sitemap = () => {
       } catch (err: any) {
         console.error('Sitemap generation error:', err);
         setError(err.message || 'Failed to generate sitemap');
+        
+        // Generate fallback sitemap
+        const baseUrl = `https://${window.location.hostname}`;
+        const fallbackXml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>${baseUrl}/</loc>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/services</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/auth</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+</urlset>`;
+        setSitemapXml(fallbackXml);
       } finally {
         setLoading(false);
       }
@@ -69,41 +116,64 @@ const Sitemap = () => {
     generateSitemap();
   }, []);
 
-  // Set proper content type for XML
-  useEffect(() => {
-    if (sitemapXml && !loading) {
-      // Create a blob and redirect to it for proper XML rendering
-      const blob = new Blob([sitemapXml], { type: 'application/xml' });
-      const url = URL.createObjectURL(blob);
-      window.location.replace(url);
-    }
-  }, [sitemapXml, loading]);
-
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
-          <p className="text-muted-foreground">Generating sitemap...</p>
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#1e1e1e',
+        color: '#888'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{
+            width: '32px',
+            height: '32px',
+            border: '3px solid #444',
+            borderTop: '3px solid #6366f1',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+            margin: '0 auto 16px'
+          }} />
+          <p style={{ fontFamily: 'monospace', fontSize: '14px' }}>Generating sitemap.xml...</p>
+          <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
         </div>
       </div>
     );
   }
 
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center text-red-500">
-          <p>Error: {error}</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Fallback display if blob redirect doesn't work
+  // Render XML directly as preformatted text
+  // This is cleaner and more reliable than blob URLs
   return (
-    <pre className="p-4 bg-slate-900 text-green-400 text-sm overflow-auto min-h-screen">
-      {sitemapXml}
+    <pre style={{
+      fontFamily: 'Monaco, Consolas, "Courier New", monospace',
+      fontSize: '13px',
+      lineHeight: '1.5',
+      whiteSpace: 'pre-wrap',
+      wordWrap: 'break-word',
+      margin: 0,
+      padding: '16px',
+      backgroundColor: '#1e1e1e',
+      color: '#d4d4d4',
+      minHeight: '100vh',
+      overflowX: 'auto'
+    }}>
+      {sitemapXml.split('\n').map((line, i) => {
+        // Simple syntax highlighting for XML
+        const highlightedLine = line
+          .replace(/(<\?.*?\?>)/g, '<span style="color:#569cd6">$1</span>')
+          .replace(/(<\/?[a-zA-Z][^>]*>)/g, '<span style="color:#4ec9b0">$1</span>')
+          .replace(/(https?:\/\/[^\s<]+)/g, '<span style="color:#ce9178">$1</span>');
+        
+        return (
+          <div 
+            key={i} 
+            dangerouslySetInnerHTML={{ __html: highlightedLine }}
+            style={{ minHeight: '20px' }}
+          />
+        );
+      })}
     </pre>
   );
 };

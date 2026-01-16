@@ -1,12 +1,30 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useLayoutEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 
+/**
+ * Dynamic robots.txt Page Component
+ * This component fetches and renders robots.txt content for both platform and tenant domains
+ * Renders as clean text directly - no blob URLs
+ */
 const RobotsTxt = () => {
   const [robotsContent, setRobotsContent] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { panel, isPlatformDomain, isTenantDomain } = useTenant();
+
+  // Set document styling for text display immediately
+  useLayoutEffect(() => {
+    document.body.style.margin = '0';
+    document.body.style.padding = '0';
+    document.body.style.backgroundColor = '#1e1e1e';
+    
+    return () => {
+      document.body.style.margin = '';
+      document.body.style.padding = '';
+      document.body.style.backgroundColor = '';
+    };
+  }, []);
 
   useEffect(() => {
     const generateRobots = async () => {
@@ -48,9 +66,10 @@ const RobotsTxt = () => {
         }
 
         // Fallback: generate based on hostname detection
-        const parts = hostname.split('.');
-        if (parts.length > 2) {
-          const subdomain = parts[0];
+        const isSubdomain = hostname.includes('.homeofsmm.com') || hostname.includes('.smmpilot.online');
+        
+        if (isSubdomain) {
+          const subdomain = hostname.split('.')[0];
           const response = await supabase.functions.invoke('generate-robots', {
             body: { subdomain }
           });
@@ -71,8 +90,16 @@ const RobotsTxt = () => {
         setError(err.message);
         
         // Fallback robots.txt
-        setRobotsContent(`User-agent: *
+        const baseUrl = `https://${window.location.hostname}`;
+        setRobotsContent(`# robots.txt for ${window.location.hostname}
+# Generated fallback
+
+User-agent: *
 Allow: /
+
+# Sitemap
+Sitemap: ${baseUrl}/sitemap.xml
+
 Crawl-delay: 1`);
       } finally {
         setLoading(false);
@@ -82,35 +109,69 @@ Crawl-delay: 1`);
     generateRobots();
   }, [panel, isPlatformDomain, isTenantDomain]);
 
-  // Redirect to blob URL with correct content type
-  useEffect(() => {
-    if (robotsContent && !loading) {
-      const blob = new Blob([robotsContent], { type: 'text/plain' });
-      const blobUrl = URL.createObjectURL(blob);
-      window.location.replace(blobUrl);
-    }
-  }, [robotsContent, loading]);
-
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-900">
-        <div className="text-slate-400">Generating robots.txt...</div>
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#1e1e1e',
+        color: '#888'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{
+            width: '32px',
+            height: '32px',
+            border: '3px solid #444',
+            borderTop: '3px solid #6366f1',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+            margin: '0 auto 16px'
+          }} />
+          <p style={{ fontFamily: 'monospace', fontSize: '14px' }}>Generating robots.txt...</p>
+          <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+        </div>
       </div>
     );
   }
 
-  if (error) {
-    return (
-      <pre className="font-mono text-sm whitespace-pre-wrap p-4">
-        {robotsContent}
-      </pre>
-    );
-  }
-
-  // Fallback render while redirect happens
+  // Render robots.txt directly as preformatted text
   return (
-    <pre className="font-mono text-sm whitespace-pre-wrap p-4">
-      {robotsContent}
+    <pre style={{
+      fontFamily: 'Monaco, Consolas, "Courier New", monospace',
+      fontSize: '13px',
+      lineHeight: '1.6',
+      whiteSpace: 'pre-wrap',
+      wordWrap: 'break-word',
+      margin: 0,
+      padding: '16px',
+      backgroundColor: '#1e1e1e',
+      color: '#d4d4d4',
+      minHeight: '100vh',
+      overflowX: 'auto'
+    }}>
+      {robotsContent.split('\n').map((line, i) => {
+        // Simple syntax highlighting for robots.txt
+        let color = '#d4d4d4'; // default
+        if (line.startsWith('#')) {
+          color = '#6a9955'; // comments in green
+        } else if (line.startsWith('User-agent:') || line.startsWith('Sitemap:')) {
+          color = '#4ec9b0'; // directives in teal
+        } else if (line.startsWith('Allow:') || line.startsWith('Disallow:')) {
+          color = '#569cd6'; // rules in blue
+        } else if (line.startsWith('Crawl-delay:')) {
+          color = '#dcdcaa'; // crawl delay in yellow
+        } else if (line.includes('http://') || line.includes('https://')) {
+          color = '#ce9178'; // URLs in orange
+        }
+        
+        return (
+          <div key={i} style={{ color, minHeight: '20px' }}>
+            {line || ' '}
+          </div>
+        );
+      })}
     </pre>
   );
 };
