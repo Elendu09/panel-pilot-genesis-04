@@ -56,12 +56,19 @@ import App from '../App';
     // 2. Remove ALL existing favicons (prevents platform favicon flash)
     document.querySelectorAll('link[rel*="icon"], link[rel="apple-touch-icon"]').forEach(el => el.remove());
     
-    // 3. Add neutral default favicon immediately
-    const favicon = document.createElement('link');
-    favicon.rel = 'icon';
-    favicon.type = 'image/png';
-    favicon.href = '/default-panel-favicon.png';
-    document.head.appendChild(favicon);
+    // 3. Add .ico favicon immediately (Google looks for /favicon.ico)
+    const faviconIco = document.createElement('link');
+    faviconIco.rel = 'icon';
+    faviconIco.type = 'image/x-icon';
+    faviconIco.href = '/default-tenant-favicon.ico';
+    document.head.appendChild(faviconIco);
+    
+    // Also add shortcut icon for legacy support
+    const shortcutIcon = document.createElement('link');
+    shortcutIcon.rel = 'shortcut icon';
+    shortcutIcon.type = 'image/x-icon';
+    shortcutIcon.href = '/default-tenant-favicon.ico';
+    document.head.appendChild(shortcutIcon);
     
     // 4. Remove any platform-specific meta tags
     document.querySelectorAll('meta[property="og:title"], meta[property="og:site_name"], meta[name="title"]').forEach(el => {
@@ -157,17 +164,30 @@ const TenantContent = () => {
       document.documentElement.style.visibility = 'visible';
       document.documentElement.style.opacity = '1';
       
-      const faviconUrl = '/default-panel-favicon.png';
-      
       // Remove existing favicons
       document.querySelectorAll('link[rel*="icon"], link[rel="apple-touch-icon"]').forEach(el => el.remove());
       
-      // Add default favicon
-      const favicon = document.createElement('link');
-      favicon.rel = 'icon';
-      favicon.type = 'image/png';
-      favicon.href = faviconUrl;
-      document.head.appendChild(favicon);
+      // Add .ico favicon (Google looks for /favicon.ico)
+      const faviconIco = document.createElement('link');
+      faviconIco.rel = 'icon';
+      faviconIco.type = 'image/x-icon';
+      faviconIco.href = '/default-tenant-favicon.ico';
+      document.head.appendChild(faviconIco);
+      
+      // Add shortcut icon for legacy browser support
+      const shortcutIcon = document.createElement('link');
+      shortcutIcon.rel = 'shortcut icon';
+      shortcutIcon.type = 'image/x-icon';
+      shortcutIcon.href = '/default-tenant-favicon.ico';
+      document.head.appendChild(shortcutIcon);
+      
+      // Add PNG favicon for other sizes
+      const faviconPng = document.createElement('link');
+      faviconPng.rel = 'icon';
+      faviconPng.type = 'image/png';
+      faviconPng.sizes = '32x32';
+      faviconPng.href = '/default-panel-favicon.png';
+      document.head.appendChild(faviconPng);
       
       // Add apple touch icon with proper 180x180 size
       const appleIcon = document.createElement('link');

@@ -23,7 +23,6 @@
           document.documentElement.style.opacity = '0';
           
           // AGGRESSIVE: Remove ALL existing favicons immediately (before they load)
-          // This runs synchronously before the browser even tries to fetch /favicon.ico
           var existingFavicons = document.querySelectorAll('link[rel*="icon"]');
           for (var i = 0; i < existingFavicons.length; i++) {
             existingFavicons[i].parentNode.removeChild(existingFavicons[i]);
@@ -96,26 +95,40 @@
     <meta name="twitter:description" content="Create and manage your own SMM panel with HOME OF SMM - the most advanced white-label SMM panel platform." data-platform-only />
     <meta name="twitter:image" content="https://storage.googleapis.com/gpt-engineer-file-uploads/a8nFu1Vlx5VQr6NAikq0H0XDcv42/social-images/social-1767449564584-HOME OF SMM SCREENSHOT.png" data-platform-only />
     
-    <!-- Favicon (platform-only, MUST be conditional for tenant domains) -->
+    <!-- Favicon handling: Conditional based on domain type -->
     <script>
-      // Insert correct favicon BEFORE the link tags are parsed
       (function() {
         if (window.__IS_TENANT_DOMAIN__) {
-          // For tenants: immediately insert neutral favicon FIRST
+          // For tenants: Insert .ico favicon for Google crawler compatibility
           var link = document.createElement('link');
           link.rel = 'icon';
-          link.type = 'image/png';
-          link.href = '/default-panel-favicon.png';
+          link.type = 'image/x-icon';
+          link.href = '/default-tenant-favicon.ico';
           document.head.appendChild(link);
+          
+          // Also add shortcut icon (legacy support)
+          var shortcut = document.createElement('link');
+          shortcut.rel = 'shortcut icon';
+          shortcut.type = 'image/x-icon';
+          shortcut.href = '/default-tenant-favicon.ico';
+          document.head.appendChild(shortcut);
+          
+          // Add apple touch icon
+          var apple = document.createElement('link');
+          apple.rel = 'apple-touch-icon';
+          apple.sizes = '180x180';
+          apple.href = '/default-panel-apple-touch-icon.png';
+          document.head.appendChild(apple);
         }
       })();
     </script>
     
     <!-- Platform favicon links (these will be removed for tenants) -->
     <link rel="icon" type="image/x-icon" href="/favicon.ico" data-platform-only />
-    <link rel="apple-touch-icon" sizes="180x180" href="/default-panel-favicon.png" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon.ico" data-platform-only />
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon.ico" data-platform-only />
+    <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" data-platform-only />
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon.ico" data-platform-only />
+    <link rel="icon" type="image/x-icon" sizes="32x32" href="/favicon.ico" data-platform-only />
+    <link rel="icon" type="image/x-icon" sizes="16x16" href="/favicon.ico" data-platform-only />
     
     <!-- Sitemap -->
     <link rel="sitemap" type="application/xml" title="Sitemap" href="/sitemap.xml" />
@@ -133,19 +146,13 @@
             platformOnly[i].parentNode.removeChild(platformOnly[i]);
           }
           
-          // Double-check: remove any remaining platform favicons
-          var favicons = document.querySelectorAll('link[rel*="icon"][href*="favicon.ico"]');
-          for (var j = 0; j < favicons.length; j++) {
-            favicons[j].parentNode.removeChild(favicons[j]);
-          }
-          
-          // Ensure neutral favicon exists
-          var hasNeutralFavicon = document.querySelector('link[href*="default-panel-favicon"]');
-          if (!hasNeutralFavicon) {
+          // Ensure tenant favicon.ico exists
+          var hasTenantFavicon = document.querySelector('link[href*="default-tenant-favicon.ico"]');
+          if (!hasTenantFavicon) {
             var link = document.createElement('link');
             link.rel = 'icon';
-            link.type = 'image/png';
-            link.href = '/default-panel-favicon.png';
+            link.type = 'image/x-icon';
+            link.href = '/default-tenant-favicon.ico';
             document.head.insertBefore(link, document.head.firstChild);
           }
         }
