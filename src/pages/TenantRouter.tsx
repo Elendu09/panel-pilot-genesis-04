@@ -153,8 +153,9 @@ const TenantContent = () => {
   // Always set default favicon for tenant domains and make document visible
   useEffect(() => {
     if (isTenantDomain && typeof document !== 'undefined') {
-      // Make document visible (was hidden by IIFE to prevent branding flash)
+      // Make document visible (was hidden by index.html script to prevent branding flash)
       document.documentElement.style.visibility = 'visible';
+      document.documentElement.style.opacity = '1';
       
       const faviconUrl = '/default-panel-favicon.png';
       
@@ -194,24 +195,18 @@ const TenantContent = () => {
     if (isPlatformDomain) {
       return <App />;
     }
-    // For tenant domains, show centered logo loading with shimmer
+    // For tenant domains, show completely neutral loading screen (no branding)
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
         <div className="text-center">
-          {/* Centered favicon with shimmer overlay - uses panel logo if available */}
-          <div className="relative w-20 h-20 mx-auto mb-6">
-            <img 
-              src={panel?.logo_url || "/default-panel-favicon.png"} 
-              alt="Loading" 
-              className="w-20 h-20 rounded-2xl opacity-80 object-cover"
-            />
-            {/* Shimmer overlay animation */}
-            <div className="absolute inset-0 rounded-2xl overflow-hidden">
+          {/* Neutral loading with shimmer - no text, just visual indicator */}
+          <div className="relative w-16 h-16 mx-auto mb-4">
+            <div className="w-16 h-16 rounded-2xl bg-slate-800 overflow-hidden">
               <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
             </div>
           </div>
-          {/* Shimmer text placeholder for panel name */}
-          <div className="h-6 w-40 mx-auto bg-slate-800 rounded-lg overflow-hidden relative">
+          {/* Shimmer text placeholder - no actual text */}
+          <div className="h-4 w-32 mx-auto bg-slate-800 rounded-lg overflow-hidden relative">
             <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
           </div>
         </div>

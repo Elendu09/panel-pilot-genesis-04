@@ -21,10 +21,23 @@ Deno.serve(async (req) => {
 
   try {
     const url = new URL(req.url);
-    const panelId = url.searchParams.get('panel_id');
-    const subdomain = url.searchParams.get('subdomain');
-    const customDomain = url.searchParams.get('domain');
-    const type = url.searchParams.get('type') || 'tenant'; // 'tenant' or 'platform'
+    
+    // Parse body if present (supabase.functions.invoke sends data in body)
+    let body: Record<string, string> = {};
+    try {
+      const contentType = req.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        body = await req.json();
+      }
+    } catch {
+      // Body might be empty or not JSON
+    }
+    
+    // Accept params from BOTH query string AND body
+    const panelId = url.searchParams.get('panel_id') || body.panel_id;
+    const subdomain = url.searchParams.get('subdomain') || body.subdomain;
+    const customDomain = url.searchParams.get('domain') || body.domain;
+    const type = url.searchParams.get('type') || body.type || 'tenant'; // 'tenant' or 'platform'
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
