@@ -53,6 +53,9 @@ verify_jwt = false
 [functions.generate-sitemap]
 verify_jwt = false
 
+[functions.generate-robots]
+verify_jwt = false
+
 [functions.scheduled-sync]
 verify_jwt = false
 

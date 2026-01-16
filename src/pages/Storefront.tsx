@@ -283,6 +283,9 @@ const Storefront = () => {
         <meta name="googlebot" content="index, follow" />
         <meta name="bingbot" content="index, follow" />
         <meta name="format-detection" content="telephone=no" />
+        {/* Robots.txt and Sitemap links for SEO */}
+        <link rel="sitemap" type="application/xml" href={`${canonicalUrl}/sitemap.xml`} />
+        <link rel="robots" href={`${canonicalUrl}/robots.txt`} />
       </Helmet>
       {/* JSON-LD Structured Data for rich search results */}
       <BuyerHomepageSchemas
