@@ -30,8 +30,14 @@ const Sitemap = () => {
     const generateSitemap = async () => {
       try {
         const hostname = window.location.hostname.toLowerCase();
-        const isPlatform = ['homeofsmm.com', 'www.homeofsmm.com', 'smmpilot.online'].includes(hostname) ||
-          hostname.includes('lovableproject.com') || hostname === 'localhost';
+        const hostnameWithoutWww = hostname.startsWith('www.') ? hostname.slice(4) : hostname;
+        
+        // Platform detection - must be EXACT match to root domain, not subdomains
+        const isPlatform = hostnameWithoutWww === 'homeofsmm.com' || 
+                           hostnameWithoutWww === 'smmpilot.online' ||
+                           hostname.includes('lovableproject.com') ||
+                           hostname.includes('lovable.app') ||
+                           hostname === 'localhost';
 
         if (isPlatform) {
           // Generate platform sitemap client-side (faster, no API call needed)

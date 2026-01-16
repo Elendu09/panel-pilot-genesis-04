@@ -169,10 +169,11 @@ const TenantContent = () => {
       favicon.href = faviconUrl;
       document.head.appendChild(favicon);
       
-      // Add apple touch icon
+      // Add apple touch icon with proper 180x180 size
       const appleIcon = document.createElement('link');
       appleIcon.rel = 'apple-touch-icon';
-      appleIcon.href = faviconUrl;
+      appleIcon.sizes = '180x180';
+      appleIcon.href = '/default-panel-apple-touch-icon.png';
       document.head.appendChild(appleIcon);
     }
   }, [isTenantDomain]);
