@@ -155,16 +155,18 @@ export const FlySMMHomepage = ({
         companyName={companyName}
         logoUrl={displayLogo}
         logoIcon={
-          <div className="w-10 h-10 rounded-2xl flex items-center justify-center shadow-lg"
-            style={{ background: `linear-gradient(to bottom right, ${primary}, ${secondary})`, boxShadow: `0 10px 25px -5px ${primary}33` }}>
-            <Rocket className="w-6 h-6 text-white" />
-          </div>
+          <img 
+            src="/default-panel-favicon.png" 
+            alt={companyName} 
+            className="w-10 h-10 rounded-2xl object-contain"
+          />
         }
         defaultIcon={
-          <div className="w-10 h-10 rounded-2xl flex items-center justify-center shadow-lg"
-            style={{ background: `linear-gradient(to bottom right, ${primary}, ${secondary})`, boxShadow: `0 10px 25px -5px ${primary}33` }}>
-            <Rocket className="w-6 h-6 text-white" />
-          </div>
+          <img 
+            src="/default-panel-favicon.png" 
+            alt={companyName} 
+            className="w-10 h-10 rounded-2xl object-contain"
+          />
         }
         showBlogInMenu={showBlogInMenu}
         themeMode={themeMode}
