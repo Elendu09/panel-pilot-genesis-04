@@ -23,9 +23,10 @@ import {
   FacebookIcon, YouTubeIcon, TelegramIcon, InstagramIcon, 
   TwitterIcon, SpotifyIcon, SnapchatIcon, TikTokIcon, SoundCloudIcon 
 } from '@/components/icons/SocialIcons';
-import { useBuyerAuth } from '@/contexts/BuyerAuthContext';
+import { BuyerAuthContext } from '@/contexts/BuyerAuthContext';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { useContext } from 'react';
 
 interface SMMVisitHomepageProps {
   panelName?: string;
@@ -50,13 +51,20 @@ export const SMMVisitHomepage = ({
   const navigate = useNavigate();
   const { t, isRTL } = useLanguage();
   
-  // Auth context for inline login
-  const { signIn, loading: authLoading, buyer, panelId } = useBuyerAuth();
+  // Auth context for inline login - safely handle when not in BuyerAuthProvider (e.g., design preview)
+  const authContext = useContext(BuyerAuthContext);
+  const signIn = authContext?.signIn;
+  const buyer = authContext?.buyer;
+  const panelId = authContext?.panelId;
+  
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [loginLoading, setLoginLoading] = useState(false);
   const [googleEnabled, setGoogleEnabled] = useState(false);
+  
+  // Determine if login functionality is available
+  const isAuthAvailable = !!authContext;
   
   // Check if Google OAuth is enabled for this panel
   useEffect(() => {
@@ -82,6 +90,12 @@ export const SMMVisitHomepage = ({
   // Handle inline login form submission
   const handleQuickLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // If not in auth context (design preview), just navigate to auth page
+    if (!signIn) {
+      navigate('/auth');
+      return;
+    }
     
     if (!loginEmail.trim()) {
       toast.error('Please enter your email or username');
