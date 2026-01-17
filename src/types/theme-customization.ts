@@ -122,9 +122,6 @@ export interface ThemeCustomization {
   // Homepage layout order
   homepageLayout?: string[];
   showBlogInMenu?: boolean;
-  
-  // Integration toggles
-  enableGoogleAuth?: boolean;
 }
 
 export interface PlatformFeature {

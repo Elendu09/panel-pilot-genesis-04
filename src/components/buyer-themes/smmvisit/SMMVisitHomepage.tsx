@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { 
   Globe, Zap, Users, Star, ArrowRight, Award, TrendingUp,
   Instagram, Youtube, Twitter, Facebook, User, Lock, Bookmark, 
-  LockKeyhole, ChevronDown, Loader2
+  LockKeyhole, ChevronDown
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,8 +23,6 @@ import {
   FacebookIcon, YouTubeIcon, TelegramIcon, InstagramIcon, 
   TwitterIcon, SpotifyIcon, SnapchatIcon, TikTokIcon, SoundCloudIcon 
 } from '@/components/icons/SocialIcons';
-import { useBuyerAuth } from '@/contexts/BuyerAuthContext';
-import { useToast } from '@/hooks/use-toast';
 
 interface SMMVisitHomepageProps {
   panelName?: string;
@@ -48,28 +46,10 @@ export const SMMVisitHomepage = ({
 }: SMMVisitHomepageProps) => {
   const navigate = useNavigate();
   const { t, isRTL } = useLanguage();
-  const { toast } = useToast();
-  
-  // Login state
-  const [loginUsername, setLoginUsername] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
-  const [loginLoading, setLoginLoading] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
-  
-  // Try to get auth context - may not be available in preview mode
-  let buyerAuth: ReturnType<typeof useBuyerAuth> | null = null;
-  try {
-    buyerAuth = useBuyerAuth();
-  } catch {
-    // Not in BuyerAuthProvider context (e.g., preview mode)
-  }
   
   // Theme mode - reactive to customization prop (no local state), SMMVisit defaults to light
   const themeMode = customization.themeMode || 'light';
   const isLightMode = themeMode === 'light';
-  
-  // Google OAuth toggle - only show if explicitly enabled in panel integrations
-  const showGoogleAuth = customization.enableGoogleAuth === true;
   
   // Theme defaults for SMMVisit (yellow/gold on light)
   const defaultPrimary = '#FFD700';
@@ -144,50 +124,6 @@ export const SMMVisitHomepage = ({
   const handleThemeModeChange = useCallback((mode: 'light' | 'dark') => {
     // Theme mode is controlled by parent via customization.themeMode
   }, []);
-
-  // Handle inline login
-  const handleQuickLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!loginUsername.trim() || !loginPassword) {
-      toast({
-        title: 'Missing credentials',
-        description: 'Please enter your username/email and password',
-        variant: 'destructive'
-      });
-      return;
-    }
-    
-    if (!buyerAuth) {
-      // Not in auth context, redirect to auth page
-      navigate('/auth');
-      return;
-    }
-    
-    setLoginLoading(true);
-    try {
-      const { error } = await buyerAuth.signIn(loginUsername.trim(), loginPassword);
-      
-      if (error) {
-        toast({
-          title: 'Login failed',
-          description: error.message || 'Invalid credentials',
-          variant: 'destructive'
-        });
-      } else {
-        // Success - redirect to dashboard
-        navigate('/dashboard');
-      }
-    } catch (err) {
-      toast({
-        title: 'Login error',
-        description: 'An unexpected error occurred',
-        variant: 'destructive'
-      });
-    } finally {
-      setLoginLoading(false);
-    }
-  };
 
   const platforms = [
     { id: 'instagram', name: 'Instagram', icon: Instagram, color: '#E4405F' },
@@ -307,7 +243,7 @@ export const SMMVisitHomepage = ({
           id="quick-login" 
           aria-label="Quick Login" 
           className="py-12"
-          style={{ backgroundColor: isLightMode ? '#F5F5F5' : surfaceColor }}
+          style={{ backgroundColor: isLightMode ? '#F9FAFB' : surfaceColor }}
         >
           <div className="mx-auto px-4" style={{ maxWidth: containerMax }}>
             <motion.div 
@@ -320,114 +256,95 @@ export const SMMVisitHomepage = ({
               </h2>
               
               {/* Horizontal Login Form */}
-              <form onSubmit={handleQuickLogin}>
-                <div className="flex flex-col lg:flex-row items-stretch gap-3 mb-4">
-                  {/* Username Input */}
-                  <div className="relative flex-1">
-                    <div 
-                      className="absolute left-0 top-0 bottom-0 w-12 flex items-center justify-center rounded-l-xl z-10"
-                      style={{ backgroundColor: primary }}
-                    >
-                      <User className="w-5 h-5" style={{ color: isLightMode ? '#1A1A1A' : '#FFFFFF' }} />
-                    </div>
-                    <Input 
-                      placeholder="Username"
-                      value={loginUsername}
-                      onChange={(e) => setLoginUsername(e.target.value)}
-                      disabled={loginLoading}
-                      className="pl-14 h-12 rounded-xl border-0"
-                      style={{ 
-                        backgroundColor: isLightMode ? '#F3F4F6' : '#333',
-                        color: textCol
-                      }}
-                    />
+              <div className="flex flex-col lg:flex-row items-stretch gap-3 mb-4">
+                {/* Username Input */}
+                <div className="relative flex-1">
+                  <div 
+                    className="absolute left-0 top-0 bottom-0 w-12 flex items-center justify-center rounded-l-xl z-10"
+                    style={{ backgroundColor: primary }}
+                  >
+                    <User className="w-5 h-5" style={{ color: isLightMode ? '#1A1A1A' : '#FFFFFF' }} />
                   </div>
-                  
-                  {/* Password Input */}
-                  <div className="relative flex-1">
-                    <div 
-                      className="absolute left-0 top-0 bottom-0 w-12 flex items-center justify-center rounded-l-xl z-10"
-                      style={{ backgroundColor: primary }}
-                    >
-                      <Lock className="w-5 h-5" style={{ color: isLightMode ? '#1A1A1A' : '#FFFFFF' }} />
-                    </div>
-                    <Input 
-                      type="password"
-                      placeholder="Password"
-                      value={loginPassword}
-                      onChange={(e) => setLoginPassword(e.target.value)}
-                      disabled={loginLoading}
-                      className="pl-14 h-12 rounded-xl border-0"
-                      style={{ 
-                        backgroundColor: isLightMode ? '#F3F4F6' : '#333',
-                        color: textCol
-                      }}
-                    />
-                  </div>
-                  
-                  {/* Action Buttons */}
-                  <div className="flex items-center gap-2">
-                    <Button 
-                      type="button"
-                      variant="outline" 
-                      size="icon"
-                      className="w-12 h-12 rounded-xl border-0"
-                      style={{ backgroundColor: primary }}
-                    >
-                      <Bookmark className="w-5 h-5" style={{ color: isLightMode ? '#1A1A1A' : '#FFFFFF' }} />
-                    </Button>
-                    <Button 
-                      type="button"
-                      variant="outline" 
-                      size="icon"
-                      className="w-12 h-12 rounded-xl border-0"
-                      style={{ backgroundColor: primary }}
-                    >
-                      <LockKeyhole className="w-5 h-5" style={{ color: isLightMode ? '#1A1A1A' : '#FFFFFF' }} />
-                    </Button>
-                    <Button 
-                      type="submit"
-                      disabled={loginLoading}
-                      className="h-12 px-6 md:px-8 rounded-xl font-semibold border-0"
-                      style={{ 
-                        backgroundColor: isLightMode ? '#1A1A1A' : '#FFFFFF',
-                        color: isLightMode ? '#FFFFFF' : '#1A1A1A'
-                      }}
-                    >
-                      {loginLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Sign in'}
-                    </Button>
-                  </div>
+                  <Input 
+                    placeholder="Username"
+                    className="pl-14 h-12 rounded-xl border-0"
+                    style={{ 
+                      backgroundColor: isLightMode ? '#F3F4F6' : '#333',
+                      color: textCol
+                    }}
+                  />
                 </div>
-              </form>
-              
-              {/* Google Sign In - Only show if enabled in panel integrations */}
-              {showGoogleAuth && (
-                <div className="flex justify-center mb-4">
+                
+                {/* Password Input */}
+                <div className="relative flex-1">
+                  <div 
+                    className="absolute left-0 top-0 bottom-0 w-12 flex items-center justify-center rounded-l-xl z-10"
+                    style={{ backgroundColor: primary }}
+                  >
+                    <Lock className="w-5 h-5" style={{ color: isLightMode ? '#1A1A1A' : '#FFFFFF' }} />
+                  </div>
+                  <Input 
+                    type="password"
+                    placeholder="Password"
+                    className="pl-14 h-12 rounded-xl border-0"
+                    style={{ 
+                      backgroundColor: isLightMode ? '#F3F4F6' : '#333',
+                      color: textCol
+                    }}
+                  />
+                </div>
+                
+                {/* Action Buttons */}
+                <div className="flex items-center gap-2">
                   <Button 
                     variant="outline" 
-                    className="h-10 px-6 rounded-lg"
+                    size="icon"
+                    className="w-12 h-12 rounded-xl border-0"
+                    style={{ backgroundColor: primary }}
+                  >
+                    <Bookmark className="w-5 h-5" style={{ color: isLightMode ? '#1A1A1A' : '#FFFFFF' }} />
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="icon"
+                    className="w-12 h-12 rounded-xl border-0"
+                    style={{ backgroundColor: primary }}
+                  >
+                    <LockKeyhole className="w-5 h-5" style={{ color: isLightMode ? '#1A1A1A' : '#FFFFFF' }} />
+                  </Button>
+                  <Button 
+                    className="h-12 px-6 md:px-8 rounded-xl font-semibold border-0"
+                    onClick={() => navigate('/auth')}
                     style={{ 
-                      borderColor: isLightMode ? '#E5E7EB' : '#444', 
-                      color: textCol,
-                      backgroundColor: 'transparent'
+                      backgroundColor: isLightMode ? '#1A1A1A' : '#FFFFFF',
+                      color: isLightMode ? '#FFFFFF' : '#1A1A1A'
                     }}
                   >
-                    <img src="https://www.google.com/favicon.ico" alt="Google" className="w-4 h-4 mr-2" />
-                    Sign in with Google
+                    Sign in
                   </Button>
                 </div>
-              )}
+              </div>
+              
+              {/* Google Sign In */}
+              <div className="flex justify-center mb-4">
+                <Button 
+                  variant="outline" 
+                  className="h-10 px-6 rounded-lg"
+                  style={{ 
+                    borderColor: isLightMode ? '#E5E7EB' : '#444', 
+                    color: textCol,
+                    backgroundColor: 'transparent'
+                  }}
+                >
+                  <img src="https://www.google.com/favicon.ico" alt="Google" className="w-4 h-4 mr-2" />
+                  Sign in with Google
+                </Button>
+              </div>
               
               {/* Remember Me & Reset */}
               <div className="flex items-center justify-between text-sm">
                 <label className="flex items-center gap-2 cursor-pointer" style={{ color: mutedColor }}>
-                  <input 
-                    type="checkbox" 
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                    className="rounded w-4 h-4" 
-                    style={{ accentColor: primary }} 
-                  />
+                  <input type="checkbox" className="rounded w-4 h-4" style={{ accentColor: primary }} />
                   Remember me
                 </label>
                 <Link to="/auth" className="underline hover:no-underline" style={{ color: textCol }}>
