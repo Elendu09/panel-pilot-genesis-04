@@ -1,10 +1,12 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Globe, Zap, Users, Star, ArrowRight, Award, TrendingUp,
-  Instagram, Youtube, Twitter, Facebook
+  Instagram, Youtube, Twitter, Facebook, User, Lock, Bookmark, 
+  LockKeyhole, ChevronDown
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { ThemeCustomization } from '@/types/theme-customization';
@@ -17,6 +19,10 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { ThemeNavigation } from '../shared/ThemeNavigation';
 import { AnimatedHeroText, getThemeDefaultAnimationStyle, getAnimatedWordFromTitle } from '../shared/AnimatedHeroText';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { 
+  FacebookIcon, YouTubeIcon, TelegramIcon, InstagramIcon, 
+  TwitterIcon, SpotifyIcon, SnapchatIcon, TikTokIcon, SoundCloudIcon 
+} from '@/components/icons/SocialIcons';
 
 interface SMMVisitHomepageProps {
   panelName?: string;
@@ -229,6 +235,172 @@ export const SMMVisitHomepage = ({
                 </Button>
               )}
             </motion.div>
+          </div>
+        </section>
+
+        {/* Quick Login Section - SMMVisit Exclusive */}
+        <section 
+          id="quick-login" 
+          aria-label="Quick Login" 
+          className="py-12"
+          style={{ backgroundColor: isLightMode ? '#F9FAFB' : surfaceColor }}
+        >
+          <div className="mx-auto px-4" style={{ maxWidth: containerMax }}>
+            <motion.div 
+              {...(enableAnimations ? { initial: { opacity: 0, y: 20 }, whileInView: { opacity: 1, y: 0 }, transition: { duration: 0.5 } } : {})}
+              className="p-6 md:p-8 rounded-3xl shadow-lg"
+              style={{ backgroundColor: isLightMode ? '#FFFFFF' : bgColor }}
+            >
+              <h2 className="text-xl md:text-2xl font-bold mb-6" style={{ color: textCol }}>
+                Login into your account
+              </h2>
+              
+              {/* Horizontal Login Form */}
+              <div className="flex flex-col lg:flex-row items-stretch gap-3 mb-4">
+                {/* Username Input */}
+                <div className="relative flex-1">
+                  <div 
+                    className="absolute left-0 top-0 bottom-0 w-12 flex items-center justify-center rounded-l-xl z-10"
+                    style={{ backgroundColor: primary }}
+                  >
+                    <User className="w-5 h-5" style={{ color: isLightMode ? '#1A1A1A' : '#FFFFFF' }} />
+                  </div>
+                  <Input 
+                    placeholder="Username"
+                    className="pl-14 h-12 rounded-xl border-0"
+                    style={{ 
+                      backgroundColor: isLightMode ? '#F3F4F6' : '#333',
+                      color: textCol
+                    }}
+                  />
+                </div>
+                
+                {/* Password Input */}
+                <div className="relative flex-1">
+                  <div 
+                    className="absolute left-0 top-0 bottom-0 w-12 flex items-center justify-center rounded-l-xl z-10"
+                    style={{ backgroundColor: primary }}
+                  >
+                    <Lock className="w-5 h-5" style={{ color: isLightMode ? '#1A1A1A' : '#FFFFFF' }} />
+                  </div>
+                  <Input 
+                    type="password"
+                    placeholder="Password"
+                    className="pl-14 h-12 rounded-xl border-0"
+                    style={{ 
+                      backgroundColor: isLightMode ? '#F3F4F6' : '#333',
+                      color: textCol
+                    }}
+                  />
+                </div>
+                
+                {/* Action Buttons */}
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="icon"
+                    className="w-12 h-12 rounded-xl border-0"
+                    style={{ backgroundColor: primary }}
+                  >
+                    <Bookmark className="w-5 h-5" style={{ color: isLightMode ? '#1A1A1A' : '#FFFFFF' }} />
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="icon"
+                    className="w-12 h-12 rounded-xl border-0"
+                    style={{ backgroundColor: primary }}
+                  >
+                    <LockKeyhole className="w-5 h-5" style={{ color: isLightMode ? '#1A1A1A' : '#FFFFFF' }} />
+                  </Button>
+                  <Button 
+                    className="h-12 px-6 md:px-8 rounded-xl font-semibold border-0"
+                    onClick={() => navigate('/auth')}
+                    style={{ 
+                      backgroundColor: isLightMode ? '#1A1A1A' : '#FFFFFF',
+                      color: isLightMode ? '#FFFFFF' : '#1A1A1A'
+                    }}
+                  >
+                    Sign in
+                  </Button>
+                </div>
+              </div>
+              
+              {/* Google Sign In */}
+              <div className="flex justify-center mb-4">
+                <Button 
+                  variant="outline" 
+                  className="h-10 px-6 rounded-lg"
+                  style={{ 
+                    borderColor: isLightMode ? '#E5E7EB' : '#444', 
+                    color: textCol,
+                    backgroundColor: 'transparent'
+                  }}
+                >
+                  <img src="https://www.google.com/favicon.ico" alt="Google" className="w-4 h-4 mr-2" />
+                  Sign in with Google
+                </Button>
+              </div>
+              
+              {/* Remember Me & Reset */}
+              <div className="flex items-center justify-between text-sm">
+                <label className="flex items-center gap-2 cursor-pointer" style={{ color: mutedColor }}>
+                  <input type="checkbox" className="rounded w-4 h-4" style={{ accentColor: primary }} />
+                  Remember me
+                </label>
+                <Link to="/auth" className="underline hover:no-underline" style={{ color: textCol }}>
+                  Reset It
+                </Link>
+              </div>
+            </motion.div>
+            
+            {/* Scroll Indicator */}
+            <div className="flex items-center justify-center gap-2 mt-8" style={{ color: mutedColor }}>
+              <ChevronDown className="w-4 h-4 animate-bounce" />
+              <span className="text-sm">Scroll to see more</span>
+            </div>
+            
+            {/* Divider */}
+            <div className="w-full h-px mt-8" style={{ backgroundColor: isLightMode ? '#E5E7EB' : '#333' }} />
+            
+            {/* Social Platform Icons - Large Colorful SVGs */}
+            <div className="flex flex-wrap items-center justify-center gap-3 md:gap-4 mt-8">
+              {/* Facebook */}
+              <div className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundColor: '#1877F2' }}>
+                <FacebookIcon className="w-8 h-8 md:w-10 md:h-10 text-white" />
+              </div>
+              {/* YouTube */}
+              <div className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundColor: '#FF0000' }}>
+                <YouTubeIcon className="w-8 h-8 md:w-10 md:h-10 text-white" />
+              </div>
+              {/* Telegram */}
+              <div className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundColor: '#0088CC' }}>
+                <TelegramIcon className="w-8 h-8 md:w-10 md:h-10 text-white" />
+              </div>
+              {/* Instagram (gradient background) */}
+              <div className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-lg" style={{ background: 'linear-gradient(45deg, #F58529, #DD2A7B, #8134AF, #515BD4)' }}>
+                <InstagramIcon className="w-8 h-8 md:w-10 md:h-10 text-white" />
+              </div>
+              {/* Twitter/X */}
+              <div className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundColor: '#1DA1F2' }}>
+                <TwitterIcon className="w-8 h-8 md:w-10 md:h-10 text-white" />
+              </div>
+              {/* Spotify */}
+              <div className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundColor: '#1DB954' }}>
+                <SpotifyIcon className="w-8 h-8 md:w-10 md:h-10 text-white" />
+              </div>
+              {/* Snapchat */}
+              <div className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundColor: '#FFFC00' }}>
+                <SnapchatIcon className="w-8 h-8 md:w-10 md:h-10 text-black" />
+              </div>
+              {/* TikTok */}
+              <div className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundColor: '#000000' }}>
+                <TikTokIcon className="w-8 h-8 md:w-10 md:h-10 text-white" />
+              </div>
+              {/* SoundCloud */}
+              <div className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-lg" style={{ background: 'linear-gradient(135deg, #FF5500, #FF7700)' }}>
+                <SoundCloudIcon className="w-8 h-8 md:w-10 md:h-10 text-white" />
+              </div>
+            </div>
           </div>
         </section>
 

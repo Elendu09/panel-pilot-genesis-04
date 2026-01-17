@@ -3514,22 +3514,22 @@ export default function DesignCustomization() {
                       <div className="w-2 h-2 bg-gray-800 rounded-full" />
                       <div className="w-8 h-3 bg-gray-900 rounded-full" />
                     </div>
-                    {/* Screen with Improved Scaling Container */}
+                    {/* Screen with Proper Scaling to Fit Menu Button */}
                     <div 
                       className="rounded-[32px] overflow-hidden bg-background relative"
-                      style={{ height: '640px' }}
+                      style={{ height: '640px', width: '304px' }}
                     >
-                      {/* Wrapper to contain scaled content properly */}
+                      {/* Wrapper with proper scroll container */}
                       <div 
-                        className="absolute inset-0 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-primary/20"
+                        className="w-full h-full overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-primary/20"
                         dir={previewDirection}
                       >
                         <div 
-                          className="origin-top-left"
                           style={{ 
                             width: '375px', 
                             minHeight: '812px',
-                            transform: 'scale(0.853)', /* 320px / 375px = 0.853 for exact fit */
+                            transform: 'scale(0.811)', /* 304px / 375px = 0.811 for exact fit within screen */
+                            transformOrigin: 'top left',
                           }}
                         >
                           <LivePreviewRenderer customization={{ ...customization, themeMode: previewThemeMode }} />
