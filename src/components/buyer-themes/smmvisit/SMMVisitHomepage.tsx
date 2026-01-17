@@ -1,9 +1,9 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Globe, Zap, Users, Star, ArrowRight, Award, TrendingUp,
   Instagram, Youtube, Twitter, Facebook, User, Lock, Bookmark, 
-  LockKeyhole, ChevronDown
+  LockKeyhole, ChevronDown, Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,6 +23,9 @@ import {
   FacebookIcon, YouTubeIcon, TelegramIcon, InstagramIcon, 
   TwitterIcon, SpotifyIcon, SnapchatIcon, TikTokIcon, SoundCloudIcon 
 } from '@/components/icons/SocialIcons';
+import { useBuyerAuth } from '@/contexts/BuyerAuthContext';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 interface SMMVisitHomepageProps {
   panelName?: string;
@@ -46,6 +49,64 @@ export const SMMVisitHomepage = ({
 }: SMMVisitHomepageProps) => {
   const navigate = useNavigate();
   const { t, isRTL } = useLanguage();
+  
+  // Auth context for inline login
+  const { signIn, loading: authLoading, buyer, panelId } = useBuyerAuth();
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [googleEnabled, setGoogleEnabled] = useState(false);
+  
+  // Check if Google OAuth is enabled for this panel
+  useEffect(() => {
+    const checkGoogleOAuth = async () => {
+      if (!panelId) return;
+      try {
+        const { data } = await supabase
+          .from('panel_settings')
+          .select('social_links')
+          .eq('panel_id', panelId)
+          .maybeSingle();
+        
+        // Check if Google OAuth is configured in social_links or integrations
+        const socialLinks = data?.social_links as Record<string, any> | null;
+        setGoogleEnabled(socialLinks?.google_oauth_enabled === true);
+      } catch (err) {
+        console.log('Could not check Google OAuth status');
+      }
+    };
+    checkGoogleOAuth();
+  }, [panelId]);
+  
+  // Handle inline login form submission
+  const handleQuickLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!loginEmail.trim()) {
+      toast.error('Please enter your email or username');
+      return;
+    }
+    if (!loginPassword) {
+      toast.error('Please enter your password');
+      return;
+    }
+    
+    setLoginLoading(true);
+    try {
+      const result = await signIn(loginEmail.trim(), loginPassword);
+      if (!result.error) {
+        toast.success('Welcome back!');
+        navigate('/dashboard');
+      } else {
+        toast.error(result.error.message || 'Login failed. Please try again.');
+      }
+    } catch (err) {
+      toast.error('An error occurred. Please try again.');
+    } finally {
+      setLoginLoading(false);
+    }
+  };
   
   // Theme mode - reactive to customization prop (no local state), SMMVisit defaults to light
   const themeMode = customization.themeMode || 'light';
@@ -238,120 +299,147 @@ export const SMMVisitHomepage = ({
           </div>
         </section>
 
-        {/* Quick Login Section - SMMVisit Exclusive */}
-        <section 
-          id="quick-login" 
-          aria-label="Quick Login" 
-          className="py-12"
-          style={{ backgroundColor: isLightMode ? '#F9FAFB' : surfaceColor }}
-        >
-          <div className="mx-auto px-4" style={{ maxWidth: containerMax }}>
-            <motion.div 
-              {...(enableAnimations ? { initial: { opacity: 0, y: 20 }, whileInView: { opacity: 1, y: 0 }, transition: { duration: 0.5 } } : {})}
-              className="p-6 md:p-8 rounded-3xl shadow-lg"
-              style={{ backgroundColor: isLightMode ? '#FFFFFF' : bgColor }}
-            >
-              <h2 className="text-xl md:text-2xl font-bold mb-6" style={{ color: textCol }}>
-                Login into your account
-              </h2>
-              
-              {/* Horizontal Login Form */}
-              <div className="flex flex-col lg:flex-row items-stretch gap-3 mb-4">
-                {/* Username Input */}
-                <div className="relative flex-1">
-                  <div 
-                    className="absolute left-0 top-0 bottom-0 w-12 flex items-center justify-center rounded-l-xl z-10"
-                    style={{ backgroundColor: primary }}
-                  >
-                    <User className="w-5 h-5" style={{ color: isLightMode ? '#1A1A1A' : '#FFFFFF' }} />
-                  </div>
-                  <Input 
-                    placeholder="Username"
-                    className="pl-14 h-12 rounded-xl border-0"
-                    style={{ 
-                      backgroundColor: isLightMode ? '#F3F4F6' : '#333',
-                      color: textCol
-                    }}
-                  />
-                </div>
+        {/* Quick Login Section - SMMVisit Exclusive (only show if not logged in) */}
+        {!buyer && (
+          <section 
+            id="quick-login" 
+            aria-label="Quick Login" 
+            className="py-12"
+            style={{ backgroundColor: isLightMode ? '#F9FAFB' : surfaceColor }}
+          >
+            <div className="mx-auto px-4" style={{ maxWidth: containerMax }}>
+              <motion.div 
+                {...(enableAnimations ? { initial: { opacity: 0, y: 20 }, whileInView: { opacity: 1, y: 0 }, transition: { duration: 0.5 } } : {})}
+                className="p-6 md:p-8 rounded-3xl shadow-lg"
+                style={{ backgroundColor: isLightMode ? '#FFFFFF' : bgColor }}
+              >
+                <h2 className="text-xl md:text-2xl font-bold mb-6" style={{ color: textCol }}>
+                  Login into your account
+                </h2>
                 
-                {/* Password Input */}
-                <div className="relative flex-1">
-                  <div 
-                    className="absolute left-0 top-0 bottom-0 w-12 flex items-center justify-center rounded-l-xl z-10"
-                    style={{ backgroundColor: primary }}
-                  >
-                    <Lock className="w-5 h-5" style={{ color: isLightMode ? '#1A1A1A' : '#FFFFFF' }} />
+                {/* Horizontal Login Form */}
+                <form onSubmit={handleQuickLogin}>
+                  <div className="flex flex-col lg:flex-row items-stretch gap-3 mb-4">
+                    {/* Email/Username Input */}
+                    <div className="relative flex-1">
+                      <div 
+                        className="absolute left-0 top-0 bottom-0 w-12 flex items-center justify-center rounded-l-xl z-10"
+                        style={{ backgroundColor: primary }}
+                      >
+                        <User className="w-5 h-5" style={{ color: isLightMode ? '#1A1A1A' : '#FFFFFF' }} />
+                      </div>
+                      <Input 
+                        placeholder="Email or Username"
+                        value={loginEmail}
+                        onChange={(e) => setLoginEmail(e.target.value)}
+                        className="pl-14 h-12 rounded-xl border-0"
+                        style={{ 
+                          backgroundColor: isLightMode ? '#F3F4F6' : '#333',
+                          color: textCol
+                        }}
+                        disabled={loginLoading}
+                      />
+                    </div>
+                    
+                    {/* Password Input */}
+                    <div className="relative flex-1">
+                      <div 
+                        className="absolute left-0 top-0 bottom-0 w-12 flex items-center justify-center rounded-l-xl z-10"
+                        style={{ backgroundColor: primary }}
+                      >
+                        <Lock className="w-5 h-5" style={{ color: isLightMode ? '#1A1A1A' : '#FFFFFF' }} />
+                      </div>
+                      <Input 
+                        type="password"
+                        placeholder="Password"
+                        value={loginPassword}
+                        onChange={(e) => setLoginPassword(e.target.value)}
+                        className="pl-14 h-12 rounded-xl border-0"
+                        style={{ 
+                          backgroundColor: isLightMode ? '#F3F4F6' : '#333',
+                          color: textCol
+                        }}
+                        disabled={loginLoading}
+                      />
+                    </div>
+                    
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-2">
+                      <Button 
+                        type="button"
+                        variant="outline" 
+                        size="icon"
+                        className="w-12 h-12 rounded-xl border-0"
+                        style={{ backgroundColor: primary }}
+                      >
+                        <Bookmark className="w-5 h-5" style={{ color: isLightMode ? '#1A1A1A' : '#FFFFFF' }} />
+                      </Button>
+                      <Button 
+                        type="button"
+                        variant="outline" 
+                        size="icon"
+                        className="w-12 h-12 rounded-xl border-0"
+                        style={{ backgroundColor: primary }}
+                      >
+                        <LockKeyhole className="w-5 h-5" style={{ color: isLightMode ? '#1A1A1A' : '#FFFFFF' }} />
+                      </Button>
+                      <Button 
+                        type="submit"
+                        className="h-12 px-6 md:px-8 rounded-xl font-semibold border-0"
+                        disabled={loginLoading}
+                        style={{ 
+                          backgroundColor: isLightMode ? '#1A1A1A' : '#FFFFFF',
+                          color: isLightMode ? '#FFFFFF' : '#1A1A1A'
+                        }}
+                      >
+                        {loginLoading ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Signing in...
+                          </>
+                        ) : (
+                          'Sign in'
+                        )}
+                      </Button>
+                    </div>
                   </div>
-                  <Input 
-                    type="password"
-                    placeholder="Password"
-                    className="pl-14 h-12 rounded-xl border-0"
-                    style={{ 
-                      backgroundColor: isLightMode ? '#F3F4F6' : '#333',
-                      color: textCol
-                    }}
-                  />
-                </div>
+                </form>
                 
-                {/* Action Buttons */}
-                <div className="flex items-center gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="icon"
-                    className="w-12 h-12 rounded-xl border-0"
-                    style={{ backgroundColor: primary }}
-                  >
-                    <Bookmark className="w-5 h-5" style={{ color: isLightMode ? '#1A1A1A' : '#FFFFFF' }} />
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="icon"
-                    className="w-12 h-12 rounded-xl border-0"
-                    style={{ backgroundColor: primary }}
-                  >
-                    <LockKeyhole className="w-5 h-5" style={{ color: isLightMode ? '#1A1A1A' : '#FFFFFF' }} />
-                  </Button>
-                  <Button 
-                    className="h-12 px-6 md:px-8 rounded-xl font-semibold border-0"
-                    onClick={() => navigate('/auth')}
-                    style={{ 
-                      backgroundColor: isLightMode ? '#1A1A1A' : '#FFFFFF',
-                      color: isLightMode ? '#FFFFFF' : '#1A1A1A'
-                    }}
-                  >
-                    Sign in
-                  </Button>
+                {/* Google Sign In - Only show if enabled */}
+                {googleEnabled && (
+                  <div className="flex justify-center mb-4">
+                    <Button 
+                      variant="outline" 
+                      className="h-10 px-6 rounded-lg"
+                      style={{ 
+                        borderColor: isLightMode ? '#E5E7EB' : '#444', 
+                        color: textCol,
+                        backgroundColor: 'transparent'
+                      }}
+                    >
+                      <img src="https://www.google.com/favicon.ico" alt="Google" className="w-4 h-4 mr-2" />
+                      Sign in with Google
+                    </Button>
+                  </div>
+                )}
+                
+                {/* Remember Me & Reset */}
+                <div className="flex items-center justify-between text-sm">
+                  <label className="flex items-center gap-2 cursor-pointer" style={{ color: mutedColor }}>
+                    <input 
+                      type="checkbox" 
+                      className="rounded w-4 h-4" 
+                      style={{ accentColor: primary }}
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                    />
+                    Remember me
+                  </label>
+                  <Link to="/auth" className="underline hover:no-underline" style={{ color: textCol }}>
+                    Reset It
+                  </Link>
                 </div>
-              </div>
-              
-              {/* Google Sign In */}
-              <div className="flex justify-center mb-4">
-                <Button 
-                  variant="outline" 
-                  className="h-10 px-6 rounded-lg"
-                  style={{ 
-                    borderColor: isLightMode ? '#E5E7EB' : '#444', 
-                    color: textCol,
-                    backgroundColor: 'transparent'
-                  }}
-                >
-                  <img src="https://www.google.com/favicon.ico" alt="Google" className="w-4 h-4 mr-2" />
-                  Sign in with Google
-                </Button>
-              </div>
-              
-              {/* Remember Me & Reset */}
-              <div className="flex items-center justify-between text-sm">
-                <label className="flex items-center gap-2 cursor-pointer" style={{ color: mutedColor }}>
-                  <input type="checkbox" className="rounded w-4 h-4" style={{ accentColor: primary }} />
-                  Remember me
-                </label>
-                <Link to="/auth" className="underline hover:no-underline" style={{ color: textCol }}>
-                  Reset It
-                </Link>
-              </div>
-            </motion.div>
+              </motion.div>
             
             {/* Scroll Indicator */}
             <div className="flex items-center justify-center gap-2 mt-8" style={{ color: mutedColor }}>
@@ -403,6 +491,7 @@ export const SMMVisitHomepage = ({
             </div>
           </div>
         </section>
+        )}
 
         {/* Stats */}
         {showStats && (
