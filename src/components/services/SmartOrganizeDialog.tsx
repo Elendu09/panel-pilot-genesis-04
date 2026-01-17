@@ -377,6 +377,16 @@ export const SmartOrganizeDialog = ({
       setProgress({ phase: 'categorizing', current: 1, total: 1, message: 'Category counts updated!' });
       
       // Complete
+      // Count services still in "Other" category for auto deep categorization
+      const { count: othersRemaining } = await supabase
+        .from('services')
+        .select('*', { count: 'exact', head: true })
+        .eq('panel_id', panelId)
+        .or('category.is.null,category.eq.other,category.ilike.%other%');
+      
+      const othersCount = othersRemaining || 0;
+      setLiveStats(prev => ({ ...prev, othersCount }));
+      
       setProgress({ 
         phase: 'completed', 
         current: changesToApply.length, 
@@ -389,11 +399,20 @@ export const SmartOrganizeDialog = ({
         description: `Organized ${allServices.length.toLocaleString()} services into ${categoriesFound.size} categories. Updated ${changesToApply.length.toLocaleString()} services.`,
       });
       
-      // Brief delay then close
-      setTimeout(() => {
-        onComplete();
-        onOpenChange(false);
-      }, 2000);
+      // Auto-trigger deep categorization if there are services in "Other"
+      if (othersCount > 0) {
+        // Brief delay then auto-open Others dialog
+        setTimeout(() => {
+          onComplete();
+          setShowOthersDialog(true);
+        }, 1500);
+      } else {
+        // No "Other" services, just close
+        setTimeout(() => {
+          onComplete();
+          onOpenChange(false);
+        }, 2000);
+      }
       
     } catch (error) {
       console.error('Error in Smart Organize:', error);
@@ -590,27 +609,25 @@ export const SmartOrganizeDialog = ({
                 <div className="text-[10px] text-muted-foreground">Categories</div>
               </div>
               <div className="bg-muted/50 rounded-lg p-3">
-                <div className="text-lg font-bold text-blue-500">{liveStats.healthIssues}</div>
-                <div className="text-[10px] text-muted-foreground">Issues</div>
+                <div className="text-lg font-bold text-blue-500">{liveStats.othersCount}</div>
+                <div className="text-[10px] text-muted-foreground">Others</div>
               </div>
             </div>
             
-            {/* Deep Categorize Others Button */}
-            <Button 
-              onClick={() => {
-                onOpenChange(false);
-                setShowOthersDialog(true);
-              }} 
-              className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600"
-            >
-              <FolderSearch className="w-4 h-4 mr-2" />
-              Deep Categorize "Others" (70+ Categories)
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
+            {/* Auto-continuation message when there are "Others" to process */}
+            {liveStats.othersCount > 0 && (
+              <div className="flex items-center justify-center gap-2 text-sm text-amber-500 bg-amber-500/10 rounded-lg p-3">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Auto-continuing to deep categorize {liveStats.othersCount.toLocaleString()} "Other" services...</span>
+              </div>
+            )}
             
-            <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full">
-              Skip & Close
-            </Button>
+            {/* No others - just show close */}
+            {liveStats.othersCount === 0 && (
+              <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full">
+                Close
+              </Button>
+            )}
           </div>
         )}
         
