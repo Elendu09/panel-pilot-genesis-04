@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface Ripple {
@@ -15,14 +15,30 @@ interface Particle {
   color: string;
 }
 
-export const CursorEffects = () => {
+const CursorEffectsComponent = () => {
   const [ripples, setRipples] = useState<Ripple[]>([]);
   const [particles, setParticles] = useState<Particle[]>([]);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [isMoving, setIsMoving] = useState(false);
+  const [isReady, setIsReady] = useState(false);
 
-  // Throttle particle creation
+  // Defer initialization to reduce initial TBT
+  useEffect(() => {
+    const timer = requestIdleCallback 
+      ? requestIdleCallback(() => setIsReady(true), { timeout: 500 })
+      : setTimeout(() => setIsReady(true), 200);
+    return () => {
+      if (requestIdleCallback && typeof timer === 'number') {
+        cancelIdleCallback(timer);
+      } else {
+        clearTimeout(timer as unknown as number);
+      }
+    };
+  }, []);
+
+  // Throttle particle creation more aggressively
   const createParticle = useCallback((x: number, y: number) => {
+    if (!isReady) return;
     const particle: Particle = {
       id: Date.now() + Math.random(),
       x,
@@ -30,11 +46,13 @@ export const CursorEffects = () => {
       size: 4 + Math.random() * 6,
       color: Math.random() > 0.5 ? 'primary' : 'accent',
     };
-    setParticles(prev => [...prev.slice(-15), particle]);
-  }, []);
+    setParticles(prev => [...prev.slice(-10), particle]); // Reduced from 15 to 10
+  }, [isReady]);
 
-  // Handle mouse move
+  // Handle mouse move with more aggressive throttling
   useEffect(() => {
+    if (!isReady) return;
+    
     let lastTime = 0;
     let moveTimeout: NodeJS.Timeout;
 
@@ -43,8 +61,8 @@ export const CursorEffects = () => {
       setMousePos({ x: e.clientX, y: e.clientY });
       setIsMoving(true);
 
-      // Create particles every 50ms while moving
-      if (now - lastTime > 50) {
+      // Create particles every 80ms while moving (increased from 50ms)
+      if (now - lastTime > 80) {
         createParticle(e.clientX, e.clientY);
         lastTime = now;
       }
@@ -59,7 +77,7 @@ export const CursorEffects = () => {
       window.removeEventListener('mousemove', handleMouseMove);
       clearTimeout(moveTimeout);
     };
-  }, [createParticle]);
+  }, [createParticle, isReady]);
 
   // Handle click for ripple effect
   useEffect(() => {
@@ -184,4 +202,5 @@ export const CursorEffects = () => {
   );
 };
 
+export const CursorEffects = memo(CursorEffectsComponent);
 export default CursorEffects;

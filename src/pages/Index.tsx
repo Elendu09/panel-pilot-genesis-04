@@ -1,17 +1,44 @@
+import { lazy, Suspense, useEffect, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { Navigation } from "@/components/layout/Navigation";
 import { HeroSection } from "@/components/sections/HeroSection";
-import { PlatformFeaturesSection } from "@/components/sections/PlatformFeaturesSection";
-import { StatsSection } from "@/components/sections/StatsSection";
-import { FeaturesSection } from "@/components/sections/FeaturesSection";
-import { TestimonialsSection } from "@/components/sections/TestimonialsSection";
-import { FAQSection } from "@/components/sections/FAQSection";
 import { Footer } from "@/components/layout/Footer";
-import { CursorEffects } from "@/components/effects/CursorEffects";
 import { MainHomepageSchemas, FAQPageSchema } from "@/components/seo/JsonLdSchema";
+
+// Lazy load below-the-fold sections to reduce TBT
+const PlatformFeaturesSection = lazy(() => import("@/components/sections/PlatformFeaturesSection").then(m => ({ default: m.PlatformFeaturesSection })));
+const StatsSection = lazy(() => import("@/components/sections/StatsSection").then(m => ({ default: m.StatsSection })));
+const FeaturesSection = lazy(() => import("@/components/sections/FeaturesSection").then(m => ({ default: m.FeaturesSection })));
+const TestimonialsSection = lazy(() => import("@/components/sections/TestimonialsSection").then(m => ({ default: m.TestimonialsSection })));
+const FAQSection = lazy(() => import("@/components/sections/FAQSection").then(m => ({ default: m.FAQSection })));
+
+// Defer cursor effects until after main content
+const CursorEffects = lazy(() => import("@/components/effects/CursorEffects"));
+
+// Minimal skeleton for lazy sections
+const SectionSkeleton = () => (
+  <div className="py-24 flex items-center justify-center">
+    <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+  </div>
+);
 
 const Index = () => {
   const canonicalUrl = typeof window !== 'undefined' ? window.location.origin : 'https://homeofsmm.com';
+  const [showEffects, setShowEffects] = useState(false);
+  
+  // Defer cursor effects until after initial render
+  useEffect(() => {
+    const timer = requestIdleCallback 
+      ? requestIdleCallback(() => setShowEffects(true))
+      : setTimeout(() => setShowEffects(true), 100);
+    return () => {
+      if (requestIdleCallback && typeof timer === 'number') {
+        cancelIdleCallback(timer);
+      } else {
+        clearTimeout(timer as unknown as number);
+      }
+    };
+  }, []);
   
   // SEO-optimized title and description with proper pixel lengths
   const seoTitle = "HOME OF SMM - #1 SMM Panel Platform | Create Your Own SMM Panel";
@@ -30,7 +57,12 @@ const Index = () => {
   
   return (
     <div className="min-h-screen bg-background">
-      <CursorEffects />
+      {/* Defer cursor effects to reduce TBT */}
+      {showEffects && (
+        <Suspense fallback={null}>
+          <CursorEffects />
+        </Suspense>
+      )}
       
       {/* JSON-LD Structured Data */}
       <MainHomepageSchemas />
@@ -85,11 +117,21 @@ const Index = () => {
       <Navigation />
       <main role="main" aria-label="Main content" itemScope itemType="https://schema.org/WebPage">
         <HeroSection />
-        <PlatformFeaturesSection />
-        <StatsSection />
-        <FeaturesSection />
-        <TestimonialsSection />
-        <FAQSection />
+        <Suspense fallback={<SectionSkeleton />}>
+          <PlatformFeaturesSection />
+        </Suspense>
+        <Suspense fallback={<SectionSkeleton />}>
+          <StatsSection />
+        </Suspense>
+        <Suspense fallback={<SectionSkeleton />}>
+          <FeaturesSection />
+        </Suspense>
+        <Suspense fallback={<SectionSkeleton />}>
+          <TestimonialsSection />
+        </Suspense>
+        <Suspense fallback={<SectionSkeleton />}>
+          <FAQSection />
+        </Suspense>
       </main>
       <Footer />
     </div>
