@@ -33,9 +33,12 @@ export const Navigation = () => {
         <div className="flex items-center justify-between h-16">
           <Link to="/" aria-label="HOME OF SMM - Home" className="flex items-center space-x-2">
             <img 
-              src="/favicon.ico" 
+              src="/default-panel-favicon.png" 
               alt="HOME OF SMM logo" 
               className="w-8 h-8 rounded-lg object-cover"
+              width={32}
+              height={32}
+              loading="eager"
             />
             <span className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
               HOME OF SMM

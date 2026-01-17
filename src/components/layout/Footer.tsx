@@ -38,9 +38,12 @@ export const Footer = () => {
           <div className="col-span-3 md:col-span-1 space-y-2 sm:space-y-3 mb-3 md:mb-0">
             <Link to="/" className="flex items-center space-x-2">
               <img 
-                src="/favicon.ico" 
+                src="/default-panel-favicon.png" 
                 alt="HOME OF SMM" 
                 className="w-7 h-7 rounded-lg object-cover"
+                width={28}
+                height={28}
+                loading="lazy"
               />
               <span className="text-lg font-bold bg-gradient-primary bg-clip-text text-transparent">
                 HOME OF SMM
