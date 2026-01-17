@@ -266,14 +266,17 @@ export const SMMVisitHomepage = ({
         <section id="hero" aria-label="Hero Section" style={{ paddingTop: sectionPadding, paddingBottom: sectionPadding }}>
           <div className="mx-auto px-4 sm:px-6 lg:px-8 text-center" style={{ maxWidth: containerMax }}>
             <motion.div {...(enableAnimations ? { initial: { opacity: 0, y: 30 }, animate: { opacity: 1, y: 0 } } : {})}>
-              <h1 className="text-4xl md:text-5xl lg:text-6xl mb-6" style={{ fontWeight: headingWeight }}>
+              <h1 
+                className="text-4xl md:text-5xl lg:text-6xl mb-6" 
+                style={{ fontWeight: headingWeight, color: isLightMode ? '#1A1A1A' : '#FFFFFF' }}
+              >
                 {(() => {
                   const position = customization.heroAnimatedTextPosition || 'last';
                   const { before, animatedWord, after } = getAnimatedWordFromTitle(heroTitle, position);
                   const effectiveAnimStyle = customization.heroAnimatedTextStyle || getThemeDefaultAnimationStyle('smmvisit');
                   return (
                     <>
-                      {before && <span>{before} </span>}
+                      {before && <span style={{ color: isLightMode ? '#1A1A1A' : '#FFFFFF' }}>{before} </span>}
                       <AnimatedHeroText 
                         text={animatedWord}
                         animationStyle={effectiveAnimStyle}
@@ -281,7 +284,7 @@ export const SMMVisitHomepage = ({
                         secondaryColor={secondary}
                         enableAnimations={enableAnimations}
                       />
-                      {after && <span> {after}</span>}
+                      {after && <span style={{ color: isLightMode ? '#1A1A1A' : '#FFFFFF' }}> {after}</span>}
                     </>
                   );
                 })()}

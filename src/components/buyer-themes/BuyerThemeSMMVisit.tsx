@@ -48,23 +48,53 @@ export const BuyerThemeSMMVisit = ({ children, className, themeMode = 'light' }:
         }
         
         /* ===== ENHANCED LIGHT MODE - CLEAN & VISIBLE ===== */
+        /* Override Tailwind CSS variables for light mode */
         .light .buyer-theme-smmvisit {
+          --background: 0 0% 96%; /* #F5F5F5 */
+          --foreground: 0 0% 10%; /* #1A1A1A */
+          --card: 0 0% 100%; /* #FFFFFF */
+          --card-foreground: 0 0% 10%;
+          --popover: 0 0% 100%;
+          --popover-foreground: 0 0% 10%;
+          --primary: 51 100% 50%; /* #FFD700 */
+          --primary-foreground: 0 0% 10%;
+          --muted: 220 9% 46%;
+          --muted-foreground: 215 14% 34%;
+          --border: 220 13% 91%;
+          --input: 220 13% 91%;
+          --ring: 51 100% 50%;
           background: #F5F5F5 !important;
           color: #1A1A1A !important;
         }
         
-        /* Force all text to be dark in light mode */
+        /* CRITICAL: Force all text to be DARK BLACK in light mode with !important */
+        .light .buyer-theme-smmvisit,
+        .light .buyer-theme-smmvisit * {
+          --tw-text-opacity: 1;
+        }
+        
         .light .buyer-theme-smmvisit h1,
         .light .buyer-theme-smmvisit h2,
         .light .buyer-theme-smmvisit h3,
         .light .buyer-theme-smmvisit h4,
         .light .buyer-theme-smmvisit h5,
-        .light .buyer-theme-smmvisit h6,
+        .light .buyer-theme-smmvisit h6 {
+          color: #1A1A1A !important;
+        }
+        
         .light .buyer-theme-smmvisit p,
-        .light .buyer-theme-smmvisit span:not(.theme-gradient-text),
+        .light .buyer-theme-smmvisit span:not(.theme-gradient-text):not([class*="animate"]),
         .light .buyer-theme-smmvisit label,
-        .light .buyer-theme-smmvisit div {
-          color: #1A1A1A;
+        .light .buyer-theme-smmvisit div:not([class*="bg-"]):not([class*="gradient"]) {
+          color: #1A1A1A !important;
+        }
+        
+        /* Navigation text must be dark in light mode */
+        .light .buyer-theme-smmvisit header,
+        .light .buyer-theme-smmvisit header *,
+        .light .buyer-theme-smmvisit nav,
+        .light .buyer-theme-smmvisit nav * {
+          color: #1A1A1A !important;
         }
         
         .light .buyer-theme-smmvisit .text-muted-foreground {
@@ -95,6 +125,13 @@ export const BuyerThemeSMMVisit = ({ children, className, themeMode = 'light' }:
         
         .light .buyer-theme-smmvisit .border-border {
           border-color: #E5E7EB !important;
+        }
+        
+        /* Light mode form labels */
+        .light .buyer-theme-smmvisit form label,
+        .light .buyer-theme-smmvisit form h2,
+        .light .buyer-theme-smmvisit form span {
+          color: #1A1A1A !important;
         }
         
         .buyer-theme-smmvisit .theme-button-primary {
@@ -249,7 +286,27 @@ export const BuyerThemeSMMVisit = ({ children, className, themeMode = 'light' }:
         }
         
         /* ===== COMPREHENSIVE DARK MODE ===== */
+        /* CRITICAL: Override ALL Tailwind CSS variables for dark mode */
         .dark .buyer-theme-smmvisit {
+          --background: 0 0% 10%; /* #1A1A1A */
+          --foreground: 0 0% 100%; /* #FFFFFF */
+          --card: 0 0% 15%; /* #262626 */
+          --card-foreground: 0 0% 100%;
+          --popover: 0 0% 15%; /* #262626 */
+          --popover-foreground: 0 0% 100%;
+          --primary: 51 100% 50%; /* #FFD700 */
+          --primary-foreground: 0 0% 10%;
+          --secondary: 0 0% 15%;
+          --secondary-foreground: 0 0% 100%;
+          --muted: 0 0% 20%;
+          --muted-foreground: 0 0% 65%;
+          --accent: 51 100% 50%;
+          --accent-foreground: 0 0% 10%;
+          --destructive: 0 84% 60%;
+          --destructive-foreground: 0 0% 100%;
+          --border: 51 100% 50% / 0.2;
+          --input: 0 0% 10%;
+          --ring: 51 100% 50%;
           --theme-background: #1A1A1A;
           --theme-surface: #262626;
           --theme-text: #FFFFFF;
@@ -258,19 +315,54 @@ export const BuyerThemeSMMVisit = ({ children, className, themeMode = 'light' }:
         }
         
         .dark .buyer-theme-smmvisit {
-          background: linear-gradient(180deg, #1A1A1A 0%, #141414 100%);
+          background: linear-gradient(180deg, #1A1A1A 0%, #141414 100%) !important;
+          color: #FFFFFF !important;
+        }
+        
+        /* Force bg-background to be dark */
+        .dark .buyer-theme-smmvisit .bg-background {
+          background-color: #1A1A1A !important;
+        }
+        
+        .dark .buyer-theme-smmvisit .bg-background\/50,
+        .dark .buyer-theme-smmvisit .bg-background\/80,
+        .dark .buyer-theme-smmvisit .bg-background\/95 {
+          background-color: rgba(26, 26, 26, 0.95) !important;
+        }
+        
+        /* SelectContent popover must be dark - CRITICAL FOR NEW ORDER PAGE */
+        .dark .buyer-theme-smmvisit [data-radix-select-content],
+        .dark .buyer-theme-smmvisit [data-radix-popper-content-wrapper] > div,
+        .dark .buyer-theme-smmvisit [cmdk-list],
+        .dark .buyer-theme-smmvisit .SelectContent,
+        .dark .buyer-theme-smmvisit [role="listbox"] {
+          background-color: #262626 !important;
+          border-color: rgba(255, 215, 0, 0.2) !important;
+          color: #FFFFFF !important;
+        }
+        
+        .dark .buyer-theme-smmvisit [data-radix-select-content] *,
+        .dark .buyer-theme-smmvisit [data-radix-popper-content-wrapper] * {
+          color: #FFFFFF !important;
+        }
+        
+        .dark .buyer-theme-smmvisit [data-radix-select-item]:hover,
+        .dark .buyer-theme-smmvisit [data-radix-select-item][data-highlighted],
+        .dark .buyer-theme-smmvisit [role="option"]:hover,
+        .dark .buyer-theme-smmvisit [role="option"][data-highlighted] {
+          background-color: rgba(255, 215, 0, 0.15) !important;
         }
         
         .dark .buyer-theme-smmvisit .theme-card {
-          background: #262626;
-          border: 1px solid rgba(255, 215, 0, 0.2);
-          box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+          background: #262626 !important;
+          border: 1px solid rgba(255, 215, 0, 0.2) !important;
+          box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4) !important;
         }
         
         .dark .buyer-theme-smmvisit .theme-nav {
-          background: rgba(26, 26, 26, 0.98);
+          background: rgba(26, 26, 26, 0.98) !important;
           backdrop-filter: blur(12px);
-          border-color: rgba(255, 215, 0, 0.15);
+          border-color: rgba(255, 215, 0, 0.15) !important;
         }
         
         .dark .buyer-theme-smmvisit .theme-hero {
