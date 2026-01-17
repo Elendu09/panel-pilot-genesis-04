@@ -169,18 +169,14 @@ export const TGRefHomepage = ({
         companyName={companyName}
         logoUrl={displayLogo}
         logoIcon={
-          <img 
-            src="/default-panel-favicon.png" 
-            alt={companyName} 
-            className="w-8 h-8 rounded object-contain"
-          />
+          <div className="w-8 h-8 rounded flex items-center justify-center" style={{ background: `linear-gradient(to bottom right, ${primary}, ${secondary})` }}>
+            <Terminal className="w-5 h-5" style={{ color: isLightMode ? '#FFFFFF' : bgColor }} />
+          </div>
         }
         defaultIcon={
-          <img 
-            src="/default-panel-favicon.png" 
-            alt={companyName} 
-            className="w-8 h-8 rounded object-contain"
-          />
+          <div className="w-8 h-8 rounded flex items-center justify-center" style={{ background: `linear-gradient(to bottom right, ${primary}, ${secondary})` }}>
+            <Terminal className="w-5 h-5" style={{ color: isLightMode ? '#FFFFFF' : bgColor }} />
+          </div>
         }
         showBlogInMenu={showBlogInMenu}
         themeMode={themeMode}

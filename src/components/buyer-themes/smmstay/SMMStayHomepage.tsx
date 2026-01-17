@@ -166,18 +166,20 @@ export const SMMStayHomepage = ({
         companyName={companyName}
         logoUrl={displayLogo}
         logoIcon={
-          <img 
-            src="/default-panel-favicon.png" 
-            alt={companyName} 
-            className="w-10 h-10 rounded-lg object-contain"
-          />
+          <div className="relative">
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: `linear-gradient(to bottom right, ${primary}, ${secondary})` }}>
+              <Flame className="w-6 h-6 text-white" />
+            </div>
+            <div className="absolute inset-0 rounded-lg blur-lg opacity-50" style={{ backgroundColor: primary }} />
+          </div>
         }
         defaultIcon={
-          <img 
-            src="/default-panel-favicon.png" 
-            alt={companyName} 
-            className="w-10 h-10 rounded-lg object-contain"
-          />
+          <div className="relative">
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: `linear-gradient(to bottom right, ${primary}, ${secondary})` }}>
+              <Flame className="w-6 h-6 text-white" />
+            </div>
+            <div className="absolute inset-0 rounded-lg blur-lg opacity-50" style={{ backgroundColor: primary }} />
+          </div>
         }
         showBlogInMenu={showBlogInMenu}
         themeMode={themeMode}

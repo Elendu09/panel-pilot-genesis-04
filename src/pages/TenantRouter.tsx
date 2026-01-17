@@ -216,19 +216,14 @@ const TenantContent = () => {
     if (isPlatformDomain) {
       return <App />;
     }
-    // For tenant domains, show loading screen with default tenant favicon (changeable)
+    // For tenant domains, show completely neutral loading screen (no branding)
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
         <div className="text-center">
-          {/* Default tenant favicon with shimmer overlay */}
+          {/* Neutral loading with shimmer - no text, just visual indicator */}
           <div className="relative w-16 h-16 mx-auto mb-4">
-            <img 
-              src="/default-panel-favicon.png" 
-              alt="Loading" 
-              className="w-16 h-16 rounded-2xl object-contain"
-            />
-            <div className="absolute inset-0 rounded-2xl overflow-hidden">
-              <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+            <div className="w-16 h-16 rounded-2xl bg-slate-800 overflow-hidden">
+              <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
             </div>
           </div>
           {/* Shimmer text placeholder - no actual text */}
