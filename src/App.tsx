@@ -7,14 +7,16 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/hooks/use-theme";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { OnboardingTourProvider } from "@/contexts/OnboardingTourContext";
-import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { HelmetProvider } from "react-helmet-async";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
 
+// Lazy load ProtectedRoute - not needed on initial render
+const ProtectedRoute = lazy(() => import("@/components/auth/ProtectedRoute").then(m => ({ default: m.ProtectedRoute })));
+
 // Critical path - load immediately
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
+const Index = lazy(() => import(/* webpackChunkName: "index" */ "./pages/Index"));
+const NotFound = lazy(() => import(/* webpackChunkName: "not-found" */ "./pages/NotFound"));
 
 // Lazy load non-critical routes for better TTI
 const Services = lazy(() => import("./pages/Services"));
