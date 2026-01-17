@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { useTenant } from '@/hooks/useTenant';
 import { analyzeDomain, PLATFORM_DOMAIN, ALL_PLATFORM_DOMAINS } from '@/lib/tenant-domain-config';
@@ -83,33 +83,40 @@ import App from '../App';
   }
 })();
 
-// Buyer pages
-import BuyerDashboard from './buyer/BuyerDashboard';
-import BuyerServices from './buyer/BuyerServices';
-import BuyerNewOrder from './buyer/BuyerNewOrder';
-import BuyerOrders from './buyer/BuyerOrders';
-import BuyerOrderTracking from './buyer/BuyerOrderTracking';
-import BuyerProfile from './buyer/BuyerProfile';
-import BuyerAuth from './buyer/BuyerAuth';
-import BuyerDeposit from './buyer/BuyerDeposit';
-import BuyerSupport from './buyer/BuyerSupport';
-import BuyerPublicServices from './buyer/BuyerPublicServices';
-import BuyerFavorites from './buyer/BuyerFavorites';
-import BuyerPrivacy from './buyer/BuyerPrivacy';
-import BuyerTerms from './buyer/BuyerTerms';
-import BuyerAPI from './buyer/BuyerAPI';
-import BuyerContact from './buyer/BuyerContact';
-import BuyerBlog from './buyer/BuyerBlog';
-import BuyerBlogPost from './buyer/BuyerBlogPost';
-import Storefront from './Storefront';
-import StorefrontBlog from './storefront/StorefrontBlog';
-import FastOrder from './FastOrder';
-import BuyerBulkOrder from './buyer/BuyerBulkOrder';
-import TrackOrder from './TrackOrder';
-import Sitemap from './Sitemap';
-import RobotsTxt from './RobotsTxt';
-import TeamAuth from './buyer/TeamAuth';
-import TeamDashboard from './panel/TeamDashboard';
+// Lazy load buyer pages for code splitting
+const BuyerDashboard = lazy(() => import('./buyer/BuyerDashboard'));
+const BuyerServices = lazy(() => import('./buyer/BuyerServices'));
+const BuyerNewOrder = lazy(() => import('./buyer/BuyerNewOrder'));
+const BuyerOrders = lazy(() => import('./buyer/BuyerOrders'));
+const BuyerOrderTracking = lazy(() => import('./buyer/BuyerOrderTracking'));
+const BuyerProfile = lazy(() => import('./buyer/BuyerProfile'));
+const BuyerAuth = lazy(() => import('./buyer/BuyerAuth'));
+const BuyerDeposit = lazy(() => import('./buyer/BuyerDeposit'));
+const BuyerSupport = lazy(() => import('./buyer/BuyerSupport'));
+const BuyerPublicServices = lazy(() => import('./buyer/BuyerPublicServices'));
+const BuyerFavorites = lazy(() => import('./buyer/BuyerFavorites'));
+const BuyerPrivacy = lazy(() => import('./buyer/BuyerPrivacy'));
+const BuyerTerms = lazy(() => import('./buyer/BuyerTerms'));
+const BuyerAPI = lazy(() => import('./buyer/BuyerAPI'));
+const BuyerContact = lazy(() => import('./buyer/BuyerContact'));
+const BuyerBlog = lazy(() => import('./buyer/BuyerBlog'));
+const BuyerBlogPost = lazy(() => import('./buyer/BuyerBlogPost'));
+const Storefront = lazy(() => import('./Storefront'));
+const StorefrontBlog = lazy(() => import('./storefront/StorefrontBlog'));
+const FastOrder = lazy(() => import('./FastOrder'));
+const BuyerBulkOrder = lazy(() => import('./buyer/BuyerBulkOrder'));
+const TrackOrder = lazy(() => import('./TrackOrder'));
+const Sitemap = lazy(() => import('./Sitemap'));
+const RobotsTxt = lazy(() => import('./RobotsTxt'));
+const TeamAuth = lazy(() => import('./buyer/TeamAuth'));
+const TeamDashboard = lazy(() => import('./panel/TeamDashboard'));
+
+// Minimal loader for lazy routes
+const PageLoader = () => (
+  <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+  </div>
+);
 
 const queryClient = new QueryClient();
 
@@ -303,80 +310,82 @@ const TenantContent = () => {
                   <BuyerAuthProvider panelId={panel.id}>
                     <BuyerThemeProvider panelId={panel.id} defaultThemeMode={panelDefaultTheme}>
                       <BrowserRouter>
-                        <Routes>
-                          {/* PUBLIC routes - Storefront accessible without login */}
-                          <Route path="/" element={<Storefront />} />
-                          <Route path="/auth" element={<BuyerAuth />} />
-                          <Route path="/services" element={<BuyerPublicServices />} />
-                          <Route path="/fast-order" element={<FastOrder />} />
-                          <Route path="/track-order" element={<TrackOrder />} />
-                          <Route path="/privacy" element={<BuyerPrivacy />} />
-                          <Route path="/terms" element={<BuyerTerms />} />
-                          <Route path="/api" element={<BuyerAPI />} />
-                          <Route path="/contact" element={<BuyerContact />} />
+                        <Suspense fallback={<PageLoader />}>
+                          <Routes>
+                            {/* PUBLIC routes - Storefront accessible without login */}
+                            <Route path="/" element={<Storefront />} />
+                            <Route path="/auth" element={<BuyerAuth />} />
+                            <Route path="/services" element={<BuyerPublicServices />} />
+                            <Route path="/fast-order" element={<FastOrder />} />
+                            <Route path="/track-order" element={<TrackOrder />} />
+                            <Route path="/privacy" element={<BuyerPrivacy />} />
+                            <Route path="/terms" element={<BuyerTerms />} />
+                            <Route path="/api" element={<BuyerAPI />} />
+                            <Route path="/contact" element={<BuyerContact />} />
 
-                          {/* Blog routes */}
-                          <Route path="/blog" element={<BuyerBlog />} />
-                          <Route path="/blog/:slug" element={<BuyerBlogPost />} />
+                            {/* Blog routes */}
+                            <Route path="/blog" element={<BuyerBlog />} />
+                            <Route path="/blog/:slug" element={<BuyerBlogPost />} />
 
-                          {/* Sitemap and robots.txt routes */}
-                          <Route path="/sitemap.xml" element={<Sitemap />} />
-                          <Route path="/robots.txt" element={<RobotsTxt />} />
-                          
-                          {/* Protected buyer routes */}
-                          <Route path="/dashboard" element={
-                            <BuyerProtectedRoute>
-                              <BuyerDashboard />
-                            </BuyerProtectedRoute>
-                          } />
-                          <Route path="/new-order" element={
-                            <BuyerProtectedRoute>
-                              <BuyerNewOrder />
-                            </BuyerProtectedRoute>
-                          } />
-                          <Route path="/orders" element={
-                            <BuyerProtectedRoute>
-                              <BuyerOrders />
-                            </BuyerProtectedRoute>
-                          } />
-                          <Route path="/orders/:orderId" element={
-                            <BuyerProtectedRoute>
-                              <BuyerOrderTracking />
-                            </BuyerProtectedRoute>
-                          } />
-                          <Route path="/profile" element={
-                            <BuyerProtectedRoute>
-                              <BuyerProfile />
-                            </BuyerProtectedRoute>
-                          } />
-                          <Route path="/deposit" element={
-                            <BuyerProtectedRoute>
-                              <BuyerDeposit />
-                            </BuyerProtectedRoute>
-                          } />
-                          <Route path="/support" element={
-                            <BuyerProtectedRoute>
-                              <BuyerSupport />
-                            </BuyerProtectedRoute>
-                          } />
-                          <Route path="/favorites" element={
-                            <BuyerProtectedRoute>
-                              <BuyerFavorites />
-                            </BuyerProtectedRoute>
-                          } />
-                          <Route path="/bulk-order" element={
-                            <BuyerProtectedRoute>
-                              <BuyerBulkOrder />
-                            </BuyerProtectedRoute>
-                          } />
-                          
-                          {/* Team member routes */}
-                          <Route path="/team-login" element={<TeamAuth />} />
-                          <Route path="/team-dashboard" element={<TeamDashboard />} />
-                          
-                          {/* Catch all - redirect to storefront */}
-                          <Route path="*" element={<Navigate to="/" replace />} />
-                        </Routes>
+                            {/* Sitemap and robots.txt routes */}
+                            <Route path="/sitemap.xml" element={<Sitemap />} />
+                            <Route path="/robots.txt" element={<RobotsTxt />} />
+                            
+                            {/* Protected buyer routes */}
+                            <Route path="/dashboard" element={
+                              <BuyerProtectedRoute>
+                                <BuyerDashboard />
+                              </BuyerProtectedRoute>
+                            } />
+                            <Route path="/new-order" element={
+                              <BuyerProtectedRoute>
+                                <BuyerNewOrder />
+                              </BuyerProtectedRoute>
+                            } />
+                            <Route path="/orders" element={
+                              <BuyerProtectedRoute>
+                                <BuyerOrders />
+                              </BuyerProtectedRoute>
+                            } />
+                            <Route path="/orders/:orderId" element={
+                              <BuyerProtectedRoute>
+                                <BuyerOrderTracking />
+                              </BuyerProtectedRoute>
+                            } />
+                            <Route path="/profile" element={
+                              <BuyerProtectedRoute>
+                                <BuyerProfile />
+                              </BuyerProtectedRoute>
+                            } />
+                            <Route path="/deposit" element={
+                              <BuyerProtectedRoute>
+                                <BuyerDeposit />
+                              </BuyerProtectedRoute>
+                            } />
+                            <Route path="/support" element={
+                              <BuyerProtectedRoute>
+                                <BuyerSupport />
+                              </BuyerProtectedRoute>
+                            } />
+                            <Route path="/favorites" element={
+                              <BuyerProtectedRoute>
+                                <BuyerFavorites />
+                              </BuyerProtectedRoute>
+                            } />
+                            <Route path="/bulk-order" element={
+                              <BuyerProtectedRoute>
+                                <BuyerBulkOrder />
+                              </BuyerProtectedRoute>
+                            } />
+                            
+                            {/* Team member routes */}
+                            <Route path="/team-login" element={<TeamAuth />} />
+                            <Route path="/team-dashboard" element={<TeamDashboard />} />
+                            
+                            {/* Catch all - redirect to storefront */}
+                            <Route path="*" element={<Navigate to="/" replace />} />
+                          </Routes>
+                        </Suspense>
                       </BrowserRouter>
                     </BuyerThemeProvider>
                   </BuyerAuthProvider>
