@@ -10,14 +10,17 @@ interface BuyerThemeSMMVisitProps {
 // SMMVisit Theme: Light gray with yellow/gold accents
 export const BuyerThemeSMMVisit = ({ children, className, themeMode = 'light' }: BuyerThemeSMMVisitProps) => {
   return (
-    <div className={themeMode === 'light' ? 'light' : 'dark'}>
+    <div className={themeMode === 'light' ? 'light' : 'dark'} data-theme={themeMode}>
       <div 
         className={cn(
           "buyer-theme-smmvisit buyer-theme-wrapper min-h-screen font-sans",
+          themeMode === 'light' ? 'smmvisit-light-mode' : 'smmvisit-dark-mode',
           className
         )}
+        data-theme-mode={themeMode}
       >
       <style>{`
+        /* ===== DEFAULT STATE (LIGHT MODE) - Applied immediately without needing .light class ===== */
         .buyer-theme-smmvisit {
           --theme-background: #F5F5F5;
           --theme-surface: #FFFFFF;
@@ -26,8 +29,72 @@ export const BuyerThemeSMMVisit = ({ children, className, themeMode = 'light' }:
           --theme-accent: #1A1A1A;
           --theme-text: #1A1A1A;
           --theme-muted: #6B7280;
-          background: var(--theme-background);
-          color: var(--theme-text);
+          background: #F5F5F5;
+          color: #1A1A1A;
+        }
+        
+        /* SMMVISIT LIGHT MODE - Direct class on wrapper for initial load */
+        .buyer-theme-smmvisit.smmvisit-light-mode {
+          background: #F5F5F5 !important;
+          color: #1A1A1A !important;
+        }
+        
+        .buyer-theme-smmvisit.smmvisit-light-mode h1,
+        .buyer-theme-smmvisit.smmvisit-light-mode h2,
+        .buyer-theme-smmvisit.smmvisit-light-mode h3,
+        .buyer-theme-smmvisit.smmvisit-light-mode h4,
+        .buyer-theme-smmvisit.smmvisit-light-mode h5,
+        .buyer-theme-smmvisit.smmvisit-light-mode h6,
+        .buyer-theme-smmvisit.smmvisit-light-mode p,
+        .buyer-theme-smmvisit.smmvisit-light-mode span:not(.theme-gradient-text),
+        .buyer-theme-smmvisit.smmvisit-light-mode label {
+          color: #1A1A1A !important;
+        }
+        
+        .buyer-theme-smmvisit.smmvisit-light-mode header,
+        .buyer-theme-smmvisit.smmvisit-light-mode header *,
+        .buyer-theme-smmvisit.smmvisit-light-mode nav,
+        .buyer-theme-smmvisit.smmvisit-light-mode nav * {
+          color: #1A1A1A !important;
+        }
+        
+        .buyer-theme-smmvisit.smmvisit-light-mode header,
+        .buyer-theme-smmvisit.smmvisit-light-mode header > div,
+        .buyer-theme-smmvisit.smmvisit-light-mode nav[style*="borderRadius"] {
+          background: #FFFFFF !important;
+        }
+        
+        /* SMMVISIT DARK MODE - Direct class on wrapper for initial load */
+        .buyer-theme-smmvisit.smmvisit-dark-mode {
+          background: linear-gradient(180deg, #1C1F26 0%, #171A20 100%) !important;
+          color: #FFFFFF !important;
+        }
+        
+        .buyer-theme-smmvisit.smmvisit-dark-mode h1,
+        .buyer-theme-smmvisit.smmvisit-dark-mode h2,
+        .buyer-theme-smmvisit.smmvisit-dark-mode h3,
+        .buyer-theme-smmvisit.smmvisit-dark-mode h4,
+        .buyer-theme-smmvisit.smmvisit-dark-mode h5,
+        .buyer-theme-smmvisit.smmvisit-dark-mode h6,
+        .buyer-theme-smmvisit.smmvisit-dark-mode p,
+        .buyer-theme-smmvisit.smmvisit-dark-mode span:not(.theme-gradient-text),
+        .buyer-theme-smmvisit.smmvisit-dark-mode label,
+        .buyer-theme-smmvisit.smmvisit-dark-mode a {
+          color: #FFFFFF !important;
+        }
+        
+        .buyer-theme-smmvisit.smmvisit-dark-mode header,
+        .buyer-theme-smmvisit.smmvisit-dark-mode header *,
+        .buyer-theme-smmvisit.smmvisit-dark-mode nav,
+        .buyer-theme-smmvisit.smmvisit-dark-mode nav a,
+        .buyer-theme-smmvisit.smmvisit-dark-mode nav button {
+          color: #E5E7EB !important;
+        }
+        
+        .buyer-theme-smmvisit.smmvisit-dark-mode header,
+        .buyer-theme-smmvisit.smmvisit-dark-mode header > div,
+        .buyer-theme-smmvisit.smmvisit-dark-mode nav[style*="borderRadius"] {
+          background: rgba(28, 31, 38, 0.95) !important;
         }
         
         /* Override panel variables for this theme */

@@ -184,14 +184,15 @@ export const OthersCategorizeDialog = ({
       });
       
       toast({
-        title: 'Others Categorization Complete!',
-        description: `Moved ${totalRecategorized.toLocaleString()} services from Other to proper categories.`,
+        title: 'Deep Categorization Complete!',
+        description: `Moved ${totalRecategorized.toLocaleString()} services from Other to ${Object.keys(aggregatedStats).length} refined categories.`,
       });
       
-      // Brief delay then trigger completion
+      // Auto-close after brief delay
       setTimeout(() => {
         onComplete();
-      }, 1500);
+        onOpenChange(false);
+      }, 2000);
       
     } catch (error) {
       console.error('Error in Others Categorization:', error);
