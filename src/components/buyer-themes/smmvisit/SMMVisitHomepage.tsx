@@ -650,7 +650,7 @@ export const SMMVisitHomepage = ({
       {(customization.enableFooter !== false) && (
         <footer className="py-16" style={{ 
           backgroundColor: isLightMode ? '#FFFFFF' : surfaceColor,
-          borderTop: `1px solid ${primary}1a` 
+          borderTop: isLightMode ? '1px solid #E5E7EB' : `1px solid ${primary}1a` 
         }}>
           <div className="mx-auto px-4 sm:px-6 lg:px-8" style={{ maxWidth: containerMax }}>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
@@ -664,9 +664,9 @@ export const SMMVisitHomepage = ({
                       <Globe className="w-4 h-4 text-white" />
                     </div>
                   )}
-                  <span className="font-bold text-lg">{companyName}</span>
+                  <span className="font-bold text-lg" style={{ color: isLightMode ? '#1A1A1A' : '#FFFFFF' }}>{companyName}</span>
                 </div>
-                <p className="text-sm mb-4" style={{ color: mutedColor }}>
+                <p className="text-sm mb-4" style={{ color: isLightMode ? '#6B7280' : mutedColor }}>
                   {customization.footerAbout || 'Professional SMM services trusted worldwide.'}
                 </p>
                 {(() => {
@@ -677,7 +677,14 @@ export const SMMVisitHomepage = ({
                       {socialLinks.map((link: any) => {
                         const Icon = iconMap[link.id] || Instagram;
                         return (
-                          <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" className="opacity-60 hover:opacity-100 transition-opacity">
+                          <a 
+                            key={link.id} 
+                            href={link.url} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="hover:opacity-100 transition-opacity"
+                            style={{ color: isLightMode ? '#6B7280' : mutedColor, opacity: 0.6 }}
+                          >
                             <Icon className="w-5 h-5" />
                           </a>
                         );
@@ -689,38 +696,38 @@ export const SMMVisitHomepage = ({
               
               {/* Services Column */}
               <div>
-                <h4 className="font-semibold mb-4">Services</h4>
-                <ul className="space-y-2 text-sm" style={{ color: mutedColor }}>
-                  <li><Link to="/services" className="hover:opacity-80 transition-opacity">All Services</Link></li>
-                  <li><Link to="/services?platform=instagram" className="hover:opacity-80 transition-opacity">Instagram</Link></li>
-                  <li><Link to="/services?platform=youtube" className="hover:opacity-80 transition-opacity">YouTube</Link></li>
-                  <li><Link to="/services?platform=tiktok" className="hover:opacity-80 transition-opacity">TikTok</Link></li>
+                <h4 className="font-semibold mb-4" style={{ color: isLightMode ? '#1A1A1A' : '#FFFFFF' }}>Services</h4>
+                <ul className="space-y-2 text-sm">
+                  <li><Link to="/services" className="hover:opacity-80 transition-opacity" style={{ color: isLightMode ? '#6B7280' : mutedColor }}>All Services</Link></li>
+                  <li><Link to="/services?platform=instagram" className="hover:opacity-80 transition-opacity" style={{ color: isLightMode ? '#6B7280' : mutedColor }}>Instagram</Link></li>
+                  <li><Link to="/services?platform=youtube" className="hover:opacity-80 transition-opacity" style={{ color: isLightMode ? '#6B7280' : mutedColor }}>YouTube</Link></li>
+                  <li><Link to="/services?platform=tiktok" className="hover:opacity-80 transition-opacity" style={{ color: isLightMode ? '#6B7280' : mutedColor }}>TikTok</Link></li>
                 </ul>
               </div>
               
               {/* Company Column */}
               <div>
-                <h4 className="font-semibold mb-4">Company</h4>
-                <ul className="space-y-2 text-sm" style={{ color: mutedColor }}>
-                  <li><Link to="/support" className="hover:opacity-80 transition-opacity">About Us</Link></li>
-                  <li><Link to="/support" className="hover:opacity-80 transition-opacity">Contact</Link></li>
-                  {showBlogInMenu && <li><Link to="/blog" className="hover:opacity-80 transition-opacity">Blog</Link></li>}
+                <h4 className="font-semibold mb-4" style={{ color: isLightMode ? '#1A1A1A' : '#FFFFFF' }}>Company</h4>
+                <ul className="space-y-2 text-sm">
+                  <li><Link to="/support" className="hover:opacity-80 transition-opacity" style={{ color: isLightMode ? '#6B7280' : mutedColor }}>About Us</Link></li>
+                  <li><Link to="/support" className="hover:opacity-80 transition-opacity" style={{ color: isLightMode ? '#6B7280' : mutedColor }}>Contact</Link></li>
+                  {showBlogInMenu && <li><Link to="/blog" className="hover:opacity-80 transition-opacity" style={{ color: isLightMode ? '#6B7280' : mutedColor }}>Blog</Link></li>}
                 </ul>
               </div>
               
               {/* Support Column */}
               <div>
-                <h4 className="font-semibold mb-4">Support</h4>
-                <ul className="space-y-2 text-sm" style={{ color: mutedColor }}>
-                  <li><a href="#faq" className="hover:opacity-80 transition-opacity">FAQ</a></li>
-                  <li><Link to="/terms" className="hover:opacity-80 transition-opacity">Terms</Link></li>
-                  <li><Link to="/privacy" className="hover:opacity-80 transition-opacity">Privacy</Link></li>
+                <h4 className="font-semibold mb-4" style={{ color: isLightMode ? '#1A1A1A' : '#FFFFFF' }}>Support</h4>
+                <ul className="space-y-2 text-sm">
+                  <li><a href="#faq" className="hover:opacity-80 transition-opacity" style={{ color: isLightMode ? '#6B7280' : mutedColor }}>FAQ</a></li>
+                  <li><Link to="/terms" className="hover:opacity-80 transition-opacity" style={{ color: isLightMode ? '#6B7280' : mutedColor }}>Terms</Link></li>
+                  <li><Link to="/privacy" className="hover:opacity-80 transition-opacity" style={{ color: isLightMode ? '#6B7280' : mutedColor }}>Privacy</Link></li>
                 </ul>
               </div>
             </div>
             
             {/* Copyright */}
-            <div className="pt-8 text-center text-sm" style={{ borderTop: `1px solid ${primary}1a`, color: mutedColor }}>
+            <div className="pt-8 text-center text-sm" style={{ borderTop: isLightMode ? '1px solid #E5E7EB' : `1px solid ${primary}1a`, color: isLightMode ? '#6B7280' : mutedColor }}>
               {customization.footerText || `© ${new Date().getFullYear()} ${companyName}. All rights reserved.`}
             </div>
           </div>
