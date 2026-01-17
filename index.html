@@ -42,8 +42,29 @@
     <link rel="dns-prefetch" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://tooudgubuhxjbbvzjcgx.supabase.co" crossorigin>
     
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Luckiest+Guy&family=Poppins:wght@400;500;600;700;800&family=Roboto:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700;800;900&family=Nunito:wght@400;500;600;700;800&family=Raleway:wght@400;500;600;700&family=Open+Sans:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Critical inline styles for initial render -->
+    <style>
+      body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+      #root { min-height: 100vh; }
+    </style>
+    
+    <!-- Google Fonts - Non-render blocking -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+    
+    <!-- Secondary fonts loaded async after initial render -->
+    <script>
+      (function() {
+        var secondaryFonts = document.createElement('link');
+        secondaryFonts.rel = 'stylesheet';
+        secondaryFonts.href = 'https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Roboto:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700;800;900&family=Nunito:wght@400;500;600;700;800&family=Raleway:wght@400;500;600;700&family=Open+Sans:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap';
+        if ('requestIdleCallback' in window) {
+          requestIdleCallback(function() { document.head.appendChild(secondaryFonts); });
+        } else {
+          setTimeout(function() { document.head.appendChild(secondaryFonts); }, 100);
+        }
+      })();
+    </script>
     
     <!-- Author & Publisher (platform-only, replaced for tenants) -->
     <meta name="author" content="HOME OF SMM" data-platform-only />
