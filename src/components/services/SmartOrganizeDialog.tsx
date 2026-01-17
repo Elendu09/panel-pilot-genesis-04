@@ -17,13 +17,16 @@ import {
   Layers,
   Wand2,
   Zap,
-  Stethoscope
+  Stethoscope,
+  FolderSearch,
+  ArrowRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { detectPlatformEnhanced, detectServiceType, SERVICE_TYPE_PRIORITY, getSubCategory, getQualityOrder } from "@/lib/service-icon-detection";
 import { toast } from "@/hooks/use-toast";
 import { SOCIAL_ICONS_MAP } from "@/components/icons/SocialIcons";
+import { OthersCategorizeDialog } from "./OthersCategorizeDialog";
 
 export type OrganizePhase = 
   | 'idle' 
@@ -74,7 +77,11 @@ export const SmartOrganizeDialog = ({
     applied: 0,
     categories: new Set<string>(),
     healthIssues: 0,
+    othersCount: 0,
   });
+  
+  // Others categorization dialog state
+  const [showOthersDialog, setShowOthersDialog] = useState(false);
 
   // Calculate overall percentage
   const overallPercentage = useMemo(() => {
@@ -109,7 +116,8 @@ export const SmartOrganizeDialog = ({
     if (!open) {
       setProgress({ phase: 'idle', current: 0, total: 0 });
       setIsProcessing(false);
-      setLiveStats({ processed: 0, applied: 0, categories: new Set(), healthIssues: 0 });
+      setLiveStats({ processed: 0, applied: 0, categories: new Set(), healthIssues: 0, othersCount: 0 });
+      setShowOthersDialog(false);
     }
   }, [open]);
 
@@ -118,7 +126,7 @@ export const SmartOrganizeDialog = ({
     
     setIsProcessing(true);
     setProgress({ phase: 'health-check', current: 0, total: 0, message: 'Running health check scan...' });
-    setLiveStats({ processed: 0, applied: 0, categories: new Set(), healthIssues: 0 });
+    setLiveStats({ processed: 0, applied: 0, categories: new Set(), healthIssues: 0, othersCount: 0 });
     
     try {
       // Phase 0: Health Check - scan for issues
@@ -587,8 +595,21 @@ export const SmartOrganizeDialog = ({
               </div>
             </div>
             
-            <Button onClick={() => onOpenChange(false)} className="w-full">
-              Close
+            {/* Deep Categorize Others Button */}
+            <Button 
+              onClick={() => {
+                onOpenChange(false);
+                setShowOthersDialog(true);
+              }} 
+              className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600"
+            >
+              <FolderSearch className="w-4 h-4 mr-2" />
+              Deep Categorize "Others" (70+ Categories)
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+            
+            <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full">
+              Skip & Close
             </Button>
           </div>
         )}
@@ -610,6 +631,18 @@ export const SmartOrganizeDialog = ({
           </div>
         )}
       </DialogContent>
+      
+      {/* Others Categorize Dialog */}
+      <OthersCategorizeDialog
+        open={showOthersDialog}
+        onOpenChange={setShowOthersDialog}
+        panelId={panelId}
+        onComplete={() => {
+          onComplete();
+          onRefreshCounts();
+        }}
+        onRefreshCounts={onRefreshCounts}
+      />
     </Dialog>
   );
 };
