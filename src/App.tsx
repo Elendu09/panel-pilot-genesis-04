@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -10,36 +11,45 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { HelmetProvider } from "react-helmet-async";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
+
+// Critical path - load immediately
 import Index from "./pages/Index";
-import Services from "./pages/Services";
-import SuperAdminDashboard from "./pages/SuperAdminDashboard";
-import PanelOwnerDashboard from "./pages/PanelOwnerDashboard";
-import PanelOnboarding from "./pages/panel/PanelOnboarding";
-import PanelOnboardingV2 from "./pages/panel/PanelOnboardingV2";
 import NotFound from "./pages/NotFound";
-import NewOrder from "./pages/NewOrder";
-import OrderManagement from "./pages/OrderManagement";
-import Features from "./pages/Features";
-import Pricing from "./pages/Pricing";
-import Documentation from "./pages/Documentation";
-import Contact from "./pages/Contact";
-import Storefront from "./pages/Storefront";
-import StorefrontPreview from "./pages/StorefrontPreview";
-import { ThemeOne } from "./components/themes/ThemeOne";
-import { ThemeTwo } from "./components/themes/ThemeTwo";
-import { ThemeThree } from "./components/themes/ThemeThree";
-import UserHome from "./pages/UserHome";
-import Terms from "./pages/Terms";
-import Privacy from "./pages/Privacy";
-import Tutorial from "./pages/Tutorial";
-import Blog from "./pages/Blog";
-import BlogPost from "./pages/BlogPost";
-import Auth from "./pages/Auth";
-import SEOSettings from "./pages/panel/SEOSettings";
-import FastOrder from "./pages/FastOrder";
-import TrackOrder from "./pages/TrackOrder";
-import PromoManagement from "./pages/panel/PromoManagement";
-import Sitemap from "./pages/Sitemap";
+
+// Lazy load non-critical routes for better TTI
+const Services = lazy(() => import("./pages/Services"));
+const SuperAdminDashboard = lazy(() => import("./pages/SuperAdminDashboard"));
+const PanelOwnerDashboard = lazy(() => import("./pages/PanelOwnerDashboard"));
+const PanelOnboarding = lazy(() => import("./pages/panel/PanelOnboarding"));
+const PanelOnboardingV2 = lazy(() => import("./pages/panel/PanelOnboardingV2"));
+const NewOrder = lazy(() => import("./pages/NewOrder"));
+const OrderManagement = lazy(() => import("./pages/OrderManagement"));
+const Features = lazy(() => import("./pages/Features"));
+const Pricing = lazy(() => import("./pages/Pricing"));
+const Documentation = lazy(() => import("./pages/Documentation"));
+const Contact = lazy(() => import("./pages/Contact"));
+const Storefront = lazy(() => import("./pages/Storefront"));
+const StorefrontPreview = lazy(() => import("./pages/StorefrontPreview"));
+const ThemeOne = lazy(() => import("./components/themes/ThemeOne").then(m => ({ default: m.ThemeOne })));
+const ThemeTwo = lazy(() => import("./components/themes/ThemeTwo").then(m => ({ default: m.ThemeTwo })));
+const ThemeThree = lazy(() => import("./components/themes/ThemeThree").then(m => ({ default: m.ThemeThree })));
+const UserHome = lazy(() => import("./pages/UserHome"));
+const Terms = lazy(() => import("./pages/Terms"));
+const Privacy = lazy(() => import("./pages/Privacy"));
+const Tutorial = lazy(() => import("./pages/Tutorial"));
+const Blog = lazy(() => import("./pages/Blog"));
+const BlogPost = lazy(() => import("./pages/BlogPost"));
+const Auth = lazy(() => import("./pages/Auth"));
+const FastOrder = lazy(() => import("./pages/FastOrder"));
+const TrackOrder = lazy(() => import("./pages/TrackOrder"));
+const Sitemap = lazy(() => import("./pages/Sitemap"));
+
+// Minimal loading fallback for lazy routes
+const PageLoader = () => (
+  <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+  </div>
+);
 
 // Enhanced QueryClient with caching for faster page loads
 const queryClient = new QueryClient({
@@ -65,63 +75,65 @@ const App = () => (
                 <Toaster />
                 <Sonner />
             <BrowserRouter>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/services" element={<Services />} />
-                <Route path="/theme-one" element={<ThemeOne />} />
-                <Route path="/theme-two" element={<ThemeTwo />} />
-                <Route path="/theme-three" element={<ThemeThree />} />
-                <Route path="/auth" element={<Auth />} />
-                <Route path="/login" element={<Auth />} />
-                <Route path="/features" element={<Features />} />
-                <Route path="/pricing" element={<Pricing />} />
-                <Route path="/docs" element={<Documentation />} />
-                <Route path="/contact" element={<Contact />} />
-                <Route path="/new-order" element={<NewOrder />} />
-                <Route path="/fast-order" element={<FastOrder />} />
-                <Route path="/track-order" element={<TrackOrder />} />
-                <Route path="/orders" element={<OrderManagement />} />
-                <Route path="/user-home" element={<UserHome />} />
-                
-                {/* Admin Portal - Super Admin Dashboard */}
-                <Route path="/admin/*" element={
-                  <ProtectedRoute requiredRole="admin">
-                    <SuperAdminDashboard />
-                  </ProtectedRoute>
-                } />
-                
-                {/* Panel Management - Panel Owner Dashboard */}
-                <Route path="/panel/onboarding" element={
-                  <ProtectedRoute requiredRole="panel_owner">
-                    <PanelOnboardingV2 />
-                  </ProtectedRoute>
-                } />
-                <Route path="/panel/onboarding-legacy" element={
-                  <ProtectedRoute requiredRole="panel_owner">
-                    <PanelOnboarding />
-                  </ProtectedRoute>
-                } />
-                <Route path="/panel/*" element={
-                  <ProtectedRoute requiredRole="panel_owner">
-                    <PanelOwnerDashboard />
-                  </ProtectedRoute>
-                } />
-                <Route path="/terms" element={<Terms />} />
-                <Route path="/privacy" element={<Privacy />} />
-                <Route path="/tutorial" element={<Tutorial />} />
-                <Route path="/blog" element={<Blog />} />
-                <Route path="/blog/:slug" element={<BlogPost />} />
-                <Route path="/sitemap.xml" element={<Sitemap />} />
-                
-                {/* Public storefront route */}
-                <Route path="/store" element={<Storefront />} />
-                
-                {/* Design Preview Route */}
-                <Route path="/preview/:previewId" element={<StorefrontPreview />} />
-                
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
+              <Suspense fallback={<PageLoader />}>
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/services" element={<Services />} />
+                  <Route path="/theme-one" element={<ThemeOne />} />
+                  <Route path="/theme-two" element={<ThemeTwo />} />
+                  <Route path="/theme-three" element={<ThemeThree />} />
+                  <Route path="/auth" element={<Auth />} />
+                  <Route path="/login" element={<Auth />} />
+                  <Route path="/features" element={<Features />} />
+                  <Route path="/pricing" element={<Pricing />} />
+                  <Route path="/docs" element={<Documentation />} />
+                  <Route path="/contact" element={<Contact />} />
+                  <Route path="/new-order" element={<NewOrder />} />
+                  <Route path="/fast-order" element={<FastOrder />} />
+                  <Route path="/track-order" element={<TrackOrder />} />
+                  <Route path="/orders" element={<OrderManagement />} />
+                  <Route path="/user-home" element={<UserHome />} />
+                  
+                  {/* Admin Portal - Super Admin Dashboard */}
+                  <Route path="/admin/*" element={
+                    <ProtectedRoute requiredRole="admin">
+                      <SuperAdminDashboard />
+                    </ProtectedRoute>
+                  } />
+                  
+                  {/* Panel Management - Panel Owner Dashboard */}
+                  <Route path="/panel/onboarding" element={
+                    <ProtectedRoute requiredRole="panel_owner">
+                      <PanelOnboardingV2 />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/panel/onboarding-legacy" element={
+                    <ProtectedRoute requiredRole="panel_owner">
+                      <PanelOnboarding />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/panel/*" element={
+                    <ProtectedRoute requiredRole="panel_owner">
+                      <PanelOwnerDashboard />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/terms" element={<Terms />} />
+                  <Route path="/privacy" element={<Privacy />} />
+                  <Route path="/tutorial" element={<Tutorial />} />
+                  <Route path="/blog" element={<Blog />} />
+                  <Route path="/blog/:slug" element={<BlogPost />} />
+                  <Route path="/sitemap.xml" element={<Sitemap />} />
+                  
+                  {/* Public storefront route */}
+                  <Route path="/store" element={<Storefront />} />
+                  
+                  {/* Design Preview Route */}
+                  <Route path="/preview/:previewId" element={<StorefrontPreview />} />
+                  
+                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </Suspense>
             </BrowserRouter>
                 </TooltipProvider>
               </OnboardingTourProvider>
