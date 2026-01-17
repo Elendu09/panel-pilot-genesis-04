@@ -3514,21 +3514,26 @@ export default function DesignCustomization() {
                       <div className="w-2 h-2 bg-gray-800 rounded-full" />
                       <div className="w-8 h-3 bg-gray-900 rounded-full" />
                     </div>
-                    {/* Screen with Scaling */}
+                    {/* Screen with Improved Scaling Container */}
                     <div 
-                      className="rounded-[32px] overflow-hidden bg-background"
+                      className="rounded-[32px] overflow-hidden bg-background relative"
                       style={{ height: '640px' }}
                     >
+                      {/* Wrapper to contain scaled content properly */}
                       <div 
-                        className="origin-top-left overflow-auto scrollbar-thin scrollbar-thumb-primary/20"
-                        style={{ 
-                          width: '375px', 
-                          height: '752px',
-                          transform: 'scale(0.8)',
-                        }}
+                        className="absolute inset-0 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-primary/20"
                         dir={previewDirection}
                       >
-                        <LivePreviewRenderer customization={{ ...customization, themeMode: previewThemeMode }} />
+                        <div 
+                          className="origin-top-left"
+                          style={{ 
+                            width: '375px', 
+                            minHeight: '812px',
+                            transform: 'scale(0.853)', /* 320px / 375px = 0.853 for exact fit */
+                          }}
+                        >
+                          <LivePreviewRenderer customization={{ ...customization, themeMode: previewThemeMode }} />
+                        </div>
                       </div>
                     </div>
                     {/* Home Indicator */}
