@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useState, useEffect, useContext } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Globe, Zap, Users, Star, ArrowRight, Award, TrendingUp,
@@ -26,7 +26,6 @@ import {
 import { BuyerAuthContext } from '@/contexts/BuyerAuthContext';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { useContext } from 'react';
 
 interface SMMVisitHomepageProps {
   panelName?: string;
@@ -40,7 +39,6 @@ interface SMMVisitHomepageProps {
   logoUrl?: string;
 }
 
-// SMMVisit Theme: Light gray, yellow/gold primary, clean professional
 export const SMMVisitHomepage = ({ 
   panelName = 'SMM Panel', 
   services = [], 
@@ -51,7 +49,7 @@ export const SMMVisitHomepage = ({
   const navigate = useNavigate();
   const { t, isRTL } = useLanguage();
   
-  // Auth context for inline login - safely handle when not in BuyerAuthProvider (e.g., design preview)
+  // Auth context for inline login
   const authContext = useContext(BuyerAuthContext);
   const signIn = authContext?.signIn;
   const buyer = authContext?.buyer;
@@ -62,9 +60,6 @@ export const SMMVisitHomepage = ({
   const [rememberMe, setRememberMe] = useState(false);
   const [loginLoading, setLoginLoading] = useState(false);
   const [googleEnabled, setGoogleEnabled] = useState(false);
-  
-  // Determine if login functionality is available
-  const isAuthAvailable = !!authContext;
   
   // Check if Google OAuth is enabled for this panel
   useEffect(() => {
@@ -77,7 +72,6 @@ export const SMMVisitHomepage = ({
           .eq('panel_id', panelId)
           .maybeSingle();
         
-        // Check if Google OAuth is configured in social_links or integrations
         const socialLinks = data?.social_links as Record<string, any> | null;
         setGoogleEnabled(socialLinks?.google_oauth_enabled === true);
       } catch (err) {
@@ -91,18 +85,17 @@ export const SMMVisitHomepage = ({
   const handleQuickLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // If not in auth context (design preview), just navigate to auth page
     if (!signIn) {
       navigate('/auth');
       return;
     }
     
     if (!loginEmail.trim()) {
-      toast.error('Please enter your email or username');
+      toast.error(t('buyer.auth.enterEmail') || 'Please enter your email or username');
       return;
     }
     if (!loginPassword) {
-      toast.error('Please enter your password');
+      toast.error(t('buyer.auth.enterPassword') || 'Please enter your password');
       return;
     }
     
@@ -110,32 +103,31 @@ export const SMMVisitHomepage = ({
     try {
       const result = await signIn(loginEmail.trim(), loginPassword);
       if (!result.error) {
-        toast.success('Welcome back!');
+        toast.success(t('buyer.auth.welcomeBack') || 'Welcome back!');
         navigate('/dashboard');
       } else {
-        toast.error(result.error.message || 'Login failed. Please try again.');
+        toast.error(result.error.message || t('buyer.auth.loginFailed') || 'Login failed. Please try again.');
       }
     } catch (err) {
-      toast.error('An error occurred. Please try again.');
+      toast.error(t('buyer.auth.error') || 'An error occurred. Please try again.');
     } finally {
       setLoginLoading(false);
     }
   };
   
-  // Theme mode - reactive to customization prop (no local state), SMMVisit defaults to light
+  // Theme mode - reactive to customization prop
   const themeMode = customization.themeMode || 'light';
   const isLightMode = themeMode === 'light';
   
-  // Theme defaults for SMMVisit (yellow/gold on light)
+  // Theme defaults for SMMVisit
   const defaultPrimary = '#FFD700';
   const defaultSecondary = '#FFC107';
 
-  // SMMVisit theme color defaults
   const themeDefaults = {
     lightBg: '#F5F5F5',
-    darkBg: '#1A1A1A',
+    darkBg: '#1C1F26',
     lightSurface: '#FFFFFF',
-    darkSurface: '#262626',
+    darkSurface: '#262A33',
     lightText: '#1A1A1A',
     darkText: '#FFFFFF',
     lightMuted: '#6B7280',
@@ -155,20 +147,16 @@ export const SMMVisitHomepage = ({
   const fontFamily = customization.fontFamily || 'Inter';
   const headingWeight = customization.headingWeight || '700';
 
-  // Content - use translations for fallback text
+  // Content - use translations
   const heroTitle = customization.heroTitle || t('buyer.hero.title');
   const heroSubtitle = customization.heroSubtitle || t('buyer.hero.subtitle');
   const heroCTA = customization.heroCTAText || t('buyer.hero.cta');
   const displayLogo = customization.logoUrl || logoUrl;
   const companyName = customization.companyName || panelName;
 
-  // Blog toggle
+  // Toggles
   const showBlogInMenu = customization.showBlogInMenu === true;
-
-  // Fast Order toggle - determines CTA buttons
   const enableFastOrder = customization.enableFastOrder !== false;
-
-  // Section toggles
   const showStats = customization.enableStats !== false;
   const showFeatures = customization.enableFeatures !== false;
   const showTestimonials = customization.enableTestimonials !== false;
@@ -186,30 +174,20 @@ export const SMMVisitHomepage = ({
 
   // Animation settings
   const enableAnimations = customization.enableAnimations !== false;
-  const hoverScale = getHoverScale(customization);
-
-  // Spacing
   const sectionPadding = customization.sectionPaddingY || 80;
   const containerMax = customization.containerMaxWidth || 1280;
 
   // Button styles
   const primaryButtonStyle = getButtonStyles(customization, 'primary');
 
-  // Theme mode change handler (no-op since we read from customization prop)
+  // Theme mode change handler
   const handleThemeModeChange = useCallback((mode: 'light' | 'dark') => {
-    // Theme mode is controlled by parent via customization.themeMode
+    // Theme mode is controlled by parent
   }, []);
 
-  const platforms = [
-    { id: 'instagram', name: 'Instagram', icon: Instagram, color: '#E4405F' },
-    { id: 'facebook', name: 'Facebook', icon: Facebook, color: '#1877F2' },
-    { id: 'youtube', name: 'YouTube', icon: Youtube, color: '#FF0000' },
-    { id: 'twitter', name: 'Twitter', icon: Twitter, color: '#1DA1F2' },
-  ];
-
   return (
-    <main role="main" className={`min-h-screen font-${fontFamily.toLowerCase()} ${themeMode}`} style={{ backgroundColor: bgColor, color: textCol }}>
-      {/* FAQPage JSON-LD Schema for rich snippets */}
+    <main role="main" className="min-h-screen" style={{ fontFamily, backgroundColor: bgColor, color: textCol }}>
+      {/* FAQPage JSON-LD Schema */}
       {showFAQs && faqs.length > 0 && (
         <Helmet>
           <script type="application/ld+json">
@@ -258,7 +236,7 @@ export const SMMVisitHomepage = ({
         bgColor={bgColor}
         navStyle="floating"
         primaryButtonStyle={primaryButtonStyle}
-        signupLabel="Sign Up"
+        signupLabel={t('buyer.auth.signUp') || 'Sign Up'}
       />
 
       <article>
@@ -268,7 +246,7 @@ export const SMMVisitHomepage = ({
             <motion.div {...(enableAnimations ? { initial: { opacity: 0, y: 30 }, animate: { opacity: 1, y: 0 } } : {})}>
               <h1 
                 className="text-4xl md:text-5xl lg:text-6xl mb-6" 
-                style={{ fontWeight: headingWeight, color: isLightMode ? '#1A1A1A' : '#FFFFFF' }}
+                style={{ fontWeight: headingWeight, color: textCol }}
               >
                 {(() => {
                   const position = customization.heroAnimatedTextPosition || 'last';
@@ -276,7 +254,7 @@ export const SMMVisitHomepage = ({
                   const effectiveAnimStyle = customization.heroAnimatedTextStyle || getThemeDefaultAnimationStyle('smmvisit');
                   return (
                     <>
-                      {before && <span style={{ color: isLightMode ? '#1A1A1A' : '#FFFFFF' }}>{before} </span>}
+                      {before && <span style={{ color: textCol }}>{before} </span>}
                       <AnimatedHeroText 
                         text={animatedWord}
                         animationStyle={effectiveAnimStyle}
@@ -284,14 +262,14 @@ export const SMMVisitHomepage = ({
                         secondaryColor={secondary}
                         enableAnimations={enableAnimations}
                       />
-                      {after && <span style={{ color: isLightMode ? '#1A1A1A' : '#FFFFFF' }}> {after}</span>}
+                      {after && <span style={{ color: textCol }}> {after}</span>}
                     </>
                   );
                 })()}
               </h1>
               <p className="text-lg mb-8 max-w-2xl mx-auto" style={{ color: mutedColor }}>{heroSubtitle}</p>
               
-              {/* Dynamic CTA based on enableFastOrder */}
+              {/* CTA Buttons */}
               {enableFastOrder ? (
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                   <Button 
@@ -301,10 +279,10 @@ export const SMMVisitHomepage = ({
                     style={primaryButtonStyle}
                   >
                     <Zap className="w-5 h-5 mr-2" />
-                    Fast Order
+                    {t('buyer.fastOrder.title') || 'Fast Order'}
                   </Button>
                   <Button size="lg" variant="outline" asChild className="font-semibold" style={{ borderColor: primary, color: textCol }}>
-                    <Link to="/services">View Services</Link>
+                    <Link to="/services">{t('buyer.services.viewAll') || 'View Services'}</Link>
                   </Button>
                 </div>
               ) : (
@@ -316,7 +294,7 @@ export const SMMVisitHomepage = ({
           </div>
         </section>
 
-        {/* Quick Login Section - SMMVisit Exclusive (only show if not logged in) */}
+        {/* Quick Login Section */}
         {!buyer && (
           <section 
             id="quick-login" 
@@ -331,13 +309,13 @@ export const SMMVisitHomepage = ({
                 style={{ backgroundColor: isLightMode ? '#FFFFFF' : bgColor }}
               >
                 <h2 className="text-xl md:text-2xl font-bold mb-6" style={{ color: textCol }}>
-                  Login into your account
+                  {t('buyer.auth.loginTitle') || 'Login to your account'}
                 </h2>
                 
-                {/* Horizontal Login Form */}
+                {/* Login Form */}
                 <form onSubmit={handleQuickLogin}>
                   <div className="flex flex-col lg:flex-row items-stretch gap-3 mb-4">
-                    {/* Email/Username Input */}
+                    {/* Email Input */}
                     <div className="relative flex-1">
                       <div 
                         className="absolute left-0 top-0 bottom-0 w-12 flex items-center justify-center rounded-l-xl z-10"
@@ -346,7 +324,7 @@ export const SMMVisitHomepage = ({
                         <User className="w-5 h-5" style={{ color: isLightMode ? '#1A1A1A' : '#FFFFFF' }} />
                       </div>
                       <Input 
-                        placeholder="Email or Username"
+                        placeholder={t('buyer.auth.emailPlaceholder') || 'Email or Username'}
                         value={loginEmail}
                         onChange={(e) => setLoginEmail(e.target.value)}
                         className="pl-14 h-12 rounded-xl border-0"
@@ -368,7 +346,7 @@ export const SMMVisitHomepage = ({
                       </div>
                       <Input 
                         type="password"
-                        placeholder="Password"
+                        placeholder={t('buyer.auth.passwordPlaceholder') || 'Password'}
                         value={loginPassword}
                         onChange={(e) => setLoginPassword(e.target.value)}
                         className="pl-14 h-12 rounded-xl border-0"
@@ -412,17 +390,17 @@ export const SMMVisitHomepage = ({
                         {loginLoading ? (
                           <>
                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Signing in...
+                            {t('buyer.auth.signingIn') || 'Signing in...'}
                           </>
                         ) : (
-                          'Sign in'
+                          t('buyer.auth.signIn') || 'Sign in'
                         )}
                       </Button>
                     </div>
                   </div>
                 </form>
                 
-                {/* Google Sign In - Only show if enabled */}
+                {/* Google Sign In */}
                 {googleEnabled && (
                   <div className="flex justify-center mb-4">
                     <Button 
@@ -435,7 +413,7 @@ export const SMMVisitHomepage = ({
                       }}
                     >
                       <img src="https://www.google.com/favicon.ico" alt="Google" className="w-4 h-4 mr-2" />
-                      Sign in with Google
+                      {t('buyer.auth.signInWithGoogle') || 'Sign in with Google'}
                     </Button>
                   </div>
                 )}
@@ -450,64 +428,55 @@ export const SMMVisitHomepage = ({
                       checked={rememberMe}
                       onChange={(e) => setRememberMe(e.target.checked)}
                     />
-                    Remember me
+                    {t('buyer.auth.rememberMe') || 'Remember me'}
                   </label>
                   <Link to="/auth" className="underline hover:no-underline" style={{ color: textCol }}>
-                    Reset It
+                    {t('buyer.auth.resetPassword') || 'Reset Password'}
                   </Link>
                 </div>
               </motion.div>
             
-            {/* Scroll Indicator */}
-            <div className="flex items-center justify-center gap-2 mt-8" style={{ color: mutedColor }}>
-              <ChevronDown className="w-4 h-4 animate-bounce" />
-              <span className="text-sm">Scroll to see more</span>
-            </div>
-            
-            {/* Divider */}
-            <div className="w-full h-px mt-8" style={{ backgroundColor: isLightMode ? '#E5E7EB' : '#333' }} />
-            
-            {/* Social Platform Icons - Large Colorful SVGs */}
-            <div className="flex flex-wrap items-center justify-center gap-3 md:gap-4 mt-8">
-              {/* Facebook */}
-              <div className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundColor: '#1877F2' }}>
-                <FacebookIcon className="w-8 h-8 md:w-10 md:h-10 text-white" />
+              {/* Scroll Indicator */}
+              <div className="flex items-center justify-center gap-2 mt-8" style={{ color: mutedColor }}>
+                <ChevronDown className="w-4 h-4 animate-bounce" />
+                <span className="text-sm">{t('buyer.home.scrollMore') || 'Scroll to see more'}</span>
               </div>
-              {/* YouTube */}
-              <div className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundColor: '#FF0000' }}>
-                <YouTubeIcon className="w-8 h-8 md:w-10 md:h-10 text-white" />
-              </div>
-              {/* Telegram */}
-              <div className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundColor: '#0088CC' }}>
-                <TelegramIcon className="w-8 h-8 md:w-10 md:h-10 text-white" />
-              </div>
-              {/* Instagram (gradient background) */}
-              <div className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-lg" style={{ background: 'linear-gradient(45deg, #F58529, #DD2A7B, #8134AF, #515BD4)' }}>
-                <InstagramIcon className="w-8 h-8 md:w-10 md:h-10 text-white" />
-              </div>
-              {/* Twitter/X */}
-              <div className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundColor: '#1DA1F2' }}>
-                <TwitterIcon className="w-8 h-8 md:w-10 md:h-10 text-white" />
-              </div>
-              {/* Spotify */}
-              <div className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundColor: '#1DB954' }}>
-                <SpotifyIcon className="w-8 h-8 md:w-10 md:h-10 text-white" />
-              </div>
-              {/* Snapchat */}
-              <div className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundColor: '#FFFC00' }}>
-                <SnapchatIcon className="w-8 h-8 md:w-10 md:h-10 text-black" />
-              </div>
-              {/* TikTok */}
-              <div className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundColor: '#000000' }}>
-                <TikTokIcon className="w-8 h-8 md:w-10 md:h-10 text-white" />
-              </div>
-              {/* SoundCloud */}
-              <div className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-lg" style={{ background: 'linear-gradient(135deg, #FF5500, #FF7700)' }}>
-                <SoundCloudIcon className="w-8 h-8 md:w-10 md:h-10 text-white" />
+              
+              {/* Divider */}
+              <div className="w-full h-px mt-8" style={{ backgroundColor: isLightMode ? '#E5E7EB' : '#333' }} />
+              
+              {/* Social Platform Icons */}
+              <div className="flex flex-wrap items-center justify-center gap-3 md:gap-4 mt-8">
+                <div className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundColor: '#1877F2' }}>
+                  <FacebookIcon className="w-8 h-8 md:w-10 md:h-10 text-white" />
+                </div>
+                <div className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundColor: '#FF0000' }}>
+                  <YouTubeIcon className="w-8 h-8 md:w-10 md:h-10 text-white" />
+                </div>
+                <div className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundColor: '#0088CC' }}>
+                  <TelegramIcon className="w-8 h-8 md:w-10 md:h-10 text-white" />
+                </div>
+                <div className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-lg" style={{ background: 'linear-gradient(45deg, #F58529, #DD2A7B, #8134AF, #515BD4)' }}>
+                  <InstagramIcon className="w-8 h-8 md:w-10 md:h-10 text-white" />
+                </div>
+                <div className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundColor: '#1DA1F2' }}>
+                  <TwitterIcon className="w-8 h-8 md:w-10 md:h-10 text-white" />
+                </div>
+                <div className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundColor: '#1DB954' }}>
+                  <SpotifyIcon className="w-8 h-8 md:w-10 md:h-10 text-white" />
+                </div>
+                <div className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundColor: '#FFFC00' }}>
+                  <SnapchatIcon className="w-8 h-8 md:w-10 md:h-10 text-black" />
+                </div>
+                <div className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundColor: '#000000' }}>
+                  <TikTokIcon className="w-8 h-8 md:w-10 md:h-10 text-white" />
+                </div>
+                <div className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-lg" style={{ background: 'linear-gradient(135deg, #FF5500, #FF7700)' }}>
+                  <SoundCloudIcon className="w-8 h-8 md:w-10 md:h-10 text-white" />
+                </div>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
         )}
 
         {/* Stats */}
@@ -515,10 +484,10 @@ export const SMMVisitHomepage = ({
           <section id="stats" aria-label="Statistics" className="py-16" style={{ backgroundColor: surfaceColor }}>
             <div className="mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-8" style={{ maxWidth: containerMax }}>
               {[
-                { label: 'Happy Users', value: stats?.totalUsers || '100K+' },
-                { label: 'Orders Completed', value: stats?.totalOrders || '1M+' },
-                { label: 'Services', value: stats?.servicesCount || '500+' },
-                { label: 'Countries', value: '150+' },
+                { label: t('buyer.stats.happyUsers') || 'Happy Users', value: stats?.totalUsers || '100K+' },
+                { label: t('buyer.stats.ordersCompleted') || 'Orders Completed', value: stats?.totalOrders || '1M+' },
+                { label: t('buyer.stats.services') || 'Services', value: stats?.servicesCount || '500+' },
+                { label: t('buyer.stats.countries') || 'Countries', value: '150+' },
               ].map((stat, idx) => (
                 <motion.div 
                   key={stat.label} 
@@ -537,7 +506,9 @@ export const SMMVisitHomepage = ({
         {showFeatures && (
           <section id="features" aria-label="Features" style={{ paddingTop: sectionPadding, paddingBottom: sectionPadding }}>
             <div className="mx-auto px-4" style={{ maxWidth: containerMax }}>
-              <h2 className="text-3xl font-bold text-center mb-12" style={{ color: textCol, fontWeight: headingWeight }}>Why Choose Us</h2>
+              <h2 className="text-3xl font-bold text-center mb-12" style={{ color: textCol, fontWeight: headingWeight }}>
+                {t('buyer.features.title') || 'Why Choose Us'}
+              </h2>
               <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {featureCards.map((feature, idx) => {
                   const IconComponent = getLucideIcon(feature.icon);
@@ -565,7 +536,9 @@ export const SMMVisitHomepage = ({
         {showTestimonials && testimonials.length > 0 && (
           <section id="testimonials" aria-label="Customer Reviews" style={{ paddingTop: sectionPadding, paddingBottom: sectionPadding, backgroundColor: surfaceColor }}>
             <div className="mx-auto px-4" style={{ maxWidth: containerMax }}>
-              <h2 className="text-3xl font-bold text-center mb-12" style={{ color: textCol, fontWeight: headingWeight }}>Customer Reviews</h2>
+              <h2 className="text-3xl font-bold text-center mb-12" style={{ color: textCol, fontWeight: headingWeight }}>
+                {t('buyer.testimonials.title') || 'Customer Reviews'}
+              </h2>
               <div className="grid md:grid-cols-3 gap-6">
                 {testimonials.map((review, idx) => (
                   <motion.div 
@@ -594,7 +567,7 @@ export const SMMVisitHomepage = ({
             <div className="mx-auto px-4 sm:px-6 lg:px-8" style={{ maxWidth: containerMax }}>
               <motion.div {...(enableAnimations ? { initial: { opacity: 0, y: 20 }, whileInView: { opacity: 1, y: 0 } } : {})} className="text-center mb-12">
                 <h2 className="text-3xl md:text-4xl mb-4" style={{ fontWeight: headingWeight, color: textCol }}>
-                  Frequently Asked <span style={{ background: `linear-gradient(to right, ${primary}, ${secondary})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Questions</span>
+                  {t('buyer.faq.title') || 'Frequently Asked'} <span style={{ background: `linear-gradient(to right, ${primary}, ${secondary})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{t('buyer.faq.questions') || 'Questions'}</span>
                 </h2>
               </motion.div>
 
@@ -621,10 +594,10 @@ export const SMMVisitHomepage = ({
               style={{ background: `linear-gradient(135deg, ${primary}, ${secondary})` }}
             >
               <h2 className="text-3xl md:text-4xl font-bold mb-4 text-white" style={{ fontWeight: headingWeight }}>
-                Ready to Boost Your Social Media?
+                {t('buyer.cta.title') || 'Ready to Boost Your Social Media?'}
               </h2>
               <p className="text-white/80 mb-8 max-w-xl mx-auto">
-                Join thousands of satisfied customers and start growing today.
+                {t('buyer.cta.subtitle') || 'Join thousands of satisfied customers and start growing today.'}
               </p>
               {enableFastOrder ? (
                 <Button 
@@ -634,11 +607,11 @@ export const SMMVisitHomepage = ({
                   style={{ backgroundColor: surfaceColor, color: textCol }}
                 >
                   <Zap className="w-5 h-5 mr-2" />
-                  Fast Order Now
+                  {t('buyer.cta.fastOrder') || 'Fast Order Now'}
                 </Button>
               ) : (
                 <Button size="lg" asChild className="font-semibold text-lg px-10 shadow-xl hover:opacity-90" style={{ backgroundColor: surfaceColor, color: textCol }}>
-                  <Link to="/auth?tab=signup">Get Started Now <ArrowRight className="w-5 h-5 ml-2" /></Link>
+                  <Link to="/auth?tab=signup">{t('buyer.cta.getStarted') || 'Get Started Now'} <ArrowRight className="w-5 h-5 ml-2" /></Link>
                 </Button>
               )}
             </motion.div>
@@ -646,7 +619,7 @@ export const SMMVisitHomepage = ({
         </section>
       </article>
 
-      {/* Enhanced Footer */}
+      {/* Footer */}
       {(customization.enableFooter !== false) && (
         <footer className="py-16" style={{ 
           backgroundColor: isLightMode ? '#FFFFFF' : surfaceColor,
@@ -664,10 +637,10 @@ export const SMMVisitHomepage = ({
                       <Globe className="w-4 h-4 text-white" />
                     </div>
                   )}
-                  <span className="font-bold text-lg" style={{ color: isLightMode ? '#1A1A1A' : '#FFFFFF' }}>{companyName}</span>
+                  <span className="font-bold text-lg" style={{ color: textCol }}>{companyName}</span>
                 </div>
-                <p className="text-sm mb-4" style={{ color: isLightMode ? '#6B7280' : mutedColor }}>
-                  {customization.footerAbout || 'Professional SMM services trusted worldwide.'}
+                <p className="text-sm mb-4" style={{ color: mutedColor }}>
+                  {customization.footerAbout || t('buyer.footer.about') || 'Professional SMM services trusted worldwide.'}
                 </p>
                 {(() => {
                   const socialLinks = getSocialLinks(customization.socialLinks);
@@ -683,7 +656,7 @@ export const SMMVisitHomepage = ({
                             target="_blank" 
                             rel="noopener noreferrer" 
                             className="hover:opacity-100 transition-opacity"
-                            style={{ color: isLightMode ? '#6B7280' : mutedColor, opacity: 0.6 }}
+                            style={{ color: mutedColor, opacity: 0.6 }}
                           >
                             <Icon className="w-5 h-5" />
                           </a>
@@ -696,39 +669,39 @@ export const SMMVisitHomepage = ({
               
               {/* Services Column */}
               <div>
-                <h4 className="font-semibold mb-4" style={{ color: isLightMode ? '#1A1A1A' : '#FFFFFF' }}>Services</h4>
+                <h4 className="font-semibold mb-4" style={{ color: textCol }}>{t('buyer.footer.services') || 'Services'}</h4>
                 <ul className="space-y-2 text-sm">
-                  <li><Link to="/services" className="hover:opacity-80 transition-opacity" style={{ color: isLightMode ? '#6B7280' : mutedColor }}>All Services</Link></li>
-                  <li><Link to="/services?platform=instagram" className="hover:opacity-80 transition-opacity" style={{ color: isLightMode ? '#6B7280' : mutedColor }}>Instagram</Link></li>
-                  <li><Link to="/services?platform=youtube" className="hover:opacity-80 transition-opacity" style={{ color: isLightMode ? '#6B7280' : mutedColor }}>YouTube</Link></li>
-                  <li><Link to="/services?platform=tiktok" className="hover:opacity-80 transition-opacity" style={{ color: isLightMode ? '#6B7280' : mutedColor }}>TikTok</Link></li>
+                  <li><Link to="/services" className="hover:opacity-80 transition-opacity" style={{ color: mutedColor }}>{t('buyer.footer.allServices') || 'All Services'}</Link></li>
+                  <li><Link to="/services?platform=instagram" className="hover:opacity-80 transition-opacity" style={{ color: mutedColor }}>Instagram</Link></li>
+                  <li><Link to="/services?platform=youtube" className="hover:opacity-80 transition-opacity" style={{ color: mutedColor }}>YouTube</Link></li>
+                  <li><Link to="/services?platform=tiktok" className="hover:opacity-80 transition-opacity" style={{ color: mutedColor }}>TikTok</Link></li>
                 </ul>
               </div>
               
               {/* Company Column */}
               <div>
-                <h4 className="font-semibold mb-4" style={{ color: isLightMode ? '#1A1A1A' : '#FFFFFF' }}>Company</h4>
+                <h4 className="font-semibold mb-4" style={{ color: textCol }}>{t('buyer.footer.company') || 'Company'}</h4>
                 <ul className="space-y-2 text-sm">
-                  <li><Link to="/support" className="hover:opacity-80 transition-opacity" style={{ color: isLightMode ? '#6B7280' : mutedColor }}>About Us</Link></li>
-                  <li><Link to="/support" className="hover:opacity-80 transition-opacity" style={{ color: isLightMode ? '#6B7280' : mutedColor }}>Contact</Link></li>
-                  {showBlogInMenu && <li><Link to="/blog" className="hover:opacity-80 transition-opacity" style={{ color: isLightMode ? '#6B7280' : mutedColor }}>Blog</Link></li>}
+                  <li><Link to="/support" className="hover:opacity-80 transition-opacity" style={{ color: mutedColor }}>{t('buyer.footer.aboutUs') || 'About Us'}</Link></li>
+                  <li><Link to="/support" className="hover:opacity-80 transition-opacity" style={{ color: mutedColor }}>{t('buyer.footer.contact') || 'Contact'}</Link></li>
+                  {showBlogInMenu && <li><Link to="/blog" className="hover:opacity-80 transition-opacity" style={{ color: mutedColor }}>{t('buyer.footer.blog') || 'Blog'}</Link></li>}
                 </ul>
               </div>
               
               {/* Support Column */}
               <div>
-                <h4 className="font-semibold mb-4" style={{ color: isLightMode ? '#1A1A1A' : '#FFFFFF' }}>Support</h4>
+                <h4 className="font-semibold mb-4" style={{ color: textCol }}>{t('buyer.footer.support') || 'Support'}</h4>
                 <ul className="space-y-2 text-sm">
-                  <li><a href="#faq" className="hover:opacity-80 transition-opacity" style={{ color: isLightMode ? '#6B7280' : mutedColor }}>FAQ</a></li>
-                  <li><Link to="/terms" className="hover:opacity-80 transition-opacity" style={{ color: isLightMode ? '#6B7280' : mutedColor }}>Terms</Link></li>
-                  <li><Link to="/privacy" className="hover:opacity-80 transition-opacity" style={{ color: isLightMode ? '#6B7280' : mutedColor }}>Privacy</Link></li>
+                  <li><a href="#faq" className="hover:opacity-80 transition-opacity" style={{ color: mutedColor }}>{t('buyer.footer.faq') || 'FAQ'}</a></li>
+                  <li><Link to="/terms" className="hover:opacity-80 transition-opacity" style={{ color: mutedColor }}>{t('buyer.footer.terms') || 'Terms'}</Link></li>
+                  <li><Link to="/privacy" className="hover:opacity-80 transition-opacity" style={{ color: mutedColor }}>{t('buyer.footer.privacy') || 'Privacy'}</Link></li>
                 </ul>
               </div>
             </div>
             
             {/* Copyright */}
-            <div className="pt-8 text-center text-sm" style={{ borderTop: isLightMode ? '1px solid #E5E7EB' : `1px solid ${primary}1a`, color: isLightMode ? '#6B7280' : mutedColor }}>
-              {customization.footerText || `© ${new Date().getFullYear()} ${companyName}. All rights reserved.`}
+            <div className="pt-8 text-center text-sm" style={{ borderTop: isLightMode ? '1px solid #E5E7EB' : `1px solid ${primary}1a`, color: mutedColor }}>
+              {customization.footerText || `© ${new Date().getFullYear()} ${companyName}. ${t('buyer.footer.rights') || 'All rights reserved.'}`}
             </div>
           </div>
         </footer>
