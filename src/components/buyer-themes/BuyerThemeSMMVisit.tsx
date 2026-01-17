@@ -47,11 +47,21 @@ export const BuyerThemeSMMVisit = ({ children, className, themeMode = 'light' }:
           --step-glow: 0 0 16px rgba(255, 215, 0, 0.6);
         }
         
-        .buyer-theme-smmvisit .theme-card {
-          background: white;
+        /* ===== ENHANCED LIGHT MODE ===== */
+        .light .buyer-theme-smmvisit {
+          background: linear-gradient(180deg, #FFFBEB 0%, #F5F5F5 100%);
+        }
+        
+        .light .buyer-theme-smmvisit .theme-card {
+          background: #FFFFFF;
           border: 1px solid #E5E7EB;
           border-radius: 1rem;
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+        
+        .light .buyer-theme-smmvisit .theme-card:hover {
+          box-shadow: 0 8px 24px rgba(255, 215, 0, 0.15);
+          border-color: #FFD700;
         }
         
         .buyer-theme-smmvisit .theme-button-primary {
@@ -78,60 +88,101 @@ export const BuyerThemeSMMVisit = ({ children, className, themeMode = 'light' }:
           border-radius: 16px;
         }
         
-        .buyer-theme-smmvisit .theme-nav {
-          background: rgba(255, 255, 255, 0.95);
-          backdrop-filter: blur(10px);
-          border-bottom: 1px solid #E5E7EB;
+        .light .buyer-theme-smmvisit .theme-nav {
+          background: rgba(255, 255, 255, 0.98);
+          backdrop-filter: blur(12px);
+          border-bottom: 1px solid rgba(229, 231, 235, 0.8);
         }
         
-        .buyer-theme-smmvisit .theme-hero {
-          background: linear-gradient(180deg, #FFFBEB 0%, #F5F5F5 100%);
+        .light .buyer-theme-smmvisit .theme-hero {
+          background: linear-gradient(180deg, #FFFBEB 0%, #FFF9E6 50%, #F5F5F5 100%);
         }
         
-        /* Dashboard elements - Light mode */
-        .buyer-theme-smmvisit .glass-card,
-        .buyer-theme-smmvisit [class*="Card"] {
+        /* Light mode dashboard elements */
+        .light .buyer-theme-smmvisit .glass-card,
+        .light .buyer-theme-smmvisit [class*="Card"] {
           background: #FFFFFF !important;
           border-color: #E5E7EB !important;
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
         }
         
-        .buyer-theme-smmvisit .glass-sidebar {
+        .light .buyer-theme-smmvisit .glass-sidebar {
           background: #FFFFFF !important;
           border-color: #E5E7EB !important;
           box-shadow: 2px 0 20px rgba(0, 0, 0, 0.03) !important;
         }
         
-        .buyer-theme-smmvisit input,
-        .buyer-theme-smmvisit textarea,
-        .buyer-theme-smmvisit select {
+        .light .buyer-theme-smmvisit input,
+        .light .buyer-theme-smmvisit textarea,
+        .light .buyer-theme-smmvisit select {
           background: #FFFFFF !important;
-          border-color: #E5E7EB !important;
+          border-color: #D1D5DB !important;
           color: #1A1A1A !important;
         }
         
-        .buyer-theme-smmvisit input::placeholder,
-        .buyer-theme-smmvisit textarea::placeholder {
+        .light .buyer-theme-smmvisit input::placeholder,
+        .light .buyer-theme-smmvisit textarea::placeholder {
           color: #9CA3AF !important;
         }
         
-        .buyer-theme-smmvisit input:focus,
-        .buyer-theme-smmvisit textarea:focus,
-        .buyer-theme-smmvisit select:focus {
+        .light .buyer-theme-smmvisit input:focus,
+        .light .buyer-theme-smmvisit textarea:focus,
+        .light .buyer-theme-smmvisit select:focus {
           border-color: #FFD700 !important;
           box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.2) !important;
         }
         
-        .buyer-theme-smmvisit table {
+        .light .buyer-theme-smmvisit table {
           background: #FFFFFF !important;
         }
         
-        .buyer-theme-smmvisit thead {
+        .light .buyer-theme-smmvisit thead {
           background: rgba(255, 215, 0, 0.08) !important;
         }
         
-        .buyer-theme-smmvisit tbody tr:hover {
+        .light .buyer-theme-smmvisit tbody tr:hover {
           background: rgba(255, 215, 0, 0.05) !important;
+        }
+        
+        /* Light mode stats cards */
+        .light .buyer-theme-smmvisit .text-2xl,
+        .light .buyer-theme-smmvisit .text-3xl,
+        .light .buyer-theme-smmvisit .text-4xl {
+          color: #1A1A1A !important;
+        }
+        
+        /* Light mode badges with gold accent */
+        .light .buyer-theme-smmvisit [class*="Badge"] {
+          background: rgba(255, 215, 0, 0.15) !important;
+          color: #B8860B !important;
+          border-color: rgba(255, 215, 0, 0.3) !important;
+        }
+        
+        /* Light mode button variants */
+        .light .buyer-theme-smmvisit button[class*="outline"],
+        .light .buyer-theme-smmvisit button[class*="ghost"] {
+          background: transparent !important;
+          border-color: #D1D5DB !important;
+          color: #1A1A1A !important;
+        }
+        
+        .light .buyer-theme-smmvisit button[class*="outline"]:hover,
+        .light .buyer-theme-smmvisit button[class*="ghost"]:hover {
+          background: rgba(255, 215, 0, 0.1) !important;
+          border-color: #FFD700 !important;
+        }
+        
+        /* Light mode navigation hover */
+        .light .buyer-theme-smmvisit nav a:hover,
+        .light .buyer-theme-smmvisit header a:hover {
+          color: #D4A500;
+        }
+        
+        /* Light mode bottom nav */
+        .light .buyer-theme-smmvisit .bottom-nav,
+        .light .buyer-theme-smmvisit [class*="BottomNav"] {
+          background: #FFFFFF !important;
+          border-top: 1px solid #E5E7EB !important;
         }
         
         /* ===== COMPREHENSIVE DARK MODE ===== */
@@ -154,9 +205,9 @@ export const BuyerThemeSMMVisit = ({ children, className, themeMode = 'light' }:
         }
         
         .dark .buyer-theme-smmvisit .theme-nav {
-          background: rgba(26, 26, 26, 0.95);
-          backdrop-filter: blur(10px);
-          border-color: rgba(255, 215, 0, 0.1);
+          background: rgba(26, 26, 26, 0.98);
+          backdrop-filter: blur(12px);
+          border-color: rgba(255, 215, 0, 0.15);
         }
         
         .dark .buyer-theme-smmvisit .theme-hero {
@@ -264,6 +315,19 @@ export const BuyerThemeSMMVisit = ({ children, className, themeMode = 'light' }:
           box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35) !important;
         }
         
+        /* Dark mode select options */
+        .dark .buyer-theme-smmvisit [role="option"],
+        .dark .buyer-theme-smmvisit [role="menuitem"] {
+          color: #FFFFFF !important;
+        }
+        
+        .dark .buyer-theme-smmvisit [role="option"]:hover,
+        .dark .buyer-theme-smmvisit [role="menuitem"]:hover,
+        .dark .buyer-theme-smmvisit [role="option"][data-highlighted],
+        .dark .buyer-theme-smmvisit [role="menuitem"][data-highlighted] {
+          background: rgba(255, 215, 0, 0.15) !important;
+        }
+        
         /* Dark mode skeleton loading */
         .dark .buyer-theme-smmvisit .skeleton,
         .dark .buyer-theme-smmvisit [class*="Skeleton"] {
@@ -288,7 +352,7 @@ export const BuyerThemeSMMVisit = ({ children, className, themeMode = 'light' }:
           color: #FFFFFF;
         }
         
-        /* Fix quick action buttons in dashboard - tall buttons with h-auto class */
+        /* Fix quick action buttons in dashboard */
         .dark .buyer-theme-smmvisit button.h-auto,
         .dark .buyer-theme-smmvisit .h-auto.rounded-xl,
         .dark .buyer-theme-smmvisit button[class*="h-auto"] {
@@ -316,7 +380,7 @@ export const BuyerThemeSMMVisit = ({ children, className, themeMode = 'light' }:
           color: rgba(255, 255, 255, 0.65) !important;
         }
         
-        /* Fix outline/ghost variant buttons - using class substring matching */
+        /* Fix outline/ghost variant buttons */
         .dark .buyer-theme-smmvisit button[class*="outline"],
         .dark .buyer-theme-smmvisit button[class*="ghost"],
         .dark .buyer-theme-smmvisit button[class*="secondary"] {
@@ -338,7 +402,7 @@ export const BuyerThemeSMMVisit = ({ children, className, themeMode = 'light' }:
           color: #FFFFFF !important;
         }
         
-        /* Fix "Alle anzeigen" / "View All" buttons */
+        /* Fix "View All" buttons */
         .dark .buyer-theme-smmvisit a button,
         .dark .buyer-theme-smmvisit a > .inline-flex {
           color: #FFD700 !important;
@@ -378,6 +442,13 @@ export const BuyerThemeSMMVisit = ({ children, className, themeMode = 'light' }:
           border-color: rgba(255, 215, 0, 0.2) !important;
         }
         
+        /* Dark mode sheet/drawer */
+        .dark .buyer-theme-smmvisit [class*="SheetContent"],
+        .dark .buyer-theme-smmvisit [data-state="open"] > [role="dialog"] {
+          background: #1A1A1A !important;
+          border-color: rgba(255, 215, 0, 0.2) !important;
+        }
+        
         /* Dark mode tabs */
         .dark .buyer-theme-smmvisit [role="tablist"] {
           background: rgba(255, 215, 0, 0.08) !important;
@@ -397,6 +468,13 @@ export const BuyerThemeSMMVisit = ({ children, className, themeMode = 'light' }:
         .dark .buyer-theme-smmvisit nav a:hover,
         .dark .buyer-theme-smmvisit header a:hover {
           color: #FFD700;
+        }
+        
+        /* Dark mode bottom nav */
+        .dark .buyer-theme-smmvisit .bottom-nav,
+        .dark .buyer-theme-smmvisit [class*="BottomNav"] {
+          background: rgba(26, 26, 26, 0.98) !important;
+          border-top: 1px solid rgba(255, 215, 0, 0.1) !important;
         }
         
         /* Ensure proper color inheritance */
@@ -464,6 +542,43 @@ export const BuyerThemeSMMVisit = ({ children, className, themeMode = 'light' }:
         /* Special fix for buttons with muted text inside */
         .dark .buyer-theme-smmvisit button .text-muted-foreground {
           color: rgba(255, 255, 255, 0.65) !important;
+        }
+        
+        /* ===== MOBILE NAVIGATION FIXES ===== */
+        /* Mobile hamburger menu sheet */
+        .dark .buyer-theme-smmvisit [data-vaul-drawer],
+        .dark .buyer-theme-smmvisit [role="dialog"][class*="Sheet"] {
+          background: #1A1A1A !important;
+        }
+        
+        /* Mobile sidebar navigation items */
+        .dark .buyer-theme-smmvisit [class*="SidebarContent"],
+        .dark .buyer-theme-smmvisit aside {
+          background: #1A1A1A !important;
+        }
+        
+        .dark .buyer-theme-smmvisit aside a,
+        .dark .buyer-theme-smmvisit [class*="SidebarContent"] a {
+          color: #D1D5DB !important;
+        }
+        
+        .dark .buyer-theme-smmvisit aside a:hover,
+        .dark .buyer-theme-smmvisit [class*="SidebarContent"] a:hover {
+          background: rgba(255, 215, 0, 0.1) !important;
+          color: #FFD700 !important;
+        }
+        
+        /* Select trigger button fix */
+        .dark .buyer-theme-smmvisit [role="combobox"],
+        .dark .buyer-theme-smmvisit button[aria-haspopup="listbox"] {
+          background: #1A1A1A !important;
+          border-color: rgba(255, 215, 0, 0.2) !important;
+          color: #FFFFFF !important;
+        }
+        
+        .dark .buyer-theme-smmvisit [role="combobox"]:hover,
+        .dark .buyer-theme-smmvisit button[aria-haspopup="listbox"]:hover {
+          border-color: rgba(255, 215, 0, 0.4) !important;
         }
       `}</style>
         {children}
