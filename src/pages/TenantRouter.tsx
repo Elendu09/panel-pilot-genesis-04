@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
+import { useState, useEffect, useMemo, lazy, Suspense, memo } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { useTenant } from '@/hooks/useTenant';
 import { analyzeDomain, PLATFORM_DOMAIN, ALL_PLATFORM_DOMAINS } from '@/lib/tenant-domain-config';
@@ -14,7 +14,9 @@ import { BuyerProtectedRoute } from '@/components/buyer/BuyerProtectedRoute';
 import { CurrencyProvider } from '@/contexts/CurrencyContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import { Rocket, Sparkles } from 'lucide-react';
-import App from '../App';
+
+// Lazy load App to reduce initial bundle for tenant domains
+const App = lazy(() => import('../App'));
 
 // CRITICAL: Set initial branding immediately based on domain
 // This prevents "HOME OF SMM" from flashing on tenant domains
@@ -111,14 +113,25 @@ const RobotsTxt = lazy(() => import('./RobotsTxt'));
 const TeamAuth = lazy(() => import('./buyer/TeamAuth'));
 const TeamDashboard = lazy(() => import('./panel/TeamDashboard'));
 
-// Minimal loader for lazy routes
-const PageLoader = () => (
+// Minimal loader for lazy routes - optimized for performance
+const PageLoader = memo(() => (
   <div className="min-h-screen flex items-center justify-center bg-background">
-    <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+    <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" aria-label="Loading" />
   </div>
-);
+));
+PageLoader.displayName = 'PageLoader';
 
-const queryClient = new QueryClient();
+// Memoize QueryClient to prevent recreation
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000,
+      gcTime: 10 * 60 * 1000,
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
 
 /**
  * TenantRouter determines if we should show the storefront/buyer dashboard or the main app
@@ -140,7 +153,11 @@ const TenantRouter = () => {
   // If we know synchronously it's the platform domain, render App immediately
   // This prevents the main website from briefly showing on subdomain loads
   if (isImmediatelyPlatform) {
-    return <App />;
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <App />
+      </Suspense>
+    );
   }
   
   // For tenant domains, proceed with async panel detection
@@ -221,7 +238,11 @@ const TenantContent = () => {
   if (loading && !loadingTimeout) {
     // For platform domains, render App immediately (optimistic)
     if (isPlatformDomain) {
-      return <App />;
+      return (
+        <Suspense fallback={<PageLoader />}>
+          <App />
+        </Suspense>
+      );
     }
     // For tenant domains, show loading screen with default tenant favicon (changeable)
     return (
@@ -287,7 +308,11 @@ const TenantContent = () => {
 
   // If this is a platform domain, show the main app
   if (isPlatformDomain) {
-    return <App />;
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <App />
+      </Suspense>
+    );
   }
 
   // If this is a tenant domain and we found a panel, show PUBLIC storefront first
@@ -480,7 +505,11 @@ const TenantContent = () => {
   }
 
   // Fallback to main app
-  return <App />;
+  return (
+    <Suspense fallback={<PageLoader />}>
+      <App />
+    </Suspense>
+  );
 };
 
 export default TenantRouter;

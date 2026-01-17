@@ -1,26 +1,27 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState, memo } from "react";
 import { Helmet } from "react-helmet-async";
 import { Navigation } from "@/components/layout/Navigation";
 import { HeroSection } from "@/components/sections/HeroSection";
 import { Footer } from "@/components/layout/Footer";
 import { MainHomepageSchemas, FAQPageSchema } from "@/components/seo/JsonLdSchema";
 
-// Lazy load below-the-fold sections to reduce TBT
-const PlatformFeaturesSection = lazy(() => import("@/components/sections/PlatformFeaturesSection").then(m => ({ default: m.PlatformFeaturesSection })));
-const StatsSection = lazy(() => import("@/components/sections/StatsSection").then(m => ({ default: m.StatsSection })));
-const FeaturesSection = lazy(() => import("@/components/sections/FeaturesSection").then(m => ({ default: m.FeaturesSection })));
-const TestimonialsSection = lazy(() => import("@/components/sections/TestimonialsSection").then(m => ({ default: m.TestimonialsSection })));
-const FAQSection = lazy(() => import("@/components/sections/FAQSection").then(m => ({ default: m.FAQSection })));
+// Lazy load all below-the-fold sections with webpackChunkName for better caching
+const PlatformFeaturesSection = lazy(() => import(/* webpackChunkName: "platform-features" */ "@/components/sections/PlatformFeaturesSection").then(m => ({ default: m.PlatformFeaturesSection })));
+const StatsSection = lazy(() => import(/* webpackChunkName: "stats" */ "@/components/sections/StatsSection").then(m => ({ default: m.StatsSection })));
+const FeaturesSection = lazy(() => import(/* webpackChunkName: "features" */ "@/components/sections/FeaturesSection").then(m => ({ default: m.FeaturesSection })));
+const TestimonialsSection = lazy(() => import(/* webpackChunkName: "testimonials" */ "@/components/sections/TestimonialsSection").then(m => ({ default: m.TestimonialsSection })));
+const FAQSection = lazy(() => import(/* webpackChunkName: "faq" */ "@/components/sections/FAQSection").then(m => ({ default: m.FAQSection })));
 
-// Defer cursor effects until after main content
-const CursorEffects = lazy(() => import("@/components/effects/CursorEffects"));
+// Defer cursor effects until after main content is interactive
+const CursorEffects = lazy(() => import(/* webpackChunkName: "cursor-effects" */ "@/components/effects/CursorEffects"));
 
-// Minimal skeleton for lazy sections
-const SectionSkeleton = () => (
-  <div className="py-24 flex items-center justify-center">
+// Memoized skeleton for lazy sections - prevents re-renders
+const SectionSkeleton = memo(() => (
+  <div className="py-24 flex items-center justify-center" aria-hidden="true">
     <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
   </div>
-);
+));
+SectionSkeleton.displayName = 'SectionSkeleton';
 
 const Index = () => {
   const canonicalUrl = typeof window !== 'undefined' ? window.location.origin : 'https://homeofsmm.com';

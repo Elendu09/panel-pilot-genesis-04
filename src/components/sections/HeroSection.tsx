@@ -1,3 +1,4 @@
+import { memo, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,50 +11,43 @@ import { BackgroundEffects } from "@/components/effects/BackgroundEffects";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
 
-export const HeroSection = () => {
+// Memoized component to prevent unnecessary re-renders
+export const HeroSection = memo(() => {
   const { t } = useLanguage();
 
-  // Floating feature cards data
-  const leftCards = [
+  // Memoize static data to prevent recreation on each render
+  const leftCards = useMemo(() => [
     { title: t('home.card.ultrafast'), subtitle: t('home.card.ultrafast.sub'), delay: 0.8 },
     { title: t('home.card.design'), subtitle: t('home.card.design.sub'), delay: 1.2 },
-  ];
+  ], [t]);
 
-  const rightCards = [
+  const rightCards = useMemo(() => [
     { title: t('home.card.functions'), subtitle: t('home.card.functions.sub'), delay: 1.0 },
     { title: t('home.card.ecosystem'), subtitle: t('home.card.ecosystem.sub'), delay: 1.4 },
-  ];
+  ], [t]);
 
-  // Panel showcase services with SVG icons
-  const showcaseServices = [
+  // Panel showcase services with SVG icons - memoized
+  const showcaseServices = useMemo(() => [
     { icon: TelegramIcon, name: "Telegram Subscribers", price: "$0.3", discount: "-50%", gradient: "from-blue-500 to-cyan-500" },
     { icon: VoteIcon, name: "Premium Votes", price: "$1", discount: "-30%", gradient: "from-amber-400 to-yellow-500" },
     { icon: ViewsIcon, name: "Channel Viewers", price: "$0.5", gradient: "from-green-500 to-emerald-500" },
     { icon: HeartIcon, name: "Real Likes", price: "$20", gradient: "from-red-500 to-pink-500" },
-  ];
+  ], []);
 
   return (
     <section className="relative min-h-[50vh] sm:min-h-[60vh] md:min-h-[75vh] lg:min-h-screen bg-gradient-hero overflow-hidden perspective-1000 pb-4 md:pb-8 lg:pb-12">
-      {/* Grid, Bubbles & Particles */}
-      <BackgroundEffects variant="hero" showGrid showBubbles showParticles bubbleCount={8} particleCount={15} />
+      {/* Grid, Bubbles & Particles - optimized for performance */}
+      <BackgroundEffects variant="hero" showGrid showBubbles showParticles bubbleCount={6} particleCount={10} />
       
-      {/* Enhanced Background Effects */}
-      <div className="absolute inset-0 opacity-20">
-        <motion.div 
-          className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary rounded-full blur-[120px]"
-          animate={{ 
-            scale: [1, 1.3, 1],
-            opacity: [0.2, 0.4, 0.2]
-          }}
-          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+      {/* Static Background Effects - CSS-based for better performance */}
+      <div className="absolute inset-0 opacity-20 pointer-events-none">
+        <div 
+          className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary rounded-full blur-[120px] animate-pulse-float"
+          style={{ animationDuration: '10s' }}
         />
-        <motion.div 
-          className="absolute bottom-1/3 right-1/4 w-[500px] h-[500px] bg-primary/50 rounded-full blur-[150px]"
-          animate={{ 
-            scale: [1.2, 1, 1.2],
-            opacity: [0.15, 0.3, 0.15]
-          }}
-          transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
+        <div 
+          className="absolute bottom-1/3 right-1/4 w-[500px] h-[500px] bg-primary/50 rounded-full blur-[150px] animate-pulse-float"
+          style={{ animationDuration: '12s', animationDelay: '2s' }}
         />
       </div>
 
@@ -316,4 +310,6 @@ export const HeroSection = () => {
       </div>
     </section>
   );
-};
+});
+
+HeroSection.displayName = 'HeroSection';
