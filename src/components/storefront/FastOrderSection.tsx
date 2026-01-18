@@ -64,13 +64,53 @@ interface FastOrderSectionProps {
   onStepChange?: (step: number) => void;
 }
 
-// Default payment methods - will be filtered based on panel settings
-const defaultPaymentMethods = [
-  { id: 'stripe', name: 'Credit Card', icon: CreditCard, color: 'bg-gradient-to-br from-blue-500 to-blue-600', badge: 'Instant' },
-  { id: 'paypal', name: 'PayPal', icon: Wallet, color: 'bg-gradient-to-br from-blue-600 to-indigo-600', badge: 'Instant' },
-  { id: 'crypto', name: 'Crypto', icon: DollarSign, color: 'bg-gradient-to-br from-orange-500 to-amber-500', badge: '5-30 min' },
-  { id: 'perfectmoney', name: 'Perfect Money', icon: Shield, color: 'bg-gradient-to-br from-green-500 to-emerald-500', badge: 'Instant' },
-];
+// All available payment gateways with their display info - dynamically loaded based on panel settings
+const allPaymentGateways: Record<string, { name: string; icon: any; color: string; badge: string }> = {
+  // Cards & Digital Wallets
+  stripe: { name: "Credit Card", icon: CreditCard, color: "bg-gradient-to-br from-blue-500 to-blue-600", badge: "Instant" },
+  paypal: { name: "PayPal", icon: Wallet, color: "bg-gradient-to-br from-blue-600 to-indigo-600", badge: "Instant" },
+  square: { name: "Square", icon: CreditCard, color: "bg-gradient-to-br from-black to-gray-700", badge: "Instant" },
+  adyen: { name: "Adyen", icon: CreditCard, color: "bg-gradient-to-br from-green-600 to-green-700", badge: "Instant" },
+  
+  // African Gateways
+  flutterwave: { name: "Flutterwave", icon: Globe, color: "bg-gradient-to-br from-orange-400 to-yellow-400", badge: "Instant" },
+  paystack: { name: "Paystack", icon: Globe, color: "bg-gradient-to-br from-cyan-500 to-blue-500", badge: "Instant" },
+  korapay: { name: "Kora Pay", icon: Globe, color: "bg-gradient-to-br from-purple-500 to-indigo-500", badge: "Instant" },
+  monnify: { name: "Monnify", icon: Globe, color: "bg-gradient-to-br from-green-500 to-teal-500", badge: "Instant" },
+  
+  // Indian Gateways
+  razorpay: { name: "Razorpay", icon: Globe, color: "bg-gradient-to-br from-blue-600 to-indigo-600", badge: "Instant" },
+  paytm: { name: "Paytm", icon: Wallet, color: "bg-gradient-to-br from-blue-400 to-cyan-500", badge: "Instant" },
+  phonepe: { name: "PhonePe", icon: Wallet, color: "bg-gradient-to-br from-purple-500 to-purple-600", badge: "Instant" },
+  
+  // LATAM Gateways
+  mercadopago: { name: "Mercado Pago", icon: DollarSign, color: "bg-gradient-to-br from-sky-400 to-blue-500", badge: "Instant" },
+  payu: { name: "PayU", icon: CreditCard, color: "bg-gradient-to-br from-green-600 to-green-700", badge: "Instant" },
+  
+  // EU Gateways
+  mollie: { name: "Mollie", icon: CreditCard, color: "bg-gradient-to-br from-black to-gray-800", badge: "Instant" },
+  klarna: { name: "Klarna", icon: Wallet, color: "bg-gradient-to-br from-pink-400 to-pink-500", badge: "Instant" },
+  ideal: { name: "iDEAL", icon: Globe, color: "bg-gradient-to-br from-pink-500 to-red-500", badge: "Instant" },
+  
+  // Crypto Gateways
+  crypto: { name: "Crypto", icon: DollarSign, color: "bg-gradient-to-br from-orange-500 to-amber-500", badge: "5-30 min" },
+  coinbase: { name: "Coinbase", icon: DollarSign, color: "bg-gradient-to-br from-blue-600 to-blue-700", badge: "5-30 min" },
+  btcpay: { name: "Bitcoin", icon: Sparkles, color: "bg-gradient-to-br from-orange-500 to-amber-500", badge: "10-60 min" },
+  nowpayments: { name: "NowPayments", icon: Sparkles, color: "bg-gradient-to-br from-gray-700 to-gray-900", badge: "5-30 min" },
+  coingate: { name: "CoinGate", icon: Sparkles, color: "bg-gradient-to-br from-blue-500 to-indigo-600", badge: "5-30 min" },
+  binancepay: { name: "Binance Pay", icon: Sparkles, color: "bg-gradient-to-br from-yellow-400 to-yellow-500", badge: "Instant" },
+  
+  // E-Wallets
+  perfectmoney: { name: "Perfect Money", icon: Shield, color: "bg-gradient-to-br from-green-500 to-emerald-500", badge: "Instant" },
+  skrill: { name: "Skrill", icon: Shield, color: "bg-gradient-to-br from-purple-600 to-purple-700", badge: "Instant" },
+  neteller: { name: "Neteller", icon: Shield, color: "bg-gradient-to-br from-green-600 to-green-700", badge: "Instant" },
+  webmoney: { name: "WebMoney", icon: Wallet, color: "bg-gradient-to-br from-blue-500 to-blue-600", badge: "Instant" },
+  
+  // Bank Transfers
+  wise: { name: "Wise", icon: Globe, color: "bg-gradient-to-br from-green-400 to-green-600", badge: "1-2 days" },
+  ach: { name: "ACH Transfer", icon: Globe, color: "bg-gradient-to-br from-blue-500 to-blue-700", badge: "1-3 days" },
+  sepa: { name: "SEPA", icon: Globe, color: "bg-gradient-to-br from-blue-600 to-indigo-600", badge: "1-2 days" },
+};
 
 interface PaymentMethod {
   id: string;
@@ -205,16 +245,29 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
         const enabledMethods = paymentSettings.enabledMethods || [];
         
         if (enabledMethods.length > 0) {
-          const filteredMethods = defaultPaymentMethods.filter(m => 
-            enabledMethods.some((em: any) => 
-              (typeof em === 'string' ? em === m.id : em.id === m.id) && 
-              (typeof em === 'string' || em.enabled !== false)
-            )
-          );
-          if (filteredMethods.length > 0) {
-            setPaymentMethods(filteredMethods);
+          // Dynamically map enabled methods to their display info
+          const mappedMethods = enabledMethods
+            .filter((em: any) => typeof em === 'string' ? true : em.enabled !== false)
+            .map((em: any) => {
+              const id = typeof em === 'string' ? em : em.id;
+              const gatewayInfo = allPaymentGateways[id];
+              if (!gatewayInfo) {
+                // Create a generic entry for unknown gateways
+                return {
+                  id,
+                  name: id.charAt(0).toUpperCase() + id.slice(1).replace(/([A-Z])/g, ' $1').trim(),
+                  icon: CreditCard,
+                  color: "bg-gradient-to-br from-gray-500 to-gray-600",
+                  badge: "Instant"
+                };
+              }
+              return { id, ...gatewayInfo };
+            });
+          
+          if (mappedMethods.length > 0) {
+            setPaymentMethods(mappedMethods);
             setNoPaymentGateway(false);
-            setSelectedPaymentMethod(filteredMethods[0].id);
+            setSelectedPaymentMethod(mappedMethods[0].id);
           } else {
             setPaymentMethods([]);
             setNoPaymentGateway(true);
@@ -573,54 +626,43 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
     setIsProcessingPayment(true);
 
     try {
-      const orderNumber = generateOrderNumber();
-
-      // Simulate payment processing (replace with real payment gateway integration)
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // Create the order directly (skip transaction for balance-based payments)
-      const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .insert({
-          buyer_id: buyer.id,
-          panel_id: panelId,
-          service_id: selectedServiceId,
-          order_number: orderNumber,
+      // Use edge function for secure order creation
+      const response = await supabase.functions.invoke('buyer-order', {
+        body: {
+          panelId: panelId,
+          buyerId: buyer.id,
+          serviceId: selectedServiceId,
           quantity: quantity,
+          targetUrl: targetUrl,
           price: totalPrice,
-          target_url: targetUrl,
-          status: 'pending',
           notes: `Fast Order via ${panelName}`,
-        })
-        .select()
-        .single();
+        }
+      });
 
-      if (orderError) throw orderError;
+      if (response.error) {
+        throw new Error(response.error.message || 'Order creation failed');
+      }
 
-      // Update buyer balance (deduct the amount)
-      const newBalance = Math.max(0, (buyer.balance || 0) - totalPrice);
-      await supabase
-        .from('client_users')
-        .update({ 
-          balance: newBalance,
-          total_spent: (buyer.total_spent || 0) + totalPrice 
-        })
-        .eq('id', buyer.id);
+      const { order, error: orderError, newBalance } = response.data || {};
+
+      if (orderError) {
+        throw new Error(orderError);
+      }
 
       await refreshBuyer();
 
       // Store order info for tracking
       setPlacedOrderId(order.id);
-      setPlacedOrderNumber(orderNumber);
+      setPlacedOrderNumber(order.orderNumber);
 
       toast({
         title: "Order Placed Successfully!",
-        description: `Order #${orderNumber} is now being processed.`,
+        description: `Order #${order.orderNumber} is now being processed.`,
       });
 
       // Copy order number to clipboard for easy tracking
       try {
-        await navigator.clipboard.writeText(orderNumber);
+        await navigator.clipboard.writeText(order.orderNumber);
       } catch {}
 
       // Show success celebration briefly, then go to tracking
@@ -633,8 +675,8 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
     } catch (error: any) {
       console.error('Payment error:', error);
       toast({
-        title: "Payment Failed",
-        description: error.message || "Failed to process payment",
+        title: "Order Failed",
+        description: error.message || "Failed to process order",
         variant: "destructive"
       });
     } finally {

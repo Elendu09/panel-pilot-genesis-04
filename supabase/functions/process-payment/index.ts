@@ -508,6 +508,221 @@ serve(async (req) => {
         break;
       }
 
+      case 'nowpayments': {
+        // NowPayments crypto integration
+        const nowPaymentsApiKey = gatewayConfig.apiKey;
+        
+        if (!nowPaymentsApiKey) {
+          return new Response(
+            JSON.stringify({ error: 'NowPayments not configured' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const nowPaymentsResponse = await fetch('https://api.nowpayments.io/v1/invoice', {
+          method: 'POST',
+          headers: {
+            'x-api-key': nowPaymentsApiKey,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            price_amount: amount,
+            price_currency: currency,
+            order_id: transactionId,
+            order_description: `Deposit - ${panel.name}`,
+            ipn_callback_url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/payment-webhook?gateway=nowpayments`,
+            success_url: `${returnUrl}?success=true&transaction_id=${transactionId}`,
+            cancel_url: `${returnUrl}?cancelled=true&transaction_id=${transactionId}`,
+          }),
+        });
+
+        const nowPaymentsData = await nowPaymentsResponse.json();
+        
+        if (!nowPaymentsData.invoice_url) {
+          console.error('[process-payment] NowPayments error:', nowPaymentsData);
+          return new Response(
+            JSON.stringify({ error: nowPaymentsData.message || 'NowPayments payment failed' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        redirectUrl = nowPaymentsData.invoice_url;
+        paymentId = nowPaymentsData.id;
+        break;
+      }
+
+      case 'coingate': {
+        // CoinGate crypto integration
+        const coinGateApiKey = gatewayConfig.apiKey;
+        
+        if (!coinGateApiKey) {
+          return new Response(
+            JSON.stringify({ error: 'CoinGate not configured' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const coinGateResponse = await fetch('https://api.coingate.com/v2/orders', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Token ${coinGateApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            order_id: transactionId,
+            price_amount: amount,
+            price_currency: currency.toUpperCase(),
+            receive_currency: currency.toUpperCase(),
+            title: `Deposit - ${panel.name}`,
+            callback_url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/payment-webhook?gateway=coingate`,
+            success_url: `${returnUrl}?success=true&transaction_id=${transactionId}`,
+            cancel_url: `${returnUrl}?cancelled=true&transaction_id=${transactionId}`,
+          }),
+        });
+
+        const coinGateData = await coinGateResponse.json();
+        
+        if (!coinGateData.payment_url) {
+          console.error('[process-payment] CoinGate error:', coinGateData);
+          return new Response(
+            JSON.stringify({ error: coinGateData.message || 'CoinGate payment failed' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        redirectUrl = coinGateData.payment_url;
+        paymentId = coinGateData.id;
+        break;
+      }
+
+      case 'binancepay': {
+        // Binance Pay integration
+        const binanceApiKey = gatewayConfig.apiKey;
+        const binanceSecretKey = gatewayConfig.secretKey;
+        
+        if (!binanceApiKey || !binanceSecretKey) {
+          return new Response(
+            JSON.stringify({ error: 'Binance Pay not configured' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const timestamp = Date.now().toString();
+        const nonce = Math.random().toString(36).substring(2, 15);
+        const requestBody = JSON.stringify({
+          env: { terminalType: 'WEB' },
+          merchantTradeNo: transactionId,
+          orderAmount: amount,
+          currency: currency.toUpperCase(),
+          goods: {
+            goodsType: '01',
+            goodsCategory: 'Z000',
+            referenceGoodsId: transactionId,
+            goodsName: `Deposit - ${panel.name}`,
+          },
+          returnUrl: `${returnUrl}?success=true&transaction_id=${transactionId}`,
+          cancelUrl: `${returnUrl}?cancelled=true&transaction_id=${transactionId}`,
+        });
+
+        const binanceResponse = await fetch('https://bpay.binanceapi.com/binancepay/openapi/v2/order', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'BinancePay-Timestamp': timestamp,
+            'BinancePay-Nonce': nonce,
+            'BinancePay-Certificate-SN': binanceApiKey,
+          },
+          body: requestBody,
+        });
+
+        const binanceData = await binanceResponse.json();
+        
+        if (binanceData.status !== 'SUCCESS') {
+          console.error('[process-payment] Binance Pay error:', binanceData);
+          return new Response(
+            JSON.stringify({ error: binanceData.errorMessage || 'Binance Pay payment failed' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        redirectUrl = binanceData.data?.checkoutUrl;
+        paymentId = binanceData.data?.prepayId;
+        break;
+      }
+
+      case 'skrill': {
+        // Skrill e-wallet integration
+        const skrillEmail = gatewayConfig.apiKey; // Merchant email
+        
+        if (!skrillEmail) {
+          return new Response(
+            JSON.stringify({ error: 'Skrill not configured' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Skrill uses form-based redirect
+        const skrillParams = new URLSearchParams({
+          pay_to_email: skrillEmail,
+          amount: amount.toString(),
+          currency: currency.toUpperCase(),
+          detail1_description: `Deposit - ${panel.name}`,
+          transaction_id: transactionId,
+          return_url: `${returnUrl}?success=true&transaction_id=${transactionId}`,
+          cancel_url: `${returnUrl}?cancelled=true&transaction_id=${transactionId}`,
+          status_url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/payment-webhook?gateway=skrill`,
+        });
+
+        redirectUrl = `https://pay.skrill.com?${skrillParams.toString()}`;
+        paymentId = transactionId;
+        break;
+      }
+
+      case 'perfectmoney': {
+        // Perfect Money integration
+        const pmAccountId = gatewayConfig.apiKey;
+        const pmPayeeName = gatewayConfig.payeeName || panel.name;
+        
+        if (!pmAccountId) {
+          return new Response(
+            JSON.stringify({ error: 'Perfect Money not configured' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Perfect Money uses form-based redirect
+        const pmParams = new URLSearchParams({
+          PAYEE_ACCOUNT: pmAccountId,
+          PAYEE_NAME: pmPayeeName,
+          PAYMENT_AMOUNT: amount.toString(),
+          PAYMENT_UNITS: currency.toUpperCase(),
+          PAYMENT_ID: transactionId,
+          STATUS_URL: `${Deno.env.get('SUPABASE_URL')}/functions/v1/payment-webhook?gateway=perfectmoney`,
+          PAYMENT_URL: `${returnUrl}?success=true&transaction_id=${transactionId}`,
+          NOPAYMENT_URL: `${returnUrl}?cancelled=true&transaction_id=${transactionId}`,
+        });
+
+        redirectUrl = `https://perfectmoney.is/api/step1.asp?${pmParams.toString()}`;
+        paymentId = transactionId;
+        break;
+      }
+
+      case 'wise': {
+        // Wise (TransferWise) - returns bank details for manual transfer
+        return new Response(
+          JSON.stringify({ 
+            success: true,
+            gateway: 'wise',
+            requiresManualTransfer: true,
+            transactionId,
+            amount,
+            currency: currency.toUpperCase(),
+            message: 'Please transfer the amount using Wise. Your balance will be credited once payment is confirmed.',
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       default:
         return new Response(
           JSON.stringify({ error: `Unsupported gateway: ${gateway}` }),

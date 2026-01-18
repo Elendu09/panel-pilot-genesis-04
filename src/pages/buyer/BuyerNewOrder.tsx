@@ -379,62 +379,48 @@ const BuyerNewOrder = () => {
 
     setOrderLoading(true);
     try {
-      const orderNumber = `ORD${Date.now()}`;
-
-      const { error: orderError } = await supabase
-        .from('orders')
-        .insert({
-          order_number: orderNumber,
-          panel_id: panel.id,
-          buyer_id: buyer.id,
-          service_id: selectedService.id,
-          target_url: targetUrl,
+      // Use edge function for secure order creation
+      const response = await supabase.functions.invoke('buyer-order', {
+        body: {
+          panelId: panel.id,
+          buyerId: buyer.id,
+          serviceId: selectedService.id,
           quantity,
+          targetUrl,
           price: totalPrice,
-          status: 'pending',
-          progress: 0,
+          promoCode: appliedPromo?.code,
           notes: appliedPromo ? `Promo: ${appliedPromo.code}` : null,
-        });
+        }
+      });
 
-      if (orderError) throw orderError;
-
-      // Update promo code usage
-      if (appliedPromo) {
-        await supabase
-          .from('promo_codes')
-          .update({ used_count: (appliedPromo as any).used_count + 1 })
-          .eq('id', appliedPromo.id);
+      if (response.error) {
+        throw new Error(response.error.message || 'Order creation failed');
       }
 
-      const newBalance = (buyer.balance || 0) - totalPrice;
-      const { error: balanceError } = await supabase
-        .from('client_users')
-        .update({ 
-          balance: newBalance,
-          total_spent: (buyer.total_spent || 0) + totalPrice,
-        })
-        .eq('id', buyer.id);
+      const { order, error: orderError, newBalance } = response.data || {};
 
-      if (balanceError) throw balanceError;
+      if (orderError) {
+        throw new Error(orderError);
+      }
 
       await refreshBuyer();
 
       // Store order details for success modal
-      setPlacedOrderNumber(orderNumber);
-      setPlacedServiceName(selectedService.name);
-      setPlacedQuantity(quantity);
-      setPlacedTotalPrice(formatPrice(totalPrice));
+      setPlacedOrderNumber(order.orderNumber);
+      setPlacedServiceName(order.serviceName || selectedService.name);
+      setPlacedQuantity(order.quantity);
+      setPlacedTotalPrice(formatPrice(order.price));
       setShowSuccessModal(true);
       
       toast({
         title: "Order Placed Successfully!",
-        description: `Order #${orderNumber} - ${quantity.toLocaleString()} ${selectedService.name}`,
+        description: `Order #${order.orderNumber} - ${quantity.toLocaleString()} ${selectedService.name}`,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error placing order:', error);
       toast({ 
         title: "Order Failed", 
-        description: "Failed to place order. Please try again.",
+        description: error.message || "Failed to place order. Please try again.",
         variant: "destructive" 
       });
     } finally {

@@ -34,26 +34,65 @@ import { Link } from "react-router-dom";
 import { BuyerInvoiceHistory } from "@/components/billing/BuyerInvoiceHistory";
 import { useInvoiceGeneration } from "@/hooks/useInvoiceGeneration";
 
-// All available payment gateways with their display info
+// All available payment gateways with their display info (30+ gateways)
 const allPaymentGateways: Record<string, { name: string; icon: any; color: string; badge: string }> = {
+  // Cards & Digital Wallets
   stripe: { name: "Card", icon: CreditCard, color: "from-blue-500 to-blue-600", badge: "Instant" },
   paypal: { name: "PayPal", icon: DollarSign, color: "from-blue-400 to-blue-500", badge: "Instant" },
-  crypto: { name: "Crypto", icon: Sparkles, color: "from-orange-500 to-yellow-500", badge: "5-30 min" },
-  coinbase: { name: "Coinbase", icon: Bitcoin, color: "from-blue-600 to-blue-700", badge: "5-30 min" },
-  perfectmoney: { name: "Perfect Money", icon: Shield, color: "from-green-500 to-emerald-500", badge: "Instant" },
+  square: { name: "Square", icon: CreditCard, color: "from-black to-gray-700", badge: "Instant" },
+  adyen: { name: "Adyen", icon: CreditCard, color: "from-green-600 to-green-700", badge: "Instant" },
+  checkout: { name: "Checkout.com", icon: CreditCard, color: "from-blue-500 to-blue-600", badge: "Instant" },
+  
+  // African Gateways
   flutterwave: { name: "Flutterwave", icon: Globe, color: "from-orange-400 to-yellow-400", badge: "Instant" },
   paystack: { name: "Paystack", icon: Smartphone, color: "from-cyan-500 to-blue-500", badge: "Instant" },
   korapay: { name: "Kora Pay", icon: Globe, color: "from-purple-500 to-indigo-500", badge: "Instant" },
-  razorpay: { name: "Razorpay", icon: Globe, color: "from-blue-600 to-indigo-600", badge: "Instant" },
-  btcpay: { name: "Bitcoin", icon: Bitcoin, color: "from-orange-500 to-amber-500", badge: "10-60 min" },
   monnify: { name: "Monnify", icon: Banknote, color: "from-green-500 to-teal-500", badge: "Instant" },
-  payu: { name: "PayU", icon: CreditCard, color: "from-green-600 to-green-700", badge: "Instant" },
+  pawapay: { name: "Pawapay", icon: Globe, color: "from-blue-500 to-blue-600", badge: "Instant" },
+  chipper: { name: "Chipper Cash", icon: Smartphone, color: "from-purple-400 to-purple-600", badge: "Instant" },
+  
+  // Indian Gateways
+  razorpay: { name: "Razorpay", icon: Globe, color: "from-blue-600 to-indigo-600", badge: "Instant" },
+  paytm: { name: "Paytm", icon: Smartphone, color: "from-blue-400 to-cyan-500", badge: "Instant" },
+  phonepe: { name: "PhonePe", icon: Smartphone, color: "from-purple-500 to-purple-600", badge: "Instant" },
+  upi: { name: "UPI", icon: Smartphone, color: "from-green-500 to-green-600", badge: "Instant" },
+  
+  // LATAM Gateways
   mercadopago: { name: "Mercado Pago", icon: DollarSign, color: "from-sky-400 to-blue-500", badge: "Instant" },
+  payu: { name: "PayU", icon: CreditCard, color: "from-green-600 to-green-700", badge: "Instant" },
+  pagseguro: { name: "PagSeguro", icon: CreditCard, color: "from-green-500 to-green-600", badge: "Instant" },
+  pix: { name: "PIX", icon: Smartphone, color: "from-teal-400 to-teal-600", badge: "Instant" },
+  
+  // EU Gateways
   mollie: { name: "Mollie", icon: CreditCard, color: "from-black to-gray-800", badge: "Instant" },
-  square: { name: "Square", icon: CreditCard, color: "from-black to-gray-700", badge: "Instant" },
-  wise: { name: "Wise", icon: Globe, color: "from-green-400 to-green-600", badge: "1-2 days" },
+  klarna: { name: "Klarna", icon: Wallet, color: "from-pink-400 to-pink-500", badge: "Instant" },
+  ideal: { name: "iDEAL", icon: Globe, color: "from-pink-500 to-red-500", badge: "Instant" },
+  sofort: { name: "Sofort", icon: Globe, color: "from-pink-400 to-pink-600", badge: "Instant" },
+  giropay: { name: "Giropay", icon: Globe, color: "from-blue-500 to-blue-700", badge: "Instant" },
+  bancontact: { name: "Bancontact", icon: CreditCard, color: "from-blue-400 to-blue-500", badge: "Instant" },
+  
+  // Crypto Gateways
+  crypto: { name: "Crypto", icon: Sparkles, color: "from-orange-500 to-yellow-500", badge: "5-30 min" },
+  coinbase: { name: "Coinbase", icon: Bitcoin, color: "from-blue-600 to-blue-700", badge: "5-30 min" },
+  btcpay: { name: "Bitcoin", icon: Bitcoin, color: "from-orange-500 to-amber-500", badge: "10-60 min" },
+  nowpayments: { name: "NowPayments", icon: Bitcoin, color: "from-gray-700 to-gray-900", badge: "5-30 min" },
+  coingate: { name: "CoinGate", icon: Bitcoin, color: "from-blue-500 to-indigo-600", badge: "5-30 min" },
+  binancepay: { name: "Binance Pay", icon: Bitcoin, color: "from-yellow-400 to-yellow-500", badge: "Instant" },
+  bitpay: { name: "BitPay", icon: Bitcoin, color: "from-blue-500 to-blue-700", badge: "5-30 min" },
+  
+  // E-Wallets
+  perfectmoney: { name: "Perfect Money", icon: Shield, color: "from-green-500 to-emerald-500", badge: "Instant" },
   skrill: { name: "Skrill", icon: Shield, color: "from-purple-600 to-purple-700", badge: "Instant" },
   neteller: { name: "Neteller", icon: Shield, color: "from-green-600 to-green-700", badge: "Instant" },
+  webmoney: { name: "WebMoney", icon: Wallet, color: "from-blue-500 to-blue-600", badge: "Instant" },
+  payeer: { name: "Payeer", icon: Wallet, color: "from-blue-400 to-blue-500", badge: "Instant" },
+  airtm: { name: "AirTM", icon: Wallet, color: "from-blue-500 to-cyan-500", badge: "Instant" },
+  
+  // Bank Transfers
+  wise: { name: "Wise", icon: Globe, color: "from-green-400 to-green-600", badge: "1-2 days" },
+  ach: { name: "ACH Transfer", icon: Banknote, color: "from-blue-500 to-blue-700", badge: "1-3 days" },
+  sepa: { name: "SEPA", icon: Banknote, color: "from-blue-600 to-indigo-600", badge: "1-2 days" },
+  wire: { name: "Wire Transfer", icon: Banknote, color: "from-gray-500 to-gray-700", badge: "2-5 days" },
 };
 
 interface PaymentMethod {
