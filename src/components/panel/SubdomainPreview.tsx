@@ -115,7 +115,7 @@ const SubdomainPreview = ({
               <Globe className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <CardTitle className="text-lg">Subdomain Preview</CardTitle>
+              <CardTitle className="text-lg">Website Live Preview</CardTitle>
               <p className="text-sm text-muted-foreground">{storefrontUrl}</p>
             </div>
           </div>
@@ -248,8 +248,9 @@ const SubdomainPreview = ({
                 "w-full h-full border-0 transition-opacity duration-300",
                 iframeLoading ? "opacity-0" : "opacity-100"
               )}
-              title="Subdomain Preview"
-              sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+              title="Website Live Preview"
+              referrerPolicy="no-referrer-when-downgrade"
+              loading="lazy"
               onLoad={() => setIframeLoading(false)}
               onError={() => {
                 setIframeLoading(false);
