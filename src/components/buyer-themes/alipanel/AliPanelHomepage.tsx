@@ -212,7 +212,7 @@ export const AliPanelHomepage = ({
         surfaceColor={surfaceColor}
         bgColor={bgColor}
         primaryButtonStyle={primaryButtonStyle}
-        signupLabel="Get Started"
+        signupLabel={t('buyer.nav.getStarted') || 'Get Started'}
       />
 
       <article>
@@ -351,10 +351,10 @@ export const AliPanelHomepage = ({
             <div className="mx-auto px-4 sm:px-6 lg:px-8" style={{ maxWidth: containerMax }}>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
                 {[
-                  { label: 'Happy Customers', value: stats?.totalUsers || '10K+' },
-                  { label: 'Orders Completed', value: stats?.totalOrders || '50K+' },
-                  { label: 'Services Available', value: stats?.servicesCount || '500+' },
-                  { label: 'Countries Served', value: '150+' },
+                  { label: t('buyer.stats.customers') || 'Happy Customers', value: stats?.totalUsers || '10K+' },
+                  { label: t('buyer.stats.ordersCompleted') || 'Orders Completed', value: stats?.totalOrders || '50K+' },
+                  { label: t('buyer.stats.servicesAvailable') || 'Services Available', value: stats?.servicesCount || '500+' },
+                  { label: t('buyer.stats.countries') || 'Countries Served', value: '150+' },
                 ].map((stat, idx) => (
                   <motion.div
                     key={stat.label}
@@ -416,7 +416,7 @@ export const AliPanelHomepage = ({
             <div className="mx-auto px-4 sm:px-6 lg:px-8" style={{ maxWidth: containerMax }}>
               <motion.div {...(enableAnimations ? { initial: { opacity: 0, y: 20 }, whileInView: { opacity: 1, y: 0 } } : {})} className="text-center mb-12">
                 <h2 className="text-3xl md:text-4xl mb-4" style={{ fontWeight: headingWeight }}>
-                  What Our <span style={{ background: `linear-gradient(to right, ${primary}, ${accent})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Customers</span> Say
+                  {t('buyer.testimonials.whatOur') || 'What Our'} <span style={{ background: `linear-gradient(to right, ${primary}, ${accent})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{t('buyer.testimonials.customers') || 'Customers'}</span> {t('buyer.testimonials.say') || 'Say'}
                 </h2>
               </motion.div>
 
@@ -448,7 +448,7 @@ export const AliPanelHomepage = ({
             <div className="mx-auto px-4 sm:px-6 lg:px-8" style={{ maxWidth: containerMax }}>
               <motion.div {...(enableAnimations ? { initial: { opacity: 0, y: 20 }, whileInView: { opacity: 1, y: 0 } } : {})} className="text-center mb-12">
                 <h2 className="text-3xl md:text-4xl mb-4" style={{ fontWeight: headingWeight }}>
-                  Frequently <span style={{ background: `linear-gradient(to right, ${primary}, ${accent})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Asked</span> Questions
+                  {t('buyer.faq.frequently') || 'Frequently'} <span style={{ background: `linear-gradient(to right, ${primary}, ${accent})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{t('buyer.faq.asked') || 'Asked'}</span> {t('buyer.faq.questions') || 'Questions'}
                 </h2>
               </motion.div>
 
@@ -475,10 +475,10 @@ export const AliPanelHomepage = ({
               style={{ background: `linear-gradient(135deg, ${surfaceColor}, ${bgColor})`, border: `1px solid ${primary}26` }}
             >
               <h2 className="text-3xl md:text-4xl mb-4" style={{ fontWeight: headingWeight }}>
-                Ready to <span style={{ background: `linear-gradient(to right, ${primary}, ${accent})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Grow</span>?
+                {t('buyer.cta.readyTo') || 'Ready to'} <span style={{ background: `linear-gradient(to right, ${primary}, ${accent})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{t('buyer.cta.grow') || 'Grow'}</span>?
               </h2>
               <p className="mb-8 max-w-xl mx-auto" style={{ color: mutedColor }}>
-                Join thousands of satisfied customers and start growing your social media today.
+                {t('buyer.cta.subtitle') || 'Join thousands of satisfied customers and start growing your social media today.'}
               </p>
               {enableFastOrder ? (
                 <Button 
@@ -488,11 +488,11 @@ export const AliPanelHomepage = ({
                   style={primaryButtonStyle}
                 >
                   <Zap className="w-5 h-5 mr-2" />
-                  Fast Order Now
+                  {t('buyer.cta.fastOrder') || 'Fast Order Now'}
                 </Button>
               ) : (
                 <Button size="lg" asChild className="text-white font-semibold text-lg px-10 shadow-xl hover:opacity-90" style={primaryButtonStyle}>
-                  <Link to="/auth?tab=signup">Get Started Now <ArrowRight className="w-5 h-5 ml-2" /></Link>
+                  <Link to="/auth?tab=signup">{t('buyer.cta.getStarted') || 'Get Started Now'} <ArrowRight className="w-5 h-5 ml-2" /></Link>
                 </Button>
               )}
             </motion.div>
@@ -544,9 +544,9 @@ export const AliPanelHomepage = ({
               
               {/* Services Column */}
               <div>
-                <h4 className="font-semibold mb-4">Services</h4>
+                <h4 className="font-semibold mb-4">{t('buyer.footer.services') || 'Services'}</h4>
                 <ul className="space-y-2 text-sm" style={{ color: mutedColor }}>
-                  <li><Link to="/services" className="hover:opacity-80 transition-opacity">All Services</Link></li>
+                  <li><Link to="/services" className="hover:opacity-80 transition-opacity">{t('buyer.footer.allServices') || 'All Services'}</Link></li>
                   <li><Link to="/services?platform=instagram" className="hover:opacity-80 transition-opacity">Instagram</Link></li>
                   <li><Link to="/services?platform=youtube" className="hover:opacity-80 transition-opacity">YouTube</Link></li>
                   <li><Link to="/services?platform=tiktok" className="hover:opacity-80 transition-opacity">TikTok</Link></li>
@@ -555,21 +555,21 @@ export const AliPanelHomepage = ({
               
               {/* Company Column */}
               <div>
-                <h4 className="font-semibold mb-4">Company</h4>
+                <h4 className="font-semibold mb-4">{t('buyer.footer.company') || 'Company'}</h4>
                 <ul className="space-y-2 text-sm" style={{ color: mutedColor }}>
-                  <li><Link to="/support" className="hover:opacity-80 transition-opacity">About Us</Link></li>
-                  <li><Link to="/support" className="hover:opacity-80 transition-opacity">Contact</Link></li>
-                  {showBlogInMenu && <li><Link to="/blog" className="hover:opacity-80 transition-opacity">Blog</Link></li>}
+                  <li><Link to="/support" className="hover:opacity-80 transition-opacity">{t('buyer.footer.aboutUs') || 'About Us'}</Link></li>
+                  <li><Link to="/support" className="hover:opacity-80 transition-opacity">{t('buyer.footer.contact') || 'Contact'}</Link></li>
+                  {showBlogInMenu && <li><Link to="/blog" className="hover:opacity-80 transition-opacity">{t('buyer.footer.blog') || 'Blog'}</Link></li>}
                 </ul>
               </div>
               
               {/* Support Column */}
               <div>
-                <h4 className="font-semibold mb-4">Support</h4>
+                <h4 className="font-semibold mb-4">{t('buyer.footer.support') || 'Support'}</h4>
                 <ul className="space-y-2 text-sm" style={{ color: mutedColor }}>
-                  <li><a href="#faq" className="hover:opacity-80 transition-opacity">FAQ</a></li>
-                  <li><Link to="/terms" className="hover:opacity-80 transition-opacity">Terms</Link></li>
-                  <li><Link to="/privacy" className="hover:opacity-80 transition-opacity">Privacy</Link></li>
+                  <li><a href="#faq" className="hover:opacity-80 transition-opacity">{t('buyer.footer.faq') || 'FAQ'}</a></li>
+                  <li><Link to="/terms" className="hover:opacity-80 transition-opacity">{t('buyer.footer.terms') || 'Terms'}</Link></li>
+                  <li><Link to="/privacy" className="hover:opacity-80 transition-opacity">{t('buyer.footer.privacy') || 'Privacy'}</Link></li>
                 </ul>
               </div>
             </div>

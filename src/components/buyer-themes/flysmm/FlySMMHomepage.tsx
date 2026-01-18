@@ -179,12 +179,12 @@ export const FlySMMHomepage = ({
         bgColor={bgColor}
         navStyle="floating"
         primaryButtonStyle={primaryButtonStyle}
-        signupLabel="Sign Up Free"
+        signupLabel={t('buyer.nav.signUpFree') || 'Sign Up Free'}
         navLinks={[
-          { label: 'Services', to: '/services' },
-          { label: 'My Orders', to: '/orders' },
-          ...(showBlogInMenu ? [{ label: 'Blog', to: '/blog' }] : []),
-          { label: 'Support', to: '/support' },
+          { label: t('buyer.nav.services') || 'Services', to: '/services' },
+          { label: t('buyer.nav.myOrders') || 'My Orders', to: '/orders' },
+          ...(showBlogInMenu ? [{ label: t('buyer.nav.blog') || 'Blog', to: '/blog' }] : []),
+          { label: t('buyer.nav.support') || 'Support', to: '/support' },
         ]}
       />
 
@@ -280,7 +280,7 @@ export const FlySMMHomepage = ({
                       </div>
                       <div>
                         <div className="font-bold" style={{ color: textCol }}>{stats?.totalUsers || '10K+'}</div>
-                        <div className="text-xs" style={{ color: mutedColor }}>Happy Users</div>
+                        <div className="text-xs" style={{ color: mutedColor }}>{t('buyer.stats.happyUsers') || 'Happy Users'}</div>
                       </div>
                     </div>
                   </motion.div>
@@ -297,7 +297,7 @@ export const FlySMMHomepage = ({
                       </div>
                       <div>
                         <div className="font-bold" style={{ color: textCol }}>{stats?.totalOrders || '50K+'}</div>
-                        <div className="text-xs" style={{ color: mutedColor }}>Orders Done</div>
+                        <div className="text-xs" style={{ color: mutedColor }}>{t('buyer.stats.ordersDone') || 'Orders Done'}</div>
                       </div>
                     </div>
                   </motion.div>
@@ -312,9 +312,9 @@ export const FlySMMHomepage = ({
           <div className="mx-auto px-4 sm:px-6 lg:px-8" style={{ maxWidth: containerMax }}>
             <motion.div {...(enableAnimations ? { initial: { opacity: 0, y: 20 }, whileInView: { opacity: 1, y: 0 } } : {})} className="text-center mb-12">
               <h2 className="text-3xl md:text-4xl mb-4" style={{ color: textCol, fontWeight: headingWeight }}>
-                How It <span style={{ color: primary }}>Works</span>
+                {t('buyer.howItWorks.howIt') || 'How It'} <span style={{ color: primary }}>{t('buyer.howItWorks.works') || 'Works'}</span>
               </h2>
-              <p style={{ color: mutedColor }} className="max-w-xl mx-auto">Get started in just 3 simple steps</p>
+              <p style={{ color: mutedColor }} className="max-w-xl mx-auto">{t('buyer.howItWorks.subtitle') || 'Get started in just 3 simple steps'}</p>
             </motion.div>
 
             <div className="grid md:grid-cols-3 gap-8">
@@ -376,7 +376,7 @@ export const FlySMMHomepage = ({
             <div className="mx-auto px-4 sm:px-6 lg:px-8" style={{ maxWidth: containerMax }}>
               <motion.div {...(enableAnimations ? { initial: { opacity: 0, y: 20 }, whileInView: { opacity: 1, y: 0 } } : {})} className="text-center mb-12">
                 <h2 className="text-3xl md:text-4xl mb-4" style={{ color: textCol, fontWeight: headingWeight }}>
-                  What Our <span style={{ color: primary }}>Customers</span> Say
+                  {t('buyer.testimonials.whatOur') || 'What Our'} <span style={{ color: primary }}>{t('buyer.testimonials.customers') || 'Customers'}</span> {t('buyer.testimonials.say') || 'Say'}
                 </h2>
               </motion.div>
 
@@ -408,7 +408,7 @@ export const FlySMMHomepage = ({
             <div className="mx-auto px-4 sm:px-6 lg:px-8" style={{ maxWidth: containerMax }}>
               <motion.div {...(enableAnimations ? { initial: { opacity: 0, y: 20 }, whileInView: { opacity: 1, y: 0 } } : {})} className="text-center mb-12">
                 <h2 className="text-3xl md:text-4xl mb-4" style={{ color: textCol, fontWeight: headingWeight }}>
-                  Frequently Asked <span style={{ color: primary }}>Questions</span>
+                  {t('buyer.faq.frequentlyAsked') || 'Frequently Asked'} <span style={{ color: primary }}>{t('buyer.faq.questions') || 'Questions'}</span>
                 </h2>
               </motion.div>
 
@@ -435,10 +435,10 @@ export const FlySMMHomepage = ({
               style={{ background: `linear-gradient(135deg, ${primary}, ${secondary})` }}
             >
               <h2 className="text-3xl md:text-4xl mb-4" style={{ fontWeight: headingWeight }}>
-                Ready to Grow Your Social Media?
+                {t('buyer.cta.title') || 'Ready to Grow Your Social Media?'}
               </h2>
               <p className="mb-8 opacity-90 max-w-xl mx-auto">
-                Join thousands of satisfied customers and start your journey today!
+                {t('buyer.cta.subtitle') || 'Join thousands of satisfied customers and start your journey today!'}
               </p>
               {enableFastOrder ? (
                 <Button 
@@ -448,11 +448,11 @@ export const FlySMMHomepage = ({
                   style={{ backgroundColor: surfaceColor, color: textCol }}
                 >
                   <Zap className="w-5 h-5 mr-2" />
-                  Fast Order Now
+                  {t('buyer.cta.fastOrder') || 'Fast Order Now'}
                 </Button>
               ) : (
                 <Button size="lg" asChild className="font-semibold text-lg px-10 shadow-xl hover:opacity-90" style={{ backgroundColor: surfaceColor, color: textCol }}>
-                  <Link to="/auth?tab=signup">Get Started Free <ArrowRight className="w-5 h-5 ml-2" /></Link>
+                  <Link to="/auth?tab=signup">{t('buyer.cta.getStartedFree') || 'Get Started Free'} <ArrowRight className="w-5 h-5 ml-2" /></Link>
                 </Button>
               )}
             </motion.div>
@@ -503,9 +503,9 @@ export const FlySMMHomepage = ({
               
               {/* Services Column */}
               <div>
-                <h4 className="font-semibold mb-4">Services</h4>
+                <h4 className="font-semibold mb-4">{t('buyer.footer.services') || 'Services'}</h4>
                 <ul className="space-y-2 text-sm" style={{ color: mutedColor }}>
-                  <li><Link to="/services" className="hover:opacity-80 transition-opacity">All Services</Link></li>
+                  <li><Link to="/services" className="hover:opacity-80 transition-opacity">{t('buyer.footer.allServices') || 'All Services'}</Link></li>
                   <li><Link to="/services?platform=instagram" className="hover:opacity-80 transition-opacity">Instagram</Link></li>
                   <li><Link to="/services?platform=youtube" className="hover:opacity-80 transition-opacity">YouTube</Link></li>
                   <li><Link to="/services?platform=tiktok" className="hover:opacity-80 transition-opacity">TikTok</Link></li>
@@ -514,21 +514,21 @@ export const FlySMMHomepage = ({
               
               {/* Company Column */}
               <div>
-                <h4 className="font-semibold mb-4">Company</h4>
+                <h4 className="font-semibold mb-4">{t('buyer.footer.company') || 'Company'}</h4>
                 <ul className="space-y-2 text-sm" style={{ color: mutedColor }}>
-                  <li><Link to="/support" className="hover:opacity-80 transition-opacity">About Us</Link></li>
-                  <li><Link to="/support" className="hover:opacity-80 transition-opacity">Contact</Link></li>
-                  {showBlogInMenu && <li><Link to="/blog" className="hover:opacity-80 transition-opacity">Blog</Link></li>}
+                  <li><Link to="/support" className="hover:opacity-80 transition-opacity">{t('buyer.footer.aboutUs') || 'About Us'}</Link></li>
+                  <li><Link to="/support" className="hover:opacity-80 transition-opacity">{t('buyer.footer.contact') || 'Contact'}</Link></li>
+                  {showBlogInMenu && <li><Link to="/blog" className="hover:opacity-80 transition-opacity">{t('buyer.footer.blog') || 'Blog'}</Link></li>}
                 </ul>
               </div>
               
               {/* Support Column */}
               <div>
-                <h4 className="font-semibold mb-4">Support</h4>
+                <h4 className="font-semibold mb-4">{t('buyer.footer.support') || 'Support'}</h4>
                 <ul className="space-y-2 text-sm" style={{ color: mutedColor }}>
-                  <li><a href="#faq" className="hover:opacity-80 transition-opacity">FAQ</a></li>
-                  <li><Link to="/terms" className="hover:opacity-80 transition-opacity">Terms</Link></li>
-                  <li><Link to="/privacy" className="hover:opacity-80 transition-opacity">Privacy</Link></li>
+                  <li><a href="#faq" className="hover:opacity-80 transition-opacity">{t('buyer.footer.faq') || 'FAQ'}</a></li>
+                  <li><Link to="/terms" className="hover:opacity-80 transition-opacity">{t('buyer.footer.terms') || 'Terms'}</Link></li>
+                  <li><Link to="/privacy" className="hover:opacity-80 transition-opacity">{t('buyer.footer.privacy') || 'Privacy'}</Link></li>
                 </ul>
               </div>
             </div>

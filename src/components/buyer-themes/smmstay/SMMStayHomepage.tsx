@@ -190,7 +190,7 @@ export const SMMStayHomepage = ({
         bgColor={bgColor}
         navStyle="neon"
         primaryButtonStyle={primaryButtonStyle}
-        signupLabel="Join Now"
+        signupLabel={t('buyer.nav.joinNow') || 'Join Now'}
       />
 
       <article>
@@ -284,7 +284,7 @@ export const SMMStayHomepage = ({
             <div className="mx-auto px-4 sm:px-6 lg:px-8" style={{ maxWidth: containerMax }}>
               <motion.div {...(enableAnimations ? { initial: { opacity: 0, y: 20 }, whileInView: { opacity: 1, y: 0 } } : {})} className="text-center mb-12">
                 <h2 className="text-3xl md:text-4xl font-black uppercase mb-4">
-                  <span style={{ background: `linear-gradient(to right, ${primary}, ${secondary})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Platforms</span>
+                  <span style={{ background: `linear-gradient(to right, ${primary}, ${secondary})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{t('buyer.platforms.title') || 'Platforms'}</span>
                 </h2>
               </motion.div>
 
@@ -338,7 +338,7 @@ export const SMMStayHomepage = ({
             <div className="mx-auto px-4 sm:px-6 lg:px-8" style={{ maxWidth: containerMax }}>
               <motion.div {...(enableAnimations ? { initial: { opacity: 0, y: 20 }, whileInView: { opacity: 1, y: 0 } } : {})} className="text-center mb-12">
                 <h2 className="text-3xl md:text-4xl font-black uppercase mb-4">
-                  <span style={{ background: `linear-gradient(to right, ${primary}, ${secondary})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Reviews</span>
+                  <span style={{ background: `linear-gradient(to right, ${primary}, ${secondary})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{t('buyer.testimonials.reviews') || 'Reviews'}</span>
                 </h2>
               </motion.div>
 
@@ -370,7 +370,7 @@ export const SMMStayHomepage = ({
             <div className="mx-auto px-4 sm:px-6 lg:px-8" style={{ maxWidth: containerMax }}>
               <motion.div {...(enableAnimations ? { initial: { opacity: 0, y: 20 }, whileInView: { opacity: 1, y: 0 } } : {})} className="text-center mb-12">
                 <h2 className="text-3xl md:text-4xl font-black uppercase mb-4">
-                  <span style={{ background: `linear-gradient(to right, ${primary}, ${secondary})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>FAQ</span>
+                  <span style={{ background: `linear-gradient(to right, ${primary}, ${secondary})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{t('buyer.faq.title') || 'FAQ'}</span>
                 </h2>
               </motion.div>
 
@@ -393,7 +393,7 @@ export const SMMStayHomepage = ({
           <div className="mx-auto px-4 text-center" style={{ maxWidth: 900 }}>
             <motion.div {...(enableAnimations ? { initial: { opacity: 0, y: 20 }, whileInView: { opacity: 1, y: 0 } } : {})}>
               <h2 className="text-3xl md:text-4xl font-black uppercase mb-6">
-                Ready to <span style={{ background: `linear-gradient(to right, ${primary}, ${secondary})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Dominate</span>?
+                {t('buyer.cta.readyTo') || 'Ready to'} <span style={{ background: `linear-gradient(to right, ${primary}, ${secondary})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{t('buyer.cta.dominate') || 'Dominate'}</span>?
               </h2>
               {enableFastOrder ? (
                 <Button 
@@ -403,11 +403,11 @@ export const SMMStayHomepage = ({
                   style={primaryButtonStyle}
                 >
                   <Zap className="w-5 h-5 mr-2" />
-                  Fast Order Now
+                  {t('buyer.cta.fastOrder') || 'Fast Order Now'}
                 </Button>
               ) : (
                 <Button size="lg" asChild className="font-black uppercase text-lg px-10 text-white shadow-xl hover:opacity-90" style={primaryButtonStyle}>
-                  <Link to="/auth?tab=signup">Join Now <ArrowRight className="w-5 h-5 ml-2" /></Link>
+                  <Link to="/auth?tab=signup">{t('buyer.nav.joinNow') || 'Join Now'} <ArrowRight className="w-5 h-5 ml-2" /></Link>
                 </Button>
               )}
             </motion.div>
@@ -458,9 +458,9 @@ export const SMMStayHomepage = ({
               
               {/* Services Column */}
               <div>
-                <h4 className="font-bold mb-4 uppercase">Services</h4>
+                <h4 className="font-bold mb-4 uppercase">{t('buyer.footer.services') || 'Services'}</h4>
                 <ul className="space-y-2 text-sm" style={{ color: mutedColor }}>
-                  <li><Link to="/services" className="hover:opacity-80 transition-opacity">All Services</Link></li>
+                  <li><Link to="/services" className="hover:opacity-80 transition-opacity">{t('buyer.footer.allServices') || 'All Services'}</Link></li>
                   <li><Link to="/services?platform=instagram" className="hover:opacity-80 transition-opacity">Instagram</Link></li>
                   <li><Link to="/services?platform=youtube" className="hover:opacity-80 transition-opacity">YouTube</Link></li>
                   <li><Link to="/services?platform=tiktok" className="hover:opacity-80 transition-opacity">TikTok</Link></li>
@@ -469,21 +469,21 @@ export const SMMStayHomepage = ({
               
               {/* Company Column */}
               <div>
-                <h4 className="font-bold mb-4 uppercase">Company</h4>
+                <h4 className="font-bold mb-4 uppercase">{t('buyer.footer.company') || 'Company'}</h4>
                 <ul className="space-y-2 text-sm" style={{ color: mutedColor }}>
-                  <li><Link to="/support" className="hover:opacity-80 transition-opacity">About Us</Link></li>
-                  <li><Link to="/support" className="hover:opacity-80 transition-opacity">Contact</Link></li>
-                  {showBlogInMenu && <li><Link to="/blog" className="hover:opacity-80 transition-opacity">Blog</Link></li>}
+                  <li><Link to="/support" className="hover:opacity-80 transition-opacity">{t('buyer.footer.aboutUs') || 'About Us'}</Link></li>
+                  <li><Link to="/support" className="hover:opacity-80 transition-opacity">{t('buyer.footer.contact') || 'Contact'}</Link></li>
+                  {showBlogInMenu && <li><Link to="/blog" className="hover:opacity-80 transition-opacity">{t('buyer.footer.blog') || 'Blog'}</Link></li>}
                 </ul>
               </div>
               
               {/* Support Column */}
               <div>
-                <h4 className="font-bold mb-4 uppercase">Support</h4>
+                <h4 className="font-bold mb-4 uppercase">{t('buyer.footer.support') || 'Support'}</h4>
                 <ul className="space-y-2 text-sm" style={{ color: mutedColor }}>
-                  <li><a href="#faq" className="hover:opacity-80 transition-opacity">FAQ</a></li>
-                  <li><Link to="/terms" className="hover:opacity-80 transition-opacity">Terms</Link></li>
-                  <li><Link to="/privacy" className="hover:opacity-80 transition-opacity">Privacy</Link></li>
+                  <li><a href="#faq" className="hover:opacity-80 transition-opacity">{t('buyer.footer.faq') || 'FAQ'}</a></li>
+                  <li><Link to="/terms" className="hover:opacity-80 transition-opacity">{t('buyer.footer.terms') || 'Terms'}</Link></li>
+                  <li><Link to="/privacy" className="hover:opacity-80 transition-opacity">{t('buyer.footer.privacy') || 'Privacy'}</Link></li>
                 </ul>
               </div>
             </div>
