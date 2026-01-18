@@ -6,7 +6,7 @@ const corsHeaders = {
 };
 
 interface ValidationRequest {
-  gateway: 'stripe' | 'paypal' | 'coinbase';
+  gateway: string;
   apiKey: string;
   secretKey?: string;
 }
@@ -118,7 +118,7 @@ async function validateCoinbase(apiKey: string): Promise<ValidationResponse> {
         success: true,
         message: 'Coinbase Commerce API key is valid',
         accountName: 'Coinbase Commerce',
-        mode: 'live', // Coinbase Commerce doesn't have a sandbox
+        mode: 'live',
       };
     } else {
       const errorData = await response.json();
@@ -133,6 +133,108 @@ async function validateCoinbase(apiKey: string): Promise<ValidationResponse> {
     return {
       success: false,
       message: 'Failed to connect to Coinbase Commerce',
+      error: error.message,
+    };
+  }
+}
+
+// Validate Flutterwave API key
+async function validateFlutterwave(secretKey: string): Promise<ValidationResponse> {
+  try {
+    const response = await fetch('https://api.flutterwave.com/v3/banks/NG', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${secretKey}`,
+      },
+    });
+
+    if (response.ok) {
+      return {
+        success: true,
+        message: 'Flutterwave API key is valid',
+        accountName: 'Flutterwave',
+        mode: secretKey.includes('test') ? 'test' : 'live',
+      };
+    } else {
+      return {
+        success: false,
+        message: 'Invalid Flutterwave API key',
+        error: 'Authentication failed',
+      };
+    }
+  } catch (error) {
+    console.error('Flutterwave validation error:', error);
+    return {
+      success: false,
+      message: 'Failed to connect to Flutterwave',
+      error: error.message,
+    };
+  }
+}
+
+// Validate Paystack API key
+async function validatePaystack(secretKey: string): Promise<ValidationResponse> {
+  try {
+    const response = await fetch('https://api.paystack.co/bank', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${secretKey}`,
+      },
+    });
+
+    if (response.ok) {
+      return {
+        success: true,
+        message: 'Paystack API key is valid',
+        accountName: 'Paystack',
+        mode: secretKey.startsWith('sk_test_') ? 'test' : 'live',
+      };
+    } else {
+      return {
+        success: false,
+        message: 'Invalid Paystack API key',
+        error: 'Authentication failed',
+      };
+    }
+  } catch (error) {
+    console.error('Paystack validation error:', error);
+    return {
+      success: false,
+      message: 'Failed to connect to Paystack',
+      error: error.message,
+    };
+  }
+}
+
+// Validate Kora Pay API key
+async function validateKoraPay(secretKey: string): Promise<ValidationResponse> {
+  try {
+    const response = await fetch('https://api.korapay.com/merchant/api/v1/misc/banks?countryCode=NG', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${secretKey}`,
+      },
+    });
+
+    if (response.ok) {
+      return {
+        success: true,
+        message: 'Kora Pay API key is valid',
+        accountName: 'Kora Pay',
+        mode: secretKey.includes('test') ? 'test' : 'live',
+      };
+    } else {
+      return {
+        success: false,
+        message: 'Invalid Kora Pay API key',
+        error: 'Authentication failed',
+      };
+    }
+  } catch (error) {
+    console.error('Kora Pay validation error:', error);
+    return {
+      success: false,
+      message: 'Failed to connect to Kora Pay',
       error: error.message,
     };
   }
@@ -172,13 +274,26 @@ serve(async (req) => {
         result = await validatePayPal(apiKey, secretKey);
         break;
       case 'coinbase':
+      case 'crypto':
         result = await validateCoinbase(apiKey);
         break;
+      case 'flutterwave':
+        result = await validateFlutterwave(secretKey || apiKey);
+        break;
+      case 'paystack':
+        result = await validatePaystack(secretKey || apiKey);
+        break;
+      case 'korapay':
+        result = await validateKoraPay(secretKey || apiKey);
+        break;
       default:
-        return new Response(
-          JSON.stringify({ success: false, message: `Unsupported gateway: ${gateway}` }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-        );
+        // For unknown gateways, return a generic success if keys are provided
+        result = {
+          success: true,
+          message: `${gateway} credentials saved (validation not available)`,
+          accountName: gateway.charAt(0).toUpperCase() + gateway.slice(1),
+          mode: 'live',
+        };
     }
 
     console.log(`Validation result for ${gateway}:`, result);
