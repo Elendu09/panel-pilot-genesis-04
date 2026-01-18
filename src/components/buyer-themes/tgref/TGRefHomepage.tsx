@@ -424,7 +424,7 @@ export const TGRefHomepage = ({
             <div className="mx-auto px-4 sm:px-6 lg:px-8" style={{ maxWidth: containerMax }}>
               <motion.div {...(enableAnimations ? { initial: { opacity: 0, y: 20 }, whileInView: { opacity: 1, y: 0 } } : {})} className="text-center mb-12">
                 <h2 className="text-3xl md:text-4xl font-bold mb-4">
-                  <span style={{ color: mutedColor }}>[</span>User Reviews<span style={{ color: mutedColor }}>]</span>
+                  <span style={{ color: mutedColor }}>[</span>{t('buyer.testimonials.userReviews') || 'User Reviews'}<span style={{ color: mutedColor }}>]</span>
                 </h2>
               </motion.div>
 
@@ -483,7 +483,7 @@ export const TGRefHomepage = ({
           <div className="mx-auto px-4 text-center" style={{ maxWidth: 900 }}>
             <motion.div {...(enableAnimations ? { initial: { opacity: 0, y: 20 }, whileInView: { opacity: 1, y: 0 } } : {})}>
               <h2 className="text-3xl md:text-4xl font-bold mb-6">
-                <span style={{ color: mutedColor }}>&gt;</span> Ready to <span style={{ color: primary }}>Execute</span>?
+                <span style={{ color: mutedColor }}>&gt;</span> {t('buyer.cta.readyTo') || 'Ready to'} <span style={{ color: primary }}>{t('buyer.cta.execute') || 'Execute'}</span>?
               </h2>
               {enableFastOrder ? (
                 <Button 
@@ -548,7 +548,7 @@ export const TGRefHomepage = ({
               <div>
                 <h4 className="font-semibold mb-4">./services</h4>
                 <ul className="space-y-2 text-sm" style={{ color: mutedColor }}>
-                  <li><Link to="/services" className="hover:opacity-80 transition-opacity">All Services</Link></li>
+                  <li><Link to="/services" className="hover:opacity-80 transition-opacity">{t('buyer.footer.allServices') || 'All Services'}</Link></li>
                   <li><Link to="/services?platform=instagram" className="hover:opacity-80 transition-opacity">Instagram</Link></li>
                   <li><Link to="/services?platform=youtube" className="hover:opacity-80 transition-opacity">YouTube</Link></li>
                   <li><Link to="/services?platform=tiktok" className="hover:opacity-80 transition-opacity">TikTok</Link></li>
@@ -559,9 +559,9 @@ export const TGRefHomepage = ({
               <div>
                 <h4 className="font-semibold mb-4">./company</h4>
                 <ul className="space-y-2 text-sm" style={{ color: mutedColor }}>
-                  <li><Link to="/support" className="hover:opacity-80 transition-opacity">About</Link></li>
-                  <li><Link to="/support" className="hover:opacity-80 transition-opacity">Contact</Link></li>
-                  {showBlogInMenu && <li><Link to="/blog" className="hover:opacity-80 transition-opacity">Blog</Link></li>}
+                  <li><Link to="/support" className="hover:opacity-80 transition-opacity">{t('buyer.footer.about') || 'About'}</Link></li>
+                  <li><Link to="/support" className="hover:opacity-80 transition-opacity">{t('buyer.footer.contact') || 'Contact'}</Link></li>
+                  {showBlogInMenu && <li><Link to="/blog" className="hover:opacity-80 transition-opacity">{t('buyer.footer.blog') || 'Blog'}</Link></li>}
                 </ul>
               </div>
               
@@ -569,9 +569,9 @@ export const TGRefHomepage = ({
               <div>
                 <h4 className="font-semibold mb-4">./help</h4>
                 <ul className="space-y-2 text-sm" style={{ color: mutedColor }}>
-                  <li><a href="#faq" className="hover:opacity-80 transition-opacity">FAQ</a></li>
-                  <li><Link to="/terms" className="hover:opacity-80 transition-opacity">Terms</Link></li>
-                  <li><Link to="/privacy" className="hover:opacity-80 transition-opacity">Privacy</Link></li>
+                  <li><a href="#faq" className="hover:opacity-80 transition-opacity">{t('buyer.footer.faq') || 'FAQ'}</a></li>
+                  <li><Link to="/terms" className="hover:opacity-80 transition-opacity">{t('buyer.footer.terms') || 'Terms'}</Link></li>
+                  <li><Link to="/privacy" className="hover:opacity-80 transition-opacity">{t('buyer.footer.privacy') || 'Privacy'}</Link></li>
                 </ul>
               </div>
             </div>
