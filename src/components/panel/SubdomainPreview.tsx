@@ -43,6 +43,7 @@ const SubdomainPreview = ({
   const [isReachable, setIsReachable] = useState<boolean | null>(null);
   const [iframeLoading, setIframeLoading] = useState(true);
   const [iframeError, setIframeError] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const storefrontUrl = `https://${subdomain}.smmpilot.online`;
 
@@ -169,6 +170,9 @@ const SubdomainPreview = ({
               variant="outline"
               size="sm"
               onClick={() => {
+                setIframeLoading(true);
+                setIframeError(false);
+                setRefreshKey(prev => prev + 1);
                 checkReachability();
                 onRefresh?.();
               }}
@@ -242,20 +246,15 @@ const SubdomainPreview = ({
             </div>
           ) : (
             <iframe
-              key={`${subdomain}-${device}`}
+              key={`${subdomain}-${device}-${refreshKey}`}
               src={storefrontUrl}
               className={cn(
-                "w-full h-full border-0 transition-opacity duration-300",
+                "w-full h-full border-0 transition-opacity duration-300 bg-white",
                 iframeLoading ? "opacity-0" : "opacity-100"
               )}
               title="Website Live Preview"
-              referrerPolicy="no-referrer-when-downgrade"
-              loading="lazy"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               onLoad={() => setIframeLoading(false)}
-              onError={() => {
-                setIframeLoading(false);
-                setIframeError(true);
-              }}
             />
           )}
         </motion.div>
