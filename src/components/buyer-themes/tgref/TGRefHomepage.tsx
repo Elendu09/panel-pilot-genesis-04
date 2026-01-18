@@ -323,10 +323,10 @@ export const TGRefHomepage = ({
             <div className="mx-auto px-4 sm:px-6 lg:px-8" style={{ maxWidth: containerMax }}>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
                 {[
-                  { label: 'Orders Completed', value: stats?.totalOrders || '50K+', icon: CheckCircle },
-                  { label: 'Active Users', value: stats?.totalUsers || '10K+', icon: Users },
-                  { label: 'Services Available', value: stats?.servicesCount || '500+', icon: Cpu },
-                  { label: 'Uptime', value: '99.9%', icon: Globe },
+                  { label: t('buyer.stats.ordersCompleted') || 'Orders Completed', value: stats?.totalOrders || '50K+', icon: CheckCircle },
+                  { label: t('buyer.stats.activeUsers') || 'Active Users', value: stats?.totalUsers || '10K+', icon: Users },
+                  { label: t('buyer.stats.servicesAvailable') || 'Services Available', value: stats?.servicesCount || '500+', icon: Cpu },
+                  { label: t('buyer.stats.uptime') || 'Uptime', value: '99.9%', icon: Globe },
                 ].map((stat, idx) => (
                   <motion.div
                     key={stat.label}
@@ -353,10 +353,10 @@ export const TGRefHomepage = ({
               <motion.div {...(enableAnimations ? { initial: { opacity: 0, y: 20 }, whileInView: { opacity: 1, y: 0 } } : {})} className="text-center mb-12">
                 <h2 className="text-3xl md:text-4xl font-bold mb-4">
                   <span style={{ color: mutedColor }}>[</span>
-                  <span>Supported Platforms</span>
+                  <span>{t('buyer.platforms.supported') || 'Supported Platforms'}</span>
                   <span style={{ color: mutedColor }}>]</span>
                 </h2>
-                <p style={{ color: mutedColor }}>All major social networks in one place</p>
+                <p style={{ color: mutedColor }}>{t('buyer.platforms.allMajor') || 'All major social networks in one place'}</p>
               </motion.div>
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -386,7 +386,7 @@ export const TGRefHomepage = ({
             <div className="mx-auto px-4 sm:px-6 lg:px-8" style={{ maxWidth: containerMax }}>
               <motion.div {...(enableAnimations ? { initial: { opacity: 0, y: 20 }, whileInView: { opacity: 1, y: 0 } } : {})} className="text-center mb-12">
                 <h2 className="text-3xl md:text-4xl font-bold mb-4">
-                  <span style={{ color: primary }}>&gt;</span> Why Choose Us
+                  <span style={{ color: primary }}>&gt;</span> {t('buyer.features.whyChooseUs') || 'Why Choose Us'}
                 </h2>
               </motion.div>
 

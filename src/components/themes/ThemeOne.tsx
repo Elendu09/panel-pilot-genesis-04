@@ -65,7 +65,8 @@ export const ThemeOne = ({ panel, services = [], customization = {}, isPreview =
 
   // Use passed theme mode (preview) or internal state (live)
   const themeMode = passedThemeMode || internalThemeMode;
-  const setThemeMode = passedThemeMode ? undefined : setInternalThemeMode;
+  // Use customization.setThemeMode if available (from BuyerThemeContext), otherwise use internal setter
+  const setThemeMode = customization?.setThemeMode || (passedThemeMode ? undefined : setInternalThemeMode);
 
   // Save preference when changed + sync with document class (only for non-preview)
   useEffect(() => {
