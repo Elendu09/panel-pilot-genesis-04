@@ -1,12 +1,13 @@
-import { useState, useContext, useCallback } from 'react';
+import { useState, useContext, useCallback, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Sun, Moon, LayoutDashboard, LogOut, Sparkles } from 'lucide-react';
+import { Menu, X, Sun, Moon, LayoutDashboard, LogOut, LogIn, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { BuyerAuthContext } from '@/contexts/BuyerAuthContext';
 import { LanguageSelector } from '@/components/buyer/LanguageSelector';
 import { useBuyerThemeMode } from '@/contexts/BuyerThemeContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface ThemeNavigationProps {
   companyName: string;
@@ -27,6 +28,7 @@ interface ThemeNavigationProps {
   loginLabel?: string;
   signupLabel?: string;
   navLinks?: { label: string; to: string }[];
+  customization?: any;
 }
 
 export const ThemeNavigation = ({
@@ -45,12 +47,14 @@ export const ThemeNavigation = ({
   bgColor = '#0A0A0A',
   navStyle = 'default',
   primaryButtonStyle = {},
-  loginLabel = 'Login',
-  signupLabel = 'Sign Up',
+  loginLabel,
+  signupLabel,
   navLinks,
+  customization,
 }: ThemeNavigationProps) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
+  const { t } = useLanguage();
   
   // Use the buyer theme context for consistent theme mode across all pages
   const { themeMode: contextThemeMode, toggleThemeMode } = useBuyerThemeMode();
@@ -65,12 +69,13 @@ export const ThemeNavigation = ({
   
   const isLight = themeMode === 'light';
   
-  const defaultLinks = [
-    { label: navStyle === 'terminal' ? './services' : 'Services', to: '/services' },
-    { label: navStyle === 'terminal' ? './orders' : 'Orders', to: '/orders' },
-    ...(showBlogInMenu ? [{ label: navStyle === 'terminal' ? './blog' : 'Blog', to: '/blog' }] : []),
-    { label: navStyle === 'terminal' ? './support' : 'Support', to: '/support' },
-  ];
+  // Navigation links with translations
+  const defaultLinks = useMemo(() => [
+    { label: navStyle === 'terminal' ? './services' : (t('buyer.nav.services') || 'Services'), to: '/services' },
+    { label: navStyle === 'terminal' ? './orders' : (t('buyer.nav.orders') || 'Orders'), to: '/orders' },
+    ...(showBlogInMenu ? [{ label: navStyle === 'terminal' ? './blog' : (t('buyer.nav.blog') || 'Blog'), to: '/blog' }] : []),
+    { label: navStyle === 'terminal' ? './support' : (t('buyer.nav.support') || 'Support'), to: '/support' },
+  ], [navStyle, showBlogInMenu, t]);
   
   const links = navLinks || defaultLinks;
 
@@ -182,7 +187,7 @@ export const ThemeNavigation = ({
                   >
                     <Link to="/dashboard" className="flex items-center gap-2">
                       <LayoutDashboard className="w-4 h-4" />
-                      {navStyle === 'terminal' ? '> dashboard' : 'Dashboard'}
+                      {navStyle === 'terminal' ? '> dashboard' : (t('buyer.nav.dashboard') || 'Dashboard')}
                     </Link>
                   </Button>
                   <Button 
@@ -196,7 +201,7 @@ export const ThemeNavigation = ({
                     style={{ ...primaryButtonStyle, color: navStyle === 'terminal' ? bgColor : 'white' }}
                   >
                     <LogOut className="w-4 h-4 mr-2" />
-                    {navStyle === 'terminal' ? '> logout' : 'Sign Out'}
+                    {navStyle === 'terminal' ? '> logout' : (t('buyer.nav.signOut') || 'Sign Out')}
                   </Button>
                 </>
               ) : (
@@ -214,7 +219,7 @@ export const ThemeNavigation = ({
                     style={{ color: textColor }}
                   >
                     <Link to="/auth">
-                      {navStyle === 'terminal' ? '> login' : loginLabel}
+                      {navStyle === 'terminal' ? '> login' : (loginLabel || t('buyer.nav.login') || 'Login')}
                     </Link>
                   </Button>
                   <Button 
@@ -228,7 +233,7 @@ export const ThemeNavigation = ({
                     style={{ ...primaryButtonStyle, color: navStyle === 'terminal' ? bgColor : 'white' }}
                   >
                     <Link to="/auth?tab=signup">
-                      {navStyle === 'terminal' ? '> register' : signupLabel}
+                      {navStyle === 'terminal' ? '> register' : (signupLabel || t('buyer.nav.signUp') || 'Sign Up')}
                     </Link>
                   </Button>
                 </>
@@ -314,9 +319,9 @@ export const ThemeNavigation = ({
                         )}
                         style={{ color: textColor }}
                       >
-                        <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2">
+                      <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2">
                           <LayoutDashboard className="w-4 h-4" />
-                          {navStyle === 'terminal' ? '> dashboard' : 'Dashboard'}
+                          {navStyle === 'terminal' ? '> dashboard' : (t('buyer.nav.dashboard') || 'Dashboard')}
                         </Link>
                       </Button>
                       <Button 
@@ -332,7 +337,7 @@ export const ThemeNavigation = ({
                         style={{ ...primaryButtonStyle, color: navStyle === 'terminal' ? bgColor : 'white' }}
                       >
                         <LogOut className="w-4 h-4 mr-2" />
-                        {navStyle === 'terminal' ? '> logout' : 'Sign Out'}
+                        {navStyle === 'terminal' ? '> logout' : (t('buyer.nav.signOut') || 'Sign Out')}
                       </Button>
                     </>
                   ) : (
@@ -349,7 +354,7 @@ export const ThemeNavigation = ({
                         style={{ color: textColor }}
                       >
                         <Link to="/auth" onClick={() => setMobileMenuOpen(false)}>
-                          {navStyle === 'terminal' ? '> login' : loginLabel}
+                          {navStyle === 'terminal' ? '> login' : (loginLabel || t('buyer.nav.login') || 'Login')}
                         </Link>
                       </Button>
                       <Button 
@@ -362,7 +367,7 @@ export const ThemeNavigation = ({
                         style={{ ...primaryButtonStyle, color: navStyle === 'terminal' ? bgColor : 'white' }}
                       >
                         <Link to="/auth?tab=signup" onClick={() => setMobileMenuOpen(false)}>
-                          {navStyle === 'terminal' ? '> register' : signupLabel}
+                          {navStyle === 'terminal' ? '> register' : (signupLabel || t('buyer.nav.signUp') || 'Sign Up')}
                         </Link>
                       </Button>
                     </>

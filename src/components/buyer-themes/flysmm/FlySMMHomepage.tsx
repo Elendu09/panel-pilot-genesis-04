@@ -121,9 +121,9 @@ export const FlySMMHomepage = ({
   }, []);
 
   const steps = [
-    { num: '1', title: 'Create Account', desc: 'Sign up for free in seconds' },
-    { num: '2', title: 'Add Funds', desc: 'Deposit using your preferred method' },
-    { num: '3', title: 'Place Order', desc: 'Select service and start growing' },
+    { num: '1', title: t('buyer.howItWorks.step1') || 'Create Account', desc: t('buyer.howItWorks.step1Desc') || 'Sign up for free in seconds' },
+    { num: '2', title: t('buyer.howItWorks.step2') || 'Add Funds', desc: t('buyer.howItWorks.step2Desc') || 'Deposit using your preferred method' },
+    { num: '3', title: t('buyer.howItWorks.step3') || 'Place Order', desc: t('buyer.howItWorks.step3Desc') || 'Select service and start growing' },
   ];
 
   const paymentMethods = ['Visa', 'Mastercard', 'PayPal', 'Crypto', 'Apple Pay', 'Google Pay'];
@@ -196,7 +196,7 @@ export const FlySMMHomepage = ({
               <motion.div {...(enableAnimations ? { initial: { opacity: 0, x: -50 }, animate: { opacity: 1, x: 0 }, transition: { duration: 0.6 } } : {})}>
                 <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-6" style={{ backgroundColor: `${primary}1a` }}>
                   <Sparkles className="w-4 h-4" style={{ color: primary }} />
-                  <span className="text-sm font-medium" style={{ color: primary }}>Trusted by 10,000+ customers</span>
+                  <span className="text-sm font-medium" style={{ color: primary }}>{t('buyer.hero.trustedBy') || 'Trusted by 10,000+ customers'}</span>
                 </div>
 
                 <h1 className="text-4xl md:text-5xl lg:text-6xl mb-6 leading-tight" style={{ color: textCol, fontWeight: headingWeight }}>
@@ -233,10 +233,10 @@ export const FlySMMHomepage = ({
                         style={primaryButtonStyle}
                       >
                         <Zap className="w-5 h-5 mr-2" />
-                        Fast Order
+                        {t('buyer.fastOrder.title') || 'Fast Order'}
                       </Button>
                       <Button size="lg" variant="outline" asChild className="font-semibold" style={{ borderColor: primary, color: primary }}>
-                        <Link to="/services">View Services</Link>
+                        <Link to="/services">{t('buyer.services.viewAll') || 'View Services'}</Link>
                       </Button>
                     </>
                   ) : (
@@ -255,7 +255,7 @@ export const FlySMMHomepage = ({
 
                 <div className="flex items-center gap-4 text-sm" style={{ color: mutedColor }}>
                   <CreditCard className="w-5 h-5" />
-                  <span>We accept: {paymentMethods.join(', ')}</span>
+                  <span>{t('buyer.payment.weAccept') || 'We accept'}: {paymentMethods.join(', ')}</span>
                 </div>
               </motion.div>
 

@@ -142,18 +142,18 @@ export const AliPanelHomepage = ({
   ];
 
   const servicePills = [
-    { name: 'Followers', gradient: `linear-gradient(to right, ${primary}, ${secondary})` },
-    { name: 'Likes', gradient: `linear-gradient(to right, ${secondary}, ${accent})` },
-    { name: 'Views', gradient: 'linear-gradient(to right, #8B5CF6, #A855F7)' },
-    { name: 'Comments', gradient: 'linear-gradient(to right, #06B6D4, #3B82F6)' },
+    { name: t('buyer.platforms.followers') || 'Followers', gradient: `linear-gradient(to right, ${primary}, ${secondary})` },
+    { name: t('buyer.platforms.likes') || 'Likes', gradient: `linear-gradient(to right, ${secondary}, ${accent})` },
+    { name: t('buyer.platforms.views') || 'Views', gradient: 'linear-gradient(to right, #8B5CF6, #A855F7)' },
+    { name: t('buyer.platforms.comments') || 'Comments', gradient: 'linear-gradient(to right, #06B6D4, #3B82F6)' },
   ];
 
   const comparisonItems = [
-    { feature: 'Instant Start', us: true, others: false },
-    { feature: '24/7 Support', us: true, others: false },
-    { feature: 'Refill Guarantee', us: true, others: false },
-    { feature: 'Secure Payments', us: true, others: true },
-    { feature: 'Low Prices', us: true, others: false },
+    { feature: t('buyer.features.instantStart') || 'Instant Start', us: true, others: false },
+    { feature: t('buyer.features.support') || '24/7 Support', us: true, others: false },
+    { feature: t('buyer.features.refillGuarantee') || 'Refill Guarantee', us: true, others: false },
+    { feature: t('buyer.features.securePayments') || 'Secure Payments', us: true, others: true },
+    { feature: t('buyer.features.bestPrices') || 'Low Prices', us: true, others: false },
   ];
 
   return (
@@ -283,10 +283,10 @@ export const AliPanelHomepage = ({
                         style={primaryButtonStyle}
                       >
                         <Zap className="w-5 h-5 mr-2" />
-                        Fast Order
+                        {t('buyer.fastOrder.title') || 'Fast Order'}
                       </Button>
                       <Button size="lg" variant="outline" asChild className="font-semibold hover:bg-white/5" style={outlineButtonStyle}>
-                        <Link to="/services">View Services</Link>
+                        <Link to="/services">{t('buyer.services.viewAll') || 'View Services'}</Link>
                       </Button>
                     </>
                   ) : (
@@ -326,7 +326,7 @@ export const AliPanelHomepage = ({
                     className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 p-6 rounded-2xl backdrop-blur-xl"
                     style={{ backgroundColor: `${surfaceColor}cc`, border: `1px solid ${primary}26` }}
                   >
-                    <h3 className="text-lg font-bold mb-4 text-center">Why Choose Us?</h3>
+                    <h3 className="text-lg font-bold mb-4 text-center">{t('buyer.features.whyChooseUs') || 'Why Choose Us?'}</h3>
                     <div className="space-y-3">
                       {comparisonItems.map((item) => (
                         <div key={item.feature} className="flex items-center justify-between gap-8 text-sm">

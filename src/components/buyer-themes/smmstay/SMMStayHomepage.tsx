@@ -241,10 +241,10 @@ export const SMMStayHomepage = ({
                   style={primaryButtonStyle}
                 >
                   <Zap className="w-5 h-5 mr-2" />
-                  Fast Order
+                  {t('buyer.fastOrder.title') || 'Fast Order'}
                 </Button>
                 <Button size="lg" variant="outline" asChild className="font-black uppercase" style={{ borderColor: `${secondary}80`, color: secondary }}>
-                  <Link to="/services">View Services</Link>
+                  <Link to="/services">{t('buyer.services.viewAll') || 'View Services'}</Link>
                 </Button>
               </div>
             ) : (
@@ -260,10 +260,10 @@ export const SMMStayHomepage = ({
           <section id="stats" aria-label="Statistics" className="py-16" style={{ borderTop: `1px solid ${primary}1a`, borderBottom: `1px solid ${primary}1a` }}>
             <div className="mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-8" style={{ maxWidth: containerMax }}>
               {[
-                { label: 'USERS', value: stats?.totalUsers || '10K+' },
-                { label: 'ORDERS', value: stats?.totalOrders || '50K+' },
-                { label: 'SERVICES', value: stats?.servicesCount || '500+' },
-                { label: 'UPTIME', value: '99.9%' },
+                { label: t('buyer.stats.users') || 'USERS', value: stats?.totalUsers || '10K+' },
+                { label: t('buyer.stats.orders') || 'ORDERS', value: stats?.totalOrders || '50K+' },
+                { label: t('buyer.stats.services') || 'SERVICES', value: stats?.servicesCount || '500+' },
+                { label: t('buyer.stats.uptime') || 'UPTIME', value: '99.9%' },
               ].map((stat, idx) => (
                 <motion.div 
                   key={stat.label} 
