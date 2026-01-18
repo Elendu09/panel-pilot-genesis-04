@@ -136,6 +136,28 @@ export const platformTranslations = {
     'buyer.signUpFree': 'Sign Up Free',
     'buyer.viewAllServices': 'View All Services',
     
+    // Navigation - additional
+    'buyer.nav.getStarted': 'Get Started',
+    
+    // Testimonials - split title
+    'buyer.testimonials.whatOur': 'What Our',
+    'buyer.testimonials.customers': 'Customers',
+    'buyer.testimonials.say': 'Say',
+    
+    // CTA - split title and buttons
+    'buyer.cta.readyTo': 'Ready to',
+    'buyer.cta.grow': 'Grow',
+    'buyer.cta.fastOrder': 'Fast Order Now',
+    'buyer.cta.getStarted': 'Get Started Now',
+    
+    // Footer - additional links
+    'buyer.footer.allServices': 'All Services',
+    'buyer.footer.aboutUs': 'About Us',
+    'buyer.footer.faq': 'FAQ',
+    
+    // Hero - trusted badge
+    'buyer.hero.trustedBy': 'Trusted by 10,000+ customers',
+    
     // Platform Navigation
     'platform.features': 'Features',
     'platform.pricing': 'Pricing',
@@ -387,6 +409,28 @@ export const platformTranslations = {
     'buyer.signUpFree': 'Regístrate Gratis',
     'buyer.viewAllServices': 'Ver Todos los Servicios',
     
+    // Navigation - additional
+    'buyer.nav.getStarted': 'Comenzar',
+    
+    // Testimonials - split title
+    'buyer.testimonials.whatOur': 'Lo Que',
+    'buyer.testimonials.customers': 'Nuestros Clientes',
+    'buyer.testimonials.say': 'Dicen',
+    
+    // CTA - split title and buttons
+    'buyer.cta.readyTo': '¿Listo para',
+    'buyer.cta.grow': 'Crecer',
+    'buyer.cta.fastOrder': 'Pedido Rápido Ahora',
+    'buyer.cta.getStarted': 'Empezar Ahora',
+    
+    // Footer - additional links
+    'buyer.footer.allServices': 'Todos los Servicios',
+    'buyer.footer.aboutUs': 'Sobre Nosotros',
+    'buyer.footer.faq': 'Preguntas Frecuentes',
+    
+    // Hero - trusted badge
+    'buyer.hero.trustedBy': 'Más de 10,000 clientes confían',
+    
     'platform.features': 'Características',
     'platform.pricing': 'Precios',
     'platform.docs': 'Documentación',
@@ -625,6 +669,28 @@ export const platformTranslations = {
     'buyer.joinNow': 'Junte-se Agora',
     'buyer.signUpFree': 'Cadastre-se Grátis',
     'buyer.viewAllServices': 'Ver Todos os Serviços',
+    
+    // Navigation - additional
+    'buyer.nav.getStarted': 'Começar',
+    
+    // Testimonials - split title
+    'buyer.testimonials.whatOur': 'O Que',
+    'buyer.testimonials.customers': 'Nossos Clientes',
+    'buyer.testimonials.say': 'Dizem',
+    
+    // CTA - split title and buttons
+    'buyer.cta.readyTo': 'Pronto para',
+    'buyer.cta.grow': 'Crescer',
+    'buyer.cta.fastOrder': 'Pedido Rápido Agora',
+    'buyer.cta.getStarted': 'Começar Agora',
+    
+    // Footer - additional links
+    'buyer.footer.allServices': 'Todos os Serviços',
+    'buyer.footer.aboutUs': 'Sobre Nós',
+    'buyer.footer.faq': 'Perguntas Frequentes',
+    
+    // Hero - trusted badge
+    'buyer.hero.trustedBy': 'Mais de 10.000 clientes confiam',
     
     'platform.features': 'Recursos',
     'platform.pricing': 'Preços',
@@ -865,6 +931,28 @@ export const platformTranslations = {
     'buyer.signUpFree': 'سجل مجاناً',
     'buyer.viewAllServices': 'عرض جميع الخدمات',
     
+    // Navigation - additional
+    'buyer.nav.getStarted': 'ابدأ الآن',
+    
+    // Testimonials - split title
+    'buyer.testimonials.whatOur': 'ماذا يقول',
+    'buyer.testimonials.customers': 'عملاؤنا',
+    'buyer.testimonials.say': 'عنا',
+    
+    // CTA - split title and buttons
+    'buyer.cta.readyTo': 'هل أنت مستعد',
+    'buyer.cta.grow': 'للنمو',
+    'buyer.cta.fastOrder': 'طلب سريع الآن',
+    'buyer.cta.getStarted': 'ابدأ الآن',
+    
+    // Footer - additional links
+    'buyer.footer.allServices': 'جميع الخدمات',
+    'buyer.footer.aboutUs': 'من نحن',
+    'buyer.footer.faq': 'الأسئلة الشائعة',
+    
+    // Hero - trusted badge
+    'buyer.hero.trustedBy': 'أكثر من 10,000 عميل يثقون بنا',
+    
     'platform.features': 'الميزات',
     'platform.pricing': 'الأسعار',
     'platform.docs': 'الوثائق',
@@ -1104,6 +1192,28 @@ export const platformTranslations = {
     'buyer.signUpFree': 'Ücretsiz Kayıt Ol',
     'buyer.viewAllServices': 'Tüm Hizmetleri Gör',
     
+    // Navigation - additional
+    'buyer.nav.getStarted': 'Başla',
+    
+    // Testimonials - split title
+    'buyer.testimonials.whatOur': 'Müşterilerimiz',
+    'buyer.testimonials.customers': 'Ne',
+    'buyer.testimonials.say': 'Diyor',
+    
+    // CTA - split title and buttons
+    'buyer.cta.readyTo': 'Büyümeye',
+    'buyer.cta.grow': 'Hazır mısınız',
+    'buyer.cta.fastOrder': 'Hızlı Sipariş Ver',
+    'buyer.cta.getStarted': 'Şimdi Başla',
+    
+    // Footer - additional links
+    'buyer.footer.allServices': 'Tüm Hizmetler',
+    'buyer.footer.aboutUs': 'Hakkımızda',
+    'buyer.footer.faq': 'SSS',
+    
+    // Hero - trusted badge
+    'buyer.hero.trustedBy': '10.000+ müşteri güveniyor',
+    
     'platform.features': 'Özellikler',
     'platform.pricing': 'Fiyatlandırma',
     'platform.docs': 'Dokümantasyon',
@@ -1334,6 +1444,28 @@ export const platformTranslations = {
     'buyer.joinNow': 'Присоединиться',
     'buyer.signUpFree': 'Бесплатная Регистрация',
     'buyer.viewAllServices': 'Все Услуги',
+    
+    // Navigation - additional
+    'buyer.nav.getStarted': 'Начать',
+    
+    // Testimonials - split title
+    'buyer.testimonials.whatOur': 'Что Говорят',
+    'buyer.testimonials.customers': 'Наши Клиенты',
+    'buyer.testimonials.say': '',
+    
+    // CTA - split title and buttons
+    'buyer.cta.readyTo': 'Готовы',
+    'buyer.cta.grow': 'Расти',
+    'buyer.cta.fastOrder': 'Быстрый Заказ Сейчас',
+    'buyer.cta.getStarted': 'Начать Сейчас',
+    
+    // Footer - additional links
+    'buyer.footer.allServices': 'Все Услуги',
+    'buyer.footer.aboutUs': 'О Нас',
+    'buyer.footer.faq': 'Вопросы',
+    
+    // Hero - trusted badge
+    'buyer.hero.trustedBy': 'Более 10 000 клиентов доверяют',
     
     'platform.features': 'Функции',
     'platform.pricing': 'Цены',
@@ -1566,6 +1698,28 @@ export const platformTranslations = {
     'buyer.signUpFree': 'Inscription Gratuite',
     'buyer.viewAllServices': 'Voir Tous les Services',
     
+    // Navigation - additional
+    'buyer.nav.getStarted': 'Commencer',
+    
+    // Testimonials - split title
+    'buyer.testimonials.whatOur': 'Ce Que',
+    'buyer.testimonials.customers': 'Nos Clients',
+    'buyer.testimonials.say': 'Disent',
+    
+    // CTA - split title and buttons
+    'buyer.cta.readyTo': 'Prêt à',
+    'buyer.cta.grow': 'Grandir',
+    'buyer.cta.fastOrder': 'Commande Rapide Maintenant',
+    'buyer.cta.getStarted': 'Commencer Maintenant',
+    
+    // Footer - additional links
+    'buyer.footer.allServices': 'Tous les Services',
+    'buyer.footer.aboutUs': 'À Propos de Nous',
+    'buyer.footer.faq': 'FAQ',
+    
+    // Hero - trusted badge
+    'buyer.hero.trustedBy': 'Plus de 10 000 clients nous font confiance',
+    
     'platform.features': 'Fonctionnalités',
     'platform.pricing': 'Tarifs',
     'platform.docs': 'Documentation',
@@ -1796,6 +1950,28 @@ export const platformTranslations = {
     'buyer.joinNow': 'Jetzt Beitreten',
     'buyer.signUpFree': 'Kostenlos Registrieren',
     'buyer.viewAllServices': 'Alle Services Ansehen',
+    
+    // Navigation - additional
+    'buyer.nav.getStarted': 'Loslegen',
+    
+    // Testimonials - split title
+    'buyer.testimonials.whatOur': 'Was Unsere',
+    'buyer.testimonials.customers': 'Kunden',
+    'buyer.testimonials.say': 'Sagen',
+    
+    // CTA - split title and buttons
+    'buyer.cta.readyTo': 'Bereit zu',
+    'buyer.cta.grow': 'Wachsen',
+    'buyer.cta.fastOrder': 'Schnellbestellung Jetzt',
+    'buyer.cta.getStarted': 'Jetzt Starten',
+    
+    // Footer - additional links
+    'buyer.footer.allServices': 'Alle Services',
+    'buyer.footer.aboutUs': 'Über Uns',
+    'buyer.footer.faq': 'FAQ',
+    
+    // Hero - trusted badge
+    'buyer.hero.trustedBy': 'Über 10.000 Kunden vertrauen uns',
     
     'platform.features': 'Funktionen',
     'platform.pricing': 'Preise',
@@ -2028,6 +2204,28 @@ export const platformTranslations = {
     'buyer.signUpFree': '免费注册',
     'buyer.viewAllServices': '查看所有服务',
     
+    // Navigation - additional
+    'buyer.nav.getStarted': '开始',
+    
+    // Testimonials - split title
+    'buyer.testimonials.whatOur': '我们的',
+    'buyer.testimonials.customers': '客户',
+    'buyer.testimonials.say': '怎么说',
+    
+    // CTA - split title and buttons
+    'buyer.cta.readyTo': '准备好',
+    'buyer.cta.grow': '成长',
+    'buyer.cta.fastOrder': '立即快速下单',
+    'buyer.cta.getStarted': '立即开始',
+    
+    // Footer - additional links
+    'buyer.footer.allServices': '所有服务',
+    'buyer.footer.aboutUs': '关于我们',
+    'buyer.footer.faq': '常见问题',
+    
+    // Hero - trusted badge
+    'buyer.hero.trustedBy': '超过10,000客户信赖',
+    
     'platform.features': '功能',
     'platform.pricing': '价格',
     'platform.docs': '文档',
@@ -2258,6 +2456,28 @@ export const platformTranslations = {
     'buyer.joinNow': 'अभी जुड़ें',
     'buyer.signUpFree': 'मुफ्त साइन अप',
     'buyer.viewAllServices': 'सभी सेवाएं देखें',
+    
+    // Navigation - additional
+    'buyer.nav.getStarted': 'शुरू करें',
+    
+    // Testimonials - split title
+    'buyer.testimonials.whatOur': 'हमारे',
+    'buyer.testimonials.customers': 'ग्राहक',
+    'buyer.testimonials.say': 'क्या कहते हैं',
+    
+    // CTA - split title and buttons
+    'buyer.cta.readyTo': 'विकास के लिए',
+    'buyer.cta.grow': 'तैयार',
+    'buyer.cta.fastOrder': 'अभी तेज़ ऑर्डर करें',
+    'buyer.cta.getStarted': 'अभी शुरू करें',
+    
+    // Footer - additional links
+    'buyer.footer.allServices': 'सभी सेवाएं',
+    'buyer.footer.aboutUs': 'हमारे बारे में',
+    'buyer.footer.faq': 'सामान्य प्रश्न',
+    
+    // Hero - trusted badge
+    'buyer.hero.trustedBy': '10,000+ ग्राहकों का भरोसा',
     
     'platform.features': 'विशेषताएं',
     'platform.pricing': 'मूल्य',
