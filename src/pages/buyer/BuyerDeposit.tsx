@@ -34,7 +34,7 @@ import { Link } from "react-router-dom";
 import { BuyerInvoiceHistory } from "@/components/billing/BuyerInvoiceHistory";
 import { useInvoiceGeneration } from "@/hooks/useInvoiceGeneration";
 
-// All available payment gateways with their display info (30+ gateways)
+// All available payment gateways with their display info (40+ gateways)
 const allPaymentGateways: Record<string, { name: string; icon: any; color: string; badge: string }> = {
   // Cards & Digital Wallets
   stripe: { name: "Card", icon: CreditCard, color: "from-blue-500 to-blue-600", badge: "Instant" },
@@ -93,6 +93,9 @@ const allPaymentGateways: Record<string, { name: string; icon: any; color: strin
   ach: { name: "ACH Transfer", icon: Banknote, color: "from-blue-500 to-blue-700", badge: "1-3 days" },
   sepa: { name: "SEPA", icon: Banknote, color: "from-blue-600 to-indigo-600", badge: "1-2 days" },
   wire: { name: "Wire Transfer", icon: Banknote, color: "from-gray-500 to-gray-700", badge: "2-5 days" },
+  
+  // Manual Transfer
+  manual_transfer: { name: "Bank Transfer", icon: Banknote, color: "from-emerald-500 to-teal-600", badge: "12-24h" },
 };
 
 interface PaymentMethod {

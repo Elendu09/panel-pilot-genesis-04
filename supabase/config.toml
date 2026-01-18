@@ -5,17 +5,39 @@ enabled = true
 port = 54321
 schemas = ["public", "graphql_public"]
 extra_search_path = ["public", "extensions"]
-max_rows = 1000
 
 [db]
 port = 54322
-shadow_port = 54320
 major_version = 15
 
 [studio]
 enabled = true
 port = 54323
-api_url = "http://localhost"
+api_url = "http://127.0.0.1:54321"
+
+[functions.add-vercel-domain]
+verify_jwt = false
+
+[functions.ai-chat-reply]
+verify_jwt = false
+
+[functions.auto-verify-domains]
+verify_jwt = false
+
+[functions.buyer-api]
+verify_jwt = false
+
+[functions.buyer-auth]
+verify_jwt = false
+
+[functions.buyer-order]
+verify_jwt = false
+
+[functions.categorize-others]
+verify_jwt = false
+
+[functions.currency-convert]
+verify_jwt = false
 
 [functions.dns-lookup]
 verify_jwt = false
@@ -23,104 +45,86 @@ verify_jwt = false
 [functions.dns-namecheap]
 verify_jwt = false
 
-[functions.provider-services]
-verify_jwt = false
-
-[functions.import-provider-services]
-verify_jwt = false
-
-[functions.sync-provider-services]
-verify_jwt = false
-
-[functions.provider-balance]
-verify_jwt = false
-
-[functions.track-order]
-verify_jwt = false
-
-[functions.payment-webhook]
-verify_jwt = false
-
-[functions.process-payment]
-verify_jwt = false
-
-[functions.generate-invoice-pdf]
-verify_jwt = false
-
-[functions.webhook-notify]
-verify_jwt = false
-
-[functions.generate-sitemap]
-verify_jwt = false
-
-[functions.generate-robots]
-verify_jwt = false
-
-[functions.scheduled-sync]
-verify_jwt = false
-
 [functions.domain-health-check]
-verify_jwt = false
-
-[functions.verify-domain-txt]
-verify_jwt = false
-
-[functions.validate-payment-gateway]
-verify_jwt = false
-
-[functions.buyer-auth]
-verify_jwt = false
-
-[functions.buyer-api]
-verify_jwt = false
-
-[functions.panel-api]
-verify_jwt = false
-
-[functions.generate-service-description]
-verify_jwt = false
-
-[functions.ai-chat-reply]
 verify_jwt = false
 
 [functions.enhance-seo-text]
 verify_jwt = false
 
+[functions.generate-invoice-pdf]
+verify_jwt = false
+
+[functions.generate-robots]
+verify_jwt = false
+
+[functions.generate-service-description]
+verify_jwt = false
+
+[functions.generate-sitemap]
+verify_jwt = false
+
 [functions.generate-theme]
+verify_jwt = false
+
+[functions.import-provider-services]
 verify_jwt = false
 
 [functions.normalize-services]
 verify_jwt = false
 
-[functions.send-notification]
-verify_jwt = false
-
-[functions.process-referral-reward]
-verify_jwt = false
-
-[functions.add-vercel-domain]
-verify_jwt = false
-
-[functions.verify-domain-dns]
-verify_jwt = false
-
-[functions.auto-verify-domains]
-verify_jwt = false
-
-[functions.save-platform-config]
-verify_jwt = false
-
-[functions.update-security-settings]
+[functions.panel-api]
 verify_jwt = false
 
 [functions.panel-customers]
 verify_jwt = false
 
-[functions.team-auth]
+[functions.process-payment]
+verify_jwt = false
+
+[functions.process-referral-reward]
+verify_jwt = false
+
+[functions.provider-balance]
+verify_jwt = false
+
+[functions.provider-services]
+verify_jwt = false
+
+[functions.save-platform-config]
+verify_jwt = false
+
+[functions.scheduled-sync]
+verify_jwt = false
+
+[functions.send-notification]
 verify_jwt = false
 
 [functions.serve-favicon]
 verify_jwt = false
 
-[functions.buyer-order]
+[functions.sync-provider-services]
+verify_jwt = false
+
+[functions.team-auth]
+verify_jwt = false
+
+[functions.track-order]
+verify_jwt = false
+
+[functions.update-security-settings]
+verify_jwt = false
+
+[functions.validate-payment-gateway]
+verify_jwt = false
+
+[functions.verify-domain-dns]
+verify_jwt = false
+
+[functions.verify-domain-txt]
+verify_jwt = false
+
+[functions.webhook-notify]
+verify_jwt = false
+
+[functions.payment-webhook]
 verify_jwt = false
