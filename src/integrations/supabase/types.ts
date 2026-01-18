@@ -3074,6 +3074,7 @@ export type Database = {
           description: string | null
           id: string
           order_id: string | null
+          panel_id: string | null
           payment_id: string | null
           payment_method: string | null
           status: Database["public"]["Enums"]["payment_status"] | null
@@ -3086,6 +3087,7 @@ export type Database = {
           description?: string | null
           id?: string
           order_id?: string | null
+          panel_id?: string | null
           payment_id?: string | null
           payment_method?: string | null
           status?: Database["public"]["Enums"]["payment_status"] | null
@@ -3098,6 +3100,7 @@ export type Database = {
           description?: string | null
           id?: string
           order_id?: string | null
+          panel_id?: string | null
           payment_id?: string | null
           payment_method?: string | null
           status?: Database["public"]["Enums"]["payment_status"] | null
@@ -3110,6 +3113,13 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels"
             referencedColumns: ["id"]
           },
           {

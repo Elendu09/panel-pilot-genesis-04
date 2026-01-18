@@ -12,7 +12,11 @@ import {
   Zap,
   Loader2,
   AlertTriangle,
-  LogIn
+  LogIn,
+  Globe,
+  Smartphone,
+  Banknote,
+  Bitcoin
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -30,12 +34,27 @@ import { Link } from "react-router-dom";
 import { BuyerInvoiceHistory } from "@/components/billing/BuyerInvoiceHistory";
 import { useInvoiceGeneration } from "@/hooks/useInvoiceGeneration";
 
-const defaultPaymentMethods = [
-  { id: "stripe", name: "Card", icon: CreditCard, color: "from-blue-500 to-blue-600", badge: "Instant" },
-  { id: "paypal", name: "PayPal", icon: DollarSign, color: "from-blue-400 to-blue-500", badge: "Instant" },
-  { id: "crypto", name: "Crypto", icon: Sparkles, color: "from-orange-500 to-yellow-500", badge: "5-30 min" },
-  { id: "perfectmoney", name: "Perfect Money", icon: Shield, color: "from-green-500 to-emerald-500", badge: "Instant" },
-];
+// All available payment gateways with their display info
+const allPaymentGateways: Record<string, { name: string; icon: any; color: string; badge: string }> = {
+  stripe: { name: "Card", icon: CreditCard, color: "from-blue-500 to-blue-600", badge: "Instant" },
+  paypal: { name: "PayPal", icon: DollarSign, color: "from-blue-400 to-blue-500", badge: "Instant" },
+  crypto: { name: "Crypto", icon: Sparkles, color: "from-orange-500 to-yellow-500", badge: "5-30 min" },
+  coinbase: { name: "Coinbase", icon: Bitcoin, color: "from-blue-600 to-blue-700", badge: "5-30 min" },
+  perfectmoney: { name: "Perfect Money", icon: Shield, color: "from-green-500 to-emerald-500", badge: "Instant" },
+  flutterwave: { name: "Flutterwave", icon: Globe, color: "from-orange-400 to-yellow-400", badge: "Instant" },
+  paystack: { name: "Paystack", icon: Smartphone, color: "from-cyan-500 to-blue-500", badge: "Instant" },
+  korapay: { name: "Kora Pay", icon: Globe, color: "from-purple-500 to-indigo-500", badge: "Instant" },
+  razorpay: { name: "Razorpay", icon: Globe, color: "from-blue-600 to-indigo-600", badge: "Instant" },
+  btcpay: { name: "Bitcoin", icon: Bitcoin, color: "from-orange-500 to-amber-500", badge: "10-60 min" },
+  monnify: { name: "Monnify", icon: Banknote, color: "from-green-500 to-teal-500", badge: "Instant" },
+  payu: { name: "PayU", icon: CreditCard, color: "from-green-600 to-green-700", badge: "Instant" },
+  mercadopago: { name: "Mercado Pago", icon: DollarSign, color: "from-sky-400 to-blue-500", badge: "Instant" },
+  mollie: { name: "Mollie", icon: CreditCard, color: "from-black to-gray-800", badge: "Instant" },
+  square: { name: "Square", icon: CreditCard, color: "from-black to-gray-700", badge: "Instant" },
+  wise: { name: "Wise", icon: Globe, color: "from-green-400 to-green-600", badge: "1-2 days" },
+  skrill: { name: "Skrill", icon: Shield, color: "from-purple-600 to-purple-700", badge: "Instant" },
+  neteller: { name: "Neteller", icon: Shield, color: "from-green-600 to-green-700", badge: "Instant" },
+};
 
 interface PaymentMethod {
   id: string;
@@ -88,15 +107,27 @@ const BuyerDeposit = () => {
         const enabledMethods = paymentSettings.enabledMethods || [];
         
         if (enabledMethods.length > 0) {
-          // Filter to only show enabled methods that match configured gateways
-          const filteredMethods = defaultPaymentMethods.filter(m => 
-            enabledMethods.some((em: any) => 
-              (typeof em === 'string' ? em === m.id : em.id === m.id) && 
-              (typeof em === 'string' || em.enabled !== false)
-            )
-          );
-          if (filteredMethods.length > 0) {
-            setPaymentMethods(filteredMethods);
+          // Map enabled methods to display info dynamically
+          const mappedMethods = enabledMethods
+            .filter((em: any) => typeof em === 'string' ? true : em.enabled !== false)
+            .map((em: any) => {
+              const id = typeof em === 'string' ? em : em.id;
+              const gatewayInfo = allPaymentGateways[id];
+              if (!gatewayInfo) {
+                // Create a generic entry for unknown gateways
+                return {
+                  id,
+                  name: id.charAt(0).toUpperCase() + id.slice(1).replace(/([A-Z])/g, ' $1').trim(),
+                  icon: CreditCard,
+                  color: "from-gray-500 to-gray-600",
+                  badge: "Instant"
+                };
+              }
+              return { id, ...gatewayInfo };
+            });
+          
+          if (mappedMethods.length > 0) {
+            setPaymentMethods(mappedMethods);
             setNoPaymentGateway(false);
           } else {
             setPaymentMethods([]);

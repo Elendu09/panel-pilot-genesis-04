@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 interface PaymentRequest {
-  gateway: 'stripe' | 'paypal' | 'crypto' | 'coinbase';
+  gateway: string;
   amount: number;
   panelId: string;
   buyerId: string;
@@ -237,6 +237,274 @@ serve(async (req) => {
 
         redirectUrl = charge.data?.hosted_url;
         paymentId = charge.data?.id;
+        break;
+      }
+
+      case 'flutterwave': {
+        // Flutterwave integration
+        const flwSecretKey = gatewayConfig.secretKey;
+        
+        if (!flwSecretKey) {
+          return new Response(
+            JSON.stringify({ error: 'Flutterwave not configured' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const flwResponse = await fetch('https://api.flutterwave.com/v3/payments', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${flwSecretKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            tx_ref: transactionId,
+            amount: amount,
+            currency: currency.toUpperCase(),
+            redirect_url: `${returnUrl}?success=true&transaction_id=${transactionId}`,
+            customer: {
+              email: `buyer-${buyerId}@panel.local`,
+            },
+            customizations: {
+              title: `Deposit - ${panel.name}`,
+              description: `Account deposit of $${amount}`,
+            },
+            payment_options: 'card,banktransfer,ussd,mobilemoney',
+            meta: {
+              panelId,
+              buyerId,
+              transactionId,
+            },
+          }),
+        });
+
+        const flwData = await flwResponse.json();
+        
+        if (flwData.status !== 'success') {
+          console.error('[process-payment] Flutterwave error:', flwData);
+          return new Response(
+            JSON.stringify({ error: flwData.message || 'Flutterwave payment failed' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        redirectUrl = flwData.data?.link;
+        paymentId = flwData.data?.id?.toString();
+        break;
+      }
+
+      case 'paystack': {
+        // Paystack integration
+        const paystackSecretKey = gatewayConfig.secretKey;
+        
+        if (!paystackSecretKey) {
+          return new Response(
+            JSON.stringify({ error: 'Paystack not configured' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const paystackResponse = await fetch('https://api.paystack.co/transaction/initialize', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${paystackSecretKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: `buyer-${buyerId}@panel.local`,
+            amount: Math.round(amount * 100), // Paystack uses kobo/cents
+            currency: currency.toUpperCase(),
+            callback_url: `${returnUrl}?success=true&transaction_id=${transactionId}`,
+            reference: transactionId,
+            metadata: {
+              panelId,
+              buyerId,
+              transactionId,
+            },
+          }),
+        });
+
+        const paystackData = await paystackResponse.json();
+        
+        if (!paystackData.status) {
+          console.error('[process-payment] Paystack error:', paystackData);
+          return new Response(
+            JSON.stringify({ error: paystackData.message || 'Paystack payment failed' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        redirectUrl = paystackData.data?.authorization_url;
+        paymentId = paystackData.data?.reference;
+        break;
+      }
+
+      case 'korapay': {
+        // Kora Pay integration
+        const koraSecretKey = gatewayConfig.secretKey;
+        
+        if (!koraSecretKey) {
+          return new Response(
+            JSON.stringify({ error: 'Kora Pay not configured' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const koraResponse = await fetch('https://api.korapay.com/merchant/api/v1/charges/initialize', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${koraSecretKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            amount: amount,
+            currency: currency.toUpperCase(),
+            reference: transactionId,
+            redirect_url: `${returnUrl}?success=true&transaction_id=${transactionId}`,
+            customer: {
+              email: `buyer-${buyerId}@panel.local`,
+            },
+            metadata: {
+              panelId,
+              buyerId,
+              transactionId,
+            },
+          }),
+        });
+
+        const koraData = await koraResponse.json();
+        
+        if (!koraData.status) {
+          console.error('[process-payment] Kora Pay error:', koraData);
+          return new Response(
+            JSON.stringify({ error: koraData.message || 'Kora Pay payment failed' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        redirectUrl = koraData.data?.checkout_url;
+        paymentId = koraData.data?.reference;
+        break;
+      }
+
+      case 'razorpay': {
+        // Razorpay integration (creates an order, frontend handles payment)
+        const razorpayKeyId = gatewayConfig.apiKey;
+        const razorpayKeySecret = gatewayConfig.secretKey;
+        
+        if (!razorpayKeyId || !razorpayKeySecret) {
+          return new Response(
+            JSON.stringify({ error: 'Razorpay not configured' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const razorpayAuth = btoa(`${razorpayKeyId}:${razorpayKeySecret}`);
+        const razorpayResponse = await fetch('https://api.razorpay.com/v1/orders', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Basic ${razorpayAuth}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            amount: Math.round(amount * 100), // Razorpay uses paise
+            currency: currency.toUpperCase(),
+            receipt: transactionId,
+            notes: {
+              panelId,
+              buyerId,
+              transactionId,
+            },
+          }),
+        });
+
+        const razorpayData = await razorpayResponse.json();
+        
+        if (razorpayData.error) {
+          console.error('[process-payment] Razorpay error:', razorpayData);
+          return new Response(
+            JSON.stringify({ error: razorpayData.error.description || 'Razorpay payment failed' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Razorpay doesn't have a hosted checkout URL, return order details for frontend
+        return new Response(
+          JSON.stringify({ 
+            success: true,
+            gateway: 'razorpay',
+            orderId: razorpayData.id,
+            keyId: razorpayKeyId,
+            amount: razorpayData.amount,
+            currency: razorpayData.currency,
+            transactionId,
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'monnify': {
+        // Monnify integration
+        const monnifyApiKey = gatewayConfig.apiKey;
+        const monnifySecretKey = gatewayConfig.secretKey;
+        const monnifyContractCode = gatewayConfig.contractCode;
+        
+        if (!monnifyApiKey || !monnifySecretKey) {
+          return new Response(
+            JSON.stringify({ error: 'Monnify not configured' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Get Monnify access token
+        const monnifyAuth = btoa(`${monnifyApiKey}:${monnifySecretKey}`);
+        const tokenResponse = await fetch('https://api.monnify.com/api/v1/auth/login', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Basic ${monnifyAuth}`,
+          },
+        });
+
+        const tokenData = await tokenResponse.json();
+        
+        if (!tokenData.requestSuccessful) {
+          return new Response(
+            JSON.stringify({ error: 'Failed to authenticate with Monnify' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Initialize transaction
+        const monnifyResponse = await fetch('https://api.monnify.com/api/v1/merchant/transactions/init-transaction', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${tokenData.responseBody.accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            amount: amount,
+            customerEmail: `buyer-${buyerId}@panel.local`,
+            paymentReference: transactionId,
+            paymentDescription: `Deposit - ${panel.name}`,
+            currencyCode: currency.toUpperCase(),
+            contractCode: monnifyContractCode,
+            redirectUrl: `${returnUrl}?success=true&transaction_id=${transactionId}`,
+            paymentMethods: ['CARD', 'ACCOUNT_TRANSFER'],
+          }),
+        });
+
+        const monnifyData = await monnifyResponse.json();
+        
+        if (!monnifyData.requestSuccessful) {
+          console.error('[process-payment] Monnify error:', monnifyData);
+          return new Response(
+            JSON.stringify({ error: monnifyData.responseMessage || 'Monnify payment failed' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        redirectUrl = monnifyData.responseBody?.checkoutUrl;
+        paymentId = monnifyData.responseBody?.transactionReference;
         break;
       }
 
