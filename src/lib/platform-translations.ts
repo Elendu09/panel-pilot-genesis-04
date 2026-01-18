@@ -97,6 +97,27 @@ export const platformTranslations = {
     'buyer.platforms.supported': 'Supported Platforms',
     'buyer.platforms.allInOne': 'All major social networks in one place',
     'buyer.platforms.services': 'services',
+    'buyer.platforms.followers': 'Followers',
+    'buyer.platforms.likes': 'Likes',
+    'buyer.platforms.views': 'Views',
+    'buyer.platforms.comments': 'Comments',
+    'buyer.platforms.subscribers': 'Subscribers',
+    'buyer.platforms.shares': 'Shares',
+    
+    // FAQ Section - split title
+    'buyer.faq.frequently': 'Frequently',
+    'buyer.faq.asked': 'Asked',
+    'buyer.faq.questions': 'Questions',
+    'buyer.faq.frequentlyAsked': 'Frequently Asked',
+    
+    // Fast Order & Services
+    'buyer.fastOrder.title': 'Fast Order',
+    'buyer.services.viewAll': 'View All Services',
+    'buyer.nav.signUpFree': 'Sign Up Free',
+    
+    // Features extras
+    'buyer.features.whyChooseUs': 'Why Choose Us?',
+    'buyer.features.refillGuarantee': 'Refill Guarantee',
     
     // Misc
     'buyer.trusted': 'Trusted by',
@@ -327,6 +348,27 @@ export const platformTranslations = {
     'buyer.platforms.supported': 'Plataformas Soportadas',
     'buyer.platforms.allInOne': 'Todas las redes sociales en un solo lugar',
     'buyer.platforms.services': 'servicios',
+    'buyer.platforms.followers': 'Seguidores',
+    'buyer.platforms.likes': 'Me Gusta',
+    'buyer.platforms.views': 'Vistas',
+    'buyer.platforms.comments': 'Comentarios',
+    'buyer.platforms.subscribers': 'Suscriptores',
+    'buyer.platforms.shares': 'Compartidos',
+    
+    // FAQ Section - split title
+    'buyer.faq.frequently': 'Preguntas',
+    'buyer.faq.asked': 'Frecuentes',
+    'buyer.faq.questions': 'Preguntas',
+    'buyer.faq.frequentlyAsked': 'Preguntas Frecuentes',
+    
+    // Fast Order & Services
+    'buyer.fastOrder.title': 'Pedido Rápido',
+    'buyer.services.viewAll': 'Ver Todos los Servicios',
+    'buyer.nav.signUpFree': 'Regístrate Gratis',
+    
+    // Features extras
+    'buyer.features.whyChooseUs': '¿Por Qué Elegirnos?',
+    'buyer.features.refillGuarantee': 'Garantía de Relleno',
     
     // Misc
     'buyer.trusted': 'Confían en nosotros',
@@ -545,6 +587,27 @@ export const platformTranslations = {
     'buyer.platforms.supported': 'Plataformas Suportadas',
     'buyer.platforms.allInOne': 'Todas as redes sociais em um só lugar',
     'buyer.platforms.services': 'serviços',
+    'buyer.platforms.followers': 'Seguidores',
+    'buyer.platforms.likes': 'Curtidas',
+    'buyer.platforms.views': 'Visualizações',
+    'buyer.platforms.comments': 'Comentários',
+    'buyer.platforms.subscribers': 'Inscritos',
+    'buyer.platforms.shares': 'Compartilhamentos',
+    
+    // FAQ Section - split title
+    'buyer.faq.frequently': 'Perguntas',
+    'buyer.faq.asked': 'Frequentes',
+    'buyer.faq.questions': 'Perguntas',
+    'buyer.faq.frequentlyAsked': 'Perguntas Frequentes',
+    
+    // Fast Order & Services
+    'buyer.fastOrder.title': 'Pedido Rápido',
+    'buyer.services.viewAll': 'Ver Todos os Serviços',
+    'buyer.nav.signUpFree': 'Cadastre-se Grátis',
+    
+    // Features extras
+    'buyer.features.whyChooseUs': 'Por Que Nos Escolher?',
+    'buyer.features.refillGuarantee': 'Garantia de Reposição',
     
     // Misc
     'buyer.trusted': 'Confiam em nós',
@@ -763,6 +826,27 @@ export const platformTranslations = {
     'buyer.platforms.supported': 'المنصات المدعومة',
     'buyer.platforms.allInOne': 'جميع الشبكات الاجتماعية في مكان واحد',
     'buyer.platforms.services': 'خدمات',
+    'buyer.platforms.followers': 'المتابعون',
+    'buyer.platforms.likes': 'الإعجابات',
+    'buyer.platforms.views': 'المشاهدات',
+    'buyer.platforms.comments': 'التعليقات',
+    'buyer.platforms.subscribers': 'المشتركون',
+    'buyer.platforms.shares': 'المشاركات',
+    
+    // FAQ Section - split title
+    'buyer.faq.frequently': 'الأسئلة',
+    'buyer.faq.asked': 'الشائعة',
+    'buyer.faq.questions': 'الأسئلة',
+    'buyer.faq.frequentlyAsked': 'الأسئلة الشائعة',
+    
+    // Fast Order & Services
+    'buyer.fastOrder.title': 'طلب سريع',
+    'buyer.services.viewAll': 'عرض جميع الخدمات',
+    'buyer.nav.signUpFree': 'سجل مجاناً',
+    
+    // Features extras
+    'buyer.features.whyChooseUs': 'لماذا تختارنا؟',
+    'buyer.features.refillGuarantee': 'ضمان إعادة التعبئة',
     
     // Misc
     'buyer.trusted': 'يثقون بنا',
@@ -981,6 +1065,27 @@ export const platformTranslations = {
     'buyer.platforms.supported': 'Desteklenen Platformlar',
     'buyer.platforms.allInOne': 'Tüm sosyal ağlar tek yerde',
     'buyer.platforms.services': 'hizmet',
+    'buyer.platforms.followers': 'Takipçiler',
+    'buyer.platforms.likes': 'Beğeniler',
+    'buyer.platforms.views': 'Görüntülemeler',
+    'buyer.platforms.comments': 'Yorumlar',
+    'buyer.platforms.subscribers': 'Aboneler',
+    'buyer.platforms.shares': 'Paylaşımlar',
+    
+    // FAQ Section - split title
+    'buyer.faq.frequently': 'Sıkça',
+    'buyer.faq.asked': 'Sorulan',
+    'buyer.faq.questions': 'Sorular',
+    'buyer.faq.frequentlyAsked': 'Sıkça Sorulan Sorular',
+    
+    // Fast Order & Services
+    'buyer.fastOrder.title': 'Hızlı Sipariş',
+    'buyer.services.viewAll': 'Tüm Hizmetleri Gör',
+    'buyer.nav.signUpFree': 'Ücretsiz Kayıt Ol',
+    
+    // Features extras
+    'buyer.features.whyChooseUs': 'Neden Bizi Seçmelisiniz?',
+    'buyer.features.refillGuarantee': 'Yenileme Garantisi',
     
     // Misc
     'buyer.trusted': 'Bize güveniyorlar',
@@ -1191,6 +1296,27 @@ export const platformTranslations = {
     'buyer.platforms.supported': 'Поддерживаемые Платформы',
     'buyer.platforms.allInOne': 'Все соцсети в одном месте',
     'buyer.platforms.services': 'услуг',
+    'buyer.platforms.followers': 'Подписчики',
+    'buyer.platforms.likes': 'Лайки',
+    'buyer.platforms.views': 'Просмотры',
+    'buyer.platforms.comments': 'Комментарии',
+    'buyer.platforms.subscribers': 'Подписчики',
+    'buyer.platforms.shares': 'Репосты',
+    
+    // FAQ Section - split title
+    'buyer.faq.frequently': 'Часто',
+    'buyer.faq.asked': 'Задаваемые',
+    'buyer.faq.questions': 'Вопросы',
+    'buyer.faq.frequentlyAsked': 'Часто Задаваемые Вопросы',
+    
+    // Fast Order & Services
+    'buyer.fastOrder.title': 'Быстрый Заказ',
+    'buyer.services.viewAll': 'Все Услуги',
+    'buyer.nav.signUpFree': 'Бесплатная Регистрация',
+    
+    // Features extras
+    'buyer.features.whyChooseUs': 'Почему Выбирают Нас?',
+    'buyer.features.refillGuarantee': 'Гарантия Пополнения',
     
     // Misc
     'buyer.trusted': 'Нам доверяют',
@@ -1401,6 +1527,27 @@ export const platformTranslations = {
     'buyer.platforms.supported': 'Plateformes Supportées',
     'buyer.platforms.allInOne': 'Tous les réseaux sociaux en un seul endroit',
     'buyer.platforms.services': 'services',
+    'buyer.platforms.followers': 'Abonnés',
+    'buyer.platforms.likes': 'J\'aime',
+    'buyer.platforms.views': 'Vues',
+    'buyer.platforms.comments': 'Commentaires',
+    'buyer.platforms.subscribers': 'Abonnés',
+    'buyer.platforms.shares': 'Partages',
+    
+    // FAQ Section - split title
+    'buyer.faq.frequently': 'Questions',
+    'buyer.faq.asked': 'Fréquentes',
+    'buyer.faq.questions': 'Questions',
+    'buyer.faq.frequentlyAsked': 'Questions Fréquentes',
+    
+    // Fast Order & Services
+    'buyer.fastOrder.title': 'Commande Rapide',
+    'buyer.services.viewAll': 'Voir Tous les Services',
+    'buyer.nav.signUpFree': 'Inscription Gratuite',
+    
+    // Features extras
+    'buyer.features.whyChooseUs': 'Pourquoi Nous Choisir?',
+    'buyer.features.refillGuarantee': 'Garantie de Remplissage',
     
     // Misc
     'buyer.trusted': 'Ils nous font confiance',
@@ -1611,6 +1758,27 @@ export const platformTranslations = {
     'buyer.platforms.supported': 'Unterstützte Plattformen',
     'buyer.platforms.allInOne': 'Alle sozialen Netzwerke an einem Ort',
     'buyer.platforms.services': 'Services',
+    'buyer.platforms.followers': 'Follower',
+    'buyer.platforms.likes': 'Gefällt mir',
+    'buyer.platforms.views': 'Aufrufe',
+    'buyer.platforms.comments': 'Kommentare',
+    'buyer.platforms.subscribers': 'Abonnenten',
+    'buyer.platforms.shares': 'Geteilt',
+    
+    // FAQ Section - split title
+    'buyer.faq.frequently': 'Häufig',
+    'buyer.faq.asked': 'Gestellte',
+    'buyer.faq.questions': 'Fragen',
+    'buyer.faq.frequentlyAsked': 'Häufig Gestellte Fragen',
+    
+    // Fast Order & Services
+    'buyer.fastOrder.title': 'Schnellbestellung',
+    'buyer.services.viewAll': 'Alle Services Ansehen',
+    'buyer.nav.signUpFree': 'Kostenlos Registrieren',
+    
+    // Features extras
+    'buyer.features.whyChooseUs': 'Warum Uns Wählen?',
+    'buyer.features.refillGuarantee': 'Nachfüll-Garantie',
     
     // Misc
     'buyer.trusted': 'Sie vertrauen uns',
@@ -1821,6 +1989,27 @@ export const platformTranslations = {
     'buyer.platforms.supported': '支持的平台',
     'buyer.platforms.allInOne': '所有社交网络一站式服务',
     'buyer.platforms.services': '个服务',
+    'buyer.platforms.followers': '粉丝',
+    'buyer.platforms.likes': '点赞',
+    'buyer.platforms.views': '观看',
+    'buyer.platforms.comments': '评论',
+    'buyer.platforms.subscribers': '订阅者',
+    'buyer.platforms.shares': '分享',
+    
+    // FAQ Section - split title
+    'buyer.faq.frequently': '常见',
+    'buyer.faq.asked': '问题',
+    'buyer.faq.questions': '问题',
+    'buyer.faq.frequentlyAsked': '常见问题',
+    
+    // Fast Order & Services
+    'buyer.fastOrder.title': '快速下单',
+    'buyer.services.viewAll': '查看所有服务',
+    'buyer.nav.signUpFree': '免费注册',
+    
+    // Features extras
+    'buyer.features.whyChooseUs': '为什么选择我们？',
+    'buyer.features.refillGuarantee': '补充保证',
     
     // Misc
     'buyer.trusted': '他们信任我们',
@@ -2031,6 +2220,27 @@ export const platformTranslations = {
     'buyer.platforms.supported': 'समर्थित प्लेटफॉर्म',
     'buyer.platforms.allInOne': 'सभी सोशल नेटवर्क एक जगह',
     'buyer.platforms.services': 'सेवाएं',
+    'buyer.platforms.followers': 'फॉलोअर्स',
+    'buyer.platforms.likes': 'लाइक्स',
+    'buyer.platforms.views': 'व्यूज',
+    'buyer.platforms.comments': 'कमेंट्स',
+    'buyer.platforms.subscribers': 'सब्सक्राइबर्स',
+    'buyer.platforms.shares': 'शेयर्स',
+    
+    // FAQ Section - split title
+    'buyer.faq.frequently': 'अक्सर',
+    'buyer.faq.asked': 'पूछे जाने वाले',
+    'buyer.faq.questions': 'प्रश्न',
+    'buyer.faq.frequentlyAsked': 'अक्सर पूछे जाने वाले प्रश्न',
+    
+    // Fast Order & Services
+    'buyer.fastOrder.title': 'तेज़ ऑर्डर',
+    'buyer.services.viewAll': 'सभी सेवाएं देखें',
+    'buyer.nav.signUpFree': 'मुफ्त साइन अप',
+    
+    // Features extras
+    'buyer.features.whyChooseUs': 'हमें क्यों चुनें?',
+    'buyer.features.refillGuarantee': 'रिफिल गारंटी',
     
     // Misc
     'buyer.trusted': 'वे हम पर भरोसा करते हैं',
