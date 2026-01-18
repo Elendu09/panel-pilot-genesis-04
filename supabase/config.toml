@@ -121,3 +121,6 @@ verify_jwt = false
 
 [functions.serve-favicon]
 verify_jwt = false
+
+[functions.buyer-order]
+verify_jwt = false
