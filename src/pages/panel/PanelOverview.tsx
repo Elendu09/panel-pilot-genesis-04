@@ -443,15 +443,13 @@ const PanelOverview = () => {
       </Helmet>
 
       {/* Enhanced Welcome Header with Stacked Cards Effect */}
-      <div className="relative pt-6 sm:pt-8 md:pt-10">
-        {/* Stacked card layer 2 (furthest back) */}
-        <div className="absolute inset-x-4 sm:inset-x-6 md:inset-x-8 -top-4 sm:-top-5 md:-top-6 h-[calc(100%+8px)] rounded-xl sm:rounded-2xl bg-card/40 border border-border/30 backdrop-blur-sm -z-20 shadow-sm" />
-        
-        {/* Stacked card layer 1 (middle) */}
-        <div className="absolute inset-x-2 sm:inset-x-3 md:inset-x-4 -top-2 sm:-top-2.5 md:-top-3 h-[calc(100%+4px)] rounded-xl sm:rounded-2xl bg-card/60 border border-border/50 backdrop-blur-sm -z-10 shadow-md" />
+      <div className="relative pt-4 sm:pt-6 md:pt-8">
+        {/* Stacked card layers behind - visible on all devices but smaller on mobile */}
+        <div className="absolute inset-x-3 sm:inset-x-6 md:inset-x-8 -top-1 sm:-top-2 h-[calc(100%-8px)] rounded-xl sm:rounded-2xl bg-primary/5 border border-primary/10 -z-10" />
+        <div className="absolute inset-x-1.5 sm:inset-x-3 md:inset-x-4 -top-0.5 sm:-top-1 h-[calc(100%-4px)] rounded-xl sm:rounded-2xl bg-primary/8 border border-primary/12 -z-10" />
         
         {/* Main card */}
-        <motion.div variants={itemVariants} className="relative z-10 overflow-hidden rounded-2xl border border-primary/20 shadow-xl">
+        <motion.div variants={itemVariants} className="relative z-10 overflow-hidden rounded-2xl border border-primary/20">
         {/* Background gradient layers */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent" />
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/10 to-primary/5" />
