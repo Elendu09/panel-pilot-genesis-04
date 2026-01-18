@@ -443,27 +443,23 @@ const PanelOverview = () => {
       </Helmet>
 
       {/* Enhanced Welcome Header with Stacked Cards Effect */}
-      <div className="relative">
+      <div className="relative isolate pt-6 sm:pt-8">
         {/* Stack card 2 (furthest back) - visible at top */}
         <div 
-          className="absolute left-4 right-4 sm:left-6 sm:right-6 md:left-8 md:right-8 top-0 h-4 sm:h-5 rounded-t-xl sm:rounded-t-2xl border border-b-0 border-primary/20 dark:border-primary/30"
-          style={{ 
-            background: 'hsl(var(--primary) / 0.08)',
-            zIndex: 1
-          }} 
+          className="absolute left-6 right-6 sm:left-8 sm:right-8 md:left-10 md:right-10 top-0 h-8 sm:h-10 rounded-t-xl sm:rounded-t-2xl bg-card/60 dark:bg-card/40 border border-b-0 border-border/40 shadow-sm backdrop-blur-sm pointer-events-none"
+          style={{ zIndex: 1 }}
+          aria-hidden="true"
         />
         
         {/* Stack card 1 (middle) - visible at top */}
         <div 
-          className="absolute left-2 right-2 sm:left-3 sm:right-3 md:left-4 md:right-4 top-2 sm:top-2.5 h-4 sm:h-5 rounded-t-xl sm:rounded-t-2xl border border-b-0 border-primary/25 dark:border-primary/35"
-          style={{ 
-            background: 'hsl(var(--primary) / 0.12)',
-            zIndex: 2
-          }} 
+          className="absolute left-3 right-3 sm:left-4 sm:right-4 md:left-5 md:right-5 top-3 sm:top-4 h-8 sm:h-10 rounded-t-xl sm:rounded-t-2xl bg-card/80 dark:bg-card/60 border border-b-0 border-border/50 shadow-md backdrop-blur-md pointer-events-none"
+          style={{ zIndex: 2 }}
+          aria-hidden="true"
         />
         
         {/* Main card */}
-        <motion.div variants={itemVariants} className="relative overflow-hidden rounded-2xl border border-primary/20 mt-4 sm:mt-5" style={{ zIndex: 3 }}>
+        <motion.div variants={itemVariants} className="relative overflow-hidden rounded-2xl border border-border shadow-lg mt-6 sm:mt-8" style={{ zIndex: 3 }}>
         {/* Background gradient layers */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent" />
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/10 to-primary/5" />
