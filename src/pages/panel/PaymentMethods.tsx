@@ -47,6 +47,7 @@ const paymentGateways = {
     { id: "nowpayments", name: "NowPayments", Icon: NowPaymentsIcon, regions: ["Worldwide"], fee: "0.5%", docsUrl: "https://nowpayments.io/docs" },
     { id: "coingate", name: "CoinGate", Icon: CoinGateIcon, regions: ["Worldwide"], fee: "1%", docsUrl: "https://developer.coingate.com" },
     { id: "binancepay", name: "Binance Pay", Icon: BinancePayIcon, regions: ["Worldwide"], fee: "0.9%", docsUrl: "https://developers.binance.com/docs/binance-pay" },
+    { id: "cryptomus", name: "Cryptomus", Icon: BitcoinIcon, regions: ["Worldwide"], fee: "0.4%", docsUrl: "https://doc.cryptomus.com" },
   ],
 };
 
@@ -216,12 +217,7 @@ const PaymentMethods = () => {
     }
   };
   
-  // Platform-enabled gateways (simulating admin-enabled methods)
-  const platformGateways = [
-    { id: "stripe", name: "Stripe", Icon: StripeIcon, enabled: true, fee: "2.9% + $0.30" },
-    { id: "paypal", name: "PayPal", Icon: PayPalIcon, enabled: true, fee: "2.9% + $0.30" },
-    { id: "coinbase", name: "Coinbase Commerce", Icon: CoinbaseIcon, enabled: true, fee: "1%" },
-  ];
+  // Removed: One-click platform gateways - panel owners must configure their own API keys
 
   const filteredGateways = paymentGateways[activeCategory].filter(g => 
     g.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -397,16 +393,7 @@ const PaymentMethods = () => {
     }
   };
 
-  const enablePlatformGateway = (gatewayId: string) => {
-    const gateway = platformGateways.find(g => g.id === gatewayId);
-    if (gateway) {
-      setConfiguredGateways(prev => ({
-        ...prev,
-        [gatewayId]: { enabled: true, apiKey: "platform_inherited", secretKey: "platform_inherited" }
-      }));
-      toast({ title: `${gateway.name} enabled`, description: "Using platform configuration" });
-    }
-  };
+  // Removed: enablePlatformGateway - panel owners must configure their own API keys
 
   const submitGatewayRequest = () => {
     if (!requestForm.gatewayName.trim()) {
@@ -576,94 +563,6 @@ const PaymentMethods = () => {
           {enabledCount} Active
         </Badge>
       </motion.div>
-
-      {/* Platform Methods Section */}
-      <Card className="bg-gradient-to-br from-primary/10 via-card to-secondary/10 border-primary/30">
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-primary/20">
-                <Sparkles className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <CardTitle className="text-lg">Platform-Enabled Gateways</CardTitle>
-                <p className="text-sm text-muted-foreground">One-click enable with inherited settings from platform</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {pendingRequests > 0 && (
-                <Badge variant="secondary" className="gap-1">
-                  <Clock className="w-3 h-3" />
-                  {pendingRequests} Pending
-                </Badge>
-              )}
-              <Button variant="outline" size="sm" onClick={() => setShowRequestDialog(true)} className="gap-2">
-                <Send className="w-4 h-4" />
-                Request Gateway
-              </Button>
-              <Button variant="outline" size="sm" onClick={syncWithPlatform} disabled={syncing} className="gap-2">
-                {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-                Sync
-              </Button>
-            </div>
-          </div>
-          {lastSynced && (
-            <p className="text-xs text-muted-foreground mt-2">
-              Last synced: {lastSynced.toLocaleTimeString()}
-            </p>
-          )}
-        </CardHeader>
-        <CardContent>
-          <div className="grid md:grid-cols-3 gap-4">
-            {platformGateways.map((gateway) => {
-              const isEnabled = !!configuredGateways[gateway.id];
-              
-              return (
-                <motion.div
-                  key={gateway.id}
-                  whileHover={{ scale: 1.02 }}
-                  className={cn(
-                    "p-4 rounded-xl border-2 transition-all",
-                    isEnabled 
-                      ? "border-green-500/50 bg-green-500/5" 
-                      : "border-primary/20 bg-card/50 hover:border-primary/40"
-                  )}
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <gateway.Icon className="w-8 h-8" />
-                      <div>
-                        <h4 className="font-semibold">{gateway.name}</h4>
-                        <p className="text-xs text-muted-foreground">Fee: {gateway.fee}</p>
-                      </div>
-                    </div>
-                    <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
-                      Platform
-                    </Badge>
-                  </div>
-                  
-                  {isEnabled ? (
-                    <div className="flex items-center gap-2 text-sm text-green-500">
-                      <CheckCircle className="w-4 h-4" />
-                      <span>Enabled (Inherited)</span>
-                    </div>
-                  ) : (
-                    <Button 
-                      size="sm" 
-                      className="w-full gap-2"
-                      onClick={() => enablePlatformGateway(gateway.id)}
-                    >
-                      <Plus className="w-4 h-4" />
-                      One-Click Enable
-                    </Button>
-                  )}
-                </motion.div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Manual Payment Methods Section */}
       <Card className="bg-gradient-to-br from-emerald-500/10 via-card to-teal-500/10 border-emerald-500/30">
         <CardHeader className="pb-2">
