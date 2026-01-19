@@ -18,7 +18,8 @@ import {
   Banknote,
   Bitcoin,
   Copy,
-  ExternalLink
+  ExternalLink,
+  XCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -247,29 +248,75 @@ const BuyerDeposit = () => {
   }, [panel?.id]);
 
   // Fetch transaction history on mount
-  useEffect(() => {
-    const fetchTransactions = async () => {
-      if (!buyer?.id) return;
+  // Fetch all transactions (pending, completed, failed)
+  const fetchTransactions = async () => {
+    if (!buyer?.id) return;
+    
+    try {
+      // Fetch using both user_id and buyer_id columns
+      const { data } = await supabase
+        .from('transactions')
+        .select('*')
+        .or(`user_id.eq.${buyer.id},buyer_id.eq.${buyer.id}`)
+        .eq('type', 'deposit')
+        .order('created_at', { ascending: false })
+        .limit(20);
       
-      try {
-        const { data } = await supabase
-          .from('transactions')
-          .select('*')
-          .eq('user_id', buyer.id)
-          .eq('type', 'deposit')
-          .order('created_at', { ascending: false })
-          .limit(10);
-        
-        setTransactions(data || []);
-      } catch (error) {
-        console.error('Error fetching transactions:', error);
-      } finally {
-        setLoadingHistory(false);
-      }
-    };
+      setTransactions(data || []);
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
 
+  useEffect(() => {
     fetchTransactions();
   }, [buyer?.id]);
+
+  // Real-time subscription for transaction updates and balance sync
+  useEffect(() => {
+    if (!buyer?.id) return;
+
+    const channel = supabase
+      .channel(`buyer-transactions-${buyer.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'transactions',
+          filter: `buyer_id=eq.${buyer.id}`
+        },
+        async (payload) => {
+          console.log('Transaction update:', payload);
+          
+          // Refresh transactions list
+          fetchTransactions();
+          
+          // If a transaction was updated to completed, refresh buyer balance
+          if (payload.eventType === 'UPDATE' && payload.new?.status === 'completed') {
+            refreshBuyer();
+            toast({
+              title: "Balance Updated!",
+              description: `$${payload.new.amount} has been added to your balance.`
+            });
+          }
+          
+          // Also handle INSERT for new transactions
+          if (payload.eventType === 'INSERT') {
+            if (payload.new?.status === 'completed') {
+              refreshBuyer();
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [buyer?.id, refreshBuyer]);
 
   // Check for payment success/cancel URL params on mount
   useEffect(() => {
@@ -623,34 +670,49 @@ const BuyerDeposit = () => {
               ) : (
                 <ScrollArea className="max-h-[300px]">
                   <div className="divide-y divide-border/50">
-                    {transactions.map((tx) => (
-                      <div key={tx.id} className="p-3 md:p-4 flex items-center justify-between">
-                        <div className="flex items-center gap-2 md:gap-3">
-                          <div className={cn(
-                            "p-1.5 md:p-2 rounded-lg",
-                            tx.status === 'completed' ? "bg-green-500/10" : "bg-yellow-500/10"
-                          )}>
-                            {tx.status === 'completed' ? (
-                              <CheckCircle className="w-3.5 h-3.5 md:w-4 md:h-4 text-green-500" />
-                            ) : (
-                              <Clock className="w-3.5 h-3.5 md:w-4 md:h-4 text-yellow-500" />
+                    {transactions.map((tx) => {
+                      const isCompleted = tx.status === 'completed';
+                      const isPending = tx.status === 'pending';
+                      const isFailed = tx.status === 'failed' || tx.status === 'cancelled';
+                      
+                      return (
+                        <div key={tx.id} className="p-3 md:p-4 flex items-center justify-between">
+                          <div className="flex items-center gap-2 md:gap-3">
+                            <div className={cn(
+                              "p-1.5 md:p-2 rounded-lg",
+                              isCompleted && "bg-green-500/10",
+                              isPending && "bg-yellow-500/10",
+                              isFailed && "bg-red-500/10"
+                            )}>
+                              {isCompleted ? (
+                                <CheckCircle className="w-3.5 h-3.5 md:w-4 md:h-4 text-green-500" />
+                              ) : isPending ? (
+                                <Clock className="w-3.5 h-3.5 md:w-4 md:h-4 text-yellow-500" />
+                              ) : (
+                                <XCircle className="w-3.5 h-3.5 md:w-4 md:h-4 text-red-500" />
+                              )}
+                            </div>
+                            <div>
+                              <p className="font-medium text-sm md:text-base">${tx.amount.toFixed(2)}</p>
+                              <p className="text-[10px] md:text-xs text-muted-foreground">
+                                {tx.payment_method || 'Payment'} • {new Date(tx.created_at).toLocaleDateString()}
+                              </p>
+                            </div>
+                          </div>
+                          <Badge 
+                            variant={isCompleted ? 'default' : 'secondary'}
+                            className={cn(
+                              "text-[10px] md:text-xs capitalize",
+                              isCompleted && "bg-green-500/10 text-green-500 border-green-500/20",
+                              isPending && "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
+                              isFailed && "bg-red-500/10 text-red-500 border-red-500/20"
                             )}
-                          </div>
-                          <div>
-                            <p className="font-medium text-sm md:text-base">${tx.amount.toFixed(2)}</p>
-                            <p className="text-[10px] md:text-xs text-muted-foreground">
-                              {tx.payment_method} • {new Date(tx.created_at).toLocaleDateString()}
-                            </p>
-                          </div>
+                          >
+                            {tx.status || 'pending'}
+                          </Badge>
                         </div>
-                        <Badge 
-                          variant={tx.status === 'completed' ? 'default' : 'secondary'}
-                          className="text-[10px] md:text-xs"
-                        >
-                          {tx.status}
-                        </Badge>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </ScrollArea>
               )}
