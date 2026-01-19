@@ -278,6 +278,7 @@ const BuyerDeposit = () => {
   useEffect(() => {
     if (!buyer?.id) return;
 
+    // Subscribe to updates using user_id (how transactions are stored)
     const channel = supabase
       .channel(`buyer-transactions-${buyer.id}`)
       .on(
@@ -286,7 +287,7 @@ const BuyerDeposit = () => {
           event: '*',
           schema: 'public',
           table: 'transactions',
-          filter: `buyer_id=eq.${buyer.id}`
+          filter: `user_id=eq.${buyer.id}`
         },
         async (payload) => {
           console.log('Transaction update:', payload);

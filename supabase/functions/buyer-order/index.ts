@@ -37,8 +37,8 @@ serve(async (req) => {
     // Validate required fields
     if (!panelId || !buyerId || !serviceId || !quantity || !targetUrl || price === undefined) {
       return new Response(
-        JSON.stringify({ error: 'Missing required fields' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: false, error: 'Missing required fields' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -53,8 +53,8 @@ serve(async (req) => {
     if (buyerError || !buyer) {
       console.error('[buyer-order] Buyer not found:', buyerError);
       return new Response(
-        JSON.stringify({ error: 'Buyer not found or does not belong to this panel' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: false, error: 'Buyer not found or does not belong to this panel' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -63,11 +63,12 @@ serve(async (req) => {
     if (currentBalance < price) {
       return new Response(
         JSON.stringify({ 
+          success: false,
           error: 'Insufficient balance',
           currentBalance,
           required: price
         }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -82,15 +83,15 @@ serve(async (req) => {
     if (serviceError || !service) {
       console.error('[buyer-order] Service not found:', serviceError);
       return new Response(
-        JSON.stringify({ error: 'Service not found' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: false, error: 'Service not found' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     if (!service.is_enabled) {
       return new Response(
-        JSON.stringify({ error: 'Service is currently disabled' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: false, error: 'Service is currently disabled' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -100,11 +101,12 @@ serve(async (req) => {
     if (quantity < minQty || quantity > maxQty) {
       return new Response(
         JSON.stringify({ 
+          success: false,
           error: `Quantity must be between ${minQty} and ${maxQty}`,
           minQuantity: minQty,
           maxQuantity: maxQty
         }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -132,8 +134,8 @@ serve(async (req) => {
     if (orderError) {
       console.error('[buyer-order] Order creation failed:', orderError);
       return new Response(
-        JSON.stringify({ error: 'Failed to create order', details: orderError.message }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: false, error: 'Failed to create order', details: orderError.message }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -154,8 +156,8 @@ serve(async (req) => {
       // Rollback the order if balance update fails
       await supabase.from('orders').delete().eq('id', order.id);
       return new Response(
-        JSON.stringify({ error: 'Failed to update balance' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: false, error: 'Failed to update balance' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -201,8 +203,8 @@ serve(async (req) => {
   } catch (error) {
     console.error('[buyer-order] Error:', error);
     return new Response(
-      JSON.stringify({ error: error.message || 'Internal server error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ success: false, error: error.message || 'Internal server error' }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
