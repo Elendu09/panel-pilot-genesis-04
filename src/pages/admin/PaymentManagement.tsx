@@ -8,7 +8,10 @@ import { Switch } from "@/components/ui/switch";
 import { TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign, CreditCard, Landmark, Coins, Save, CheckCircle2, Search, Filter, Loader2, XCircle, Clock } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { DollarSign, CreditCard, Landmark, Coins, Save, CheckCircle2, Search, Filter, Loader2, XCircle, Clock, ArrowUpRight, ArrowDownRight, Wallet, Download, Eye, Plus, Building2, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { SubscriptionProviderManager } from "@/components/admin/SubscriptionProviderManager";
@@ -50,6 +53,14 @@ interface Transaction {
   status: string | null;
   created_at: string;
   description: string | null;
+  panel_id: string | null;
+  user_id: string | null;
+}
+
+interface Panel {
+  id: string;
+  name: string;
+  balance: number | null;
 }
 
 interface PlatformFee {
@@ -74,8 +85,22 @@ const PaymentManagement = () => {
   // Real data states
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [platformFees, setPlatformFees] = useState<PlatformFee[]>([]);
+  const [panels, setPanels] = useState<Panel[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  
+  // Transaction filters
+  const [txTypeFilter, setTxTypeFilter] = useState<string>("all");
+  const [txStatusFilter, setTxStatusFilter] = useState<string>("all");
+  const [txSearchQuery, setTxSearchQuery] = useState("");
+  
+  // Panel funding dialog
+  const [fundingDialogOpen, setFundingDialogOpen] = useState(false);
+  const [selectedPanelId, setSelectedPanelId] = useState<string>("");
+  const [fundingAmount, setFundingAmount] = useState("");
+  const [fundingType, setFundingType] = useState<"credit" | "debit">("credit");
+  const [fundingReason, setFundingReason] = useState("");
+  const [fundingProcessing, setFundingProcessing] = useState(false);
 
   // Platform settings from DB
   const [platformCommission, setPlatformCommission] = useState(5);
@@ -99,12 +124,12 @@ const PaymentManagement = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch transactions
+      // Fetch transactions with more data
       const { data: txData } = await supabase
         .from('transactions')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(100);
+        .limit(500);
 
       if (txData) setTransactions(txData);
 
@@ -116,6 +141,14 @@ const PaymentManagement = () => {
         .limit(50);
 
       if (feeData) setPlatformFees(feeData);
+
+      // Fetch panels for funding
+      const { data: panelData } = await supabase
+        .from('panels')
+        .select('id, name, balance')
+        .order('name');
+
+      if (panelData) setPanels(panelData);
 
       // Fetch platform settings
       const { data: settings } = await supabase
@@ -143,6 +176,63 @@ const PaymentManagement = () => {
       setLoading(false);
     }
   };
+
+  // Handle panel funding
+  const handlePanelFunding = async () => {
+    if (!selectedPanelId || !fundingAmount || parseFloat(fundingAmount) <= 0) {
+      toast({ variant: "destructive", title: "Please select a panel and enter a valid amount" });
+      return;
+    }
+
+    setFundingProcessing(true);
+    try {
+      const response = await supabase.functions.invoke('admin-panel-ops', {
+        body: {
+          action: 'add_funds',
+          panelId: selectedPanelId,
+          amount: parseFloat(fundingAmount),
+          type: fundingType,
+          reason: fundingReason || `Admin ${fundingType} - Manual adjustment`
+        }
+      });
+
+      if (response.error) throw new Error(response.error.message);
+
+      const result = response.data;
+      if (!result.success) throw new Error(result.error || 'Failed to update panel balance');
+
+      toast({ 
+        title: "Balance Updated", 
+        description: `Panel balance ${fundingType === 'credit' ? 'increased' : 'decreased'} by $${fundingAmount}. New balance: $${result.newBalance?.toFixed(2)}` 
+      });
+      
+      // Reset form and close dialog
+      setFundingDialogOpen(false);
+      setSelectedPanelId("");
+      setFundingAmount("");
+      setFundingReason("");
+      
+      // Refresh data
+      fetchData();
+    } catch (error: any) {
+      console.error('Panel funding error:', error);
+      toast({ variant: "destructive", title: "Failed to update balance", description: error.message });
+    } finally {
+      setFundingProcessing(false);
+    }
+  };
+
+  // Filter transactions
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter(tx => {
+      const matchType = txTypeFilter === "all" || tx.type === txTypeFilter;
+      const matchStatus = txStatusFilter === "all" || tx.status === txStatusFilter;
+      const matchSearch = !txSearchQuery || 
+        tx.id.toLowerCase().includes(txSearchQuery.toLowerCase()) ||
+        (tx.description?.toLowerCase().includes(txSearchQuery.toLowerCase()));
+      return matchType && matchStatus && matchSearch;
+    });
+  }, [transactions, txTypeFilter, txStatusFilter, txSearchQuery]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -296,7 +386,9 @@ const PaymentManagement = () => {
         value={activeTab} 
         onValueChange={setActiveTab}
         tabs={[
-          { value: "subscription-providers", label: "Subscription Providers", icon: CreditCard },
+          { value: "subscription-providers", label: "Subscriptions", icon: CreditCard },
+          { value: "transactions", label: "Transactions", icon: ArrowUpRight },
+          { value: "panel-funding", label: "Panel Funding", icon: Building2 },
           { value: "gateways", label: "Gateways", icon: Landmark },
           { value: "methods", label: "Methods", icon: Coins },
           { value: "fees", label: "Fees", icon: DollarSign },
@@ -315,6 +407,334 @@ const PaymentManagement = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <SubscriptionProviderManager />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Transactions Tab */}
+        <TabsContent value="transactions" className="space-y-6">
+          <Card className="bg-gradient-card border-border shadow-card">
+            <CardHeader>
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <CardTitle>All Transactions</CardTitle>
+                  <CardDescription>Platform-wide transaction history and management</CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={fetchData}>
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Refresh
+                  </Button>
+                  <Button variant="outline" size="sm">
+                    <Download className="w-4 h-4 mr-2" />
+                    Export CSV
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Filters */}
+              <div className="flex flex-col md:flex-row gap-3">
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    className="pl-9"
+                    placeholder="Search transactions..."
+                    value={txSearchQuery}
+                    onChange={(e) => setTxSearchQuery(e.target.value)}
+                  />
+                </div>
+                <Select value={txTypeFilter} onValueChange={setTxTypeFilter}>
+                  <SelectTrigger className="w-full md:w-40">
+                    <SelectValue placeholder="Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="deposit">Deposit</SelectItem>
+                    <SelectItem value="withdrawal">Withdrawal</SelectItem>
+                    <SelectItem value="admin_credit">Admin Credit</SelectItem>
+                    <SelectItem value="admin_debit">Admin Debit</SelectItem>
+                    <SelectItem value="subscription">Subscription</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={txStatusFilter} onValueChange={setTxStatusFilter}>
+                  <SelectTrigger className="w-full md:w-40">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="failed">Failed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Transaction Stats */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="p-3 bg-green-500/10 rounded-lg">
+                  <div className="text-xs text-muted-foreground">Completed</div>
+                  <div className="text-lg font-bold text-green-500">
+                    {transactions.filter(t => t.status === 'completed').length}
+                  </div>
+                </div>
+                <div className="p-3 bg-yellow-500/10 rounded-lg">
+                  <div className="text-xs text-muted-foreground">Pending</div>
+                  <div className="text-lg font-bold text-yellow-500">
+                    {transactions.filter(t => t.status === 'pending').length}
+                  </div>
+                </div>
+                <div className="p-3 bg-red-500/10 rounded-lg">
+                  <div className="text-xs text-muted-foreground">Failed</div>
+                  <div className="text-lg font-bold text-red-500">
+                    {transactions.filter(t => t.status === 'failed').length}
+                  </div>
+                </div>
+                <div className="p-3 bg-primary/10 rounded-lg">
+                  <div className="text-xs text-muted-foreground">Total Volume</div>
+                  <div className="text-lg font-bold text-primary">
+                    ${transactions.filter(t => t.status === 'completed').reduce((s, t) => s + t.amount, 0).toFixed(2)}
+                  </div>
+                </div>
+              </div>
+
+              {/* Transaction Table */}
+              <ScrollArea className="h-[400px]">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="text-left text-muted-foreground sticky top-0 bg-card">
+                      <tr>
+                        <th className="py-3 px-2">Date</th>
+                        <th className="py-3 px-2">Type</th>
+                        <th className="py-3 px-2">Amount</th>
+                        <th className="py-3 px-2">Method</th>
+                        <th className="py-3 px-2">Status</th>
+                        <th className="py-3 px-2">Description</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredTransactions.length === 0 ? (
+                        <tr><td colSpan={6} className="py-8 text-center text-muted-foreground">No transactions found</td></tr>
+                      ) : (
+                        filteredTransactions.map((tx) => (
+                          <tr key={tx.id} className="border-t border-border hover:bg-muted/50">
+                            <td className="py-3 px-2 whitespace-nowrap">
+                              {new Date(tx.created_at).toLocaleDateString()} {new Date(tx.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </td>
+                            <td className="py-3 px-2">
+                              <div className="flex items-center gap-2">
+                                {tx.type === 'deposit' ? (
+                                  <ArrowDownRight className="w-4 h-4 text-green-500" />
+                                ) : (
+                                  <ArrowUpRight className="w-4 h-4 text-red-500" />
+                                )}
+                                <span className="capitalize">{tx.type.replace('_', ' ')}</span>
+                              </div>
+                            </td>
+                            <td className="py-3 px-2 font-medium">
+                              <span className={tx.type === 'deposit' || tx.type === 'admin_credit' ? 'text-green-500' : 'text-red-500'}>
+                                {tx.type === 'deposit' || tx.type === 'admin_credit' ? '+' : '-'}${Math.abs(tx.amount).toFixed(2)}
+                              </span>
+                            </td>
+                            <td className="py-3 px-2 capitalize">{tx.payment_method || '-'}</td>
+                            <td className="py-3 px-2">{getStatusBadge(tx.status)}</td>
+                            <td className="py-3 px-2 text-muted-foreground max-w-[200px] truncate">{tx.description || '-'}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </ScrollArea>
+              <p className="text-xs text-muted-foreground">
+                Showing {filteredTransactions.length} of {transactions.length} transactions
+              </p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Panel Funding Tab */}
+        <TabsContent value="panel-funding" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Quick Fund Panel */}
+            <Card className="bg-gradient-card border-border shadow-card lg:col-span-1">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Wallet className="w-5 h-5" />
+                  Quick Fund Panel
+                </CardTitle>
+                <CardDescription>Add or remove funds from any panel</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label>Select Panel</Label>
+                  <Select value={selectedPanelId} onValueChange={setSelectedPanelId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose a panel..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {panels.map(p => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.name} (${(p.balance || 0).toFixed(2)})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label>Operation</Label>
+                  <Select value={fundingType} onValueChange={(v) => setFundingType(v as "credit" | "debit")}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="credit">Credit (Add Funds)</SelectItem>
+                      <SelectItem value="debit">Debit (Remove Funds)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label>Amount ($)</Label>
+                  <div className="relative">
+                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      type="number"
+                      className="pl-9"
+                      placeholder="0.00"
+                      value={fundingAmount}
+                      onChange={(e) => setFundingAmount(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label>Reason (Optional)</Label>
+                  <Textarea
+                    placeholder="e.g., Promotional credit, Refund, etc."
+                    value={fundingReason}
+                    onChange={(e) => setFundingReason(e.target.value)}
+                    rows={2}
+                  />
+                </div>
+
+                <Button 
+                  className="w-full" 
+                  onClick={handlePanelFunding}
+                  disabled={fundingProcessing || !selectedPanelId || !fundingAmount}
+                >
+                  {fundingProcessing ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : fundingType === 'credit' ? (
+                    <Plus className="w-4 h-4 mr-2" />
+                  ) : (
+                    <ArrowUpRight className="w-4 h-4 mr-2" />
+                  )}
+                  {fundingType === 'credit' ? 'Add Funds' : 'Remove Funds'}
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Panel Balances */}
+            <Card className="bg-gradient-card border-border shadow-card lg:col-span-2">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Panel Balances</CardTitle>
+                    <CardDescription>Overview of all panel balances</CardDescription>
+                  </div>
+                  <Badge variant="outline" className="text-lg px-3 py-1">
+                    Total: ${panels.reduce((s, p) => s + (p.balance || 0), 0).toFixed(2)}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-[350px]">
+                  <div className="space-y-3">
+                    {panels.length === 0 ? (
+                      <div className="text-center text-muted-foreground py-8">No panels found</div>
+                    ) : (
+                      panels.map(panel => (
+                        <div key={panel.id} className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                              <Building2 className="w-5 h-5 text-primary" />
+                            </div>
+                            <div>
+                              <p className="font-medium">{panel.name}</p>
+                              <p className="text-xs text-muted-foreground">ID: {panel.id.slice(0, 8)}...</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className={`text-lg font-bold ${(panel.balance || 0) > 0 ? 'text-green-500' : 'text-muted-foreground'}`}>
+                              ${(panel.balance || 0).toFixed(2)}
+                            </span>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => {
+                                setSelectedPanelId(panel.id);
+                                setFundingType('credit');
+                              }}
+                            >
+                              <Plus className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Recent Admin Operations */}
+          <Card className="bg-gradient-card border-border shadow-card">
+            <CardHeader>
+              <CardTitle>Recent Admin Fund Operations</CardTitle>
+              <CardDescription>Admin-initiated balance adjustments</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="text-left text-muted-foreground">
+                    <tr>
+                      <th className="py-2">Date</th>
+                      <th className="py-2">Panel</th>
+                      <th className="py-2">Type</th>
+                      <th className="py-2">Amount</th>
+                      <th className="py-2">Reason</th>
+                      <th className="py-2">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {transactions.filter(t => t.type === 'admin_credit' || t.type === 'admin_debit').length === 0 ? (
+                      <tr><td colSpan={6} className="py-4 text-center text-muted-foreground">No admin operations yet</td></tr>
+                    ) : (
+                      transactions
+                        .filter(t => t.type === 'admin_credit' || t.type === 'admin_debit')
+                        .slice(0, 10)
+                        .map((tx) => {
+                          const panel = panels.find(p => p.id === tx.panel_id);
+                          return (
+                            <tr key={tx.id} className="border-t border-border">
+                              <td className="py-3">{new Date(tx.created_at).toLocaleDateString()}</td>
+                              <td className="py-3">{panel?.name || 'Unknown'}</td>
+                              <td className="py-3 capitalize">{tx.type.replace('_', ' ')}</td>
+                              <td className={`py-3 font-medium ${tx.type === 'admin_credit' ? 'text-green-500' : 'text-red-500'}`}>
+                                {tx.type === 'admin_credit' ? '+' : '-'}${Math.abs(tx.amount).toFixed(2)}
+                              </td>
+                              <td className="py-3 text-muted-foreground">{tx.description || '-'}</td>
+                              <td className="py-3">{getStatusBadge(tx.status)}</td>
+                            </tr>
+                          );
+                        })
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
