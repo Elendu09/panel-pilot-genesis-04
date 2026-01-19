@@ -353,7 +353,7 @@ export const AliPanelHomepage = ({
                 {[
                   { label: t('buyer.stats.customers') || 'Happy Customers', value: stats?.totalUsers || '10K+' },
                   { label: t('buyer.stats.ordersCompleted') || 'Orders Completed', value: stats?.totalOrders || '50K+' },
-                  { label: t('buyer.stats.servicesAvailable') || 'Services Available', value: stats?.servicesCount || '500+' },
+                  { label: t('buyer.stats.services') || 'Services Available', value: stats?.servicesCount || '500+' },
                   { label: t('buyer.stats.countries') || 'Countries Served', value: '150+' },
                 ].map((stat, idx) => (
                   <motion.div

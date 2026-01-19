@@ -325,7 +325,7 @@ export const TGRefHomepage = ({
                 {[
                   { label: t('buyer.stats.ordersCompleted') || 'Orders Completed', value: stats?.totalOrders || '50K+', icon: CheckCircle },
                   { label: t('buyer.stats.activeUsers') || 'Active Users', value: stats?.totalUsers || '10K+', icon: Users },
-                  { label: t('buyer.stats.servicesAvailable') || 'Services Available', value: stats?.servicesCount || '500+', icon: Cpu },
+                  { label: t('buyer.stats.services') || 'Services Available', value: stats?.servicesCount || '500+', icon: Cpu },
                   { label: t('buyer.stats.uptime') || 'Uptime', value: '99.9%', icon: Globe },
                 ].map((stat, idx) => (
                   <motion.div
