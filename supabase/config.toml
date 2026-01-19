@@ -18,6 +18,9 @@ api_url = "http://127.0.0.1:54321"
 [functions.add-vercel-domain]
 verify_jwt = false
 
+[functions.admin-panel-ops]
+verify_jwt = false
+
 [functions.ai-chat-reply]
 verify_jwt = false
 
@@ -78,6 +81,9 @@ verify_jwt = false
 [functions.panel-customers]
 verify_jwt = false
 
+[functions.payment-webhook]
+verify_jwt = false
+
 [functions.process-payment]
 verify_jwt = false
 
@@ -124,7 +130,4 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.webhook-notify]
-verify_jwt = false
-
-[functions.payment-webhook]
 verify_jwt = false
