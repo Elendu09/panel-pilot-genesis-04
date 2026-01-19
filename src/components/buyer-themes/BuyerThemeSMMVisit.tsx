@@ -24,12 +24,12 @@ export const BuyerThemeSMMVisit = ({ children, className, themeMode = 'light' }:
           --theme-surface: #FFFFFF;
           --theme-primary: #FFD700;
           --theme-secondary: #FFC107;
-          --theme-accent: #FFFFFF;
-          --theme-text: #FFFFFF;
-          --theme-muted: #FFFFFF;
+          --theme-accent: #1A1A1A;
+          --theme-text: #1A1A1A;
+          --theme-muted: #6B7280;
           --theme-gradient: linear-gradient(135deg, #FFD700 0%, #FFC107 100%);
           background: var(--theme-background);
-          color: #FFFFFF;
+          color: var(--theme-text);
         }
         
         /* Override panel variables for this theme */
@@ -122,39 +122,12 @@ export const BuyerThemeSMMVisit = ({ children, className, themeMode = 'light' }:
         .buyer-theme-smmvisit select {
           background: #FFFFFF;
           border-color: #D1D5DB;
-          color: #FFFFFF !important;
+          color: #1A1A1A;
         }
         
         .buyer-theme-smmvisit input::placeholder,
         .buyer-theme-smmvisit textarea::placeholder {
-          color: #FFFFFF !important;
-        }
-        
-        /* Light mode - force ALL text to white */
-        .buyer-theme-smmvisit h1,
-        .buyer-theme-smmvisit h2,
-        .buyer-theme-smmvisit h3,
-        .buyer-theme-smmvisit h4,
-        .buyer-theme-smmvisit h5,
-        .buyer-theme-smmvisit h6,
-        .buyer-theme-smmvisit p,
-        .buyer-theme-smmvisit span:not(.theme-gradient-text),
-        .buyer-theme-smmvisit a,
-        .buyer-theme-smmvisit label,
-        .buyer-theme-smmvisit div:not([class*="gradient"]),
-        .buyer-theme-smmvisit li,
-        .buyer-theme-smmvisit button:not(.theme-button-primary),
-        .buyer-theme-smmvisit .text-muted-foreground {
-          color: #FFFFFF !important;
-        }
-        
-        .buyer-theme-smmvisit nav a,
-        .buyer-theme-smmvisit header a {
-          color: #FFFFFF !important;
-        }
-        
-        .buyer-theme-smmvisit a:hover {
-          color: #FFD700 !important;
+          color: #9CA3AF;
         }
         
         .buyer-theme-smmvisit input:focus,
@@ -504,9 +477,9 @@ export const smmVisitThemeConfig = {
       surface: '#FFFFFF',
       primary: '#FFD700',
       secondary: '#FFC107',
-      accent: '#FFFFFF',
-      text: '#FFFFFF',
-      muted: '#FFFFFF',
+      accent: '#1A1A1A',
+      text: '#1A1A1A',
+      muted: '#6B7280',
     },
   },
   layout: {
