@@ -253,6 +253,82 @@ serve(async (req) => {
         break;
       }
 
+      case 'square': {
+        event = JSON.parse(body);
+        if (event.type === 'payment.completed' || event.data?.object?.status === 'COMPLETED') {
+          transactionId = event.data?.object?.order_id || event.data?.object?.note;
+          status = 'completed';
+          amount = (event.data?.object?.amount_money?.amount || 0) / 100;
+          buyerId = event.data?.object?.buyer_email_address;
+          console.log(`[payment-webhook] Square payment completed: ${transactionId}, amount: ${amount}`);
+        } else if (event.type === 'payment.failed') {
+          transactionId = event.data?.object?.order_id;
+          status = 'failed';
+        }
+        break;
+      }
+
+      case 'braintree': {
+        event = JSON.parse(body);
+        if (event.kind === 'transaction_settled' || event.kind === 'disbursement') {
+          transactionId = event.transaction?.id || event.subject?.transactions?.[0]?.id;
+          status = 'completed';
+          amount = parseFloat(event.transaction?.amount || '0');
+          console.log(`[payment-webhook] Braintree payment settled: ${transactionId}, amount: ${amount}`);
+        } else if (event.kind === 'transaction_settled_failed' || event.kind === 'transaction_settlement_declined') {
+          transactionId = event.transaction?.id;
+          status = 'failed';
+        }
+        break;
+      }
+
+      case 'ach':
+      case 'sepa': {
+        // ACH/SEPA use Stripe under the hood
+        event = JSON.parse(body);
+        if (event.type === 'checkout.session.completed') {
+          const session = event.data.object;
+          transactionId = session.metadata?.transactionId;
+          status = 'completed';
+          amount = (session.amount_total || 0) / 100;
+          buyerId = session.metadata?.buyerId;
+          panelId = session.metadata?.panelId;
+          console.log(`[payment-webhook] ${gateway.toUpperCase()} payment completed: ${transactionId}, amount: ${amount}`);
+        } else if (event.type === 'checkout.session.expired' || event.type === 'payment_intent.payment_failed') {
+          transactionId = event.data.object.metadata?.transactionId;
+          status = 'failed';
+        }
+        break;
+      }
+
+      case 'btcpay': {
+        event = JSON.parse(body);
+        if (event.type === 'InvoiceSettled' || event.type === 'InvoiceProcessing') {
+          transactionId = event.invoiceId || event.metadata?.orderId;
+          status = 'completed';
+          amount = parseFloat(event.price || event.btcPaid || '0');
+          console.log(`[payment-webhook] BTCPay invoice settled: ${transactionId}, amount: ${amount}`);
+        } else if (event.type === 'InvoiceExpired' || event.type === 'InvoiceInvalid') {
+          transactionId = event.invoiceId;
+          status = 'failed';
+        }
+        break;
+      }
+
+      case 'wise': {
+        event = JSON.parse(body);
+        if (event.event_type === 'transfers#state-change' && event.data?.current_state === 'outgoing_payment_sent') {
+          transactionId = event.data?.resource?.id?.toString();
+          status = 'completed';
+          amount = parseFloat(event.data?.resource?.targetValue || '0');
+          console.log(`[payment-webhook] Wise transfer completed: ${transactionId}, amount: ${amount}`);
+        } else if (event.data?.current_state === 'cancelled' || event.data?.current_state === 'funds_refunded') {
+          transactionId = event.data?.resource?.id?.toString();
+          status = 'failed';
+        }
+        break;
+      }
+
       default: {
         console.log(`[payment-webhook] Unknown gateway: ${gateway}`);
         return new Response(
