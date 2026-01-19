@@ -33,12 +33,40 @@ serve(async (req) => {
 
     console.log(`[process-payment] Processing ${gateway} payment: $${amount} for panel ${panelId}`);
 
-    if (!gateway || !amount || !panelId || !buyerId || !transactionId) {
+    if (!gateway || !amount || !panelId || !buyerId) {
       return new Response(
-        JSON.stringify({ error: 'Missing required fields' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: false, error: 'Missing required fields' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // Create transaction if not provided (server-side creation bypasses RLS)
+    let txId = transactionId;
+    if (!txId) {
+      const { data: newTx, error: txError } = await supabase
+        .from('transactions')
+        .insert({
+          user_id: buyerId,
+          panel_id: panelId,
+          amount: amount,
+          type: 'deposit',
+          payment_method: gateway,
+          status: 'pending',
+          description: `Deposit via ${gateway}`
+        })
+        .select('id')
+        .single();
+      
+      if (txError) {
+        console.error('[process-payment] Transaction creation error:', txError);
+        return new Response(
+          JSON.stringify({ success: false, error: 'Failed to create transaction' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      txId = newTx.id;
+    }
+    const transactionIdToUse = txId;
 
     // Fetch panel's payment gateway credentials
     const { data: panel } = await supabase
@@ -49,8 +77,8 @@ serve(async (req) => {
 
     if (!panel) {
       return new Response(
-        JSON.stringify({ error: 'Panel not found' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: false, error: 'Panel not found' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -58,13 +86,19 @@ serve(async (req) => {
     const paymentSettings = panelSettings.payments || {};
     const enabledMethods = paymentSettings.enabledMethods || [];
     
-    // Find the gateway config
-    const gatewayConfig = enabledMethods.find((m: any) => m.id === gateway);
+    // Find the gateway config - also check for manual payment methods
+    let gatewayConfig = enabledMethods.find((m: any) => m.id === gateway);
     
-    if (!gatewayConfig || !gatewayConfig.enabled) {
+    // For manual payment methods, check manualPayments array
+    if (!gatewayConfig && gateway.startsWith('manual_')) {
+      const manualPayments = paymentSettings.manualPayments || [];
+      gatewayConfig = manualPayments.find((m: any) => m.id === gateway);
+    }
+    
+    if (!gatewayConfig || gatewayConfig.enabled === false) {
       return new Response(
-        JSON.stringify({ error: `${gateway} is not enabled for this panel` }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: false, error: `${gateway} is not enabled for this panel` }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -78,8 +112,8 @@ serve(async (req) => {
         
         if (!stripeSecretKey) {
           return new Response(
-            JSON.stringify({ error: 'Stripe not configured' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            JSON.stringify({ success: false, error: 'Stripe not configured' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
@@ -96,11 +130,11 @@ serve(async (req) => {
             'line_items[0][price_data][unit_amount]': String(Math.round(amount * 100)),
             'line_items[0][quantity]': '1',
             'mode': 'payment',
-            'success_url': `${returnUrl}?success=true&session_id={CHECKOUT_SESSION_ID}&transaction_id=${transactionId}`,
-            'cancel_url': `${returnUrl}?cancelled=true&transaction_id=${transactionId}`,
+            'success_url': `${returnUrl}?success=true&session_id={CHECKOUT_SESSION_ID}&transaction_id=${transactionIdToUse}`,
+            'cancel_url': `${returnUrl}?cancelled=true&transaction_id=${transactionIdToUse}`,
             'metadata[panelId]': panelId,
             'metadata[buyerId]': buyerId,
-            'metadata[transactionId]': transactionId,
+            'metadata[transactionId]': transactionIdToUse,
           }),
         });
 
@@ -109,8 +143,8 @@ serve(async (req) => {
         if (session.error) {
           console.error('[process-payment] Stripe error:', session.error);
           return new Response(
-            JSON.stringify({ error: session.error.message }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            JSON.stringify({ success: false, error: session.error.message }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
@@ -126,8 +160,8 @@ serve(async (req) => {
         
         if (!paypalClientId || !paypalSecret) {
           return new Response(
-            JSON.stringify({ error: 'PayPal not configured' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            JSON.stringify({ success: false, error: 'PayPal not configured' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
@@ -145,8 +179,8 @@ serve(async (req) => {
         
         if (!tokenData.access_token) {
           return new Response(
-            JSON.stringify({ error: 'Failed to authenticate with PayPal' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            JSON.stringify({ success: false, error: 'Failed to authenticate with PayPal' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
@@ -165,11 +199,11 @@ serve(async (req) => {
                 value: amount.toFixed(2),
               },
               description: `Account Deposit - ${panel.name}`,
-              custom_id: transactionId,
+              custom_id: transactionIdToUse,
             }],
             application_context: {
-              return_url: `${returnUrl}?success=true&transaction_id=${transactionId}`,
-              cancel_url: `${returnUrl}?cancelled=true&transaction_id=${transactionId}`,
+              return_url: `${returnUrl}?success=true&transaction_id=${transactionIdToUse}`,
+              cancel_url: `${returnUrl}?cancelled=true&transaction_id=${transactionIdToUse}`,
             },
           }),
         });
@@ -178,8 +212,8 @@ serve(async (req) => {
         
         if (order.error) {
           return new Response(
-            JSON.stringify({ error: order.error.message }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            JSON.stringify({ success: false, error: order.error.message }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
@@ -196,8 +230,8 @@ serve(async (req) => {
         
         if (!coinbaseApiKey) {
           return new Response(
-            JSON.stringify({ error: 'Crypto payment not configured' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            JSON.stringify({ success: false, error: 'Crypto payment not configured' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
@@ -219,10 +253,10 @@ serve(async (req) => {
             metadata: {
               panelId,
               buyerId,
-              transactionId,
+              transactionId: transactionIdToUse,
             },
-            redirect_url: `${returnUrl}?success=true&transaction_id=${transactionId}`,
-            cancel_url: `${returnUrl}?cancelled=true&transaction_id=${transactionId}`,
+            redirect_url: `${returnUrl}?success=true&transaction_id=${transactionIdToUse}`,
+            cancel_url: `${returnUrl}?cancelled=true&transaction_id=${transactionIdToUse}`,
           }),
         });
 
@@ -230,8 +264,8 @@ serve(async (req) => {
         
         if (charge.error) {
           return new Response(
-            JSON.stringify({ error: charge.error.message }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            JSON.stringify({ success: false, error: charge.error.message }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
@@ -246,8 +280,8 @@ serve(async (req) => {
         
         if (!flwSecretKey) {
           return new Response(
-            JSON.stringify({ error: 'Flutterwave not configured' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            JSON.stringify({ success: false, error: 'Flutterwave not configured' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
@@ -258,10 +292,10 @@ serve(async (req) => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            tx_ref: transactionId,
+            tx_ref: transactionIdToUse,
             amount: amount,
             currency: currency.toUpperCase(),
-            redirect_url: `${returnUrl}?success=true&transaction_id=${transactionId}`,
+            redirect_url: `${returnUrl}?success=true&transaction_id=${transactionIdToUse}`,
             customer: {
               email: `buyer-${buyerId}@panel.local`,
             },
@@ -273,7 +307,7 @@ serve(async (req) => {
             meta: {
               panelId,
               buyerId,
-              transactionId,
+              transactionId: transactionIdToUse,
             },
           }),
         });
@@ -283,8 +317,8 @@ serve(async (req) => {
         if (flwData.status !== 'success') {
           console.error('[process-payment] Flutterwave error:', flwData);
           return new Response(
-            JSON.stringify({ error: flwData.message || 'Flutterwave payment failed' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            JSON.stringify({ success: false, error: flwData.message || 'Flutterwave payment failed' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
@@ -299,8 +333,8 @@ serve(async (req) => {
         
         if (!paystackSecretKey) {
           return new Response(
-            JSON.stringify({ error: 'Paystack not configured' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            JSON.stringify({ success: false, error: 'Paystack not configured' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
@@ -312,14 +346,14 @@ serve(async (req) => {
           },
           body: JSON.stringify({
             email: `buyer-${buyerId}@panel.local`,
-            amount: Math.round(amount * 100), // Paystack uses kobo/cents
+            amount: Math.round(amount * 100),
             currency: currency.toUpperCase(),
-            callback_url: `${returnUrl}?success=true&transaction_id=${transactionId}`,
-            reference: transactionId,
+            callback_url: `${returnUrl}?success=true&transaction_id=${transactionIdToUse}`,
+            reference: transactionIdToUse,
             metadata: {
               panelId,
               buyerId,
-              transactionId,
+              transactionId: transactionIdToUse,
             },
           }),
         });
@@ -329,8 +363,8 @@ serve(async (req) => {
         if (!paystackData.status) {
           console.error('[process-payment] Paystack error:', paystackData);
           return new Response(
-            JSON.stringify({ error: paystackData.message || 'Paystack payment failed' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            JSON.stringify({ success: false, error: paystackData.message || 'Paystack payment failed' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
@@ -345,8 +379,8 @@ serve(async (req) => {
         
         if (!koraSecretKey) {
           return new Response(
-            JSON.stringify({ error: 'Kora Pay not configured' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            JSON.stringify({ success: false, error: 'Kora Pay not configured' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
@@ -359,15 +393,15 @@ serve(async (req) => {
           body: JSON.stringify({
             amount: amount,
             currency: currency.toUpperCase(),
-            reference: transactionId,
-            redirect_url: `${returnUrl}?success=true&transaction_id=${transactionId}`,
+            reference: transactionIdToUse,
+            redirect_url: `${returnUrl}?success=true&transaction_id=${transactionIdToUse}`,
             customer: {
               email: `buyer-${buyerId}@panel.local`,
             },
             metadata: {
               panelId,
               buyerId,
-              transactionId,
+              transactionId: transactionIdToUse,
             },
           }),
         });
@@ -377,8 +411,8 @@ serve(async (req) => {
         if (!koraData.status) {
           console.error('[process-payment] Kora Pay error:', koraData);
           return new Response(
-            JSON.stringify({ error: koraData.message || 'Kora Pay payment failed' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            JSON.stringify({ success: false, error: koraData.message || 'Kora Pay payment failed' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
@@ -394,8 +428,8 @@ serve(async (req) => {
         
         if (!razorpayKeyId || !razorpayKeySecret) {
           return new Response(
-            JSON.stringify({ error: 'Razorpay not configured' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            JSON.stringify({ success: false, error: 'Razorpay not configured' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
@@ -407,13 +441,13 @@ serve(async (req) => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            amount: Math.round(amount * 100), // Razorpay uses paise
+            amount: Math.round(amount * 100),
             currency: currency.toUpperCase(),
-            receipt: transactionId,
+            receipt: transactionIdToUse,
             notes: {
               panelId,
               buyerId,
-              transactionId,
+              transactionId: transactionIdToUse,
             },
           }),
         });
@@ -423,8 +457,8 @@ serve(async (req) => {
         if (razorpayData.error) {
           console.error('[process-payment] Razorpay error:', razorpayData);
           return new Response(
-            JSON.stringify({ error: razorpayData.error.description || 'Razorpay payment failed' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            JSON.stringify({ success: false, error: razorpayData.error.description || 'Razorpay payment failed' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
@@ -437,7 +471,7 @@ serve(async (req) => {
             keyId: razorpayKeyId,
             amount: razorpayData.amount,
             currency: razorpayData.currency,
-            transactionId,
+            transactionId: transactionIdToUse,
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
@@ -451,30 +485,26 @@ serve(async (req) => {
         
         if (!monnifyApiKey || !monnifySecretKey) {
           return new Response(
-            JSON.stringify({ error: 'Monnify not configured' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            JSON.stringify({ success: false, error: 'Monnify not configured' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
-        // Get Monnify access token
         const monnifyAuth = btoa(`${monnifyApiKey}:${monnifySecretKey}`);
         const tokenResponse = await fetch('https://api.monnify.com/api/v1/auth/login', {
           method: 'POST',
-          headers: {
-            'Authorization': `Basic ${monnifyAuth}`,
-          },
+          headers: { 'Authorization': `Basic ${monnifyAuth}` },
         });
 
         const tokenData = await tokenResponse.json();
         
         if (!tokenData.requestSuccessful) {
           return new Response(
-            JSON.stringify({ error: 'Failed to authenticate with Monnify' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            JSON.stringify({ success: false, error: 'Failed to authenticate with Monnify' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
-        // Initialize transaction
         const monnifyResponse = await fetch('https://api.monnify.com/api/v1/merchant/transactions/init-transaction', {
           method: 'POST',
           headers: {
@@ -484,11 +514,11 @@ serve(async (req) => {
           body: JSON.stringify({
             amount: amount,
             customerEmail: `buyer-${buyerId}@panel.local`,
-            paymentReference: transactionId,
+            paymentReference: transactionIdToUse,
             paymentDescription: `Deposit - ${panel.name}`,
             currencyCode: currency.toUpperCase(),
             contractCode: monnifyContractCode,
-            redirectUrl: `${returnUrl}?success=true&transaction_id=${transactionId}`,
+            redirectUrl: `${returnUrl}?success=true&transaction_id=${transactionIdToUse}`,
             paymentMethods: ['CARD', 'ACCOUNT_TRANSFER'],
           }),
         });
@@ -496,10 +526,9 @@ serve(async (req) => {
         const monnifyData = await monnifyResponse.json();
         
         if (!monnifyData.requestSuccessful) {
-          console.error('[process-payment] Monnify error:', monnifyData);
           return new Response(
-            JSON.stringify({ error: monnifyData.responseMessage || 'Monnify payment failed' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            JSON.stringify({ success: false, error: monnifyData.responseMessage || 'Monnify payment failed' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
@@ -509,43 +538,25 @@ serve(async (req) => {
       }
 
       case 'nowpayments': {
-        // NowPayments crypto integration
         const nowPaymentsApiKey = gatewayConfig.apiKey;
-        
         if (!nowPaymentsApiKey) {
-          return new Response(
-            JSON.stringify({ error: 'NowPayments not configured' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          return new Response(JSON.stringify({ success: false, error: 'NowPayments not configured' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
-
         const nowPaymentsResponse = await fetch('https://api.nowpayments.io/v1/invoice', {
           method: 'POST',
-          headers: {
-            'x-api-key': nowPaymentsApiKey,
-            'Content-Type': 'application/json',
-          },
+          headers: { 'x-api-key': nowPaymentsApiKey, 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            price_amount: amount,
-            price_currency: currency,
-            order_id: transactionId,
+            price_amount: amount, price_currency: currency, order_id: transactionIdToUse,
             order_description: `Deposit - ${panel.name}`,
             ipn_callback_url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/payment-webhook?gateway=nowpayments`,
-            success_url: `${returnUrl}?success=true&transaction_id=${transactionId}`,
-            cancel_url: `${returnUrl}?cancelled=true&transaction_id=${transactionId}`,
+            success_url: `${returnUrl}?success=true&transaction_id=${transactionIdToUse}`,
+            cancel_url: `${returnUrl}?cancelled=true&transaction_id=${transactionIdToUse}`,
           }),
         });
-
         const nowPaymentsData = await nowPaymentsResponse.json();
-        
         if (!nowPaymentsData.invoice_url) {
-          console.error('[process-payment] NowPayments error:', nowPaymentsData);
-          return new Response(
-            JSON.stringify({ error: nowPaymentsData.message || 'NowPayments payment failed' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          return new Response(JSON.stringify({ success: false, error: nowPaymentsData.message || 'NowPayments payment failed' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
-
         redirectUrl = nowPaymentsData.invoice_url;
         paymentId = nowPaymentsData.id;
         break;
@@ -723,11 +734,30 @@ serve(async (req) => {
         );
       }
 
-      default:
+      case 'manual_transfer':
+      default: {
+        // Manual transfer or unsupported gateway - return the transaction ID for manual handling
+        if (gateway.startsWith('manual_') || gateway === 'manual_transfer') {
+          return new Response(
+            JSON.stringify({ 
+              success: true,
+              gateway: gateway,
+              requiresManualTransfer: true,
+              transactionId: transactionIdToUse,
+              amount,
+              currency: currency.toUpperCase(),
+              config: gatewayConfig,
+              message: 'Please complete the transfer manually. Your balance will be credited once payment is confirmed.',
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
         return new Response(
-          JSON.stringify({ error: `Unsupported gateway: ${gateway}` }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ success: false, error: `Unsupported gateway: ${gateway}` }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
+      }
     }
 
     // Update transaction with external payment ID
@@ -738,7 +768,7 @@ serve(async (req) => {
           external_id: paymentId,
           status: 'processing'
         })
-        .eq('id', transactionId);
+        .eq('id', transactionIdToUse);
     }
 
     console.log(`[process-payment] Payment initiated: ${gateway}, redirect: ${redirectUrl}`);
@@ -748,6 +778,7 @@ serve(async (req) => {
         success: true,
         redirectUrl,
         paymentId,
+        transactionId: transactionIdToUse,
         gateway
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -756,8 +787,8 @@ serve(async (req) => {
   } catch (error) {
     console.error('[process-payment] Error:', error);
     return new Response(
-      JSON.stringify({ error: error.message || 'Internal server error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ success: false, error: error.message || 'Internal server error' }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
