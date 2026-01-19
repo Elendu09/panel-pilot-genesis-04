@@ -111,6 +111,60 @@ export const PaystackIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
+// Kora Pay Icon
+export const KoraPayIcon = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect width="32" height="32" rx="6" fill="#00B5E2"/>
+    <path d="M8 8V24H12V18L18 24H24L16 16L24 8H18L12 14V8H8Z" fill="white"/>
+  </svg>
+);
+
+// Monnify Icon
+export const MonnifyIcon = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect width="32" height="32" rx="6" fill="#0057A7"/>
+    <path d="M8 12L12 8L16 12L20 8L24 12V20L20 24L16 20L12 24L8 20V12Z" fill="white"/>
+    <circle cx="16" cy="16" r="3" fill="#0057A7"/>
+  </svg>
+);
+
+// NowPayments Icon
+export const NowPaymentsIcon = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect width="32" height="32" rx="6" fill="#05C46B"/>
+    <path d="M10 22V10L16 16L22 10V22" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+  </svg>
+);
+
+// CoinGate Icon
+export const CoinGateIcon = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect width="32" height="32" rx="6" fill="#1E3A5F"/>
+    <circle cx="16" cy="16" r="8" stroke="#3B82F6" strokeWidth="2" fill="none"/>
+    <path d="M14 13V19M14 13H18M14 16H17M14 19H18" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+  </svg>
+);
+
+// Binance Pay Icon
+export const BinancePayIcon = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect width="32" height="32" rx="6" fill="#F0B90B"/>
+    <path d="M16 8L19 11L16 14L13 11L16 8Z" fill="white"/>
+    <path d="M10 14L13 17L10 20L7 17L10 14Z" fill="white"/>
+    <path d="M22 14L25 17L22 20L19 17L22 14Z" fill="white"/>
+    <path d="M16 17L19 20L16 23L13 20L16 17Z" fill="white"/>
+  </svg>
+);
+
+// Perfect Money Icon
+export const PerfectMoneyIcon = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect width="32" height="32" rx="6" fill="#E31C23"/>
+    <path d="M10 10H18C20.2 10 22 11.8 22 14C22 16.2 20.2 18 18 18H14V22H10V10Z" fill="white"/>
+    <path d="M14 13V15H17.5C18.1 15 18.5 14.6 18.5 14C18.5 13.4 18.1 13 17.5 13H14Z" fill="#E31C23"/>
+  </svg>
+);
+
 // Flutterwave Icon
 export const FlutterwaveIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -172,6 +226,17 @@ export const getPaymentIcon = (gatewayId: string): React.FC<{ className?: string
     square: SquareIcon,
     amazonpay: AmazonPayIcon,
     amazon_pay: AmazonPayIcon,
+    korapay: KoraPayIcon,
+    kora_pay: KoraPayIcon,
+    monnify: MonnifyIcon,
+    nowpayments: NowPaymentsIcon,
+    now_payments: NowPaymentsIcon,
+    coingate: CoinGateIcon,
+    coin_gate: CoinGateIcon,
+    binancepay: BinancePayIcon,
+    binance_pay: BinancePayIcon,
+    perfectmoney: PerfectMoneyIcon,
+    perfect_money: PerfectMoneyIcon,
   };
   return icons[gatewayId.toLowerCase()] || GenericPaymentIcon;
 };

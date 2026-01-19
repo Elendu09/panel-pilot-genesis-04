@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Textarea } from "@/components/ui/textarea";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { StripeIcon, PayPalIcon, BitcoinIcon, CoinbaseIcon, RazorpayIcon, PaystackIcon, FlutterwaveIcon, SquareIcon, getPaymentIcon } from "@/components/payment/PaymentIcons";
+import { StripeIcon, PayPalIcon, BitcoinIcon, CoinbaseIcon, RazorpayIcon, PaystackIcon, FlutterwaveIcon, SquareIcon, SkrillIcon, WiseIcon, KoraPayIcon, MonnifyIcon, NowPaymentsIcon, CoinGateIcon, BinancePayIcon, PerfectMoneyIcon, getPaymentIcon } from "@/components/payment/PaymentIcons";
 import PaymentAnalyticsChart from "@/components/payment/PaymentAnalyticsChart";
 import { usePanel } from "@/hooks/usePanel";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,6 +29,13 @@ const paymentGateways = {
     { id: "razorpay", name: "Razorpay", Icon: RazorpayIcon, regions: ["India"], fee: "2%", docsUrl: "https://razorpay.com/docs" },
     { id: "paystack", name: "Paystack", Icon: PaystackIcon, regions: ["Africa"], fee: "1.5% + $0.15", docsUrl: "https://paystack.com/docs" },
     { id: "flutterwave", name: "Flutterwave", Icon: FlutterwaveIcon, regions: ["Africa"], fee: "1.4%", docsUrl: "https://developer.flutterwave.com" },
+    { id: "korapay", name: "Kora Pay", Icon: KoraPayIcon, regions: ["Africa"], fee: "1.4%", docsUrl: "https://korahq.com/docs" },
+    { id: "monnify", name: "Monnify", Icon: MonnifyIcon, regions: ["Nigeria"], fee: "1.5%", docsUrl: "https://docs.monnify.com" },
+  ],
+  ewallets: [
+    { id: "skrill", name: "Skrill", Icon: SkrillIcon, regions: ["Worldwide"], fee: "1.9%", docsUrl: "https://developer.skrill.com" },
+    { id: "perfectmoney", name: "Perfect Money", Icon: PerfectMoneyIcon, regions: ["Worldwide"], fee: "0.5%", docsUrl: "https://perfectmoney.com/docs" },
+    { id: "wise", name: "Wise", Icon: WiseIcon, regions: ["Worldwide"], fee: "0.5%", docsUrl: "https://wise.com/developers" },
   ],
   bank: [
     { id: "ach", name: "ACH Transfer", Icon: StripeIcon, regions: ["US"], fee: "$0.25", docsUrl: "https://stripe.com/docs/ach" },
@@ -37,6 +44,9 @@ const paymentGateways = {
   crypto: [
     { id: "coinbase", name: "Coinbase Commerce", Icon: CoinbaseIcon, regions: ["Worldwide"], fee: "1%", docsUrl: "https://commerce.coinbase.com/docs" },
     { id: "btcpay", name: "BTCPay Server", Icon: BitcoinIcon, regions: ["Worldwide"], fee: "0%", docsUrl: "https://docs.btcpayserver.org" },
+    { id: "nowpayments", name: "NowPayments", Icon: NowPaymentsIcon, regions: ["Worldwide"], fee: "0.5%", docsUrl: "https://nowpayments.io/docs" },
+    { id: "coingate", name: "CoinGate", Icon: CoinGateIcon, regions: ["Worldwide"], fee: "1%", docsUrl: "https://developer.coingate.com" },
+    { id: "binancepay", name: "Binance Pay", Icon: BinancePayIcon, regions: ["Worldwide"], fee: "0.9%", docsUrl: "https://developers.binance.com/docs/binance-pay" },
   ],
 };
 
@@ -45,6 +55,7 @@ type GatewayType = { id: string; name: string; Icon: React.FC<{ className?: stri
 const categoryIcons: Record<keyof typeof paymentGateways, React.ElementType> = {
   cards: CreditCard,
   regional: Globe,
+  ewallets: Wallet,
   bank: Building2,
   crypto: Bitcoin,
 };
@@ -52,6 +63,7 @@ const categoryIcons: Record<keyof typeof paymentGateways, React.ElementType> = {
 const categoryLabels: Record<keyof typeof paymentGateways, string> = {
   cards: "Card Payments",
   regional: "Regional Gateways",
+  ewallets: "E-Wallets",
   bank: "Bank Transfers",
   crypto: "Cryptocurrency",
 };
@@ -291,12 +303,13 @@ const PaymentMethods = () => {
     
     // Persist to Supabase
     try {
-      const enabledMethods = Object.entries(updatedGateways)
+    const enabledMethods = Object.entries(updatedGateways)
         .filter(([_, config]) => config.apiKey) // Only include configured ones
         .map(([id, config]) => ({
           id,
           enabled: config.enabled,
           apiKey: config.apiKey,
+          secretKey: config.secretKey,
         }));
       
       const currentSettings = (panel?.settings as any) || {};

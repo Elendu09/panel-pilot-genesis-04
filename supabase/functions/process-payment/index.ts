@@ -568,8 +568,8 @@ serve(async (req) => {
         
         if (!coinGateApiKey) {
           return new Response(
-            JSON.stringify({ error: 'CoinGate not configured' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            JSON.stringify({ success: false, error: 'CoinGate not configured' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
@@ -580,14 +580,14 @@ serve(async (req) => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            order_id: transactionId,
+            order_id: transactionIdToUse,
             price_amount: amount,
             price_currency: currency.toUpperCase(),
             receive_currency: currency.toUpperCase(),
             title: `Deposit - ${panel.name}`,
             callback_url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/payment-webhook?gateway=coingate`,
-            success_url: `${returnUrl}?success=true&transaction_id=${transactionId}`,
-            cancel_url: `${returnUrl}?cancelled=true&transaction_id=${transactionId}`,
+            success_url: `${returnUrl}?success=true&transaction_id=${transactionIdToUse}`,
+            cancel_url: `${returnUrl}?cancelled=true&transaction_id=${transactionIdToUse}`,
           }),
         });
 
@@ -596,8 +596,8 @@ serve(async (req) => {
         if (!coinGateData.payment_url) {
           console.error('[process-payment] CoinGate error:', coinGateData);
           return new Response(
-            JSON.stringify({ error: coinGateData.message || 'CoinGate payment failed' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            JSON.stringify({ success: false, error: coinGateData.message || 'CoinGate payment failed' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
@@ -613,8 +613,8 @@ serve(async (req) => {
         
         if (!binanceApiKey || !binanceSecretKey) {
           return new Response(
-            JSON.stringify({ error: 'Binance Pay not configured' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            JSON.stringify({ success: false, error: 'Binance Pay not configured' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
@@ -622,17 +622,17 @@ serve(async (req) => {
         const nonce = Math.random().toString(36).substring(2, 15);
         const requestBody = JSON.stringify({
           env: { terminalType: 'WEB' },
-          merchantTradeNo: transactionId,
+          merchantTradeNo: transactionIdToUse,
           orderAmount: amount,
           currency: currency.toUpperCase(),
           goods: {
             goodsType: '01',
             goodsCategory: 'Z000',
-            referenceGoodsId: transactionId,
+            referenceGoodsId: transactionIdToUse,
             goodsName: `Deposit - ${panel.name}`,
           },
-          returnUrl: `${returnUrl}?success=true&transaction_id=${transactionId}`,
-          cancelUrl: `${returnUrl}?cancelled=true&transaction_id=${transactionId}`,
+          returnUrl: `${returnUrl}?success=true&transaction_id=${transactionIdToUse}`,
+          cancelUrl: `${returnUrl}?cancelled=true&transaction_id=${transactionIdToUse}`,
         });
 
         const binanceResponse = await fetch('https://bpay.binanceapi.com/binancepay/openapi/v2/order', {
@@ -651,8 +651,8 @@ serve(async (req) => {
         if (binanceData.status !== 'SUCCESS') {
           console.error('[process-payment] Binance Pay error:', binanceData);
           return new Response(
-            JSON.stringify({ error: binanceData.errorMessage || 'Binance Pay payment failed' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            JSON.stringify({ success: false, error: binanceData.errorMessage || 'Binance Pay payment failed' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
@@ -667,8 +667,8 @@ serve(async (req) => {
         
         if (!skrillEmail) {
           return new Response(
-            JSON.stringify({ error: 'Skrill not configured' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            JSON.stringify({ success: false, error: 'Skrill not configured' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
@@ -696,8 +696,8 @@ serve(async (req) => {
         
         if (!pmAccountId) {
           return new Response(
-            JSON.stringify({ error: 'Perfect Money not configured' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            JSON.stringify({ success: false, error: 'Perfect Money not configured' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
