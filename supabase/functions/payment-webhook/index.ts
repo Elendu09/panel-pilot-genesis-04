@@ -329,6 +329,30 @@ serve(async (req) => {
         break;
       }
 
+      case 'cryptomus': {
+        // Cryptomus crypto payment webhook
+        event = JSON.parse(body);
+        // Cryptomus status: paid, paid_over, wrong_amount, process, confirm_check, wrong_amount_waiting, check, fail, cancel, system_fail, refund_process, refund_fail, refund_paid
+        if (event.status === 'paid' || event.status === 'paid_over') {
+          transactionId = event.order_id;
+          status = 'completed';
+          amount = parseFloat(event.amount || '0');
+          // Parse additional data for panelId and buyerId
+          try {
+            const additionalData = JSON.parse(event.additional_data || '{}');
+            panelId = additionalData.panelId;
+            buyerId = additionalData.buyerId;
+          } catch (e) {
+            console.log('[payment-webhook] Cryptomus: Could not parse additional_data');
+          }
+          console.log(`[payment-webhook] Cryptomus payment completed: ${transactionId}, amount: ${amount}`);
+        } else if (event.status === 'fail' || event.status === 'cancel' || event.status === 'system_fail') {
+          transactionId = event.order_id;
+          status = 'failed';
+        }
+        break;
+      }
+
       default: {
         console.log(`[payment-webhook] Unknown gateway: ${gateway}`);
         return new Response(

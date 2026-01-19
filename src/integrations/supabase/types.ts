@@ -3070,6 +3070,7 @@ export type Database = {
       transactions: {
         Row: {
           amount: number
+          buyer_id: string | null
           created_at: string
           description: string | null
           id: string
@@ -3083,6 +3084,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          buyer_id?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -3096,6 +3098,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          buyer_id?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -3109,6 +3112,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "transactions_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "client_users"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "transactions_order_id_fkey"
             columns: ["order_id"]
             isOneToOne: false
@@ -3120,13 +3130,6 @@ export type Database = {
             columns: ["panel_id"]
             isOneToOne: false
             referencedRelation: "panels"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "transactions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]

@@ -692,6 +692,63 @@ serve(async (req) => {
         break;
       }
 
+      case 'cryptomus': {
+        // Cryptomus crypto payment integration
+        const cryptomusApiKey = gatewayConfig.apiKey; // Payment API key
+        const cryptomusMerchantId = gatewayConfig.secretKey; // Merchant UUID
+        
+        if (!cryptomusApiKey || !cryptomusMerchantId) {
+          return new Response(
+            JSON.stringify({ success: false, error: 'Cryptomus not configured. Please add API Key and Merchant ID.' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Cryptomus uses HMAC-MD5 signature: base64(json) + api_key
+        const cryptomusPayload = {
+          amount: amount.toString(),
+          currency: currency.toUpperCase(),
+          order_id: transactionIdToUse,
+          url_return: `${returnUrl}?success=true&transaction_id=${transactionIdToUse}`,
+          url_callback: `${Deno.env.get('SUPABASE_URL')}/functions/v1/payment-webhook?gateway=cryptomus`,
+          is_payment_multiple: false,
+          lifetime: 3600, // 1 hour
+          additional_data: JSON.stringify({ panelId, buyerId }),
+        };
+
+        // Create MD5 signature
+        const encoder = new TextEncoder();
+        const payloadBase64 = btoa(JSON.stringify(cryptomusPayload));
+        const signData = encoder.encode(payloadBase64 + cryptomusApiKey);
+        const hashBuffer = await crypto.subtle.digest('MD5', signData);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const sign = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+        const cryptomusResponse = await fetch('https://api.cryptomus.com/v1/payment', {
+          method: 'POST',
+          headers: {
+            'merchant': cryptomusMerchantId,
+            'sign': sign,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(cryptomusPayload),
+        });
+
+        const cryptomusData = await cryptomusResponse.json();
+        
+        if (!cryptomusData.result?.url) {
+          console.error('[process-payment] Cryptomus error:', cryptomusData);
+          return new Response(
+            JSON.stringify({ success: false, error: cryptomusData.message || 'Cryptomus payment failed' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        redirectUrl = cryptomusData.result.url;
+        paymentId = cryptomusData.result.uuid;
+        break;
+      }
+
       case 'skrill': {
         // Skrill e-wallet integration
         const skrillEmail = gatewayConfig.apiKey; // Merchant email

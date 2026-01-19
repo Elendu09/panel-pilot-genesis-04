@@ -40,7 +40,7 @@ import { useInvoiceGeneration } from "@/hooks/useInvoiceGeneration";
 // All available payment gateways with their display info (40+ gateways)
 const allPaymentGateways: Record<string, { name: string; icon: any; color: string; badge: string }> = {
   // Cards & Digital Wallets
-  stripe: { name: "Card", icon: CreditCard, color: "from-blue-500 to-blue-600", badge: "Instant" },
+  stripe: { name: "Stripe", icon: CreditCard, color: "from-blue-500 to-blue-600", badge: "Instant" },
   paypal: { name: "PayPal", icon: DollarSign, color: "from-blue-400 to-blue-500", badge: "Instant" },
   square: { name: "Square", icon: CreditCard, color: "from-black to-gray-700", badge: "Instant" },
   adyen: { name: "Adyen", icon: CreditCard, color: "from-green-600 to-green-700", badge: "Instant" },
@@ -82,6 +82,7 @@ const allPaymentGateways: Record<string, { name: string; icon: any; color: strin
   coingate: { name: "CoinGate", icon: Bitcoin, color: "from-blue-500 to-indigo-600", badge: "5-30 min" },
   binancepay: { name: "Binance Pay", icon: Bitcoin, color: "from-yellow-400 to-yellow-500", badge: "Instant" },
   bitpay: { name: "BitPay", icon: Bitcoin, color: "from-blue-500 to-blue-700", badge: "5-30 min" },
+  cryptomus: { name: "Cryptomus", icon: Bitcoin, color: "from-green-500 to-green-600", badge: "5-30 min" },
   
   // E-Wallets
   perfectmoney: { name: "Perfect Money", icon: Shield, color: "from-green-500 to-emerald-500", badge: "Instant" },
@@ -144,6 +145,10 @@ const BuyerDeposit = () => {
     instructions: string;
     title: string;
   } | null>(null);
+  
+  // Multiple manual methods selector state
+  const [showManualSelector, setShowManualSelector] = useState(false);
+  const [allManualMethods, setAllManualMethods] = useState<PaymentMethod[]>([]);
 
   // Fetch enabled payment methods from panel settings
   useEffect(() => {
@@ -203,7 +208,24 @@ const BuyerDeposit = () => {
               bankDetails: m.bankDetails,
               instructions: m.instructions
             }));
-          allMethods.push(...mappedManual);
+          
+          // Store all manual methods for selector
+          setAllManualMethods(mappedManual);
+          
+          // If multiple manual methods, add a single "Manual Transfer" option that opens selector
+          if (mappedManual.length > 1) {
+            allMethods.push({
+              id: 'manual_selector',
+              name: 'Bank Transfer',
+              icon: Banknote,
+              color: "from-emerald-500 to-teal-600",
+              badge: `${mappedManual.length} options`,
+              isManual: true
+            });
+          } else {
+            // Just one manual method, add it directly
+            allMethods.push(...mappedManual);
+          }
         }
         
         if (allMethods.length > 0) {
@@ -277,8 +299,10 @@ const BuyerDeposit = () => {
     }
   }, [refreshBuyer]);
 
-  const handleDeposit = async () => {
-    if (!selectedMethod || !amount || parseFloat(amount) <= 0) {
+  const handleDeposit = async (overrideMethodId?: string) => {
+    const methodToUse = overrideMethodId || selectedMethod;
+    
+    if (!methodToUse || !amount || parseFloat(amount) <= 0) {
       toast({ variant: "destructive", title: "Please select payment method and enter amount" });
       return;
     }
@@ -287,18 +311,27 @@ const BuyerDeposit = () => {
       toast({ variant: "destructive", title: "Error", description: "User or panel not found" });
       return;
     }
+    
+    // If selecting manual_selector, show the manual methods selector
+    if (methodToUse === 'manual_selector') {
+      setShowManualSelector(true);
+      return;
+    }
 
     setProcessing(true);
+    setShowManualSelector(false);
 
     try {
       const depositAmount = parseFloat(amount);
-      const selectedPaymentMethod = paymentMethods.find(m => m.id === selectedMethod);
-      const methodName = selectedPaymentMethod?.name || selectedMethod;
+      // Look in both paymentMethods and allManualMethods
+      const selectedPaymentMethod = paymentMethods.find(m => m.id === methodToUse) 
+        || allManualMethods.find(m => m.id === methodToUse);
+      const methodName = selectedPaymentMethod?.name || methodToUse;
 
       // Call the payment processing edge function (it creates the transaction server-side)
       const response = await supabase.functions.invoke('process-payment', {
         body: {
-          gateway: selectedMethod,
+          gateway: methodToUse,
           amount: depositAmount,
           panelId: panel.id,
           buyerId: buyer.id,
@@ -548,7 +581,7 @@ const BuyerDeposit = () => {
             size="lg"
             className="w-full h-12 md:h-14 text-base md:text-lg gap-2 md:gap-3 bg-gradient-to-r from-primary to-primary/80 shadow-lg shadow-primary/20"
             disabled={!selectedMethod || !amount || parseFloat(amount) <= 0 || processing}
-            onClick={handleDeposit}
+            onClick={() => handleDeposit()}
           >
             {processing ? (
               <>
@@ -727,6 +760,60 @@ const BuyerDeposit = () => {
             >
               <CheckCircle className="w-4 h-4" />
               I've Made the Transfer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Manual Methods Selector Dialog */}
+      <Dialog open={showManualSelector} onOpenChange={setShowManualSelector}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Banknote className="w-5 h-5 text-emerald-500" />
+              Select Payment Method
+            </DialogTitle>
+            <DialogDescription>
+              Choose your preferred transfer method for ${amount}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-3 py-4 max-h-[400px] overflow-y-auto">
+            {allManualMethods.map((method) => (
+              <motion.button
+                key={method.id}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => {
+                  setShowManualSelector(false);
+                  handleDeposit(method.id);
+                }}
+                className="w-full p-4 rounded-xl border-2 border-border hover:border-emerald-500/50 bg-card transition-all text-left"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-emerald-500/10">
+                      <Banknote className="w-5 h-5 text-emerald-500" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold">{method.name}</h4>
+                      <p className="text-xs text-muted-foreground">{method.badge}</p>
+                    </div>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-muted-foreground" />
+                </div>
+                {method.bankDetails && (
+                  <p className="text-xs text-muted-foreground mt-2 line-clamp-1">
+                    {method.bankDetails.split('\n')[0]}...
+                  </p>
+                )}
+              </motion.button>
+            ))}
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowManualSelector(false)}>
+              Cancel
             </Button>
           </DialogFooter>
         </DialogContent>
