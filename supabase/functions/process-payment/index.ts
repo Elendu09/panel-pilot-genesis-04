@@ -718,6 +718,243 @@ serve(async (req) => {
         break;
       }
 
+      case 'square': {
+        // Square Checkout integration
+        const squareAccessToken = gatewayConfig.secretKey;
+        const squareLocationId = gatewayConfig.apiKey; // Location ID stored as apiKey
+        
+        if (!squareAccessToken || !squareLocationId) {
+          return new Response(
+            JSON.stringify({ success: false, error: 'Square not configured. Please add Access Token and Location ID.' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const squareResponse = await fetch('https://connect.squareup.com/v2/online-checkout/payment-links', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${squareAccessToken}`,
+            'Content-Type': 'application/json',
+            'Square-Version': '2024-01-18',
+          },
+          body: JSON.stringify({
+            idempotency_key: transactionIdToUse,
+            quick_pay: {
+              name: `Deposit - ${panel.name}`,
+              price_money: {
+                amount: Math.round(amount * 100), // Square uses cents
+                currency: currency.toUpperCase(),
+              },
+              location_id: squareLocationId,
+            },
+            checkout_options: {
+              redirect_url: `${returnUrl}?success=true&transaction_id=${transactionIdToUse}`,
+            },
+            pre_populated_data: {
+              buyer_email: buyerId ? undefined : undefined, // Could fetch buyer email if needed
+            },
+          }),
+        });
+
+        const squareData = await squareResponse.json();
+        
+        if (!squareData.payment_link?.url) {
+          console.error('[process-payment] Square error:', squareData);
+          return new Response(
+            JSON.stringify({ success: false, error: squareData.errors?.[0]?.detail || 'Square payment failed' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        redirectUrl = squareData.payment_link.url;
+        paymentId = squareData.payment_link.id;
+        break;
+      }
+
+      case 'braintree': {
+        // Braintree - typically uses client-side SDK, returns hosted fields URL
+        const braintreeMerchantId = gatewayConfig.apiKey;
+        const braintreePrivateKey = gatewayConfig.secretKey;
+        const braintreePublicKey = gatewayConfig.publicKey || '';
+        
+        if (!braintreeMerchantId || !braintreePrivateKey) {
+          return new Response(
+            JSON.stringify({ success: false, error: 'Braintree not configured. Please add Merchant ID and Private Key.' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Braintree doesn't have a simple redirect checkout like Stripe
+        // Return config for client-side integration
+        return new Response(
+          JSON.stringify({ 
+            success: true,
+            gateway: 'braintree',
+            requiresClientIntegration: true,
+            transactionId: transactionIdToUse,
+            amount,
+            currency: currency.toUpperCase(),
+            config: {
+              merchantId: braintreeMerchantId,
+              publicKey: braintreePublicKey,
+              // Note: In production, generate a client token server-side
+            },
+            message: 'Braintree requires client-side integration. Use the Braintree SDK with the provided config.',
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'ach': {
+        // ACH Transfer via Stripe
+        const stripeSecretKey = gatewayConfig.secretKey || Deno.env.get('STRIPE_SECRET_KEY');
+        
+        if (!stripeSecretKey) {
+          return new Response(
+            JSON.stringify({ success: false, error: 'ACH (Stripe) not configured' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const achResponse = await fetch('https://api.stripe.com/v1/checkout/sessions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${stripeSecretKey}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            'payment_method_types[0]': 'us_bank_account',
+            'line_items[0][price_data][currency]': 'usd', // ACH only supports USD
+            'line_items[0][price_data][product_data][name]': `Account Deposit - ${panel.name}`,
+            'line_items[0][price_data][unit_amount]': String(Math.round(amount * 100)),
+            'line_items[0][quantity]': '1',
+            'mode': 'payment',
+            'success_url': `${returnUrl}?success=true&session_id={CHECKOUT_SESSION_ID}&transaction_id=${transactionIdToUse}`,
+            'cancel_url': `${returnUrl}?cancelled=true&transaction_id=${transactionIdToUse}`,
+            'metadata[panelId]': panelId,
+            'metadata[buyerId]': buyerId,
+            'metadata[transactionId]': transactionIdToUse,
+            'payment_method_options[us_bank_account][financial_connections][permissions][0]': 'payment_method',
+          }),
+        });
+
+        const achSession = await achResponse.json();
+        
+        if (achSession.error) {
+          console.error('[process-payment] ACH error:', achSession.error);
+          return new Response(
+            JSON.stringify({ success: false, error: achSession.error.message }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        redirectUrl = achSession.url;
+        paymentId = achSession.id;
+        break;
+      }
+
+      case 'sepa': {
+        // SEPA Transfer via Stripe
+        const stripeSecretKey = gatewayConfig.secretKey || Deno.env.get('STRIPE_SECRET_KEY');
+        
+        if (!stripeSecretKey) {
+          return new Response(
+            JSON.stringify({ success: false, error: 'SEPA (Stripe) not configured' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const sepaResponse = await fetch('https://api.stripe.com/v1/checkout/sessions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${stripeSecretKey}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            'payment_method_types[0]': 'sepa_debit',
+            'line_items[0][price_data][currency]': 'eur', // SEPA only supports EUR
+            'line_items[0][price_data][product_data][name]': `Account Deposit - ${panel.name}`,
+            'line_items[0][price_data][unit_amount]': String(Math.round(amount * 100)),
+            'line_items[0][quantity]': '1',
+            'mode': 'payment',
+            'success_url': `${returnUrl}?success=true&session_id={CHECKOUT_SESSION_ID}&transaction_id=${transactionIdToUse}`,
+            'cancel_url': `${returnUrl}?cancelled=true&transaction_id=${transactionIdToUse}`,
+            'metadata[panelId]': panelId,
+            'metadata[buyerId]': buyerId,
+            'metadata[transactionId]': transactionIdToUse,
+          }),
+        });
+
+        const sepaSession = await sepaResponse.json();
+        
+        if (sepaSession.error) {
+          console.error('[process-payment] SEPA error:', sepaSession.error);
+          return new Response(
+            JSON.stringify({ success: false, error: sepaSession.error.message }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        redirectUrl = sepaSession.url;
+        paymentId = sepaSession.id;
+        break;
+      }
+
+      case 'btcpay': {
+        // BTCPay Server integration
+        const btcpayHost = gatewayConfig.apiKey; // Store URL as apiKey (e.g., https://btcpay.example.com)
+        const btcpayApiKey = gatewayConfig.secretKey;
+        const btcpayStoreId = gatewayConfig.storeId || gatewayConfig.publicKey || '';
+        
+        if (!btcpayHost || !btcpayApiKey) {
+          return new Response(
+            JSON.stringify({ success: false, error: 'BTCPay Server not configured. Please add Server URL and API Key.' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Normalize host URL
+        const btcpayUrl = btcpayHost.endsWith('/') ? btcpayHost.slice(0, -1) : btcpayHost;
+
+        const btcpayResponse = await fetch(`${btcpayUrl}/api/v1/stores/${btcpayStoreId}/invoices`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `token ${btcpayApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            amount: amount.toString(),
+            currency: currency.toUpperCase(),
+            metadata: {
+              orderId: transactionIdToUse,
+              panelId: panelId,
+              buyerId: buyerId,
+            },
+            checkout: {
+              redirectURL: `${returnUrl}?success=true&transaction_id=${transactionIdToUse}`,
+              redirectAutomatically: true,
+            },
+            receipt: {
+              enabled: true,
+            },
+          }),
+        });
+
+        const btcpayData = await btcpayResponse.json();
+        
+        if (!btcpayData.checkoutLink) {
+          console.error('[process-payment] BTCPay error:', btcpayData);
+          return new Response(
+            JSON.stringify({ success: false, error: btcpayData.message || 'BTCPay Server payment failed' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        redirectUrl = btcpayData.checkoutLink;
+        paymentId = btcpayData.id;
+        break;
+      }
+
       case 'wise': {
         // Wise (TransferWise) - returns bank details for manual transfer
         return new Response(
@@ -725,7 +962,7 @@ serve(async (req) => {
             success: true,
             gateway: 'wise',
             requiresManualTransfer: true,
-            transactionId,
+            transactionId: transactionIdToUse,
             amount,
             currency: currency.toUpperCase(),
             message: 'Please transfer the amount using Wise. Your balance will be credited once payment is confirmed.',
