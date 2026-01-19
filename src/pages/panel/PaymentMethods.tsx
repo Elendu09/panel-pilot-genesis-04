@@ -5,9 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CreditCard, Plus, Settings, Search, CheckCircle, AlertCircle, Globe, Wallet, Bitcoin, Building2, Smartphone, DollarSign, Eye, EyeOff, Play, Loader2, Sparkles, Send, RefreshCw, Clock, TrendingUp, Users, BarChart3, ExternalLink } from "lucide-react";
+import { CreditCard, Plus, Settings, Search, CheckCircle, AlertCircle, Globe, Wallet, Bitcoin, Building2, Smartphone, DollarSign, Eye, EyeOff, Play, Loader2, Sparkles, Send, RefreshCw, Clock, TrendingUp, Users, BarChart3, ExternalLink, Banknote, Pencil, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Textarea } from "@/components/ui/textarea";
 import { motion, AnimatePresence } from "framer-motion";
@@ -97,7 +97,7 @@ const PaymentMethods = () => {
   const [paymentMethodUsage, setPaymentMethodUsage] = useState<{ method: string; percent: number; color: string }[]>([]);
   const [loadingStats, setLoadingStats] = useState(true);
 
-  // Load configured gateways from Supabase on mount
+  // Load configured gateways and manual payments from Supabase on mount
   useEffect(() => {
     if (panel?.id) {
       loadConfiguredGateways();
@@ -114,6 +114,10 @@ const PaymentMethods = () => {
         loaded[m.id] = { enabled: m.enabled ?? true, apiKey: m.apiKey || '', secretKey: m.secretKey || '' };
       });
       setConfiguredGateways(loaded);
+    }
+    // Load manual payments
+    if (settings?.payments?.manualPayments) {
+      setManualPayments(settings.payments.manualPayments);
     }
   };
 
@@ -410,6 +414,142 @@ const PaymentMethods = () => {
     toast({ title: "Synced with platform", description: "Payment methods are up to date" });
   };
 
+  // Manual Payment Management
+  const openManualDialog = (method?: ManualPaymentMethod) => {
+    if (method) {
+      setEditingManual(method);
+      setManualForm({
+        title: method.title,
+        bankDetails: method.bankDetails,
+        instructions: method.instructions,
+        processingTime: method.processingTime
+      });
+    } else {
+      setEditingManual(null);
+      setManualForm({ title: "", bankDetails: "", instructions: "", processingTime: "12-24 hours" });
+    }
+    setManualDialogOpen(true);
+  };
+
+  const saveManualPayment = async () => {
+    if (!manualForm.title.trim() || !panel?.id) {
+      toast({ variant: "destructive", title: "Title is required" });
+      return;
+    }
+
+    let updated: ManualPaymentMethod[];
+    if (editingManual) {
+      // Update existing
+      updated = manualPayments.map(m => 
+        m.id === editingManual.id 
+          ? { ...m, ...manualForm }
+          : m
+      );
+    } else {
+      // Add new
+      const newMethod: ManualPaymentMethod = {
+        id: `manual_${Date.now()}`,
+        title: manualForm.title,
+        bankDetails: manualForm.bankDetails,
+        instructions: manualForm.instructions,
+        processingTime: manualForm.processingTime,
+        enabled: true
+      };
+      updated = [...manualPayments, newMethod];
+    }
+
+    setManualPayments(updated);
+
+    // Persist to Supabase
+    try {
+      const currentSettings = (panel?.settings as any) || {};
+      const paymentSettings = currentSettings.payments || {};
+      
+      await supabase
+        .from('panels')
+        .update({ 
+          settings: { 
+            ...currentSettings, 
+            payments: { 
+              ...paymentSettings,
+              manualPayments: updated,
+              configuredAt: new Date().toISOString() 
+            } 
+          } 
+        })
+        .eq('id', panel.id);
+      
+      refreshPanel();
+      setManualDialogOpen(false);
+      toast({ title: editingManual ? "Manual payment updated" : "Manual payment added" });
+    } catch (error) {
+      console.error('Error saving manual payment:', error);
+      toast({ variant: "destructive", title: "Failed to save" });
+    }
+  };
+
+  const deleteManualPayment = async (id: string) => {
+    if (!panel?.id) return;
+    
+    const updated = manualPayments.filter(m => m.id !== id);
+    setManualPayments(updated);
+
+    try {
+      const currentSettings = (panel?.settings as any) || {};
+      const paymentSettings = currentSettings.payments || {};
+      
+      await supabase
+        .from('panels')
+        .update({ 
+          settings: { 
+            ...currentSettings, 
+            payments: { 
+              ...paymentSettings,
+              manualPayments: updated 
+            } 
+          } 
+        })
+        .eq('id', panel.id);
+      
+      refreshPanel();
+      toast({ title: "Manual payment deleted" });
+    } catch (error) {
+      console.error('Error deleting manual payment:', error);
+      toast({ variant: "destructive", title: "Failed to delete" });
+    }
+  };
+
+  const toggleManualPayment = async (id: string) => {
+    if (!panel?.id) return;
+    
+    const updated = manualPayments.map(m => 
+      m.id === id ? { ...m, enabled: !m.enabled } : m
+    );
+    setManualPayments(updated);
+
+    try {
+      const currentSettings = (panel?.settings as any) || {};
+      const paymentSettings = currentSettings.payments || {};
+      
+      await supabase
+        .from('panels')
+        .update({ 
+          settings: { 
+            ...currentSettings, 
+            payments: { 
+              ...paymentSettings,
+              manualPayments: updated 
+            } 
+          } 
+        })
+        .eq('id', panel.id);
+      
+      refreshPanel();
+    } catch (error) {
+      console.error('Error toggling manual payment:', error);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -508,6 +648,96 @@ const PaymentMethods = () => {
               );
             })}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Manual Payment Methods Section */}
+      <Card className="bg-gradient-to-br from-emerald-500/10 via-card to-teal-500/10 border-emerald-500/30">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-emerald-500/20">
+                <Banknote className="w-5 h-5 text-emerald-500" />
+              </div>
+              <div>
+                <CardTitle className="text-lg">Manual Payment Methods</CardTitle>
+                <p className="text-sm text-muted-foreground">Add bank transfer details, mobile money, or custom payment instructions</p>
+              </div>
+            </div>
+            <Button onClick={() => openManualDialog()} className="gap-2 bg-emerald-600 hover:bg-emerald-700">
+              <Plus className="w-4 h-4" />
+              Add Manual Payment
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {manualPayments.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Banknote className="w-12 h-12 mx-auto mb-3 opacity-50" />
+              <p>No manual payment methods configured yet.</p>
+              <p className="text-sm">Click "Add Manual Payment" to create one.</p>
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {manualPayments.map((method) => (
+                <motion.div
+                  key={method.id}
+                  whileHover={{ scale: 1.02 }}
+                  className={cn(
+                    "p-4 rounded-xl border-2 transition-all",
+                    method.enabled 
+                      ? "border-emerald-500/50 bg-emerald-500/5" 
+                      : "border-border/50 bg-muted/20"
+                  )}
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-emerald-500/20">
+                        <Banknote className="w-5 h-5 text-emerald-500" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold">{method.title}</h4>
+                        <p className="text-xs text-muted-foreground">
+                          <Clock className="w-3 h-3 inline mr-1" />
+                          {method.processingTime}
+                        </p>
+                      </div>
+                    </div>
+                    <Switch 
+                      checked={method.enabled} 
+                      onCheckedChange={() => toggleManualPayment(method.id)} 
+                    />
+                  </div>
+                  
+                  {method.bankDetails && (
+                    <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
+                      {method.bankDetails}
+                    </p>
+                  )}
+                  
+                  <div className="flex gap-2 mt-3">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex-1 gap-1"
+                      onClick={() => openManualDialog(method)}
+                    >
+                      <Pencil className="w-3 h-3" />
+                      Edit
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="text-destructive hover:bg-destructive/10"
+                      onClick={() => deleteManualPayment(method.id)}
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -868,6 +1098,75 @@ const PaymentMethods = () => {
               Submit Request
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Manual Payment Dialog */}
+      <Dialog open={manualDialogOpen} onOpenChange={setManualDialogOpen}>
+        <DialogContent className="sm:max-w-[500px] glass-card border-border/50">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              <Banknote className="w-6 h-6 text-emerald-500" />
+              {editingManual ? 'Edit Manual Payment' : 'Add Manual Payment'}
+            </DialogTitle>
+            <DialogDescription>
+              Configure payment instructions for bank transfers, mobile money, or other manual payment methods
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <Label>Payment Method Title *</Label>
+              <Input 
+                value={manualForm.title} 
+                onChange={(e) => setManualForm({...manualForm, title: e.target.value})} 
+                placeholder="e.g., Bank Transfer (GTBank), Mobile Money, Western Union"
+                className="bg-background/50" 
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Bank/Account Details</Label>
+              <Textarea 
+                value={manualForm.bankDetails} 
+                onChange={(e) => setManualForm({...manualForm, bankDetails: e.target.value})} 
+                placeholder="Bank: GTBank&#10;Account Name: Your Business Name&#10;Account Number: 0123456789&#10;Swift Code: GTBINGLA"
+                className="bg-background/50 font-mono text-sm" 
+                rows={5}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Payment Instructions</Label>
+              <Textarea 
+                value={manualForm.instructions} 
+                onChange={(e) => setManualForm({...manualForm, instructions: e.target.value})} 
+                placeholder="1. Make the transfer to the account above&#10;2. Send proof of payment via WhatsApp to +234...&#10;3. Your account will be credited within 24 hours"
+                className="bg-background/50" 
+                rows={4}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Processing Time</Label>
+              <select 
+                className="w-full p-2 rounded-md border bg-background/50" 
+                value={manualForm.processingTime} 
+                onChange={(e) => setManualForm({...manualForm, processingTime: e.target.value})}
+              >
+                <option value="1-2 hours">1-2 hours</option>
+                <option value="6-12 hours">6-12 hours</option>
+                <option value="12-24 hours">12-24 hours</option>
+                <option value="1-2 business days">1-2 business days</option>
+                <option value="2-5 business days">2-5 business days</option>
+              </select>
+            </div>
+          </div>
+          <DialogFooter className="mt-6">
+            <Button variant="outline" onClick={() => setManualDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={saveManualPayment} className="gap-2 bg-emerald-600 hover:bg-emerald-700">
+              <CheckCircle className="w-4 h-4" />
+              {editingManual ? 'Save Changes' : 'Add Payment Method'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
