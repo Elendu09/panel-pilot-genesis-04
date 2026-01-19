@@ -56,6 +56,16 @@ const categoryLabels: Record<keyof typeof paymentGateways, string> = {
   crypto: "Cryptocurrency",
 };
 
+// Manual Payment interface
+interface ManualPaymentMethod {
+  id: string;
+  title: string;
+  bankDetails: string;
+  instructions: string;
+  processingTime: string;
+  enabled: boolean;
+}
+
 const PaymentMethods = () => {
   const { toast } = useToast();
   const { panel, refreshPanel } = usePanel();
@@ -67,6 +77,12 @@ const PaymentMethods = () => {
   const [showSecretKey, setShowSecretKey] = useState(false);
   const [testing, setTesting] = useState(false);
   const [formData, setFormData] = useState({ apiKey: "", secretKey: "", testMode: true, minDeposit: "5", maxDeposit: "1000", feePercentage: "0", fixedFee: "0" });
+  
+  // Manual payments state
+  const [manualPayments, setManualPayments] = useState<ManualPaymentMethod[]>([]);
+  const [manualDialogOpen, setManualDialogOpen] = useState(false);
+  const [editingManual, setEditingManual] = useState<ManualPaymentMethod | null>(null);
+  const [manualForm, setManualForm] = useState({ title: "", bankDetails: "", instructions: "", processingTime: "12-24 hours" });
   
   // Platform methods state
   const [showRequestDialog, setShowRequestDialog] = useState(false);
