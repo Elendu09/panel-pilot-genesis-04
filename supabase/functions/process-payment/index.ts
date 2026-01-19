@@ -166,7 +166,7 @@ serve(async (req) => {
         }
 
         // Get PayPal access token
-        const tokenResponse = await fetch('https://api-m.sandbox.paypal.com/v1/oauth2/token', {
+        const tokenResponse = await fetch('https://api-m.paypal.com/v1/oauth2/token', {
           method: 'POST',
           headers: {
             'Authorization': `Basic ${btoa(`${paypalClientId}:${paypalSecret}`)}`,
@@ -185,7 +185,7 @@ serve(async (req) => {
         }
 
         // Create PayPal order
-        const orderResponse = await fetch('https://api-m.sandbox.paypal.com/v2/checkout/orders', {
+        const orderResponse = await fetch('https://api-m.paypal.com/v2/checkout/orders', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${tokenData.access_token}`,
@@ -678,14 +678,14 @@ serve(async (req) => {
           amount: amount.toString(),
           currency: currency.toUpperCase(),
           detail1_description: `Deposit - ${panel.name}`,
-          transaction_id: transactionId,
-          return_url: `${returnUrl}?success=true&transaction_id=${transactionId}`,
-          cancel_url: `${returnUrl}?cancelled=true&transaction_id=${transactionId}`,
+          transaction_id: transactionIdToUse,
+          return_url: `${returnUrl}?success=true&transaction_id=${transactionIdToUse}`,
+          cancel_url: `${returnUrl}?cancelled=true&transaction_id=${transactionIdToUse}`,
           status_url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/payment-webhook?gateway=skrill`,
         });
 
         redirectUrl = `https://pay.skrill.com?${skrillParams.toString()}`;
-        paymentId = transactionId;
+        paymentId = transactionIdToUse;
         break;
       }
 
@@ -707,14 +707,14 @@ serve(async (req) => {
           PAYEE_NAME: pmPayeeName,
           PAYMENT_AMOUNT: amount.toString(),
           PAYMENT_UNITS: currency.toUpperCase(),
-          PAYMENT_ID: transactionId,
+          PAYMENT_ID: transactionIdToUse,
           STATUS_URL: `${Deno.env.get('SUPABASE_URL')}/functions/v1/payment-webhook?gateway=perfectmoney`,
-          PAYMENT_URL: `${returnUrl}?success=true&transaction_id=${transactionId}`,
-          NOPAYMENT_URL: `${returnUrl}?cancelled=true&transaction_id=${transactionId}`,
+          PAYMENT_URL: `${returnUrl}?success=true&transaction_id=${transactionIdToUse}`,
+          NOPAYMENT_URL: `${returnUrl}?cancelled=true&transaction_id=${transactionIdToUse}`,
         });
 
         redirectUrl = `https://perfectmoney.is/api/step1.asp?${pmParams.toString()}`;
-        paymentId = transactionId;
+        paymentId = transactionIdToUse;
         break;
       }
 
