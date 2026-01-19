@@ -345,6 +345,18 @@ export const BuyerThemeAliPanel = ({ children, className, themeMode = 'dark' }: 
         .light .buyer-theme-alipanel .buyer-theme-wrapper {
           color: #1A1A1A;
         }
+        
+        /* Force balance text to always be white */
+        .buyer-theme-alipanel .balance-card .text-xl.font-bold,
+        .buyer-theme-alipanel .balance-card p.text-white,
+        .light .buyer-theme-alipanel .balance-card .text-xl.font-bold,
+        .light .buyer-theme-alipanel .balance-card p.text-white {
+          color: #FFFFFF !important;
+        }
+        .buyer-theme-alipanel .balance-card .text-white\\/70,
+        .light .buyer-theme-alipanel .balance-card .text-white\\/70 {
+          color: rgba(255, 255, 255, 0.7) !important;
+        }
       `}</style>
         {children}
       </div>
