@@ -34,13 +34,77 @@ serve(async (req) => {
     console.log(`[process-payment] Processing ${gateway} payment: $${amount} for panel ${panelId}`);
 
     if (!gateway || !amount || !panelId || !buyerId) {
+      console.error('[process-payment] Missing fields:', { gateway, amount, panelId, buyerId });
       return new Response(
         JSON.stringify({ success: false, error: 'Missing required fields' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Create transaction if not provided (server-side creation bypasses RLS)
+    // Fetch panel's payment gateway credentials FIRST (before creating transaction)
+    const { data: panel, error: panelError } = await supabase
+      .from('panels')
+      .select('settings, name')
+      .eq('id', panelId)
+      .single();
+
+    if (panelError || !panel) {
+      console.error('[process-payment] Panel fetch error:', panelError);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Panel not found' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const panelSettings = panel.settings as Record<string, any> || {};
+    const paymentSettings = panelSettings.payments || {};
+    const enabledMethods = paymentSettings.enabledMethods || [];
+    const manualPayments = paymentSettings.manualPayments || [];
+    
+    console.log('[process-payment] Panel settings:', { 
+      panelName: panel.name, 
+      enabledMethodsCount: enabledMethods.length,
+      manualPaymentsCount: manualPayments.length,
+      requestedGateway: gateway 
+    });
+    
+    // Find the gateway config
+    let gatewayConfig = enabledMethods.find((m: any) => {
+      const methodId = typeof m === 'string' ? m : m.id;
+      return methodId === gateway;
+    });
+    
+    // For string-only entries, create a minimal config
+    if (typeof gatewayConfig === 'string') {
+      gatewayConfig = { id: gatewayConfig, enabled: true };
+    }
+    
+    // For manual payment methods, check manualPayments array
+    if (!gatewayConfig && (gateway.startsWith('manual_') || gateway === 'manual_transfer')) {
+      gatewayConfig = manualPayments.find((m: any) => m.id === gateway);
+    }
+    
+    // If still no config but gateway is in enabled list (for simpler configs)
+    if (!gatewayConfig && enabledMethods.includes(gateway)) {
+      gatewayConfig = { id: gateway, enabled: true };
+    }
+    
+    if (!gatewayConfig || gatewayConfig.enabled === false) {
+      console.error('[process-payment] Gateway not enabled:', { 
+        gateway, 
+        enabledMethods,
+        foundConfig: gatewayConfig 
+      });
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: `${gateway} is not enabled for this panel. Please configure payment methods in panel settings.` 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Now create transaction AFTER validating gateway (server-side creation bypasses RLS)
     let txId = transactionId;
     if (!txId) {
       const { data: newTx, error: txError } = await supabase
@@ -60,47 +124,14 @@ serve(async (req) => {
       if (txError) {
         console.error('[process-payment] Transaction creation error:', txError);
         return new Response(
-          JSON.stringify({ success: false, error: 'Failed to create transaction' }),
+          JSON.stringify({ success: false, error: 'Failed to create transaction record' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
       txId = newTx.id;
+      console.log('[process-payment] Created transaction:', txId);
     }
     const transactionIdToUse = txId;
-
-    // Fetch panel's payment gateway credentials
-    const { data: panel } = await supabase
-      .from('panels')
-      .select('settings, name')
-      .eq('id', panelId)
-      .single();
-
-    if (!panel) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Panel not found' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const panelSettings = panel.settings as Record<string, any> || {};
-    const paymentSettings = panelSettings.payments || {};
-    const enabledMethods = paymentSettings.enabledMethods || [];
-    
-    // Find the gateway config - also check for manual payment methods
-    let gatewayConfig = enabledMethods.find((m: any) => m.id === gateway);
-    
-    // For manual payment methods, check manualPayments array
-    if (!gatewayConfig && gateway.startsWith('manual_')) {
-      const manualPayments = paymentSettings.manualPayments || [];
-      gatewayConfig = manualPayments.find((m: any) => m.id === gateway);
-    }
-    
-    if (!gatewayConfig || gatewayConfig.enabled === false) {
-      return new Response(
-        JSON.stringify({ success: false, error: `${gateway} is not enabled for this panel` }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
 
     let redirectUrl: string | null = null;
     let paymentId: string | null = null;
