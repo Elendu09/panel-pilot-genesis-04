@@ -404,18 +404,6 @@ export const BuyerThemeSMMStay = ({ children, className, themeMode = 'dark' }: B
         .light .buyer-theme-smmstay .buyer-theme-wrapper {
           color: #1A1A1A;
         }
-        
-        /* Force balance text to always be white */
-        .buyer-theme-smmstay .balance-card .text-xl.font-bold,
-        .buyer-theme-smmstay .balance-card p.text-white,
-        .light .buyer-theme-smmstay .balance-card .text-xl.font-bold,
-        .light .buyer-theme-smmstay .balance-card p.text-white {
-          color: #FFFFFF !important;
-        }
-        .buyer-theme-smmstay .balance-card .text-white\\/70,
-        .light .buyer-theme-smmstay .balance-card .text-white\\/70 {
-          color: rgba(255, 255, 255, 0.7) !important;
-        }
       `}</style>
         {children}
       </div>

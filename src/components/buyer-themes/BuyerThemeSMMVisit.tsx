@@ -447,18 +447,6 @@ export const BuyerThemeSMMVisit = ({ children, className, themeMode = 'light' }:
         .dark .buyer-theme-smmvisit a:hover {
           color: #FFD700;
         }
-        
-        /* Force balance text to always be white */
-        .buyer-theme-smmvisit .balance-card .text-xl.font-bold,
-        .buyer-theme-smmvisit .balance-card p.text-white,
-        .dark .buyer-theme-smmvisit .balance-card .text-xl.font-bold,
-        .dark .buyer-theme-smmvisit .balance-card p.text-white {
-          color: #FFFFFF !important;
-        }
-        .buyer-theme-smmvisit .balance-card .text-white\\/70,
-        .dark .buyer-theme-smmvisit .balance-card .text-white\\/70 {
-          color: rgba(255, 255, 255, 0.7) !important;
-        }
       `}</style>
         {children}
       </div>

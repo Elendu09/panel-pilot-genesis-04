@@ -428,18 +428,6 @@ export const BuyerThemeTGRef = ({ children, className, themeMode = 'dark' }: Buy
         .light .buyer-theme-tgref .buyer-theme-wrapper {
           color: #1E293B;
         }
-        
-        /* Force balance text to always be white */
-        .buyer-theme-tgref .balance-card .text-xl.font-bold,
-        .buyer-theme-tgref .balance-card p.text-white,
-        .light .buyer-theme-tgref .balance-card .text-xl.font-bold,
-        .light .buyer-theme-tgref .balance-card p.text-white {
-          color: #FFFFFF !important;
-        }
-        .buyer-theme-tgref .balance-card .text-white\\/70,
-        .light .buyer-theme-tgref .balance-card .text-white\\/70 {
-          color: rgba(255, 255, 255, 0.7) !important;
-        }
       `}</style>
         {children}
       </div>

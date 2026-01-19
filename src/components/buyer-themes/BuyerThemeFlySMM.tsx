@@ -425,18 +425,6 @@ export const BuyerThemeFlySMM = ({ children, className, themeMode = 'light' }: B
         .dark .buyer-theme-flysmm .buyer-theme-wrapper {
           color: #F1F5F9;
         }
-        
-        /* Force balance text to always be white */
-        .buyer-theme-flysmm .balance-card .text-xl.font-bold,
-        .buyer-theme-flysmm .balance-card p.text-white,
-        .dark .buyer-theme-flysmm .balance-card .text-xl.font-bold,
-        .dark .buyer-theme-flysmm .balance-card p.text-white {
-          color: #FFFFFF !important;
-        }
-        .buyer-theme-flysmm .balance-card .text-white\\/70,
-        .dark .buyer-theme-flysmm .balance-card .text-white\\/70 {
-          color: rgba(255, 255, 255, 0.7) !important;
-        }
       `}</style>
         {children}
       </div>
