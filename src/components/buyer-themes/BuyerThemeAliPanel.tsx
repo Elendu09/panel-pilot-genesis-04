@@ -140,8 +140,8 @@ export const BuyerThemeAliPanel = ({ children, className, themeMode = 'dark' }: 
         .light .buyer-theme-alipanel {
           --theme-background: #FFFBFB;
           --theme-surface: #FFFFFF;
-          --theme-text: #1A1A1A;
-          --theme-muted: #6B7280;
+          --theme-text: #FFFFFF;
+          --theme-muted: #FFFFFF;
           --panel-nav-active-text: #FF6B6B;
         }
         
@@ -213,23 +213,23 @@ export const BuyerThemeAliPanel = ({ children, className, themeMode = 'dark' }: 
           background: rgba(255, 107, 107, 0.1) !important;
         }
         
-        /* Light mode text colors */
+        /* Light mode text colors - ALWAYS WHITE */
         .light .buyer-theme-alipanel h1,
         .light .buyer-theme-alipanel h2,
         .light .buyer-theme-alipanel h3,
         .light .buyer-theme-alipanel h4,
         .light .buyer-theme-alipanel h5,
         .light .buyer-theme-alipanel h6 {
-          color: #1A1A1A;
+          color: #FFFFFF !important;
         }
         
         .light .buyer-theme-alipanel p,
         .light .buyer-theme-alipanel span:not(.theme-gradient-text) {
-          color: #374151;
+          color: #FFFFFF !important;
         }
         
         .light .buyer-theme-alipanel .text-muted-foreground {
-          color: #6B7280 !important;
+          color: #FFFFFF !important;
         }
         
         /* Light mode badges and chips */
@@ -274,17 +274,17 @@ export const BuyerThemeAliPanel = ({ children, className, themeMode = 'dark' }: 
           background: rgba(255, 107, 107, 0.04) !important;
         }
         
-        /* Light mode buttons - comprehensive */
+        /* Light mode buttons - comprehensive - ALWAYS WHITE */
         .light .buyer-theme-alipanel button:not(.theme-button-primary):not([class*="gradient"]) {
-          color: #1A1A1A;
+          color: #FFFFFF !important;
         }
         
         .light .buyer-theme-alipanel a {
-          color: #374151;
+          color: #FFFFFF !important;
         }
         
         .light .buyer-theme-alipanel a:hover {
-          color: #FF6B6B;
+          color: #FF6B6B !important;
         }
         
         /* Light mode secondary buttons */
@@ -325,15 +325,15 @@ export const BuyerThemeAliPanel = ({ children, className, themeMode = 'dark' }: 
           color: #FF6B6B !important;
         }
         
-        /* Light mode links in nav */
+        /* Light mode links in nav - ALWAYS WHITE */
         .light .buyer-theme-alipanel nav a,
         .light .buyer-theme-alipanel header a {
-          color: #374151;
+          color: #FFFFFF !important;
         }
         
         .light .buyer-theme-alipanel nav a:hover,
         .light .buyer-theme-alipanel header a:hover {
-          color: #FF6B6B;
+          color: #FF6B6B !important;
         }
         
         /* Ensure proper color inheritance */
@@ -343,7 +343,14 @@ export const BuyerThemeAliPanel = ({ children, className, themeMode = 'dark' }: 
         
         .light .buyer-theme-alipanel,
         .light .buyer-theme-alipanel .buyer-theme-wrapper {
-          color: #1A1A1A;
+          color: #FFFFFF !important;
+        }
+        
+        /* Force all text white in light mode */
+        .light .buyer-theme-alipanel label,
+        .light .buyer-theme-alipanel div:not([class*="gradient"]),
+        .light .buyer-theme-alipanel li {
+          color: #FFFFFF !important;
         }
       `}</style>
         {children}
@@ -377,8 +384,8 @@ export const aliPanelThemeConfig = {
       primary: '#FF6B6B',
       secondary: '#FF8E53',
       accent: '#FFCC70',
-      text: '#1A1A1A',
-      muted: '#6B7280',
+      text: '#FFFFFF',
+      muted: '#FFFFFF',
     },
   },
   layout: {
