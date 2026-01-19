@@ -16,7 +16,9 @@ import {
   Globe,
   Smartphone,
   Banknote,
-  Bitcoin
+  Bitcoin,
+  Copy,
+  ExternalLink
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,6 +26,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -104,6 +107,9 @@ interface PaymentMethod {
   icon: any;
   color: string;
   badge: string;
+  isManual?: boolean;
+  bankDetails?: string;
+  instructions?: string;
 }
 
 const quickAmounts = [10, 25, 50, 100, 250, 500];
@@ -128,6 +134,16 @@ const BuyerDeposit = () => {
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loadingMethods, setLoadingMethods] = useState(true);
   const [noPaymentGateway, setNoPaymentGateway] = useState(false);
+  
+  // Manual payment dialog state
+  const [manualDialogOpen, setManualDialogOpen] = useState(false);
+  const [manualPaymentDetails, setManualPaymentDetails] = useState<{
+    transactionId: string;
+    amount: number;
+    bankDetails: string;
+    instructions: string;
+    title: string;
+  } | null>(null);
 
   // Fetch enabled payment methods from panel settings
   useEffect(() => {
@@ -147,9 +163,12 @@ const BuyerDeposit = () => {
         const panelSettings = panelData?.settings as Record<string, any> || {};
         const paymentSettings = panelSettings.payments || {};
         const enabledMethods = paymentSettings.enabledMethods || [];
+        const manualPayments = paymentSettings.manualPayments || [];
         
+        const allMethods: PaymentMethod[] = [];
+        
+        // Map enabled automatic methods
         if (enabledMethods.length > 0) {
-          // Map enabled methods to display info dynamically
           const mappedMethods = enabledMethods
             .filter((em: any) => typeof em === 'string' ? true : em.enabled !== false)
             .map((em: any) => {
@@ -167,16 +186,30 @@ const BuyerDeposit = () => {
               }
               return { id, ...gatewayInfo };
             });
-          
-          if (mappedMethods.length > 0) {
-            setPaymentMethods(mappedMethods);
-            setNoPaymentGateway(false);
-          } else {
-            setPaymentMethods([]);
-            setNoPaymentGateway(true);
-          }
+          allMethods.push(...mappedMethods);
+        }
+        
+        // Add enabled manual payment methods
+        if (manualPayments.length > 0) {
+          const mappedManual = manualPayments
+            .filter((m: any) => m.enabled !== false)
+            .map((m: any) => ({
+              id: m.id,
+              name: m.title,
+              icon: Banknote,
+              color: "from-emerald-500 to-teal-600",
+              badge: m.processingTime || "12-24h",
+              isManual: true,
+              bankDetails: m.bankDetails,
+              instructions: m.instructions
+            }));
+          allMethods.push(...mappedManual);
+        }
+        
+        if (allMethods.length > 0) {
+          setPaymentMethods(allMethods);
+          setNoPaymentGateway(false);
         } else {
-          // No payment methods configured
           setPaymentMethods([]);
           setNoPaymentGateway(true);
         }
@@ -259,55 +292,42 @@ const BuyerDeposit = () => {
 
     try {
       const depositAmount = parseFloat(amount);
+      const selectedPaymentMethod = paymentMethods.find(m => m.id === selectedMethod);
+      const methodName = selectedPaymentMethod?.name || selectedMethod;
 
-      // Create transaction record with pending status
-      const { data: transaction, error: transError } = await supabase
-        .from('transactions')
-        .insert({
-          user_id: buyer.id,
-          panel_id: panel.id,
-          amount: depositAmount,
-          type: 'deposit',
-          payment_method: selectedMethod,
-          status: 'pending',
-          description: `Deposit via ${paymentMethods.find(m => m.id === selectedMethod)?.name}`
-        })
-        .select()
-        .single();
-
-      if (transError) throw transError;
-
-      // Call the payment processing edge function
+      // Call the payment processing edge function (it creates the transaction server-side)
       const response = await supabase.functions.invoke('process-payment', {
         body: {
           gateway: selectedMethod,
           amount: depositAmount,
           panelId: panel.id,
           buyerId: buyer.id,
-          transactionId: transaction.id,
           returnUrl: window.location.origin + '/deposit',
-          currency: 'usd'
+          currency: 'usd',
+          description: `Deposit via ${methodName}`
         }
       });
 
-      if (response.error) {
-        throw new Error(response.error.message || 'Payment processing failed');
+      const result = response.data || {};
+
+      // Handle response (edge function now always returns 200 with success/error in body)
+      if (!result.success) {
+        throw new Error(result.error || 'Payment processing failed');
       }
 
-      const { redirectUrl, error: paymentError } = response.data || {};
-
-      if (paymentError) {
-        // Update transaction to failed
-        await supabase
-          .from('transactions')
-          .update({ status: 'failed' })
-          .eq('id', transaction.id);
-        throw new Error(paymentError);
-      }
-
-      if (redirectUrl) {
+      if (result.redirectUrl) {
         // Redirect to payment gateway
-        window.location.href = redirectUrl;
+        window.location.href = result.redirectUrl;
+      } else if (result.requiresManualTransfer || selectedPaymentMethod?.isManual) {
+        // Manual payment - show dialog with bank details and instructions
+        setManualPaymentDetails({
+          transactionId: result.transactionId,
+          amount: depositAmount,
+          bankDetails: result.config?.bankDetails || selectedPaymentMethod?.bankDetails || '',
+          instructions: result.config?.instructions || selectedPaymentMethod?.instructions || 'Please complete the transfer and your balance will be credited once confirmed.',
+          title: methodName
+        });
+        setManualDialogOpen(true);
       } else {
         // If no redirect (some gateways might complete instantly)
         toast({ 
@@ -328,6 +348,11 @@ const BuyerDeposit = () => {
     } finally {
       setProcessing(false);
     }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({ title: "Copied to clipboard" });
   };
 
   const containerVariants = {
@@ -600,6 +625,112 @@ const BuyerDeposit = () => {
           </Card>
         </motion.div>
       </motion.div>
+
+      {/* Manual Payment Instructions Dialog */}
+      <Dialog open={manualDialogOpen} onOpenChange={setManualDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              <Banknote className="w-6 h-6 text-emerald-500" />
+              {manualPaymentDetails?.title || 'Manual Payment'}
+            </DialogTitle>
+            <DialogDescription>
+              Complete your deposit of ${manualPaymentDetails?.amount?.toFixed(2)}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 pt-4">
+            {/* Transaction Reference */}
+            <div className="p-3 bg-muted/50 rounded-lg border">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-muted-foreground">Transaction Reference</p>
+                  <p className="font-mono text-sm font-medium">{manualPaymentDetails?.transactionId?.slice(0, 8).toUpperCase()}</p>
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => copyToClipboard(manualPaymentDetails?.transactionId || '')}
+                >
+                  <Copy className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+            
+            {/* Amount */}
+            <div className="p-4 bg-primary/10 rounded-lg border border-primary/20 text-center">
+              <p className="text-sm text-muted-foreground">Amount to Transfer</p>
+              <p className="text-3xl font-bold text-primary">${manualPaymentDetails?.amount?.toFixed(2)}</p>
+            </div>
+
+            {/* Bank Details */}
+            {manualPaymentDetails?.bankDetails && (
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold">Bank/Payment Details</Label>
+                <div className="p-3 bg-muted/30 rounded-lg border font-mono text-sm whitespace-pre-wrap relative">
+                  {manualPaymentDetails.bankDetails}
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="absolute top-2 right-2"
+                    onClick={() => copyToClipboard(manualPaymentDetails.bankDetails)}
+                  >
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Instructions */}
+            {manualPaymentDetails?.instructions && (
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold">Instructions</Label>
+                <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-sm">
+                  <div className="flex gap-2">
+                    <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                    <p className="whitespace-pre-wrap">{manualPaymentDetails.instructions}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center gap-2 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg text-sm">
+              <CheckCircle className="w-4 h-4 text-blue-500 shrink-0" />
+              <p>Your balance will be credited once payment is verified by our team.</p>
+            </div>
+          </div>
+
+          <DialogFooter className="mt-4">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setManualDialogOpen(false);
+                setManualPaymentDetails(null);
+                setAmount("");
+                setSelectedMethod(null);
+              }}
+            >
+              Close
+            </Button>
+            <Button 
+              onClick={() => {
+                setManualDialogOpen(false);
+                setManualPaymentDetails(null);
+                setAmount("");
+                setSelectedMethod(null);
+                toast({ 
+                  title: "Payment Pending", 
+                  description: "Complete the transfer and your balance will be updated." 
+                });
+              }}
+              className="gap-2"
+            >
+              <CheckCircle className="w-4 h-4" />
+              I've Made the Transfer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </BuyerLayout>
   );
 };
