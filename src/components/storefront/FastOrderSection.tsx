@@ -639,15 +639,14 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
         }
       });
 
-      if (response.error) {
-        throw new Error(response.error.message || 'Order creation failed');
+      const result = response.data || {};
+
+      // Handle new response format (always 200 with success/error in body)
+      if (!result.success && result.error) {
+        throw new Error(result.error);
       }
 
-      const { order, error: orderError, newBalance } = response.data || {};
-
-      if (orderError) {
-        throw new Error(orderError);
-      }
+      const { order, newBalance } = result;
 
       await refreshBuyer();
 

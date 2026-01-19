@@ -69,6 +69,8 @@ export function useBuyerRealtimeOrders(
     if (!buyerId || !panelId) return;
 
     // Subscribe to order updates for this buyer
+    // Note: orders.buyer_id references profiles.id, not client_users.id
+    // The buyer context stores the client_users.id, so we need to match that
     const channel = supabase
       .channel(`buyer-orders-${buyerId}`)
       .on(
@@ -77,7 +79,6 @@ export function useBuyerRealtimeOrders(
           event: 'UPDATE',
           schema: 'public',
           table: 'orders',
-          filter: `buyer_id=eq.${buyerId}`,
         },
         (payload) => {
           const newOrder = payload.new as OrderUpdate;
@@ -123,7 +124,6 @@ export function useBuyerRealtimeOrders(
           event: 'INSERT',
           schema: 'public',
           table: 'orders',
-          filter: `buyer_id=eq.${buyerId}`,
         },
         (payload) => {
           const newOrder = payload.new as OrderUpdate;
