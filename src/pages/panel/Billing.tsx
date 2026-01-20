@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   CreditCard, 
   Check, 
@@ -13,9 +12,7 @@ import {
   Calendar,
   DollarSign,
   Sparkles,
-  Percent,
-  FileText,
-  Settings
+  Percent
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { useAuth } from '@/contexts/AuthContext';
@@ -27,8 +24,6 @@ import { TransactionHistory } from '@/components/billing/TransactionHistory';
 import { CommissionTracker } from '@/components/billing/CommissionTracker';
 import { QuickDeposit } from '@/components/billing/QuickDeposit';
 import { PaymentMethodsQuickAccess } from '@/components/billing/PaymentMethodsQuickAccess';
-import { InvoiceList } from '@/components/billing/InvoiceList';
-import { InvoiceSettings } from '@/components/billing/InvoiceSettings';
 import { usePanel } from '@/hooks/usePanel';
 
 interface Subscription {
@@ -366,33 +361,20 @@ const Billing = () => {
         </div>
       </motion.div>
 
-      {/* Transaction History & Invoices Tabs */}
+      {/* Transaction History */}
       <motion.div variants={itemVariants}>
-        <Tabs defaultValue="transactions" className="w-full">
-          <TabsList className="mb-4">
-            <TabsTrigger value="transactions" className="gap-2">
-              <CreditCard className="w-4 h-4" />
-              Transactions
-            </TabsTrigger>
-            <TabsTrigger value="invoices" className="gap-2">
-              <FileText className="w-4 h-4" />
-              Invoices
-            </TabsTrigger>
-            <TabsTrigger value="invoice-settings" className="gap-2">
-              <Settings className="w-4 h-4" />
-              Invoice Settings
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent value="transactions">
+        <Card className="bg-card/60 backdrop-blur-xl border-border/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CreditCard className="w-5 h-5" />
+              Transaction History
+            </CardTitle>
+            <CardDescription>View all your panel transactions</CardDescription>
+          </CardHeader>
+          <CardContent>
             <TransactionHistory panelId={panel?.id} />
-          </TabsContent>
-          <TabsContent value="invoices">
-            <InvoiceList panelId={panel?.id} userId={profile?.id} title="All Invoices" />
-          </TabsContent>
-          <TabsContent value="invoice-settings">
-            {panel?.id && <InvoiceSettings panelId={panel.id} />}
-          </TabsContent>
-        </Tabs>
+          </CardContent>
+        </Card>
       </motion.div>
 
       {/* Pricing Plans */}

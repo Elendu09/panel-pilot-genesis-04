@@ -20,7 +20,9 @@ import {
   Database,
   Download,
   Globe,
-  Activity
+  Activity,
+  BookOpen,
+  Receipt
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
@@ -45,6 +47,8 @@ import AnnouncementsManagement from "./admin/AnnouncementsManagement";
 import ReportsExport from "./admin/ReportsExport";
 import BackupManagement from "./admin/BackupManagement";
 import DomainManagement from "./admin/DomainManagement";
+import ReceiptManagement from "./admin/ReceiptManagement";
+import BlogManagement from "./admin/BlogManagement";
 import { Helmet } from "react-helmet-async";
 
 const SuperAdminDashboard = () => {
@@ -78,6 +82,7 @@ const SuperAdminDashboard = () => {
         { name: 'Revenue', href: '/admin/revenue', icon: DollarSign },
         { name: 'Subscriptions', href: '/admin/subscriptions', icon: Crown },
         { name: 'Payments', href: '/admin/payments', icon: CreditCard },
+        { name: 'Receipts', href: '/admin/receipts', icon: Receipt },
       ]
     },
     {
@@ -85,6 +90,7 @@ const SuperAdminDashboard = () => {
       items: [
         { name: 'Tickets', href: '/admin/tickets', icon: MessageSquare },
         { name: 'Announcements', href: '/admin/announcements', icon: Megaphone },
+        { name: 'Blog', href: '/admin/blog', icon: BookOpen },
       ]
     },
     {
@@ -228,6 +234,8 @@ const SuperAdminDashboard = () => {
           <Route path="settings" element={<PlatformSettings />} />
           <Route path="security" element={<SecuritySettings />} />
           <Route path="payments" element={<PaymentManagement />} />
+          <Route path="receipts" element={<ReceiptManagement />} />
+          <Route path="blog" element={<BlogManagement />} />
           <Route path="more" element={<AdminMoreMenu />} />
         </Routes>
       </div>

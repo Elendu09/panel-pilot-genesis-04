@@ -1932,6 +1932,63 @@ export type Database = {
           },
         ]
       }
+      platform_blog_posts: {
+        Row: {
+          author_name: string | null
+          content: string | null
+          created_at: string | null
+          excerpt: string | null
+          faqs: Json | null
+          featured_image_url: string | null
+          id: string
+          published_at: string | null
+          seo_description: string | null
+          seo_keywords: string[] | null
+          seo_title: string | null
+          slug: string
+          status: string | null
+          table_of_contents: Json | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          author_name?: string | null
+          content?: string | null
+          created_at?: string | null
+          excerpt?: string | null
+          faqs?: Json | null
+          featured_image_url?: string | null
+          id?: string
+          published_at?: string | null
+          seo_description?: string | null
+          seo_keywords?: string[] | null
+          seo_title?: string | null
+          slug: string
+          status?: string | null
+          table_of_contents?: Json | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          author_name?: string | null
+          content?: string | null
+          created_at?: string | null
+          excerpt?: string | null
+          faqs?: Json | null
+          featured_image_url?: string | null
+          id?: string
+          published_at?: string | null
+          seo_description?: string | null
+          seo_keywords?: string[] | null
+          seo_title?: string | null
+          slug?: string
+          status?: string | null
+          table_of_contents?: Json | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       platform_config: {
         Row: {
           created_at: string | null
@@ -2106,6 +2163,63 @@ export type Database = {
           name?: string
           sync_status?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      platform_receipt_settings: {
+        Row: {
+          company_address: string | null
+          company_email: string | null
+          company_logo_url: string | null
+          company_name: string
+          company_phone: string | null
+          company_vat_id: string | null
+          company_website: string | null
+          created_at: string | null
+          footer_text: string | null
+          id: string
+          include_tax: boolean | null
+          next_receipt_number: number | null
+          receipt_prefix: string | null
+          tax_label: string | null
+          tax_rate: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          company_address?: string | null
+          company_email?: string | null
+          company_logo_url?: string | null
+          company_name?: string
+          company_phone?: string | null
+          company_vat_id?: string | null
+          company_website?: string | null
+          created_at?: string | null
+          footer_text?: string | null
+          id?: string
+          include_tax?: boolean | null
+          next_receipt_number?: number | null
+          receipt_prefix?: string | null
+          tax_label?: string | null
+          tax_rate?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          company_address?: string | null
+          company_email?: string | null
+          company_logo_url?: string | null
+          company_name?: string
+          company_phone?: string | null
+          company_vat_id?: string | null
+          company_website?: string | null
+          created_at?: string | null
+          footer_text?: string | null
+          id?: string
+          include_tax?: boolean | null
+          next_receipt_number?: number | null
+          receipt_prefix?: string | null
+          tax_label?: string | null
+          tax_rate?: number | null
+          updated_at?: string | null
         }
         Relationships: []
       }
