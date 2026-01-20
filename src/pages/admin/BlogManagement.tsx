@@ -145,25 +145,52 @@ const BlogManagement = () => {
 
     setSaving(true);
     try {
-      const postData = {
-        ...currentPost,
-        seo_keywords: keywordInput.split(',').map(k => k.trim()).filter(Boolean),
-        published_at: currentPost.status === 'published' && !currentPost.published_at 
-          ? new Date().toISOString() 
-          : currentPost.published_at,
-        updated_at: new Date().toISOString()
-      };
+      const seoKeywords = keywordInput.split(',').map(k => k.trim()).filter(Boolean);
+      const publishedAt = currentPost.status === 'published' && !currentPost.published_at 
+        ? new Date().toISOString() 
+        : currentPost.published_at || null;
 
       if (isCreating) {
+        const insertData = {
+          title: currentPost.title!,
+          slug: currentPost.slug!,
+          content: currentPost.content || null,
+          excerpt: currentPost.excerpt || null,
+          featured_image_url: currentPost.featured_image_url || null,
+          author_name: currentPost.author_name || 'HOMEOFSMM Team',
+          status: currentPost.status || 'draft',
+          seo_title: currentPost.seo_title || null,
+          seo_description: currentPost.seo_description || null,
+          seo_keywords: seoKeywords,
+          table_of_contents: currentPost.table_of_contents || [],
+          faqs: currentPost.faqs || [],
+          published_at: publishedAt
+        };
         const { error } = await supabase
           .from('platform_blog_posts')
-          .insert([postData]);
+          .insert([insertData]);
         if (error) throw error;
         toast({ title: 'Success', description: 'Blog post created successfully' });
       } else {
+        const updateData = {
+          title: currentPost.title!,
+          slug: currentPost.slug!,
+          content: currentPost.content || null,
+          excerpt: currentPost.excerpt || null,
+          featured_image_url: currentPost.featured_image_url || null,
+          author_name: currentPost.author_name || 'HOMEOFSMM Team',
+          status: currentPost.status || 'draft',
+          seo_title: currentPost.seo_title || null,
+          seo_description: currentPost.seo_description || null,
+          seo_keywords: seoKeywords,
+          table_of_contents: currentPost.table_of_contents || [],
+          faqs: currentPost.faqs || [],
+          published_at: publishedAt,
+          updated_at: new Date().toISOString()
+        };
         const { error } = await supabase
           .from('platform_blog_posts')
-          .update(postData)
+          .update(updateData)
           .eq('id', currentPost.id);
         if (error) throw error;
         toast({ title: 'Success', description: 'Blog post updated successfully' });
