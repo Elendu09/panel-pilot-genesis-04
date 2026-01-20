@@ -223,6 +223,9 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [serviceSearch, setServiceSearch] = useState('');
   const [showOrderSuccess, setShowOrderSuccess] = useState(false);
+  
+  // Track credential copy status - user must copy both to proceed
+  const [credentialsCopied, setCredentialsCopied] = useState({ username: false, password: false });
 
   // Fetch real payment methods from panel settings
   useEffect(() => {
@@ -246,8 +249,16 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
         
         if (enabledMethods.length > 0) {
           // Dynamically map enabled methods to their display info
+          // Only include gateways that have actual configuration (API keys)
           const mappedMethods = enabledMethods
-            .filter((em: any) => typeof em === 'string' ? true : em.enabled !== false)
+            .filter((em: any) => {
+              if (typeof em === 'string') {
+                // String entries are legacy - only include if they're manual or known to work
+                return em.startsWith('manual_') || em === 'manual_transfer';
+              }
+              // Object entries - must have enabled flag and either be manual or have credentials
+              return em.enabled !== false && (em.isManual || em.apiKey || em.secretKey || em.id?.startsWith('manual_'));
+            })
             .map((em: any) => {
               const id = typeof em === 'string' ? em : em.id;
               const gatewayInfo = allPaymentGateways[id];
@@ -419,13 +430,21 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
     return `user_${randomStr}`;
   };
 
-  // Copy to clipboard helper
+  // Copy to clipboard helper - tracks which fields have been copied
   const copyToClipboard = async (text: string, field: string) => {
     try {
       await navigator.clipboard.writeText(text);
       setCopiedField(field);
       setTimeout(() => setCopiedField(null), 2000);
       toast({ title: "Copied!", description: `${field} copied to clipboard` });
+      
+      // Track credential copy status for requirement enforcement
+      if (field === 'Username') {
+        setCredentialsCopied(prev => ({ ...prev, username: true }));
+      }
+      if (field === 'Password') {
+        setCredentialsCopied(prev => ({ ...prev, password: true }));
+      }
     } catch (err) {
       toast({ title: "Copy failed", variant: "destructive" });
     }
@@ -538,13 +557,22 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
     }
   };
 
-  // Continue to payment step after account creation
+  // Continue to payment step after account creation (only if credentials copied)
   const handleContinueToPayment = () => {
+    if (!credentialsCopied.username || !credentialsCopied.password) {
+      toast({
+        title: "Please Copy Your Credentials",
+        description: "You must copy both your username and password before continuing.",
+        variant: "destructive"
+      });
+      return;
+    }
     setShowGuestModal(false);
     setAccountCreated(false);
     setModalStep('email');
     setCurrentStep(5);
   };
+
 
   // Reset modal state when closed
   const handleModalClose = (open: boolean) => {
@@ -558,6 +586,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
       setTempPassword('');
       setAutoUsername('');
       setCopiedField(null);
+      setCredentialsCopied({ username: false, password: false }); // Reset copy tracking
     }
     setShowGuestModal(open);
   };
@@ -605,6 +634,55 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
     }
   }, [buyer, services]);
 
+  // Check for payment success/cancel URL params on mount (for direct order payment flow)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const success = params.get('success');
+    const cancelled = params.get('cancelled');
+    
+    if (success === 'true') {
+      // Payment was successful - check for pending order payment
+      const pendingOrder = localStorage.getItem('pending_order_payment');
+      if (pendingOrder) {
+        try {
+          const { orderId, orderNumber } = JSON.parse(pendingOrder);
+          setPlacedOrderId(orderId);
+          setPlacedOrderNumber(orderNumber);
+          
+          toast({ 
+            title: "Payment Successful!", 
+            description: `Order #${orderNumber} is now being processed.`
+          });
+          
+          setShowOrderSuccess(true);
+          setTimeout(() => {
+            setShowOrderSuccess(false);
+            setCurrentStep(6);
+          }, 2000);
+          
+          localStorage.removeItem('pending_order_payment');
+        } catch (e) {
+          console.error('Failed to parse pending order:', e);
+        }
+      } else {
+        toast({ 
+          title: "Payment Successful!", 
+          description: "Your order is being processed."
+        });
+      }
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (cancelled === 'true') {
+      toast({ 
+        variant: "destructive",
+        title: "Payment Cancelled", 
+        description: "Your payment was not completed. You can try again."
+      });
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
+
   // Process payment and create order
   const handleProcessPayment = async () => {
     if (!buyer) {
@@ -626,50 +704,110 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
     setIsProcessingPayment(true);
 
     try {
-      // Use edge function for secure order creation
-      const response = await supabase.functions.invoke('buyer-order', {
-        body: {
-          panelId: panelId,
-          buyerId: buyer.id,
-          serviceId: selectedServiceId,
-          quantity: quantity,
-          targetUrl: targetUrl,
-          price: totalPrice,
-          notes: `Fast Order via ${panelName}`,
+      const buyerBalance = buyer.balance || 0;
+      
+      // Check if buyer has sufficient balance
+      if (buyerBalance >= totalPrice) {
+        // Use balance payment - deduct from balance
+        const response = await supabase.functions.invoke('buyer-order', {
+          body: {
+            panelId: panelId,
+            buyerId: buyer.id,
+            serviceId: selectedServiceId,
+            quantity: quantity,
+            targetUrl: targetUrl,
+            price: totalPrice,
+            paymentType: 'balance',
+            notes: `Fast Order via ${panelName}`,
+          }
+        });
+
+        const result = response.data || {};
+
+        if (!result.success && result.error) {
+          throw new Error(result.error);
         }
-      });
 
-      const result = response.data || {};
+        const { order, newBalance } = result;
+        await refreshBuyer();
 
-      // Handle new response format (always 200 with success/error in body)
-      if (!result.success && result.error) {
-        throw new Error(result.error);
+        setPlacedOrderId(order.id);
+        setPlacedOrderNumber(order.orderNumber);
+
+        toast({
+          title: "Order Placed Successfully!",
+          description: `Order #${order.orderNumber} is now being processed.`,
+        });
+
+        try {
+          await navigator.clipboard.writeText(order.orderNumber);
+        } catch {}
+
+        setShowOrderSuccess(true);
+        setTimeout(() => {
+          setShowOrderSuccess(false);
+          setCurrentStep(6);
+        }, 2000);
+      } else {
+        // Insufficient balance - use direct payment flow
+        // First create the order with awaiting_payment status
+        const orderResponse = await supabase.functions.invoke('buyer-order', {
+          body: {
+            panelId: panelId,
+            buyerId: buyer.id,
+            serviceId: selectedServiceId,
+            quantity: quantity,
+            targetUrl: targetUrl,
+            price: totalPrice,
+            paymentType: 'direct',
+            notes: `Fast Order via ${panelName}`,
+          }
+        });
+
+        const orderResult = orderResponse.data || {};
+
+        if (!orderResult.success && orderResult.error) {
+          throw new Error(orderResult.error);
+        }
+
+        const { order } = orderResult;
+
+        // Now redirect to payment gateway with order ID
+        const paymentResponse = await supabase.functions.invoke('process-payment', {
+          body: {
+            gateway: selectedPaymentMethod,
+            amount: totalPrice,
+            panelId: panelId,
+            buyerId: buyer.id,
+            orderId: order.id,
+            returnUrl: window.location.origin + '/fast-order',
+            currency: 'usd',
+          }
+        });
+
+        const paymentResult = paymentResponse.data || {};
+
+        if (!paymentResult.success) {
+          throw new Error(paymentResult.error || 'Payment processing failed');
+        }
+
+        if (paymentResult.redirectUrl) {
+          // Store order info for tracking after payment
+          localStorage.setItem('pending_order_payment', JSON.stringify({
+            orderId: order.id,
+            orderNumber: order.orderNumber,
+          }));
+          window.location.href = paymentResult.redirectUrl;
+        } else {
+          toast({
+            title: "Order Created",
+            description: "Complete payment to start processing.",
+          });
+          setPlacedOrderId(order.id);
+          setPlacedOrderNumber(order.orderNumber);
+          setCurrentStep(6);
+        }
       }
-
-      const { order, newBalance } = result;
-
-      await refreshBuyer();
-
-      // Store order info for tracking
-      setPlacedOrderId(order.id);
-      setPlacedOrderNumber(order.orderNumber);
-
-      toast({
-        title: "Order Placed Successfully!",
-        description: `Order #${order.orderNumber} is now being processed.`,
-      });
-
-      // Copy order number to clipboard for easy tracking
-      try {
-        await navigator.clipboard.writeText(order.orderNumber);
-      } catch {}
-
-      // Show success celebration briefly, then go to tracking
-      setShowOrderSuccess(true);
-      setTimeout(() => {
-        setShowOrderSuccess(false);
-        setCurrentStep(6);
-      }, 2000);
 
     } catch (error: any) {
       console.error('Payment error:', error);
@@ -1621,15 +1759,36 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                   </div>
                 </div>
 
-                {/* Warning */}
-                <div className="flex items-start gap-2 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
-                  <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                  <p className="text-xs text-amber-700 dark:text-amber-400">
-                    <strong>Important:</strong> Save these credentials! You'll need them to login later.
-                  </p>
-                </div>
+                {/* Credential Copy Status Indicator */}
+                {credentialsCopied.username && credentialsCopied.password ? (
+                  <div className="flex items-center gap-2 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                    <CheckCircle className="w-4 h-4 text-green-500 shrink-0" />
+                    <p className="text-xs text-green-700 dark:text-green-400">
+                      <strong>You're now logged in!</strong> Proceed to payment.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="flex items-start gap-2 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                    <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                    <p className="text-xs text-amber-700 dark:text-amber-400">
+                      <strong>Important:</strong> You must copy BOTH your username and password before continuing.
+                      {!credentialsCopied.username && !credentialsCopied.password && ' (0/2 copied)'}
+                      {credentialsCopied.username && !credentialsCopied.password && ' (1/2 - copy password)'}
+                      {!credentialsCopied.username && credentialsCopied.password && ' (1/2 - copy username)'}
+                    </p>
+                  </div>
+                )}
 
-                <Button className="w-full h-12 text-base bg-blue-500 hover:bg-blue-600" onClick={handleContinueToPayment}>
+                <Button 
+                  className={cn(
+                    "w-full h-12 text-base transition-all",
+                    credentialsCopied.username && credentialsCopied.password
+                      ? "bg-blue-500 hover:bg-blue-600"
+                      : "bg-gray-400 cursor-not-allowed opacity-60"
+                  )}
+                  onClick={handleContinueToPayment}
+                  disabled={!credentialsCopied.username || !credentialsCopied.password}
+                >
                   <span>Continue to Payment</span>
                   <ArrowRight className="w-5 h-5 ml-2" />
                 </Button>

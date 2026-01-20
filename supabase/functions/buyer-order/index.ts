@@ -15,6 +15,7 @@ interface OrderRequest {
   price: number;
   promoCode?: string;
   notes?: string;
+  paymentType?: 'balance' | 'direct'; // balance = deduct from balance, direct = pay via gateway
 }
 
 serve(async (req) => {
@@ -30,9 +31,9 @@ serve(async (req) => {
     );
 
     const body: OrderRequest = await req.json();
-    const { panelId, buyerId, serviceId, quantity, targetUrl, price, promoCode, notes } = body;
+    const { panelId, buyerId, serviceId, quantity, targetUrl, price, promoCode, notes, paymentType = 'balance' } = body;
 
-    console.log(`[buyer-order] Creating order for buyer ${buyerId} on panel ${panelId}`);
+    console.log(`[buyer-order] Creating order for buyer ${buyerId} on panel ${panelId}, paymentType: ${paymentType}`);
 
     // Validate required fields
     if (!panelId || !buyerId || !serviceId || !quantity || !targetUrl || price === undefined) {
@@ -58,15 +59,16 @@ serve(async (req) => {
       );
     }
 
-    // Check if buyer has sufficient balance
+    // Check if buyer has sufficient balance (only for balance payment type)
     const currentBalance = buyer.balance || 0;
-    if (currentBalance < price) {
+    if (paymentType === 'balance' && currentBalance < price) {
       return new Response(
         JSON.stringify({ 
           success: false,
           error: 'Insufficient balance',
           currentBalance,
-          required: price
+          required: price,
+          needsPayment: true // Signal that direct payment is needed
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -113,7 +115,8 @@ serve(async (req) => {
     // Generate order number
     const orderNumber = `ORD${Date.now()}${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
-    // Create the order
+    // Create the order with status based on payment type
+    const orderStatus = paymentType === 'direct' ? 'awaiting_payment' : 'pending';
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .insert({
@@ -124,7 +127,7 @@ serve(async (req) => {
         target_url: targetUrl,
         quantity,
         price,
-        status: 'pending',
+        status: orderStatus,
         progress: 0,
         notes: notes || (promoCode ? `Promo: ${promoCode}` : null),
       })
@@ -139,29 +142,36 @@ serve(async (req) => {
       );
     }
 
-    // Deduct balance from buyer
-    const newBalance = currentBalance - price;
-    const newTotalSpent = (buyer.total_spent || 0) + price;
+    // Only deduct balance for balance payment type
+    let newBalance = currentBalance;
+    if (paymentType === 'balance') {
+      newBalance = currentBalance - price;
+      const newTotalSpent = (buyer.total_spent || 0) + price;
 
-    const { error: balanceError } = await supabase
-      .from('client_users')
-      .update({ 
-        balance: newBalance,
-        total_spent: newTotalSpent
-      })
-      .eq('id', buyerId);
+      const { error: balanceError } = await supabase
+        .from('client_users')
+        .update({ 
+          balance: newBalance,
+          total_spent: newTotalSpent
+        })
+        .eq('id', buyerId);
 
-    if (balanceError) {
-      console.error('[buyer-order] Balance update failed:', balanceError);
-      // Rollback the order if balance update fails
-      await supabase.from('orders').delete().eq('id', order.id);
-      return new Response(
-        JSON.stringify({ success: false, error: 'Failed to update balance' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      if (balanceError) {
+        console.error('[buyer-order] Balance update failed:', balanceError);
+        // Rollback the order if balance update fails
+        await supabase.from('orders').delete().eq('id', order.id);
+        return new Response(
+          JSON.stringify({ success: false, error: 'Failed to update balance' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     // Create notification for buyer
+    const notificationMessage = paymentType === 'direct' 
+      ? `Order #${orderNumber} created. Complete payment to start processing.`
+      : `Order #${orderNumber} for ${quantity.toLocaleString()} ${service.name} has been placed successfully.`;
+    
     await supabase
       .from('buyer_notifications')
       .insert({
@@ -169,8 +179,8 @@ serve(async (req) => {
         panel_id: panelId,
         order_id: order.id,
         type: 'order',
-        title: 'Order Placed',
-        message: `Order #${orderNumber} for ${quantity.toLocaleString()} ${service.name} has been placed successfully.`,
+        title: paymentType === 'direct' ? 'Order Awaiting Payment' : 'Order Placed',
+        message: notificationMessage,
       });
 
     // Update promo code usage if used
@@ -182,7 +192,7 @@ serve(async (req) => {
         .eq('panel_id', panelId);
     }
 
-    console.log(`[buyer-order] Order ${orderNumber} created successfully, new balance: ${newBalance}`);
+    console.log(`[buyer-order] Order ${orderNumber} created successfully, paymentType: ${paymentType}, new balance: ${newBalance}`);
 
     return new Response(
       JSON.stringify({ 
@@ -195,7 +205,9 @@ serve(async (req) => {
           price: order.price,
           serviceName: service.name,
         },
-        newBalance
+        newBalance,
+        paymentType,
+        requiresPayment: paymentType === 'direct'
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

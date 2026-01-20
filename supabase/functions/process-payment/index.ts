@@ -11,9 +11,10 @@ interface PaymentRequest {
   amount: number;
   panelId: string;
   buyerId: string;
-  transactionId: string;
+  transactionId?: string;
   returnUrl: string;
   currency?: string;
+  orderId?: string; // If paying for a specific order (direct order payment)
 }
 
 serve(async (req) => {
@@ -29,9 +30,9 @@ serve(async (req) => {
     );
 
     const body: PaymentRequest = await req.json();
-    const { gateway, amount, panelId, buyerId, transactionId, returnUrl, currency = 'usd' } = body;
+    const { gateway, amount, panelId, buyerId, transactionId, returnUrl, currency = 'usd', orderId } = body;
 
-    console.log(`[process-payment] Processing ${gateway} payment: $${amount} for panel ${panelId}`);
+    console.log(`[process-payment] Processing ${gateway} payment: $${amount} for panel ${panelId}${orderId ? `, order: ${orderId}` : ''}`);
 
     if (!gateway || !amount || !panelId || !buyerId) {
       console.error('[process-payment] Missing fields:', { gateway, amount, panelId, buyerId });
@@ -107,16 +108,22 @@ serve(async (req) => {
     // Now create transaction AFTER validating gateway (server-side creation bypasses RLS)
     let txId = transactionId;
     if (!txId) {
+      const txType = orderId ? 'order_payment' : 'deposit';
+      const txDescription = orderId ? `Order payment via ${gateway}` : `Deposit via ${gateway}`;
+      
       const { data: newTx, error: txError } = await supabase
         .from('transactions')
         .insert({
           user_id: buyerId,
+          buyer_id: buyerId, // Set both user_id and buyer_id for consistent querying
           panel_id: panelId,
           amount: amount,
-          type: 'deposit',
+          type: txType,
           payment_method: gateway,
           status: 'pending',
-          description: `Deposit via ${gateway}`
+          description: txDescription,
+          // Store orderId in metadata for webhook processing
+          ...(orderId ? { metadata: { orderId } } : {})
         })
         .select('id')
         .single();
@@ -129,7 +136,7 @@ serve(async (req) => {
         );
       }
       txId = newTx.id;
-      console.log('[process-payment] Created transaction:', txId);
+      console.log('[process-payment] Created transaction:', txId, orderId ? `for order ${orderId}` : '');
     }
     const transactionIdToUse = txId;
 
