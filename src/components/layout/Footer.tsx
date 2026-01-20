@@ -1,24 +1,53 @@
 import { useState } from "react";
-import { Twitter, Github, Linkedin, Mail, Heart } from "lucide-react";
+import { Twitter, Github, Linkedin, Mail, Heart, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Footer = () => {
   const [email, setEmail] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const { t } = useLanguage();
 
-  const handleSubscribe = (e: React.FormEvent) => {
+  const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email) {
+    if (!email) return;
+    
+    setIsLoading(true);
+    try {
+      const { error } = await supabase
+        .from('newsletter_subscribers')
+        .insert({ email, source: 'footer' });
+      
+      if (error) {
+        if (error.code === '23505') {
+          toast({
+            title: "Already subscribed!",
+            description: "This email is already on our newsletter list.",
+          });
+        } else {
+          throw error;
+        }
+      } else {
+        toast({
+          title: "Subscribed!",
+          description: "Thank you for subscribing. Stay tuned for updates!",
+        });
+        setEmail("");
+      }
+    } catch (error) {
+      console.error('Newsletter subscription error:', error);
       toast({
-        title: "Subscribed!",
-        description: "Thank you for subscribing to our newsletter.",
+        title: "Subscription failed",
+        description: "Please try again later.",
+        variant: "destructive",
       });
-      setEmail("");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -152,11 +181,15 @@ export const Footer = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 className="h-8 text-xs"
                 required
+                disabled={isLoading}
               />
-              <Button type="submit" size="sm" className="h-8 text-xs px-4">
-                {t('footer.subscribe')}
+              <Button type="submit" size="sm" className="h-8 text-xs px-4" disabled={isLoading}>
+                {isLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : t('footer.subscribe')}
               </Button>
             </form>
+            <p className="text-[10px] text-muted-foreground/60 mt-2">
+              📧 Email notifications for new blog posts coming soon!
+            </p>
           </div>
         </div>
 
