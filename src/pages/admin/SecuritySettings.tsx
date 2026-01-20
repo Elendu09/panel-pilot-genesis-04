@@ -9,9 +9,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Shield, KeyRound, Smartphone, Globe, UserCheck, Save, Activity, Loader2, AlertCircle, CheckCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { format, formatDistanceToNow } from "date-fns";
 
 interface SecuritySettings {
   enforce_2fa: boolean;
@@ -26,6 +28,25 @@ interface SecuritySettings {
   ip_allowlist: string;
   blocked_countries: string;
   block_vpn: boolean;
+}
+
+interface ActiveSession {
+  user_id: string;
+  email: string;
+  ip_address: string;
+  user_agent: string;
+  last_active: string;
+}
+
+interface AuditLogEntry {
+  id: string;
+  user_id: string | null;
+  action: string;
+  resource_type: string | null;
+  ip_address: string;
+  created_at: string;
+  details: any;
+  user_email?: string;
 }
 
 const defaultSettings: SecuritySettings = {
@@ -43,16 +64,22 @@ const defaultSettings: SecuritySettings = {
   block_vpn: false,
 };
 
-const SecuritySettings = () => {
+const SecuritySettingsPage = () => {
   const canonicalUrl = typeof window !== 'undefined' ? `${window.location.origin}/admin/security` : '';
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState<SecuritySettings>(defaultSettings);
   const [activeTab, setActiveTab] = useState("core");
+  const [activeSessions, setActiveSessions] = useState<ActiveSession[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(true);
+  const [auditLoading, setAuditLoading] = useState(true);
 
   useEffect(() => {
     fetchSettings();
+    fetchActiveSessions();
+    fetchAuditLogs();
   }, []);
 
   const fetchSettings = async () => {
@@ -70,6 +97,89 @@ const SecuritySettings = () => {
       console.error('Error fetching security settings:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchActiveSessions = async () => {
+    try {
+      // Get recent login activities from audit_logs
+      const { data: logs, error } = await supabase
+        .from('audit_logs')
+        .select('*')
+        .in('action', ['login', 'session_start', 'page_view', 'api_call'])
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+
+      // Get unique user sessions by user_id
+      const sessionsMap = new Map<string, ActiveSession>();
+      
+      for (const log of logs || []) {
+        if (log.user_id && !sessionsMap.has(log.user_id)) {
+          // Fetch user email
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('email')
+            .eq('id', log.user_id)
+            .maybeSingle();
+
+          const details = log.details as any || {};
+          
+          sessionsMap.set(log.user_id, {
+            user_id: log.user_id,
+            email: profile?.email || 'Unknown',
+            ip_address: typeof log.ip_address === 'string' ? log.ip_address : 'Unknown',
+            user_agent: details?.user_agent || log.user_agent || 'Unknown device',
+            last_active: log.created_at
+          });
+        }
+      }
+
+      setActiveSessions(Array.from(sessionsMap.values()).slice(0, 10));
+    } catch (error) {
+      console.error('Error fetching active sessions:', error);
+    } finally {
+      setSessionsLoading(false);
+    }
+  };
+
+  const fetchAuditLogs = async () => {
+    try {
+      const { data: logs, error } = await supabase
+        .from('audit_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (error) throw error;
+
+      // Fetch user emails for logs
+      const logsWithEmails: AuditLogEntry[] = [];
+      
+      for (const log of logs || []) {
+        let userEmail = 'System';
+        if (log.user_id) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('email')
+            .eq('id', log.user_id)
+            .maybeSingle();
+          userEmail = profile?.email || 'Unknown';
+        }
+
+        logsWithEmails.push({
+          ...log,
+          ip_address: typeof log.ip_address === 'string' ? log.ip_address : 'Unknown',
+          user_email: userEmail
+        });
+      }
+
+      setAuditLogs(logsWithEmails);
+    } catch (error) {
+      console.error('Error fetching audit logs:', error);
+    } finally {
+      setAuditLoading(false);
     }
   };
 
@@ -93,6 +203,54 @@ const SecuritySettings = () => {
 
   const handleChange = <K extends keyof SecuritySettings>(key: K, value: SecuritySettings[K]) => {
     setSettings(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleRevokeSession = async (userId: string) => {
+    // Log the revocation action
+    try {
+      await supabase.from('audit_logs').insert({
+        action: 'session_revoked',
+        user_id: userId,
+        resource_type: 'session',
+        details: { revoked_by: 'admin' }
+      });
+      
+      toast({ title: "Session Revoked", description: "User session has been terminated" });
+      fetchActiveSessions();
+    } catch (error) {
+      console.error('Error revoking session:', error);
+      toast({ variant: "destructive", title: "Error", description: "Failed to revoke session" });
+    }
+  };
+
+  const parseUserAgent = (ua: string): string => {
+    if (!ua || ua === 'Unknown device') return 'Unknown device';
+    
+    // Simple parsing
+    if (ua.includes('Chrome')) return 'Chrome Browser';
+    if (ua.includes('Firefox')) return 'Firefox Browser';
+    if (ua.includes('Safari')) return 'Safari Browser';
+    if (ua.includes('Edge')) return 'Edge Browser';
+    if (ua.includes('Mobile')) return 'Mobile Device';
+    
+    return ua.substring(0, 30) + '...';
+  };
+
+  const getActionDescription = (action: string): string => {
+    const descriptions: Record<string, string> = {
+      'login': 'User logged in',
+      'logout': 'User logged out',
+      'session_revoked': 'Session was revoked',
+      'settings_updated': 'Settings were updated',
+      'role_change': 'User role was changed',
+      'password_change': 'Password was changed',
+      'api_call': 'API request made',
+      'page_view': 'Page was accessed',
+      'create': 'Resource created',
+      'update': 'Resource updated',
+      'delete': 'Resource deleted',
+    };
+    return descriptions[action] || action.replace(/_/g, ' ');
   };
 
   const tabs = [
@@ -320,6 +478,10 @@ const SecuritySettings = () => {
                     <span className="text-muted-foreground">Timeout</span>
                     <span className="font-medium">{settings.session_timeout} min</span>
                   </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Active Sessions</span>
+                    <span className="font-medium">{activeSessions.length}</span>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -373,37 +535,57 @@ const SecuritySettings = () => {
               <CardTitle className="flex items-center gap-2 text-lg">
                 <UserCheck className="w-5 h-5" /> Active Sessions
               </CardTitle>
-              <CardDescription>Manage and revoke sessions</CardDescription>
+              <CardDescription>Manage and revoke user sessions ({activeSessions.length} active)</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
-                <table className="w-full text-sm min-w-[500px]">
-                  <thead className="text-left text-muted-foreground">
-                    <tr>
-                      <th className="py-2 font-medium">User</th>
-                      <th className="py-2 font-medium">IP</th>
-                      <th className="py-2 font-medium hidden sm:table-cell">Device</th>
-                      <th className="py-2 font-medium">Last active</th>
-                      <th className="py-2"/>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {[1,2,3].map((i) => (
-                      <tr key={i} className="border-t border-border">
-                        <td className="py-3">
-                          <span className="truncate block max-w-[120px] sm:max-w-none">admin{i}@domain.com</span>
-                        </td>
-                        <td className="py-3">102.89.10.{i}</td>
-                        <td className="py-3 hidden sm:table-cell">Chrome on macOS</td>
-                        <td className="py-3">{i * 2}m ago</td>
-                        <td className="py-3 text-right">
-                          <Button variant="outline" size="sm" className="text-xs">Revoke</Button>
-                        </td>
+              {sessionsLoading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <Skeleton key={i} className="h-14 w-full" />
+                  ))}
+                </div>
+              ) : activeSessions.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <UserCheck className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p>No active sessions found</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+                  <table className="w-full text-sm min-w-[500px]">
+                    <thead className="text-left text-muted-foreground">
+                      <tr>
+                        <th className="py-2 font-medium">User</th>
+                        <th className="py-2 font-medium">IP</th>
+                        <th className="py-2 font-medium hidden sm:table-cell">Device</th>
+                        <th className="py-2 font-medium">Last active</th>
+                        <th className="py-2"/>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {activeSessions.map((session) => (
+                        <tr key={session.user_id} className="border-t border-border">
+                          <td className="py-3">
+                            <span className="truncate block max-w-[120px] sm:max-w-none">{session.email}</span>
+                          </td>
+                          <td className="py-3">{session.ip_address}</td>
+                          <td className="py-3 hidden sm:table-cell">{parseUserAgent(session.user_agent)}</td>
+                          <td className="py-3">{formatDistanceToNow(new Date(session.last_active), { addSuffix: true })}</td>
+                          <td className="py-3 text-right">
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="text-xs"
+                              onClick={() => handleRevokeSession(session.user_id)}
+                            >
+                              Revoke
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -414,20 +596,49 @@ const SecuritySettings = () => {
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Activity className="w-5 h-5" /> Audit Log
               </CardTitle>
-              <CardDescription>Recent sensitive actions</CardDescription>
+              <CardDescription>Recent security-sensitive actions</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3 text-sm">
-                {[1,2,3,4,5].map((i) => (
-                  <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 border rounded-lg gap-2">
-                    <div className="min-w-0">
-                      <p className="font-medium truncate">User updated platform settings</p>
-                      <p className="text-muted-foreground text-xs truncate">admin@domain.com • {i * 5}m ago • IP 102.89.10.{i}</p>
+              {auditLoading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <Skeleton key={i} className="h-16 w-full" />
+                  ))}
+                </div>
+              ) : auditLogs.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Activity className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p>No audit logs found</p>
+                </div>
+              ) : (
+                <div className="space-y-3 text-sm">
+                  {auditLogs.map((log) => (
+                    <div key={log.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 border rounded-lg gap-2">
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">{getActionDescription(log.action)}</p>
+                        <p className="text-muted-foreground text-xs truncate">
+                          {log.user_email} • {formatDistanceToNow(new Date(log.created_at), { addSuffix: true })} • IP {log.ip_address}
+                        </p>
+                        {log.resource_type && (
+                          <p className="text-xs text-muted-foreground">
+                            Resource: {log.resource_type}
+                          </p>
+                        )}
+                      </div>
+                      <Badge 
+                        variant="outline" 
+                        className={`w-fit shrink-0 ${
+                          log.action.includes('delete') || log.action.includes('revoke') 
+                            ? 'border-destructive/50 text-destructive' 
+                            : ''
+                        }`}
+                      >
+                        {log.action.includes('error') || log.action.includes('fail') ? 'ERROR' : 'OK'}
+                      </Badge>
                     </div>
-                    <Badge variant="outline" className="w-fit shrink-0">OK</Badge>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -436,4 +647,4 @@ const SecuritySettings = () => {
   );
 };
 
-export default SecuritySettings;
+export default SecuritySettingsPage;
