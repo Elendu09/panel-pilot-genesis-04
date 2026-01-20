@@ -404,44 +404,77 @@ serve(async (req) => {
 
     const tx = transaction || null;
 
-    // If payment completed, credit buyer's balance
+    // If payment completed, handle based on transaction type
     if (status === 'completed') {
       const userId = tx?.user_id || buyerId;
       const depositAmount = tx?.amount || amount;
       const txPanelId = tx?.panel_id || panelId;
+      const txType = tx?.type || 'deposit';
+      const txMetadata = tx?.metadata as Record<string, any> || {};
+      const orderId = txMetadata?.orderId;
 
       if (userId) {
-        // Get current buyer balance
-        const { data: buyer } = await supabase
-          .from('client_users')
-          .select('balance, total_spent')
-          .eq('id', userId)
-          .single();
-
-        if (buyer) {
-          const newBalance = (buyer.balance || 0) + depositAmount;
-          
-          // Update buyer balance
-          await supabase
-            .from('client_users')
+        // Check if this is an order payment or a deposit
+        if (txType === 'order_payment' && orderId) {
+          // This is a direct order payment - update order status, don't credit balance
+          const { error: orderError } = await supabase
+            .from('orders')
             .update({ 
-              balance: newBalance,
-              total_spent: (buyer.total_spent || 0) + depositAmount
+              status: 'pending', // Move from awaiting_payment to pending
+              updated_at: new Date().toISOString()
             })
-            .eq('id', userId);
+            .eq('id', orderId);
 
-          console.log(`[payment-webhook] Credited $${depositAmount} to buyer ${userId}, new balance: ${newBalance}`);
+          if (orderError) {
+            console.error('[payment-webhook] Error updating order:', orderError);
+          } else {
+            console.log(`[payment-webhook] Order ${orderId} moved to pending after payment`);
+          }
 
-          // Create buyer notification
+          // Create notification for order payment success
           await supabase
             .from('buyer_notifications')
             .insert({
               buyer_id: userId,
               panel_id: txPanelId,
-              type: 'deposit',
-              title: 'Deposit Successful',
-              message: `$${depositAmount.toFixed(2)} has been added to your account via ${gateway}`,
+              order_id: orderId,
+              type: 'order',
+              title: 'Order Payment Successful',
+              message: `Your payment of $${depositAmount.toFixed(2)} was successful. Your order is now being processed.`,
             });
+        } else {
+          // This is a regular deposit - credit buyer balance
+          const { data: buyer } = await supabase
+            .from('client_users')
+            .select('balance, total_spent')
+            .eq('id', userId)
+            .single();
+
+          if (buyer) {
+            const newBalance = (buyer.balance || 0) + depositAmount;
+            
+            // Update buyer balance
+            await supabase
+              .from('client_users')
+              .update({ 
+                balance: newBalance,
+                total_spent: (buyer.total_spent || 0) + depositAmount
+              })
+              .eq('id', userId);
+
+            console.log(`[payment-webhook] Credited $${depositAmount} to buyer ${userId}, new balance: ${newBalance}`);
+
+            // Create buyer notification for deposit
+            await supabase
+              .from('buyer_notifications')
+              .insert({
+                buyer_id: userId,
+                panel_id: txPanelId,
+                type: 'deposit',
+                title: 'Deposit Successful',
+                message: `$${depositAmount.toFixed(2)} has been added to your account via ${gateway}`,
+              });
+          }
         }
       }
     } else if (status === 'failed') {
