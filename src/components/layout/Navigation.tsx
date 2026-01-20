@@ -50,6 +50,9 @@ export const Navigation = () => {
             <Link to="/pricing" aria-label="Pricing page" className="text-muted-foreground hover:text-foreground transition-colors">
               {t('platform.pricing')}
             </Link>
+            <Link to="/blog" aria-label="Blog" className="text-muted-foreground hover:text-foreground transition-colors">
+              Blog
+            </Link>
             <Link to="/docs" aria-label="Documentation" className="text-muted-foreground hover:text-foreground transition-colors">
               {t('platform.docs')}
             </Link>
@@ -124,6 +127,9 @@ export const Navigation = () => {
               </Link>
               <Link to="/pricing" className="text-muted-foreground hover:text-foreground">
                 Pricing
+              </Link>
+              <Link to="/blog" className="text-muted-foreground hover:text-foreground">
+                Blog
               </Link>
               <Link to="/docs" className="text-muted-foreground hover:text-foreground">
                 Documentation

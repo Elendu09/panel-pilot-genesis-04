@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { Navigation } from "@/components/layout/Navigation";
@@ -7,49 +7,70 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { CalendarDays, Clock, ArrowRight, Search, X } from "lucide-react";
-import { blogPosts, categories, allTags } from "@/data/blogPosts";
+import { supabase } from "@/integrations/supabase/client";
+import { format } from "date-fns";
+
+interface BlogPost {
+  id: string;
+  title: string;
+  slug: string;
+  content: string | null;
+  excerpt: string | null;
+  featured_image_url: string | null;
+  author_name: string;
+  status: string;
+  seo_keywords: string[] | null;
+  published_at: string | null;
+}
 
 const Blog = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("All");
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [posts, setPosts] = useState<BlogPost[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchPosts();
+  }, []);
+
+  const fetchPosts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('platform_blog_posts')
+        .select('*')
+        .eq('status', 'published')
+        .order('published_at', { ascending: false });
+
+      if (error) throw error;
+      setPosts((data || []) as BlogPost[]);
+    } catch (error) {
+      console.error('Error fetching blog posts:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredPosts = useMemo(() => {
-    return blogPosts.filter((post) => {
-      // Search filter
+    return posts.filter((post) => {
       const matchesSearch =
         searchQuery === "" ||
         post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        post.excerpt.toLowerCase().includes(searchQuery.toLowerCase());
-
-      // Category filter
-      const matchesCategory =
-        selectedCategory === "All" || post.category === selectedCategory;
-
-      // Tags filter
-      const matchesTags =
-        selectedTags.length === 0 ||
-        selectedTags.some((tag) => post.tags.includes(tag));
-
-      return matchesSearch && matchesCategory && matchesTags;
+        (post.excerpt || '').toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesSearch;
     });
-  }, [searchQuery, selectedCategory, selectedTags]);
-
-  const toggleTag = (tag: string) => {
-    setSelectedTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
-    );
-  };
+  }, [searchQuery, posts]);
 
   const clearFilters = () => {
     setSearchQuery("");
-    setSelectedCategory("All");
-    setSelectedTags([]);
   };
 
-  const hasActiveFilters =
-    searchQuery !== "" || selectedCategory !== "All" || selectedTags.length > 0;
+  const getReadTime = (content: string | null) => {
+    if (!content) return '3 min read';
+    const words = content.replace(/<[^>]*>/g, '').split(/\s+/).length;
+    const minutes = Math.ceil(words / 200);
+    return `${minutes} min read`;
+  };
 
   return (
     <>
@@ -71,7 +92,7 @@ const Blog = () => {
 
       <div className="min-h-screen bg-background">
         <Navigation />
-        <div className="container mx-auto px-4 py-12">
+        <div className="container mx-auto px-4 py-12 pt-24">
           <div className="text-center mb-12">
             <h1 className="text-4xl font-bold mb-4">Blog & Insights</h1>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
@@ -80,9 +101,8 @@ const Blog = () => {
             </p>
           </div>
 
-          {/* Search and Filters */}
+          {/* Search */}
           <div className="mb-8 space-y-4">
-            {/* Search Input */}
             <div className="relative max-w-md mx-auto">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -94,36 +114,7 @@ const Blog = () => {
               />
             </div>
 
-            {/* Category Filters */}
-            <div className="flex flex-wrap justify-center gap-2">
-              {categories.map((category) => (
-                <Button
-                  key={category}
-                  variant={selectedCategory === category ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setSelectedCategory(category)}
-                >
-                  {category}
-                </Button>
-              ))}
-            </div>
-
-            {/* Tag Filters */}
-            <div className="flex flex-wrap justify-center gap-2">
-              {allTags.map((tag) => (
-                <Badge
-                  key={tag}
-                  variant={selectedTags.includes(tag) ? "default" : "outline"}
-                  className="cursor-pointer hover:bg-primary/10 transition-colors"
-                  onClick={() => toggleTag(tag)}
-                >
-                  {tag}
-                </Badge>
-              ))}
-            </div>
-
-            {/* Clear Filters */}
-            {hasActiveFilters && (
+            {searchQuery && (
               <div className="flex justify-center">
                 <Button
                   variant="ghost"
@@ -132,19 +123,37 @@ const Blog = () => {
                   className="text-muted-foreground"
                 >
                   <X className="h-4 w-4 mr-1" />
-                  Clear all filters
+                  Clear search
                 </Button>
               </div>
             )}
 
-            {/* Results Count */}
             <p className="text-center text-sm text-muted-foreground">
-              Showing {filteredPosts.length} of {blogPosts.length} articles
+              Showing {filteredPosts.length} article{filteredPosts.length !== 1 ? 's' : ''}
             </p>
           </div>
 
+          {/* Loading State */}
+          {loading && (
+            <div className="grid gap-8 lg:grid-cols-2 xl:grid-cols-3">
+              {[1, 2, 3].map((i) => (
+                <Card key={i} className="overflow-hidden">
+                  <Skeleton className="aspect-video" />
+                  <CardHeader>
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="h-6 w-full" />
+                    <Skeleton className="h-4 w-32" />
+                  </CardHeader>
+                  <CardContent>
+                    <Skeleton className="h-16 w-full" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+
           {/* Blog Posts Grid */}
-          {filteredPosts.length > 0 ? (
+          {!loading && filteredPosts.length > 0 ? (
             <div className="grid gap-8 lg:grid-cols-2 xl:grid-cols-3">
               {filteredPosts.map((post) => (
                 <Card
@@ -152,21 +161,29 @@ const Blog = () => {
                   className="overflow-hidden hover:shadow-xl transition-all duration-300 group border-0 bg-card/80 backdrop-blur-sm"
                 >
                   <Link to={`/blog/${post.slug}`}>
-                    <div className="aspect-video overflow-hidden rounded-t-3xl">
-                      <img
-                        src={post.image}
-                        alt={post.title}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                        loading="lazy"
-                      />
+                    <div className="aspect-video overflow-hidden rounded-t-xl bg-muted">
+                      {post.featured_image_url ? (
+                        <img
+                          src={post.featured_image_url}
+                          alt={post.title}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5">
+                          <span className="text-4xl font-bold text-primary/30">
+                            {post.title.charAt(0)}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </Link>
                   <CardHeader>
                     <div className="flex items-center justify-between mb-2">
-                      <Badge variant="secondary">{post.category}</Badge>
+                      <Badge variant="secondary">Article</Badge>
                       <div className="flex items-center text-sm text-muted-foreground">
                         <Clock className="h-4 w-4 mr-1" />
-                        {post.readTime}
+                        {getReadTime(post.content)}
                       </div>
                     </div>
                     <Link to={`/blog/${post.slug}`}>
@@ -176,12 +193,12 @@ const Blog = () => {
                     </Link>
                     <div className="flex items-center text-sm text-muted-foreground">
                       <CalendarDays className="h-4 w-4 mr-1" />
-                      {post.date}
+                      {post.published_at ? format(new Date(post.published_at), 'MMM dd, yyyy') : 'Draft'}
                     </div>
                   </CardHeader>
                   <CardContent>
                     <CardDescription className="line-clamp-3 mb-4">
-                      {post.excerpt}
+                      {post.excerpt || 'Read this article to learn more...'}
                     </CardDescription>
                     <Link to={`/blog/${post.slug}`}>
                       <Button variant="outline" className="w-full group/btn">
@@ -193,16 +210,18 @@ const Blog = () => {
                 </Card>
               ))}
             </div>
-          ) : (
+          ) : !loading ? (
             <div className="text-center py-12">
               <p className="text-lg text-muted-foreground mb-4">
-                No articles found matching your filters.
+                No articles found.
               </p>
-              <Button variant="outline" onClick={clearFilters}>
-                Clear filters
-              </Button>
+              {searchQuery && (
+                <Button variant="outline" onClick={clearFilters}>
+                  Clear search
+                </Button>
+              )}
             </div>
-          )}
+          ) : null}
 
           {/* Newsletter Signup */}
           <div className="mt-16 bg-gradient-to-r from-primary/10 via-primary/5 to-secondary/10 rounded-3xl p-8 md:p-12 text-center shadow-lg">
