@@ -176,13 +176,13 @@ const BlogPost = () => {
         <Navigation />
 
         {/* Hero Section with Curved Image */}
-        <div className="container mx-auto px-4 pt-8">
-          <div className="relative w-full aspect-[21/9] max-h-[450px] overflow-hidden rounded-3xl shadow-2xl">
+        <div className="container mx-auto px-4 pt-24 md:pt-28">
+          <div className="relative w-full aspect-[16/9] md:aspect-[21/9] min-h-[280px] md:min-h-[400px] max-h-[500px] overflow-hidden rounded-3xl shadow-2xl">
             {post.featured_image_url ? (
               <img
                 src={post.featured_image_url}
                 alt={post.title}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover object-center"
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/30 to-secondary/20">
@@ -191,15 +191,15 @@ const BlogPost = () => {
                 </span>
               </div>
             )}
-            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/30 to-transparent rounded-3xl" />
+            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent rounded-3xl" />
           </div>
         </div>
 
         <div className="container mx-auto px-4">
           {/* Back Button */}
-          <div className="py-4">
+          <div className="py-6">
             <Link to="/blog">
-              <Button variant="ghost" size="sm" className="gap-2">
+              <Button variant="ghost" size="sm" className="gap-2 hover:bg-primary/10">
                 <ArrowLeft className="h-4 w-4" />
                 Back to Blog
               </Button>
@@ -209,20 +209,20 @@ const BlogPost = () => {
           {/* Article Header */}
           <header className="max-w-4xl mx-auto pb-8">
             <div className="flex flex-wrap items-center gap-3 mb-4">
-              <Badge variant="secondary" className="text-sm">
+              <Badge variant="secondary" className="text-sm font-medium">
                 Article
               </Badge>
-              <span className="text-sm text-muted-foreground flex items-center gap-1">
+              <span className="text-sm text-muted-foreground flex items-center gap-1.5">
                 <Clock className="h-4 w-4" />
                 {getReadTime(post.content)}
               </span>
-              <span className="text-sm text-muted-foreground flex items-center gap-1">
+              <span className="text-sm text-muted-foreground flex items-center gap-1.5">
                 <CalendarDays className="h-4 w-4" />
                 {post.published_at ? format(new Date(post.published_at), 'MMM dd, yyyy') : 'Draft'}
               </span>
             </div>
 
-            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 leading-tight">
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 leading-tight text-foreground">
               {post.title}
             </h1>
 
@@ -235,7 +235,7 @@ const BlogPost = () => {
             {post.seo_keywords && post.seo_keywords.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-6">
                 {post.seo_keywords.map((tag) => (
-                  <Badge key={tag} variant="outline" className="text-xs">
+                  <Badge key={tag} variant="outline" className="text-xs px-3 py-1">
                     {tag}
                   </Badge>
                 ))}
@@ -257,31 +257,55 @@ const BlogPost = () => {
 
             {/* Article Content */}
             <article className="flex-1 max-w-3xl" ref={contentRef}>
+              {/* Mobile Table of Contents */}
+              {headings.length > 0 && (
+                <div className="lg:hidden mb-8 p-4 bg-muted/50 rounded-xl border">
+                  <h3 className="font-semibold mb-3 text-sm uppercase tracking-wide text-muted-foreground">
+                    Table of Contents
+                  </h3>
+                  <nav className="space-y-2">
+                    {headings.map((heading) => (
+                      <a
+                        key={heading.id}
+                        href={`#${heading.id}`}
+                        className={`block text-sm py-1 hover:text-primary transition-colors ${
+                          heading.level === 3 ? 'pl-4 text-muted-foreground' : 'font-medium'
+                        }`}
+                      >
+                        {heading.text}
+                      </a>
+                    ))}
+                  </nav>
+                </div>
+              )}
+
               <div
-                className="prose prose-lg dark:prose-invert max-w-none
-                  prose-headings:scroll-mt-24
-                  prose-h2:text-2xl prose-h2:font-bold prose-h2:mt-8 prose-h2:mb-4
-                  prose-h3:text-xl prose-h3:font-semibold prose-h3:mt-6 prose-h3:mb-3
-                  prose-p:text-muted-foreground prose-p:leading-relaxed
-                  prose-strong:text-foreground
-                  prose-a:text-primary prose-a:no-underline hover:prose-a:underline"
+                className="blog-content space-y-6"
                 dangerouslySetInnerHTML={{ __html: sanitizedContent }}
               />
 
               {/* FAQ Section */}
               {faqs.length > 0 && (
-                <div className="mt-12 border-t pt-8">
-                  <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
-                    <HelpCircle className="w-6 h-6 text-primary" />
-                    Frequently Asked Questions
-                  </h2>
-                  <Accordion type="single" collapsible className="w-full">
+                <div className="mt-16 pt-8 border-t border-border">
+                  <div className="flex items-center gap-3 mb-8">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <HelpCircle className="w-6 h-6 text-primary" />
+                    </div>
+                    <h2 className="text-2xl md:text-3xl font-bold text-foreground">
+                      Frequently Asked Questions
+                    </h2>
+                  </div>
+                  <Accordion type="single" collapsible className="w-full space-y-3">
                     {faqs.map((faq, index) => (
-                      <AccordionItem key={index} value={`faq-${index}`}>
-                        <AccordionTrigger className="text-left">
+                      <AccordionItem 
+                        key={index} 
+                        value={`faq-${index}`}
+                        className="border border-border rounded-lg px-4 bg-card/50 data-[state=open]:bg-card"
+                      >
+                        <AccordionTrigger className="text-left font-medium hover:no-underline py-4 text-foreground">
                           {faq.question}
                         </AccordionTrigger>
-                        <AccordionContent className="text-muted-foreground">
+                        <AccordionContent className="text-muted-foreground pb-4 leading-relaxed">
                           {faq.answer}
                         </AccordionContent>
                       </AccordionItem>
@@ -291,8 +315,33 @@ const BlogPost = () => {
               )}
             </article>
 
-            {/* Table of Contents */}
-            <TableOfContents items={headings} activeId={activeId} />
+            {/* Desktop Table of Contents */}
+            {headings.length > 0 && (
+              <aside className="hidden lg:block w-64 shrink-0">
+                <div className="sticky top-24">
+                  <div className="p-4 bg-muted/30 rounded-xl border">
+                    <h3 className="font-semibold mb-4 text-sm uppercase tracking-wide text-muted-foreground">
+                      On This Page
+                    </h3>
+                    <nav className="space-y-2">
+                      {headings.map((heading) => (
+                        <a
+                          key={heading.id}
+                          href={`#${heading.id}`}
+                          className={`block text-sm py-1.5 transition-colors border-l-2 pl-3 ${
+                            activeId === heading.id
+                              ? 'border-primary text-primary font-medium'
+                              : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground'
+                          } ${heading.level === 3 ? 'pl-5' : ''}`}
+                        >
+                          {heading.text}
+                        </a>
+                      ))}
+                    </nav>
+                  </div>
+                </div>
+              </aside>
+            )}
           </div>
 
           {/* Related Posts Section - Could be added later */}
