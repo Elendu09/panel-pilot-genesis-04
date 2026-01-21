@@ -49,6 +49,7 @@ import BackupManagement from "./admin/BackupManagement";
 import DomainManagement from "./admin/DomainManagement";
 import ReceiptManagement from "./admin/ReceiptManagement";
 import BlogManagement from "./admin/BlogManagement";
+import DocsManagement from "./admin/DocsManagement";
 import { Helmet } from "react-helmet-async";
 
 const SuperAdminDashboard = () => {
@@ -91,6 +92,7 @@ const SuperAdminDashboard = () => {
         { name: 'Tickets', href: '/admin/tickets', icon: MessageSquare },
         { name: 'Announcements', href: '/admin/announcements', icon: Megaphone },
         { name: 'Blog', href: '/admin/blog', icon: BookOpen },
+        { name: 'Docs', href: '/admin/docs', icon: FileText },
       ]
     },
     {
@@ -236,6 +238,7 @@ const SuperAdminDashboard = () => {
           <Route path="payments" element={<PaymentManagement />} />
           <Route path="receipts" element={<ReceiptManagement />} />
           <Route path="blog" element={<BlogManagement />} />
+          <Route path="docs" element={<DocsManagement />} />
           <Route path="more" element={<AdminMoreMenu />} />
         </Routes>
       </div>
