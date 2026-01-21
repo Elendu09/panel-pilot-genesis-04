@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { List, ChevronUp } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface DocsTableOfContentsProps {
   content: string;
@@ -15,6 +18,8 @@ interface TOCItem {
 export function DocsTableOfContents({ content }: DocsTableOfContentsProps) {
   const [headings, setHeadings] = useState<TOCItem[]>([]);
   const [activeId, setActiveId] = useState<string>("");
+  const [progress, setProgress] = useState(0);
+  const [showBackToTop, setShowBackToTop] = useState(false);
 
   // Extract headings from content
   useEffect(() => {
@@ -36,6 +41,21 @@ export function DocsTableOfContents({ content }: DocsTableOfContentsProps) {
 
     setHeadings(extracted);
   }, [content]);
+
+  // Track active heading and scroll progress
+  useEffect(() => {
+    const handleScroll = () => {
+      // Calculate scroll progress
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const scrollProgress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+      setProgress(Math.min(scrollProgress, 100));
+      setShowBackToTop(scrollTop > 400);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // Track active heading on scroll
   useEffect(() => {
@@ -67,6 +87,10 @@ export function DocsTableOfContents({ content }: DocsTableOfContentsProps) {
     }
   };
 
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   if (headings.length === 0) {
     return null;
   }
@@ -74,21 +98,39 @@ export function DocsTableOfContents({ content }: DocsTableOfContentsProps) {
   return (
     <aside className="hidden xl:block w-64 shrink-0">
       <div className="sticky top-24 pl-8">
-        <h4 className="text-sm font-semibold mb-4">On this page</h4>
-        <ScrollArea className="h-[calc(100vh-12rem)]">
-          <nav className="space-y-1">
-            {headings.map((heading) => (
+        {/* Progress indicator */}
+        <div className="h-1 w-full bg-muted rounded-full mb-4 overflow-hidden">
+          <motion.div 
+            className="h-full bg-gradient-to-r from-primary to-primary-glow rounded-full"
+            style={{ width: `${progress}%` }}
+            transition={{ duration: 0.1 }}
+          />
+        </div>
+
+        <div className="flex items-center justify-between mb-4">
+          <h4 className="text-sm font-semibold flex items-center gap-2">
+            <List className="h-4 w-4 text-muted-foreground" />
+            On this page
+          </h4>
+          <span className="text-xs text-muted-foreground">
+            {Math.round(progress)}%
+          </span>
+        </div>
+
+        <ScrollArea className="h-[calc(100vh-14rem)]">
+          <nav className="space-y-0.5 pr-4">
+            {headings.map((heading, index) => (
               <button
-                key={heading.id}
+                key={`${heading.id}-${index}`}
                 onClick={() => scrollToHeading(heading.id)}
                 className={cn(
-                  "block w-full text-left text-sm py-1.5 transition-colors hover:text-foreground",
-                  heading.level === 1 && "pl-0 font-medium",
-                  heading.level === 2 && "pl-0",
-                  heading.level === 3 && "pl-4",
+                  "block w-full text-left text-sm py-1.5 px-2 rounded-md transition-all duration-200 hover:bg-muted/50",
+                  heading.level === 1 && "pl-2 font-medium",
+                  heading.level === 2 && "pl-2",
+                  heading.level === 3 && "pl-6 text-xs",
                   activeId === heading.id
-                    ? "text-primary font-medium"
-                    : "text-muted-foreground"
+                    ? "text-primary bg-primary/10 font-medium border-l-2 border-primary -ml-0.5 pl-[calc(0.5rem+2px)]"
+                    : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 {heading.text}
@@ -96,6 +138,28 @@ export function DocsTableOfContents({ content }: DocsTableOfContentsProps) {
             ))}
           </nav>
         </ScrollArea>
+
+        {/* Back to top button */}
+        <AnimatePresence>
+          {showBackToTop && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              className="mt-4"
+            >
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={scrollToTop}
+                className="w-full text-xs"
+              >
+                <ChevronUp className="h-3 w-3 mr-1" />
+                Back to top
+              </Button>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </aside>
   );

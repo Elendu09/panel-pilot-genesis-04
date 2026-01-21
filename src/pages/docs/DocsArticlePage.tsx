@@ -12,17 +12,23 @@ import {
   BookOpen,
   ChevronRight,
   Link2,
-  ThumbsUp,
-  ThumbsDown,
-  Copy,
-  Check,
-  FileText
+  FileText,
+  Zap,
+  Code,
+  Settings,
+  Users,
+  Shield,
+  AlertTriangle,
+  Check
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { DocsTableOfContents } from "@/components/docs/DocsTableOfContents";
 import { DocsFeedback } from "@/components/docs/DocsFeedback";
 import { DocsRelatedArticles } from "@/components/docs/DocsRelatedArticles";
+import { DocsCallout } from "@/components/docs/DocsCallout";
+import { DocsCodeBlock } from "@/components/docs/DocsCodeBlock";
 import DOMPurify from "dompurify";
+import { motion } from "framer-motion";
 
 interface DocArticle {
   id: string;
@@ -35,14 +41,14 @@ interface DocArticle {
   updated_at: string;
 }
 
-const categoryLabels: Record<string, string> = {
-  "getting-started": "Getting Started",
-  "api": "API Reference",
-  "integration": "Integration",
-  "configuration": "Configuration",
-  "user-management": "User Management",
-  "security": "Security",
-  "troubleshooting": "Troubleshooting",
+const categoryConfig: Record<string, { label: string; icon: React.ElementType; gradient: string }> = {
+  "getting-started": { label: "Getting Started", icon: Zap, gradient: "from-yellow-500 to-orange-500" },
+  "api": { label: "API Reference", icon: Code, gradient: "from-blue-500 to-cyan-500" },
+  "integration": { label: "Integration", icon: Link2, gradient: "from-purple-500 to-pink-500" },
+  "configuration": { label: "Configuration", icon: Settings, gradient: "from-green-500 to-emerald-500" },
+  "user-management": { label: "User Management", icon: Users, gradient: "from-orange-500 to-red-500" },
+  "security": { label: "Security", icon: Shield, gradient: "from-red-500 to-rose-500" },
+  "troubleshooting": { label: "Troubleshooting", icon: AlertTriangle, gradient: "from-amber-500 to-yellow-500" },
 };
 
 export default function DocsArticlePage() {
@@ -109,27 +115,53 @@ export default function DocsArticlePage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Convert markdown-like content to HTML (basic conversion)
+  // Enhanced markdown to HTML conversion with callout and code block support
   const renderContent = (content: string | null) => {
     if (!content) return null;
 
-    // Basic markdown to HTML conversion
+    // Basic markdown to HTML conversion with enhanced styling
     let html = content
-      // Headers
-      .replace(/^### (.*$)/gim, '<h3 class="text-xl font-semibold mt-8 mb-4 scroll-mt-20">$1</h3>')
-      .replace(/^## (.*$)/gim, '<h2 class="text-2xl font-bold mt-10 mb-4 scroll-mt-20">$1</h2>')
-      .replace(/^# (.*$)/gim, '<h1 class="text-3xl font-bold mt-8 mb-6">$1</h1>')
+      // Headers with IDs for TOC
+      .replace(/^### (.*$)/gim, (_, text) => {
+        const id = text.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+        return `<h3 id="${id}" class="text-xl font-semibold mt-8 mb-4 scroll-mt-24 group flex items-center gap-2">
+          <a href="#${id}" class="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-primary transition-opacity">#</a>
+          ${text}
+        </h3>`;
+      })
+      .replace(/^## (.*$)/gim, (_, text) => {
+        const id = text.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+        return `<h2 id="${id}" class="text-2xl font-bold mt-10 mb-4 scroll-mt-24 group flex items-center gap-2">
+          <a href="#${id}" class="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-primary transition-opacity">#</a>
+          ${text}
+        </h2>`;
+      })
+      .replace(/^# (.*$)/gim, (_, text) => {
+        const id = text.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+        return `<h1 id="${id}" class="text-3xl font-bold mt-8 mb-6 scroll-mt-24">${text}</h1>`;
+      })
       // Bold and italic
-      .replace(/\*\*(.*)\*\*/gim, '<strong class="font-semibold">$1</strong>')
-      .replace(/\*(.*)\*/gim, '<em>$1</em>')
-      // Code blocks
-      .replace(/```(\w+)?\n([\s\S]*?)```/gim, '<pre class="bg-muted p-4 rounded-lg overflow-x-auto my-4 text-sm"><code>$2</code></pre>')
-      .replace(/`([^`]+)`/gim, '<code class="bg-muted px-1.5 py-0.5 rounded text-sm font-mono">$1</code>')
+      .replace(/\*\*([^*]+)\*\*/gim, '<strong class="font-semibold text-foreground">$1</strong>')
+      .replace(/\*([^*]+)\*/gim, '<em class="italic">$1</em>')
+      // Callout blocks: > [!TIP] or > [!WARNING] etc.
+      .replace(/>\s*\[!(TIP|WARNING|INFO|DANGER|NOTE)\]\s*\n>\s*([\s\S]*?)(?=\n\n|\n[^>]|$)/gim, (_, type, text) => {
+        const cleanText = text.replace(/>\s*/g, '').trim();
+        return `<div class="callout callout-${type.toLowerCase()}" data-type="${type.toLowerCase()}">${cleanText}</div>`;
+      })
+      // Code blocks with language
+      .replace(/```(\w+)?\n([\s\S]*?)```/gim, (_, lang, code) => {
+        const language = lang || 'bash';
+        return `<div class="code-block" data-language="${language}">${code.trim()}</div>`;
+      })
+      // Inline code
+      .replace(/`([^`]+)`/gim, '<code class="bg-muted/50 px-1.5 py-0.5 rounded text-sm font-mono text-primary">$1</code>')
       // Lists
-      .replace(/^\- (.*$)/gim, '<li class="ml-6 list-disc">$1</li>')
-      .replace(/^\d+\. (.*$)/gim, '<li class="ml-6 list-decimal">$1</li>')
+      .replace(/^\- (.*$)/gim, '<li class="ml-6 list-disc mb-2 text-muted-foreground">$1</li>')
+      .replace(/^\d+\. (.*$)/gim, '<li class="ml-6 list-decimal mb-2 text-muted-foreground">$1</li>')
       // Links
-      .replace(/\[([^\]]+)\]\(([^)]+)\)/gim, '<a href="$2" class="text-primary hover:underline">$1</a>')
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/gim, '<a href="$2" class="text-primary hover:underline underline-offset-2 font-medium" target="_blank" rel="noopener noreferrer">$1</a>')
+      // Horizontal rules
+      .replace(/^---$/gim, '<hr class="my-8 border-border/50" />')
       // Paragraphs
       .replace(/\n\n/gim, '</p><p class="mb-4 text-muted-foreground leading-relaxed">')
       // Line breaks
@@ -139,7 +171,7 @@ export default function DocsArticlePage() {
     html = `<p class="mb-4 text-muted-foreground leading-relaxed">${html}</p>`;
 
     // Sanitize HTML
-    return DOMPurify.sanitize(html, { ADD_ATTR: ['target'] });
+    return DOMPurify.sanitize(html, { ADD_ATTR: ['target', 'data-type', 'data-language'] });
   };
 
   if (loading) {
@@ -190,7 +222,7 @@ export default function DocsArticlePage() {
               to={`/docs/${category}/${article.slug}`} 
               className="hover:text-foreground transition-colors capitalize"
             >
-              {categoryLabels[category || ""] || category}
+              {categoryConfig[category || ""]?.label || category}
             </Link>
             <ChevronRight className="h-4 w-4" />
             <span className="text-foreground truncate">{article.title}</span>
@@ -200,7 +232,7 @@ export default function DocsArticlePage() {
           <header className="mb-8">
             <div className="flex items-center gap-3 mb-4">
               <Badge variant="secondary" className="capitalize">
-                {categoryLabels[category || ""] || category}
+                {categoryConfig[category || ""]?.label || category}
               </Badge>
               {article.read_time && (
                 <span className="flex items-center gap-1 text-sm text-muted-foreground">
