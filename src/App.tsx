@@ -26,7 +26,8 @@ const NewOrder = lazy(() => import("./pages/NewOrder"));
 const OrderManagement = lazy(() => import("./pages/OrderManagement"));
 const Features = lazy(() => import("./pages/Features"));
 const Pricing = lazy(() => import("./pages/Pricing"));
-const Documentation = lazy(() => import("./pages/Documentation"));
+const DocsHub = lazy(() => import("./pages/docs/DocsHub"));
+const DocsArticlePage = lazy(() => import("./pages/docs/DocsArticlePage"));
 const Contact = lazy(() => import("./pages/Contact"));
 const Storefront = lazy(() => import("./pages/Storefront"));
 const StorefrontPreview = lazy(() => import("./pages/StorefrontPreview"));
@@ -43,7 +44,6 @@ const Auth = lazy(() => import("./pages/Auth"));
 const FastOrder = lazy(() => import("./pages/FastOrder"));
 const TrackOrder = lazy(() => import("./pages/TrackOrder"));
 const Sitemap = lazy(() => import("./pages/Sitemap"));
-const DocsArticle = lazy(() => import("./pages/docs/DocsArticle"));
 
 // Minimal loading fallback for lazy routes
 const PageLoader = () => (
@@ -87,8 +87,8 @@ const App = () => (
                   <Route path="/login" element={<Auth />} />
                   <Route path="/features" element={<Features />} />
                   <Route path="/pricing" element={<Pricing />} />
-                  <Route path="/docs" element={<Documentation />} />
-                  <Route path="/docs/:category/:slug" element={<DocsArticle />} />
+                  <Route path="/docs" element={<DocsHub />} />
+                  <Route path="/docs/:category/:slug" element={<DocsArticlePage />} />
                   <Route path="/contact" element={<Contact />} />
                   <Route path="/new-order" element={<NewOrder />} />
                   <Route path="/fast-order" element={<FastOrder />} />
