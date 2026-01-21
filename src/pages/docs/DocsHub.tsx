@@ -4,6 +4,7 @@ import { DocsLayout } from "./DocsLayout";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { motion } from "framer-motion";
 import { 
   Zap, 
   Code, 
@@ -19,7 +20,10 @@ import {
   Sparkles,
   FileText,
   ExternalLink,
-  CheckCircle2
+  CheckCircle2,
+  TrendingUp,
+  Play,
+  Rocket
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -36,61 +40,82 @@ interface DocArticle {
 const featureCards = [
   {
     title: "Quick Start",
-    description: "Get your SMM panel running in under 5 minutes",
-    icon: Zap,
-    color: "from-yellow-500 to-orange-500",
+    description: "Get your SMM panel running in under 5 minutes with our step-by-step guide",
+    icon: Rocket,
+    gradient: "from-amber-500 via-orange-500 to-red-500",
+    bgGlow: "bg-orange-500/20",
     link: "/docs/getting-started/quick-start",
-    badge: "5 min"
+    badge: "5 min",
+    stats: "Most popular"
   },
   {
     title: "API Reference",
-    description: "Complete REST API documentation with examples",
+    description: "Complete REST API documentation with code examples in multiple languages",
     icon: Code,
-    color: "from-blue-500 to-cyan-500",
+    gradient: "from-blue-500 via-cyan-500 to-teal-500",
+    bgGlow: "bg-blue-500/20",
     link: "/docs/api/api-overview",
-    badge: "REST"
+    badge: "REST",
+    stats: "15+ endpoints"
   },
   {
     title: "Integrations",
-    description: "Connect providers, payments, and custom domains",
+    description: "Connect providers, payment gateways, and set up custom domains",
     icon: Link2,
-    color: "from-purple-500 to-pink-500",
+    gradient: "from-purple-500 via-pink-500 to-rose-500",
+    bgGlow: "bg-purple-500/20",
     link: "/docs/integration/provider-integration",
-    badge: null
+    badge: null,
+    stats: "10+ providers"
   },
   {
     title: "Configuration",
-    description: "Customize every aspect of your panel",
+    description: "Customize branding, themes, SEO settings, and every aspect of your panel",
     icon: Settings,
-    color: "from-green-500 to-emerald-500",
+    gradient: "from-emerald-500 via-green-500 to-lime-500",
+    bgGlow: "bg-green-500/20",
     link: "/docs/configuration/panel-settings",
-    badge: null
+    badge: null,
+    stats: "Full control"
   },
 ];
 
 const essentialsDocs = [
-  { title: "Quick Start Guide", link: "/docs/getting-started/quick-start", icon: Zap },
-  { title: "Creating Your Panel", link: "/docs/getting-started/creating-panel", icon: FileText },
-  { title: "Adding Providers", link: "/docs/integration/provider-integration", icon: Link2 },
-  { title: "Payment Methods", link: "/docs/integration/payment-gateway-integration", icon: CheckCircle2 },
+  { title: "Quick Start Guide", link: "/docs/getting-started/quick-start", icon: Zap, description: "Get up and running fast" },
+  { title: "Creating Your Panel", link: "/docs/getting-started/creating-panel", icon: FileText, description: "Step-by-step setup" },
+  { title: "Adding Providers", link: "/docs/integration/provider-integration", icon: Link2, description: "Connect API providers" },
+  { title: "Payment Methods", link: "/docs/integration/payment-gateway-integration", icon: CheckCircle2, description: "Accept payments" },
 ];
 
 const advancedDocs = [
-  { title: "API Authentication", link: "/docs/api/api-overview", icon: Code },
-  { title: "Webhooks Guide", link: "/docs/api/webhooks-guide", icon: ExternalLink },
-  { title: "Custom Domain Setup", link: "/docs/integration/custom-domain", icon: Settings },
-  { title: "Security Settings", link: "/docs/security/security-overview", icon: Shield },
+  { title: "API Authentication", link: "/docs/api/api-overview", icon: Code, description: "Secure API access" },
+  { title: "Webhooks Guide", link: "/docs/api/webhooks-guide", icon: ExternalLink, description: "Real-time notifications" },
+  { title: "Custom Domain Setup", link: "/docs/integration/custom-domain", icon: Settings, description: "Use your own domain" },
+  { title: "Security Settings", link: "/docs/security/security-overview", icon: Shield, description: "Protect your panel" },
 ];
 
 const categoryCards = [
-  { name: "Getting Started", slug: "getting-started", icon: Zap, color: "text-yellow-500" },
-  { name: "API Reference", slug: "api", icon: Code, color: "text-blue-500" },
-  { name: "Integration", slug: "integration", icon: Link2, color: "text-purple-500" },
-  { name: "Configuration", slug: "configuration", icon: Settings, color: "text-green-500" },
-  { name: "User Management", slug: "user-management", icon: Users, color: "text-orange-500" },
-  { name: "Security", slug: "security", icon: Shield, color: "text-red-500" },
-  { name: "Troubleshooting", slug: "troubleshooting", icon: AlertTriangle, color: "text-amber-500" },
+  { name: "Getting Started", slug: "getting-started", icon: Zap, gradient: "from-yellow-500 to-orange-500", description: "Start building your panel" },
+  { name: "API Reference", slug: "api", icon: Code, gradient: "from-blue-500 to-cyan-500", description: "REST API documentation" },
+  { name: "Integration", slug: "integration", icon: Link2, gradient: "from-purple-500 to-pink-500", description: "Connect external services" },
+  { name: "Configuration", slug: "configuration", icon: Settings, gradient: "from-green-500 to-emerald-500", description: "Customize your panel" },
+  { name: "User Management", slug: "user-management", icon: Users, gradient: "from-orange-500 to-red-500", description: "Manage customers & team" },
+  { name: "Security", slug: "security", icon: Shield, gradient: "from-red-500 to-rose-500", description: "Protect your business" },
+  { name: "Troubleshooting", slug: "troubleshooting", icon: AlertTriangle, gradient: "from-amber-500 to-yellow-500", description: "Solve common issues" },
 ];
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.1 }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0 }
+};
 
 export default function DocsHub() {
   const [articles, setArticles] = useState<DocArticle[]>([]);
@@ -130,88 +155,123 @@ export default function DocsHub() {
 
   return (
     <DocsLayout>
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
+      <motion.div 
+        className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
         {/* Hero Section */}
-        <div className="text-center mb-12">
-          <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">
+        <motion.div className="text-center mb-16" variants={itemVariants}>
+          <Badge className="mb-4 bg-gradient-to-r from-primary/20 to-primary-glow/20 text-primary border-primary/30 backdrop-blur-sm">
             <Sparkles className="w-3 h-3 mr-1" />
             Documentation
           </Badge>
-          <h1 className="text-4xl sm:text-5xl font-bold mb-4 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-            Everything You Need to Master
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6">
+            <span className="bg-gradient-to-r from-foreground via-foreground/90 to-foreground/70 bg-clip-text text-transparent">
+              Everything You Need to Master
+            </span>
             <br />
-            <span className="bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-primary via-primary to-primary-glow bg-clip-text text-transparent">
               HOME OF SMM
             </span>
           </h1>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-6">
-            Comprehensive guides, API references, and tutorials to help you build and scale your SMM panel business.
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
+            Comprehensive guides, API references, and tutorials to help you build 
+            and scale your SMM panel business from zero to hero.
           </p>
-          <div className="flex items-center justify-center gap-4 text-sm text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <FileText className="h-4 w-4" />
-              {articles.length}+ articles
-            </span>
-            <span>•</span>
-            <span className="flex items-center gap-1">
-              <BookOpen className="h-4 w-4" />
-              {categoryCards.length} categories
-            </span>
-            <span>•</span>
-            <span className="flex items-center gap-1">
-              <Clock className="h-4 w-4" />
-              Updated regularly
-            </span>
+          
+          {/* Stats Row */}
+          <div className="flex flex-wrap items-center justify-center gap-6 text-sm">
+            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-muted/50 backdrop-blur-sm border border-border/50">
+              <FileText className="h-4 w-4 text-primary" />
+              <span className="font-medium">{articles.length}+</span>
+              <span className="text-muted-foreground">articles</span>
+            </div>
+            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-muted/50 backdrop-blur-sm border border-border/50">
+              <BookOpen className="h-4 w-4 text-primary" />
+              <span className="font-medium">{categoryCards.length}</span>
+              <span className="text-muted-foreground">categories</span>
+            </div>
+            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-muted/50 backdrop-blur-sm border border-border/50">
+              <TrendingUp className="h-4 w-4 text-primary" />
+              <span className="text-muted-foreground">Updated daily</span>
+            </div>
           </div>
-        </div>
+        </motion.div>
 
-        {/* Feature Cards Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
-          {featureCards.map((card) => (
+        {/* Feature Cards Grid - GitBook Style */}
+        <motion.div 
+          className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6 mb-16"
+          variants={itemVariants}
+        >
+          {featureCards.map((card, index) => (
             <Link key={card.title} to={card.link}>
-              <Card className="p-5 h-full bg-card/50 backdrop-blur-sm border-border/50 hover:bg-card/80 hover:border-primary/30 transition-all group cursor-pointer">
-                <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${card.color} flex items-center justify-center mb-4`}>
-                  <card.icon className="h-5 w-5 text-white" />
-                </div>
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <h3 className="font-semibold group-hover:text-primary transition-colors">
+              <Card className="group relative h-full overflow-hidden bg-card/50 backdrop-blur-md border-border/50 hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/5">
+                {/* Gradient glow effect */}
+                <div className={`absolute inset-0 ${card.bgGlow} opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-3xl`} />
+                
+                <div className="relative p-6">
+                  <div className="flex items-start justify-between gap-4 mb-4">
+                    <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${card.gradient} flex items-center justify-center shadow-lg`}>
+                      <card.icon className="h-6 w-6 text-white" />
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      {card.badge && (
+                        <Badge variant="secondary" className="text-xs">
+                          {card.badge}
+                        </Badge>
+                      )}
+                      <span className="text-xs text-muted-foreground">{card.stats}</span>
+                    </div>
+                  </div>
+                  
+                  <h3 className="text-xl font-semibold mb-2 group-hover:text-primary transition-colors">
                     {card.title}
                   </h3>
-                  {card.badge && (
-                    <Badge variant="secondary" className="text-xs shrink-0">
-                      {card.badge}
-                    </Badge>
-                  )}
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {card.description}
-                </p>
-                <div className="flex items-center gap-1 mt-3 text-sm text-primary opacity-0 group-hover:opacity-100 transition-opacity">
-                  Learn more <ArrowRight className="h-4 w-4" />
+                  <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+                    {card.description}
+                  </p>
+                  
+                  <div className="flex items-center gap-2 text-sm font-medium text-primary opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-0 group-hover:translate-x-1">
+                    Get started <ArrowRight className="h-4 w-4" />
+                  </div>
                 </div>
               </Card>
             </Link>
           ))}
-        </div>
+        </motion.div>
 
-        {/* Two Column Essentials */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+        {/* Two Column Essentials - Enhanced */}
+        <motion.div 
+          className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-16"
+          variants={itemVariants}
+        >
           {/* Essentials */}
           <div>
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <Star className="h-5 w-5 text-yellow-500" />
-              Essentials
-            </h2>
-            <Card className="p-4 bg-card/50 backdrop-blur-sm divide-y divide-border/50">
-              {essentialsDocs.map((doc) => (
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center">
+                <Star className="h-4 w-4 text-white" />
+              </div>
+              <h2 className="text-xl font-semibold">Essentials</h2>
+            </div>
+            <Card className="bg-card/50 backdrop-blur-md border-border/50 overflow-hidden">
+              {essentialsDocs.map((doc, index) => (
                 <Link 
                   key={doc.title} 
                   to={doc.link}
-                  className="flex items-center gap-3 py-3 first:pt-0 last:pb-0 hover:text-primary transition-colors group"
+                  className={`flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors group ${
+                    index !== essentialsDocs.length - 1 ? 'border-b border-border/50' : ''
+                  }`}
                 >
-                  <doc.icon className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
-                  <span className="flex-1">{doc.title}</span>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="w-10 h-10 rounded-lg bg-muted/50 flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+                    <doc.icon className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-medium group-hover:text-primary transition-colors">{doc.title}</h4>
+                    <p className="text-xs text-muted-foreground">{doc.description}</p>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-all transform translate-x-0 group-hover:translate-x-1" />
                 </Link>
               ))}
             </Card>
@@ -219,52 +279,62 @@ export default function DocsHub() {
 
           {/* Advanced Topics */}
           <div>
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <Code className="h-5 w-5 text-blue-500" />
-              Advanced Topics
-            </h2>
-            <Card className="p-4 bg-card/50 backdrop-blur-sm divide-y divide-border/50">
-              {advancedDocs.map((doc) => (
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+                <Code className="h-4 w-4 text-white" />
+              </div>
+              <h2 className="text-xl font-semibold">Advanced Topics</h2>
+            </div>
+            <Card className="bg-card/50 backdrop-blur-md border-border/50 overflow-hidden">
+              {advancedDocs.map((doc, index) => (
                 <Link 
                   key={doc.title} 
                   to={doc.link}
-                  className="flex items-center gap-3 py-3 first:pt-0 last:pb-0 hover:text-primary transition-colors group"
+                  className={`flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors group ${
+                    index !== advancedDocs.length - 1 ? 'border-b border-border/50' : ''
+                  }`}
                 >
-                  <doc.icon className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
-                  <span className="flex-1">{doc.title}</span>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="w-10 h-10 rounded-lg bg-muted/50 flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+                    <doc.icon className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-medium group-hover:text-primary transition-colors">{doc.title}</h4>
+                    <p className="text-xs text-muted-foreground">{doc.description}</p>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-all transform translate-x-0 group-hover:translate-x-1" />
                 </Link>
               ))}
             </Card>
           </div>
-        </div>
+        </motion.div>
 
-        {/* Popular Topics */}
+        {/* Popular Topics Badges */}
         {popularArticles.length > 0 && (
-          <div className="mb-12">
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+          <motion.div className="mb-16" variants={itemVariants}>
+            <div className="flex items-center gap-2 mb-4">
               <Sparkles className="h-5 w-5 text-primary" />
-              Popular Topics
-            </h2>
+              <h2 className="text-xl font-semibold">Popular Topics</h2>
+            </div>
             <div className="flex flex-wrap gap-2">
               {popularArticles.map((article) => (
                 <Link key={article.id} to={`/docs/${article.category}/${article.slug}`}>
                   <Badge 
-                    variant="secondary" 
-                    className="px-3 py-1.5 text-sm hover:bg-primary/20 hover:text-primary cursor-pointer transition-colors"
+                    variant="outline" 
+                    className="px-4 py-2 text-sm bg-card/50 backdrop-blur-sm border-border/50 hover:bg-primary/10 hover:text-primary hover:border-primary/30 cursor-pointer transition-all"
                   >
+                    <TrendingUp className="h-3 w-3 mr-1.5" />
                     {article.title}
                   </Badge>
                 </Link>
               ))}
             </div>
-          </div>
+          </motion.div>
         )}
 
-        {/* Browse by Category */}
-        <div className="mb-12">
-          <h2 className="text-xl font-semibold mb-4">Browse by Category</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* Browse by Category - Enhanced Grid */}
+        <motion.div className="mb-16" variants={itemVariants}>
+          <h2 className="text-xl font-semibold mb-6">Browse by Category</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {categoryCards.map((category) => {
               const count = articlesByCategory[category.slug]?.length || 0;
               const firstArticle = articlesByCategory[category.slug]?.[0];
@@ -274,90 +344,127 @@ export default function DocsHub() {
 
               return (
                 <Link key={category.slug} to={link}>
-                  <Card className="p-5 h-full bg-card/50 backdrop-blur-sm border-border/50 hover:bg-card/80 hover:border-primary/30 transition-all group cursor-pointer">
+                  <Card className="group p-5 h-full bg-card/50 backdrop-blur-md border-border/50 hover:border-primary/30 transition-all hover:shadow-lg hover:shadow-primary/5">
                     <div className="flex items-center justify-between mb-3">
-                      <category.icon className={`h-6 w-6 ${category.color}`} />
-                      <Badge variant="outline" className="text-xs">
-                        {count} articles
+                      <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${category.gradient} flex items-center justify-center`}>
+                        <category.icon className="h-5 w-5 text-white" />
+                      </div>
+                      <Badge variant="secondary" className="text-xs">
+                        {count} {count === 1 ? 'article' : 'articles'}
                       </Badge>
                     </div>
                     <h3 className="font-semibold mb-1 group-hover:text-primary transition-colors">
                       {category.name}
                     </h3>
-                    <p className="text-sm text-muted-foreground">
-                      {count > 0 ? `Explore ${count} guides and tutorials` : 'Coming soon'}
+                    <p className="text-xs text-muted-foreground line-clamp-2">
+                      {category.description}
                     </p>
                   </Card>
                 </Link>
               );
             })}
           </div>
-        </div>
+        </motion.div>
 
-        {/* API Preview Section */}
-        <Card className="p-6 bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border-blue-500/20 mb-12">
-          <div className="flex flex-col lg:flex-row gap-6">
-            <div className="flex-1">
-              <Badge className="mb-3 bg-blue-500/20 text-blue-400 border-blue-500/30">
-                <Code className="w-3 h-3 mr-1" />
-                REST API
-              </Badge>
-              <h3 className="text-2xl font-bold mb-3">Powerful API Integration</h3>
-              <p className="text-muted-foreground mb-4">
-                Build custom integrations with our comprehensive REST API. 
-                Full documentation with code examples in multiple languages.
-              </p>
-              <div className="flex flex-wrap gap-2 mb-4">
-                {['cURL', 'PHP', 'Python', 'Node.js'].map((lang) => (
-                  <Badge key={lang} variant="secondary" className="text-xs">
-                    {lang}
+        {/* API Preview Section - Enhanced */}
+        <motion.div variants={itemVariants}>
+          <Card className="relative overflow-hidden bg-gradient-to-br from-blue-500/10 via-cyan-500/5 to-transparent border-blue-500/20 backdrop-blur-md">
+            {/* Background pattern */}
+            <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiMyMDIwMjAiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djItSDI0di0yaDEyek0zNiAyNHYySDI0di0yaDEyeiIvPjwvZz48L2c+PC9zdmc+')] opacity-50" />
+            
+            <div className="relative p-6 lg:p-8">
+              <div className="flex flex-col lg:flex-row gap-8">
+                <div className="flex-1">
+                  <Badge className="mb-4 bg-blue-500/20 text-blue-400 border-blue-500/30">
+                    <Code className="w-3 h-3 mr-1" />
+                    REST API
                   </Badge>
-                ))}
-              </div>
-              <Button asChild className="bg-blue-500 hover:bg-blue-600">
-                <Link to="/docs/api/api-overview">
-                  View API Docs <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-            </div>
-            <div className="lg:w-80">
-              <div className="bg-background/80 rounded-lg p-4 font-mono text-sm">
-                <div className="text-muted-foreground mb-2">// Example Request</div>
-                <div className="text-green-400">GET</div>
-                <div className="text-foreground">/api/v1/services</div>
-                <div className="text-muted-foreground mt-3 mb-1">// Response</div>
-                <pre className="text-xs text-muted-foreground overflow-x-auto">
+                  <h3 className="text-2xl lg:text-3xl font-bold mb-4">
+                    Powerful API Integration
+                  </h3>
+                  <p className="text-muted-foreground mb-6">
+                    Build custom integrations with our comprehensive REST API. 
+                    Full documentation with code examples in multiple languages.
+                  </p>
+                  <div className="flex flex-wrap gap-2 mb-6">
+                    {['cURL', 'PHP', 'Python', 'Node.js', 'Ruby'].map((lang) => (
+                      <Badge key={lang} variant="outline" className="bg-background/50">
+                        {lang}
+                      </Badge>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap gap-3">
+                    <Button asChild className="bg-blue-500 hover:bg-blue-600">
+                      <Link to="/docs/api/api-overview">
+                        <Play className="mr-2 h-4 w-4" />
+                        View API Docs
+                      </Link>
+                    </Button>
+                    <Button asChild variant="outline">
+                      <Link to="/docs/api/api-endpoints">
+                        See Endpoints
+                      </Link>
+                    </Button>
+                  </div>
+                </div>
+                
+                {/* Code Preview */}
+                <div className="lg:w-96">
+                  <div className="rounded-lg overflow-hidden border border-blue-500/20 bg-background/80 backdrop-blur-sm">
+                    <div className="flex items-center gap-2 px-4 py-2 bg-muted/50 border-b border-border/50">
+                      <div className="flex gap-1.5">
+                        <div className="w-3 h-3 rounded-full bg-red-500/70" />
+                        <div className="w-3 h-3 rounded-full bg-yellow-500/70" />
+                        <div className="w-3 h-3 rounded-full bg-green-500/70" />
+                      </div>
+                      <span className="text-xs text-muted-foreground ml-2">api-example.sh</span>
+                    </div>
+                    <div className="p-4 font-mono text-sm">
+                      <div className="text-muted-foreground mb-1"># Get all services</div>
+                      <div className="text-cyan-400">curl <span className="text-yellow-400">-X GET</span> \</div>
+                      <div className="pl-4 text-green-400">"https://api.yourpanel.com/v1/services"</div>
+                      <div className="text-muted-foreground mt-4 mb-1"># Response</div>
+                      <pre className="text-xs text-muted-foreground">
 {`{
   "status": "success",
-  "data": [...]
+  "data": [
+    { "id": 1, "name": "..." }
+  ]
 }`}
-                </pre>
+                      </pre>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        </Card>
+          </Card>
+        </motion.div>
 
         {/* Help Section */}
-        <div className="text-center py-8 border-t border-border/50">
-          <h3 className="text-xl font-semibold mb-2">Need Help?</h3>
-          <p className="text-muted-foreground mb-4">
-            Can't find what you're looking for? Our support team is here to help.
+        <motion.div 
+          className="text-center py-12 mt-16 border-t border-border/50"
+          variants={itemVariants}
+        >
+          <h3 className="text-2xl font-semibold mb-3">Can't find what you're looking for?</h3>
+          <p className="text-muted-foreground mb-6 max-w-lg mx-auto">
+            Our support team is here to help. Check the FAQ or reach out directly.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Button asChild variant="outline">
+            <Button asChild variant="outline" size="lg">
               <Link to="/docs/troubleshooting/faq">
                 <AlertTriangle className="mr-2 h-4 w-4" />
                 View FAQ
               </Link>
             </Button>
-            <Button asChild>
+            <Button asChild size="lg">
               <Link to="/contact">
                 Contact Support
+                <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
           </div>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
     </DocsLayout>
   );
 }
