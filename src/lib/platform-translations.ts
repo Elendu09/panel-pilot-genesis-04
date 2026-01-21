@@ -147,8 +147,12 @@ export const platformTranslations = {
     // CTA - split title and buttons
     'buyer.cta.readyTo': 'Ready to',
     'buyer.cta.grow': 'Grow',
+    'buyer.cta.dominate': 'Dominate',
     'buyer.cta.fastOrder': 'Fast Order Now',
     'buyer.cta.getStarted': 'Get Started Now',
+    
+    // Navigation - additional
+    'buyer.nav.joinNow': 'Join Now',
     
     // Footer - additional links
     'buyer.footer.allServices': 'All Services',
@@ -420,8 +424,12 @@ export const platformTranslations = {
     // CTA - split title and buttons
     'buyer.cta.readyTo': '¿Listo para',
     'buyer.cta.grow': 'Crecer',
+    'buyer.cta.dominate': 'Dominar',
     'buyer.cta.fastOrder': 'Pedido Rápido Ahora',
     'buyer.cta.getStarted': 'Empezar Ahora',
+    
+    // Navigation - additional
+    'buyer.nav.joinNow': 'Únete Ahora',
     
     // Footer - additional links
     'buyer.footer.allServices': 'Todos los Servicios',
@@ -681,8 +689,12 @@ export const platformTranslations = {
     // CTA - split title and buttons
     'buyer.cta.readyTo': 'Pronto para',
     'buyer.cta.grow': 'Crescer',
+    'buyer.cta.dominate': 'Dominar',
     'buyer.cta.fastOrder': 'Pedido Rápido Agora',
     'buyer.cta.getStarted': 'Começar Agora',
+    
+    // Navigation - additional
+    'buyer.nav.joinNow': 'Junte-se Agora',
     
     // Footer - additional links
     'buyer.footer.allServices': 'Todos os Serviços',
@@ -942,8 +954,12 @@ export const platformTranslations = {
     // CTA - split title and buttons
     'buyer.cta.readyTo': 'هل أنت مستعد',
     'buyer.cta.grow': 'للنمو',
+    'buyer.cta.dominate': 'للسيطرة',
     'buyer.cta.fastOrder': 'طلب سريع الآن',
     'buyer.cta.getStarted': 'ابدأ الآن',
+    
+    // Navigation - additional
+    'buyer.nav.joinNow': 'انضم الآن',
     
     // Footer - additional links
     'buyer.footer.allServices': 'جميع الخدمات',
@@ -1203,8 +1219,12 @@ export const platformTranslations = {
     // CTA - split title and buttons
     'buyer.cta.readyTo': 'Büyümeye',
     'buyer.cta.grow': 'Hazır mısınız',
+    'buyer.cta.dominate': 'Hükmetmeye',
     'buyer.cta.fastOrder': 'Hızlı Sipariş Ver',
     'buyer.cta.getStarted': 'Şimdi Başla',
+    
+    // Navigation - additional
+    'buyer.nav.joinNow': 'Şimdi Katıl',
     
     // Footer - additional links
     'buyer.footer.allServices': 'Tüm Hizmetler',
@@ -1456,8 +1476,12 @@ export const platformTranslations = {
     // CTA - split title and buttons
     'buyer.cta.readyTo': 'Готовы',
     'buyer.cta.grow': 'Расти',
+    'buyer.cta.dominate': 'Доминировать',
     'buyer.cta.fastOrder': 'Быстрый Заказ Сейчас',
     'buyer.cta.getStarted': 'Начать Сейчас',
+    
+    // Navigation - additional
+    'buyer.nav.joinNow': 'Присоединиться',
     
     // Footer - additional links
     'buyer.footer.allServices': 'Все Услуги',
@@ -1709,8 +1733,12 @@ export const platformTranslations = {
     // CTA - split title and buttons
     'buyer.cta.readyTo': 'Prêt à',
     'buyer.cta.grow': 'Grandir',
+    'buyer.cta.dominate': 'Dominer',
     'buyer.cta.fastOrder': 'Commande Rapide Maintenant',
     'buyer.cta.getStarted': 'Commencer Maintenant',
+    
+    // Navigation - additional
+    'buyer.nav.joinNow': 'Rejoindre',
     
     // Footer - additional links
     'buyer.footer.allServices': 'Tous les Services',
@@ -1962,8 +1990,12 @@ export const platformTranslations = {
     // CTA - split title and buttons
     'buyer.cta.readyTo': 'Bereit zu',
     'buyer.cta.grow': 'Wachsen',
+    'buyer.cta.dominate': 'Dominieren',
     'buyer.cta.fastOrder': 'Schnellbestellung Jetzt',
     'buyer.cta.getStarted': 'Jetzt Starten',
+    
+    // Navigation - additional
+    'buyer.nav.joinNow': 'Jetzt Beitreten',
     
     // Footer - additional links
     'buyer.footer.allServices': 'Alle Services',
@@ -2215,8 +2247,12 @@ export const platformTranslations = {
     // CTA - split title and buttons
     'buyer.cta.readyTo': '准备好',
     'buyer.cta.grow': '成长',
+    'buyer.cta.dominate': '主导',
     'buyer.cta.fastOrder': '立即快速下单',
     'buyer.cta.getStarted': '立即开始',
+    
+    // Navigation - additional
+    'buyer.nav.joinNow': '立即加入',
     
     // Footer - additional links
     'buyer.footer.allServices': '所有服务',
@@ -2468,8 +2504,12 @@ export const platformTranslations = {
     // CTA - split title and buttons
     'buyer.cta.readyTo': 'विकास के लिए',
     'buyer.cta.grow': 'तैयार',
+    'buyer.cta.dominate': 'हावी होने',
     'buyer.cta.fastOrder': 'अभी तेज़ ऑर्डर करें',
     'buyer.cta.getStarted': 'अभी शुरू करें',
+    
+    // Navigation - additional
+    'buyer.nav.joinNow': 'अभी जुड़ें',
     
     // Footer - additional links
     'buyer.footer.allServices': 'सभी सेवाएं',
