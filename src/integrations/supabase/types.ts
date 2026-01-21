@@ -2052,6 +2052,69 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_docs: {
+        Row: {
+          category: string
+          content: string | null
+          created_at: string | null
+          excerpt: string | null
+          icon: string | null
+          id: string
+          is_popular: boolean | null
+          order_index: number | null
+          read_time: string | null
+          related_docs: string[] | null
+          seo_description: string | null
+          seo_keywords: string[] | null
+          seo_title: string | null
+          slug: string
+          status: string | null
+          table_of_contents: Json | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          category: string
+          content?: string | null
+          created_at?: string | null
+          excerpt?: string | null
+          icon?: string | null
+          id?: string
+          is_popular?: boolean | null
+          order_index?: number | null
+          read_time?: string | null
+          related_docs?: string[] | null
+          seo_description?: string | null
+          seo_keywords?: string[] | null
+          seo_title?: string | null
+          slug: string
+          status?: string | null
+          table_of_contents?: Json | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string
+          content?: string | null
+          created_at?: string | null
+          excerpt?: string | null
+          icon?: string | null
+          id?: string
+          is_popular?: boolean | null
+          order_index?: number | null
+          read_time?: string | null
+          related_docs?: string[] | null
+          seo_description?: string | null
+          seo_keywords?: string[] | null
+          seo_title?: string | null
+          slug?: string
+          status?: string | null
+          table_of_contents?: Json | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       platform_fees: {
         Row: {
           created_at: string
