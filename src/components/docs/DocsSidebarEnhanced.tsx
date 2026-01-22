@@ -81,6 +81,13 @@ const categoryConfig: Category[] = [
   },
 ];
 
+// Sub-categories for API section
+const apiSubCategories = {
+  "Panel Owner API": ["panel-api-overview", "panel-api-auth", "panel-services-api", "panel-orders-api", "panel-customers-api", "panel-providers-api", "panel-stats-api", "panel-webhooks"],
+  "Buyer API": ["buyer-api-overview", "api-overview", "services-endpoint", "orders-endpoint", "balance-endpoint", "refill-cancel"],
+  "Reference": ["webhooks-guide", "rate-limiting", "error-codes"]
+};
+
 const getArticleIcon = (iconName: string | null): React.ElementType => {
   const iconMap: Record<string, React.ElementType> = {
     zap: Zap,

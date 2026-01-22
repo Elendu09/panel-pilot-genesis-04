@@ -82,16 +82,16 @@ const featureCards = [
 
 const essentialsDocs = [
   { title: "Quick Start Guide", link: "/docs/getting-started/quick-start-guide", icon: Zap, description: "Get up and running fast" },
-  { title: "Creating Your Panel", link: "/docs/getting-started/creating-panel", icon: FileText, description: "Step-by-step setup" },
+  { title: "Creating Your Panel", link: "/docs/getting-started/creating-your-panel", icon: FileText, description: "Step-by-step setup" },
   { title: "Adding Providers", link: "/docs/integration/provider-integration", icon: Link2, description: "Connect API providers" },
-  { title: "Payment Methods", link: "/docs/integration/payment-gateway-integration", icon: CheckCircle2, description: "Accept payments" },
+  { title: "Payment Methods", link: "/docs/integration/payment-gateway-setup", icon: CheckCircle2, description: "Accept payments" },
 ];
 
 const advancedDocs = [
   { title: "Panel Owner API", link: "/docs/api/panel-api-overview", icon: Code, description: "Build custom integrations" },
   { title: "Buyer API", link: "/docs/api/buyer-api-overview", icon: ExternalLink, description: "Storefront API access" },
-  { title: "Customer Pricing", link: "/docs/user-management/customer-pricing", icon: Users, description: "Set custom prices" },
-  { title: "Team Roles", link: "/docs/user-management/roles-permissions", icon: Shield, description: "Access control" },
+  { title: "Security Overview", link: "/docs/security/security-overview", icon: Shield, description: "Protect your panel" },
+  { title: "Team Roles", link: "/docs/user-management/roles-permissions", icon: Users, description: "Access control" },
 ];
 
 const categoryCards = [
