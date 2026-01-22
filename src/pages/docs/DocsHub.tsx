@@ -44,19 +44,19 @@ const featureCards = [
     icon: Rocket,
     gradient: "from-amber-500 via-orange-500 to-red-500",
     bgGlow: "bg-orange-500/20",
-    link: "/docs/getting-started/quick-start",
+    link: "/docs/getting-started/quick-start-guide",
     badge: "5 min",
     stats: "Most popular"
   },
   {
     title: "API Reference",
-    description: "Complete REST API documentation with code examples in multiple languages",
+    description: "Complete REST API documentation for buyers and panel owners",
     icon: Code,
     gradient: "from-blue-500 via-cyan-500 to-teal-500",
     bgGlow: "bg-blue-500/20",
-    link: "/docs/api/api-overview",
+    link: "/docs/api/panel-api-overview",
     badge: "REST",
-    stats: "15+ endpoints"
+    stats: "25+ endpoints"
   },
   {
     title: "Integrations",
@@ -69,29 +69,29 @@ const featureCards = [
     stats: "10+ providers"
   },
   {
-    title: "Configuration",
-    description: "Customize branding, themes, SEO settings, and every aspect of your panel",
-    icon: Settings,
+    title: "User Management",
+    description: "Manage customers, teams, pricing, and permissions across your panel",
+    icon: Users,
     gradient: "from-emerald-500 via-green-500 to-lime-500",
     bgGlow: "bg-green-500/20",
-    link: "/docs/configuration/panel-settings",
+    link: "/docs/user-management/customer-overview",
     badge: null,
     stats: "Full control"
   },
 ];
 
 const essentialsDocs = [
-  { title: "Quick Start Guide", link: "/docs/getting-started/quick-start", icon: Zap, description: "Get up and running fast" },
+  { title: "Quick Start Guide", link: "/docs/getting-started/quick-start-guide", icon: Zap, description: "Get up and running fast" },
   { title: "Creating Your Panel", link: "/docs/getting-started/creating-panel", icon: FileText, description: "Step-by-step setup" },
   { title: "Adding Providers", link: "/docs/integration/provider-integration", icon: Link2, description: "Connect API providers" },
   { title: "Payment Methods", link: "/docs/integration/payment-gateway-integration", icon: CheckCircle2, description: "Accept payments" },
 ];
 
 const advancedDocs = [
-  { title: "API Authentication", link: "/docs/api/api-overview", icon: Code, description: "Secure API access" },
-  { title: "Webhooks Guide", link: "/docs/api/webhooks-guide", icon: ExternalLink, description: "Real-time notifications" },
-  { title: "Custom Domain Setup", link: "/docs/integration/custom-domain", icon: Settings, description: "Use your own domain" },
-  { title: "Security Settings", link: "/docs/security/security-overview", icon: Shield, description: "Protect your panel" },
+  { title: "Panel Owner API", link: "/docs/api/panel-api-overview", icon: Code, description: "Build custom integrations" },
+  { title: "Buyer API", link: "/docs/api/buyer-api-overview", icon: ExternalLink, description: "Storefront API access" },
+  { title: "Customer Pricing", link: "/docs/user-management/customer-pricing", icon: Users, description: "Set custom prices" },
+  { title: "Team Roles", link: "/docs/user-management/roles-permissions", icon: Shield, description: "Access control" },
 ];
 
 const categoryCards = [
