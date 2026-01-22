@@ -87,6 +87,11 @@ export function DocsHeader({ onMenuClick, onSearchClick }: DocsHeaderProps) {
                 {link.name}
               </Link>
             ))}
+            <Link to="/auth">
+              <Button size="sm" className="ml-2">
+                Get Started
+              </Button>
+            </Link>
           </nav>
 
           {/* Spacer */}
