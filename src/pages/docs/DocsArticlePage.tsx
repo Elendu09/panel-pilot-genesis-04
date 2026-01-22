@@ -119,26 +119,26 @@ export default function DocsArticlePage() {
   const renderContent = (content: string | null) => {
     if (!content) return null;
 
-    // Basic markdown to HTML conversion with enhanced styling
+    // Basic markdown to HTML conversion with reduced spacing
     let html = content
-      // Headers with IDs for TOC
+      // Headers with IDs for TOC - reduced margins
       .replace(/^### (.*$)/gim, (_, text) => {
         const id = text.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-        return `<h3 id="${id}" class="text-xl font-semibold mt-8 mb-4 scroll-mt-24 group flex items-center gap-2">
+        return `<h3 id="${id}" class="text-xl font-semibold mt-4 mb-2 scroll-mt-24 group flex items-center gap-2">
           <a href="#${id}" class="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-primary transition-opacity">#</a>
           ${text}
         </h3>`;
       })
       .replace(/^## (.*$)/gim, (_, text) => {
         const id = text.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-        return `<h2 id="${id}" class="text-2xl font-bold mt-10 mb-4 scroll-mt-24 group flex items-center gap-2">
+        return `<h2 id="${id}" class="text-2xl font-bold mt-6 mb-2 scroll-mt-24 group flex items-center gap-2">
           <a href="#${id}" class="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-primary transition-opacity">#</a>
           ${text}
         </h2>`;
       })
       .replace(/^# (.*$)/gim, (_, text) => {
         const id = text.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-        return `<h1 id="${id}" class="text-3xl font-bold mt-8 mb-6 scroll-mt-24">${text}</h1>`;
+        return `<h1 id="${id}" class="text-3xl font-bold mt-4 mb-3 scroll-mt-24">${text}</h1>`;
       })
       // Bold and italic
       .replace(/\*\*([^*]+)\*\*/gim, '<strong class="font-semibold text-foreground">$1</strong>')
@@ -148,27 +148,27 @@ export default function DocsArticlePage() {
         const cleanText = text.replace(/>\s*/g, '').trim();
         return `<div class="callout callout-${type.toLowerCase()}" data-type="${type.toLowerCase()}">${cleanText}</div>`;
       })
-      // Code blocks with language
+      // Code blocks with language - reduced margin
       .replace(/```(\w+)?\n([\s\S]*?)```/gim, (_, lang, code) => {
         const language = lang || 'bash';
-        return `<div class="code-block" data-language="${language}">${code.trim()}</div>`;
+        return `<div class="code-block my-3" data-language="${language}">${code.trim()}</div>`;
       })
       // Inline code
       .replace(/`([^`]+)`/gim, '<code class="bg-muted/50 px-1.5 py-0.5 rounded text-sm font-mono text-primary">$1</code>')
-      // Lists
-      .replace(/^\- (.*$)/gim, '<li class="ml-6 list-disc mb-2 text-muted-foreground">$1</li>')
-      .replace(/^\d+\. (.*$)/gim, '<li class="ml-6 list-decimal mb-2 text-muted-foreground">$1</li>')
+      // Lists - reduced margin
+      .replace(/^\- (.*$)/gim, '<li class="ml-6 list-disc mb-1 text-muted-foreground">$1</li>')
+      .replace(/^\d+\. (.*$)/gim, '<li class="ml-6 list-decimal mb-1 text-muted-foreground">$1</li>')
       // Links
       .replace(/\[([^\]]+)\]\(([^)]+)\)/gim, '<a href="$2" class="text-primary hover:underline underline-offset-2 font-medium" target="_blank" rel="noopener noreferrer">$1</a>')
-      // Horizontal rules
-      .replace(/^---$/gim, '<hr class="my-8 border-border/50" />')
-      // Paragraphs
-      .replace(/\n\n/gim, '</p><p class="mb-4 text-muted-foreground leading-relaxed">')
+      // Horizontal rules - reduced margin
+      .replace(/^---$/gim, '<hr class="my-4 border-border/50" />')
+      // Paragraphs - reduced margin
+      .replace(/\n\n/gim, '</p><p class="mb-3 text-muted-foreground leading-relaxed">')
       // Line breaks
       .replace(/\n/gim, '<br />');
 
-    // Wrap in paragraph tags
-    html = `<p class="mb-4 text-muted-foreground leading-relaxed">${html}</p>`;
+    // Wrap in paragraph tags - reduced margin
+    html = `<p class="mb-3 text-muted-foreground leading-relaxed">${html}</p>`;
 
     // Sanitize HTML
     return DOMPurify.sanitize(html, { ADD_ATTR: ['target', 'data-type', 'data-language'] });
@@ -278,7 +278,7 @@ export default function DocsArticlePage() {
           </header>
 
           {/* Article Content */}
-          <Card className="p-6 sm:p-8 mb-8 bg-card/50 backdrop-blur-sm">
+          <Card className="p-4 sm:p-6 mb-6 bg-card/50 backdrop-blur-sm">
             <div 
               className="prose prose-neutral dark:prose-invert max-w-none"
               dangerouslySetInnerHTML={{ __html: renderContent(article.content) || '' }}
