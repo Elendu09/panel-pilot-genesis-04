@@ -142,7 +142,7 @@ export function DocsMobileSidebar({ open, onClose }: DocsMobileSidebarProps) {
 
   return (
     <Sheet open={open} onOpenChange={onClose}>
-      <SheetContent side="left" className="w-80 p-0">
+      <SheetContent side="right" className="w-80 p-0">
         <SheetHeader className="px-4 py-4 border-b">
           <div className="flex items-center justify-between">
             <SheetTitle className="flex items-center gap-2">

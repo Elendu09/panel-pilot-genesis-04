@@ -41,16 +41,6 @@ export function DocsHeader({ onMenuClick, onSearchClick }: DocsHeaderProps) {
       {/* Row 1: Brand + Search + Theme */}
       <div className="border-b bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-14 items-center gap-4">
-          {/* Mobile Menu Button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="lg:hidden shrink-0"
-            onClick={onMenuClick}
-          >
-            <Menu className="h-5 w-5" />
-            <span className="sr-only">Toggle menu</span>
-          </Button>
 
           {/* Brand Logo + Name */}
           <Link to="/" className="flex items-center gap-2 shrink-0">
@@ -125,6 +115,17 @@ export function DocsHeader({ onMenuClick, onSearchClick }: DocsHeaderProps) {
           <div className="w-9 h-9 shrink-0 flex items-center justify-center">
             <ThemeToggle />
           </div>
+
+          {/* Mobile Menu Button - Right Side */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="lg:hidden shrink-0"
+            onClick={onMenuClick}
+          >
+            <Menu className="h-5 w-5" />
+            <span className="sr-only">Toggle menu</span>
+          </Button>
         </div>
       </div>
 
