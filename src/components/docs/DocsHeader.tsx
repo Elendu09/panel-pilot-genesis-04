@@ -53,21 +53,41 @@ export function DocsHeader({ onMenuClick, onSearchClick }: DocsHeaderProps) {
           </Button>
 
           {/* Brand Logo + Name */}
-          <Link to="/" className="flex items-center gap-2.5 shrink-0">
+          <Link to="/" className="flex items-center gap-2 shrink-0">
             <img 
               src="/favicon.ico" 
               alt="HOME OF SMM" 
               className="w-8 h-8 rounded-lg"
             />
-            <div className="hidden sm:flex flex-col">
+            {/* Show brand name on all screens */}
+            <div className="flex flex-col">
               <span className="text-sm font-bold leading-tight">HOME OF SMM</span>
-              <span className="text-[10px] text-muted-foreground leading-tight">Documentation</span>
+              <span className="hidden sm:block text-[10px] text-muted-foreground leading-tight">Documentation</span>
             </div>
           </Link>
 
           <Badge variant="secondary" className="hidden sm:flex bg-primary/10 text-primary border-primary/20">
             Docs
           </Badge>
+
+          {/* Desktop Main Site Navigation */}
+          <nav className="hidden lg:flex items-center gap-1 ml-4">
+            {[
+              { name: "Features", href: "/features" },
+              { name: "Pricing", href: "/pricing" },
+              { name: "Blog", href: "/blog" },
+              { name: "Documentation", href: "/docs" },
+              { name: "Contact", href: "/contact" },
+            ].map((link) => (
+              <Link
+                key={link.name}
+                to={link.href}
+                className="px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {link.name}
+              </Link>
+            ))}
+          </nav>
 
           {/* Spacer */}
           <div className="flex-1" />
