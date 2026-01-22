@@ -27,46 +27,71 @@ interface BuyerApiRequest {
   interval?: number;
 }
 
+// Consistent JSON response helper - matches standard SMM panel API format
+function jsonResponse(data: any, statusCode = 200) {
+  return new Response(
+    JSON.stringify(data),
+    { 
+      status: statusCode, 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+    }
+  );
+}
+
+// Error response in standard SMM format
+function errorResponse(message: string) {
+  return jsonResponse({ error: message });
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const startTime = Date.now();
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Parse request body (supports both JSON and form-data)
+    // Parse request - support JSON, form-data, and raw body
     let params: BuyerApiRequest;
     const contentType = req.headers.get('content-type') || '';
     
-    if (contentType.includes('application/json')) {
-      params = await req.json();
-    } else {
-      const formData = await req.formData();
-      params = Object.fromEntries(formData) as unknown as BuyerApiRequest;
+    try {
+      if (contentType.includes('application/json')) {
+        params = await req.json();
+      } else if (contentType.includes('form-data') || contentType.includes('urlencoded')) {
+        const formData = await req.formData();
+        params = Object.fromEntries(formData) as unknown as BuyerApiRequest;
+      } else {
+        // Try to parse as JSON anyway (common for API calls without proper content-type)
+        const bodyText = await req.text();
+        if (bodyText) {
+          params = JSON.parse(bodyText);
+        } else {
+          return errorResponse("Request body is required");
+        }
+      }
+    } catch (parseError: any) {
+      console.error('[buyer-api] Parse error:', parseError);
+      return errorResponse("Invalid request body. Expected JSON.");
     }
 
     const { key, action } = params;
 
     if (!key) {
-      return new Response(
-        JSON.stringify({ error: "Invalid API key" }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return errorResponse("Invalid API key");
     }
 
     if (!action) {
-      return new Response(
-        JSON.stringify({ error: "Action is required" }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return errorResponse("Action is required");
     }
 
-    console.log(`Buyer API: action=${action}, key=${key.substring(0, 10)}...`);
+    console.log(`[buyer-api] action=${action}, key=${key.substring(0, 10)}...`);
 
-    // Validate API key and get buyer
+    // Validate API key and get panel
     const { data: apiKeyData, error: apiKeyError } = await supabase
       .from('panel_api_keys')
       .select('panel_id, is_active')
@@ -75,60 +100,62 @@ serve(async (req) => {
       .maybeSingle();
 
     if (apiKeyError || !apiKeyData) {
-      console.log('Invalid API key attempt:', key.substring(0, 10));
-      return new Response(
-        JSON.stringify({ error: "Invalid API key" }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.log('[buyer-api] Invalid API key attempt:', key.substring(0, 10));
+      return errorResponse("Invalid API key");
     }
 
     const panelId = apiKeyData.panel_id;
 
-    // Log the API call
-    await supabase.from('api_logs').insert({
-      panel_id: panelId,
-      endpoint: `/api/v2/${action}`,
-      method: 'POST',
-      status_code: 200,
-      response_time_ms: 0
-    });
-
     // Route to appropriate handler
+    let response: Response;
     switch (action.toLowerCase()) {
       case 'services':
-        return await handleServices(supabase, panelId);
+        response = await handleServices(supabase, panelId);
+        break;
       
       case 'add':
-        return await handleAddOrder(supabase, panelId, params);
+        response = await handleAddOrder(supabase, panelId, params);
+        break;
       
       case 'status':
-        return await handleStatus(supabase, panelId, params);
+        response = await handleStatus(supabase, panelId, params);
+        break;
       
       case 'balance':
-        return await handleBalance(supabase, panelId, key);
+        response = await handleBalance(supabase, panelId, key);
+        break;
       
       case 'refill':
-        return await handleRefill(supabase, panelId, params);
+        response = await handleRefill(supabase, panelId, params);
+        break;
       
       case 'refill_status':
-        return await handleRefillStatus(supabase, panelId, params);
+        response = await handleRefillStatus(supabase, panelId, params);
+        break;
       
       case 'cancel':
-        return await handleCancel(supabase, panelId, params);
+        response = await handleCancel(supabase, panelId, params);
+        break;
       
       default:
-        return new Response(
-          JSON.stringify({ error: `Unknown action: ${action}` }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        response = errorResponse(`Unknown action: ${action}`);
     }
 
+    // Log the API call with actual response time
+    const responseTime = Date.now() - startTime;
+    await supabase.from('api_logs').insert({
+      panel_id: panelId,
+      endpoint: `/api/v1/${action}`,
+      method: 'POST',
+      status_code: response.status,
+      response_time_ms: responseTime
+    });
+
+    return response;
+
   } catch (error: any) {
-    console.error('Buyer API error:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Internal server error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    console.error('[buyer-api] Error:', error);
+    return errorResponse(error.message || 'Internal server error');
   }
 });
 
@@ -142,11 +169,8 @@ async function handleServices(supabase: any, panelId: string) {
     .order('display_order', { ascending: true });
 
   if (error) {
-    console.error('Error fetching services:', error);
-    return new Response(
-      JSON.stringify({ error: 'Failed to fetch services' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    console.error('[buyer-api] Services fetch error:', error);
+    return errorResponse('Failed to fetch services');
   }
 
   // Format response like standard SMM panel API
@@ -155,7 +179,7 @@ async function handleServices(supabase: any, panelId: string) {
     name: s.name,
     type: s.service_type || 'Default',
     category: formatCategory(s.category),
-    rate: s.price.toFixed(4),
+    rate: parseFloat(s.price).toFixed(4),
     min: s.min_quantity,
     max: s.max_quantity,
     refill: s.refill_available || false,
@@ -165,21 +189,19 @@ async function handleServices(supabase: any, panelId: string) {
     average_time: s.average_time || s.estimated_time || 'N/A'
   }));
 
-  return new Response(
-    JSON.stringify(formattedServices),
-    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-  );
+  return jsonResponse(formattedServices);
 }
 
 // Add new order
 async function handleAddOrder(supabase: any, panelId: string, params: BuyerApiRequest) {
   const { service, link, quantity, comments, username, min, max, posts, delay, expiry, runs, interval } = params;
 
-  if (!service || !link) {
-    return new Response(
-      JSON.stringify({ error: "Service and link are required" }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+  if (!service) {
+    return errorResponse("Service ID is required");
+  }
+
+  if (!link) {
+    return errorResponse("Link is required");
   }
 
   // Find the service
@@ -192,13 +214,19 @@ async function handleAddOrder(supabase: any, panelId: string, params: BuyerApiRe
     .maybeSingle();
 
   if (serviceError || !serviceData) {
-    return new Response(
-      JSON.stringify({ error: "Service not found" }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return errorResponse("Service not found");
   }
 
   const orderQuantity = quantity || serviceData.min_quantity;
+  
+  // Validate quantity
+  if (orderQuantity < serviceData.min_quantity) {
+    return errorResponse(`Quantity too low. Minimum: ${serviceData.min_quantity}`);
+  }
+  if (orderQuantity > serviceData.max_quantity) {
+    return errorResponse(`Quantity too high. Maximum: ${serviceData.max_quantity}`);
+  }
+
   const price = (serviceData.price / 1000) * orderQuantity;
 
   // Generate order number
@@ -221,22 +249,14 @@ async function handleAddOrder(supabase: any, panelId: string, params: BuyerApiRe
     .single();
 
   if (orderError) {
-    console.error('Error creating order:', orderError);
-    return new Response(
-      JSON.stringify({ error: "Failed to create order" }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    console.error('[buyer-api] Order creation error:', orderError);
+    return errorResponse("Failed to create order");
   }
 
-  // TODO: Forward order to provider if configured
-  // This would call the upstream SMM panel's API
+  console.log(`[buyer-api] Order created: ${order.order_number}`);
 
-  console.log(`Order created: ${order.order_number}`);
-
-  return new Response(
-    JSON.stringify({ order: order.order_number }),
-    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-  );
+  // Return in standard SMM format
+  return jsonResponse({ order: order.order_number });
 }
 
 // Get order status (single or multiple)
@@ -253,10 +273,8 @@ async function handleStatus(supabase: any, panelId: string, params: BuyerApiRequ
       .in('order_number', orderIds);
 
     if (error) {
-      return new Response(
-        JSON.stringify({ error: "Failed to fetch orders" }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.error('[buyer-api] Status fetch error:', error);
+      return errorResponse("Failed to fetch orders");
     }
 
     const result: Record<string, any> = {};
@@ -264,10 +282,10 @@ async function handleStatus(supabase: any, panelId: string, params: BuyerApiRequ
       const found = orderData?.find((o: any) => o.order_number === id);
       if (found) {
         result[id] = {
-          charge: found.price.toFixed(4),
-          start_count: found.start_count?.toString() || "0",
+          charge: parseFloat(found.price).toFixed(4),
+          start_count: String(found.start_count || 0),
           status: formatStatus(found.status),
-          remains: found.remains?.toString() || "0",
+          remains: String(found.remains || 0),
           currency: "USD"
         };
       } else {
@@ -275,18 +293,12 @@ async function handleStatus(supabase: any, panelId: string, params: BuyerApiRequ
       }
     });
 
-    return new Response(
-      JSON.stringify(result),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return jsonResponse(result);
   }
 
   // Single order
   if (!order) {
-    return new Response(
-      JSON.stringify({ error: "Order ID is required" }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return errorResponse("Order ID is required");
   }
 
   const { data: orderData, error } = await supabase
@@ -297,47 +309,35 @@ async function handleStatus(supabase: any, panelId: string, params: BuyerApiRequ
     .maybeSingle();
 
   if (error || !orderData) {
-    return new Response(
-      JSON.stringify({ error: "Incorrect order ID" }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return errorResponse("Incorrect order ID");
   }
 
-  return new Response(
-    JSON.stringify({
-      charge: orderData.price.toFixed(4),
-      start_count: orderData.start_count?.toString() || "0",
-      status: formatStatus(orderData.status),
-      remains: orderData.remains?.toString() || "0",
-      currency: "USD"
-    }),
-    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-  );
+  return jsonResponse({
+    charge: parseFloat(orderData.price).toFixed(4),
+    start_count: String(orderData.start_count || 0),
+    status: formatStatus(orderData.status),
+    remains: String(orderData.remains || 0),
+    currency: "USD"
+  });
 }
 
-// Get buyer balance (placeholder - would need buyer auth)
+// Get buyer balance
 async function handleBalance(supabase: any, panelId: string, apiKey: string) {
   // For now, return panel balance - in full implementation would return buyer's balance
   const { data: panel, error } = await supabase
     .from('panels')
     .select('balance')
     .eq('id', panelId)
-    .single();
+    .maybeSingle();
 
-  if (error) {
-    return new Response(
-      JSON.stringify({ error: "Failed to fetch balance" }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+  if (error || !panel) {
+    return errorResponse("Failed to fetch balance");
   }
 
-  return new Response(
-    JSON.stringify({
-      balance: (panel.balance || 0).toFixed(4),
-      currency: "USD"
-    }),
-    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-  );
+  return jsonResponse({
+    balance: parseFloat(panel.balance || 0).toFixed(4),
+    currency: "USD"
+  });
 }
 
 // Request order refill
@@ -345,10 +345,7 @@ async function handleRefill(supabase: any, panelId: string, params: BuyerApiRequ
   const { order, orders } = params;
 
   if (!order && !orders) {
-    return new Response(
-      JSON.stringify({ error: "Order ID is required" }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return errorResponse("Order ID is required");
   }
 
   const orderIds = orders ? orders.split(',').map(o => o.trim()) : [String(order)];
@@ -385,6 +382,7 @@ async function handleRefill(supabase: any, panelId: string, params: BuyerApiRequ
       .single();
 
     if (refillError) {
+      console.error('[buyer-api] Refill creation error:', refillError);
       results.push({ order: orderId, refill: { error: "Failed to create refill" } });
     } else {
       results.push({ order: orderId, refill: refill.id });
@@ -393,16 +391,14 @@ async function handleRefill(supabase: any, panelId: string, params: BuyerApiRequ
 
   // Return single or array based on request
   if (!orders && results.length === 1) {
-    return new Response(
-      JSON.stringify(results[0].refill.error ? { error: results[0].refill.error } : { refill: results[0].refill }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    return jsonResponse(
+      results[0].refill.error 
+        ? { error: results[0].refill.error } 
+        : { refill: results[0].refill }
     );
   }
 
-  return new Response(
-    JSON.stringify(results),
-    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-  );
+  return jsonResponse(results);
 }
 
 // Get refill status
@@ -410,10 +406,7 @@ async function handleRefillStatus(supabase: any, panelId: string, params: BuyerA
   const { refill, refills } = params;
 
   if (!refill && !refills) {
-    return new Response(
-      JSON.stringify({ error: "Refill ID is required" }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return errorResponse("Refill ID is required");
   }
 
   const refillIds = refills ? refills.split(',').map(r => r.trim()) : [String(refill)];
@@ -425,24 +418,16 @@ async function handleRefillStatus(supabase: any, panelId: string, params: BuyerA
     .in('id', refillIds);
 
   if (error) {
-    return new Response(
-      JSON.stringify({ error: "Failed to fetch refill status" }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    console.error('[buyer-api] Refill status fetch error:', error);
+    return errorResponse("Failed to fetch refill status");
   }
 
   if (refillIds.length === 1) {
     const found = refillData?.find((r: any) => r.id === refillIds[0]);
     if (!found) {
-      return new Response(
-        JSON.stringify({ error: "Incorrect refill ID" }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return errorResponse("Incorrect refill ID");
     }
-    return new Response(
-      JSON.stringify({ status: formatStatus(found.status) }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return jsonResponse({ status: formatStatus(found.status) });
   }
 
   const result: Record<string, any> = {};
@@ -451,10 +436,7 @@ async function handleRefillStatus(supabase: any, panelId: string, params: BuyerA
     result[id] = found ? { status: formatStatus(found.status) } : { error: "Incorrect refill ID" };
   });
 
-  return new Response(
-    JSON.stringify(result),
-    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-  );
+  return jsonResponse(result);
 }
 
 // Cancel orders
@@ -462,10 +444,7 @@ async function handleCancel(supabase: any, panelId: string, params: BuyerApiRequ
   const { orders } = params;
 
   if (!orders) {
-    return new Response(
-      JSON.stringify({ error: "Order IDs are required" }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return errorResponse("Order IDs are required");
   }
 
   const orderIds = orders.split(',').map(o => o.trim());
@@ -490,18 +469,20 @@ async function handleCancel(supabase: any, panelId: string, params: BuyerApiRequ
     }
 
     // Update order status
-    await supabase
+    const { error: updateError } = await supabase
       .from('orders')
       .update({ status: 'cancelled' })
       .eq('id', orderData.id);
 
-    results.push({ order: orderId, cancel: true });
+    if (updateError) {
+      console.error('[buyer-api] Cancel error:', updateError);
+      results.push({ order: orderId, cancel: { error: "Failed to cancel order" } });
+    } else {
+      results.push({ order: orderId, cancel: true });
+    }
   }
 
-  return new Response(
-    JSON.stringify(results),
-    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-  );
+  return jsonResponse(results);
 }
 
 // Helper functions
