@@ -17,6 +17,34 @@ interface PanelApiRequest {
   offset?: number;
   customer_id?: string;
   order_id?: string;
+  // Service update fields
+  is_active?: boolean;
+  price?: number;
+  min_quantity?: number;
+  max_quantity?: number;
+  name?: string;
+  description?: string;
+  // Customer update fields
+  balance?: number;
+  is_vip?: boolean;
+  is_banned?: boolean;
+  custom_discount?: number;
+}
+
+// Consistent JSON response helper
+function jsonResponse(data: any, statusCode = 200) {
+  return new Response(
+    JSON.stringify(data),
+    { 
+      status: statusCode, 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+    }
+  );
+}
+
+// Error response helper
+function errorResponse(message: string, statusCode = 400) {
+  return jsonResponse({ success: false, error: message }, statusCode);
 }
 
 serve(async (req) => {
@@ -24,32 +52,48 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const startTime = Date.now();
+
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Parse request
+    // Parse request - support JSON, form-data, and raw body
     let params: PanelApiRequest;
     const contentType = req.headers.get('content-type') || '';
     
-    if (contentType.includes('application/json')) {
-      params = await req.json();
-    } else {
-      const formData = await req.formData();
-      params = Object.fromEntries(formData) as unknown as PanelApiRequest;
+    try {
+      if (contentType.includes('application/json')) {
+        params = await req.json();
+      } else if (contentType.includes('form-data') || contentType.includes('urlencoded')) {
+        const formData = await req.formData();
+        params = Object.fromEntries(formData) as unknown as PanelApiRequest;
+      } else {
+        // Try to parse as JSON anyway (common for API calls without proper content-type)
+        const bodyText = await req.text();
+        if (bodyText) {
+          params = JSON.parse(bodyText);
+        } else {
+          return errorResponse("Request body is required", 400);
+        }
+      }
+    } catch (parseError: any) {
+      console.error('[panel-api] Parse error:', parseError);
+      return errorResponse("Invalid request body. Expected JSON.", 400);
     }
 
     const { key, action } = params;
 
     if (!key) {
-      return new Response(
-        JSON.stringify({ error: "API key is required" }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return errorResponse("API key is required", 401);
     }
 
-    console.log(`Panel API: action=${action}, key=${key.substring(0, 10)}...`);
+    if (!action) {
+      return errorResponse("Action is required", 400);
+    }
+
+    console.log(`[panel-api] action=${action}, key=${key.substring(0, 10)}...`);
 
     // Validate panel owner API key
     const { data: apiKeyData, error: apiKeyError } = await supabase
@@ -60,65 +104,78 @@ serve(async (req) => {
       .maybeSingle();
 
     if (apiKeyError || !apiKeyData) {
-      return new Response(
-        JSON.stringify({ error: "Invalid API key" }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.log('[panel-api] Invalid API key');
+      return errorResponse("Invalid API key", 401);
     }
 
     const panelId = apiKeyData.panel_id;
 
-    // Log the API call
-    await supabase.from('api_logs').insert({
-      panel_id: panelId,
-      endpoint: `/panel-api/${action}`,
-      method: 'POST',
-      status_code: 200,
-      response_time_ms: 0
-    });
-
     // Route to handler
+    let response: Response;
     switch (action?.toLowerCase()) {
       case 'services':
-        return await handleServices(supabase, panelId, params);
+        response = await handleServices(supabase, panelId, params);
+        break;
       
       case 'services.sync':
-        return await handleServicesSync(supabase, panelId, params);
+        response = await handleServicesSync(supabase, panelId, params);
+        break;
+      
+      case 'service.update':
+        response = await handleServiceUpdate(supabase, panelId, params);
+        break;
       
       case 'orders':
-        return await handleOrders(supabase, panelId, params);
+        response = await handleOrders(supabase, panelId, params);
+        break;
       
       case 'order':
-        return await handleOrder(supabase, panelId, params);
+        response = await handleOrder(supabase, panelId, params);
+        break;
       
       case 'customers':
-        return await handleCustomers(supabase, panelId, params);
+        response = await handleCustomers(supabase, panelId, params);
+        break;
       
       case 'customer':
-        return await handleCustomer(supabase, panelId, params);
+        response = await handleCustomer(supabase, panelId, params);
+        break;
+      
+      case 'customer.update':
+        response = await handleCustomerUpdate(supabase, panelId, params);
+        break;
       
       case 'balance':
-        return await handleBalance(supabase, panelId);
+        response = await handleBalance(supabase, panelId);
+        break;
       
       case 'providers':
-        return await handleProviders(supabase, panelId);
+        response = await handleProviders(supabase, panelId);
+        break;
       
       case 'stats':
-        return await handleStats(supabase, panelId);
+        response = await handleStats(supabase, panelId);
+        break;
       
       default:
-        return new Response(
-          JSON.stringify({ error: `Unknown action: ${action}` }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        response = errorResponse(`Unknown action: ${action}`, 400);
     }
 
+    // Log the API call with actual response time
+    const responseTime = Date.now() - startTime;
+    await supabase.from('api_logs').insert({
+      panel_id: panelId,
+      endpoint: `/api/v2/panel/${action}`,
+      method: 'POST',
+      status_code: response.status,
+      response_time_ms: responseTime
+    });
+
+    return response;
+
   } catch (error: any) {
-    console.error('Panel API error:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Internal server error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    console.error('[panel-api] Error:', error);
+    return errorResponse(error.message || 'Internal server error', 500);
   }
 });
 
@@ -142,33 +199,25 @@ async function handleServices(supabase: any, panelId: string, params: PanelApiRe
   const { data, error, count } = await query;
 
   if (error) {
-    return new Response(
-      JSON.stringify({ error: 'Failed to fetch services' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    console.error('[panel-api] Services fetch error:', error);
+    return errorResponse('Failed to fetch services', 500);
   }
 
-  return new Response(
-    JSON.stringify({
-      success: true,
-      data: data,
-      total: count,
-      limit,
-      offset
-    }),
-    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-  );
+  return jsonResponse({
+    success: true,
+    data: data,
+    total: count,
+    limit,
+    offset
+  });
 }
 
-// Sync services from provider
+// Sync services from provider - FIXED: Direct implementation instead of calling another edge function
 async function handleServicesSync(supabase: any, panelId: string, params: PanelApiRequest) {
   const { provider_id, markup_percent = 25 } = params;
 
   if (!provider_id) {
-    return new Response(
-      JSON.stringify({ error: "Provider ID is required" }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return errorResponse("provider_id is required", 400);
   }
 
   // Verify provider belongs to panel
@@ -177,36 +226,164 @@ async function handleServicesSync(supabase: any, panelId: string, params: PanelA
     .select('*')
     .eq('id', provider_id)
     .eq('panel_id', panelId)
-    .single();
+    .maybeSingle();
 
   if (providerError || !provider) {
-    return new Response(
-      JSON.stringify({ error: "Provider not found" }),
-      { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return errorResponse("Provider not found", 404);
   }
 
-  // Trigger sync via the existing edge function
-  const syncResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/sync-provider-services`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
-    },
-    body: JSON.stringify({
-      panelId,
-      providerId: provider_id,
-      markupPercent: markup_percent,
-      importNew: true
-    })
-  });
+  console.log(`[panel-api] Syncing services from provider: ${provider.name}`);
 
-  const syncData = await syncResponse.json();
+  try {
+    // Fetch services from upstream provider API
+    const providerResponse = await fetch(provider.api_endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key: provider.api_key, action: 'services' })
+    });
 
-  return new Response(
-    JSON.stringify(syncData),
-    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-  );
+    if (!providerResponse.ok) {
+      return errorResponse(`Provider API error: ${providerResponse.status}`, 502);
+    }
+
+    const providerServices = await providerResponse.json();
+
+    if (!Array.isArray(providerServices)) {
+      return errorResponse("Invalid response from provider API", 502);
+    }
+
+    let imported = 0;
+    let updated = 0;
+    let failed = 0;
+
+    for (const svc of providerServices) {
+      const serviceId = String(svc.service || svc.id);
+      const providerRate = parseFloat(svc.rate) || 0;
+      const buyerPrice = providerRate * (1 + markup_percent / 100);
+
+      // Check if service already exists
+      const { data: existing } = await supabase
+        .from('services')
+        .select('id')
+        .eq('panel_id', panelId)
+        .eq('provider_service_id', serviceId)
+        .maybeSingle();
+
+      const serviceData = {
+        panel_id: panelId,
+        provider_id: provider_id,
+        provider_service_id: serviceId,
+        name: svc.name || `Service ${serviceId}`,
+        description: svc.desc || svc.description || null,
+        category: svc.category?.toLowerCase()?.replace(/[^a-z0-9]/g, '_') || 'other',
+        price: buyerPrice,
+        provider_rate: providerRate,
+        min_quantity: parseInt(svc.min) || 1,
+        max_quantity: parseInt(svc.max) || 100000,
+        service_type: svc.type || 'Default',
+        refill_available: svc.refill === true || svc.refill === 'true',
+        cancel_available: svc.cancel === true || svc.cancel === 'true',
+        estimated_time: svc.average_time || null,
+        is_active: true,
+        updated_at: new Date().toISOString()
+      };
+
+      if (existing) {
+        // Update existing service
+        const { error } = await supabase
+          .from('services')
+          .update(serviceData)
+          .eq('id', existing.id);
+
+        if (error) {
+          console.error(`[panel-api] Update error for service ${serviceId}:`, error);
+          failed++;
+        } else {
+          updated++;
+        }
+      } else {
+        // Insert new service
+        const { error } = await supabase
+          .from('services')
+          .insert(serviceData);
+
+        if (error) {
+          console.error(`[panel-api] Insert error for service ${serviceId}:`, error);
+          failed++;
+        } else {
+          imported++;
+        }
+      }
+    }
+
+    // Update provider last sync time
+    await supabase
+      .from('providers')
+      .update({ 
+        last_synced: new Date().toISOString(),
+        sync_status: 'synced'
+      })
+      .eq('id', provider_id);
+
+    console.log(`[panel-api] Sync complete: ${imported} imported, ${updated} updated, ${failed} failed`);
+
+    return jsonResponse({
+      success: true,
+      message: 'Services synced successfully',
+      stats: {
+        total_from_provider: providerServices.length,
+        imported,
+        updated,
+        failed
+      }
+    });
+
+  } catch (error: any) {
+    console.error('[panel-api] Sync error:', error);
+    return errorResponse(`Failed to sync: ${error.message}`, 500);
+  }
+}
+
+// Update a service
+async function handleServiceUpdate(supabase: any, panelId: string, params: PanelApiRequest) {
+  const { service_id, is_active, price, min_quantity, max_quantity, name, description } = params;
+
+  if (!service_id) {
+    return errorResponse("service_id is required", 400);
+  }
+
+  // Verify service belongs to panel
+  const { data: service, error: findError } = await supabase
+    .from('services')
+    .select('id')
+    .eq('panel_id', panelId)
+    .or(`id.eq.${service_id},provider_service_id.eq.${service_id}`)
+    .maybeSingle();
+
+  if (findError || !service) {
+    return errorResponse("Service not found", 404);
+  }
+
+  // Build update object
+  const updates: Record<string, any> = { updated_at: new Date().toISOString() };
+  if (is_active !== undefined) updates.is_active = is_active;
+  if (price !== undefined) updates.price = price;
+  if (min_quantity !== undefined) updates.min_quantity = min_quantity;
+  if (max_quantity !== undefined) updates.max_quantity = max_quantity;
+  if (name !== undefined) updates.name = name;
+  if (description !== undefined) updates.description = description;
+
+  const { error: updateError } = await supabase
+    .from('services')
+    .update(updates)
+    .eq('id', service.id);
+
+  if (updateError) {
+    console.error('[panel-api] Service update error:', updateError);
+    return errorResponse("Failed to update service", 500);
+  }
+
+  return jsonResponse({ success: true, message: 'Service updated' });
 }
 
 // Get panel orders
@@ -227,22 +404,17 @@ async function handleOrders(supabase: any, panelId: string, params: PanelApiRequ
   const { data, error, count } = await query;
 
   if (error) {
-    return new Response(
-      JSON.stringify({ error: 'Failed to fetch orders' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    console.error('[panel-api] Orders fetch error:', error);
+    return errorResponse('Failed to fetch orders', 500);
   }
 
-  return new Response(
-    JSON.stringify({
-      success: true,
-      data: data,
-      total: count,
-      limit,
-      offset
-    }),
-    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-  );
+  return jsonResponse({
+    success: true,
+    data: data,
+    total: count,
+    limit,
+    offset
+  });
 }
 
 // Get single order
@@ -250,10 +422,7 @@ async function handleOrder(supabase: any, panelId: string, params: PanelApiReque
   const { order_id } = params;
 
   if (!order_id) {
-    return new Response(
-      JSON.stringify({ error: "Order ID is required" }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return errorResponse("order_id is required", 400);
   }
 
   const { data, error } = await supabase
@@ -264,16 +433,10 @@ async function handleOrder(supabase: any, panelId: string, params: PanelApiReque
     .maybeSingle();
 
   if (error || !data) {
-    return new Response(
-      JSON.stringify({ error: "Order not found" }),
-      { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return errorResponse("Order not found", 404);
   }
 
-  return new Response(
-    JSON.stringify({ success: true, data }),
-    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-  );
+  return jsonResponse({ success: true, data });
 }
 
 // Get panel customers
@@ -298,10 +461,8 @@ async function handleCustomers(supabase: any, panelId: string, params: PanelApiR
   const { data, error, count } = await query;
 
   if (error) {
-    return new Response(
-      JSON.stringify({ error: 'Failed to fetch customers' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    console.error('[panel-api] Customers fetch error:', error);
+    return errorResponse('Failed to fetch customers', 500);
   }
 
   // Remove sensitive data
@@ -311,16 +472,13 @@ async function handleCustomers(supabase: any, panelId: string, params: PanelApiR
     password_temp: undefined
   }));
 
-  return new Response(
-    JSON.stringify({
-      success: true,
-      data: sanitized,
-      total: count,
-      limit,
-      offset
-    }),
-    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-  );
+  return jsonResponse({
+    success: true,
+    data: sanitized,
+    total: count,
+    limit,
+    offset
+  });
 }
 
 // Get single customer
@@ -328,10 +486,7 @@ async function handleCustomer(supabase: any, panelId: string, params: PanelApiRe
   const { customer_id } = params;
 
   if (!customer_id) {
-    return new Response(
-      JSON.stringify({ error: "Customer ID is required" }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return errorResponse("customer_id is required", 400);
   }
 
   const { data, error } = await supabase
@@ -342,10 +497,7 @@ async function handleCustomer(supabase: any, panelId: string, params: PanelApiRe
     .maybeSingle();
 
   if (error || !data) {
-    return new Response(
-      JSON.stringify({ error: "Customer not found" }),
-      { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return errorResponse("Customer not found", 404);
   }
 
   // Remove sensitive data
@@ -355,10 +507,47 @@ async function handleCustomer(supabase: any, panelId: string, params: PanelApiRe
     password_temp: undefined
   };
 
-  return new Response(
-    JSON.stringify({ success: true, data: sanitized }),
-    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-  );
+  return jsonResponse({ success: true, data: sanitized });
+}
+
+// Update customer
+async function handleCustomerUpdate(supabase: any, panelId: string, params: PanelApiRequest) {
+  const { customer_id, balance, is_vip, is_banned, custom_discount } = params;
+
+  if (!customer_id) {
+    return errorResponse("customer_id is required", 400);
+  }
+
+  // Verify customer belongs to panel
+  const { data: customer, error: findError } = await supabase
+    .from('client_users')
+    .select('id')
+    .eq('panel_id', panelId)
+    .eq('id', customer_id)
+    .maybeSingle();
+
+  if (findError || !customer) {
+    return errorResponse("Customer not found", 404);
+  }
+
+  // Build update object
+  const updates: Record<string, any> = { updated_at: new Date().toISOString() };
+  if (balance !== undefined) updates.balance = balance;
+  if (is_vip !== undefined) updates.is_vip = is_vip;
+  if (is_banned !== undefined) updates.is_banned = is_banned;
+  if (custom_discount !== undefined) updates.custom_discount = custom_discount;
+
+  const { error: updateError } = await supabase
+    .from('client_users')
+    .update(updates)
+    .eq('id', customer_id);
+
+  if (updateError) {
+    console.error('[panel-api] Customer update error:', updateError);
+    return errorResponse("Failed to update customer", 500);
+  }
+
+  return jsonResponse({ success: true, message: 'Customer updated' });
 }
 
 // Get panel balance
@@ -367,56 +556,47 @@ async function handleBalance(supabase: any, panelId: string) {
     .from('panels')
     .select('balance, monthly_revenue')
     .eq('id', panelId)
-    .single();
+    .maybeSingle();
 
-  if (error) {
-    return new Response(
-      JSON.stringify({ error: 'Failed to fetch balance' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+  if (error || !data) {
+    return errorResponse('Failed to fetch balance', 500);
   }
 
-  return new Response(
-    JSON.stringify({
-      success: true,
-      balance: data.balance || 0,
-      monthly_revenue: data.monthly_revenue || 0,
-      currency: "USD"
-    }),
-    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-  );
+  return jsonResponse({
+    success: true,
+    balance: data.balance || 0,
+    monthly_revenue: data.monthly_revenue || 0,
+    currency: "USD"
+  });
 }
 
 // Get connected providers
 async function handleProviders(supabase: any, panelId: string) {
   const { data, error } = await supabase
     .from('providers')
-    .select('id, name, api_endpoint, balance, is_active, created_at, updated_at')
+    .select('id, name, api_endpoint, balance, is_active, last_synced, sync_status, created_at, updated_at')
     .eq('panel_id', panelId)
     .order('created_at', { ascending: false });
 
   if (error) {
-    return new Response(
-      JSON.stringify({ error: 'Failed to fetch providers' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    console.error('[panel-api] Providers fetch error:', error);
+    return errorResponse('Failed to fetch providers', 500);
   }
 
-  // Mask API endpoints partially
-  const sanitized = data?.map((p: any) => ({
-    ...p,
-    api_endpoint: p.api_endpoint ? new URL(p.api_endpoint).hostname : null
-  }));
+  // Mask API endpoints
+  const sanitized = data?.map((p: any) => {
+    let hostname = null;
+    try {
+      hostname = p.api_endpoint ? new URL(p.api_endpoint).hostname : null;
+    } catch {}
+    return { ...p, api_endpoint: hostname };
+  });
 
-  return new Response(
-    JSON.stringify({ success: true, data: sanitized }),
-    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-  );
+  return jsonResponse({ success: true, data: sanitized });
 }
 
 // Get panel statistics
 async function handleStats(supabase: any, panelId: string) {
-  // Get counts
   const [servicesResult, ordersResult, customersResult, providersResult] = await Promise.all([
     supabase.from('services').select('id', { count: 'exact', head: true }).eq('panel_id', panelId),
     supabase.from('orders').select('id, price, status', { count: 'exact' }).eq('panel_id', panelId),
@@ -439,22 +619,19 @@ async function handleStats(supabase: any, panelId: string) {
 
   const todayRevenue = todayOrders?.reduce((sum: number, o: any) => sum + (o.price || 0), 0) || 0;
 
-  return new Response(
-    JSON.stringify({
-      success: true,
-      stats: {
-        total_services: servicesResult.count || 0,
-        total_orders: ordersResult.count || 0,
-        total_customers: customersResult.count || 0,
-        active_providers: providersResult.count || 0,
-        total_revenue: totalRevenue,
-        today_revenue: todayRevenue,
-        today_orders: todayOrders?.length || 0,
-        completed_orders: completedOrders,
-        pending_orders: pendingOrders,
-        completion_rate: ordersResult.count ? ((completedOrders / ordersResult.count) * 100).toFixed(1) : 0
-      }
-    }),
-    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-  );
+  return jsonResponse({
+    success: true,
+    stats: {
+      total_services: servicesResult.count || 0,
+      total_orders: ordersResult.count || 0,
+      total_customers: customersResult.count || 0,
+      active_providers: providersResult.count || 0,
+      total_revenue: totalRevenue,
+      today_revenue: todayRevenue,
+      today_orders: todayOrders?.length || 0,
+      completed_orders: completedOrders,
+      pending_orders: pendingOrders,
+      completion_rate: ordersResult.count ? parseFloat(((completedOrders / ordersResult.count) * 100).toFixed(1)) : 0
+    }
+  });
 }
