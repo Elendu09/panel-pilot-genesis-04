@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { DocsTableOfContents } from "@/components/docs/DocsTableOfContents";
+import { DocsMobileTOC } from "@/components/docs/DocsMobileTOC";
 import { DocsFeedback } from "@/components/docs/DocsFeedback";
 import { DocsRelatedArticles } from "@/components/docs/DocsRelatedArticles";
 import { DocsReadingProgress } from "@/components/docs/DocsReadingProgress";
@@ -367,6 +368,9 @@ export default function DocsArticlePage() {
               </Button>
             </div>
           </header>
+
+          {/* Mobile Table of Contents */}
+          <DocsMobileTOC content={article.content || ""} />
 
           {/* Article Content */}
           <Card className="p-5 sm:p-8 mb-6 bg-card/50 backdrop-blur-sm border-border/50">
