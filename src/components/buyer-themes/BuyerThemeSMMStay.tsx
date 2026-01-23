@@ -277,8 +277,15 @@ export const BuyerThemeSMMStay = ({ children, className, themeMode = 'dark' }: B
         }
         
         .light .buyer-theme-smmstay p,
-        .light .buyer-theme-smmstay span:not(.theme-gradient-text):not(.theme-outline-text) {
+        .light .buyer-theme-smmstay span:not(.theme-gradient-text):not(.theme-outline-text):not(.balance-display):not(button span) {
           color: #374151;
+        }
+        
+        /* Balance display - always white */
+        .buyer-theme-smmstay .balance-display,
+        .light .buyer-theme-smmstay .balance-display,
+        .dark .buyer-theme-smmstay .balance-display {
+          color: #FFFFFF !important;
         }
         
         .light .buyer-theme-smmstay .text-muted-foreground {
