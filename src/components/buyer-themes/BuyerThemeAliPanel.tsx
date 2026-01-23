@@ -224,8 +224,15 @@ export const BuyerThemeAliPanel = ({ children, className, themeMode = 'dark' }: 
         }
         
         .light .buyer-theme-alipanel p,
-        .light .buyer-theme-alipanel span:not(.theme-gradient-text) {
+        .light .buyer-theme-alipanel span:not(.theme-gradient-text):not(.balance-display):not(button span) {
           color: #374151;
+        }
+        
+        /* Balance display - always white */
+        .buyer-theme-alipanel .balance-display,
+        .light .buyer-theme-alipanel .balance-display,
+        .dark .buyer-theme-alipanel .balance-display {
+          color: #FFFFFF !important;
         }
         
         .light .buyer-theme-alipanel .text-muted-foreground {

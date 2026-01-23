@@ -307,8 +307,15 @@ export const BuyerThemeTGRef = ({ children, className, themeMode = 'dark' }: Buy
         }
         
         .light .buyer-theme-tgref p,
-        .light .buyer-theme-tgref span:not(.theme-gradient-text) {
+        .light .buyer-theme-tgref span:not(.theme-gradient-text):not(.balance-display):not(button span) {
           color: #334155;
+        }
+        
+        /* Balance display - always white */
+        .buyer-theme-tgref .balance-display,
+        .light .buyer-theme-tgref .balance-display,
+        .dark .buyer-theme-tgref .balance-display {
+          color: #FFFFFF !important;
         }
         
         .light .buyer-theme-tgref .text-muted-foreground {

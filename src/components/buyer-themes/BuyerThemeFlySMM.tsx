@@ -257,8 +257,15 @@ export const BuyerThemeFlySMM = ({ children, className, themeMode = 'light' }: B
         }
         
         .dark .buyer-theme-flysmm p,
-        .dark .buyer-theme-flysmm span:not(.theme-gradient-text) {
+        .dark .buyer-theme-flysmm span:not(.theme-gradient-text):not(.balance-display):not(button span) {
           color: #CBD5E1;
+        }
+        
+        /* Balance display - always white */
+        .buyer-theme-flysmm .balance-display,
+        .light .buyer-theme-flysmm .balance-display,
+        .dark .buyer-theme-flysmm .balance-display {
+          color: #FFFFFF !important;
         }
         
         .dark .buyer-theme-flysmm .text-muted-foreground {

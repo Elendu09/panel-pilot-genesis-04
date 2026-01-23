@@ -262,8 +262,15 @@ export const BuyerThemeSMMVisit = ({ children, className, themeMode = 'light' }:
         }
         
         .dark .buyer-theme-smmvisit p,
-        .dark .buyer-theme-smmvisit span:not(.theme-gradient-text) {
+        .dark .buyer-theme-smmvisit span:not(.theme-gradient-text):not(.balance-display):not(button span) {
           color: #E5E7EB;
+        }
+        
+        /* Balance display - always white */
+        .buyer-theme-smmvisit .balance-display,
+        .light .buyer-theme-smmvisit .balance-display,
+        .dark .buyer-theme-smmvisit .balance-display {
+          color: #FFFFFF !important;
         }
         
         .dark .buyer-theme-smmvisit .text-muted-foreground {
@@ -415,23 +422,43 @@ export const BuyerThemeSMMVisit = ({ children, className, themeMode = 'light' }:
         }
         
         /* Quick action buttons */
-        .dark .buyer-theme-smmvisit button.h-auto {
+        .dark .buyer-theme-smmvisit button.h-auto,
+        .dark .buyer-theme-smmvisit button[class*="h-auto"] {
           background: #262A33;
-          border-color: rgba(255, 215, 0, 0.15);
+          border-color: rgba(255, 215, 0, 0.2);
         }
         
-        .dark .buyer-theme-smmvisit button.h-auto:hover {
-          background: rgba(255, 215, 0, 0.1);
-          border-color: rgba(255, 215, 0, 0.3);
+        .dark .buyer-theme-smmvisit button.h-auto:hover,
+        .dark .buyer-theme-smmvisit button[class*="h-auto"]:hover {
+          background: rgba(255, 215, 0, 0.12);
+          border-color: rgba(255, 215, 0, 0.35);
         }
         
         .dark .buyer-theme-smmvisit button.h-auto span,
-        .dark .buyer-theme-smmvisit button.h-auto p {
-          color: #FFFFFF;
+        .dark .buyer-theme-smmvisit button.h-auto p,
+        .dark .buyer-theme-smmvisit button[class*="h-auto"] span,
+        .dark .buyer-theme-smmvisit button[class*="h-auto"] p {
+          color: #FFFFFF !important;
         }
         
-        .dark .buyer-theme-smmvisit button.h-auto .text-muted-foreground {
-          color: #9CA3AF;
+        .dark .buyer-theme-smmvisit button.h-auto .text-muted-foreground,
+        .dark .buyer-theme-smmvisit button[class*="h-auto"] .text-muted-foreground {
+          color: rgba(255, 255, 255, 0.65) !important;
+        }
+        
+        /* Link button spans */
+        .dark .buyer-theme-smmvisit a button span {
+          color: #FFD700 !important;
+        }
+        
+        /* CardContent text adjustments */
+        .dark .buyer-theme-smmvisit [class*="CardContent"] .text-muted-foreground {
+          color: rgba(255, 255, 255, 0.7) !important;
+        }
+        
+        /* Button spans in general */
+        .dark .buyer-theme-smmvisit button .text-muted-foreground {
+          color: rgba(255, 255, 255, 0.65) !important;
         }
         
         /* Ensure proper color inheritance */
