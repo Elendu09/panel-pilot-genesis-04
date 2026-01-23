@@ -266,36 +266,80 @@ export function DocsSidebarEnhanced({ className }: DocsSidebarEnhancedProps) {
                   </CollapsibleTrigger>
 
                   <CollapsibleContent>
-                    <ul className="mt-1 ml-4 border-l border-border space-y-0.5">
-                      {filteredArticles.map((article) => {
-                        const href = `/docs/${category.slug}/${article.slug}`;
-                        const isActive = currentPath === href;
-                        const ArticleIcon = getArticleIcon(article.icon);
+                    <div className="mt-1 ml-4 border-l border-border">
+                      {/* Special rendering for API category with subsections */}
+                      {category.slug === 'api' ? (
+                        Object.entries(apiSubCategories).map(([subcat, slugs]) => {
+                          const subArticles = filteredArticles.filter(a => 
+                            slugs.includes(a.slug)
+                          );
+                          if (subArticles.length === 0 && searchTerm) return null;
+                          
+                          return (
+                            <div key={subcat} className="mb-2">
+                              <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 px-3 pt-3 pb-1">
+                                {subcat}
+                              </div>
+                              <ul className="space-y-0.5">
+                                {subArticles.map((article) => {
+                                  const href = `/docs/${category.slug}/${article.slug}`;
+                                  const isActive = currentPath === href;
+                                  const ArticleIcon = getArticleIcon(article.icon);
 
-                        return (
-                          <li key={article.id}>
-                            <Link
-                              to={href}
-                              className={cn(
-                                "flex items-center gap-2 py-1.5 px-3 text-sm transition-colors -ml-px border-l-2",
-                                isActive
-                                  ? "border-primary text-primary font-medium bg-primary/5"
-                                  : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground"
-                              )}
-                            >
-                              <ArticleIcon className="h-3.5 w-3.5" />
-                              <span className="truncate">{article.title}</span>
-                            </Link>
-                          </li>
-                        );
-                      })}
+                                  return (
+                                    <li key={article.id}>
+                                      <Link
+                                        to={href}
+                                        className={cn(
+                                          "flex items-center gap-2 py-1.5 px-3 text-sm transition-colors -ml-px border-l-2",
+                                          isActive
+                                            ? "border-primary text-primary font-medium bg-primary/5"
+                                            : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground"
+                                        )}
+                                      >
+                                        <ArticleIcon className="h-3.5 w-3.5" />
+                                        <span className="truncate">{article.title}</span>
+                                      </Link>
+                                    </li>
+                                  );
+                                })}
+                              </ul>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <ul className="space-y-0.5">
+                          {filteredArticles.map((article) => {
+                            const href = `/docs/${category.slug}/${article.slug}`;
+                            const isActive = currentPath === href;
+                            const ArticleIcon = getArticleIcon(article.icon);
+
+                            return (
+                              <li key={article.id}>
+                                <Link
+                                  to={href}
+                                  className={cn(
+                                    "flex items-center gap-2 py-1.5 px-3 text-sm transition-colors -ml-px border-l-2",
+                                    isActive
+                                      ? "border-primary text-primary font-medium bg-primary/5"
+                                      : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground"
+                                  )}
+                                >
+                                  <ArticleIcon className="h-3.5 w-3.5" />
+                                  <span className="truncate">{article.title}</span>
+                                </Link>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
                       
                       {categoryArticles.length === 0 && (
-                        <li className="py-2 px-3 text-xs text-muted-foreground italic">
+                        <div className="py-2 px-3 text-xs text-muted-foreground italic">
                           No articles yet
-                        </li>
+                        </div>
                       )}
-                    </ul>
+                    </div>
                   </CollapsibleContent>
                 </Collapsible>
               );

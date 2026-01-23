@@ -66,53 +66,79 @@ const languageLabels: Record<string, string> = {
   sql: "SQL",
 };
 
-// Syntax highlighting
+// Improved syntax highlighting - applies patterns in order with proper escaping
 const highlightCode = (code: string, language: string): string => {
-  let highlighted = code
+  // First escape HTML entities
+  let escaped = code
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
 
-  const patterns: Record<string, { regex: RegExp; className: string }[]> = {
-    bash: [
-      { regex: /(curl|wget|npm|yarn|pnpm|git|cd|ls|mkdir|rm|echo|export)/g, className: 'text-cyan-400' },
-      { regex: /(-X\s+\w+|-H\s+|-d\s+|--\w+)/g, className: 'text-yellow-400' },
-      { regex: /(https?:\/\/[^\s"'\\]+)/g, className: 'text-green-400' },
-      { regex: /(".*?"|'.*?')/g, className: 'text-amber-300' },
-      { regex: /(#.*$)/gm, className: 'text-zinc-500 italic' },
-    ],
-    json: [
-      { regex: /("[\w-]+")\s*:/g, className: 'text-purple-400' },
-      { regex: /:\s*(".*?")/g, className: 'text-green-400' },
-      { regex: /:\s*(\d+|true|false|null)/g, className: 'text-amber-400' },
-    ],
-    javascript: [
-      { regex: /\b(const|let|var|function|async|await|return|import|export|from|if|else|try|catch)\b/g, className: 'text-purple-400' },
-      { regex: /\b(true|false|null|undefined)\b/g, className: 'text-amber-400' },
-      { regex: /(\/\/.*$)/gm, className: 'text-zinc-500 italic' },
-      { regex: /(".*?"|'.*?'|`.*?`)/g, className: 'text-green-400' },
-    ],
-    php: [
-      { regex: /(&lt;\?php|\?&gt;)/g, className: 'text-red-400' },
-      { regex: /(\$\w+)/g, className: 'text-cyan-400' },
-      { regex: /\b(echo|print|return|function|class|public|private|new|if|else|foreach|while)\b/g, className: 'text-purple-400' },
-      { regex: /(".*?"|'.*?')/g, className: 'text-green-400' },
-    ],
-    python: [
-      { regex: /\b(import|from|def|class|return|if|else|elif|try|except|with|as|for|in|while|True|False|None)\b/g, className: 'text-purple-400' },
-      { regex: /(#.*$)/gm, className: 'text-zinc-500 italic' },
-      { regex: /(".*?"|'.*?')/g, className: 'text-green-400' },
-    ],
+  // Use placeholder tokens to prevent nested highlighting
+  const tokens: string[] = [];
+  const tokenize = (match: string, className: string): string => {
+    const idx = tokens.length;
+    tokens.push(`<span class="${className}">${match}</span>`);
+    return `\x00${idx}\x00`;
   };
 
-  const langPatterns = patterns[language] || patterns['bash'];
-  langPatterns?.forEach(({ regex, className }) => {
-    highlighted = highlighted.replace(regex, (match) => 
-      `<span class="${className}">${match}</span>`
-    );
-  });
+  // Apply patterns based on language - order matters!
+  switch (language) {
+    case 'bash':
+    case 'shell':
+    case 'curl':
+      // 1. Comments first (won't contain other syntax)
+      escaped = escaped.replace(/(#[^\n]*)/g, (m) => tokenize(m, 'text-zinc-500 italic'));
+      // 2. Strings (including URLs inside them) - single atomic unit
+      escaped = escaped.replace(/("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/g, (m) => tokenize(m, 'text-amber-300'));
+      // 3. Commands at word boundaries
+      escaped = escaped.replace(/\b(curl|wget|npm|yarn|pnpm|git|cd|ls|mkdir|rm|echo|export|pip|python|node|php)\b/g, (m) => tokenize(m, 'text-cyan-400 font-semibold'));
+      // 4. Flags
+      escaped = escaped.replace(/(\s-[A-Za-z]+|\s--[a-z-]+)/g, (m) => tokenize(m, 'text-yellow-400'));
+      break;
 
-  return highlighted;
+    case 'json':
+      // Property names
+      escaped = escaped.replace(/("[\w-]+")\s*:/g, (m, key) => tokenize(key, 'text-purple-400') + ':');
+      // String values
+      escaped = escaped.replace(/:\s*("(?:[^"\\]|\\.)*")/g, (m, val) => ': ' + tokenize(val, 'text-emerald-400'));
+      // Numbers and booleans
+      escaped = escaped.replace(/:\s*(\d+\.?\d*|true|false|null)\b/g, (m, val) => ': ' + tokenize(val, 'text-amber-400'));
+      break;
+
+    case 'javascript':
+    case 'typescript':
+    case 'js':
+    case 'ts':
+      escaped = escaped.replace(/(\/\/[^\n]*)/g, (m) => tokenize(m, 'text-zinc-500 italic'));
+      escaped = escaped.replace(/("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`)/g, (m) => tokenize(m, 'text-emerald-400'));
+      escaped = escaped.replace(/\b(const|let|var|function|async|await|return|import|export|from|if|else|try|catch|new|class|this)\b/g, (m) => tokenize(m, 'text-purple-400'));
+      escaped = escaped.replace(/\b(true|false|null|undefined)\b/g, (m) => tokenize(m, 'text-amber-400'));
+      break;
+
+    case 'php':
+      escaped = escaped.replace(/(&lt;\?php|\?&gt;)/g, (m) => tokenize(m, 'text-red-400'));
+      escaped = escaped.replace(/("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/g, (m) => tokenize(m, 'text-emerald-400'));
+      escaped = escaped.replace(/(\$\w+)/g, (m) => tokenize(m, 'text-cyan-400'));
+      escaped = escaped.replace(/\b(echo|print|return|function|class|public|private|protected|new|if|else|foreach|while|array|use|namespace)\b/g, (m) => tokenize(m, 'text-purple-400'));
+      break;
+
+    case 'python':
+      escaped = escaped.replace(/(#[^\n]*)/g, (m) => tokenize(m, 'text-zinc-500 italic'));
+      escaped = escaped.replace(/("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/g, (m) => tokenize(m, 'text-emerald-400'));
+      escaped = escaped.replace(/\b(import|from|def|class|return|if|else|elif|try|except|with|as|for|in|while|print|self)\b/g, (m) => tokenize(m, 'text-purple-400'));
+      escaped = escaped.replace(/\b(True|False|None)\b/g, (m) => tokenize(m, 'text-amber-400'));
+      break;
+
+    default:
+      // Generic highlighting for unknown languages
+      escaped = escaped.replace(/("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/g, (m) => tokenize(m, 'text-amber-300'));
+  }
+
+  // Replace tokens back with actual spans
+  escaped = escaped.replace(/\x00(\d+)\x00/g, (_, idx) => tokens[parseInt(idx)]);
+
+  return escaped;
 };
 
 export default function DocsArticlePage() {

@@ -420,17 +420,16 @@ export default function DocsHub() {
                       <span className="text-xs text-muted-foreground ml-2">api-example.sh</span>
                     </div>
                     <div className="p-4 font-mono text-sm">
-                      <div className="text-muted-foreground mb-1"># Get all services</div>
-                      <div className="text-cyan-400">curl <span className="text-yellow-400">-X GET</span> \</div>
-                      <div className="pl-4 text-green-400">"https://api.yourpanel.com/v1/services"</div>
-                      <div className="text-muted-foreground mt-4 mb-1"># Response</div>
-                      <pre className="text-xs text-muted-foreground">
-{`{
-  "status": "success",
-  "data": [
-    { "id": 1, "name": "..." }
-  ]
-}`}
+                      <div className="text-zinc-500 italic mb-1"># Get all services (Buyer API)</div>
+                      <div><span className="text-cyan-400 font-semibold">curl</span> <span className="text-yellow-400">-X POST</span> \</div>
+                      <div className="pl-4"><span className="text-amber-300">"https://yourpanel.homeofsmm.com/api/v1"</span> \</div>
+                      <div className="pl-4"><span className="text-yellow-400">-d</span> <span className="text-amber-300">'&#123;"key":"API_KEY","action":"services"&#125;'</span></div>
+                      <div className="text-zinc-500 italic mt-4 mb-1"># Response</div>
+                      <pre className="text-xs text-zinc-400">
+{`[
+  { "service": "1", "name": "Instagram Followers", 
+    "rate": "0.50", "min": 100, "max": 10000 }
+]`}
                       </pre>
                     </div>
                   </div>

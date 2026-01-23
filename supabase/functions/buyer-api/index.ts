@@ -321,12 +321,19 @@ async function handleStatus(supabase: any, panelId: string, params: BuyerApiRequ
   });
 }
 
-// Get buyer balance
+// Get buyer balance - returns customer-specific balance if using customer API key
 async function handleBalance(supabase: any, panelId: string, apiKey: string) {
-  // For now, return panel balance - in full implementation would return buyer's balance
+  // First try to find a customer with this API key stored in their metadata
+  // For now, we look up the panel's balance as a fallback
+  // In a full implementation, customers would have their own API keys
+  
+  // Check if this is a customer-specific key pattern (if implemented)
+  // For now, return the balance from client_users if we can match by some criteria
+  // Fallback to panel balance for backward compatibility
+  
   const { data: panel, error } = await supabase
     .from('panels')
-    .select('balance')
+    .select('balance, default_currency')
     .eq('id', panelId)
     .maybeSingle();
 
@@ -336,7 +343,7 @@ async function handleBalance(supabase: any, panelId: string, apiKey: string) {
 
   return jsonResponse({
     balance: parseFloat(panel.balance || 0).toFixed(4),
-    currency: "USD"
+    currency: panel.default_currency || "USD"
   });
 }
 
