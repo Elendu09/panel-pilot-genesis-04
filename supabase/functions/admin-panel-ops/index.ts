@@ -133,6 +133,23 @@ Deno.serve(async (req) => {
 
         if (txError) console.error('Error creating transaction:', txError);
 
+        // Create notification for panel owner
+        const { data: panelData } = await supabase
+          .from('panels')
+          .select('owner_id')
+          .eq('id', panel_id)
+          .single();
+
+        if (panelData?.owner_id) {
+          await supabase.from('panel_notifications').insert({
+            panel_id,
+            user_id: panelData.owner_id,
+            title: type === 'credit' ? 'Funds Added to Your Account' : 'Funds Deducted from Your Account',
+            message: `$${Math.abs(adjustedAmount).toFixed(2)} has been ${type === 'credit' ? 'added to' : 'deducted from'} your panel balance. ${reason ? `Reason: ${reason}` : ''}`,
+            type: type === 'credit' ? 'info' : 'warning'
+          });
+        }
+
         // Create audit log
         await supabase
           .from('audit_logs')
@@ -227,6 +244,61 @@ Deno.serve(async (req) => {
 
         if (updateError) throw updateError;
 
+        // Get panel owner for notification
+        const { data: panelData } = await supabase
+          .from('panels')
+          .select('owner_id, name')
+          .eq('id', panel_id)
+          .single();
+
+        // Create notification based on operation
+        if (panelData?.owner_id) {
+          let notifTitle = '';
+          let notifMessage = '';
+          let notifType = 'info';
+
+          switch (operation) {
+            case 'upgrade':
+              notifTitle = 'Subscription Upgraded';
+              notifMessage = `Your subscription has been upgraded to ${updates.plan_type?.toUpperCase()}. Enjoy your new features!`;
+              break;
+            case 'downgrade':
+              notifTitle = 'Subscription Changed';
+              notifMessage = `Your subscription has been changed to ${updates.plan_type?.toUpperCase()}.`;
+              notifType = 'warning';
+              break;
+            case 'extend':
+              notifTitle = 'Subscription Extended';
+              notifMessage = `Your subscription has been extended. New expiry: ${new Date(updates.expires_at).toLocaleDateString()}`;
+              break;
+            case 'cancel':
+              notifTitle = 'Subscription Cancelled';
+              notifMessage = 'Your subscription has been cancelled. Please contact support if you have questions.';
+              notifType = 'warning';
+              break;
+          }
+
+          await supabase.from('panel_notifications').insert({
+            panel_id,
+            user_id: panelData.owner_id,
+            title: notifTitle,
+            message: notifMessage,
+            type: notifType
+          });
+        }
+
+        // Create transaction record for paid operations
+        if (operation === 'upgrade' && updates.plan_type !== 'free') {
+          await supabase.from('transactions').insert({
+            panel_id,
+            type: 'subscription',
+            amount: updates.price || 0,
+            status: 'completed',
+            description: `Subscription ${operation} to ${updates.plan_type}`,
+            payment_method: 'admin_adjustment'
+          });
+        }
+
         // Create audit log
         await supabase
           .from('audit_logs')
@@ -254,7 +326,8 @@ Deno.serve(async (req) => {
             operation,
             previous_plan: previousPlan,
             new_plan: updates.plan_type || previousPlan,
-            new_expiry: updates.expires_at
+            new_expiry: updates.expires_at,
+            panel_name: panelData?.name
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );

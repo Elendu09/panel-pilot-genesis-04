@@ -4,6 +4,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { 
   CreditCard, 
   Crown, 
   Zap, 
@@ -13,23 +20,40 @@ import {
   Users,
   Search,
   Calendar,
-  ArrowUpRight
+  ArrowUpRight,
+  MoreVertical,
+  ArrowUp,
+  ArrowDown,
+  CalendarPlus,
+  XCircle,
+  Wallet,
+  RefreshCw
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
+import { toast } from 'sonner';
+import { 
+  UpgradeDialog, 
+  ExtendDialog, 
+  CancelDialog, 
+  AddFundsDialog 
+} from '@/components/admin/SubscriptionActionDialogs';
 
 interface SubscriptionWithPanel {
   id: string;
+  panel_id?: string;
   plan_type: 'free' | 'basic' | 'pro';
   price: number;
   status: string;
   started_at: string;
   expires_at: string | null;
   panel: {
+    id?: string;
     name: string;
     subdomain: string;
+    balance?: number;
     owner: {
       email: string;
       full_name: string;
@@ -41,9 +65,38 @@ const SubscriptionManagement = () => {
   const [subscriptions, setSubscriptions] = useState<SubscriptionWithPanel[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Dialog states
+  const [upgradeDialog, setUpgradeDialog] = useState<{ open: boolean; subscription: SubscriptionWithPanel | null }>({ open: false, subscription: null });
+  const [extendDialog, setExtendDialog] = useState<{ open: boolean; subscription: SubscriptionWithPanel | null }>({ open: false, subscription: null });
+  const [cancelDialog, setCancelDialog] = useState<{ open: boolean; subscription: SubscriptionWithPanel | null }>({ open: false, subscription: null });
+  const [addFundsDialog, setAddFundsDialog] = useState<{ open: boolean; subscription: SubscriptionWithPanel | null }>({ open: false, subscription: null });
 
   useEffect(() => {
     fetchSubscriptions();
+    
+    // Set up real-time subscription
+    const channel = supabase
+      .channel('admin-subscriptions')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'panel_subscriptions'
+      }, () => {
+        fetchSubscriptions();
+      })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'transactions'
+      }, () => {
+        fetchSubscriptions();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchSubscriptions = async () => {
@@ -52,13 +105,20 @@ const SubscriptionManagement = () => {
         .from('panel_subscriptions')
         .select(`
           *,
-          panel:panels(name, subdomain, owner:profiles!panels_owner_id_fkey(email, full_name))
+          panel:panels(id, name, subdomain, balance, owner:profiles!panels_owner_id_fkey(email, full_name))
         `)
         .order('created_at', { ascending: false });
 
-      setSubscriptions((data || []) as SubscriptionWithPanel[]);
+      // Transform data to include panel_id at subscription level
+      const transformed = (data || []).map(sub => ({
+        ...sub,
+        panel_id: sub.panel?.id || sub.panel_id
+      })) as SubscriptionWithPanel[];
+
+      setSubscriptions(transformed);
     } catch (error) {
       console.error('Error fetching subscriptions:', error);
+      toast.error('Failed to load subscriptions');
     } finally {
       setLoading(false);
     }
@@ -69,7 +129,9 @@ const SubscriptionManagement = () => {
     freeCount: subscriptions.filter(s => s.plan_type === 'free').length,
     basicCount: subscriptions.filter(s => s.plan_type === 'basic').length,
     proCount: subscriptions.filter(s => s.plan_type === 'pro').length,
-    monthlyRevenue: subscriptions.reduce((sum, s) => sum + (s.price || 0), 0)
+    monthlyRevenue: subscriptions.reduce((sum, s) => sum + (s.price || 0), 0),
+    activeCount: subscriptions.filter(s => s.status === 'active').length,
+    totalBalance: subscriptions.reduce((sum, s) => sum + ((s.panel as any)?.balance || 0), 0)
   };
 
   const filteredSubs = subscriptions.filter(sub =>
@@ -123,13 +185,19 @@ const SubscriptionManagement = () => {
       </Helmet>
 
       {/* Header */}
-      <motion.div variants={itemVariants}>
-        <h1 className="text-2xl md:text-3xl font-bold">Subscription Management</h1>
-        <p className="text-muted-foreground">Monitor and manage panel subscriptions</p>
+      <motion.div variants={itemVariants} className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold">Subscription Management</h1>
+          <p className="text-muted-foreground">Monitor and manage panel subscriptions</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={fetchSubscriptions} disabled={loading}>
+          <RefreshCw className={cn("w-4 h-4 mr-2", loading && "animate-spin")} />
+          Refresh
+        </Button>
       </motion.div>
 
-      {/* Stats Grid */}
-      <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      {/* Enhanced Stats Grid */}
+      <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-7 gap-4">
         <Card className="glass-card-hover">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -138,7 +206,21 @@ const SubscriptionManagement = () => {
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats.totalSubscriptions}</p>
-                <p className="text-xs text-muted-foreground">Total Subscriptions</p>
+                <p className="text-xs text-muted-foreground">Total</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="glass-card-hover">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-emerald-500/10">
+                <TrendingUp className="w-5 h-5 text-emerald-500" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{stats.activeCount}</p>
+                <p className="text-xs text-muted-foreground">Active</p>
               </div>
             </div>
           </CardContent>
@@ -152,7 +234,7 @@ const SubscriptionManagement = () => {
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats.freeCount}</p>
-                <p className="text-xs text-muted-foreground">Free Plans</p>
+                <p className="text-xs text-muted-foreground">Free</p>
               </div>
             </div>
           </CardContent>
@@ -166,7 +248,7 @@ const SubscriptionManagement = () => {
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats.basicCount}</p>
-                <p className="text-xs text-muted-foreground">Basic Plans</p>
+                <p className="text-xs text-muted-foreground">Basic</p>
               </div>
             </div>
           </CardContent>
@@ -180,7 +262,7 @@ const SubscriptionManagement = () => {
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats.proCount}</p>
-                <p className="text-xs text-muted-foreground">Pro Plans</p>
+                <p className="text-xs text-muted-foreground">Pro</p>
               </div>
             </div>
           </CardContent>
@@ -194,7 +276,21 @@ const SubscriptionManagement = () => {
               </div>
               <div>
                 <p className="text-2xl font-bold">${stats.monthlyRevenue}</p>
-                <p className="text-xs text-muted-foreground">Monthly Revenue</p>
+                <p className="text-xs text-muted-foreground">MRR</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="glass-card-hover">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-purple-500/10">
+                <Wallet className="w-5 h-5 text-purple-500" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">${stats.totalBalance.toFixed(0)}</p>
+                <p className="text-xs text-muted-foreground">Balances</p>
               </div>
             </div>
           </CardContent>
@@ -242,7 +338,7 @@ const SubscriptionManagement = () => {
               <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
                 {loading ? (
                   [1, 2, 3].map(i => (
-                    <div key={i} className="h-24 bg-muted rounded-xl animate-pulse" />
+                    <div key={i} className="h-32 bg-muted rounded-xl animate-pulse" />
                   ))
                 ) : columnSubs.length === 0 ? (
                   <div className="glass-card p-6 text-center">
@@ -255,24 +351,58 @@ const SubscriptionManagement = () => {
                       key={sub.id}
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      className="glass-card-hover p-3 md:p-4 space-y-3 cursor-pointer group"
+                      className="glass-card-hover p-3 md:p-4 space-y-3 group"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
-                          <p className="font-medium group-hover:text-primary transition-colors text-sm md:text-base truncate">
+                          <p className="font-medium text-sm md:text-base truncate">
                             {sub.panel?.name || 'Unknown Panel'}
                           </p>
                           <p className="text-xs text-muted-foreground truncate">
                             {sub.panel?.owner?.email}
                           </p>
                         </div>
-                        <Badge className={cn(
-                          "text-xs shrink-0",
-                          sub.status === 'active' && "bg-emerald-500/20 text-emerald-500",
-                          sub.status === 'expired' && "bg-destructive/20 text-destructive"
-                        )}>
-                          {sub.status}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge className={cn(
+                            "text-xs shrink-0",
+                            sub.status === 'active' && "bg-emerald-500/20 text-emerald-500",
+                            sub.status === 'cancelled' && "bg-destructive/20 text-destructive",
+                            sub.status === 'expired' && "bg-amber-500/20 text-amber-500"
+                          )}>
+                            {sub.status}
+                          </Badge>
+                          
+                          {/* Actions Dropdown */}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreVertical className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuItem onClick={() => setUpgradeDialog({ open: true, subscription: sub })}>
+                                <ArrowUp className="w-4 h-4 mr-2" />
+                                Upgrade/Downgrade
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setExtendDialog({ open: true, subscription: sub })}>
+                                <CalendarPlus className="w-4 h-4 mr-2" />
+                                Extend Duration
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setAddFundsDialog({ open: true, subscription: sub })}>
+                                <Wallet className="w-4 h-4 mr-2" />
+                                Manage Funds
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem 
+                                onClick={() => setCancelDialog({ open: true, subscription: sub })}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <XCircle className="w-4 h-4 mr-2" />
+                                Cancel Subscription
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </div>
                       
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -285,16 +415,22 @@ const SubscriptionManagement = () => {
                           ${sub.price}/mo
                         </div>
                       </div>
+
+                      {/* Balance indicator */}
+                      <div className="flex items-center justify-between pt-2 border-t border-border/50">
+                        <span className="text-xs text-muted-foreground">Balance</span>
+                        <Badge variant="outline" className="text-xs">
+                          ${((sub.panel as any)?.balance || 0).toFixed(2)}
+                        </Badge>
+                      </div>
                       
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                      {/* Quick action */}
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity pt-2">
                         <Button 
                           size="sm" 
                           variant="outline" 
                           className="w-full text-xs gap-1"
-                          onClick={() => {
-                            // Navigate to panel management with this subscription
-                            window.location.href = `/admin/panels?subscription=${sub.id}`;
-                          }}
+                          onClick={() => window.location.href = `/admin/panels?subscription=${sub.id}`}
                         >
                           View Details <ArrowUpRight className="w-3 h-3" />
                         </Button>
@@ -307,6 +443,32 @@ const SubscriptionManagement = () => {
           );
         })}
       </motion.div>
+
+      {/* Dialogs */}
+      <UpgradeDialog
+        open={upgradeDialog.open}
+        onClose={() => setUpgradeDialog({ open: false, subscription: null })}
+        subscription={upgradeDialog.subscription}
+        onSuccess={fetchSubscriptions}
+      />
+      <ExtendDialog
+        open={extendDialog.open}
+        onClose={() => setExtendDialog({ open: false, subscription: null })}
+        subscription={extendDialog.subscription}
+        onSuccess={fetchSubscriptions}
+      />
+      <CancelDialog
+        open={cancelDialog.open}
+        onClose={() => setCancelDialog({ open: false, subscription: null })}
+        subscription={cancelDialog.subscription}
+        onSuccess={fetchSubscriptions}
+      />
+      <AddFundsDialog
+        open={addFundsDialog.open}
+        onClose={() => setAddFundsDialog({ open: false, subscription: null })}
+        subscription={addFundsDialog.subscription}
+        onSuccess={fetchSubscriptions}
+      />
     </motion.div>
   );
 };
