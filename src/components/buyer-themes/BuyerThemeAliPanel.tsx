@@ -18,22 +18,13 @@ export const BuyerThemeAliPanel = ({ children, className, themeMode = 'dark' }: 
         )}
       >
       <style>{`
+        /* ===== ALIPANEL THEME-SPECIFIC STYLES ===== */
+        /* Base unified variables are inherited from buyer-theme-variables.css */
+        
+        /* Legacy variable aliases for compatibility */
         .buyer-theme-alipanel {
-          --theme-background: #0A0A0A;
-          --theme-surface: #141414;
-          --theme-primary: #FF6B6B;
-          --theme-secondary: #FF8E53;
-          --theme-accent: #FF6B9D;
-          --theme-text: #FFFFFF;
-          --theme-muted: #A1A1AA;
           --theme-gradient: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 50%, #FFCC70 100%);
           --theme-glow: 0 0 40px rgba(255, 107, 107, 0.3);
-          background: var(--theme-background);
-          color: var(--theme-text);
-        }
-        
-        /* Override panel variables for this theme */
-        .buyer-theme-alipanel {
           --panel-primary: #FF6B6B;
           --panel-secondary: #FF8E53;
           --panel-accent: #FFCC70;
@@ -49,6 +40,7 @@ export const BuyerThemeAliPanel = ({ children, className, themeMode = 'dark' }: 
           --step-glow: 0 0 16px rgba(255, 107, 107, 0.6);
         }
         
+        /* Theme-specific component styles */
         .buyer-theme-alipanel .theme-card {
           background: rgba(20, 20, 20, 0.8);
           border: 1px solid rgba(255, 107, 107, 0.1);
@@ -92,61 +84,10 @@ export const BuyerThemeAliPanel = ({ children, className, themeMode = 'dark' }: 
                       radial-gradient(ellipse at bottom right, rgba(255, 142, 83, 0.1) 0%, transparent 50%);
         }
         
-        /* Dashboard elements - Dark mode */
-        .buyer-theme-alipanel .glass-card,
-        .buyer-theme-alipanel [class*="Card"] {
-          background: rgba(20, 20, 20, 0.8) !important;
-          border-color: rgba(255, 107, 107, 0.15) !important;
-        }
-        
-        .buyer-theme-alipanel .glass-sidebar {
-          background: rgba(10, 10, 10, 0.95) !important;
-          border-color: rgba(255, 107, 107, 0.1) !important;
-        }
-        
-        .buyer-theme-alipanel input,
-        .buyer-theme-alipanel textarea,
-        .buyer-theme-alipanel select {
-          background: rgba(20, 20, 20, 0.9) !important;
-          border-color: rgba(255, 107, 107, 0.2) !important;
-          color: #FFFFFF !important;
-        }
-        
-        .buyer-theme-alipanel input::placeholder,
-        .buyer-theme-alipanel textarea::placeholder {
-          color: #71717A !important;
-        }
-        
-        .buyer-theme-alipanel input:focus,
-        .buyer-theme-alipanel textarea:focus,
-        .buyer-theme-alipanel select:focus {
-          border-color: #FF6B6B !important;
-          box-shadow: 0 0 0 2px rgba(255, 107, 107, 0.2) !important;
-        }
-        
-        .buyer-theme-alipanel table {
-          background: rgba(20, 20, 20, 0.5) !important;
-        }
-        
-        .buyer-theme-alipanel thead {
-          background: rgba(255, 107, 107, 0.1) !important;
-        }
-        
-        .buyer-theme-alipanel tbody tr:hover {
-          background: rgba(255, 107, 107, 0.05) !important;
-        }
-        
-        /* ===== COMPREHENSIVE LIGHT MODE ===== */
-        .light .buyer-theme-alipanel {
-          --theme-background: #FFFBFB;
-          --theme-surface: #FFFFFF;
-          --theme-text: #1A1A1A;
-          --theme-muted: #6B7280;
-          --panel-nav-active-text: #FF6B6B;
-        }
-        
+        /* ===== LIGHT MODE OVERRIDES ===== */
         .light .buyer-theme-alipanel {
           background: linear-gradient(180deg, #FFFBFB 0%, #FFF5F5 100%);
+          --panel-nav-active-text: #FF6B6B;
         }
         
         .light .buyer-theme-alipanel .theme-card {
@@ -167,190 +108,6 @@ export const BuyerThemeAliPanel = ({ children, className, themeMode = 'dark' }: 
         
         .light .buyer-theme-alipanel .theme-button-primary {
           box-shadow: 0 4px 20px rgba(255, 107, 107, 0.25);
-        }
-        
-        /* Light mode dashboard elements */
-        .light .buyer-theme-alipanel .glass-card,
-        .light .buyer-theme-alipanel [class*="Card"] {
-          background: #FFFFFF !important;
-          border-color: rgba(255, 107, 107, 0.12) !important;
-          box-shadow: 0 4px 20px rgba(255, 107, 107, 0.06) !important;
-        }
-        
-        .light .buyer-theme-alipanel .glass-sidebar {
-          background: #FFFFFF !important;
-          border-color: rgba(255, 107, 107, 0.1) !important;
-          box-shadow: 2px 0 20px rgba(255, 107, 107, 0.05) !important;
-        }
-        
-        .light .buyer-theme-alipanel input,
-        .light .buyer-theme-alipanel textarea,
-        .light .buyer-theme-alipanel select {
-          background: #FFFFFF !important;
-          border-color: rgba(255, 107, 107, 0.2) !important;
-          color: #1A1A1A !important;
-        }
-        
-        .light .buyer-theme-alipanel input::placeholder,
-        .light .buyer-theme-alipanel textarea::placeholder {
-          color: #9CA3AF !important;
-        }
-        
-        .light .buyer-theme-alipanel table {
-          background: #FFFFFF !important;
-        }
-        
-        .light .buyer-theme-alipanel thead {
-          background: rgba(255, 107, 107, 0.08) !important;
-        }
-        
-        .light .buyer-theme-alipanel tbody tr:hover {
-          background: rgba(255, 107, 107, 0.04) !important;
-        }
-        
-        .light .buyer-theme-alipanel .nav-item.active,
-        .light .buyer-theme-alipanel .nav-item:hover {
-          background: rgba(255, 107, 107, 0.1) !important;
-        }
-        
-        /* Light mode text colors */
-        .light .buyer-theme-alipanel h1,
-        .light .buyer-theme-alipanel h2,
-        .light .buyer-theme-alipanel h3,
-        .light .buyer-theme-alipanel h4,
-        .light .buyer-theme-alipanel h5,
-        .light .buyer-theme-alipanel h6 {
-          color: #1A1A1A;
-        }
-        
-        .light .buyer-theme-alipanel p,
-        .light .buyer-theme-alipanel span:not(.theme-gradient-text):not(.balance-display):not(button span) {
-          color: #374151;
-        }
-        
-        /* Balance display - always white */
-        .buyer-theme-alipanel .balance-display,
-        .light .buyer-theme-alipanel .balance-display,
-        .dark .buyer-theme-alipanel .balance-display {
-          color: #FFFFFF !important;
-        }
-        
-        .light .buyer-theme-alipanel .text-muted-foreground {
-          color: #6B7280 !important;
-        }
-        
-        /* Light mode badges and chips */
-        .light .buyer-theme-alipanel [class*="Badge"],
-        .light .buyer-theme-alipanel .badge {
-          background: rgba(255, 107, 107, 0.1) !important;
-          color: #FF6B6B !important;
-          border-color: rgba(255, 107, 107, 0.2) !important;
-        }
-        
-        /* Light mode footer */
-        .light .buyer-theme-alipanel footer {
-          background: linear-gradient(180deg, #FFFBFB 0%, #FFF0F0 100%) !important;
-          border-top: 1px solid rgba(255, 107, 107, 0.1) !important;
-        }
-        
-        /* Light mode dropdowns and popovers */
-        .light .buyer-theme-alipanel [data-radix-popper-content-wrapper] > div,
-        .light .buyer-theme-alipanel [role="listbox"],
-        .light .buyer-theme-alipanel [role="menu"] {
-          background: #FFFFFF !important;
-          border-color: rgba(255, 107, 107, 0.15) !important;
-          box-shadow: 0 10px 40px rgba(255, 107, 107, 0.12) !important;
-        }
-        
-        /* Light mode skeleton loading */
-        .light .buyer-theme-alipanel .skeleton,
-        .light .buyer-theme-alipanel [class*="Skeleton"] {
-          background: rgba(255, 107, 107, 0.08) !important;
-        }
-        
-        /* Light mode scrollbar */
-        .light .buyer-theme-alipanel ::-webkit-scrollbar-thumb {
-          background: rgba(255, 107, 107, 0.3);
-        }
-        .light .buyer-theme-alipanel ::-webkit-scrollbar-track {
-          background: rgba(255, 107, 107, 0.05);
-        }
-        
-        /* Light mode accordion */
-        .light .buyer-theme-alipanel [data-state="open"] {
-          background: rgba(255, 107, 107, 0.04) !important;
-        }
-        
-        /* Light mode buttons - comprehensive */
-        .light .buyer-theme-alipanel button:not(.theme-button-primary):not([class*="gradient"]) {
-          color: #1A1A1A;
-        }
-        
-        .light .buyer-theme-alipanel a {
-          color: #374151;
-        }
-        
-        .light .buyer-theme-alipanel a:hover {
-          color: #FF6B6B;
-        }
-        
-        /* Light mode secondary buttons */
-        .light .buyer-theme-alipanel .btn-secondary,
-        .light .buyer-theme-alipanel button[variant="secondary"],
-        .light .buyer-theme-alipanel button[variant="outline"],
-        .light .buyer-theme-alipanel button[variant="ghost"] {
-          background: rgba(255, 107, 107, 0.08) !important;
-          color: #FF6B6B !important;
-          border-color: rgba(255, 107, 107, 0.2) !important;
-        }
-        
-        .light .buyer-theme-alipanel .btn-secondary:hover,
-        .light .buyer-theme-alipanel button[variant="secondary"]:hover,
-        .light .buyer-theme-alipanel button[variant="outline"]:hover,
-        .light .buyer-theme-alipanel button[variant="ghost"]:hover {
-          background: rgba(255, 107, 107, 0.15) !important;
-        }
-        
-        /* Light mode icons */
-        .light .buyer-theme-alipanel svg:not([class*="gradient"]) {
-          color: inherit;
-        }
-        
-        /* Light mode dialog/modal */
-        .light .buyer-theme-alipanel [role="dialog"] {
-          background: #FFFFFF !important;
-          border-color: rgba(255, 107, 107, 0.15) !important;
-        }
-        
-        /* Light mode tabs */
-        .light .buyer-theme-alipanel [role="tablist"] {
-          background: rgba(255, 107, 107, 0.05) !important;
-        }
-        
-        .light .buyer-theme-alipanel [role="tab"][data-state="active"] {
-          background: #FFFFFF !important;
-          color: #FF6B6B !important;
-        }
-        
-        /* Light mode links in nav */
-        .light .buyer-theme-alipanel nav a,
-        .light .buyer-theme-alipanel header a {
-          color: #374151;
-        }
-        
-        .light .buyer-theme-alipanel nav a:hover,
-        .light .buyer-theme-alipanel header a:hover {
-          color: #FF6B6B;
-        }
-        
-        /* Ensure proper color inheritance */
-        .light .buyer-theme-alipanel * {
-          border-color: inherit;
-        }
-        
-        .light .buyer-theme-alipanel,
-        .light .buyer-theme-alipanel .buyer-theme-wrapper {
-          color: #1A1A1A;
         }
       `}</style>
         {children}
