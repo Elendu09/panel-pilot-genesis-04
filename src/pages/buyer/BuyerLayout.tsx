@@ -37,7 +37,7 @@ import { LanguageSelector } from "@/components/buyer/LanguageSelector";
 import { CurrencySelector } from "@/components/buyer/CurrencySelector";
 import { TenantHead } from "@/components/tenant/TenantHead";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { BuyerThemeWrapper } from "@/components/buyer-themes";
+import { BuyerThemeWrapper, useBuyerTheme } from "@/components/buyer-themes";
 import { generateBuyerThemeCSS } from "@/lib/color-utils";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { BuyerOnboardingTour } from "@/components/buyer/BuyerOnboardingTour";
@@ -53,7 +53,15 @@ interface PanelSettings {
   blog_enabled?: boolean;
 }
 
-const BuyerLayout = ({ children }: BuyerLayoutProps) => {
+// Component that conditionally renders theme toggle based on active theme
+const ConditionalThemeToggle = () => {
+  const { themeKey } = useBuyerTheme();
+  // SMMVisit is light-mode only, hide the toggle
+  if (themeKey === 'smmvisit') return null;
+  return <BuyerThemeToggle />;
+};
+
+const BuyerLayoutInner = ({ children }: BuyerLayoutProps) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
   const { panel } = useTenant();
@@ -245,7 +253,7 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
             <CurrencySelector />
             <LanguageSelector />
             <BuyerNotifications />
-            <BuyerThemeToggle />
+            <ConditionalThemeToggle />
             <Button variant="ghost" size="icon" className="h-9 w-9">
               <HelpCircle className="w-4 h-4" />
             </Button>
@@ -288,7 +296,7 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
         </nav>
 
         <div className="flex flex-col items-center gap-2">
-          <BuyerThemeToggle />
+          <ConditionalThemeToggle />
           <Button 
             variant="ghost" 
             size="icon" 
@@ -322,7 +330,7 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
           </motion.div>
           <BuyerNotifications />
           <LanguageSelector />
-          <BuyerThemeToggle />
+          <ConditionalThemeToggle />
         </div>
       </header>
 
@@ -594,6 +602,11 @@ const BuyerLayout = ({ children }: BuyerLayoutProps) => {
     </div>
     </BuyerThemeWrapper>
   );
+};
+
+// Main export - wrapper that provides theme context
+const BuyerLayout = ({ children }: BuyerLayoutProps) => {
+  return <BuyerLayoutInner>{children}</BuyerLayoutInner>;
 };
 
 export default BuyerLayout;

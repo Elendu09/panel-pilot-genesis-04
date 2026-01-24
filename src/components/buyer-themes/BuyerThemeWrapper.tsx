@@ -73,7 +73,7 @@ export const BuyerThemeWrapper = ({
   const [refreshKey, setRefreshKey] = useState(0);
   
   // Use the buyer theme context for consistent theme mode
-  const { themeMode } = useBuyerThemeMode();
+  const { themeMode: contextThemeMode } = useBuyerThemeMode();
 
   // Listen for design updates to refresh theme instantly
   useEffect(() => {
@@ -147,6 +147,9 @@ export const BuyerThemeWrapper = ({
   // Get theme component and config
   const ThemeComponent = themeComponents[themeKey] || themeComponents.default;
   const themeConfig = themeConfigs[themeKey] || themeConfigs.default;
+
+  // Force light mode for SMMVisit theme (it's light-mode only)
+  const themeMode = themeKey === 'smmvisit' ? 'light' : contextThemeMode;
 
   // Build full customization from panel data
   const customization = useMemo(() => {

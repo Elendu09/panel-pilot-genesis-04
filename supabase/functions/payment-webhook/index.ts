@@ -474,6 +474,27 @@ serve(async (req) => {
                 title: 'Deposit Successful',
                 message: `$${depositAmount.toFixed(2)} has been added to your account via ${gateway}`,
               });
+
+            // Also create panel notification for panel owner
+            if (txPanelId) {
+              const { data: panelOwner } = await supabase
+                .from('panels')
+                .select('owner_id')
+                .eq('id', txPanelId)
+                .single();
+
+              if (panelOwner?.owner_id) {
+                await supabase
+                  .from('panel_notifications')
+                  .insert({
+                    panel_id: txPanelId,
+                    user_id: panelOwner.owner_id,
+                    type: 'payment',
+                    title: 'Payment Received',
+                    message: `A deposit of $${depositAmount.toFixed(2)} was completed via ${gateway}.`,
+                  });
+              }
+            }
           }
         }
       }

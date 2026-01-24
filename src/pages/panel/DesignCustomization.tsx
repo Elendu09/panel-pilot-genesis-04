@@ -1671,25 +1671,41 @@ export default function DesignCustomization() {
 
         return (
           <div className="space-y-4">
-            {/* Theme Mode Toggle */}
-            <div className="flex items-center justify-between p-3 rounded-lg bg-accent/30">
-              <div className="flex items-center gap-2">
-                {customization.themeMode === 'light' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-                <span className="font-medium">Theme Mode</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">
-                  {customization.themeMode === 'light' ? 'Light' : 'Dark'}
-                </span>
-                <Switch 
-                  checked={customization.themeMode === 'light'} 
-                  onCheckedChange={(checked) => {
-                    updateCustomization('themeMode', checked ? 'light' : 'dark');
-                    setPreviewThemeMode(checked ? 'light' : 'dark');
-                  }} 
-                />
-              </div>
-            </div>
+            {/* Theme Mode Toggle - Hidden for SMMVisit (light-mode only) */}
+            {(() => {
+              const isSMMVisitTheme = customization.selectedTheme === 'theme_smmvisit' || customization.selectedTheme === 'smmvisit';
+              if (isSMMVisitTheme) {
+                return (
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                    <div className="flex items-center gap-2">
+                      <Sun className="w-4 h-4 text-amber-500" />
+                      <span className="font-medium">Light Mode Only</span>
+                    </div>
+                    <span className="text-xs text-amber-600">SMMVisit theme is light-mode only</span>
+                  </div>
+                );
+              }
+              return (
+                <div className="flex items-center justify-between p-3 rounded-lg bg-accent/30">
+                  <div className="flex items-center gap-2">
+                    {customization.themeMode === 'light' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                    <span className="font-medium">Theme Mode</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">
+                      {customization.themeMode === 'light' ? 'Light' : 'Dark'}
+                    </span>
+                    <Switch 
+                      checked={customization.themeMode === 'light'} 
+                      onCheckedChange={(checked) => {
+                        updateCustomization('themeMode', checked ? 'light' : 'dark');
+                        setPreviewThemeMode(checked ? 'light' : 'dark');
+                      }} 
+                    />
+                  </div>
+                </div>
+              );
+            })()}
             
             {colorGroups.map((group) => (
               <div key={group.label} className="space-y-2">
@@ -3434,25 +3450,27 @@ export default function DesignCustomization() {
                 </div>
               </div>
               <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
-                {/* Light/Dark Mode Toggle - Desktop */}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    "h-7 w-7 sm:h-8 sm:w-8 p-0 transition-colors",
-                    previewThemeMode === 'dark' 
-                      ? "bg-slate-800 hover:bg-slate-700" 
-                      : "bg-amber-100 hover:bg-amber-200"
-                  )}
-                  onClick={togglePreviewTheme}
-                  title={previewThemeMode === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-                >
-                  {previewThemeMode === 'dark' ? (
-                    <Sun className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-400" />
-                  ) : (
-                    <Moon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-600" />
-                  )}
-                </Button>
+                {/* Light/Dark Mode Toggle - Hidden for SMMVisit (light-mode only) */}
+                {!(customization.selectedTheme === 'theme_smmvisit' || customization.selectedTheme === 'smmvisit') && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={cn(
+                      "h-7 w-7 sm:h-8 sm:w-8 p-0 transition-colors",
+                      previewThemeMode === 'dark' 
+                        ? "bg-slate-800 hover:bg-slate-700" 
+                        : "bg-amber-100 hover:bg-amber-200"
+                    )}
+                    onClick={togglePreviewTheme}
+                    title={previewThemeMode === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                  >
+                    {previewThemeMode === 'dark' ? (
+                      <Sun className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-400" />
+                    ) : (
+                      <Moon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-600" />
+                    )}
+                  </Button>
+                )}
 
                 {/* RTL/LTR Toggle */}
                 <Button
