@@ -9,7 +9,8 @@ import {
   CreditCard, 
   Wallet,
   Zap,
-  Bitcoin
+  Bitcoin,
+  Loader2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -23,8 +24,8 @@ const quickAmounts = [10, 25, 50, 100, 250, 500];
 const paymentMethods = [
   { id: "stripe", name: "Credit Card", icon: CreditCard, available: true },
   { id: "paypal", name: "PayPal", icon: Wallet, available: true },
-  { id: "crypto", name: "Crypto", icon: Bitcoin, available: true },
-  { id: "perfectmoney", name: "Perfect Money", icon: DollarSign, available: false },
+  { id: "coinbase", name: "Crypto", icon: Bitcoin, available: true },
+  { id: "flutterwave", name: "Flutterwave", icon: DollarSign, available: true },
 ];
 
 export const QuickDeposit = ({ onDeposit, loading }: QuickDepositProps) => {
@@ -40,6 +41,9 @@ export const QuickDeposit = ({ onDeposit, loading }: QuickDepositProps) => {
     if (isNaN(numAmount) || numAmount <= 0) return;
     onDeposit(numAmount, selectedMethod);
   };
+
+  const numericAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+  const isValidAmount = !isNaN(numericAmount) && numericAmount > 0;
 
   return (
     <Card className="bg-card/60 backdrop-blur-xl border-border/50">
@@ -63,6 +67,7 @@ export const QuickDeposit = ({ onDeposit, loading }: QuickDepositProps) => {
                   amount === value && "ring-2 ring-primary ring-offset-2 ring-offset-background"
                 )}
                 onClick={() => handleQuickAmount(value)}
+                disabled={loading}
               >
                 ${value}
               </Button>
@@ -78,10 +83,13 @@ export const QuickDeposit = ({ onDeposit, loading }: QuickDepositProps) => {
             <Input
               id="custom-amount"
               type="number"
+              min="1"
+              step="0.01"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               className="pl-10 text-lg h-12"
               placeholder="Enter amount"
+              disabled={loading}
             />
           </div>
         </div>
@@ -96,7 +104,7 @@ export const QuickDeposit = ({ onDeposit, loading }: QuickDepositProps) => {
                 <Button
                   key={method.id}
                   variant="outline"
-                  disabled={!method.available}
+                  disabled={!method.available || loading}
                   className={cn(
                     "h-14 justify-start gap-3 relative",
                     selectedMethod === method.id && method.available && "border-primary bg-primary/5 ring-2 ring-primary ring-offset-2 ring-offset-background"
@@ -120,14 +128,23 @@ export const QuickDeposit = ({ onDeposit, loading }: QuickDepositProps) => {
         <Button 
           className="w-full h-12 text-lg gap-2" 
           onClick={handleDeposit}
-          disabled={loading || !amount || (typeof amount === 'string' && parseFloat(amount) <= 0)}
+          disabled={loading || !isValidAmount}
         >
-          <DollarSign className="w-5 h-5" />
-          {loading ? "Processing..." : `Deposit $${typeof amount === 'string' ? amount : amount.toFixed(2)}`}
+          {loading ? (
+            <>
+              <Loader2 className="w-5 h-5 animate-spin" />
+              Processing...
+            </>
+          ) : (
+            <>
+              <DollarSign className="w-5 h-5" />
+              Deposit ${isValidAmount ? numericAmount.toFixed(2) : '0.00'}
+            </>
+          )}
         </Button>
 
         <p className="text-xs text-center text-muted-foreground">
-          Secure payment processing. Funds are credited instantly.
+          Secure payment processing. You'll be redirected to complete payment.
         </p>
       </CardContent>
     </Card>

@@ -12,7 +12,8 @@ import {
   Calendar,
   DollarSign,
   Sparkles,
-  Percent
+  Percent,
+  Loader2
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { useAuth } from '@/contexts/AuthContext';
@@ -105,6 +106,7 @@ const Billing = () => {
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [panelBalance, setPanelBalance] = useState(0);
   const [depositLoading, setDepositLoading] = useState(false);
+  const [upgradeLoading, setUpgradeLoading] = useState<string | null>(null);
   const [commissionData, setCommissionData] = useState<CommissionData>({
     commissionRate: 5,
     earnedThisMonth: 0,
@@ -115,6 +117,28 @@ const Billing = () => {
   useEffect(() => {
     if (panel?.id) {
       fetchBillingData();
+      // Subscribe to transaction updates for real-time balance
+      const channel = supabase
+        .channel('billing-transactions')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'transactions',
+          filter: `panel_id=eq.${panel.id}`
+        }, (payload) => {
+          if (payload.new && (payload.new as any).status === 'completed') {
+            toast({ 
+              title: 'Payment Completed!', 
+              description: `$${(payload.new as any).amount?.toFixed(2) || '0.00'} has been added to your balance.` 
+            });
+            fetchBillingData();
+          }
+        })
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
   }, [panel?.id]);
 
@@ -154,7 +178,7 @@ const Billing = () => {
         setCommissionData({
           commissionRate: panel.commission_rate || 5,
           earnedThisMonth,
-          pendingCommission: earnedThisMonth, // Simplified - all this month is pending
+          pendingCommission: earnedThisMonth,
           paidCommission: totalFees - earnedThisMonth,
         });
       }
@@ -166,69 +190,150 @@ const Billing = () => {
   };
 
   const handleUpgrade = async (planName: string) => {
-    if (!panel?.id) return;
+    if (!panel?.id || !profile?.id) return;
 
     const plan = plans.find(p => p.name.toLowerCase() === planName.toLowerCase());
     if (!plan) return;
 
+    // Free plan - direct upgrade without payment
+    if (plan.price === 0) {
+      try {
+        const { error } = await supabase
+          .from('panel_subscriptions')
+          .upsert({
+            panel_id: panel.id,
+            plan_type: 'free' as const,
+            price: 0,
+            status: 'active',
+            started_at: new Date().toISOString(),
+            expires_at: null
+          }, { onConflict: 'panel_id' });
+
+        if (error) throw error;
+        toast({ title: 'Success', description: 'Switched to Free plan!' });
+        fetchBillingData();
+      } catch (error) {
+        console.error('Error switching to free:', error);
+        toast({ variant: 'destructive', title: 'Error', description: 'Failed to switch plan' });
+      }
+      return;
+    }
+
+    // Paid plan - go through payment flow
+    setUpgradeLoading(planName);
     try {
-      const { error } = await supabase
-        .from('panel_subscriptions')
-        .upsert({
-          panel_id: panel.id,
-          plan_type: planName.toLowerCase() as 'free' | 'basic' | 'pro',
-          price: plan.price,
-          status: 'active',
-          started_at: new Date().toISOString(),
-          expires_at: plan.price > 0 
-            ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() 
-            : null
-        }, { onConflict: 'panel_id' });
+      const { data, error } = await supabase.functions.invoke('process-payment', {
+        body: {
+          gateway: 'stripe', // Default to stripe for subscriptions
+          amount: plan.price,
+          panelId: panel.id,
+          buyerId: profile.id,
+          returnUrl: `${window.location.origin}/panel/billing?upgrade=success`,
+          cancelUrl: `${window.location.origin}/panel/billing?upgrade=cancelled`,
+          metadata: {
+            type: 'subscription',
+            plan: planName.toLowerCase(),
+            panelId: panel.id
+          }
+        }
+      });
 
       if (error) throw error;
 
-      toast({ title: 'Success', description: `Upgraded to ${plan.name} plan!` });
-      fetchBillingData();
-    } catch (error) {
+      if (data?.redirectUrl) {
+        window.location.href = data.redirectUrl;
+      } else if (data?.success) {
+        toast({ title: 'Success', description: `Upgraded to ${plan.name} plan!` });
+        fetchBillingData();
+      } else {
+        throw new Error(data?.error || 'Payment initialization failed');
+      }
+    } catch (error: any) {
       console.error('Error upgrading:', error);
-      toast({ variant: 'destructive', title: 'Error', description: 'Failed to upgrade plan' });
+      toast({ 
+        variant: 'destructive', 
+        title: 'Upgrade Failed', 
+        description: error.message || 'Failed to initiate payment. Please try again.' 
+      });
+    } finally {
+      setUpgradeLoading(null);
     }
   };
 
   const handleDeposit = async (amount: number, method: string) => {
-    if (!panel?.id) return;
+    if (!panel?.id || !profile?.id) return;
 
     setDepositLoading(true);
     try {
-      const { error } = await supabase
-        .from('panels')
-        .update({ balance: panelBalance + amount })
-        .eq('id', panel.id);
+      // Create transaction and initiate payment
+      const { data, error } = await supabase.functions.invoke('process-payment', {
+        body: {
+          gateway: method,
+          amount,
+          panelId: panel.id,
+          buyerId: profile.id,
+          returnUrl: `${window.location.origin}/panel/billing?deposit=success`,
+          cancelUrl: `${window.location.origin}/panel/billing?deposit=cancelled`,
+          metadata: {
+            type: 'panel_deposit',
+            panelId: panel.id
+          }
+        }
+      });
 
       if (error) throw error;
 
-      // Log transaction
-      await supabase.from('transactions').insert({
-        user_id: profile?.id,
-        amount,
-        type: 'deposit',
-        payment_method: method,
-        description: `Balance top-up via ${method}`,
-        status: 'completed'
-      });
-
-      toast({ title: 'Success', description: `Added $${amount.toFixed(2)} via ${method}` });
-      fetchBillingData();
-    } catch (error) {
+      if (data?.redirectUrl) {
+        window.location.href = data.redirectUrl;
+      } else if (data?.success) {
+        toast({ title: 'Success', description: `Deposit of $${amount.toFixed(2)} initiated!` });
+        fetchBillingData();
+      } else {
+        throw new Error(data?.error || 'Payment initialization failed');
+      }
+    } catch (error: any) {
       console.error('Error adding funds:', error);
-      toast({ variant: 'destructive', title: 'Error', description: 'Failed to add funds' });
+      toast({ 
+        variant: 'destructive', 
+        title: 'Deposit Failed', 
+        description: error.message || 'Failed to initiate deposit. Please try again.' 
+      });
     } finally {
       setDepositLoading(false);
     }
   };
 
-  const handlePayCommission = () => {
-    toast({ title: 'Commission Payment', description: 'Redirecting to payment...' });
+  const handlePayCommission = async () => {
+    if (!panel?.id || !profile?.id || commissionData.pendingCommission <= 0) return;
+
+    try {
+      const { data, error } = await supabase.functions.invoke('process-payment', {
+        body: {
+          gateway: 'stripe',
+          amount: commissionData.pendingCommission,
+          panelId: panel.id,
+          buyerId: profile.id,
+          returnUrl: `${window.location.origin}/panel/billing?commission=success`,
+          cancelUrl: `${window.location.origin}/panel/billing?commission=cancelled`,
+          metadata: {
+            type: 'commission_payment',
+            panelId: panel.id
+          }
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.redirectUrl) {
+        window.location.href = data.redirectUrl;
+      }
+    } catch (error) {
+      toast({ 
+        variant: 'destructive', 
+        title: 'Error', 
+        description: 'Failed to initiate commission payment' 
+      });
+    }
   };
 
   const currentPlan = subscription?.plan_type || 'free';
@@ -384,6 +489,7 @@ const Billing = () => {
           {plans.map((plan) => {
             const Icon = plan.icon;
             const isCurrent = currentPlan === plan.name.toLowerCase();
+            const isLoading = upgradeLoading === plan.name;
             
             return (
               <motion.div
@@ -441,9 +547,14 @@ const Billing = () => {
                       )}
                       variant={plan.popular ? 'default' : 'outline'}
                       onClick={() => !isCurrent && handleUpgrade(plan.name)}
-                      disabled={isCurrent}
+                      disabled={isCurrent || isLoading}
                     >
-                      {isCurrent ? (
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Processing...
+                        </>
+                      ) : isCurrent ? (
                         'Current Plan'
                       ) : (
                         <>
