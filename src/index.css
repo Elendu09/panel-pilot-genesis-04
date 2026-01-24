@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Buyer Theme System - Unified Variables & Components */
+@import './styles/buyer-theme-variables.css';
+@import './styles/buyer-theme-components.css';
+
 /* SMM Panel Platform Design System - Enhanced Glassmorphic */
 
 @layer base {

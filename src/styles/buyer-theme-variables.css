@@ -1,0 +1,195 @@
+/* ===== BUYER THEME SYSTEM - UNIFIED VARIABLES ===== */
+/* This file defines the base CSS custom properties for all buyer themes */
+
+/* Base tokens (inherited by all themes) */
+.buyer-theme-wrapper {
+  /* Semantic color tokens - override per theme */
+  --bt-background: #0F172A;
+  --bt-surface: #1E293B;
+  --bt-card: #1E293B;
+  --bt-primary: #6366F1;
+  --bt-secondary: #8B5CF6;
+  --bt-accent: #EC4899;
+  --bt-text: #FFFFFF;
+  --bt-text-secondary: #E5E7EB;
+  --bt-muted: #9CA3AF;
+  --bt-border: rgba(255, 255, 255, 0.1);
+  --bt-success: #10B981;
+  --bt-warning: #F59E0B;
+  --bt-error: #EF4444;
+  
+  /* RGB values for alpha operations */
+  --bt-primary-rgb: 99, 102, 241;
+  --bt-secondary-rgb: 139, 92, 246;
+  --bt-accent-rgb: 236, 72, 153;
+  
+  /* Computed effect tokens */
+  --bt-glow: 0 0 20px rgba(var(--bt-primary-rgb), 0.4);
+  --bt-glow-sm: 0 0 10px rgba(var(--bt-primary-rgb), 0.3);
+  --bt-glow-lg: 0 0 40px rgba(var(--bt-primary-rgb), 0.3);
+  --bt-gradient: linear-gradient(135deg, var(--bt-primary), var(--bt-secondary));
+  --bt-gradient-radial: radial-gradient(ellipse at top, var(--bt-primary), transparent 50%);
+  
+  /* Navigation tokens */
+  --bt-nav-bg: var(--bt-surface);
+  --bt-nav-border: var(--bt-border);
+  --bt-nav-active-bg: rgba(var(--bt-primary-rgb), 0.15);
+  --bt-nav-active-text: var(--bt-primary);
+  --bt-nav-inactive-text: var(--bt-muted);
+  
+  /* Card tokens */
+  --bt-card-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
+  --bt-card-hover-shadow: 0 8px 32px rgba(var(--bt-primary-rgb), 0.15);
+  --bt-card-border: var(--bt-border);
+  --bt-card-hover-border: rgba(var(--bt-primary-rgb), 0.3);
+  
+  /* Input tokens */
+  --bt-input-bg: var(--bt-surface);
+  --bt-input-border: var(--bt-border);
+  --bt-input-focus-border: var(--bt-primary);
+  --bt-input-focus-ring: rgba(var(--bt-primary-rgb), 0.2);
+  
+  /* Button tokens */
+  --bt-button-primary-bg: var(--bt-gradient);
+  --bt-button-primary-text: #FFFFFF;
+  --bt-button-secondary-bg: rgba(var(--bt-primary-rgb), 0.1);
+  --bt-button-secondary-border: rgba(var(--bt-primary-rgb), 0.25);
+  --bt-button-secondary-text: var(--bt-text);
+  
+  /* Skeleton/loading tokens */
+  --bt-skeleton-base: var(--bt-surface);
+  --bt-skeleton-shimmer: rgba(var(--bt-primary-rgb), 0.1);
+  
+  /* Apply base styles */
+  background: var(--bt-background);
+  color: var(--bt-text);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* ===== DARK MODE BASE ===== */
+.dark .buyer-theme-wrapper {
+  --bt-text: #FFFFFF;
+  --bt-text-secondary: #E5E7EB;
+  --bt-muted: #9CA3AF;
+  --bt-border: rgba(255, 255, 255, 0.1);
+}
+
+/* ===== LIGHT MODE BASE ===== */
+.light .buyer-theme-wrapper {
+  --bt-background: #FAFBFC;
+  --bt-surface: #FFFFFF;
+  --bt-card: #FFFFFF;
+  --bt-text: #1F2937;
+  --bt-text-secondary: #374151;
+  --bt-muted: #6B7280;
+  --bt-border: rgba(0, 0, 0, 0.1);
+  --bt-card-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+  --bt-nav-inactive-text: #6B7280;
+}
+
+/* ===== THEME-SPECIFIC VARIABLE OVERRIDES ===== */
+
+/* AliPanel: Red/Orange gradient theme */
+.buyer-theme-alipanel {
+  --bt-primary: #FF6B6B;
+  --bt-secondary: #FF8E53;
+  --bt-accent: #FFA07A;
+  --bt-primary-rgb: 255, 107, 107;
+  --bt-secondary-rgb: 255, 142, 83;
+}
+
+.dark .buyer-theme-alipanel {
+  --bt-background: #0A0A0A;
+  --bt-surface: #141414;
+  --bt-card: #141414;
+}
+
+.light .buyer-theme-alipanel {
+  --bt-background: #FFFBFB;
+  --bt-surface: #FFFFFF;
+}
+
+/* SMMVisit: Yellow/Gold accent theme */
+.buyer-theme-smmvisit {
+  --bt-primary: #FFD700;
+  --bt-secondary: #FFC107;
+  --bt-accent: #FFB300;
+  --bt-primary-rgb: 255, 215, 0;
+  --bt-secondary-rgb: 255, 193, 7;
+}
+
+.dark .buyer-theme-smmvisit {
+  --bt-background: #1C1F26;
+  --bt-surface: #262A33;
+  --bt-card: #262A33;
+  --bt-border: rgba(255, 215, 0, 0.12);
+  --bt-skeleton-shimmer: rgba(255, 215, 0, 0.15);
+}
+
+.light .buyer-theme-smmvisit {
+  --bt-background: #F5F5F5;
+  --bt-surface: #FFFFFF;
+  --bt-text: #1A1A1A;
+}
+
+/* FlySMM: Blue accent theme */
+.buyer-theme-flysmm {
+  --bt-primary: #2196F3;
+  --bt-secondary: #64B5F6;
+  --bt-accent: #03A9F4;
+  --bt-primary-rgb: 33, 150, 243;
+  --bt-secondary-rgb: 100, 181, 246;
+}
+
+.dark .buyer-theme-flysmm {
+  --bt-background: #0C1929;
+  --bt-surface: #132337;
+  --bt-card: #132337;
+}
+
+.light .buyer-theme-flysmm {
+  --bt-background: #F8FAFC;
+  --bt-surface: #FFFFFF;
+}
+
+/* SMMStay: Pink/Magenta neon theme */
+.buyer-theme-smmstay {
+  --bt-primary: #FF4081;
+  --bt-secondary: #FF80AB;
+  --bt-accent: #E91E63;
+  --bt-primary-rgb: 255, 64, 129;
+  --bt-secondary-rgb: 255, 128, 171;
+}
+
+.dark .buyer-theme-smmstay {
+  --bt-background: #000000;
+  --bt-surface: #0D0D0D;
+  --bt-card: #0D0D0D;
+  --bt-border: rgba(255, 64, 129, 0.15);
+}
+
+.light .buyer-theme-smmstay {
+  --bt-background: #FFFAFC;
+  --bt-surface: #FFFFFF;
+}
+
+/* TGRef: Teal/Cyan tech theme */
+.buyer-theme-tgref {
+  --bt-primary: #00D4AA;
+  --bt-secondary: #0EA5E9;
+  --bt-accent: #14F195;
+  --bt-primary-rgb: 0, 212, 170;
+  --bt-secondary-rgb: 14, 165, 233;
+}
+
+.dark .buyer-theme-tgref {
+  --bt-background: #1A1B26;
+  --bt-surface: #24283B;
+  --bt-card: #24283B;
+  --bt-border: rgba(0, 212, 170, 0.15);
+}
+
+.light .buyer-theme-tgref {
+  --bt-background: #F8FAFC;
+  --bt-surface: #FFFFFF;
+}
