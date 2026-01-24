@@ -300,21 +300,13 @@ export const SMMVisitHomepage = ({
             id="quick-login" 
             aria-label="Quick Login" 
             className="py-12"
-            style={{ 
-              backgroundColor: isLightMode ? '#F9FAFB' : 'transparent',
-              background: isLightMode ? '#F9FAFB' : 'radial-gradient(ellipse at center, rgba(255, 215, 0, 0.05) 0%, transparent 70%)'
-            }}
+            style={{ backgroundColor: isLightMode ? '#F9FAFB' : surfaceColor }}
           >
             <div className="mx-auto px-4" style={{ maxWidth: containerMax }}>
               <motion.div 
                 {...(enableAnimations ? { initial: { opacity: 0, y: 20 }, whileInView: { opacity: 1, y: 0 }, transition: { duration: 0.5 } } : {})}
                 className="p-6 md:p-8 rounded-3xl shadow-lg"
-                style={{ 
-                  backgroundColor: isLightMode ? '#FFFFFF' : 'rgba(38, 42, 51, 0.95)',
-                  border: isLightMode ? 'none' : '1px solid rgba(255, 215, 0, 0.15)',
-                  backdropFilter: isLightMode ? 'none' : 'blur(10px)',
-                  boxShadow: isLightMode ? '0 10px 40px rgba(0,0,0,0.08)' : '0 10px 50px rgba(0,0,0,0.4), 0 0 60px rgba(255, 215, 0, 0.05)'
-                }}
+                style={{ backgroundColor: isLightMode ? '#FFFFFF' : bgColor }}
               >
                 <h2 className="text-xl md:text-2xl font-bold mb-6" style={{ color: textCol }}>
                   {t('buyer.auth.loginTitle') || 'Login to your account'}
@@ -327,12 +319,9 @@ export const SMMVisitHomepage = ({
                     <div className="relative flex-1">
                       <div 
                         className="absolute left-0 top-0 bottom-0 w-12 flex items-center justify-center rounded-l-xl z-10"
-                        style={{ 
-                          backgroundColor: primary,
-                          boxShadow: isLightMode ? 'none' : '0 0 15px rgba(255, 215, 0, 0.3)'
-                        }}
+                        style={{ backgroundColor: primary }}
                       >
-                        <User className="w-5 h-5" style={{ color: isLightMode ? '#1A1A1A' : '#1A1A1A' }} />
+                        <User className="w-5 h-5" style={{ color: isLightMode ? '#1A1A1A' : '#FFFFFF' }} />
                       </div>
                       <Input 
                         placeholder={t('buyer.auth.emailPlaceholder') || 'Email or Username'}
@@ -340,9 +329,8 @@ export const SMMVisitHomepage = ({
                         onChange={(e) => setLoginEmail(e.target.value)}
                         className="pl-14 h-12 rounded-xl border-0"
                         style={{ 
-                          backgroundColor: isLightMode ? '#F3F4F6' : 'rgba(28, 31, 38, 0.9)',
-                          color: textCol,
-                          border: isLightMode ? 'none' : '1px solid rgba(255, 215, 0, 0.1)'
+                          backgroundColor: isLightMode ? '#F3F4F6' : '#333',
+                          color: textCol
                         }}
                         disabled={loginLoading}
                       />
@@ -352,12 +340,9 @@ export const SMMVisitHomepage = ({
                     <div className="relative flex-1">
                       <div 
                         className="absolute left-0 top-0 bottom-0 w-12 flex items-center justify-center rounded-l-xl z-10"
-                        style={{ 
-                          backgroundColor: primary,
-                          boxShadow: isLightMode ? 'none' : '0 0 15px rgba(255, 215, 0, 0.3)'
-                        }}
+                        style={{ backgroundColor: primary }}
                       >
-                        <Lock className="w-5 h-5" style={{ color: isLightMode ? '#1A1A1A' : '#1A1A1A' }} />
+                        <Lock className="w-5 h-5" style={{ color: isLightMode ? '#1A1A1A' : '#FFFFFF' }} />
                       </div>
                       <Input 
                         type="password"
@@ -366,9 +351,8 @@ export const SMMVisitHomepage = ({
                         onChange={(e) => setLoginPassword(e.target.value)}
                         className="pl-14 h-12 rounded-xl border-0"
                         style={{ 
-                          backgroundColor: isLightMode ? '#F3F4F6' : 'rgba(28, 31, 38, 0.9)',
-                          color: textCol,
-                          border: isLightMode ? 'none' : '1px solid rgba(255, 215, 0, 0.1)'
+                          backgroundColor: isLightMode ? '#F3F4F6' : '#333',
+                          color: textCol
                         }}
                         disabled={loginLoading}
                       />
@@ -380,34 +364,27 @@ export const SMMVisitHomepage = ({
                         type="button"
                         variant="outline" 
                         size="icon"
-                        className="w-12 h-12 rounded-xl border-0 transition-all duration-300"
-                        style={{ 
-                          backgroundColor: primary,
-                          boxShadow: isLightMode ? 'none' : '0 4px 15px rgba(255, 215, 0, 0.3)'
-                        }}
+                        className="w-12 h-12 rounded-xl border-0"
+                        style={{ backgroundColor: primary }}
                       >
-                        <Bookmark className="w-5 h-5" style={{ color: '#1A1A1A' }} />
+                        <Bookmark className="w-5 h-5" style={{ color: isLightMode ? '#1A1A1A' : '#FFFFFF' }} />
                       </Button>
                       <Button 
                         type="button"
                         variant="outline" 
                         size="icon"
-                        className="w-12 h-12 rounded-xl border-0 transition-all duration-300"
-                        style={{ 
-                          backgroundColor: primary,
-                          boxShadow: isLightMode ? 'none' : '0 4px 15px rgba(255, 215, 0, 0.3)'
-                        }}
+                        className="w-12 h-12 rounded-xl border-0"
+                        style={{ backgroundColor: primary }}
                       >
-                        <LockKeyhole className="w-5 h-5" style={{ color: '#1A1A1A' }} />
+                        <LockKeyhole className="w-5 h-5" style={{ color: isLightMode ? '#1A1A1A' : '#FFFFFF' }} />
                       </Button>
                       <Button 
                         type="submit"
-                        className="h-12 px-6 md:px-8 rounded-xl font-semibold border-0 transition-all duration-300"
+                        className="h-12 px-6 md:px-8 rounded-xl font-semibold border-0"
                         disabled={loginLoading}
                         style={{ 
                           backgroundColor: isLightMode ? '#1A1A1A' : '#FFFFFF',
-                          color: isLightMode ? '#FFFFFF' : '#1A1A1A',
-                          boxShadow: isLightMode ? 'none' : '0 4px 20px rgba(255, 255, 255, 0.2)'
+                          color: isLightMode ? '#FFFFFF' : '#1A1A1A'
                         }}
                       >
                         {loginLoading ? (
@@ -428,9 +405,9 @@ export const SMMVisitHomepage = ({
                   <div className="flex justify-center mb-4">
                     <Button 
                       variant="outline" 
-                      className="h-10 px-6 rounded-lg transition-all duration-300"
+                      className="h-10 px-6 rounded-lg"
                       style={{ 
-                        borderColor: isLightMode ? '#E5E7EB' : 'rgba(255, 215, 0, 0.2)', 
+                        borderColor: isLightMode ? '#E5E7EB' : '#444', 
                         color: textCol,
                         backgroundColor: 'transparent'
                       }}
@@ -453,7 +430,7 @@ export const SMMVisitHomepage = ({
                     />
                     {t('buyer.auth.rememberMe') || 'Remember me'}
                   </label>
-                  <Link to="/auth" className="underline hover:no-underline transition-colors" style={{ color: isLightMode ? textCol : primary }}>
+                  <Link to="/auth" className="underline hover:no-underline" style={{ color: textCol }}>
                     {t('buyer.auth.resetPassword') || 'Reset Password'}
                   </Link>
                 </div>
@@ -461,99 +438,40 @@ export const SMMVisitHomepage = ({
             
               {/* Scroll Indicator */}
               <div className="flex items-center justify-center gap-2 mt-8" style={{ color: mutedColor }}>
-                <ChevronDown className="w-4 h-4 animate-bounce" style={{ color: isLightMode ? mutedColor : primary }} />
+                <ChevronDown className="w-4 h-4 animate-bounce" />
                 <span className="text-sm">{t('buyer.home.scrollMore') || 'Scroll to see more'}</span>
               </div>
               
-              {/* Divider with gold gradient in dark mode */}
-              <div 
-                className="w-full h-px mt-8" 
-                style={{ 
-                  background: isLightMode ? '#E5E7EB' : 'linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.3), transparent)'
-                }} 
-              />
+              {/* Divider */}
+              <div className="w-full h-px mt-8" style={{ backgroundColor: isLightMode ? '#E5E7EB' : '#333' }} />
               
-              {/* Social Platform Icons with hover glow in dark mode */}
+              {/* Social Platform Icons */}
               <div className="flex flex-wrap items-center justify-center gap-3 md:gap-4 mt-8">
-                <div 
-                  className="social-icon-wrapper w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 cursor-pointer" 
-                  style={{ 
-                    backgroundColor: '#1877F2',
-                    boxShadow: isLightMode ? '0 4px 15px rgba(0,0,0,0.1)' : '0 4px 20px rgba(24, 119, 242, 0.4)'
-                  }}
-                >
+                <div className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundColor: '#1877F2' }}>
                   <FacebookIcon className="w-8 h-8 md:w-10 md:h-10 text-white" />
                 </div>
-                <div 
-                  className="social-icon-wrapper w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 cursor-pointer" 
-                  style={{ 
-                    backgroundColor: '#FF0000',
-                    boxShadow: isLightMode ? '0 4px 15px rgba(0,0,0,0.1)' : '0 4px 20px rgba(255, 0, 0, 0.4)'
-                  }}
-                >
+                <div className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundColor: '#FF0000' }}>
                   <YouTubeIcon className="w-8 h-8 md:w-10 md:h-10 text-white" />
                 </div>
-                <div 
-                  className="social-icon-wrapper w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 cursor-pointer" 
-                  style={{ 
-                    backgroundColor: '#0088CC',
-                    boxShadow: isLightMode ? '0 4px 15px rgba(0,0,0,0.1)' : '0 4px 20px rgba(0, 136, 204, 0.4)'
-                  }}
-                >
+                <div className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundColor: '#0088CC' }}>
                   <TelegramIcon className="w-8 h-8 md:w-10 md:h-10 text-white" />
                 </div>
-                <div 
-                  className="social-icon-wrapper w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 cursor-pointer" 
-                  style={{ 
-                    background: 'linear-gradient(45deg, #F58529, #DD2A7B, #8134AF, #515BD4)',
-                    boxShadow: isLightMode ? '0 4px 15px rgba(0,0,0,0.1)' : '0 4px 20px rgba(221, 42, 123, 0.4)'
-                  }}
-                >
+                <div className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-lg" style={{ background: 'linear-gradient(45deg, #F58529, #DD2A7B, #8134AF, #515BD4)' }}>
                   <InstagramIcon className="w-8 h-8 md:w-10 md:h-10 text-white" />
                 </div>
-                <div 
-                  className="social-icon-wrapper w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 cursor-pointer" 
-                  style={{ 
-                    backgroundColor: '#1DA1F2',
-                    boxShadow: isLightMode ? '0 4px 15px rgba(0,0,0,0.1)' : '0 4px 20px rgba(29, 161, 242, 0.4)'
-                  }}
-                >
+                <div className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundColor: '#1DA1F2' }}>
                   <TwitterIcon className="w-8 h-8 md:w-10 md:h-10 text-white" />
                 </div>
-                <div 
-                  className="social-icon-wrapper w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 cursor-pointer" 
-                  style={{ 
-                    backgroundColor: '#1DB954',
-                    boxShadow: isLightMode ? '0 4px 15px rgba(0,0,0,0.1)' : '0 4px 20px rgba(29, 185, 84, 0.4)'
-                  }}
-                >
+                <div className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundColor: '#1DB954' }}>
                   <SpotifyIcon className="w-8 h-8 md:w-10 md:h-10 text-white" />
                 </div>
-                <div 
-                  className="social-icon-wrapper w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 cursor-pointer" 
-                  style={{ 
-                    backgroundColor: '#FFFC00',
-                    boxShadow: isLightMode ? '0 4px 15px rgba(0,0,0,0.1)' : '0 4px 20px rgba(255, 252, 0, 0.4)'
-                  }}
-                >
+                <div className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundColor: '#FFFC00' }}>
                   <SnapchatIcon className="w-8 h-8 md:w-10 md:h-10 text-black" />
                 </div>
-                <div 
-                  className="social-icon-wrapper w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 cursor-pointer" 
-                  style={{ 
-                    backgroundColor: '#000000',
-                    boxShadow: isLightMode ? '0 4px 15px rgba(0,0,0,0.1)' : '0 4px 20px rgba(255, 255, 255, 0.2)'
-                  }}
-                >
+                <div className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundColor: '#000000' }}>
                   <TikTokIcon className="w-8 h-8 md:w-10 md:h-10 text-white" />
                 </div>
-                <div 
-                  className="social-icon-wrapper w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 cursor-pointer" 
-                  style={{ 
-                    background: 'linear-gradient(135deg, #FF5500, #FF7700)',
-                    boxShadow: isLightMode ? '0 4px 15px rgba(0,0,0,0.1)' : '0 4px 20px rgba(255, 85, 0, 0.4)'
-                  }}
-                >
+                <div className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-lg" style={{ background: 'linear-gradient(135deg, #FF5500, #FF7700)' }}>
                   <SoundCloudIcon className="w-8 h-8 md:w-10 md:h-10 text-white" />
                 </div>
               </div>
