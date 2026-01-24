@@ -12,16 +12,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { 
-  ArrowUpRight, 
-  ArrowDownRight, 
   Receipt,
-  Download,
   ChevronLeft,
   ChevronRight,
-  Loader2
+  Loader2,
+  RefreshCw,
+  Bell
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface Transaction {
   id: string;
@@ -40,28 +40,78 @@ interface TransactionHistoryProps {
 export const TransactionHistory = ({ panelId }: TransactionHistoryProps) => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<"all" | "deposit" | "withdrawal" | "commission">("all");
+  const [filter, setFilter] = useState<"all" | "deposit" | "withdrawal" | "commission" | "subscription">("all");
   const [page, setPage] = useState(1);
-  const perPage = 5;
+  const perPage = 10;
 
   useEffect(() => {
     fetchTransactions();
+
+    // Set up real-time subscription for transaction updates
+    const channel = supabase
+      .channel('transaction-updates')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'transactions',
+        filter: panelId ? `panel_id=eq.${panelId}` : undefined
+      }, (payload) => {
+        const newTx = payload.new as Transaction;
+        setTransactions(prev => [newTx, ...prev]);
+        
+        // Show toast for new transactions
+        if (newTx.status === 'completed') {
+          toast.success('New Transaction', {
+            description: `${newTx.type}: $${Math.abs(newTx.amount).toFixed(2)}`,
+            icon: <Bell className="w-4 h-4" />
+          });
+        }
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'transactions',
+        filter: panelId ? `panel_id=eq.${panelId}` : undefined
+      }, (payload) => {
+        const updatedTx = payload.new as Transaction;
+        setTransactions(prev => 
+          prev.map(tx => tx.id === updatedTx.id ? updatedTx : tx)
+        );
+        
+        // Notify on status change to completed
+        if (updatedTx.status === 'completed' && payload.old?.status !== 'completed') {
+          toast.success('Payment Completed', {
+            description: `$${Math.abs(updatedTx.amount).toFixed(2)} has been processed`
+          });
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [panelId]);
 
   const fetchTransactions = async () => {
     setLoading(true);
     try {
-      // Fetch transactions for the panel owner
-      const { data, error } = await supabase
+      let query = supabase
         .from('transactions')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(50);
+        .limit(100);
+
+      if (panelId) {
+        query = query.eq('panel_id', panelId);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       setTransactions(data || []);
     } catch (error) {
       console.error('Error fetching transactions:', error);
+      toast.error('Failed to load transactions');
     } finally {
       setLoading(false);
     }
@@ -69,6 +119,10 @@ export const TransactionHistory = ({ panelId }: TransactionHistoryProps) => {
 
   const filteredTransactions = transactions.filter(tx => {
     if (filter === "all") return true;
+    // Handle admin adjustments
+    if (tx.type === 'admin_credit' || tx.type === 'admin_debit') {
+      return filter === 'deposit';
+    }
     return tx.type === filter;
   });
 
@@ -77,11 +131,18 @@ export const TransactionHistory = ({ panelId }: TransactionHistoryProps) => {
 
   const getTypeColor = (type: string) => {
     switch (type) {
-      case "deposit": return "bg-green-500/10 text-green-500";
-      case "withdrawal": return "bg-orange-500/10 text-orange-500";
-      case "commission": return "bg-purple-500/10 text-purple-500";
-      case "subscription": return "bg-blue-500/10 text-blue-500";
-      default: return "bg-muted";
+      case "deposit": 
+      case "admin_credit": 
+        return "bg-green-500/10 text-green-500";
+      case "withdrawal": 
+      case "admin_debit": 
+        return "bg-orange-500/10 text-orange-500";
+      case "commission": 
+        return "bg-purple-500/10 text-purple-500";
+      case "subscription": 
+        return "bg-blue-500/10 text-blue-500";
+      default: 
+        return "bg-muted";
     }
   };
 
@@ -94,6 +155,14 @@ export const TransactionHistory = ({ panelId }: TransactionHistoryProps) => {
     }
   };
 
+  const getTypeLabel = (type: string) => {
+    switch (type) {
+      case "admin_credit": return "Credit";
+      case "admin_debit": return "Debit";
+      default: return type;
+    }
+  };
+
   return (
     <Card className="bg-card/60 backdrop-blur-xl border-border/50">
       <CardHeader className="pb-3">
@@ -102,14 +171,19 @@ export const TransactionHistory = ({ panelId }: TransactionHistoryProps) => {
             <Receipt className="w-5 h-5" />
             Transaction History
           </CardTitle>
-          <Tabs value={filter} onValueChange={(v) => { setFilter(v as any); setPage(1); }}>
-            <TabsList className="bg-muted/50">
-              <TabsTrigger value="all" className="text-xs">All</TabsTrigger>
-              <TabsTrigger value="deposit" className="text-xs">Deposits</TabsTrigger>
-              <TabsTrigger value="withdrawal" className="text-xs">Withdrawals</TabsTrigger>
-              <TabsTrigger value="commission" className="text-xs">Commissions</TabsTrigger>
-            </TabsList>
-          </Tabs>
+          <div className="flex items-center gap-2">
+            <Tabs value={filter} onValueChange={(v) => { setFilter(v as any); setPage(1); }}>
+              <TabsList className="bg-muted/50">
+                <TabsTrigger value="all" className="text-xs">All</TabsTrigger>
+                <TabsTrigger value="deposit" className="text-xs">Deposits</TabsTrigger>
+                <TabsTrigger value="subscription" className="text-xs">Subscriptions</TabsTrigger>
+                <TabsTrigger value="commission" className="text-xs">Commissions</TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <Button variant="ghost" size="icon" onClick={fetchTransactions} disabled={loading}>
+              <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -140,20 +214,23 @@ export const TransactionHistory = ({ panelId }: TransactionHistoryProps) => {
                 </TableRow>
               ) : (
                 paginatedTransactions.map((tx) => (
-                  <TableRow key={tx.id}>
+                  <TableRow key={tx.id} className="group">
                     <TableCell className="text-sm text-muted-foreground">
-                      {new Date(tx.created_at).toLocaleDateString()}
+                      <div>
+                        <p>{new Date(tx.created_at).toLocaleDateString()}</p>
+                        <p className="text-xs">{new Date(tx.created_at).toLocaleTimeString()}</p>
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Badge className={cn("capitalize", getTypeColor(tx.type))}>
-                        {tx.type}
+                        {getTypeLabel(tx.type)}
                       </Badge>
                     </TableCell>
                     <TableCell className="max-w-[200px] truncate text-sm">
                       {tx.description || '-'}
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {tx.payment_method || '-'}
+                    <TableCell className="text-sm text-muted-foreground capitalize">
+                      {tx.payment_method?.replace('_', ' ') || '-'}
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className={cn("capitalize text-xs", getStatusColor(tx.status))}>
@@ -161,7 +238,10 @@ export const TransactionHistory = ({ panelId }: TransactionHistoryProps) => {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right font-medium">
-                      <span className={tx.amount >= 0 ? "text-green-500" : "text-muted-foreground"}>
+                      <span className={cn(
+                        tx.amount >= 0 ? "text-green-500" : "text-destructive",
+                        "font-mono"
+                      )}>
                         {tx.amount >= 0 ? "+" : ""}${Math.abs(tx.amount).toFixed(2)}
                       </span>
                     </TableCell>
@@ -187,7 +267,7 @@ export const TransactionHistory = ({ panelId }: TransactionHistoryProps) => {
             >
               <ChevronLeft className="w-4 h-4" />
             </Button>
-            <span className="text-sm">
+            <span className="text-sm min-w-[80px] text-center">
               Page {page} of {totalPages || 1}
             </span>
             <Button 
