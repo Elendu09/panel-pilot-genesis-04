@@ -237,6 +237,7 @@ export const SMMVisitHomepage = ({
         navStyle="floating"
         primaryButtonStyle={primaryButtonStyle}
         signupLabel={t('buyer.auth.signUp') || 'Sign Up'}
+        hideThemeToggle={true}
       />
 
       <article>
