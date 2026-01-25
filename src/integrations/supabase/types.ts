@@ -1605,11 +1605,24 @@ export type Database = {
           floating_chat_telegram: string | null
           floating_chat_whatsapp: string | null
           id: string
+          integrations: Json | null
           live_chat_enabled: boolean | null
           low_balance_alert_enabled: boolean | null
           low_balance_threshold: number | null
           maintenance_message: string | null
           maintenance_mode: boolean | null
+          oauth_discord_client_id: string | null
+          oauth_discord_client_secret: string | null
+          oauth_discord_enabled: boolean | null
+          oauth_google_client_id: string | null
+          oauth_google_client_secret: string | null
+          oauth_google_enabled: boolean | null
+          oauth_telegram_client_id: string | null
+          oauth_telegram_client_secret: string | null
+          oauth_telegram_enabled: boolean | null
+          oauth_vk_client_id: string | null
+          oauth_vk_client_secret: string | null
+          oauth_vk_enabled: boolean | null
           panel_id: string | null
           privacy_policy: string | null
           seo_description: string | null
@@ -1634,11 +1647,24 @@ export type Database = {
           floating_chat_telegram?: string | null
           floating_chat_whatsapp?: string | null
           id?: string
+          integrations?: Json | null
           live_chat_enabled?: boolean | null
           low_balance_alert_enabled?: boolean | null
           low_balance_threshold?: number | null
           maintenance_message?: string | null
           maintenance_mode?: boolean | null
+          oauth_discord_client_id?: string | null
+          oauth_discord_client_secret?: string | null
+          oauth_discord_enabled?: boolean | null
+          oauth_google_client_id?: string | null
+          oauth_google_client_secret?: string | null
+          oauth_google_enabled?: boolean | null
+          oauth_telegram_client_id?: string | null
+          oauth_telegram_client_secret?: string | null
+          oauth_telegram_enabled?: boolean | null
+          oauth_vk_client_id?: string | null
+          oauth_vk_client_secret?: string | null
+          oauth_vk_enabled?: boolean | null
           panel_id?: string | null
           privacy_policy?: string | null
           seo_description?: string | null
@@ -1663,11 +1689,24 @@ export type Database = {
           floating_chat_telegram?: string | null
           floating_chat_whatsapp?: string | null
           id?: string
+          integrations?: Json | null
           live_chat_enabled?: boolean | null
           low_balance_alert_enabled?: boolean | null
           low_balance_threshold?: number | null
           maintenance_message?: string | null
           maintenance_mode?: boolean | null
+          oauth_discord_client_id?: string | null
+          oauth_discord_client_secret?: string | null
+          oauth_discord_enabled?: boolean | null
+          oauth_google_client_id?: string | null
+          oauth_google_client_secret?: string | null
+          oauth_google_enabled?: boolean | null
+          oauth_telegram_client_id?: string | null
+          oauth_telegram_client_secret?: string | null
+          oauth_telegram_enabled?: boolean | null
+          oauth_vk_client_id?: string | null
+          oauth_vk_client_secret?: string | null
+          oauth_vk_enabled?: boolean | null
           panel_id?: string | null
           privacy_policy?: string | null
           seo_description?: string | null

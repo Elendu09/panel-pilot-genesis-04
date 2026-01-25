@@ -20,7 +20,13 @@ import {
   Send,
   Loader2,
   MessageCircle,
-  Phone
+  Phone,
+  Copy,
+  BarChart3,
+  Code,
+  Megaphone,
+  HelpCircle,
+  Info
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -28,6 +34,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -48,85 +55,313 @@ import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 
-interface Integration {
+// OAuth Providers Configuration
+interface OAuthProvider {
+  id: string;
+  name: string;
+  icon: string;
+  color: string;
+  setupUrl: string;
+  instructions: string[];
+}
+
+const oauthProviders: OAuthProvider[] = [
+  {
+    id: 'google',
+    name: 'Google OAuth',
+    icon: '🔵',
+    color: 'from-red-500 to-yellow-500',
+    setupUrl: 'https://console.cloud.google.com/apis/credentials',
+    instructions: [
+      'Go to Google Cloud Console',
+      'Create a new OAuth 2.0 Client ID',
+      'Set the authorized redirect URI',
+      'Copy Client ID and Secret here'
+    ]
+  },
+  {
+    id: 'telegram',
+    name: 'Telegram OAuth',
+    icon: '✈️',
+    color: 'from-sky-500 to-blue-600',
+    setupUrl: 'https://core.telegram.org/widgets/login',
+    instructions: [
+      'Message @BotFather on Telegram',
+      'Create a new bot with /newbot',
+      'Get your Bot Token',
+      'Set the domain for web login'
+    ]
+  },
+  {
+    id: 'vk',
+    name: 'VK OAuth',
+    icon: '🔷',
+    color: 'from-blue-600 to-blue-700',
+    setupUrl: 'https://vk.com/apps?act=manage',
+    instructions: [
+      'Go to VK Developer Console',
+      'Create a new Standalone application',
+      'Set authorized redirect URI',
+      'Copy App ID and Secure Key'
+    ]
+  },
+  {
+    id: 'discord',
+    name: 'Discord OAuth',
+    icon: '💬',
+    color: 'from-indigo-500 to-purple-600',
+    setupUrl: 'https://discord.com/developers/applications',
+    instructions: [
+      'Go to Discord Developer Portal',
+      'Create a new Application',
+      'In OAuth2, add redirect URL',
+      'Copy Client ID and Secret'
+    ]
+  }
+];
+
+// Service Integrations Configuration
+interface ServiceIntegration {
   id: string;
   name: string;
   description: string;
-  icon: any;
-  status: "connected" | "disconnected" | "pending";
-  category: "payment" | "provider" | "notification" | "webhook" | "third-party" | "chat";
+  icon: string;
   color: string;
-  lastSync?: string;
+  category: 'chat' | 'analytics' | 'notifications' | 'other';
+  fields: {
+    type: 'input' | 'textarea' | 'phone';
+    name: string;
+    label: string;
+    placeholder: string;
+    helper?: string;
+  }[];
 }
 
-const integrations: Integration[] = [
+const serviceIntegrations: ServiceIntegration[] = [
   // Chat Widgets
-  { id: "floating-chat", name: "Floating Chat Widget", description: "WhatsApp & Telegram floating chat buttons", icon: MessageCircle, status: "disconnected", category: "chat", color: "from-green-500 to-emerald-600" },
-  
-  // Authentication / OAuth
-  { id: "google-oauth", name: "Google Sign-In", description: "Allow users to sign in with Google accounts", icon: Shield, status: "disconnected", category: "third-party", color: "from-red-500 to-yellow-500" },
-  { id: "github-oauth", name: "GitHub Sign-In", description: "Allow users to sign in with GitHub accounts", icon: Shield, status: "disconnected", category: "third-party", color: "from-gray-700 to-gray-900" },
-  { id: "discord-oauth", name: "Discord Sign-In", description: "Allow users to sign in with Discord accounts", icon: Shield, status: "disconnected", category: "third-party", color: "from-indigo-500 to-purple-600" },
-  
-  // Payment Gateways
-  { id: "stripe", name: "Stripe", description: "Accept credit card payments worldwide", icon: CreditCard, status: "connected", category: "payment", color: "from-purple-500 to-indigo-600", lastSync: "2 min ago" },
-  { id: "paypal", name: "PayPal", description: "Accept PayPal payments", icon: CreditCard, status: "disconnected", category: "payment", color: "from-blue-500 to-blue-600" },
-  { id: "crypto", name: "Coinbase Commerce", description: "Accept cryptocurrency payments", icon: CreditCard, status: "disconnected", category: "payment", color: "from-amber-500 to-orange-600" },
-  { id: "perfectmoney", name: "Perfect Money", description: "Accept Perfect Money payments", icon: CreditCard, status: "connected", category: "payment", color: "from-green-500 to-emerald-600", lastSync: "5 min ago" },
-  
-  // Provider APIs
-  { id: "provider-smmkings", name: "SMMKings API", description: "Main SMM service provider", icon: Plug, status: "connected", category: "provider", color: "from-pink-500 to-rose-600", lastSync: "1 min ago" },
-  { id: "provider-socpanel", name: "SocPanel API", description: "Premium SMM services", icon: Plug, status: "connected", category: "provider", color: "from-cyan-500 to-teal-600", lastSync: "3 min ago" },
-  { id: "provider-custom", name: "Custom API", description: "Add your own provider API", icon: Plug, status: "disconnected", category: "provider", color: "from-slate-500 to-slate-600" },
-  
+  {
+    id: 'telegram_bot',
+    name: 'Telegram',
+    description: 'Chat with users via Telegram bot',
+    icon: '✈️',
+    color: 'from-sky-500 to-blue-600',
+    category: 'chat',
+    fields: [
+      { type: 'input', name: 'bot_token', label: 'Bot Token', placeholder: '123456:ABC-DEF...', helper: 'Get from @BotFather' },
+      { type: 'input', name: 'chat_id', label: 'Chat ID', placeholder: '-1001234567890', helper: 'Channel or group ID' }
+    ]
+  },
+  {
+    id: 'whatsapp',
+    name: 'WhatsApp Button',
+    description: 'Floating WhatsApp chat button',
+    icon: '💬',
+    color: 'from-green-500 to-emerald-600',
+    category: 'chat',
+    fields: [
+      { type: 'phone', name: 'phone', label: 'Phone Number', placeholder: '+1234567890', helper: 'Include country code' },
+      { type: 'input', name: 'message', label: 'Default Message', placeholder: 'Hello, I need help with...' }
+    ]
+  },
+  {
+    id: 'getbutton',
+    name: 'GetButton',
+    description: 'Multi-channel chat widget',
+    icon: '🔘',
+    color: 'from-blue-500 to-indigo-600',
+    category: 'chat',
+    fields: [
+      { type: 'textarea', name: 'code', label: 'Insert Code', placeholder: '<!-- GetButton.io widget -->', helper: 'Paste your GetButton widget code' }
+    ]
+  },
+  {
+    id: 'zendesk',
+    name: 'Zendesk',
+    description: 'Customer support platform',
+    icon: '🎧',
+    color: 'from-emerald-500 to-teal-600',
+    category: 'chat',
+    fields: [
+      { type: 'textarea', name: 'code', label: 'Insert Code', placeholder: '<!-- Zendesk Widget -->', helper: 'Paste your Zendesk widget code' }
+    ]
+  },
+  {
+    id: 'tidio',
+    name: 'Tidio',
+    description: 'Live chat & chatbots',
+    icon: '💭',
+    color: 'from-blue-400 to-blue-600',
+    category: 'chat',
+    fields: [
+      { type: 'textarea', name: 'code', label: 'Insert Code', placeholder: '<!-- Tidio Code -->', helper: 'Paste Tidio installation code' }
+    ]
+  },
+  {
+    id: 'smartsupp',
+    name: 'Smartsupp',
+    description: 'Live chat with video recordings',
+    icon: '📹',
+    color: 'from-yellow-500 to-orange-600',
+    category: 'chat',
+    fields: [
+      { type: 'textarea', name: 'code', label: 'Insert Code', placeholder: '<!-- Smartsupp Code -->', helper: 'Paste Smartsupp installation code' }
+    ]
+  },
+  {
+    id: 'crisp',
+    name: 'Crisp',
+    description: 'All-in-one messaging platform',
+    icon: '💬',
+    color: 'from-purple-500 to-pink-600',
+    category: 'chat',
+    fields: [
+      { type: 'input', name: 'website_id', label: 'Website ID', placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx', helper: 'Find in Crisp Dashboard → Settings' }
+    ]
+  },
+  {
+    id: 'jivochat',
+    name: 'Jivochat',
+    description: 'Business messenger',
+    icon: '🗨️',
+    color: 'from-green-400 to-cyan-600',
+    category: 'chat',
+    fields: [
+      { type: 'input', name: 'widget_id', label: 'Widget ID', placeholder: 'xxxxxxxxx', helper: 'Your JivoChat widget ID' },
+      { type: 'textarea', name: 'code', label: 'Or Insert Code', placeholder: '<!-- JivoChat Code -->', helper: 'Or paste the full installation code' }
+    ]
+  },
+  {
+    id: 'facebook_chat',
+    name: 'Facebook Chat',
+    description: 'Messenger customer chat plugin',
+    icon: '📱',
+    color: 'from-blue-600 to-blue-700',
+    category: 'chat',
+    fields: [
+      { type: 'input', name: 'page_id', label: 'Page ID', placeholder: '123456789', helper: 'Your Facebook Page ID' },
+      { type: 'textarea', name: 'code', label: 'Insert Code', placeholder: '<!-- Facebook Chat Plugin -->' }
+    ]
+  },
+  // Analytics
+  {
+    id: 'google_analytics',
+    name: 'Google Analytics',
+    description: 'Track website traffic & behavior',
+    icon: '📊',
+    color: 'from-orange-500 to-yellow-600',
+    category: 'analytics',
+    fields: [
+      { type: 'textarea', name: 'code', label: 'Insert Code', placeholder: '<!-- Google Analytics -->\n<script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXX"></script>', helper: 'Paste your gtag.js code' }
+    ]
+  },
+  {
+    id: 'google_tag_manager',
+    name: 'Google Tag Manager',
+    description: 'Manage all your tags in one place',
+    icon: '🏷️',
+    color: 'from-blue-500 to-cyan-600',
+    category: 'analytics',
+    fields: [
+      { type: 'input', name: 'container_id', label: 'Container ID', placeholder: 'GTM-XXXXXXX', helper: 'Your GTM container ID' }
+    ]
+  },
+  {
+    id: 'yandex_metrika',
+    name: 'Yandex.Metrika',
+    description: 'Russian analytics platform',
+    icon: '📈',
+    color: 'from-red-500 to-red-600',
+    category: 'analytics',
+    fields: [
+      { type: 'input', name: 'counter_id', label: 'Counter ID', placeholder: '12345678', helper: 'Your Yandex.Metrika counter ID' },
+      { type: 'textarea', name: 'code', label: 'Or Insert Code', placeholder: '<!-- Yandex.Metrika counter -->' }
+    ]
+  },
   // Notifications
-  { id: "telegram", name: "Telegram Bot", description: "Send notifications to Telegram", icon: Send, status: "connected", category: "notification", color: "from-sky-500 to-blue-600", lastSync: "Just now" },
-  { id: "discord", name: "Discord Webhook", description: "Send notifications to Discord", icon: MessageSquare, status: "disconnected", category: "notification", color: "from-indigo-500 to-purple-600" },
-  { id: "email", name: "Email (SMTP)", description: "Send email notifications", icon: Mail, status: "connected", category: "notification", color: "from-red-500 to-pink-600", lastSync: "10 min ago" },
-  
-  // Webhooks
-  { id: "webhook-orders", name: "Order Webhooks", description: "Notify external systems on orders", icon: Webhook, status: "connected", category: "webhook", color: "from-emerald-500 to-green-600" },
-  { id: "webhook-users", name: "User Webhooks", description: "Notify on user registrations", icon: Webhook, status: "disconnected", category: "webhook", color: "from-amber-500 to-yellow-600" },
-  
-  // Third-party
-  { id: "zapier", name: "Zapier", description: "Connect with 5000+ apps", icon: Zap, status: "disconnected", category: "third-party", color: "from-orange-500 to-red-600" },
-  { id: "make", name: "Make (Integromat)", description: "Advanced automation workflows", icon: Zap, status: "disconnected", category: "third-party", color: "from-violet-500 to-purple-600" },
+  {
+    id: 'onesignal',
+    name: 'OneSignal',
+    description: 'Push notifications platform',
+    icon: '🔔',
+    color: 'from-red-500 to-pink-600',
+    category: 'notifications',
+    fields: [
+      { type: 'input', name: 'app_id', label: 'App ID', placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx', helper: 'Find in OneSignal Dashboard' }
+    ]
+  },
+  {
+    id: 'getsitecontrol',
+    name: 'Getsitecontrol',
+    description: 'Popups, surveys, forms',
+    icon: '📝',
+    color: 'from-teal-500 to-cyan-600',
+    category: 'notifications',
+    fields: [
+      { type: 'input', name: 'widget_id', label: 'Widget ID', placeholder: 'xxxxxxxxx' },
+      { type: 'textarea', name: 'code', label: 'Or Insert Code', placeholder: '<!-- GetSiteControl -->' }
+    ]
+  },
+  {
+    id: 'beamer',
+    name: 'Beamer',
+    description: 'Changelog & notifications',
+    icon: '📣',
+    color: 'from-purple-500 to-violet-600',
+    category: 'notifications',
+    fields: [
+      { type: 'input', name: 'product_id', label: 'Product ID', placeholder: 'xxxxx', helper: 'Your Beamer product ID' }
+    ]
+  },
+  // Other
+  {
+    id: 'announcements',
+    name: 'Announcements',
+    description: 'Show announcements bar',
+    icon: '📢',
+    color: 'from-amber-500 to-orange-600',
+    category: 'other',
+    fields: [
+      { type: 'input', name: 'text', label: 'Announcement Text', placeholder: 'Welcome to our panel!' },
+      { type: 'input', name: 'link', label: 'Link (optional)', placeholder: 'https://...' }
+    ]
+  },
+  {
+    id: 'custom_head_code',
+    name: 'Other (Custom Code)',
+    description: 'Add custom scripts to <head>',
+    icon: '🔧',
+    color: 'from-slate-500 to-gray-600',
+    category: 'other',
+    fields: [
+      { type: 'textarea', name: 'code', label: 'Insert Code', placeholder: '<!-- Custom Code for <head> -->\n<script>...</script>', helper: 'This code will be injected into the page <head>' }
+    ]
+  }
 ];
 
-const categoryInfo = {
-  chat: { title: "Chat Widgets", description: "Floating chat buttons for support", icon: MessageCircle },
-  payment: { title: "Payment Gateways", description: "Accept payments from customers", icon: CreditCard },
-  provider: { title: "Provider APIs", description: "Connect to SMM service providers", icon: Plug },
-  notification: { title: "Notifications", description: "Send alerts and notifications", icon: Bell },
-  webhook: { title: "Webhooks", description: "Real-time event notifications", icon: Webhook },
-  "third-party": { title: "Third-party Tools", description: "Automation and integrations", icon: Zap },
-};
-
 const Integrations = () => {
-  const [activeTab, setActiveTab] = useState("all");
-  const [configDialog, setConfigDialog] = useState<Integration | null>(null);
-  const [isLoading, setIsLoading] = useState<string | null>(null);
-  const [chatConfigOpen, setChatConfigOpen] = useState(false);
-  const [oauthConfigOpen, setOauthConfigOpen] = useState(false);
-  const [selectedOAuthProvider, setSelectedOAuthProvider] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("oauth");
   const [panelId, setPanelId] = useState<string | null>(null);
-  const [chatSettings, setChatSettings] = useState({
-    enabled: false,
-    whatsapp: '',
-    telegram: '',
-    position: 'bottom-right',
-    message: 'Need help? Chat with us!'
-  });
-  const [oauthSettings, setOauthSettings] = useState({
-    clientId: '',
-    clientSecret: '',
-    enabled: false
-  });
-  const [savingChat, setSavingChat] = useState(false);
-  const [savingOAuth, setSavingOAuth] = useState(false);
-  const [localIntegrations, setLocalIntegrations] = useState(integrations);
+  const [panelSubdomain, setPanelSubdomain] = useState<string>('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState<string | null>(null);
+  
+  // OAuth state
+  const [oauthConfigs, setOauthConfigs] = useState<Record<string, {
+    client_id: string;
+    client_secret: string;
+    enabled: boolean;
+  }>>({});
+  const [oauthDialogOpen, setOauthDialogOpen] = useState(false);
+  const [selectedOAuth, setSelectedOAuth] = useState<OAuthProvider | null>(null);
+  const [tempOAuthConfig, setTempOAuthConfig] = useState({ client_id: '', client_secret: '', enabled: false });
+  
+  // Service integrations state
+  const [integrations, setIntegrations] = useState<Record<string, { enabled: boolean; [key: string]: any }>>({});
+  const [serviceDialogOpen, setServiceDialogOpen] = useState(false);
+  const [selectedService, setSelectedService] = useState<ServiceIntegration | null>(null);
+  const [tempServiceConfig, setTempServiceConfig] = useState<Record<string, any>>({});
 
-  // Fetch panel ID and chat settings on mount
+  // Fetch panel and settings on mount
   useEffect(() => {
     const fetchPanelAndSettings = async () => {
       try {
@@ -143,145 +378,140 @@ const Integrations = () => {
 
         const { data: panel } = await supabase
           .from('panels')
-          .select('id')
+          .select('id, subdomain')
           .eq('owner_id', profile.id)
           .single();
 
         if (!panel) return;
         setPanelId(panel.id);
+        setPanelSubdomain(panel.subdomain);
 
-        // Fetch chat settings
+        // Fetch settings
         const { data: settings } = await supabase
           .from('panel_settings')
-          .select('floating_chat_enabled, floating_chat_whatsapp, floating_chat_telegram, floating_chat_position, floating_chat_message')
+          .select('*')
           .eq('panel_id', panel.id)
           .single();
 
         if (settings) {
-          const isEnabled = settings.floating_chat_enabled && (settings.floating_chat_whatsapp || settings.floating_chat_telegram);
-          setChatSettings({
-            enabled: settings.floating_chat_enabled || false,
-            whatsapp: settings.floating_chat_whatsapp || '',
-            telegram: settings.floating_chat_telegram || '',
-            position: settings.floating_chat_position || 'bottom-right',
-            message: settings.floating_chat_message || 'Need help? Chat with us!'
+          // Load OAuth configs
+          const oauthData: Record<string, any> = {};
+          oauthProviders.forEach(provider => {
+            const clientIdKey = `oauth_${provider.id}_client_id` as keyof typeof settings;
+            const clientSecretKey = `oauth_${provider.id}_client_secret` as keyof typeof settings;
+            const enabledKey = `oauth_${provider.id}_enabled` as keyof typeof settings;
+            oauthData[provider.id] = {
+              client_id: (settings[clientIdKey] as string) || '',
+              client_secret: (settings[clientSecretKey] as string) || '',
+              enabled: (settings[enabledKey] as boolean) || false
+            };
           });
-          
-          // Update floating-chat status in local integrations
-          setLocalIntegrations(prev => prev.map(i => 
-            i.id === 'floating-chat' 
-              ? { ...i, status: isEnabled ? 'connected' as const : 'disconnected' as const }
-              : i
-          ));
+          setOauthConfigs(oauthData);
+
+          // Load service integrations
+          const integrationsData = (settings as any).integrations || {};
+          setIntegrations(integrationsData);
         }
       } catch (err) {
         console.error('Error fetching panel settings:', err);
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchPanelAndSettings();
   }, []);
 
-  const saveChatSettings = async () => {
-    if (!panelId) {
-      toast({ variant: "destructive", title: "Error", description: "Panel not found" });
-      return;
-    }
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({ title: "Copied!", description: "URL copied to clipboard" });
+  };
 
-    setSavingChat(true);
+  const saveOAuthConfig = async () => {
+    if (!panelId || !selectedOAuth) return;
+    setSaving(selectedOAuth.id);
+    
     try {
-      // First check if settings exist
-      const { data: existing } = await supabase
+      const updateData: Record<string, any> = {
+        [`oauth_${selectedOAuth.id}_client_id`]: tempOAuthConfig.client_id || null,
+        [`oauth_${selectedOAuth.id}_client_secret`]: tempOAuthConfig.client_secret || null,
+        [`oauth_${selectedOAuth.id}_enabled`]: tempOAuthConfig.enabled,
+        updated_at: new Date().toISOString()
+      };
+
+      const { error } = await supabase
         .from('panel_settings')
-        .select('id')
-        .eq('panel_id', panelId)
-        .single();
+        .update(updateData)
+        .eq('panel_id', panelId);
 
-      if (existing) {
-        // Update existing settings
-        const { error } = await supabase
-          .from('panel_settings')
-          .update({
-            floating_chat_enabled: chatSettings.enabled,
-            floating_chat_whatsapp: chatSettings.whatsapp || null,
-            floating_chat_telegram: chatSettings.telegram || null,
-            floating_chat_position: chatSettings.position,
-            floating_chat_message: chatSettings.message,
-            updated_at: new Date().toISOString()
-          })
-          .eq('panel_id', panelId);
+      if (error) throw error;
 
-        if (error) throw error;
-      } else {
-        // Insert new settings
-        const { error } = await supabase
-          .from('panel_settings')
-          .insert({
-            panel_id: panelId,
-            floating_chat_enabled: chatSettings.enabled,
-            floating_chat_whatsapp: chatSettings.whatsapp || null,
-            floating_chat_telegram: chatSettings.telegram || null,
-            floating_chat_position: chatSettings.position,
-            floating_chat_message: chatSettings.message
-          });
+      setOauthConfigs(prev => ({
+        ...prev,
+        [selectedOAuth.id]: { ...tempOAuthConfig }
+      }));
 
-        if (error) throw error;
-      }
-
-      const isConnected = chatSettings.enabled && (chatSettings.whatsapp || chatSettings.telegram);
-      setLocalIntegrations(prev => prev.map(i => 
-        i.id === 'floating-chat' 
-          ? { ...i, status: isConnected ? 'connected' as const : 'disconnected' as const }
-          : i
-      ));
-
-      toast({ title: "Chat Widget Settings Saved", description: "Your floating chat widget has been configured." });
-      setChatConfigOpen(false);
+      toast({ 
+        title: "OAuth Provider Saved", 
+        description: `${selectedOAuth.name} configuration updated.` 
+      });
+      setOauthDialogOpen(false);
     } catch (err) {
-      console.error('Error saving chat settings:', err);
-      toast({ variant: "destructive", title: "Error", description: "Failed to save settings" });
+      console.error('Error saving OAuth config:', err);
+      toast({ variant: "destructive", title: "Error", description: "Failed to save configuration" });
     } finally {
-      setSavingChat(false);
+      setSaving(null);
     }
   };
 
-  const filteredIntegrations = activeTab === "all" 
-    ? localIntegrations 
-    : localIntegrations.filter(i => i.category === activeTab);
-
-  const connectedCount = localIntegrations.filter(i => i.status === "connected").length;
-
-  const handleConnect = async (integration: Integration) => {
-    if (integration.id === 'floating-chat') {
-      setChatConfigOpen(true);
-      return;
-    }
+  const saveServiceConfig = async () => {
+    if (!panelId || !selectedService) return;
+    setSaving(selectedService.id);
     
-    // Handle OAuth providers
-    if (integration.id.includes('-oauth')) {
-      setSelectedOAuthProvider(integration.id);
-      setOauthSettings({ clientId: '', clientSecret: '', enabled: false });
-      setOauthConfigOpen(true);
-      return;
+    try {
+      const updatedIntegrations = {
+        ...integrations,
+        [selectedService.id]: {
+          enabled: tempServiceConfig.enabled ?? true,
+          ...tempServiceConfig
+        }
+      };
+
+      const { error } = await supabase
+        .from('panel_settings')
+        .update({
+          integrations: updatedIntegrations,
+          updated_at: new Date().toISOString()
+        })
+        .eq('panel_id', panelId);
+
+      if (error) throw error;
+
+      setIntegrations(updatedIntegrations);
+
+      toast({ 
+        title: "Integration Saved", 
+        description: `${selectedService.name} configuration updated.` 
+      });
+      setServiceDialogOpen(false);
+    } catch (err) {
+      console.error('Error saving service config:', err);
+      toast({ variant: "destructive", title: "Error", description: "Failed to save configuration" });
+    } finally {
+      setSaving(null);
     }
-    
-    setIsLoading(integration.id);
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setIsLoading(null);
-    toast({ title: `${integration.name} Connected`, description: "Integration is now active." });
   };
 
-  const handleDisconnect = async (integration: Integration) => {
-    if (integration.id === 'floating-chat') {
-      setChatSettings(prev => ({ ...prev, enabled: false }));
-      await saveChatSettings();
-      return;
-    }
-    
-    setIsLoading(integration.id);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setIsLoading(null);
-    toast({ title: `${integration.name} Disconnected`, description: "Integration has been removed." });
+  const openOAuthDialog = (provider: OAuthProvider) => {
+    setSelectedOAuth(provider);
+    setTempOAuthConfig(oauthConfigs[provider.id] || { client_id: '', client_secret: '', enabled: false });
+    setOauthDialogOpen(true);
+  };
+
+  const openServiceDialog = (service: ServiceIntegration) => {
+    setSelectedService(service);
+    setTempServiceConfig(integrations[service.id] || { enabled: true });
+    setServiceDialogOpen(true);
   };
 
   const containerVariants = {
@@ -293,6 +523,27 @@ const Integrations = () => {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0 }
   };
+
+  const isOAuthConnected = (providerId: string) => {
+    const config = oauthConfigs[providerId];
+    return config?.enabled && config?.client_id && config?.client_secret;
+  };
+
+  const isServiceConnected = (serviceId: string) => {
+    const config = integrations[serviceId];
+    return config?.enabled;
+  };
+
+  const connectedOAuthCount = oauthProviders.filter(p => isOAuthConnected(p.id)).length;
+  const connectedServiceCount = serviceIntegrations.filter(s => isServiceConnected(s.id)).length;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -306,481 +557,486 @@ const Integrations = () => {
           <h1 className="text-2xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">
             Integrations
           </h1>
-          <p className="text-muted-foreground">Connect your panel to external services and APIs</p>
+          <p className="text-muted-foreground">Connect OAuth providers and third-party services</p>
         </div>
         <div className="flex items-center gap-3">
           <Badge variant="outline" className="py-1.5 px-3 bg-primary/10 border-primary/30">
-            <Check className="w-3 h-3 mr-1.5" />
-            {connectedCount} Connected
+            <Shield className="w-3 h-3 mr-1.5" />
+            {connectedOAuthCount} OAuth
           </Badge>
-          <Button className="bg-gradient-to-r from-primary to-primary/80">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Custom
-          </Button>
+          <Badge variant="outline" className="py-1.5 px-3 bg-emerald-500/10 border-emerald-500/30 text-emerald-500">
+            <Plug className="w-3 h-3 mr-1.5" />
+            {connectedServiceCount} Services
+          </Badge>
         </div>
-      </motion.div>
-
-      {/* Stats Overview */}
-      <motion.div 
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className="grid grid-cols-2 md:grid-cols-6 gap-4"
-      >
-        {Object.entries(categoryInfo).map(([key, info], index) => {
-          const count = localIntegrations.filter(i => i.category === key && i.status === "connected").length;
-          const total = localIntegrations.filter(i => i.category === key).length;
-          return (
-            <motion.div key={key} variants={itemVariants}>
-              <Card 
-                className={cn(
-                  "glass-stat-card cursor-pointer transition-all hover:scale-[1.02]",
-                  activeTab === key && "ring-2 ring-primary"
-                )}
-                onClick={() => setActiveTab(key)}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-primary/10">
-                      <info.icon className="w-4 h-4 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">{info.title}</p>
-                      <p className="text-lg font-bold">{count}/{total}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          );
-        })}
       </motion.div>
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="bg-muted/50 p-1 flex-wrap">
-          <TabsTrigger value="all">All</TabsTrigger>
-          <TabsTrigger value="chat">Chat</TabsTrigger>
-          <TabsTrigger value="payment">Payment</TabsTrigger>
-          <TabsTrigger value="provider">Providers</TabsTrigger>
-          <TabsTrigger value="notification">Notifications</TabsTrigger>
-          <TabsTrigger value="webhook">Webhooks</TabsTrigger>
-          <TabsTrigger value="third-party">Third-party</TabsTrigger>
+        <TabsList className="bg-muted/50 p-1">
+          <TabsTrigger value="oauth" className="gap-2">
+            <Shield className="w-4 h-4" />
+            OAuth Integrations
+          </TabsTrigger>
+          <TabsTrigger value="services" className="gap-2">
+            <Plug className="w-4 h-4" />
+            Service Integrations
+          </TabsTrigger>
         </TabsList>
-      </Tabs>
 
-      {/* Integrations Grid */}
-      <motion.div 
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className="grid md:grid-cols-2 lg:grid-cols-3 gap-4"
-      >
-        {filteredIntegrations.map((integration) => (
-          <motion.div key={integration.id} variants={itemVariants}>
-            <Card className="glass-stat-card overflow-hidden group hover:border-primary/30 transition-all">
-              {/* Gradient Header */}
-              <div className={cn("h-2 bg-gradient-to-r", integration.color)} />
-              
-              <CardContent className="p-5">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className={cn("p-2.5 rounded-xl bg-gradient-to-br", integration.color)}>
-                      <integration.icon className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold">{integration.name}</h3>
-                      <p className="text-xs text-muted-foreground">{integration.description}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Badge 
-                      variant={integration.status === "connected" ? "default" : "secondary"}
-                      className={cn(
-                        integration.status === "connected" && "bg-green-500/10 text-green-500 border-green-500/20"
-                      )}
-                    >
-                      {integration.status === "connected" ? (
-                        <>
-                          <Check className="w-3 h-3 mr-1" />
-                          Connected
-                        </>
-                      ) : "Disconnected"}
-                    </Badge>
-                    {integration.lastSync && (
-                      <span className="text-xs text-muted-foreground">
-                        Synced {integration.lastSync}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-1">
-                    {integration.status === "connected" ? (
-                      <>
+        {/* OAuth Integrations Tab */}
+        <TabsContent value="oauth" className="mt-6">
+          <Card className="glass-card mb-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="w-5 h-5 text-primary" />
+                OAuth Integrations
+              </CardTitle>
+              <CardDescription>
+                Allow customers to sign up and log in using social accounts. Enabled providers will appear on your buyer auth page.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <motion.div 
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                className="grid md:grid-cols-2 gap-4"
+              >
+                {oauthProviders.map((provider) => {
+                  const connected = isOAuthConnected(provider.id);
+                  return (
+                    <motion.div key={provider.id} variants={itemVariants}>
+                      <div className={cn(
+                        "flex items-center justify-between p-4 rounded-xl border transition-all",
+                        connected 
+                          ? "bg-emerald-500/5 border-emerald-500/30" 
+                          : "bg-muted/30 border-border hover:border-primary/30"
+                      )}>
+                        <div className="flex items-center gap-3">
+                          <div className={cn("w-10 h-10 rounded-lg bg-gradient-to-br flex items-center justify-center text-xl", provider.color)}>
+                            {provider.icon}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{provider.name}</span>
+                              {connected && (
+                                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                              )}
+                            </div>
+                            <span className="text-xs text-muted-foreground">
+                              {connected ? 'Connected' : 'Not configured'}
+                            </span>
+                          </div>
+                        </div>
                         <Button 
-                          size="icon" 
-                          variant="ghost" 
-                          className="h-8 w-8"
-                          onClick={() => {
-                            if (integration.id === 'floating-chat') {
-                              setChatConfigOpen(true);
-                            } else {
-                              setConfigDialog(integration);
-                            }
-                          }}
+                          variant={connected ? "outline" : "default"}
+                          size="sm"
+                          onClick={() => openOAuthDialog(provider)}
                         >
-                          <Settings2 className="w-4 h-4" />
-                        </Button>
-                        <Button 
-                          size="icon" 
-                          variant="ghost" 
-                          className="h-8 w-8 text-destructive hover:text-destructive"
-                          onClick={() => handleDisconnect(integration)}
-                          disabled={isLoading === integration.id}
-                        >
-                          {isLoading === integration.id ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
+                          {connected ? (
+                            <>
+                              <Settings2 className="w-4 h-4 mr-2" />
+                              Edit
+                            </>
                           ) : (
-                            <Trash2 className="w-4 h-4" />
+                            <>
+                              <Plus className="w-4 h-4 mr-2" />
+                              Connect
+                            </>
                           )}
                         </Button>
-                      </>
-                    ) : (
-                      <Button 
-                        size="sm" 
-                        onClick={() => handleConnect(integration)}
-                        disabled={isLoading === integration.id}
-                      >
-                        {isLoading === integration.id ? (
-                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                        ) : (
-                          <Plus className="w-4 h-4 mr-2" />
-                        )}
-                        Connect
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        ))}
-      </motion.div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </motion.div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-      {/* Configuration Dialog */}
-      <Dialog open={!!configDialog} onOpenChange={() => setConfigDialog(null)}>
-        <DialogContent className="glass-card max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-3">
-              {configDialog && (
-                <div className={cn("p-2 rounded-lg bg-gradient-to-br", configDialog.color)}>
-                  <configDialog.icon className="w-4 h-4 text-white" />
-                </div>
-              )}
-              Configure {configDialog?.name}
-            </DialogTitle>
-            <DialogDescription>
-              Update your integration settings and credentials
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>API Key / Secret</Label>
-              <Input type="password" value="••••••••••••••••" className="bg-background/50" />
-            </div>
-            <div className="space-y-2">
-              <Label>Webhook URL</Label>
-              <Input value="https://api.yourpanel.com/webhook/stripe" readOnly className="bg-background/50" />
-            </div>
-            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-              <div>
-                <p className="text-sm font-medium">Auto-sync enabled</p>
-                <p className="text-xs text-muted-foreground">Sync data every 5 minutes</p>
-              </div>
-              <Switch defaultChecked />
-            </div>
-            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-              <div>
-                <p className="text-sm font-medium">Sandbox/Test Mode</p>
-                <p className="text-xs text-muted-foreground">Use test credentials</p>
-              </div>
-              <Switch />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfigDialog(null)}>Cancel</Button>
-            <Button onClick={() => {
-              toast({ title: "Settings Saved" });
-              setConfigDialog(null);
-            }}>
-              Save Changes
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Floating Chat Widget Configuration Dialog */}
-      <Dialog open={chatConfigOpen} onOpenChange={setChatConfigOpen}>
-        <DialogContent className="glass-card max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600">
-                <MessageCircle className="w-4 h-4 text-white" />
-              </div>
-              Floating Chat Widget
-            </DialogTitle>
-            <DialogDescription>
-              Configure WhatsApp and Telegram floating chat buttons for your storefront
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-              <div>
-                <p className="text-sm font-medium">Enable Floating Chat</p>
-                <p className="text-xs text-muted-foreground">Show chat buttons on your storefront</p>
-              </div>
-              <Switch 
-                checked={chatSettings.enabled}
-                onCheckedChange={(checked) => setChatSettings(prev => ({ ...prev, enabled: checked }))}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <Phone className="w-4 h-4 text-green-500" />
-                WhatsApp Number
-              </Label>
-              <Input 
-                placeholder="+1234567890 (include country code)"
-                value={chatSettings.whatsapp}
-                onChange={(e) => setChatSettings(prev => ({ ...prev, whatsapp: e.target.value }))}
-                className="bg-background/50"
-              />
-              <p className="text-xs text-muted-foreground">Enter your WhatsApp number with country code (e.g., +1234567890)</p>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <Send className="w-4 h-4 text-sky-500" />
-                Telegram Username
-              </Label>
-              <Input 
-                placeholder="@username or username"
-                value={chatSettings.telegram}
-                onChange={(e) => setChatSettings(prev => ({ ...prev, telegram: e.target.value }))}
-                className="bg-background/50"
-              />
-              <p className="text-xs text-muted-foreground">Enter your Telegram username (with or without @)</p>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Welcome Message</Label>
-              <Input 
-                placeholder="Need help? Chat with us!"
-                value={chatSettings.message}
-                onChange={(e) => setChatSettings(prev => ({ ...prev, message: e.target.value }))}
-                className="bg-background/50"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Widget Position</Label>
-              <Select 
-                value={chatSettings.position} 
-                onValueChange={(value) => setChatSettings(prev => ({ ...prev, position: value }))}
+        {/* Service Integrations Tab */}
+        <TabsContent value="services" className="mt-6 space-y-6">
+          {/* Chat Widgets */}
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MessageCircle className="w-5 h-5 text-green-500" />
+                Chat Widgets
+              </CardTitle>
+              <CardDescription>
+                Add live chat and support widgets to your storefront
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <motion.div 
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                className="grid md:grid-cols-3 gap-3"
               >
-                <SelectTrigger className="bg-background/50">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="bottom-right">Bottom Right</SelectItem>
-                  <SelectItem value="bottom-left">Bottom Left</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+                {serviceIntegrations.filter(s => s.category === 'chat').map((service) => {
+                  const connected = isServiceConnected(service.id);
+                  return (
+                    <motion.div key={service.id} variants={itemVariants}>
+                      <div className={cn(
+                        "flex items-center justify-between p-3 rounded-lg border transition-all cursor-pointer hover:border-primary/30",
+                        connected 
+                          ? "bg-emerald-500/5 border-emerald-500/30" 
+                          : "bg-muted/20 border-border"
+                      )} onClick={() => openServiceDialog(service)}>
+                        <div className="flex items-center gap-2.5">
+                          <div className={cn("w-8 h-8 rounded-lg bg-gradient-to-br flex items-center justify-center text-sm", service.color)}>
+                            {service.icon}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-sm font-medium">{service.name}</span>
+                              {connected && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
+                            </div>
+                          </div>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </motion.div>
+            </CardContent>
+          </Card>
 
-            {/* Preview */}
-            <div className="p-4 rounded-lg bg-muted/30 border">
-              <p className="text-xs text-muted-foreground mb-2">Preview</p>
-              <div className="flex gap-2">
-                {chatSettings.whatsapp && (
-                  <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center">
-                    <MessageCircle className="w-5 h-5 text-white" />
-                  </div>
-                )}
-                {chatSettings.telegram && (
-                  <div className="w-10 h-10 rounded-full bg-sky-500 flex items-center justify-center">
-                    <Send className="w-5 h-5 text-white" />
-                  </div>
-                )}
-                {!chatSettings.whatsapp && !chatSettings.telegram && (
-                  <p className="text-sm text-muted-foreground">Add WhatsApp or Telegram to see preview</p>
-                )}
-              </div>
-            </div>
-          </div>
+          {/* Analytics */}
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="w-5 h-5 text-orange-500" />
+                Analytics & Tracking
+              </CardTitle>
+              <CardDescription>
+                Track visitor behavior and measure conversions
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <motion.div 
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                className="grid md:grid-cols-3 gap-3"
+              >
+                {serviceIntegrations.filter(s => s.category === 'analytics').map((service) => {
+                  const connected = isServiceConnected(service.id);
+                  return (
+                    <motion.div key={service.id} variants={itemVariants}>
+                      <div className={cn(
+                        "flex items-center justify-between p-3 rounded-lg border transition-all cursor-pointer hover:border-primary/30",
+                        connected 
+                          ? "bg-emerald-500/5 border-emerald-500/30" 
+                          : "bg-muted/20 border-border"
+                      )} onClick={() => openServiceDialog(service)}>
+                        <div className="flex items-center gap-2.5">
+                          <div className={cn("w-8 h-8 rounded-lg bg-gradient-to-br flex items-center justify-center text-sm", service.color)}>
+                            {service.icon}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-sm font-medium">{service.name}</span>
+                              {connected && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
+                            </div>
+                          </div>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </motion.div>
+            </CardContent>
+          </Card>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setChatConfigOpen(false)}>Cancel</Button>
-            <Button 
-              onClick={saveChatSettings}
-              disabled={savingChat}
-              className="bg-gradient-to-r from-green-500 to-emerald-600"
-            >
-              {savingChat ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  Saving...
-                </>
-              ) : (
-                'Save Settings'
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          {/* Notifications */}
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Bell className="w-5 h-5 text-purple-500" />
+                Notifications & Widgets
+              </CardTitle>
+              <CardDescription>
+                Push notifications, popups, and announcements
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <motion.div 
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                className="grid md:grid-cols-3 gap-3"
+              >
+                {serviceIntegrations.filter(s => s.category === 'notifications').map((service) => {
+                  const connected = isServiceConnected(service.id);
+                  return (
+                    <motion.div key={service.id} variants={itemVariants}>
+                      <div className={cn(
+                        "flex items-center justify-between p-3 rounded-lg border transition-all cursor-pointer hover:border-primary/30",
+                        connected 
+                          ? "bg-emerald-500/5 border-emerald-500/30" 
+                          : "bg-muted/20 border-border"
+                      )} onClick={() => openServiceDialog(service)}>
+                        <div className="flex items-center gap-2.5">
+                          <div className={cn("w-8 h-8 rounded-lg bg-gradient-to-br flex items-center justify-center text-sm", service.color)}>
+                            {service.icon}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-sm font-medium">{service.name}</span>
+                              {connected && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
+                            </div>
+                          </div>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </motion.div>
+            </CardContent>
+          </Card>
 
-      {/* OAuth Provider Configuration Dialog */}
-      <Dialog open={oauthConfigOpen} onOpenChange={setOauthConfigOpen}>
+          {/* Other */}
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Code className="w-5 h-5 text-slate-500" />
+                Other Integrations
+              </CardTitle>
+              <CardDescription>
+                Announcements, custom code, and more
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <motion.div 
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                className="grid md:grid-cols-3 gap-3"
+              >
+                {serviceIntegrations.filter(s => s.category === 'other').map((service) => {
+                  const connected = isServiceConnected(service.id);
+                  return (
+                    <motion.div key={service.id} variants={itemVariants}>
+                      <div className={cn(
+                        "flex items-center justify-between p-3 rounded-lg border transition-all cursor-pointer hover:border-primary/30",
+                        connected 
+                          ? "bg-emerald-500/5 border-emerald-500/30" 
+                          : "bg-muted/20 border-border"
+                      )} onClick={() => openServiceDialog(service)}>
+                        <div className="flex items-center gap-2.5">
+                          <div className={cn("w-8 h-8 rounded-lg bg-gradient-to-br flex items-center justify-center text-sm", service.color)}>
+                            {service.icon}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-sm font-medium">{service.name}</span>
+                              {connected && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
+                            </div>
+                          </div>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </motion.div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* OAuth Configuration Dialog */}
+      <Dialog open={oauthDialogOpen} onOpenChange={setOauthDialogOpen}>
         <DialogContent className="glass-card max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3">
-              <div className={cn("p-2 rounded-lg bg-gradient-to-br", 
-                selectedOAuthProvider === 'google-oauth' ? "from-red-500 to-yellow-500" :
-                selectedOAuthProvider === 'github-oauth' ? "from-gray-700 to-gray-900" :
-                "from-indigo-500 to-purple-600"
-              )}>
-                <Shield className="w-4 h-4 text-white" />
-              </div>
-              Configure {
-                selectedOAuthProvider === 'google-oauth' ? 'Google Sign-In' :
-                selectedOAuthProvider === 'github-oauth' ? 'GitHub Sign-In' :
-                selectedOAuthProvider === 'discord-oauth' ? 'Discord Sign-In' : 'OAuth'
-              }
+              {selectedOAuth && (
+                <div className={cn("w-10 h-10 rounded-lg bg-gradient-to-br flex items-center justify-center text-xl", selectedOAuth.color)}>
+                  {selectedOAuth.icon}
+                </div>
+              )}
+              Configure {selectedOAuth?.name}
             </DialogTitle>
             <DialogDescription>
-              {selectedOAuthProvider === 'google-oauth' && 'Set up Google Sign-In for your storefront users'}
-              {selectedOAuthProvider === 'github-oauth' && 'Set up GitHub Sign-In for your storefront users'}
-              {selectedOAuthProvider === 'discord-oauth' && 'Set up Discord Sign-In for your storefront users'}
+              Set up social login for your storefront customers
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4 py-4">
             {/* Setup Instructions */}
             <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
-              <p className="text-sm font-medium mb-2">Setup Instructions:</p>
+              <p className="text-sm font-medium mb-2 flex items-center gap-2">
+                <Info className="w-4 h-4" />
+                Setup Instructions:
+              </p>
               <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
-                {selectedOAuthProvider === 'google-oauth' && (
-                  <>
-                    <li>Go to <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Google Cloud Console</a></li>
-                    <li>Create a new OAuth 2.0 Client ID</li>
-                    <li>Set the authorized redirect URI to the URL below</li>
-                    <li>Copy the Client ID and Secret here</li>
-                  </>
-                )}
-                {selectedOAuthProvider === 'github-oauth' && (
-                  <>
-                    <li>Go to <a href="https://github.com/settings/developers" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">GitHub Developer Settings</a></li>
-                    <li>Create a new OAuth App</li>
-                    <li>Set the callback URL to the URL below</li>
-                    <li>Copy the Client ID and Secret here</li>
-                  </>
-                )}
-                {selectedOAuthProvider === 'discord-oauth' && (
-                  <>
-                    <li>Go to <a href="https://discord.com/developers/applications" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Discord Developer Portal</a></li>
-                    <li>Create a new Application</li>
-                    <li>In OAuth2, add the redirect URL below</li>
-                    <li>Copy the Client ID and Secret here</li>
-                  </>
-                )}
+                {selectedOAuth?.instructions.map((instruction, idx) => (
+                  <li key={idx}>{instruction}</li>
+                ))}
               </ol>
+              <Button variant="link" size="sm" className="mt-2 h-auto p-0" asChild>
+                <a href={selectedOAuth?.setupUrl} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="w-3 h-3 mr-1" />
+                  Open Developer Console
+                </a>
+              </Button>
             </div>
 
+            {/* Redirect URI */}
             <div className="space-y-2">
               <Label>Redirect URI (copy this to your OAuth app)</Label>
-              <Input 
-                readOnly 
-                value={`https://tooudgubuhxjbbvzjcgx.supabase.co/auth/v1/callback`}
-                className="bg-muted/50 font-mono text-xs"
-              />
+              <div className="flex gap-2">
+                <Input 
+                  readOnly 
+                  value={`https://${panelSubdomain}.smmpilot.online/api/oauth/${selectedOAuth?.id}/callback`}
+                  className="bg-muted/50 font-mono text-xs flex-1"
+                />
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  onClick={() => copyToClipboard(`https://${panelSubdomain}.smmpilot.online/api/oauth/${selectedOAuth?.id}/callback`)}
+                >
+                  <Copy className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
 
+            {/* Client ID */}
             <div className="space-y-2">
               <Label>Client ID</Label>
               <Input 
-                placeholder={
-                  selectedOAuthProvider === 'google-oauth' ? 'xxxx.apps.googleusercontent.com' :
-                  selectedOAuthProvider === 'github-oauth' ? 'Ov23lixxxxxxxxx' : 
-                  'Enter client ID'
-                }
-                value={oauthSettings.clientId}
-                onChange={(e) => setOauthSettings(prev => ({ ...prev, clientId: e.target.value }))}
+                placeholder="Enter client ID"
+                value={tempOAuthConfig.client_id}
+                onChange={(e) => setTempOAuthConfig(prev => ({ ...prev, client_id: e.target.value }))}
                 className="bg-background/50 font-mono text-sm"
               />
             </div>
 
+            {/* Client Secret */}
             <div className="space-y-2">
               <Label>Client Secret</Label>
               <Input 
                 type="password"
                 placeholder="Enter client secret"
-                value={oauthSettings.clientSecret}
-                onChange={(e) => setOauthSettings(prev => ({ ...prev, clientSecret: e.target.value }))}
+                value={tempOAuthConfig.client_secret}
+                onChange={(e) => setTempOAuthConfig(prev => ({ ...prev, client_secret: e.target.value }))}
                 className="bg-background/50 font-mono text-sm"
               />
             </div>
 
+            {/* Enable Toggle */}
             <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
               <div>
                 <p className="text-sm font-medium">Enable Provider</p>
-                <p className="text-xs text-muted-foreground">Allow users to sign in with this provider</p>
+                <p className="text-xs text-muted-foreground">Show on buyer auth page</p>
               </div>
               <Switch 
-                checked={oauthSettings.enabled}
-                onCheckedChange={(checked) => setOauthSettings(prev => ({ ...prev, enabled: checked }))}
+                checked={tempOAuthConfig.enabled}
+                onCheckedChange={(checked) => setTempOAuthConfig(prev => ({ ...prev, enabled: checked }))}
               />
-            </div>
-
-            {/* Important Note */}
-            <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30">
-              <p className="text-xs text-amber-600 dark:text-amber-400">
-                <strong>Note:</strong> OAuth providers must also be enabled in your Supabase dashboard under Authentication → Providers.
-                <a href="https://supabase.com/dashboard/project/tooudgubuhxjbbvzjcgx/auth/providers" target="_blank" rel="noopener noreferrer" className="ml-1 underline">
-                  Open Supabase Auth Settings →
-                </a>
-              </p>
             </div>
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOauthConfigOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setOauthDialogOpen(false)}>Cancel</Button>
             <Button 
-              onClick={async () => {
-                setSavingOAuth(true);
-                await new Promise(r => setTimeout(r, 1500));
-                setLocalIntegrations(prev => prev.map(i => 
-                  i.id === selectedOAuthProvider 
-                    ? { ...i, status: oauthSettings.enabled ? 'connected' as const : 'disconnected' as const }
-                    : i
-                ));
-                setSavingOAuth(false);
-                setOauthConfigOpen(false);
-                toast({ 
-                  title: "OAuth Provider Configured", 
-                  description: "Don't forget to also enable this provider in your Supabase dashboard!" 
-                });
-              }}
-              disabled={savingOAuth || !oauthSettings.clientId}
+              onClick={saveOAuthConfig}
+              disabled={saving === selectedOAuth?.id || !tempOAuthConfig.client_id}
+            >
+              {saving === selectedOAuth?.id ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  Saving...
+                </>
+              ) : (
+                'Save Configuration'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Service Integration Configuration Dialog */}
+      <Dialog open={serviceDialogOpen} onOpenChange={setServiceDialogOpen}>
+        <DialogContent className="glass-card max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              {selectedService && (
+                <div className={cn("w-10 h-10 rounded-lg bg-gradient-to-br flex items-center justify-center text-xl", selectedService.color)}>
+                  {selectedService.icon}
+                </div>
+              )}
+              Configure {selectedService?.name}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedService?.description}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {/* Enable Toggle */}
+            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+              <div>
+                <p className="text-sm font-medium">Enable Integration</p>
+                <p className="text-xs text-muted-foreground">Activate on your storefront</p>
+              </div>
+              <Switch 
+                checked={tempServiceConfig.enabled ?? true}
+                onCheckedChange={(checked) => setTempServiceConfig(prev => ({ ...prev, enabled: checked }))}
+              />
+            </div>
+
+            {/* Dynamic Fields */}
+            {selectedService?.fields.map((field) => (
+              <div key={field.name} className="space-y-2">
+                <Label>{field.label}</Label>
+                {field.type === 'textarea' ? (
+                  <Textarea 
+                    placeholder={field.placeholder}
+                    value={tempServiceConfig[field.name] || ''}
+                    onChange={(e) => setTempServiceConfig(prev => ({ ...prev, [field.name]: e.target.value }))}
+                    className="bg-background/50 font-mono text-xs min-h-[100px]"
+                  />
+                ) : (
+                  <Input 
+                    type={field.type === 'phone' ? 'tel' : 'text'}
+                    placeholder={field.placeholder}
+                    value={tempServiceConfig[field.name] || ''}
+                    onChange={(e) => setTempServiceConfig(prev => ({ ...prev, [field.name]: e.target.value }))}
+                    className="bg-background/50"
+                  />
+                )}
+                {field.helper && (
+                  <p className="text-xs text-muted-foreground">{field.helper}</p>
+                )}
+              </div>
+            ))}
+
+            {/* Info about head injection */}
+            {selectedService?.fields.some(f => f.type === 'textarea') && (
+              <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30">
+                <p className="text-xs text-amber-600 dark:text-amber-400 flex items-start gap-2">
+                  <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                  <span>Code will be injected into your storefront's &lt;head&gt; section for verification and functionality.</span>
+                </p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setServiceDialogOpen(false)}>Cancel</Button>
+            <Button 
+              onClick={saveServiceConfig}
+              disabled={saving === selectedService?.id}
               className="bg-gradient-to-r from-primary to-primary/80"
             >
-              {savingOAuth ? (
+              {saving === selectedService?.id ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin mr-2" />
                   Saving...

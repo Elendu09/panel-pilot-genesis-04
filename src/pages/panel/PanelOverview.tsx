@@ -867,9 +867,23 @@ const PanelOverview = () => {
                 <div className="p-2 rounded-lg bg-violet-500/10">
                   <Palette className="w-4 h-4 text-violet-500" />
                 </div>
-                <span className="text-sm">Theme</span>
+                <span className="text-sm">Buyer Theme</span>
               </div>
-              <span className="text-sm font-medium capitalize">{panelData?.theme_type?.replace('_', ' ') || 'Dark Gradient'}</span>
+              <Badge variant="outline" className="text-xs bg-primary/10 border-primary/30">
+                {(() => {
+                  const themeLabels: Record<string, string> = {
+                    default: 'Default Theme',
+                    alipanel: 'AliPanel Style',
+                    flysmm: 'FlySMM Style',
+                    smmstay: 'SMMStay Style',
+                    tgref: 'TGRef Style',
+                    smmvisit: 'SMMVisit Style',
+                  };
+                  const panelSettings = panelData?.panel_settings as any;
+                  const buyerTheme = panelSettings?.buyer_theme || 'default';
+                  return themeLabels[buyerTheme] || 'Default Theme';
+                })()}
+              </Badge>
             </div>
           </CardContent>
         </Card>
