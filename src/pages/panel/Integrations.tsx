@@ -342,6 +342,7 @@ const Integrations = () => {
   const [activeTab, setActiveTab] = useState("oauth");
   const [panelId, setPanelId] = useState<string | null>(null);
   const [panelSubdomain, setPanelSubdomain] = useState<string>('');
+  const [panelDomains, setPanelDomains] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   
@@ -378,13 +379,44 @@ const Integrations = () => {
 
         const { data: panel } = await supabase
           .from('panels')
-          .select('id, subdomain')
+          .select('id, subdomain, custom_domain')
           .eq('owner_id', profile.id)
           .single();
 
         if (!panel) return;
         setPanelId(panel.id);
         setPanelSubdomain(panel.subdomain);
+
+        // Build list of all domains for OAuth redirect URIs
+        const allDomains: string[] = [];
+        
+        // Add subdomain options for both platforms
+        if (panel.subdomain) {
+          allDomains.push(`${panel.subdomain}.smmpilot.online`);
+          allDomains.push(`${panel.subdomain}.homeofsmm.com`);
+        }
+        
+        // Add custom domain if set on panel
+        if (panel.custom_domain) {
+          allDomains.push(panel.custom_domain);
+        }
+
+        // Fetch verified custom domains from panel_domains
+        const { data: domains } = await supabase
+          .from('panel_domains')
+          .select('domain')
+          .eq('panel_id', panel.id)
+          .eq('verification_status', 'verified');
+
+        if (domains && domains.length > 0) {
+          domains.forEach(d => {
+            if (!allDomains.includes(d.domain)) {
+              allDomains.push(d.domain);
+            }
+          });
+        }
+
+        setPanelDomains(allDomains);
 
         // Fetch settings
         const { data: settings } = await supabase
@@ -888,23 +920,43 @@ const Integrations = () => {
               </Button>
             </div>
 
-            {/* Redirect URI */}
+            {/* Redirect URIs - Show all configured domains */}
             <div className="space-y-2">
-              <Label>Redirect URI (copy this to your OAuth app)</Label>
-              <div className="flex gap-2">
-                <Input 
-                  readOnly 
-                  value={`https://${panelSubdomain}.smmpilot.online/api/oauth/${selectedOAuth?.id}/callback`}
-                  className="bg-muted/50 font-mono text-xs flex-1"
-                />
-                <Button 
-                  variant="outline" 
-                  size="icon"
-                  onClick={() => copyToClipboard(`https://${panelSubdomain}.smmpilot.online/api/oauth/${selectedOAuth?.id}/callback`)}
-                >
-                  <Copy className="w-4 h-4" />
-                </Button>
+              <Label>Redirect URIs (add ALL to your OAuth app)</Label>
+              <div className="space-y-2 max-h-32 overflow-y-auto">
+                {/* Primary callback URL using Supabase edge function */}
+                <div className="flex gap-2">
+                  <Input 
+                    readOnly 
+                    value={`https://tooudgubuhxjbbvzjcgx.supabase.co/functions/v1/oauth-callback?provider=${selectedOAuth?.id}`}
+                    className="bg-muted/50 font-mono text-xs flex-1"
+                  />
+                  <Button 
+                    variant="outline" 
+                    size="icon"
+                    onClick={() => copyToClipboard(`https://tooudgubuhxjbbvzjcgx.supabase.co/functions/v1/oauth-callback?provider=${selectedOAuth?.id}`)}
+                  >
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
+              <p className="text-xs text-muted-foreground">
+                Add the redirect URI above to your OAuth provider settings. The edge function will handle the callback for all your domains.
+              </p>
+              
+              {/* Show configured domains for reference */}
+              {panelDomains.length > 0 && (
+                <div className="mt-3 p-3 rounded-lg bg-muted/30 border border-border/50">
+                  <p className="text-xs font-medium mb-1">Your configured domains:</p>
+                  <div className="flex flex-wrap gap-1">
+                    {panelDomains.map((domain, idx) => (
+                      <Badge key={idx} variant="outline" className="text-xs font-mono">
+                        {domain}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Client ID */}

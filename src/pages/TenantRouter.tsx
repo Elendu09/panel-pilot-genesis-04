@@ -93,6 +93,7 @@ const BuyerOrders = lazy(() => import('./buyer/BuyerOrders'));
 const BuyerOrderTracking = lazy(() => import('./buyer/BuyerOrderTracking'));
 const BuyerProfile = lazy(() => import('./buyer/BuyerProfile'));
 const BuyerAuth = lazy(() => import('./buyer/BuyerAuth'));
+const BuyerOAuthCallback = lazy(() => import('./buyer/BuyerOAuthCallback'));
 const BuyerDeposit = lazy(() => import('./buyer/BuyerDeposit'));
 const BuyerSupport = lazy(() => import('./buyer/BuyerSupport'));
 const BuyerPublicServices = lazy(() => import('./buyer/BuyerPublicServices'));
@@ -340,6 +341,7 @@ const TenantContent = () => {
                             {/* PUBLIC routes - Storefront accessible without login */}
                             <Route path="/" element={<Storefront />} />
                             <Route path="/auth" element={<BuyerAuth />} />
+                            <Route path="/auth/callback" element={<BuyerOAuthCallback />} />
                             <Route path="/services" element={<BuyerPublicServices />} />
                             <Route path="/fast-order" element={<FastOrder />} />
                             <Route path="/track-order" element={<TrackOrder />} />
