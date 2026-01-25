@@ -29,6 +29,7 @@ interface ThemeNavigationProps {
   signupLabel?: string;
   navLinks?: { label: string; to: string }[];
   customization?: any;
+  hideThemeToggle?: boolean;
 }
 
 export const ThemeNavigation = ({
@@ -51,6 +52,7 @@ export const ThemeNavigation = ({
   signupLabel,
   navLinks,
   customization,
+  hideThemeToggle = false,
 }: ThemeNavigationProps) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
@@ -156,20 +158,22 @@ export const ThemeNavigation = ({
               {/* Language Selector */}
               <LanguageSelector />
               
-              {/* Theme Toggle */}
-              <Button 
-                variant="ghost" 
-                size="icon"
-                onClick={handleToggleTheme}
-                className="hover:bg-white/10"
-                aria-label={`Switch to ${isLight ? 'dark' : 'light'} mode`}
-              >
-                {isLight ? (
-                  <Moon className="w-5 h-5" style={{ color: mutedColor }} />
-                ) : (
-                  <Sun className="w-5 h-5" style={{ color: mutedColor }} />
-                )}
-              </Button>
+              {/* Theme Toggle - hidden for light-mode-only themes like SMMVisit */}
+              {!hideThemeToggle && (
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={handleToggleTheme}
+                  className="hover:bg-white/10"
+                  aria-label={`Switch to ${isLight ? 'dark' : 'light'} mode`}
+                >
+                  {isLight ? (
+                    <Moon className="w-5 h-5" style={{ color: mutedColor }} />
+                  ) : (
+                    <Sun className="w-5 h-5" style={{ color: mutedColor }} />
+                  )}
+                </Button>
+              )}
               
               {buyer ? (
                 // Logged-in user: Show Dashboard & Sign Out
@@ -245,20 +249,22 @@ export const ThemeNavigation = ({
               {/* Mobile Language Selector */}
               <LanguageSelector />
               
-              {/* Mobile Theme Toggle */}
-              <Button 
-                variant="ghost" 
-                size="icon"
-                onClick={handleToggleTheme}
-                className="hover:bg-white/10"
-                aria-label={`Switch to ${isLight ? 'dark' : 'light'} mode`}
-              >
-                {isLight ? (
-                  <Moon className="w-5 h-5" style={{ color: mutedColor }} />
-                ) : (
-                  <Sun className="w-5 h-5" style={{ color: mutedColor }} />
-                )}
-              </Button>
+              {/* Mobile Theme Toggle - hidden for light-mode-only themes like SMMVisit */}
+              {!hideThemeToggle && (
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={handleToggleTheme}
+                  className="hover:bg-white/10"
+                  aria-label={`Switch to ${isLight ? 'dark' : 'light'} mode`}
+                >
+                  {isLight ? (
+                    <Moon className="w-5 h-5" style={{ color: mutedColor }} />
+                  ) : (
+                    <Sun className="w-5 h-5" style={{ color: mutedColor }} />
+                  )}
+                </Button>
+              )}
               
               <Button
                 variant="ghost"
