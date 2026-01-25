@@ -44,6 +44,19 @@ interface AuditLog {
   details: any;
 }
 
+interface RecentDeposit {
+  id: string;
+  amount: number;
+  payment_method: string | null;
+  created_at: string;
+  status: string | null;
+  panel: {
+    id: string;
+    name: string;
+    subdomain: string;
+  } | null;
+}
+
 const AdminOverview = () => {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -66,6 +79,7 @@ const AdminOverview = () => {
   const [recentPanels, setRecentPanels] = useState<Panel[]>([]);
   const [recentActivity, setRecentActivity] = useState<AuditLog[]>([]);
   const [topPanels, setTopPanels] = useState<Panel[]>([]);
+  const [recentDeposits, setRecentDeposits] = useState<RecentDeposit[]>([]);
 
   useEffect(() => {
     fetchData();
@@ -96,6 +110,21 @@ const AdminOverview = () => {
         .eq('status', 'active')
         .order('monthly_revenue', { ascending: false })
         .limit(3);
+
+      // Fetch recent deposits across all panels
+      const { data: deposits } = await supabase
+        .from('transactions')
+        .select(`
+          id,
+          amount,
+          payment_method,
+          created_at,
+          status,
+          panel:panels(id, name, subdomain)
+        `)
+        .eq('type', 'deposit')
+        .order('created_at', { ascending: false })
+        .limit(5);
 
       // Calculate changes
       const { startDate: prevStart, endDate: prevEnd } = getPreviousPeriodRange(30);
@@ -136,6 +165,7 @@ const AdminOverview = () => {
 
       setRecentActivity((auditLogs || []) as AuditLog[]);
       setTopPanels((topPerformers || []) as unknown as Panel[]);
+      setRecentDeposits((deposits || []) as unknown as RecentDeposit[]);
 
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -330,8 +360,8 @@ const AdminOverview = () => {
         </div>
       </motion.div>
 
-      {/* Recent Activity & Top Panels */}
-      <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Recent Activity, Recent Deposits & Top Panels */}
+      <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="glass-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -365,6 +395,51 @@ const AdminOverview = () => {
                 ))
               )}
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Recent Deposits Widget */}
+        <Card className="glass-card">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <DollarSign className="w-5 h-5 text-emerald-500" />
+              Recent Deposits
+            </CardTitle>
+            <CardDescription>Latest deposits across all panels</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {loading ? (
+                [1, 2, 3].map(i => (
+                  <div key={i} className="h-16 bg-muted/50 rounded-xl animate-pulse" />
+                ))
+              ) : recentDeposits.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <DollarSign className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No recent deposits</p>
+                </div>
+              ) : (
+                recentDeposits.map((deposit) => (
+                  <div key={deposit.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-accent/30 transition-colors">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-sm truncate">{deposit.panel?.name || 'Unknown Panel'}</p>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                        <Badge variant="outline" className="text-xs capitalize">
+                          {deposit.payment_method?.replace('_', ' ') || 'N/A'}
+                        </Badge>
+                        <span>{formatDistanceToNow(new Date(deposit.created_at), { addSuffix: true })}</span>
+                      </div>
+                    </div>
+                    <span className="font-semibold text-emerald-500 ml-2">
+                      +${deposit.amount.toFixed(2)}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+            <Button variant="outline" size="sm" className="w-full mt-4" asChild>
+              <Link to="/admin/payments">View All Transactions</Link>
+            </Button>
           </CardContent>
         </Card>
 
