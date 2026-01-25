@@ -151,7 +151,7 @@ const BuyerDeposit = () => {
   const [showManualSelector, setShowManualSelector] = useState(false);
   const [allManualMethods, setAllManualMethods] = useState<PaymentMethod[]>([]);
 
-  // Fetch enabled payment methods from panel settings
+  // Fetch enabled payment methods from panel settings + sync with platform providers
   useEffect(() => {
     const fetchPaymentMethods = async () => {
       if (!panel?.id) {
@@ -160,28 +160,49 @@ const BuyerDeposit = () => {
       }
       
       try {
-        const { data: panelData } = await supabase
-          .from('panels')
-          .select('settings')
-          .eq('id', panel.id)
-          .single();
+        // Fetch panel settings AND platform-enabled providers in parallel
+        const [panelRes, providersRes] = await Promise.all([
+          supabase.from('panels').select('settings').eq('id', panel.id).single(),
+          supabase.from('platform_payment_providers').select('provider_name, is_enabled').eq('is_enabled', true)
+        ]);
         
-        const panelSettings = panelData?.settings as Record<string, any> || {};
+        const panelSettings = panelRes.data?.settings as Record<string, any> || {};
         const paymentSettings = panelSettings.payments || {};
         const enabledMethods = paymentSettings.enabledMethods || [];
         const manualPayments = paymentSettings.manualPayments || [];
         
+        // Create a set of platform-enabled provider names
+        const platformEnabledProviders = new Set(
+          (providersRes.data || []).map((p: any) => p.provider_name)
+        );
+        
         const allMethods: PaymentMethod[] = [];
         
-        // Map enabled automatic methods
+        // Helper to check if automatic gateway has valid credentials
+        const hasCredentials = (method: any) => {
+          if (typeof method === 'string') return false; // String-only means no config
+          return Boolean((method.apiKey && method.apiKey.trim()) || (method.secretKey && method.secretKey.trim()));
+        };
+        
+        // Map enabled automatic methods - ONLY if platform-approved AND has credentials
         if (enabledMethods.length > 0) {
           const mappedMethods = enabledMethods
-            .filter((em: any) => typeof em === 'string' ? true : em.enabled !== false)
+            .filter((em: any) => {
+              const id = typeof em === 'string' ? em : em.id;
+              const isEnabled = typeof em === 'string' ? true : em.enabled !== false;
+              // Must be: enabled, have credentials, and be platform-approved
+              if (!isEnabled) return false;
+              if (!hasCredentials(em)) return false;
+              // If platform has providers configured, check approval
+              if (platformEnabledProviders.size > 0 && !platformEnabledProviders.has(id)) {
+                return false;
+              }
+              return true;
+            })
             .map((em: any) => {
               const id = typeof em === 'string' ? em : em.id;
               const gatewayInfo = allPaymentGateways[id];
               if (!gatewayInfo) {
-                // Create a generic entry for unknown gateways
                 return {
                   id,
                   name: id.charAt(0).toUpperCase() + id.slice(1).replace(/([A-Z])/g, ' $1').trim(),
@@ -195,7 +216,7 @@ const BuyerDeposit = () => {
           allMethods.push(...mappedMethods);
         }
         
-        // Add enabled manual payment methods
+        // Add enabled manual payment methods (panel-defined, no platform sync needed)
         if (manualPayments.length > 0) {
           const mappedManual = manualPayments
             .filter((m: any) => m.enabled !== false)
@@ -210,10 +231,8 @@ const BuyerDeposit = () => {
               instructions: m.instructions
             }));
           
-          // Store all manual methods for selector
           setAllManualMethods(mappedManual);
           
-          // If multiple manual methods, add a single "Manual Transfer" option that opens selector
           if (mappedManual.length > 1) {
             allMethods.push({
               id: 'manual_selector',
@@ -224,7 +243,6 @@ const BuyerDeposit = () => {
               isManual: true
             });
           } else {
-            // Just one manual method, add it directly
             allMethods.push(...mappedManual);
           }
         }
