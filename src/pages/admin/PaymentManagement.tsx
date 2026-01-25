@@ -16,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { SubscriptionProviderManager } from "@/components/admin/SubscriptionProviderManager";
 import { ResponsiveTabs } from "@/components/admin/ResponsiveTabs";
+import { TransactionDetailModal } from "@/components/admin/TransactionDetailModal";
 
 // Payment method types
 type Method = {
@@ -103,6 +104,9 @@ const PaymentManagement = () => {
   const [txStatusFilter, setTxStatusFilter] = useState<string>("all");
   const [txSearchQuery, setTxSearchQuery] = useState("");
   
+  // Transaction detail modal
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [txDetailOpen, setTxDetailOpen] = useState(false);
   // Panel funding dialog
   const [fundingDialogOpen, setFundingDialogOpen] = useState(false);
   const [selectedPanelId, setSelectedPanelId] = useState<string>("");
@@ -528,7 +532,7 @@ const PaymentManagement = () => {
                         <th className="py-3 px-2">Amount</th>
                         <th className="py-3 px-2">Method</th>
                         <th className="py-3 px-2">Status</th>
-                        <th className="py-3 px-2">Description</th>
+                        <th className="py-3 px-2">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -563,7 +567,19 @@ const PaymentManagement = () => {
                             </td>
                             <td className="py-3 px-2 capitalize">{tx.payment_method || '-'}</td>
                             <td className="py-3 px-2">{getStatusBadge(tx.status)}</td>
-                            <td className="py-3 px-2 text-muted-foreground max-w-[200px] truncate">{tx.description || '-'}</td>
+                            <td className="py-3 px-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedTransaction(tx);
+                                  setTxDetailOpen(true);
+                                }}
+                              >
+                                <Eye className="w-4 h-4 mr-1" />
+                                View
+                              </Button>
+                            </td>
                           </tr>
                         ))
                       )}
@@ -576,6 +592,14 @@ const PaymentManagement = () => {
               </p>
             </CardContent>
           </Card>
+          
+          {/* Transaction Detail Modal */}
+          <TransactionDetailModal
+            open={txDetailOpen}
+            onOpenChange={setTxDetailOpen}
+            transaction={selectedTransaction}
+            onStatusUpdate={fetchData}
+          />
         </TabsContent>
 
         {/* Panel Funding Tab */}
