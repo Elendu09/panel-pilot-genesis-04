@@ -764,6 +764,7 @@ export type Database = {
       }
       client_users: {
         Row: {
+          avatar_url: string | null
           balance: number | null
           ban_reason: string | null
           banned_at: string | null
@@ -780,6 +781,8 @@ export type Database = {
           is_vip: boolean | null
           last_login_at: string | null
           low_balance_threshold: number | null
+          oauth_provider: string | null
+          oauth_provider_id: string | null
           panel_id: string | null
           password_hash: string | null
           password_temp: string | null
@@ -794,6 +797,7 @@ export type Database = {
           vip_since: string | null
         }
         Insert: {
+          avatar_url?: string | null
           balance?: number | null
           ban_reason?: string | null
           banned_at?: string | null
@@ -810,6 +814,8 @@ export type Database = {
           is_vip?: boolean | null
           last_login_at?: string | null
           low_balance_threshold?: number | null
+          oauth_provider?: string | null
+          oauth_provider_id?: string | null
           panel_id?: string | null
           password_hash?: string | null
           password_temp?: string | null
@@ -824,6 +830,7 @@ export type Database = {
           vip_since?: string | null
         }
         Update: {
+          avatar_url?: string | null
           balance?: number | null
           ban_reason?: string | null
           banned_at?: string | null
@@ -840,6 +847,8 @@ export type Database = {
           is_vip?: boolean | null
           last_login_at?: string | null
           low_balance_threshold?: number | null
+          oauth_provider?: string | null
+          oauth_provider_id?: string | null
           panel_id?: string | null
           password_hash?: string | null
           password_temp?: string | null

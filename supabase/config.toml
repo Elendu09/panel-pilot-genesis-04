@@ -131,3 +131,6 @@ verify_jwt = false
 
 [functions.webhook-notify]
 verify_jwt = false
+
+[functions.oauth-callback]
+verify_jwt = false
