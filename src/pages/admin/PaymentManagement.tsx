@@ -55,6 +55,15 @@ interface Transaction {
   description: string | null;
   panel_id: string | null;
   user_id: string | null;
+  panel?: {
+    id: string;
+    name: string;
+    subdomain: string;
+    owner?: {
+      email: string;
+      full_name: string;
+    } | null;
+  } | null;
 }
 
 interface Panel {
@@ -127,7 +136,15 @@ const PaymentManagement = () => {
       // Fetch transactions with more data
       const { data: txData } = await supabase
         .from('transactions')
-        .select('*')
+        .select(`
+          *,
+          panel:panels(
+            id,
+            name,
+            subdomain,
+            owner:profiles!panels_owner_id_fkey(email, full_name)
+          )
+        `)
         .order('created_at', { ascending: false })
         .limit(500);
 
@@ -505,6 +522,8 @@ const PaymentManagement = () => {
                     <thead className="text-left text-muted-foreground sticky top-0 bg-card">
                       <tr>
                         <th className="py-3 px-2">Date</th>
+                        <th className="py-3 px-2">Panel</th>
+                        <th className="py-3 px-2">Owner</th>
                         <th className="py-3 px-2">Type</th>
                         <th className="py-3 px-2">Amount</th>
                         <th className="py-3 px-2">Method</th>
@@ -514,12 +533,18 @@ const PaymentManagement = () => {
                     </thead>
                     <tbody>
                       {filteredTransactions.length === 0 ? (
-                        <tr><td colSpan={6} className="py-8 text-center text-muted-foreground">No transactions found</td></tr>
+                        <tr><td colSpan={8} className="py-8 text-center text-muted-foreground">No transactions found</td></tr>
                       ) : (
                         filteredTransactions.map((tx) => (
                           <tr key={tx.id} className="border-t border-border hover:bg-muted/50">
                             <td className="py-3 px-2 whitespace-nowrap">
                               {new Date(tx.created_at).toLocaleDateString()} {new Date(tx.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </td>
+                            <td className="py-3 px-2 whitespace-nowrap">
+                              {tx.panel?.name || (tx.panel_id ? tx.panel_id.slice(0, 8) + '…' : '-')}
+                            </td>
+                            <td className="py-3 px-2 whitespace-nowrap text-muted-foreground">
+                              {tx.panel?.owner?.email || '-'}
                             </td>
                             <td className="py-3 px-2">
                               <div className="flex items-center gap-2">

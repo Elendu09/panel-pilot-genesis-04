@@ -26,6 +26,7 @@ import { CommissionTracker } from '@/components/billing/CommissionTracker';
 import { QuickDeposit } from '@/components/billing/QuickDeposit';
 import { PaymentMethodsQuickAccess } from '@/components/billing/PaymentMethodsQuickAccess';
 import { usePanel } from '@/hooks/usePanel';
+import { useAvailablePaymentGateways } from '@/hooks/useAvailablePaymentGateways';
 
 interface Subscription {
   id: string;
@@ -113,6 +114,13 @@ const Billing = () => {
     pendingCommission: 0,
     paidCommission: 0,
   });
+
+  const { gateways: availableGateways, loading: gatewaysLoading } = useAvailablePaymentGateways({
+    panelId: panel?.id,
+    panelSettings: (panel?.settings as any) || null,
+  });
+
+  const defaultGateway = availableGateways[0]?.id;
 
   useEffect(() => {
     if (panel?.id) {
@@ -220,11 +228,19 @@ const Billing = () => {
     }
 
     // Paid plan - go through payment flow
+    if (!defaultGateway) {
+      toast({
+        variant: 'destructive',
+        title: 'No payment gateway configured',
+        description: 'Go to Payment Methods and add a valid gateway first.'
+      });
+      return;
+    }
     setUpgradeLoading(planName);
     try {
       const { data, error } = await supabase.functions.invoke('process-payment', {
         body: {
-          gateway: 'stripe', // Default to stripe for subscriptions
+          gateway: defaultGateway,
           amount: plan.price,
           panelId: panel.id,
           buyerId: profile.id,
@@ -306,10 +322,19 @@ const Billing = () => {
   const handlePayCommission = async () => {
     if (!panel?.id || !profile?.id || commissionData.pendingCommission <= 0) return;
 
+    if (!defaultGateway) {
+      toast({
+        variant: 'destructive',
+        title: 'No payment gateway configured',
+        description: 'Go to Payment Methods and add a valid gateway first.'
+      });
+      return;
+    }
+
     try {
       const { data, error } = await supabase.functions.invoke('process-payment', {
         body: {
-          gateway: 'stripe',
+          gateway: defaultGateway,
           amount: commissionData.pendingCommission,
           panelId: panel.id,
           buyerId: profile.id,

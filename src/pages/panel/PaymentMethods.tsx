@@ -16,6 +16,7 @@ import { StripeIcon, PayPalIcon, BitcoinIcon, CoinbaseIcon, RazorpayIcon, Paysta
 import PaymentAnalyticsChart from "@/components/payment/PaymentAnalyticsChart";
 import { usePanel } from "@/hooks/usePanel";
 import { supabase } from "@/integrations/supabase/client";
+import { useAvailablePaymentGateways } from "@/hooks/useAvailablePaymentGateways";
 
 // Worldwide payment gateways
 const paymentGateways = {
@@ -103,6 +104,15 @@ const PaymentMethods = () => {
   const [pendingRequests, setPendingRequests] = useState(0);
   const [syncing, setSyncing] = useState(false);
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
+
+  // Platform-enabled providers (admin-controlled)
+  const [platformEnabledProviderNames, setPlatformEnabledProviderNames] = useState<Set<string>>(new Set());
+  const [platformProvidersLoaded, setPlatformProvidersLoaded] = useState(false);
+
+  const { refresh: refreshAvailableGateways } = useAvailablePaymentGateways({
+    panelId: panel?.id,
+    panelSettings: (panel?.settings as any) || null,
+  });
   
   // Real data from database
   const [topDepositors, setTopDepositors] = useState<{ name: string; amount: number; method: string }[]>([]);
@@ -115,8 +125,27 @@ const PaymentMethods = () => {
     if (panel?.id) {
       loadConfiguredGateways();
       fetchPaymentStats();
+      fetchPlatformEnabledProviders();
     }
   }, [panel?.id]);
+
+  const fetchPlatformEnabledProviders = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('platform_payment_providers')
+        .select('provider_name, is_enabled')
+        .eq('is_enabled', true);
+
+      if (error) throw error;
+      setPlatformEnabledProviderNames(new Set((data || []).map(p => p.provider_name)));
+    } catch (e) {
+      console.error('Failed to fetch platform payment providers', e);
+      // If fetch fails, keep behavior permissive to avoid blocking UI.
+      setPlatformEnabledProviderNames(new Set());
+    } finally {
+      setPlatformProvidersLoaded(true);
+    }
+  };
 
   const loadConfiguredGateways = () => {
     const settings = panel?.settings as any;
@@ -219,10 +248,17 @@ const PaymentMethods = () => {
   
   // Removed: One-click platform gateways - panel owners must configure their own API keys
 
-  const filteredGateways = paymentGateways[activeCategory].filter(g => 
-    g.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    g.regions.some(r => r.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const filteredGateways = paymentGateways[activeCategory]
+    .filter(g => {
+      // If platform providers are available, hide anything not enabled by admin.
+      if (!platformProvidersLoaded) return true;
+      if (platformEnabledProviderNames.size === 0) return true;
+      return platformEnabledProviderNames.has(g.id);
+    })
+    .filter(g => 
+      g.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      g.regions.some(r => r.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
 
   const enabledCount = Object.values(configuredGateways).filter(g => g.enabled).length;
 
@@ -408,10 +444,14 @@ const PaymentMethods = () => {
 
   const syncWithPlatform = async () => {
     setSyncing(true);
-    await new Promise(r => setTimeout(r, 2000));
-    setSyncing(false);
-    setLastSynced(new Date());
-    toast({ title: "Synced with platform", description: "Payment methods are up to date" });
+    try {
+      await fetchPlatformEnabledProviders();
+      await refreshAvailableGateways();
+      setLastSynced(new Date());
+      toast({ title: "Synced with platform", description: "Payment methods are up to date" });
+    } finally {
+      setSyncing(false);
+    }
   };
 
   // Manual Payment Management

@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
   CreditCard, 
-  Wallet,
   Settings,
   Check,
   X,
@@ -11,6 +10,8 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { usePanel } from "@/hooks/usePanel";
+import { useAvailablePaymentGateways } from "@/hooks/useAvailablePaymentGateways";
 
 interface PaymentMethod {
   id: string;
@@ -23,23 +24,28 @@ interface PaymentMethodsQuickAccessProps {
   methods?: PaymentMethod[];
 }
 
-const defaultMethods: PaymentMethod[] = [
-  { id: "stripe", name: "Stripe", enabled: true, icon: "card" },
-  { id: "paypal", name: "PayPal", enabled: true, icon: "wallet" },
-  { id: "crypto", name: "Cryptocurrency", enabled: false, icon: "wallet" },
-  { id: "perfectmoney", name: "Perfect Money", enabled: false, icon: "wallet" },
-];
+const defaultMethods: PaymentMethod[] = [];
 
 export const PaymentMethodsQuickAccess = ({ methods = defaultMethods }: PaymentMethodsQuickAccessProps) => {
   const navigate = useNavigate();
-  const enabledCount = methods.filter(m => m.enabled).length;
+  const { panel } = usePanel();
+  const { gateways, loading } = useAvailablePaymentGateways({
+    panelId: panel?.id,
+    panelSettings: (panel?.settings as any) || null,
+  });
 
-  const getIcon = (icon: string) => {
-    switch (icon) {
-      case "card": return CreditCard;
-      default: return Wallet;
-    }
-  };
+  const derivedMethods: PaymentMethod[] = methods.length
+    ? methods
+    : gateways.map((g) => ({
+        id: g.id,
+        name: g.displayName,
+        enabled: true,
+        icon: g.id === "stripe" ? "card" : "wallet",
+      }));
+
+  const enabledCount = derivedMethods.filter((m) => m.enabled).length;
+
+  const getIcon = (icon: string) => (icon === "card" ? CreditCard : CreditCard);
 
   return (
     <Card className="bg-card/60 backdrop-blur-xl border-border/50">
@@ -56,7 +62,16 @@ export const PaymentMethodsQuickAccess = ({ methods = defaultMethods }: PaymentM
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          {methods.map((method) => {
+          {loading ? (
+            <div className="p-3 rounded-lg border border-border/50 text-sm text-muted-foreground">
+              Loading payment methods...
+            </div>
+          ) : derivedMethods.length === 0 ? (
+            <div className="p-3 rounded-lg border border-border/50 text-sm text-muted-foreground">
+              No valid payment gateways configured.
+            </div>
+          ) : (
+            derivedMethods.map((method) => {
             const Icon = getIcon(method.icon);
             return (
               <div 
@@ -95,7 +110,8 @@ export const PaymentMethodsQuickAccess = ({ methods = defaultMethods }: PaymentM
                 </div>
               </div>
             );
-          })}
+          })
+          )}
         </div>
 
         <Button 
@@ -111,3 +127,4 @@ export const PaymentMethodsQuickAccess = ({ methods = defaultMethods }: PaymentM
     </Card>
   );
 };
+
