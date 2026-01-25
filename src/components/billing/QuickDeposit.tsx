@@ -1,18 +1,17 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { 
-  DollarSign, 
-  CreditCard, 
-  Wallet,
+import {
+  DollarSign,
   Zap,
-  Bitcoin,
   Loader2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { usePanel } from "@/hooks/usePanel";
+import { useAvailablePaymentGateways } from "@/hooks/useAvailablePaymentGateways";
 
 interface QuickDepositProps {
   onDeposit: (amount: number, method: string) => void;
@@ -21,16 +20,22 @@ interface QuickDepositProps {
 
 const quickAmounts = [10, 25, 50, 100, 250, 500];
 
-const paymentMethods = [
-  { id: "stripe", name: "Credit Card", icon: CreditCard, available: true },
-  { id: "paypal", name: "PayPal", icon: Wallet, available: true },
-  { id: "coinbase", name: "Crypto", icon: Bitcoin, available: true },
-  { id: "flutterwave", name: "Flutterwave", icon: DollarSign, available: true },
-];
-
 export const QuickDeposit = ({ onDeposit, loading }: QuickDepositProps) => {
+  const { panel } = usePanel();
+  const { gateways, loading: gatewaysLoading } = useAvailablePaymentGateways({
+    panelId: panel?.id,
+    panelSettings: (panel?.settings as any) || null,
+  });
   const [amount, setAmount] = useState<number | string>(50);
-  const [selectedMethod, setSelectedMethod] = useState("stripe");
+  const [selectedMethod, setSelectedMethod] = useState<string>("stripe");
+
+  useEffect(() => {
+    if (!selectedMethod && gateways.length > 0) setSelectedMethod(gateways[0].id);
+    if (selectedMethod && gateways.length > 0 && !gateways.some((g) => g.id === selectedMethod)) {
+      setSelectedMethod(gateways[0].id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gateways.length]);
 
   const handleQuickAmount = (value: number) => {
     setAmount(value);
@@ -97,38 +102,39 @@ export const QuickDeposit = ({ onDeposit, loading }: QuickDepositProps) => {
         {/* Payment Methods */}
         <div>
           <Label className="text-sm text-muted-foreground">Payment Method</Label>
-          <div className="grid grid-cols-2 gap-2 mt-2">
-            {paymentMethods.map((method) => {
-              const Icon = method.icon;
-              return (
+          {gatewaysLoading ? (
+            <div className="mt-2 rounded-lg border border-border/50 p-4 text-sm text-muted-foreground">
+              Loading payment methods...
+            </div>
+          ) : gateways.length === 0 ? (
+            <div className="mt-2 rounded-lg border border-border/50 p-4 text-sm text-muted-foreground">
+              No valid payment gateways configured. Go to <span className="font-medium">Payment Methods</span> to add one.
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              {gateways.map((g) => (
                 <Button
-                  key={method.id}
+                  key={g.id}
                   variant="outline"
-                  disabled={!method.available || loading}
+                  disabled={loading}
                   className={cn(
                     "h-14 justify-start gap-3 relative",
-                    selectedMethod === method.id && method.available && "border-primary bg-primary/5 ring-2 ring-primary ring-offset-2 ring-offset-background"
+                    selectedMethod === g.id && "border-primary bg-primary/5 ring-2 ring-primary ring-offset-2 ring-offset-background"
                   )}
-                  onClick={() => method.available && setSelectedMethod(method.id)}
+                  onClick={() => setSelectedMethod(g.id)}
                 >
-                  <Icon className="w-5 h-5" />
-                  <span>{method.name}</span>
-                  {!method.available && (
-                    <Badge variant="secondary" className="absolute right-2 top-1/2 -translate-y-1/2 text-xs">
-                      Soon
-                    </Badge>
-                  )}
+                  <span className="font-medium">{g.displayName}</span>
                 </Button>
-              );
-            })}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Deposit Button */}
         <Button 
           className="w-full h-12 text-lg gap-2" 
           onClick={handleDeposit}
-          disabled={loading || !isValidAmount}
+          disabled={loading || gatewaysLoading || gateways.length === 0 || !isValidAmount}
         >
           {loading ? (
             <>
