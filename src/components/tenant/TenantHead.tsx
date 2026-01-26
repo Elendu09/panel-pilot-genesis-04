@@ -1,6 +1,18 @@
-import { useEffect, useLayoutEffect } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useTenant } from '@/hooks/useTenant';
+import { supabase } from '@/integrations/supabase/client';
+
+// Extend Window interface for chat widgets
+declare global {
+  interface Window {
+    $crisp?: any[];
+    CRISP_WEBSITE_ID?: string;
+    Tawk_API?: any;
+    Tawk_LoadStart?: Date;
+    Intercom?: any;
+  }
+}
 
 interface TenantHeadProps {
   title?: string;
@@ -11,6 +23,7 @@ export const TenantHead = ({ title, description }: TenantHeadProps) => {
   const { panel } = useTenant();
   const customBranding = panel?.custom_branding as any;
   const panelSettings = panel?.settings as any;
+  const integrationsInjectedRef = useRef(false);
   
   // Favicon URLs - prioritize .ico for Google compatibility, then custom, then defaults
   const faviconIcoUrl = customBranding?.faviconIcoUrl || '/default-tenant-favicon.ico';
@@ -77,6 +90,210 @@ export const TenantHead = ({ title, description }: TenantHeadProps) => {
     appleIcon.href = appleTouchIconUrl;
     document.head.appendChild(appleIcon);
   }, [faviconIcoUrl, faviconPngUrl, appleTouchIconUrl]);
+  
+  // Inject enabled service integrations (GA, GTM, Crisp, etc.)
+  useEffect(() => {
+    if (!panel?.id || integrationsInjectedRef.current) return;
+    
+    const injectIntegrations = async () => {
+      try {
+        const { data } = await supabase
+          .from('panel_settings')
+          .select('integrations')
+          .eq('panel_id', panel.id)
+          .maybeSingle();
+        
+        if (!data?.integrations) return;
+        integrationsInjectedRef.current = true;
+        
+        const integrations = data.integrations as Record<string, any>;
+        
+        // Google Analytics - inject gtag script
+        if (integrations.google_analytics?.enabled && integrations.google_analytics?.code) {
+          try {
+            const code = integrations.google_analytics.code;
+            const range = document.createRange();
+            const fragment = range.createContextualFragment(code);
+            document.head.appendChild(fragment);
+          } catch (e) {
+            console.error('Failed to inject Google Analytics:', e);
+          }
+        }
+        
+        // Google Tag Manager - inject GTM script
+        if (integrations.google_tag_manager?.enabled && integrations.google_tag_manager?.code) {
+          try {
+            const code = integrations.google_tag_manager.code;
+            const range = document.createRange();
+            const fragment = range.createContextualFragment(code);
+            document.head.appendChild(fragment);
+          } catch (e) {
+            console.error('Failed to inject GTM:', e);
+          }
+        }
+        
+        // Yandex.Metrika - inject counter code
+        if (integrations.yandex_metrika?.enabled && integrations.yandex_metrika?.code) {
+          try {
+            const code = integrations.yandex_metrika.code;
+            const range = document.createRange();
+            const fragment = range.createContextualFragment(code);
+            document.head.appendChild(fragment);
+          } catch (e) {
+            console.error('Failed to inject Yandex.Metrika:', e);
+          }
+        }
+        
+        // Crisp Chat - inject with website_id
+        if (integrations.crisp?.enabled && integrations.crisp?.website_id) {
+          window.$crisp = [];
+          window.CRISP_WEBSITE_ID = integrations.crisp.website_id;
+          const script = document.createElement('script');
+          script.src = 'https://client.crisp.chat/l.js';
+          script.async = true;
+          document.head.appendChild(script);
+        }
+        
+        // Tidio - inject tidio code/script
+        if (integrations.tidio?.enabled && integrations.tidio?.code) {
+          try {
+            const code = integrations.tidio.code;
+            const range = document.createRange();
+            const fragment = range.createContextualFragment(code);
+            document.body.appendChild(fragment);
+          } catch (e) {
+            console.error('Failed to inject Tidio:', e);
+          }
+        }
+        
+        // Zendesk - inject widget code
+        if (integrations.zendesk?.enabled && integrations.zendesk?.code) {
+          try {
+            const code = integrations.zendesk.code;
+            const range = document.createRange();
+            const fragment = range.createContextualFragment(code);
+            document.body.appendChild(fragment);
+          } catch (e) {
+            console.error('Failed to inject Zendesk:', e);
+          }
+        }
+        
+        // Smartsupp - inject code
+        if (integrations.smartsupp?.enabled && integrations.smartsupp?.code) {
+          try {
+            const code = integrations.smartsupp.code;
+            const range = document.createRange();
+            const fragment = range.createContextualFragment(code);
+            document.body.appendChild(fragment);
+          } catch (e) {
+            console.error('Failed to inject Smartsupp:', e);
+          }
+        }
+        
+        // JivoChat - inject widget
+        if (integrations.jivochat?.enabled && integrations.jivochat?.code) {
+          try {
+            const code = integrations.jivochat.code;
+            const range = document.createRange();
+            const fragment = range.createContextualFragment(code);
+            document.body.appendChild(fragment);
+          } catch (e) {
+            console.error('Failed to inject JivoChat:', e);
+          }
+        }
+        
+        // GetButton - inject multi-button widget
+        if (integrations.getbutton?.enabled && integrations.getbutton?.code) {
+          try {
+            const code = integrations.getbutton.code;
+            const range = document.createRange();
+            const fragment = range.createContextualFragment(code);
+            document.body.appendChild(fragment);
+          } catch (e) {
+            console.error('Failed to inject GetButton:', e);
+          }
+        }
+        
+        // Beamer - inject notification widget
+        if (integrations.beamer?.enabled && integrations.beamer?.product_id) {
+          const script = document.createElement('script');
+          script.src = 'https://app.getbeamer.com/js/beamer-embed.js';
+          script.defer = true;
+          script.setAttribute('data-beamer-product-id', integrations.beamer.product_id);
+          document.head.appendChild(script);
+        }
+        
+        // GetSiteControl - inject popup/form widget
+        if (integrations.getsitecontrol?.enabled && integrations.getsitecontrol?.code) {
+          try {
+            const code = integrations.getsitecontrol.code;
+            const range = document.createRange();
+            const fragment = range.createContextualFragment(code);
+            document.body.appendChild(fragment);
+          } catch (e) {
+            console.error('Failed to inject GetSiteControl:', e);
+          }
+        }
+        
+        // OneSignal - push notifications
+        if (integrations.onesignal?.enabled && integrations.onesignal?.app_id) {
+          const script = document.createElement('script');
+          script.src = 'https://cdn.onesignal.com/sdks/OneSignalSDK.js';
+          script.async = true;
+          script.onload = () => {
+            (window as any).OneSignal = (window as any).OneSignal || [];
+            (window as any).OneSignal.push(['init', {
+              appId: integrations.onesignal.app_id,
+            }]);
+          };
+          document.head.appendChild(script);
+        }
+        
+        // Facebook Chat Plugin - inject messenger widget
+        if (integrations.facebook_chat?.enabled && integrations.facebook_chat?.code) {
+          try {
+            const code = integrations.facebook_chat.code;
+            const div = document.createElement('div');
+            div.id = 'fb-root';
+            document.body.appendChild(div);
+            
+            const range = document.createRange();
+            const fragment = range.createContextualFragment(code);
+            document.body.appendChild(fragment);
+            
+            // Load Facebook SDK if not loaded
+            if (!(window as any).FB) {
+              const fbScript = document.createElement('script');
+              fbScript.async = true;
+              fbScript.defer = true;
+              fbScript.crossOrigin = 'anonymous';
+              fbScript.src = 'https://connect.facebook.net/en_US/sdk/xfbml.customerchat.js';
+              document.body.appendChild(fbScript);
+            }
+          } catch (e) {
+            console.error('Failed to inject Facebook Chat:', e);
+          }
+        }
+        
+        // Custom Head Code - inject raw HTML/scripts
+        if (integrations.custom_head_code?.enabled && integrations.custom_head_code?.code) {
+          try {
+            const code = integrations.custom_head_code.code;
+            const range = document.createRange();
+            const fragment = range.createContextualFragment(code);
+            document.head.appendChild(fragment);
+          } catch (e) {
+            console.error('Failed to inject custom head code:', e);
+          }
+        }
+        
+      } catch (error) {
+        console.error('Failed to load panel integrations:', error);
+      }
+    };
+    
+    injectIntegrations();
+  }, [panel?.id]);
   
   return (
     <Helmet>

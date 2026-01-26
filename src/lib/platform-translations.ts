@@ -136,6 +136,16 @@ export const platformTranslations = {
     'buyer.signUpFree': 'Sign Up Free',
     'buyer.viewAllServices': 'View All Services',
     
+    // Additional theme keys - prefixed versions
+    'buyer.payment.weAccept': 'We accept',
+    'buyer.stats.happyUsers': 'Happy Users',
+    'buyer.stats.ordersDone': 'Orders Done',
+    'buyer.howItWorks.howIt': 'How It',
+    'buyer.howItWorks.works': 'Works',
+    'buyer.platforms.allMajor': 'All major social networks in one place',
+    'buyer.auth.resetPassword': 'Reset Password',
+    'buyer.features.securePayments': 'Secure Payments',
+    
     // Navigation - additional
     'buyer.nav.getStarted': 'Get Started',
     
@@ -413,6 +423,16 @@ export const platformTranslations = {
     'buyer.signUpFree': 'Regístrate Gratis',
     'buyer.viewAllServices': 'Ver Todos los Servicios',
     
+    // Additional theme keys - prefixed versions
+    'buyer.payment.weAccept': 'Aceptamos',
+    'buyer.stats.happyUsers': 'Usuarios Felices',
+    'buyer.stats.ordersDone': 'Pedidos Realizados',
+    'buyer.howItWorks.howIt': 'Cómo',
+    'buyer.howItWorks.works': 'Funciona',
+    'buyer.platforms.allMajor': 'Todas las redes sociales en un solo lugar',
+    'buyer.auth.resetPassword': 'Restablecer Contraseña',
+    'buyer.features.securePayments': 'Pagos Seguros',
+    
     // Navigation - additional
     'buyer.nav.getStarted': 'Comenzar',
     
@@ -677,6 +697,16 @@ export const platformTranslations = {
     'buyer.joinNow': 'Junte-se Agora',
     'buyer.signUpFree': 'Cadastre-se Grátis',
     'buyer.viewAllServices': 'Ver Todos os Serviços',
+    
+    // Additional theme keys - prefixed versions
+    'buyer.payment.weAccept': 'Aceitamos',
+    'buyer.stats.happyUsers': 'Usuários Felizes',
+    'buyer.stats.ordersDone': 'Pedidos Feitos',
+    'buyer.howItWorks.howIt': 'Como',
+    'buyer.howItWorks.works': 'Funciona',
+    'buyer.platforms.allMajor': 'Todas as redes sociais em um só lugar',
+    'buyer.auth.resetPassword': 'Redefinir Senha',
+    'buyer.features.securePayments': 'Pagamentos Seguros',
     
     // Navigation - additional
     'buyer.nav.getStarted': 'Começar',
@@ -943,6 +973,16 @@ export const platformTranslations = {
     'buyer.signUpFree': 'سجل مجاناً',
     'buyer.viewAllServices': 'عرض جميع الخدمات',
     
+    // Additional theme keys - prefixed versions
+    'buyer.payment.weAccept': 'نقبل',
+    'buyer.stats.happyUsers': 'مستخدمون سعداء',
+    'buyer.stats.ordersDone': 'طلبات منجزة',
+    'buyer.howItWorks.howIt': 'كيف',
+    'buyer.howItWorks.works': 'يعمل',
+    'buyer.platforms.allMajor': 'جميع الشبكات الاجتماعية الرئيسية في مكان واحد',
+    'buyer.auth.resetPassword': 'إعادة تعيين كلمة المرور',
+    'buyer.features.securePayments': 'مدفوعات آمنة',
+    
     // Navigation - additional
     'buyer.nav.getStarted': 'ابدأ الآن',
     
@@ -1207,6 +1247,16 @@ export const platformTranslations = {
     'buyer.joinNow': 'Şimdi Katıl',
     'buyer.signUpFree': 'Ücretsiz Kayıt Ol',
     'buyer.viewAllServices': 'Tüm Hizmetleri Gör',
+    
+    // Additional theme keys
+    'buyer.payment.weAccept': 'Kabul ediyoruz',
+    'buyer.stats.happyUsers': 'Mutlu Kullanıcılar',
+    'buyer.stats.ordersDone': 'Yapılan Siparişler',
+    'buyer.howItWorks.howIt': 'Nasıl',
+    'buyer.howItWorks.works': 'Çalışır',
+    'buyer.platforms.allMajor': 'Tüm büyük sosyal ağlar tek yerde',
+    'buyer.auth.resetPassword': 'Şifreyi Sıfırla',
+    'buyer.features.securePayments': 'Güvenli Ödemeler',
     
     // Navigation - additional
     'buyer.nav.getStarted': 'Başla',
