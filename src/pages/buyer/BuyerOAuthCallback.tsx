@@ -18,27 +18,35 @@ const BuyerOAuthCallback = () => {
       const error = searchParams.get('error');
 
       if (error) {
-        setErrorMessage(error);
+        setErrorMessage(decodeURIComponent(error));
         setStatus('error');
         return;
       }
 
       if (!token || !buyerId) {
-        setErrorMessage('Missing authentication data');
+        setErrorMessage('Authentication data missing. Please try again.');
         setStatus('error');
         return;
       }
 
       try {
-        // Store the session in localStorage (matching BuyerAuthContext pattern)
-        const panelId = localStorage.getItem('buyer_panel_id') || '';
-        
-        // Decode token to get expiry
+        // Decode token to get payload
         const payload = JSON.parse(atob(token));
         
+        // Validate token structure
+        if (!payload.exp || !payload.sub || !payload.panel) {
+          throw new Error('Invalid authentication token');
+        }
+        
+        // Check if token is already expired
+        if (payload.exp < Math.floor(Date.now() / 1000)) {
+          throw new Error('Authentication token has expired');
+        }
+        
+        // Build session from token payload (more reliable than localStorage)
         const session = {
           buyerId: buyerId,
-          panelId: panelId || payload.panel,
+          panelId: payload.panel,
           token: token,
           expiresAt: payload.exp
         };
@@ -52,9 +60,9 @@ const BuyerOAuthCallback = () => {
           navigate('/dashboard', { replace: true });
         }, 1500);
         
-      } catch (err) {
+      } catch (err: any) {
         console.error('OAuth callback processing error:', err);
-        setErrorMessage('Failed to complete authentication');
+        setErrorMessage(err.message || 'Failed to complete authentication');
         setStatus('error');
       }
     };

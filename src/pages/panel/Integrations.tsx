@@ -54,12 +54,34 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  GoogleIcon,
+  TelegramIcon,
+  VKIcon,
+  DiscordIcon,
+  WhatsAppIcon,
+  FacebookIcon,
+  GoogleAnalyticsIcon,
+  GoogleTagManagerIcon,
+  YandexMetrikaIcon,
+  OneSignalIcon,
+  ZendeskIcon,
+  TidioIcon,
+  SmartsuppIcon,
+  CrispIcon,
+  JivoChatIcon,
+  GetButtonIcon,
+  BeamerIcon,
+  GetSiteControlIcon,
+  AnnouncementsIcon,
+  CustomCodeIcon
+} from "@/components/icons/IntegrationIcons";
 
 // OAuth Providers Configuration
 interface OAuthProvider {
   id: string;
   name: string;
-  icon: string;
+  icon: React.ReactNode;
   color: string;
   setupUrl: string;
   instructions: string[];
@@ -69,7 +91,7 @@ const oauthProviders: OAuthProvider[] = [
   {
     id: 'google',
     name: 'Google OAuth',
-    icon: '🔵',
+    icon: <GoogleIcon className="w-5 h-5" />,
     color: 'from-red-500 to-yellow-500',
     setupUrl: 'https://console.cloud.google.com/apis/credentials',
     instructions: [
@@ -82,20 +104,20 @@ const oauthProviders: OAuthProvider[] = [
   {
     id: 'telegram',
     name: 'Telegram OAuth',
-    icon: '✈️',
+    icon: <TelegramIcon className="w-5 h-5" />,
     color: 'from-sky-500 to-blue-600',
     setupUrl: 'https://core.telegram.org/widgets/login',
     instructions: [
       'Message @BotFather on Telegram',
       'Create a new bot with /newbot',
-      'Get your Bot Token',
-      'Set the domain for web login'
+      'Get your Bot Token (client_secret)',
+      'Bot username goes in Client ID'
     ]
   },
   {
     id: 'vk',
     name: 'VK OAuth',
-    icon: '🔷',
+    icon: <VKIcon className="w-5 h-5" />,
     color: 'from-blue-600 to-blue-700',
     setupUrl: 'https://vk.com/apps?act=manage',
     instructions: [
@@ -108,7 +130,7 @@ const oauthProviders: OAuthProvider[] = [
   {
     id: 'discord',
     name: 'Discord OAuth',
-    icon: '💬',
+    icon: <DiscordIcon className="w-5 h-5" />,
     color: 'from-indigo-500 to-purple-600',
     setupUrl: 'https://discord.com/developers/applications',
     instructions: [
@@ -125,7 +147,7 @@ interface ServiceIntegration {
   id: string;
   name: string;
   description: string;
-  icon: string;
+  icon: React.ReactNode;
   color: string;
   category: 'chat' | 'analytics' | 'notifications' | 'other';
   fields: {
@@ -143,7 +165,7 @@ const serviceIntegrations: ServiceIntegration[] = [
     id: 'telegram_bot',
     name: 'Telegram',
     description: 'Chat with users via Telegram bot',
-    icon: '✈️',
+    icon: <TelegramIcon className="w-5 h-5" />,
     color: 'from-sky-500 to-blue-600',
     category: 'chat',
     fields: [
@@ -155,7 +177,7 @@ const serviceIntegrations: ServiceIntegration[] = [
     id: 'whatsapp',
     name: 'WhatsApp Button',
     description: 'Floating WhatsApp chat button',
-    icon: '💬',
+    icon: <WhatsAppIcon className="w-5 h-5" />,
     color: 'from-green-500 to-emerald-600',
     category: 'chat',
     fields: [
@@ -167,7 +189,7 @@ const serviceIntegrations: ServiceIntegration[] = [
     id: 'getbutton',
     name: 'GetButton',
     description: 'Multi-channel chat widget',
-    icon: '🔘',
+    icon: <GetButtonIcon className="w-5 h-5" />,
     color: 'from-blue-500 to-indigo-600',
     category: 'chat',
     fields: [
@@ -178,7 +200,7 @@ const serviceIntegrations: ServiceIntegration[] = [
     id: 'zendesk',
     name: 'Zendesk',
     description: 'Customer support platform',
-    icon: '🎧',
+    icon: <ZendeskIcon className="w-5 h-5" />,
     color: 'from-emerald-500 to-teal-600',
     category: 'chat',
     fields: [
@@ -189,7 +211,7 @@ const serviceIntegrations: ServiceIntegration[] = [
     id: 'tidio',
     name: 'Tidio',
     description: 'Live chat & chatbots',
-    icon: '💭',
+    icon: <TidioIcon className="w-5 h-5" />,
     color: 'from-blue-400 to-blue-600',
     category: 'chat',
     fields: [
@@ -200,7 +222,7 @@ const serviceIntegrations: ServiceIntegration[] = [
     id: 'smartsupp',
     name: 'Smartsupp',
     description: 'Live chat with video recordings',
-    icon: '📹',
+    icon: <SmartsuppIcon className="w-5 h-5" />,
     color: 'from-yellow-500 to-orange-600',
     category: 'chat',
     fields: [
@@ -211,7 +233,7 @@ const serviceIntegrations: ServiceIntegration[] = [
     id: 'crisp',
     name: 'Crisp',
     description: 'All-in-one messaging platform',
-    icon: '💬',
+    icon: <CrispIcon className="w-5 h-5" />,
     color: 'from-purple-500 to-pink-600',
     category: 'chat',
     fields: [
@@ -222,7 +244,7 @@ const serviceIntegrations: ServiceIntegration[] = [
     id: 'jivochat',
     name: 'Jivochat',
     description: 'Business messenger',
-    icon: '🗨️',
+    icon: <JivoChatIcon className="w-5 h-5" />,
     color: 'from-green-400 to-cyan-600',
     category: 'chat',
     fields: [
@@ -234,7 +256,7 @@ const serviceIntegrations: ServiceIntegration[] = [
     id: 'facebook_chat',
     name: 'Facebook Chat',
     description: 'Messenger customer chat plugin',
-    icon: '📱',
+    icon: <FacebookIcon className="w-5 h-5" />,
     color: 'from-blue-600 to-blue-700',
     category: 'chat',
     fields: [
@@ -247,7 +269,7 @@ const serviceIntegrations: ServiceIntegration[] = [
     id: 'google_analytics',
     name: 'Google Analytics',
     description: 'Track website traffic & behavior',
-    icon: '📊',
+    icon: <GoogleAnalyticsIcon className="w-5 h-5" />,
     color: 'from-orange-500 to-yellow-600',
     category: 'analytics',
     fields: [
@@ -258,7 +280,7 @@ const serviceIntegrations: ServiceIntegration[] = [
     id: 'google_tag_manager',
     name: 'Google Tag Manager',
     description: 'Manage all your tags in one place',
-    icon: '🏷️',
+    icon: <GoogleTagManagerIcon className="w-5 h-5" />,
     color: 'from-blue-500 to-cyan-600',
     category: 'analytics',
     fields: [
@@ -269,7 +291,7 @@ const serviceIntegrations: ServiceIntegration[] = [
     id: 'yandex_metrika',
     name: 'Yandex.Metrika',
     description: 'Russian analytics platform',
-    icon: '📈',
+    icon: <YandexMetrikaIcon className="w-5 h-5" />,
     color: 'from-red-500 to-red-600',
     category: 'analytics',
     fields: [
@@ -282,7 +304,7 @@ const serviceIntegrations: ServiceIntegration[] = [
     id: 'onesignal',
     name: 'OneSignal',
     description: 'Push notifications platform',
-    icon: '🔔',
+    icon: <OneSignalIcon className="w-5 h-5" />,
     color: 'from-red-500 to-pink-600',
     category: 'notifications',
     fields: [
@@ -293,7 +315,7 @@ const serviceIntegrations: ServiceIntegration[] = [
     id: 'getsitecontrol',
     name: 'Getsitecontrol',
     description: 'Popups, surveys, forms',
-    icon: '📝',
+    icon: <GetSiteControlIcon className="w-5 h-5" />,
     color: 'from-teal-500 to-cyan-600',
     category: 'notifications',
     fields: [
@@ -305,7 +327,7 @@ const serviceIntegrations: ServiceIntegration[] = [
     id: 'beamer',
     name: 'Beamer',
     description: 'Changelog & notifications',
-    icon: '📣',
+    icon: <BeamerIcon className="w-5 h-5" />,
     color: 'from-purple-500 to-violet-600',
     category: 'notifications',
     fields: [
@@ -317,7 +339,7 @@ const serviceIntegrations: ServiceIntegration[] = [
     id: 'announcements',
     name: 'Announcements',
     description: 'Show announcements bar',
-    icon: '📢',
+    icon: <AnnouncementsIcon className="w-5 h-5" />,
     color: 'from-amber-500 to-orange-600',
     category: 'other',
     fields: [
@@ -329,7 +351,7 @@ const serviceIntegrations: ServiceIntegration[] = [
     id: 'custom_head_code',
     name: 'Other (Custom Code)',
     description: 'Add custom scripts to <head>',
-    icon: '🔧',
+    icon: <CustomCodeIcon className="w-5 h-5" />,
     color: 'from-slate-500 to-gray-600',
     category: 'other',
     fields: [

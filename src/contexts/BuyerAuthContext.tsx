@@ -24,6 +24,9 @@ interface BuyerUser {
   preferred_language: string | null;
   timezone: string | null;
   low_balance_threshold: number | null;
+  oauth_provider: string | null;
+  oauth_provider_id: string | null;
+  avatar_url: string | null;
 }
 
 interface BuyerSession {
