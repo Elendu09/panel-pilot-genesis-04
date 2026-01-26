@@ -50,7 +50,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+// Tabs removed - now using single-page layout
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -361,7 +361,6 @@ const serviceIntegrations: ServiceIntegration[] = [
 ];
 
 const Integrations = () => {
-  const [activeTab, setActiveTab] = useState("oauth");
   const [panelId, setPanelId] = useState<string | null>(null);
   const [panelSubdomain, setPanelSubdomain] = useState<string>('');
   const [panelDomains, setPanelDomains] = useState<string[]>([]);
@@ -625,285 +624,266 @@ const Integrations = () => {
         </div>
       </motion.div>
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="bg-muted/50 p-1">
-          <TabsTrigger value="oauth" className="gap-2">
-            <Shield className="w-4 h-4" />
+      {/* OAuth Integrations Section */}
+      <Card className="glass-card">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="w-5 h-5 text-primary" />
             OAuth Integrations
-          </TabsTrigger>
-          <TabsTrigger value="services" className="gap-2">
-            <Plug className="w-4 h-4" />
-            Service Integrations
-          </TabsTrigger>
-        </TabsList>
-
-        {/* OAuth Integrations Tab */}
-        <TabsContent value="oauth" className="mt-6">
-          <Card className="glass-card mb-6">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="w-5 h-5 text-primary" />
-                OAuth Integrations
-              </CardTitle>
-              <CardDescription>
-                Allow customers to sign up and log in using social accounts. Enabled providers will appear on your buyer auth page.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <motion.div 
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-                className="grid md:grid-cols-2 gap-4"
-              >
-                {oauthProviders.map((provider) => {
-                  const connected = isOAuthConnected(provider.id);
-                  return (
-                    <motion.div key={provider.id} variants={itemVariants}>
-                      <div className={cn(
-                        "flex items-center justify-between p-4 rounded-xl border transition-all",
-                        connected 
-                          ? "bg-emerald-500/5 border-emerald-500/30" 
-                          : "bg-muted/30 border-border hover:border-primary/30"
-                      )}>
-                        <div className="flex items-center gap-3">
-                          <div className={cn("w-10 h-10 rounded-lg bg-gradient-to-br flex items-center justify-center text-xl", provider.color)}>
-                            {provider.icon}
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium">{provider.name}</span>
-                              {connected && (
-                                <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                              )}
-                            </div>
-                            <span className="text-xs text-muted-foreground">
-                              {connected ? 'Connected' : 'Not configured'}
-                            </span>
-                          </div>
-                        </div>
-                        <Button 
-                          variant={connected ? "outline" : "default"}
-                          size="sm"
-                          onClick={() => openOAuthDialog(provider)}
-                        >
-                          {connected ? (
-                            <>
-                              <Settings2 className="w-4 h-4 mr-2" />
-                              Edit
-                            </>
-                          ) : (
-                            <>
-                              <Plus className="w-4 h-4 mr-2" />
-                              Connect
-                            </>
+          </CardTitle>
+          <CardDescription>
+            Allow customers to sign up and log in using social accounts. Enabled providers will appear on your buyer auth page.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="grid md:grid-cols-2 gap-4"
+          >
+            {oauthProviders.map((provider) => {
+              const connected = isOAuthConnected(provider.id);
+              return (
+                <motion.div key={provider.id} variants={itemVariants}>
+                  <div className={cn(
+                    "flex items-center justify-between p-4 rounded-xl border transition-all",
+                    connected 
+                      ? "bg-emerald-500/5 border-emerald-500/30" 
+                      : "bg-muted/30 border-border hover:border-primary/30"
+                  )}>
+                    <div className="flex items-center gap-3">
+                      <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center text-xl", provider.color)}>
+                        {provider.icon}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{provider.name}</span>
+                          {connected && (
+                            <span className="w-2 h-2 rounded-full bg-emerald-500" />
                           )}
-                        </Button>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </motion.div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Service Integrations Tab */}
-        <TabsContent value="services" className="mt-6 space-y-6">
-          {/* Chat Widgets */}
-          <Card className="glass-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MessageCircle className="w-5 h-5 text-green-500" />
-                Chat Widgets
-              </CardTitle>
-              <CardDescription>
-                Add live chat and support widgets to your storefront
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <motion.div 
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-                className="grid md:grid-cols-3 gap-3"
-              >
-                {serviceIntegrations.filter(s => s.category === 'chat').map((service) => {
-                  const connected = isServiceConnected(service.id);
-                  return (
-                    <motion.div key={service.id} variants={itemVariants}>
-                      <div className={cn(
-                        "flex items-center justify-between p-3 rounded-lg border transition-all cursor-pointer hover:border-primary/30",
-                        connected 
-                          ? "bg-emerald-500/5 border-emerald-500/30" 
-                          : "bg-muted/20 border-border"
-                      )} onClick={() => openServiceDialog(service)}>
-                        <div className="flex items-center gap-2.5">
-                          <div className={cn("w-8 h-8 rounded-lg bg-gradient-to-br flex items-center justify-center text-sm", service.color)}>
-                            {service.icon}
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-sm font-medium">{service.name}</span>
-                              {connected && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
-                            </div>
-                          </div>
                         </div>
-                        <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground">
+                          {connected ? 'Connected' : 'Not configured'}
+                        </span>
                       </div>
-                    </motion.div>
-                  );
-                })}
-              </motion.div>
-            </CardContent>
-          </Card>
+                    </div>
+                    <Button 
+                      variant={connected ? "outline" : "default"}
+                      size="sm"
+                      onClick={() => openOAuthDialog(provider)}
+                    >
+                      {connected ? (
+                        <>
+                          <Settings2 className="w-4 h-4 mr-2" />
+                          Edit
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="w-4 h-4 mr-2" />
+                          Connect
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </motion.div>
+        </CardContent>
+      </Card>
 
-          {/* Analytics */}
-          <Card className="glass-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="w-5 h-5 text-orange-500" />
-                Analytics & Tracking
-              </CardTitle>
-              <CardDescription>
-                Track visitor behavior and measure conversions
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <motion.div 
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-                className="grid md:grid-cols-3 gap-3"
-              >
-                {serviceIntegrations.filter(s => s.category === 'analytics').map((service) => {
-                  const connected = isServiceConnected(service.id);
-                  return (
-                    <motion.div key={service.id} variants={itemVariants}>
-                      <div className={cn(
-                        "flex items-center justify-between p-3 rounded-lg border transition-all cursor-pointer hover:border-primary/30",
-                        connected 
-                          ? "bg-emerald-500/5 border-emerald-500/30" 
-                          : "bg-muted/20 border-border"
-                      )} onClick={() => openServiceDialog(service)}>
-                        <div className="flex items-center gap-2.5">
-                          <div className={cn("w-8 h-8 rounded-lg bg-gradient-to-br flex items-center justify-center text-sm", service.color)}>
-                            {service.icon}
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-sm font-medium">{service.name}</span>
-                              {connected && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
-                            </div>
-                          </div>
-                        </div>
-                        <ChevronRight className="w-4 h-4 text-muted-foreground" />
+      {/* Chat Widgets Section */}
+      <Card className="glass-card">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <MessageCircle className="w-5 h-5 text-green-500" />
+            Chat Widgets
+          </CardTitle>
+          <CardDescription>
+            Add live chat and support widgets to your storefront
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="grid md:grid-cols-3 gap-3"
+          >
+            {serviceIntegrations.filter(s => s.category === 'chat').map((service) => {
+              const connected = isServiceConnected(service.id);
+              return (
+                <motion.div key={service.id} variants={itemVariants}>
+                  <div className={cn(
+                    "flex items-center justify-between p-3 rounded-lg border transition-all cursor-pointer hover:border-primary/30",
+                    connected 
+                      ? "bg-emerald-500/5 border-emerald-500/30" 
+                      : "bg-muted/20 border-border"
+                  )} onClick={() => openServiceDialog(service)}>
+                    <div className="flex items-center gap-2.5">
+                      <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center text-sm", service.color)}>
+                        {service.icon}
                       </div>
-                    </motion.div>
-                  );
-                })}
-              </motion.div>
-            </CardContent>
-          </Card>
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-sm font-medium">{service.name}</span>
+                          {connected && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
+                        </div>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                </motion.div>
+              );
+            })}
+          </motion.div>
+        </CardContent>
+      </Card>
 
-          {/* Notifications */}
-          <Card className="glass-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Bell className="w-5 h-5 text-purple-500" />
-                Notifications & Widgets
-              </CardTitle>
-              <CardDescription>
-                Push notifications, popups, and announcements
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <motion.div 
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-                className="grid md:grid-cols-3 gap-3"
-              >
-                {serviceIntegrations.filter(s => s.category === 'notifications').map((service) => {
-                  const connected = isServiceConnected(service.id);
-                  return (
-                    <motion.div key={service.id} variants={itemVariants}>
-                      <div className={cn(
-                        "flex items-center justify-between p-3 rounded-lg border transition-all cursor-pointer hover:border-primary/30",
-                        connected 
-                          ? "bg-emerald-500/5 border-emerald-500/30" 
-                          : "bg-muted/20 border-border"
-                      )} onClick={() => openServiceDialog(service)}>
-                        <div className="flex items-center gap-2.5">
-                          <div className={cn("w-8 h-8 rounded-lg bg-gradient-to-br flex items-center justify-center text-sm", service.color)}>
-                            {service.icon}
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-sm font-medium">{service.name}</span>
-                              {connected && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
-                            </div>
-                          </div>
-                        </div>
-                        <ChevronRight className="w-4 h-4 text-muted-foreground" />
+      {/* Analytics & Tracking Section */}
+      <Card className="glass-card">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BarChart3 className="w-5 h-5 text-orange-500" />
+            Analytics & Tracking
+          </CardTitle>
+          <CardDescription>
+            Track visitor behavior and measure conversions
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="grid md:grid-cols-3 gap-3"
+          >
+            {serviceIntegrations.filter(s => s.category === 'analytics').map((service) => {
+              const connected = isServiceConnected(service.id);
+              return (
+                <motion.div key={service.id} variants={itemVariants}>
+                  <div className={cn(
+                    "flex items-center justify-between p-3 rounded-lg border transition-all cursor-pointer hover:border-primary/30",
+                    connected 
+                      ? "bg-emerald-500/5 border-emerald-500/30" 
+                      : "bg-muted/20 border-border"
+                  )} onClick={() => openServiceDialog(service)}>
+                    <div className="flex items-center gap-2.5">
+                      <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center text-sm", service.color)}>
+                        {service.icon}
                       </div>
-                    </motion.div>
-                  );
-                })}
-              </motion.div>
-            </CardContent>
-          </Card>
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-sm font-medium">{service.name}</span>
+                          {connected && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
+                        </div>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                </motion.div>
+              );
+            })}
+          </motion.div>
+        </CardContent>
+      </Card>
 
-          {/* Other */}
-          <Card className="glass-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Code className="w-5 h-5 text-slate-500" />
-                Other Integrations
-              </CardTitle>
-              <CardDescription>
-                Announcements, custom code, and more
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <motion.div 
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-                className="grid md:grid-cols-3 gap-3"
-              >
-                {serviceIntegrations.filter(s => s.category === 'other').map((service) => {
-                  const connected = isServiceConnected(service.id);
-                  return (
-                    <motion.div key={service.id} variants={itemVariants}>
-                      <div className={cn(
-                        "flex items-center justify-between p-3 rounded-lg border transition-all cursor-pointer hover:border-primary/30",
-                        connected 
-                          ? "bg-emerald-500/5 border-emerald-500/30" 
-                          : "bg-muted/20 border-border"
-                      )} onClick={() => openServiceDialog(service)}>
-                        <div className="flex items-center gap-2.5">
-                          <div className={cn("w-8 h-8 rounded-lg bg-gradient-to-br flex items-center justify-center text-sm", service.color)}>
-                            {service.icon}
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-sm font-medium">{service.name}</span>
-                              {connected && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
-                            </div>
-                          </div>
-                        </div>
-                        <ChevronRight className="w-4 h-4 text-muted-foreground" />
+      {/* Notifications & Widgets Section */}
+      <Card className="glass-card">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Bell className="w-5 h-5 text-purple-500" />
+            Notifications & Widgets
+          </CardTitle>
+          <CardDescription>
+            Push notifications, popups, and announcements
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="grid md:grid-cols-3 gap-3"
+          >
+            {serviceIntegrations.filter(s => s.category === 'notifications').map((service) => {
+              const connected = isServiceConnected(service.id);
+              return (
+                <motion.div key={service.id} variants={itemVariants}>
+                  <div className={cn(
+                    "flex items-center justify-between p-3 rounded-lg border transition-all cursor-pointer hover:border-primary/30",
+                    connected 
+                      ? "bg-emerald-500/5 border-emerald-500/30" 
+                      : "bg-muted/20 border-border"
+                  )} onClick={() => openServiceDialog(service)}>
+                    <div className="flex items-center gap-2.5">
+                      <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center text-sm", service.color)}>
+                        {service.icon}
                       </div>
-                    </motion.div>
-                  );
-                })}
-              </motion.div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-sm font-medium">{service.name}</span>
+                          {connected && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
+                        </div>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                </motion.div>
+              );
+            })}
+          </motion.div>
+        </CardContent>
+      </Card>
+
+      {/* Other Integrations Section */}
+      <Card className="glass-card">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Code className="w-5 h-5 text-slate-500" />
+            Other Integrations
+          </CardTitle>
+          <CardDescription>
+            Announcements, custom code, and more
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="grid md:grid-cols-3 gap-3"
+          >
+            {serviceIntegrations.filter(s => s.category === 'other').map((service) => {
+              const connected = isServiceConnected(service.id);
+              return (
+                <motion.div key={service.id} variants={itemVariants}>
+                  <div className={cn(
+                    "flex items-center justify-between p-3 rounded-lg border transition-all cursor-pointer hover:border-primary/30",
+                    connected 
+                      ? "bg-emerald-500/5 border-emerald-500/30" 
+                      : "bg-muted/20 border-border"
+                  )} onClick={() => openServiceDialog(service)}>
+                    <div className="flex items-center gap-2.5">
+                      <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center text-sm", service.color)}>
+                        {service.icon}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-sm font-medium">{service.name}</span>
+                          {connected && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
+                        </div>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                </motion.div>
+              );
+            })}
+          </motion.div>
+        </CardContent>
+      </Card>
 
       {/* OAuth Configuration Dialog */}
       <Dialog open={oauthDialogOpen} onOpenChange={setOauthDialogOpen}>
@@ -911,7 +891,7 @@ const Integrations = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3">
               {selectedOAuth && (
-                <div className={cn("w-10 h-10 rounded-lg bg-gradient-to-br flex items-center justify-center text-xl", selectedOAuth.color)}>
+                <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center text-xl", selectedOAuth.color)}>
                   {selectedOAuth.icon}
                 </div>
               )}
@@ -1042,7 +1022,7 @@ const Integrations = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3">
               {selectedService && (
-                <div className={cn("w-10 h-10 rounded-lg bg-gradient-to-br flex items-center justify-center text-xl", selectedService.color)}>
+                <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center text-xl", selectedService.color)}>
                   {selectedService.icon}
                 </div>
               )}

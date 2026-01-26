@@ -566,7 +566,7 @@ const PanelOverview = () => {
               <Button 
                 variant="outline" 
                 size="sm"
-                onClick={() => navigate('/billing')}
+                onClick={() => navigate('/panel/billing')}
                 className="gap-1.5 bg-background/50 backdrop-blur-sm hover:bg-primary/10 border-primary/30"
               >
                 <Wallet className="w-4 h-4" />
@@ -575,7 +575,7 @@ const PanelOverview = () => {
               <Button 
                 variant="outline" 
                 size="sm"
-                onClick={() => navigate('/billing')}
+                onClick={() => navigate('/panel/billing')}
                 className="gap-1.5 bg-background/50 backdrop-blur-sm hover:bg-amber-500/10 border-amber-500/30"
               >
                 <Crown className="w-4 h-4 text-amber-500" />

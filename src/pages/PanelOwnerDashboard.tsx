@@ -19,7 +19,8 @@ import {
   FileText,
   HelpCircle,
   CreditCard,
-  Shield
+  Shield,
+  Zap
 } from "lucide-react";
 import { usePendingOrders } from "@/hooks/use-pending-orders";
 import { Button } from "@/components/ui/button";
@@ -121,6 +122,7 @@ const PanelOwnerDashboard = () => {
   const settingsNavigation = [
     { name: 'Providers', href: '/panel/providers', icon: Plug, tourId: 'providers' },
     { name: 'Payments', href: '/panel/payments', icon: CreditCard, tourId: 'payments' },
+    { name: 'Integrations', href: '/panel/integrations', icon: Zap, tourId: 'integrations' },
     { name: 'Team', href: '/panel/team', icon: Users, tourId: 'team' },
     { name: 'API', href: '/panel/api', icon: Code, tourId: 'api' },
     { name: 'Blog', href: '/panel/blog', icon: FileText, tourId: 'blog' },
