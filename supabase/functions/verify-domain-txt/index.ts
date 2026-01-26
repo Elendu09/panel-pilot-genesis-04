@@ -26,8 +26,8 @@ interface GoogleDNSResponse {
 async function lookupTXTRecords(domain: string): Promise<string[]> {
   const txtRecords: string[] = [];
   
-  // Check _lovable subdomain for verification TXT record
-  const verificationHost = `_lovable.${domain}`;
+  // Check _smmpilot subdomain for verification TXT record
+  const verificationHost = `_smmpilot.${domain}`;
   
   console.log(`[verify-domain-txt] Looking up TXT records for: ${verificationHost}`);
   
@@ -108,7 +108,7 @@ serve(async (req) => {
     console.log(`[verify-domain-txt] Verifying TXT record for domain: ${domain}, panel: ${panel_id}`);
 
     // Expected TXT record value
-    const expectedValue = `lovable_verify=${panel_id}`;
+    const expectedValue = `smmpilot-verify=${panel_id}`;
     console.log(`[verify-domain-txt] Expected TXT value: ${expectedValue}`);
 
     // Lookup TXT records
