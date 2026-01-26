@@ -75,6 +75,16 @@ const BuyerAuth = () => {
   const [oauthProviders, setOauthProviders] = useState<EnabledOAuthProvider[]>([]);
   const [oauthLoading, setOauthLoading] = useState<string | null>(null);
 
+  // Check for OAuth error in URL params
+  useEffect(() => {
+    const errorParam = searchParams.get('error');
+    if (errorParam) {
+      toast.error(`Sign in failed: ${decodeURIComponent(errorParam)}`);
+      // Clear the error from URL
+      navigate('/auth', { replace: true });
+    }
+  }, [searchParams, navigate]);
+
   // Fetch enabled OAuth providers for this panel
   useEffect(() => {
     const fetchOAuthProviders = async () => {
@@ -129,6 +139,9 @@ const BuyerAuth = () => {
   const handleOAuthLogin = (provider: EnabledOAuthProvider) => {
     setOauthLoading(provider.id);
     
+    // Store panel ID for callback
+    localStorage.setItem('buyer_panel_id', panelId);
+    
     const currentOrigin = window.location.origin;
     const state = btoa(JSON.stringify({ panelId, returnUrl: currentOrigin }));
     
@@ -148,8 +161,8 @@ const BuyerAuth = () => {
         authUrl = `https://oauth.vk.com/authorize?client_id=${provider.clientId}&redirect_uri=${encodeURIComponent(callbackUrl)}&response_type=code&scope=email&state=${state}&v=5.131`;
         break;
       case 'telegram':
-        // Telegram uses a widget, not a redirect flow - for now show info
-        toast.info('Telegram login widget coming soon');
+        // Telegram uses a widget-based flow, handled separately
+        toast.info('Telegram login uses a popup widget. Please configure the Telegram Login Widget on your domain.');
         setOauthLoading(null);
         return;
       default:
