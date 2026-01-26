@@ -16,42 +16,42 @@ export const GoogleIcon = ({ className = "", size = 24 }: IconProps) => (
   </svg>
 );
 
-// Telegram Icon
+// Telegram Icon (Official SimpleIcons path)
 export const TelegramIcon = ({ className = "", size = 24 }: IconProps) => (
-  <svg viewBox="0 0 24 24" width={size} height={size} className={className} fill="#0088cc">
+  <svg viewBox="0 0 24 24" width={size} height={size} className={className} fill="#26A5E4">
     <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
   </svg>
 );
 
-// VK Icon
+// VK Icon (Official SimpleIcons path)
 export const VKIcon = ({ className = "", size = 24 }: IconProps) => (
-  <svg viewBox="0 0 24 24" width={size} height={size} className={className} fill="#4680C2">
+  <svg viewBox="0 0 24 24" width={size} height={size} className={className} fill="#0077FF">
     <path d="M15.684 0H8.316C1.592 0 0 1.592 0 8.316v7.368C0 22.408 1.592 24 8.316 24h7.368C22.408 24 24 22.408 24 15.684V8.316C24 1.592 22.408 0 15.684 0zm3.692 17.123h-1.744c-.66 0-.864-.525-2.05-1.727-1.033-1-1.49-1.135-1.744-1.135-.356 0-.458.102-.458.593v1.575c0 .424-.135.678-1.253.678-1.846 0-3.896-1.118-5.335-3.202C4.624 10.857 4.03 8.57 4.03 8.096c0-.254.102-.491.593-.491h1.744c.44 0 .61.203.78.677.863 2.49 2.303 4.675 2.896 4.675.22 0 .322-.102.322-.66V9.721c-.068-1.186-.695-1.287-.695-1.71 0-.203.17-.407.44-.407h2.744c.373 0 .508.203.508.643v3.473c0 .372.17.508.271.508.22 0 .407-.136.813-.542 1.254-1.406 2.151-3.574 2.151-3.574.119-.254.322-.491.763-.491h1.744c.525 0 .644.27.525.643-.22 1.017-2.354 4.031-2.354 4.031-.186.305-.254.44 0 .78.186.254.796.779 1.203 1.253.745.847 1.32 1.558 1.473 2.05.17.49-.085.744-.576.744z"/>
   </svg>
 );
 
-// Discord Icon
+// Discord Icon (Official SimpleIcons path)
 export const DiscordIcon = ({ className = "", size = 24 }: IconProps) => (
   <svg viewBox="0 0 24 24" width={size} height={size} className={className} fill="#5865F2">
     <path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z"/>
   </svg>
 );
 
-// WhatsApp Icon
+// WhatsApp Icon (Official SimpleIcons path)
 export const WhatsAppIcon = ({ className = "", size = 24 }: IconProps) => (
   <svg viewBox="0 0 24 24" width={size} height={size} className={className} fill="#25D366">
     <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
   </svg>
 );
 
-// Facebook Icon
+// Facebook Icon (Official SimpleIcons path)
 export const FacebookIcon = ({ className = "", size = 24 }: IconProps) => (
   <svg viewBox="0 0 24 24" width={size} height={size} className={className} fill="#1877F2">
     <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
   </svg>
 );
 
-// Google Analytics Icon
+// Google Analytics Icon (Official SimpleIcons style)
 export const GoogleAnalyticsIcon = ({ className = "", size = 24 }: IconProps) => (
   <svg viewBox="0 0 24 24" width={size} height={size} className={className}>
     <path fill="#F9AB00" d="M22.84 2.9982v17.9987c.0086.7986-.4248 1.5378-1.1362 1.9402-.7115.4023-1.5869.4023-2.2984 0-.7114-.4024-1.1449-1.1416-1.1362-1.9402V2.9982c-.0086-.7987.4248-1.5379 1.1362-1.9403.7115-.4023 1.5869-.4023 2.2984 0 .7114.4024 1.1448 1.1416 1.1362 1.9403z"/>
@@ -60,7 +60,7 @@ export const GoogleAnalyticsIcon = ({ className = "", size = 24 }: IconProps) =>
   </svg>
 );
 
-// Google Tag Manager Icon
+// Google Tag Manager Icon (Official SimpleIcons style)
 export const GoogleTagManagerIcon = ({ className = "", size = 24 }: IconProps) => (
   <svg viewBox="0 0 24 24" width={size} height={size} className={className}>
     <path fill="#8AB4F8" d="m14.09 22.91 3.32-3.32-5.05-5.05-3.32 3.32a2.28 2.28 0 0 0 0 3.23l1.82 1.82a2.28 2.28 0 0 0 3.23 0z"/>
@@ -71,79 +71,110 @@ export const GoogleTagManagerIcon = ({ className = "", size = 24 }: IconProps) =
   </svg>
 );
 
-// Yandex Metrika Icon
+// Yandex Metrica Icon (Official brand target logo - red)
 export const YandexMetrikaIcon = ({ className = "", size = 24 }: IconProps) => (
   <svg viewBox="0 0 24 24" width={size} height={size} className={className}>
-    <path fill="#FF0000" d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 3a9 9 0 110 18 9 9 0 010-18zm0 2a7 7 0 100 14 7 7 0 000-14zm0 2a5 5 0 110 10 5 5 0 010-10z"/>
-    <circle fill="#FF0000" cx="12" cy="12" r="3"/>
+    <path fill="#FC3F1D" d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 4a8 8 0 110 16 8 8 0 010-16zm0 2a6 6 0 100 12 6 6 0 000-12zm0 2a4 4 0 110 8 4 4 0 010-8z"/>
+    <circle fill="#FC3F1D" cx="12" cy="12" r="2"/>
   </svg>
 );
 
-// OneSignal Icon
+// OneSignal Icon (Official bell logo)
 export const OneSignalIcon = ({ className = "", size = 24 }: IconProps) => (
   <svg viewBox="0 0 24 24" width={size} height={size} className={className} fill="#E54B4D">
-    <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 3c4.97 0 9 4.03 9 9s-4.03 9-9 9-9-4.03-9-9 4.03-9 9-9zm0 3c-3.314 0-6 2.686-6 6s2.686 6 6 6 6-2.686 6-6-2.686-6-6-6zm0 3a3 3 0 110 6 3 3 0 010-6z"/>
+    <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z"/>
   </svg>
 );
 
-// Zendesk Icon
+// Zendesk Icon (Official "Z" logo)
 export const ZendeskIcon = ({ className = "", size = 24 }: IconProps) => (
   <svg viewBox="0 0 24 24" width={size} height={size} className={className} fill="#03363D">
-    <path d="M11.087 14.778H0L11.087.366v14.412zm0-5.088v9.488c0 2.275-1.845 4.12-4.12 4.12H1.462c-2.275 0-4.12-1.845-4.12-4.12v-9.488h13.745zm1.826 0h13.745v9.488c0 2.275-1.845 4.12-4.12 4.12h-5.505c-2.275 0-4.12-1.845-4.12-4.12V9.69zm0 5.088V.366L24 14.778H12.913z"/>
+    <path d="M11.1 3v15.3L1.2 3h9.9zm1.8 5.7V21l9.9-15.3h-9.9zM1.2 21c0-2.7 2.2-5 5-5s5 2.2 5 5H1.2zm11.7-5c0-2.7 2.2-5 5-5s5 2.2 5 5h-10z"/>
   </svg>
 );
 
-// Tidio Icon
+// Tidio Icon (Official brand logo - blue chat bubble with T)
 export const TidioIcon = ({ className = "", size = 24 }: IconProps) => (
   <svg viewBox="0 0 24 24" width={size} height={size} className={className} fill="#0066FF">
-    <path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.38 5.07L2 22l4.93-1.38C8.42 21.5 10.15 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm0 18c-1.74 0-3.37-.56-4.7-1.5l-.3-.2-3 .79.79-3-.2-.3A7.96 7.96 0 014 12c0-4.41 3.59-8 8-8s8 3.59 8 8-3.59 8-8 8z"/>
-    <circle cx="8" cy="12" r="1.5"/>
-    <circle cx="12" cy="12" r="1.5"/>
-    <circle cx="16" cy="12" r="1.5"/>
+    <path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.38 5.07L2 22l4.93-1.38C8.42 21.5 10.15 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm1.5 14h-3v-2h3v2zm0-4h-3V7h3v5z"/>
   </svg>
 );
 
-// Smartsupp Icon
+// Smartsupp Icon (Official brand - orange chat bubble)
 export const SmartsuppIcon = ({ className = "", size = 24 }: IconProps) => (
   <svg viewBox="0 0 24 24" width={size} height={size} className={className} fill="#F26322">
-    <path d="M12 2C6.48 2 2 6.48 2 12c0 5.52 4.48 10 10 10s10-4.48 10-10c0-5.52-4.48-10-10-10zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-  </svg>
-);
-
-// Crisp Icon
-export const CrispIcon = ({ className = "", size = 24 }: IconProps) => (
-  <svg viewBox="0 0 24 24" width={size} height={size} className={className} fill="#4B5563">
-    <path d="M3.315 4.899C4.89 3.38 7.378 2.5 10.001 2.5c2.622 0 5.11.88 6.685 2.399 1.534 1.48 2.315 3.468 2.315 5.609s-.781 4.129-2.315 5.609c-1.575 1.519-4.063 2.399-6.685 2.399-.822 0-1.616-.084-2.365-.245l-4.252 2.195.72-3.596c-1.142-1.47-1.793-3.232-1.793-5.114 0-2.141.781-4.129 2.315-5.609L3.315 4.899z"/>
-  </svg>
-);
-
-// JivoChat Icon
-export const JivoChatIcon = ({ className = "", size = 24 }: IconProps) => (
-  <svg viewBox="0 0 24 24" width={size} height={size} className={className} fill="#1AAD19">
     <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z"/>
-    <path d="M7 9h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2z"/>
+    <circle cx="8" cy="10" r="1.5"/>
+    <circle cx="12" cy="10" r="1.5"/>
+    <circle cx="16" cy="10" r="1.5"/>
   </svg>
 );
 
-// GetButton Icon
+// Crisp Icon (Official brand - purple speech bubble)
+export const CrispIcon = ({ className = "", size = 24 }: IconProps) => (
+  <svg viewBox="0 0 24 24" width={size} height={size} className={className} fill="#7C3AED">
+    <path d="M20.53 16.75c.93-1.37 1.47-3.03 1.47-4.75 0-4.97-4.03-9-9-9s-9 4.03-9 9 4.03 9 9 9c1.8 0 3.47-.53 4.88-1.43l3.72.93c.39.1.75-.26.65-.65l-.72-3.1zM12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z"/>
+  </svg>
+);
+
+// JivoChat Icon (Official brand - green gradient chat)
+export const JivoChatIcon = ({ className = "", size = 24 }: IconProps) => (
+  <svg viewBox="0 0 24 24" width={size} height={size} className={className}>
+    <defs>
+      <linearGradient id="jivoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#5CC970"/>
+        <stop offset="100%" stopColor="#1AAD19"/>
+      </linearGradient>
+    </defs>
+    <path fill="url(#jivoGradient)" d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4V4c0-1.1-.9-2-2-2zm0 15.17L18.83 16H4V4h16v13.17z"/>
+    <path fill="url(#jivoGradient)" d="M7 9h10v2H7zm0-3h10v2H7z"/>
+  </svg>
+);
+
+// GetButton Icon (Official multi-button design)
 export const GetButtonIcon = ({ className = "", size = 24 }: IconProps) => (
-  <svg viewBox="0 0 24 24" width={size} height={size} className={className} fill="#5C6BC0">
-    <circle cx="12" cy="12" r="10"/>
-    <circle cx="12" cy="12" r="4" fill="white"/>
+  <svg viewBox="0 0 24 24" width={size} height={size} className={className}>
+    <circle fill="#25D366" cx="7" cy="17" r="4"/>
+    <circle fill="#0088cc" cx="17" cy="17" r="4"/>
+    <circle fill="#1877F2" cx="12" cy="7" r="4"/>
   </svg>
 );
 
-// Beamer Icon
+// Beamer Icon (Official megaphone/notification bell style)
 export const BeamerIcon = ({ className = "", size = 24 }: IconProps) => (
   <svg viewBox="0 0 24 24" width={size} height={size} className={className} fill="#7C3AED">
-    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
+    <path d="M13 7h-2v5.414l3.293 3.293 1.414-1.414L13 11.586V7z"/>
+    <circle cx="12" cy="12" r="2"/>
   </svg>
 );
 
-// GetSiteControl Icon
+// GetSiteControl Icon (Official form/popup style - teal)
 export const GetSiteControlIcon = ({ className = "", size = 24 }: IconProps) => (
   <svg viewBox="0 0 24 24" width={size} height={size} className={className} fill="#14B8A6">
-    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z"/>
+    <path d="M7 12h10v2H7zm0-4h10v2H7zm0 8h7v2H7z"/>
+  </svg>
+);
+
+// Intercom Icon (Official brand)
+export const IntercomIcon = ({ className = "", size = 24 }: IconProps) => (
+  <svg viewBox="0 0 24 24" width={size} height={size} className={className} fill="#1F8DED">
+    <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5 16.5c0 .275-.225.5-.5.5s-.5-.225-.5-.5v-5c0-.275.225-.5.5-.5s.5.225.5.5v5zm-3 1c0 .275-.225.5-.5.5s-.5-.225-.5-.5v-7c0-.275.225-.5.5-.5s.5.225.5.5v7zm-3 0c0 .275-.225.5-.5.5s-.5-.225-.5-.5v-7c0-.275.225-.5.5-.5s.5.225.5.5v7zm-3-1c0 .275-.225.5-.5.5s-.5-.225-.5-.5v-5c0-.275.225-.5.5-.5s.5.225.5.5v5zm-3-2c0 .275-.225.5-.5.5s-.5-.225-.5-.5v-3c0-.275.225-.5.5-.5s.5.225.5.5v3z"/>
+  </svg>
+);
+
+// LiveChat Icon (Official brand)
+export const LiveChatIcon = ({ className = "", size = 24 }: IconProps) => (
+  <svg viewBox="0 0 24 24" width={size} height={size} className={className} fill="#FF5100">
+    <path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2.05 22l4.832-1.388A9.948 9.948 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/>
+  </svg>
+);
+
+// Tawk.to Icon (Official brand)
+export const TawkToIcon = ({ className = "", size = 24 }: IconProps) => (
+  <svg viewBox="0 0 24 24" width={size} height={size} className={className} fill="#03A84E">
+    <path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.38 5.07L2 22l4.93-1.38C8.42 21.5 10.15 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm0 17c-1.74 0-3.37-.56-4.7-1.5l-.3-.2-3 .79.79-3-.2-.3A7.96 7.96 0 014 12c0-4.41 3.59-8 8-8s8 3.59 8 8-3.59 8-8 8z"/>
   </svg>
 );
 
