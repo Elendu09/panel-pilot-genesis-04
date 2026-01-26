@@ -74,7 +74,10 @@ import {
   BeamerIcon,
   GetSiteControlIcon,
   AnnouncementsIcon,
-  CustomCodeIcon
+  CustomCodeIcon,
+  IntercomIcon,
+  LiveChatIcon,
+  TawkToIcon
 } from "@/components/icons/IntegrationIcons";
 
 // OAuth Providers Configuration
@@ -262,6 +265,43 @@ const serviceIntegrations: ServiceIntegration[] = [
     fields: [
       { type: 'input', name: 'page_id', label: 'Page ID', placeholder: '123456789', helper: 'Your Facebook Page ID' },
       { type: 'textarea', name: 'code', label: 'Insert Code', placeholder: '<!-- Facebook Chat Plugin -->' }
+    ]
+  },
+  {
+    id: 'intercom',
+    name: 'Intercom',
+    description: 'Customer messaging platform',
+    icon: <IntercomIcon className="w-5 h-5" />,
+    color: 'bg-[#1F8DED]', // Official Intercom blue
+    category: 'chat',
+    fields: [
+      { type: 'input', name: 'app_id', label: 'App ID', placeholder: 'xxxxxxxx', helper: 'Your Intercom App ID' },
+      { type: 'textarea', name: 'code', label: 'Or Insert Code', placeholder: '<!-- Intercom Script -->', helper: 'Or paste your full Intercom installation code' }
+    ]
+  },
+  {
+    id: 'livechat',
+    name: 'LiveChat',
+    description: 'Live chat software',
+    icon: <LiveChatIcon className="w-5 h-5" />,
+    color: 'bg-[#FF5100]', // Official LiveChat orange
+    category: 'chat',
+    fields: [
+      { type: 'input', name: 'license', label: 'License ID', placeholder: '12345678', helper: 'Your LiveChat license number' },
+      { type: 'textarea', name: 'code', label: 'Or Insert Code', placeholder: '<!-- LiveChat Script -->', helper: 'Or paste your LiveChat installation code' }
+    ]
+  },
+  {
+    id: 'tawkto',
+    name: 'Tawk.to',
+    description: 'Free live chat software',
+    icon: <TawkToIcon className="w-5 h-5" />,
+    color: 'bg-[#03A84E]', // Official Tawk.to green
+    category: 'chat',
+    fields: [
+      { type: 'input', name: 'property_id', label: 'Property ID', placeholder: 'xxxxxxxxxxxxxxxxxxxxxxxx', helper: 'Your Tawk.to property ID' },
+      { type: 'input', name: 'widget_id', label: 'Widget ID', placeholder: 'default', helper: 'Usually "default" or custom widget ID' },
+      { type: 'textarea', name: 'code', label: 'Or Insert Code', placeholder: '<!-- Tawk.to Script -->', helper: 'Or paste your full Tawk.to installation code' }
     ]
   },
   // Analytics

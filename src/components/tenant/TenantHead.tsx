@@ -275,6 +275,76 @@ export const TenantHead = ({ title, description }: TenantHeadProps) => {
           }
         }
         
+        // Intercom - inject messenger widget
+        if (integrations.intercom?.enabled) {
+          try {
+            if (integrations.intercom.code) {
+              // Use custom code if provided
+              const code = integrations.intercom.code;
+              const range = document.createRange();
+              const fragment = range.createContextualFragment(code);
+              document.body.appendChild(fragment);
+            } else if (integrations.intercom.app_id) {
+              // Use app_id to load Intercom SDK
+              (window as any).intercomSettings = {
+                api_base: "https://api-iam.intercom.io",
+                app_id: integrations.intercom.app_id,
+              };
+              const script = document.createElement('script');
+              script.innerHTML = `(function(){var w=window;var ic=w.Intercom;if(typeof ic==="function"){ic('reattach_activator');ic('update',w.intercomSettings);}else{var d=document;var i=function(){i.c(arguments);};i.q=[];i.c=function(args){i.q.push(args);};w.Intercom=i;var l=function(){var s=d.createElement('script');s.type='text/javascript';s.async=true;s.src='https://widget.intercom.io/widget/${integrations.intercom.app_id}';var x=d.getElementsByTagName('script')[0];x.parentNode.insertBefore(s,x);};if(document.readyState==='complete'){l();}else if(w.attachEvent){w.attachEvent('onload',l);}else{w.addEventListener('load',l,false);}}})();`;
+              document.body.appendChild(script);
+            }
+          } catch (e) {
+            console.error('Failed to inject Intercom:', e);
+          }
+        }
+        
+        // LiveChat - inject chat widget
+        if (integrations.livechat?.enabled) {
+          try {
+            if (integrations.livechat.code) {
+              // Use custom code if provided
+              const code = integrations.livechat.code;
+              const range = document.createRange();
+              const fragment = range.createContextualFragment(code);
+              document.body.appendChild(fragment);
+            } else if (integrations.livechat.license) {
+              // Use license to load LiveChat SDK
+              const script = document.createElement('script');
+              script.innerHTML = `window.__lc = window.__lc || {};window.__lc.license = ${integrations.livechat.license};(function(n,t,c){function i(n){return e._h?e._h.apply(null,n):e._q.push(n)}var e={_q:[],_h:null,_v:"2.0",on:function(){i(["on",c.call(arguments)])},once:function(){i(["once",c.call(arguments)])},off:function(){i(["off",c.call(arguments)])},get:function(){if(!e._h)throw new Error("[LiveChatWidget] You can't use getters before load.");return i(["get",c.call(arguments)])},call:function(){i(["call",c.call(arguments)])},init:function(){var n=t.createElement("script");n.async=!0,n.type="text/javascript",n.src="https://cdn.livechatinc.com/tracking.js",t.head.appendChild(n)}};!n.__lc.asyncInit&&e.init(),n.LiveChatWidget=n.LiveChatWidget||e}(window,document,[].slice));`;
+              document.body.appendChild(script);
+            }
+          } catch (e) {
+            console.error('Failed to inject LiveChat:', e);
+          }
+        }
+        
+        // Tawk.to - inject chat widget
+        if (integrations.tawkto?.enabled) {
+          try {
+            if (integrations.tawkto.code) {
+              // Use custom code if provided
+              const code = integrations.tawkto.code;
+              const range = document.createRange();
+              const fragment = range.createContextualFragment(code);
+              document.body.appendChild(fragment);
+            } else if (integrations.tawkto.property_id) {
+              // Use property_id and widget_id to load Tawk.to SDK
+              const widgetId = integrations.tawkto.widget_id || 'default';
+              window.Tawk_API = window.Tawk_API || {};
+              window.Tawk_LoadStart = new Date();
+              const script = document.createElement('script');
+              script.async = true;
+              script.src = `https://embed.tawk.to/${integrations.tawkto.property_id}/${widgetId}`;
+              script.charset = 'UTF-8';
+              script.setAttribute('crossorigin', '*');
+              document.head.appendChild(script);
+            }
+          } catch (e) {
+            console.error('Failed to inject Tawk.to:', e);
+          }
+        }
+        
         // Custom Head Code - inject raw HTML/scripts
         if (integrations.custom_head_code?.enabled && integrations.custom_head_code?.code) {
           try {
