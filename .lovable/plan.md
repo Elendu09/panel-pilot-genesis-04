@@ -1,449 +1,229 @@
 
-
-# Plan: Integration Page Overhaul + OAuth System Fixes + Profile Updates
+# Plan: Complete Integration Verification + SVG Icon Updates + Translation Fixes
 
 ## Overview
-
-This plan addresses multiple areas:
-1. **Replace emoji icons with proper SVG icons** in the Integrations page
-2. **Verify and fix each OAuth integration** (Google, Telegram, VK, Discord)
-3. **Fix OAuth callback redirect** (should go to `/auth/callback` not storefront)
-4. **Implement proper Telegram and Facebook integrations** with their specific flows
-5. **Handle OAuth success/failure flows** in signup/signin
-6. **Update buyer profile and dashboard** for OAuth users (show avatar, connected provider)
+This plan addresses three major areas:
+1. **Integration Icons Fix** - Update all SVG icons to match official brand guidelines
+2. **Service Integrations Injection** - Ensure integrations work on tenant storefronts across all themes
+3. **Translation Keys Fix** - Add missing translation keys used across all buyer themes
 
 ---
 
-## Part 1: Replace Emoji Icons with SVG Icons
+## Part 1: Integration Icons - Official Brand SVG Updates
 
-### Problem
-The current Integrations page uses emojis like `🔵`, `✈️`, `💬` for icons which look unprofessional and inconsistent.
+### Current Issues Found
+Several icons in `IntegrationIcons.tsx` use generic placeholder designs instead of official brand icons:
 
-### Solution
-Create proper SVG icon components for each integration and use them instead of emojis.
+| Icon | Current State | Required Fix |
+|------|--------------|--------------|
+| ZendeskIcon | Generic path design | Use official Zendesk "Z" logo (#03363D) |
+| TidioIcon | Generic chat bubble | Use official Tidio logo (blue gradient) |
+| SmartsuppIcon | Generic checkmark | Use official Smartsupp chat bubble (#F26322) |
+| CrispIcon | Generic speech bubble | Use official Crisp purple logo |
+| JivoChatIcon | Generic chat icon | Use official JivoChat green gradient logo |
+| GetButtonIcon | Simple circles | Use official GetButton multi-dot logo |
+| BeamerIcon | Generic globe icon | Use official Beamer megaphone/bell (#7C3AED) |
+| GetSiteControlIcon | Generic form | Use official GetSiteControl logo (#14B8A6) |
+| YandexMetrikaIcon | Generic circles | Use official Yandex.Metrika target logo (#FC3F1D) |
+| OneSignalIcon | Generic circles | Use official OneSignal bell logo (#E54B4D) |
 
-### Icons Needed (OAuth Providers)
+### File to Update
+**`src/components/icons/IntegrationIcons.tsx`**
 
-| Provider | Current | New Icon |
-|----------|---------|----------|
-| Google | `🔵` | Google colored SVG (from BuyerAuth.tsx) |
-| Telegram | `✈️` | TelegramIcon from SocialIcons.tsx |
-| VK | `🔷` | VKIcon from SocialIcons.tsx |
-| Discord | `💬` | DiscordIcon from SocialIcons.tsx |
-
-### Icons Needed (Service Integrations)
-
-| Service | Current | New Icon |
-|---------|---------|----------|
-| Telegram Bot | `✈️` | TelegramIcon |
-| WhatsApp | `💬` | WhatsAppIcon |
-| GetButton | `🔘` | Custom SVG |
-| Zendesk | `🎧` | Custom SVG |
-| Tidio | `💭` | Custom SVG |
-| Smartsupp | `📹` | Custom SVG |
-| Crisp | `💬` | Custom SVG |
-| Jivochat | `🗨️` | Custom SVG |
-| Facebook Chat | `📱` | FacebookIcon |
-| Google Analytics | `📊` | Custom SVG (Google colors) |
-| Google Tag Manager | `🏷️` | Custom SVG |
-| Yandex.Metrika | `📈` | Custom SVG |
-| OneSignal | `🔔` | Custom SVG |
-| Getsitecontrol | `📝` | Custom SVG |
-| Beamer | `📣` | Custom SVG |
-| Announcements | `📢` | Lucide Megaphone |
-| Custom Code | `🔧` | Lucide Code |
-
-### Implementation
-
-Create a new file `src/components/icons/IntegrationIcons.tsx` with all needed SVG icons, then update `Integrations.tsx` to use React components instead of emoji strings.
-
-```tsx
-// Example structure
-interface OAuthProvider {
-  id: string;
-  name: string;
-  icon: React.ReactNode; // Changed from string
-  color: string;
-  setupUrl: string;
-  instructions: string[];
-}
-
-const oauthProviders: OAuthProvider[] = [
-  {
-    id: 'google',
-    name: 'Google OAuth',
-    icon: <GoogleIcon className="w-5 h-5" />,
-    color: 'from-red-500 to-yellow-500',
-    // ...
-  },
-  // ...
-];
-```
+Replace all placeholder icons with official brand SVG paths from SimpleIcons or brand guidelines.
 
 ---
 
-## Part 2: Fix OAuth Callback Flow
+## Part 2: Service Integrations - Storefront Injection
 
 ### Current Issue
-The OAuth callback redirects to `/auth/callback` on the storefront which is correct, but there's a potential issue with panel ID not being stored.
+TenantHead.tsx does NOT inject enabled service integrations (Google Analytics, Facebook Chat, custom code, etc.) into the storefront pages.
 
-### Fix in BuyerOAuthCallback.tsx
+### Required Changes
 
-```tsx
-// Current code reads from localStorage
-const panelId = localStorage.getItem('buyer_panel_id') || '';
+#### 2.1 Update TenantHead.tsx to Inject Scripts
 
-// Problem: This might be empty
-// Fix: Get panelId from JWT payload
-const payload = JSON.parse(atob(token));
-const session = {
-  buyerId: buyerId,
-  panelId: payload.panel, // Use from token, not localStorage
-  token: token,
-  expiresAt: payload.exp
-};
-```
+**File:** `src/components/tenant/TenantHead.tsx`
 
-### Fix in BuyerAuth.tsx
-Store panel ID before OAuth redirect:
+Add a new useEffect that:
+1. Fetches panel_settings.integrations JSONB column
+2. Loops through enabled integrations
+3. Injects scripts/code into `<head>` or `<body>` as appropriate
 
-```tsx
-const handleOAuthLogin = (provider: EnabledOAuthProvider) => {
-  // Store panel ID for callback
-  localStorage.setItem('buyer_panel_id', panelId);
-  // ... rest of OAuth redirect
-};
-```
+**Integrations to inject:**
 
----
+| Integration | Injection Location | Method |
+|-------------|-------------------|--------|
+| Google Analytics | `<head>` | Parse and inject gtag.js code |
+| Google Tag Manager | `<head>` | Inject GTM container script |
+| Yandex.Metrika | `<head>` | Inject counter code |
+| OneSignal | `<head>` | Inject OneSignal SDK + init |
+| Facebook Chat | `<body>` | Inject Messenger plugin HTML |
+| Crisp | `<head>` | Inject Crisp loader with website_id |
+| Tidio | `<body>` | Inject Tidio script |
+| Zendesk | `<body>` | Inject Zendesk widget code |
+| Smartsupp | `<body>` | Inject Smartsupp code |
+| JivoChat | `<body>` | Inject JivoChat widget |
+| GetButton | `<body>` | Inject GetButton code |
+| Beamer | `<head>` | Inject Beamer script with product_id |
+| GetSiteControl | `<body>` | Inject GSC code |
+| Custom Head Code | `<head>` | Inject raw HTML |
 
-## Part 3: Fix Telegram OAuth Integration
-
-### How Telegram Login Works
-Telegram uses a **widget-based** authentication, not a standard OAuth code flow:
-1. Panel owner creates a bot with @BotFather
-2. Bot owner sets the domain via @BotFather: `/setdomain`
-3. Telegram Login Widget is embedded on the auth page
-4. User clicks widget, authenticates via Telegram app
-5. Widget returns user data + hash directly to callback
-
-### Implementation
-
-#### 3.1 Update Telegram OAuth in BuyerAuth.tsx
-
-```tsx
-// For Telegram, use the Telegram Login Widget script
-case 'telegram':
-  // Inject Telegram widget script
-  const script = document.createElement('script');
-  script.src = 'https://telegram.org/js/telegram-widget.js?22';
-  script.setAttribute('data-telegram-login', provider.clientId); // Bot username
-  script.setAttribute('data-size', 'large');
-  script.setAttribute('data-auth-url', `${callbackUrl}&panel_id=${panelId}`);
-  script.setAttribute('data-request-access', 'write');
-  document.body.appendChild(script);
-  return;
-```
-
-#### 3.2 Update oauth-callback Edge Function for Telegram
-
-The current function has basic Telegram handling but needs:
-- Proper HMAC-SHA256 hash verification using bot token
-- Better error messages
-
+**Implementation Pattern:**
 ```typescript
-// Verify Telegram hash
-import { crypto } from "https://deno.land/std@0.168.0/crypto/mod.ts";
-
-async function verifyTelegramHash(
-  data: URLSearchParams, 
-  botToken: string
-): Promise<boolean> {
-  const hash = data.get('hash');
-  if (!hash) return false;
-  
-  // Build data check string (sorted params without hash)
-  const checkArr = [];
-  for (const [key, value] of data.entries()) {
-    if (key !== 'hash') checkArr.push(`${key}=${value}`);
-  }
-  checkArr.sort();
-  const dataCheckString = checkArr.join('\n');
-  
-  // SHA256 of bot token as secret key
-  const encoder = new TextEncoder();
-  const keyData = await crypto.subtle.digest(
-    "SHA-256",
-    encoder.encode(botToken)
-  );
-  
-  const key = await crypto.subtle.importKey(
-    "raw",
-    keyData,
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"]
-  );
-  
-  const signature = await crypto.subtle.sign(
-    "HMAC",
-    key,
-    encoder.encode(dataCheckString)
-  );
-  
-  const computedHash = Array.from(new Uint8Array(signature))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
-  
-  return computedHash === hash;
-}
-```
-
----
-
-## Part 4: Fix Facebook Chat Integration
-
-### How Facebook Messenger Plugin Works
-Facebook Chat plugin is NOT OAuth for login - it's for customer chat on storefront.
-
-### Current Config (Correct)
-The current implementation correctly treats Facebook as a **service integration** (chat widget), not OAuth. The `page_id` and `code` fields allow panel owners to paste their Messenger plugin code.
-
-### Storefront Injection
-Need to update TenantHead.tsx to inject Facebook SDK and chat plugin when enabled:
-
-```tsx
-// In TenantHead.tsx - inject enabled integrations
 useEffect(() => {
-  if (!panelSettings?.integrations) return;
-  
-  const integrations = panelSettings.integrations;
-  
-  // Facebook Chat Plugin
-  if (integrations.facebook_chat?.enabled && integrations.facebook_chat?.code) {
-    const div = document.createElement('div');
-    div.innerHTML = integrations.facebook_chat.code;
-    document.body.appendChild(div);
+  const injectIntegrations = async () => {
+    if (!panel?.id) return;
     
-    // Load Facebook SDK if not already
-    if (!window.FB) {
-      const script = document.createElement('script');
-      script.async = true;
-      script.src = 'https://connect.facebook.net/en_US/sdk.js';
-      document.body.appendChild(script);
+    const { data } = await supabase
+      .from('panel_settings')
+      .select('integrations')
+      .eq('panel_id', panel.id)
+      .single();
+    
+    if (!data?.integrations) return;
+    const integrations = data.integrations as Record<string, any>;
+    
+    // Google Analytics
+    if (integrations.google_analytics?.enabled && integrations.google_analytics?.code) {
+      const range = document.createRange();
+      const fragment = range.createContextualFragment(integrations.google_analytics.code);
+      document.head.appendChild(fragment);
     }
-  }
+    
+    // Crisp Chat
+    if (integrations.crisp?.enabled && integrations.crisp?.website_id) {
+      window.$crisp = [];
+      window.CRISP_WEBSITE_ID = integrations.crisp.website_id;
+      const script = document.createElement('script');
+      script.src = 'https://client.crisp.chat/l.js';
+      script.async = true;
+      document.head.appendChild(script);
+    }
+    
+    // ... other integrations
+  };
   
-  // Google Analytics
-  if (integrations.google_analytics?.enabled && integrations.google_analytics?.code) {
-    const scriptContainer = document.createElement('div');
-    scriptContainer.innerHTML = integrations.google_analytics.code;
-    document.head.appendChild(scriptContainer);
-  }
-  
-  // Custom head code
-  if (integrations.custom_head_code?.enabled && integrations.custom_head_code?.code) {
-    const range = document.createRange();
-    const fragment = range.createContextualFragment(integrations.custom_head_code.code);
-    document.head.appendChild(fragment);
-  }
-}, [panelSettings]);
+  injectIntegrations();
+}, [panel?.id]);
 ```
+
+#### 2.2 FloatingChatWidget Integration
+
+The FloatingChatWidget already correctly reads from panel_settings and renders WhatsApp, Telegram, Messenger, Discord buttons. Verify it receives the configuration from all buyer themes.
+
+**Themes to verify receive FloatingChatWidget:**
+- AliPanelHomepage.tsx
+- FlySMMHomepage.tsx
+- SMMStayHomepage.tsx
+- SMMVisitHomepage.tsx
+- TGRefHomepage.tsx
+
+Check that BuyerThemeWrapper or BuyerLayout includes `<FloatingChatWidget panelId={...} />` for all themes.
 
 ---
 
-## Part 5: OAuth Success/Failure Flows
+## Part 3: Translation Keys - Add Missing Keys
 
-### Current Flow Analysis
+### Missing Keys Found in Themes
 
-**Success Flow:**
-1. User clicks OAuth button on BuyerAuth.tsx
-2. Redirected to provider (Google/Discord/VK)
-3. Provider redirects to edge function `/oauth-callback`
-4. Edge function creates/finds buyer, generates JWT
-5. Redirects to `{returnUrl}/auth/callback?token=...`
-6. BuyerOAuthCallback.tsx stores session, redirects to /dashboard
+| Key Used | File | Current State |
+|----------|------|---------------|
+| `buyer.payment.weAccept` | FlySMMHomepage | NOT in translations |
+| `buyer.stats.happyUsers` | FlySMMHomepage, SMMVisitHomepage | NOT in translations |
+| `buyer.stats.ordersDone` | FlySMMHomepage | NOT in translations |
+| `buyer.howItWorks.howIt` | FlySMMHomepage | NOT in translations |
+| `buyer.howItWorks.works` | FlySMMHomepage | NOT in translations |
+| `buyer.platforms.allMajor` | TGRefHomepage | NOT in translations |
+| `buyer.auth.resetPassword` | SMMVisitHomepage | NOT in translations |
 
-**Failure Flow:**
-1. If error occurs in edge function, redirects to `{returnUrl}/auth?error=...`
-2. BuyerAuth.tsx should display this error
+### File to Update
+**`src/lib/platform-translations.ts`**
 
-### Required Fixes
+Add the following keys to ALL 10 languages (en, es, pt, ar, tr, ru, fr, de, zh, hi):
 
-#### 5.1 Display OAuth Errors in BuyerAuth.tsx
-
-```tsx
-// At start of component, check for error param
-useEffect(() => {
-  const errorParam = searchParams.get('error');
-  if (errorParam) {
-    toast.error(`Sign in failed: ${errorParam}`);
-    // Clear the error from URL
-    navigate('/auth', { replace: true });
-  }
-}, [searchParams]);
-```
-
-#### 5.2 Better Error Handling in BuyerOAuthCallback.tsx
-
-```tsx
-// Add more specific error messages
-if (!token || !buyerId) {
-  setErrorMessage('Authentication data missing. Please try again.');
-  setStatus('error');
-  return;
-}
-
-try {
-  const payload = JSON.parse(atob(token));
-  
-  // Validate token structure
-  if (!payload.exp || !payload.sub || !payload.panel) {
-    throw new Error('Invalid authentication token');
-  }
-  
-  // Check if token is already expired
-  if (payload.exp < Math.floor(Date.now() / 1000)) {
-    throw new Error('Authentication token has expired');
-  }
-  
-  // ... rest of processing
-} catch (err) {
-  console.error('OAuth callback processing error:', err);
-  setErrorMessage(err.message || 'Failed to complete authentication');
-  setStatus('error');
-}
-```
-
----
-
-## Part 6: Update Profile for OAuth Users
-
-### Current Issue
-The BuyerProfile page doesn't show:
-- OAuth-connected provider info
-- User's avatar from OAuth (stored in `avatar_url`)
-- Option to link additional OAuth providers
-
-### Required Updates to BuyerProfile.tsx
-
-#### 6.1 Display Avatar from OAuth
-
-```tsx
-// Update the Avatar component
-<Avatar className="w-20 h-20 border-4 border-primary/20">
-  {buyer?.avatar_url ? (
-    <AvatarImage src={buyer.avatar_url} alt={profileData.name} />
-  ) : null}
-  <AvatarFallback className="bg-primary/10 text-primary text-2xl font-bold">
-    {profileData.name.charAt(0).toUpperCase()}
-  </AvatarFallback>
-</Avatar>
-```
-
-#### 6.2 Show Connected OAuth Provider
-
-```tsx
-// Add section showing OAuth connection
-{buyer?.oauth_provider && (
-  <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30">
-    <div className="flex items-center gap-3">
-      <div className="p-2 rounded-lg bg-primary/10">
-        {buyer.oauth_provider === 'google' && <GoogleIcon className="w-5 h-5" />}
-        {buyer.oauth_provider === 'discord' && <DiscordIcon className="w-5 h-5" />}
-        {buyer.oauth_provider === 'vk' && <VKIcon className="w-5 h-5" />}
-        {buyer.oauth_provider === 'telegram' && <TelegramIcon className="w-5 h-5" />}
-      </div>
-      <div>
-        <p className="font-medium">Connected via {buyer.oauth_provider}</p>
-        <p className="text-sm text-muted-foreground">
-          You signed up using {buyer.oauth_provider}
-        </p>
-      </div>
-    </div>
-    <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500">
-      <CheckCircle className="w-3 h-3 mr-1" />
-      Connected
-    </Badge>
-  </div>
-)}
-```
-
-#### 6.3 Hide Password Section for OAuth Users
-
-```tsx
-// Only show password change for non-OAuth users
-{!buyer?.oauth_provider && (
-  <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30">
-    <div className="flex items-center gap-3">
-      <div className="p-2 rounded-lg bg-primary/10">
-        <Key className="w-5 h-5 text-primary" />
-      </div>
-      <div>
-        <p className="font-medium">Password</p>
-        <p className="text-sm text-muted-foreground">Change your account password</p>
-      </div>
-    </div>
-    <ChangePasswordDialog />
-  </div>
-)}
-```
-
----
-
-## Part 7: Update BuyerAuthContext for OAuth
-
-### Add oauth_provider and avatar_url to BuyerUser interface
-
+**English (en) additions:**
 ```typescript
-interface BuyerUser {
-  // ... existing fields
-  oauth_provider: string | null;
-  oauth_provider_id: string | null;
-  avatar_url: string | null;
-}
+// Payment
+'buyer.payment.weAccept': 'We accept',
+
+// Stats - additional
+'buyer.stats.happyUsers': 'Happy Users',
+'buyer.stats.ordersDone': 'Orders Done',
+
+// How It Works - split
+'buyer.howItWorks.howIt': 'How It',
+'buyer.howItWorks.works': 'Works',
+
+// Platforms - additional
+'buyer.platforms.allMajor': 'All major social networks in one place',
+
+// Auth - additional
+'buyer.auth.resetPassword': 'Reset Password',
 ```
+
+**Spanish (es) additions:**
+```typescript
+'buyer.payment.weAccept': 'Aceptamos',
+'buyer.stats.happyUsers': 'Usuarios Felices',
+'buyer.stats.ordersDone': 'Pedidos Realizados',
+'buyer.howItWorks.howIt': 'Cómo',
+'buyer.howItWorks.works': 'Funciona',
+'buyer.platforms.allMajor': 'Todas las redes sociales en un solo lugar',
+'buyer.auth.resetPassword': 'Restablecer Contraseña',
+```
+
+Similar translations needed for: Portuguese, Arabic, Turkish, Russian, French, German, Chinese, Hindi
 
 ---
 
-## Files to Create/Modify
+## Part 4: Verification Checklist
+
+### Integration Testing Matrix
+
+| Integration | Config UI | Saves to DB | Injects to Storefront | Works All Themes |
+|-------------|-----------|-------------|----------------------|------------------|
+| Google OAuth | ✅ | ✅ | N/A (Auth) | ✅ |
+| Telegram OAuth | ✅ | ✅ | N/A (Auth) | ✅ |
+| VK OAuth | ✅ | ✅ | N/A (Auth) | ✅ |
+| Discord OAuth | ✅ | ✅ | N/A (Auth) | ✅ |
+| WhatsApp Button | ✅ | ✅ | ⚠️ Verify | ⚠️ Verify |
+| Telegram Bot | ✅ | ✅ | N/A (Backend) | ✅ |
+| Google Analytics | ✅ | ✅ | ❌ Need to add | ❌ |
+| Google Tag Manager | ✅ | ✅ | ❌ Need to add | ❌ |
+| Yandex.Metrika | ✅ | ✅ | ❌ Need to add | ❌ |
+| Facebook Chat | ✅ | ✅ | ❌ Need to add | ❌ |
+| Crisp | ✅ | ✅ | ❌ Need to add | ❌ |
+| Tidio | ✅ | ✅ | ❌ Need to add | ❌ |
+| Custom Head Code | ✅ | ✅ | ❌ Need to add | ❌ |
+
+### Theme Translation Coverage
+
+| Theme | Uses t() | Fallbacks | Missing Keys |
+|-------|----------|-----------|--------------|
+| AliPanel | ✅ | ✅ | buyer.features.securePayments (needs check) |
+| FlySMM | ✅ | ✅ | 5 keys missing |
+| SMMStay | ✅ | ✅ | None |
+| SMMVisit | ✅ | ✅ | 2 keys missing |
+| TGRef | ✅ | ✅ | 1 key missing |
+
+---
+
+## Files to Modify
 
 | File | Action | Changes |
 |------|--------|---------|
-| `src/components/icons/IntegrationIcons.tsx` | Create | SVG icons for all integrations |
-| `src/pages/panel/Integrations.tsx` | Modify | Replace emoji icons with SVG components |
-| `src/pages/buyer/BuyerAuth.tsx` | Modify | Add Telegram widget, show OAuth errors |
-| `src/pages/buyer/BuyerOAuthCallback.tsx` | Modify | Better error handling, fix panelId |
-| `src/pages/buyer/BuyerProfile.tsx` | Modify | Show avatar, OAuth provider, hide password for OAuth users |
-| `src/contexts/BuyerAuthContext.tsx` | Modify | Add oauth_provider/avatar_url to interface |
-| `src/components/tenant/TenantHead.tsx` | Modify | Inject enabled service integrations (analytics, chat) |
-| `supabase/functions/oauth-callback/index.ts` | Modify | Add proper Telegram hash verification |
-
----
-
-## Integration Verification Checklist
-
-| Integration | Type | Status | Notes |
-|-------------|------|--------|-------|
-| Google OAuth | OAuth | ✅ Works | Standard flow implemented |
-| Discord OAuth | OAuth | ✅ Works | Standard flow implemented |
-| VK OAuth | OAuth | ✅ Works | Standard flow implemented |
-| Telegram OAuth | OAuth | ⚠️ Needs Fix | Widget-based auth, needs implementation |
-| Telegram Bot | Service | ✅ Works | For notifications, not auth |
-| WhatsApp Button | Service | ✅ Works | Floating button widget |
-| Facebook Chat | Service | ⚠️ Needs Injection | SDK needs to be injected in storefront |
-| Google Analytics | Service | ⚠️ Needs Injection | Code needs to be injected in head |
-| Custom Head Code | Service | ⚠️ Needs Injection | Code needs to be injected in head |
+| `src/components/icons/IntegrationIcons.tsx` | Modify | Update all 10+ icons to official brand SVGs |
+| `src/components/tenant/TenantHead.tsx` | Modify | Add integration script injection logic |
+| `src/lib/platform-translations.ts` | Modify | Add 7 missing keys × 10 languages = 70 translations |
+| `src/components/buyer-themes/BuyerThemeWrapper.tsx` | Verify | Ensure FloatingChatWidget is rendered |
 
 ---
 
 ## Summary
 
-This comprehensive plan will:
-1. **Professionalize the UI** with proper SVG icons instead of emojis
-2. **Fix Telegram OAuth** with proper widget-based authentication
-3. **Enable service integrations** by injecting scripts into storefront head
-4. **Improve OAuth error handling** for better user experience
-5. **Enhance buyer profile** to show OAuth connection details and avatar
-6. **Maintain security** with proper hash verification for Telegram
-
+This plan will:
+1. **Replace all placeholder icons** with official brand SVG icons matching their brand guidelines
+2. **Enable service integrations** by injecting enabled scripts (GA, GTM, Crisp, etc.) into tenant storefronts
+3. **Fix all translation errors** by adding 7 missing keys across all 10 supported languages
+4. **Verify FloatingChatWidget** renders correctly across all 5 buyer themes
