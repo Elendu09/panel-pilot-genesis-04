@@ -92,7 +92,7 @@ const oauthProviders: OAuthProvider[] = [
     id: 'google',
     name: 'Google OAuth',
     icon: <GoogleIcon className="w-5 h-5" />,
-    color: 'from-red-500 to-yellow-500',
+    color: 'bg-white border border-gray-200', // Official Google: white background
     setupUrl: 'https://console.cloud.google.com/apis/credentials',
     instructions: [
       'Go to Google Cloud Console',
@@ -105,7 +105,7 @@ const oauthProviders: OAuthProvider[] = [
     id: 'telegram',
     name: 'Telegram OAuth',
     icon: <TelegramIcon className="w-5 h-5" />,
-    color: 'from-sky-500 to-blue-600',
+    color: 'bg-[#26A5E4]', // Official Telegram blue
     setupUrl: 'https://core.telegram.org/widgets/login',
     instructions: [
       'Message @BotFather on Telegram',
@@ -118,7 +118,7 @@ const oauthProviders: OAuthProvider[] = [
     id: 'vk',
     name: 'VK OAuth',
     icon: <VKIcon className="w-5 h-5" />,
-    color: 'from-blue-600 to-blue-700',
+    color: 'bg-[#0077FF]', // Official VK blue
     setupUrl: 'https://vk.com/apps?act=manage',
     instructions: [
       'Go to VK Developer Console',
@@ -131,7 +131,7 @@ const oauthProviders: OAuthProvider[] = [
     id: 'discord',
     name: 'Discord OAuth',
     icon: <DiscordIcon className="w-5 h-5" />,
-    color: 'from-indigo-500 to-purple-600',
+    color: 'bg-[#5865F2]', // Official Discord blurple
     setupUrl: 'https://discord.com/developers/applications',
     instructions: [
       'Go to Discord Developer Portal',
@@ -166,7 +166,7 @@ const serviceIntegrations: ServiceIntegration[] = [
     name: 'Telegram',
     description: 'Chat with users via Telegram bot',
     icon: <TelegramIcon className="w-5 h-5" />,
-    color: 'from-sky-500 to-blue-600',
+    color: 'bg-[#26A5E4]', // Official Telegram blue
     category: 'chat',
     fields: [
       { type: 'input', name: 'bot_token', label: 'Bot Token', placeholder: '123456:ABC-DEF...', helper: 'Get from @BotFather' },
@@ -178,7 +178,7 @@ const serviceIntegrations: ServiceIntegration[] = [
     name: 'WhatsApp Button',
     description: 'Floating WhatsApp chat button',
     icon: <WhatsAppIcon className="w-5 h-5" />,
-    color: 'from-green-500 to-emerald-600',
+    color: 'bg-[#25D366]', // Official WhatsApp green
     category: 'chat',
     fields: [
       { type: 'phone', name: 'phone', label: 'Phone Number', placeholder: '+1234567890', helper: 'Include country code' },
@@ -190,7 +190,7 @@ const serviceIntegrations: ServiceIntegration[] = [
     name: 'GetButton',
     description: 'Multi-channel chat widget',
     icon: <GetButtonIcon className="w-5 h-5" />,
-    color: 'from-blue-500 to-indigo-600',
+    color: 'bg-[#0066FF]', // GetButton blue
     category: 'chat',
     fields: [
       { type: 'textarea', name: 'code', label: 'Insert Code', placeholder: '<!-- GetButton.io widget -->', helper: 'Paste your GetButton widget code' }
@@ -201,7 +201,7 @@ const serviceIntegrations: ServiceIntegration[] = [
     name: 'Zendesk',
     description: 'Customer support platform',
     icon: <ZendeskIcon className="w-5 h-5" />,
-    color: 'from-emerald-500 to-teal-600',
+    color: 'bg-[#03363D]', // Official Zendesk dark teal
     category: 'chat',
     fields: [
       { type: 'textarea', name: 'code', label: 'Insert Code', placeholder: '<!-- Zendesk Widget -->', helper: 'Paste your Zendesk widget code' }
@@ -212,7 +212,7 @@ const serviceIntegrations: ServiceIntegration[] = [
     name: 'Tidio',
     description: 'Live chat & chatbots',
     icon: <TidioIcon className="w-5 h-5" />,
-    color: 'from-blue-400 to-blue-600',
+    color: 'bg-[#0066FF]', // Official Tidio blue
     category: 'chat',
     fields: [
       { type: 'textarea', name: 'code', label: 'Insert Code', placeholder: '<!-- Tidio Code -->', helper: 'Paste Tidio installation code' }
@@ -223,7 +223,7 @@ const serviceIntegrations: ServiceIntegration[] = [
     name: 'Smartsupp',
     description: 'Live chat with video recordings',
     icon: <SmartsuppIcon className="w-5 h-5" />,
-    color: 'from-yellow-500 to-orange-600',
+    color: 'bg-[#F26322]', // Official Smartsupp orange
     category: 'chat',
     fields: [
       { type: 'textarea', name: 'code', label: 'Insert Code', placeholder: '<!-- Smartsupp Code -->', helper: 'Paste Smartsupp installation code' }
@@ -234,7 +234,7 @@ const serviceIntegrations: ServiceIntegration[] = [
     name: 'Crisp',
     description: 'All-in-one messaging platform',
     icon: <CrispIcon className="w-5 h-5" />,
-    color: 'from-purple-500 to-pink-600',
+    color: 'bg-[#7C3AED]', // Official Crisp purple
     category: 'chat',
     fields: [
       { type: 'input', name: 'website_id', label: 'Website ID', placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx', helper: 'Find in Crisp Dashboard → Settings' }
@@ -245,7 +245,7 @@ const serviceIntegrations: ServiceIntegration[] = [
     name: 'Jivochat',
     description: 'Business messenger',
     icon: <JivoChatIcon className="w-5 h-5" />,
-    color: 'from-green-400 to-cyan-600',
+    color: 'bg-[#1AAD19]', // Official JivoChat green
     category: 'chat',
     fields: [
       { type: 'input', name: 'widget_id', label: 'Widget ID', placeholder: 'xxxxxxxxx', helper: 'Your JivoChat widget ID' },
@@ -257,7 +257,7 @@ const serviceIntegrations: ServiceIntegration[] = [
     name: 'Facebook Chat',
     description: 'Messenger customer chat plugin',
     icon: <FacebookIcon className="w-5 h-5" />,
-    color: 'from-blue-600 to-blue-700',
+    color: 'bg-[#1877F2]', // Official Facebook blue
     category: 'chat',
     fields: [
       { type: 'input', name: 'page_id', label: 'Page ID', placeholder: '123456789', helper: 'Your Facebook Page ID' },
@@ -270,7 +270,7 @@ const serviceIntegrations: ServiceIntegration[] = [
     name: 'Google Analytics',
     description: 'Track website traffic & behavior',
     icon: <GoogleAnalyticsIcon className="w-5 h-5" />,
-    color: 'from-orange-500 to-yellow-600',
+    color: 'bg-[#F9AB00]', // Official Google Analytics yellow/orange
     category: 'analytics',
     fields: [
       { type: 'textarea', name: 'code', label: 'Insert Code', placeholder: '<!-- Google Analytics -->\n<script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXX"></script>', helper: 'Paste your gtag.js code' }
@@ -281,7 +281,7 @@ const serviceIntegrations: ServiceIntegration[] = [
     name: 'Google Tag Manager',
     description: 'Manage all your tags in one place',
     icon: <GoogleTagManagerIcon className="w-5 h-5" />,
-    color: 'from-blue-500 to-cyan-600',
+    color: 'bg-[#246FDB]', // Official GTM blue
     category: 'analytics',
     fields: [
       { type: 'input', name: 'container_id', label: 'Container ID', placeholder: 'GTM-XXXXXXX', helper: 'Your GTM container ID' }
@@ -292,7 +292,7 @@ const serviceIntegrations: ServiceIntegration[] = [
     name: 'Yandex.Metrika',
     description: 'Russian analytics platform',
     icon: <YandexMetrikaIcon className="w-5 h-5" />,
-    color: 'from-red-500 to-red-600',
+    color: 'bg-[#FC3F1D]', // Official Yandex red
     category: 'analytics',
     fields: [
       { type: 'input', name: 'counter_id', label: 'Counter ID', placeholder: '12345678', helper: 'Your Yandex.Metrika counter ID' },
@@ -305,7 +305,7 @@ const serviceIntegrations: ServiceIntegration[] = [
     name: 'OneSignal',
     description: 'Push notifications platform',
     icon: <OneSignalIcon className="w-5 h-5" />,
-    color: 'from-red-500 to-pink-600',
+    color: 'bg-[#E54B4D]', // Official OneSignal red
     category: 'notifications',
     fields: [
       { type: 'input', name: 'app_id', label: 'App ID', placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx', helper: 'Find in OneSignal Dashboard' }
@@ -316,7 +316,7 @@ const serviceIntegrations: ServiceIntegration[] = [
     name: 'Getsitecontrol',
     description: 'Popups, surveys, forms',
     icon: <GetSiteControlIcon className="w-5 h-5" />,
-    color: 'from-teal-500 to-cyan-600',
+    color: 'bg-[#14B8A6]', // GetSiteControl teal
     category: 'notifications',
     fields: [
       { type: 'input', name: 'widget_id', label: 'Widget ID', placeholder: 'xxxxxxxxx' },
@@ -328,7 +328,7 @@ const serviceIntegrations: ServiceIntegration[] = [
     name: 'Beamer',
     description: 'Changelog & notifications',
     icon: <BeamerIcon className="w-5 h-5" />,
-    color: 'from-purple-500 to-violet-600',
+    color: 'bg-[#7C3AED]', // Beamer purple
     category: 'notifications',
     fields: [
       { type: 'input', name: 'product_id', label: 'Product ID', placeholder: 'xxxxx', helper: 'Your Beamer product ID' }
@@ -340,7 +340,7 @@ const serviceIntegrations: ServiceIntegration[] = [
     name: 'Announcements',
     description: 'Show announcements bar',
     icon: <AnnouncementsIcon className="w-5 h-5" />,
-    color: 'from-amber-500 to-orange-600',
+    color: 'bg-[#F59E0B]', // Amber/orange
     category: 'other',
     fields: [
       { type: 'input', name: 'text', label: 'Announcement Text', placeholder: 'Welcome to our panel!' },
@@ -352,7 +352,7 @@ const serviceIntegrations: ServiceIntegration[] = [
     name: 'Other (Custom Code)',
     description: 'Add custom scripts to <head>',
     icon: <CustomCodeIcon className="w-5 h-5" />,
-    color: 'from-slate-500 to-gray-600',
+    color: 'bg-[#475569]', // Slate gray
     category: 'other',
     fields: [
       { type: 'textarea', name: 'code', label: 'Insert Code', placeholder: '<!-- Custom Code for <head> -->\n<script>...</script>', helper: 'This code will be injected into the page <head>' }

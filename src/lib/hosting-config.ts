@@ -39,8 +39,8 @@ export function getDnsRecordsForDomain(domain: string, verificationToken: string
     },
     {
       type: 'TXT',
-      host: '_smmpilot',
-      value: `smmpilot-verify=${verificationToken}`,
+      host: '_homeofsmm',
+      value: `homeofsmm-verify=${verificationToken}`,
       description: 'Verifies domain ownership for your panel',
       required: true,
     },

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useTenant, useTenantServices } from '@/hooks/useTenant';
+import { TenantHead } from '@/components/tenant/TenantHead';
 import { ThemeOne } from '@/components/themes/ThemeOne';
 import { ThemeTwo } from '@/components/themes/ThemeTwo';
 import { ThemeThree } from '@/components/themes/ThemeThree';
@@ -294,6 +295,8 @@ const Storefront = () => {
         logoUrl={panel.logo_url || undefined}
         description={seoDescription}
       />
+      {/* Inject TenantHead for service integrations (GA, GTM, Crisp, custom code, etc.) */}
+      <TenantHead />
       {/* Inject design preset colors as CSS variables */}
       {storefrontColorStyles && <style>{storefrontColorStyles}</style>}
       {/* Theme mode wrapper - uses BuyerTheme* wrapper for buyer themes (enables CSS light/dark selectors) */}
