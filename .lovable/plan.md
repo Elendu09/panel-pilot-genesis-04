@@ -1,229 +1,254 @@
 
-# Plan: Complete Integration Verification + SVG Icon Updates + Translation Fixes
 
-## Overview
-This plan addresses three major areas:
-1. **Integration Icons Fix** - Update all SVG icons to match official brand guidelines
-2. **Service Integrations Injection** - Ensure integrations work on tenant storefronts across all themes
-3. **Translation Keys Fix** - Add missing translation keys used across all buyer themes
+# Plan: Domain Management Page Complete Rewrite
+
+## Current Issues Analysis
+
+After thorough analysis of the current `DomainSettings.tsx` (970 lines) and 15 domain-related components, I've identified significant problems that require a complete rewrite:
+
+### Critical Problems
+
+| Issue | Current State | Impact |
+|-------|---------------|--------|
+| **Multi-provider complexity** | Supports Vercel, Lovable, Netlify, Cloudflare, Custom | Confuses users - panels only need ONE hosting provider |
+| **Inconsistent IP addresses** | Shows `76.76.21.21` (Vercel), `185.158.133.1` (Lovable) | Users don't know which to use |
+| **Nameserver recommendation** | Wizard recommends changing nameservers | THIS BREAKS EMAIL - very dangerous |
+| **7 tabs** | Domains, Setup, Diagnostics, Propagation, SSL, Help, Buy | Overwhelming for panel owners |
+| **Redundant components** | 15 files in `/domain/` - most duplicating functionality | Maintenance nightmare |
+| **Panel sync issue** | `panel_domains` table vs `panels.custom_domain` not synced | Two sources of truth |
+| **smmpilot.online vs homeofsmm** | TXT verification uses `_smmpilot`, records use `_homeofsmm` | Confusing branding |
+
+### What to REMOVE
+
+| Component | Reason |
+|-----------|--------|
+| `CustomDomainWizard.tsx` | Recommends nameserver changes (dangerous) |
+| `HostingProviderSelector.tsx` | Multi-provider support unnecessary |
+| `VercelDeploymentGuide.tsx` | Vercel-specific, not relevant |
+| `SubdomainManager.tsx` | Subdomains are automatic via wildcard |
+| `DomainTransfer.tsx` | Complex feature rarely used |
+| `DomainPurchaseLinks.tsx` | Just links - can be inline |
+| `DNSRecordGuide.tsx` | Duplicate of inline instructions |
+| `DnsRecordsDisplay.tsx` | Duplicate functionality |
+| **7 tabs UI** | Replace with simplified 2-section layout |
+| **Nameserver recommendations** | NEVER recommend changing nameservers |
+
+### What to ENHANCE
+
+| Feature | Enhancement |
+|---------|-------------|
+| **Single IP focus** | Use ONLY `185.158.133.1` (Lovable infrastructure) |
+| **Unified branding** | Use `_lovable` for TXT verification consistently |
+| **Panel sync** | Update both `panel_domains` AND `panels.custom_domain` together |
+| **Simple wizard** | 3 steps max: Enter domain → Add DNS records → Verify |
+| **Auto-verification** | Silent background verification, no manual "Verify" button spam |
+| **Status clarity** | Clear states: Pending → Verifying → Active → Error |
+
+### What to RESTRICT
+
+| Feature | Restriction |
+|---------|-------------|
+| **One custom domain per panel** | MVP panels need only 1 custom domain |
+| **No nameserver changes** | Only allow A/CNAME record additions |
+| **No multi-provider** | Lock to Lovable infrastructure only |
+| **No manual DNS checks** | All verification happens automatically |
 
 ---
 
-## Part 1: Integration Icons - Official Brand SVG Updates
+## New Architecture
 
-### Current Issues Found
-Several icons in `IntegrationIcons.tsx` use generic placeholder designs instead of official brand icons:
+### Database Sync Strategy
 
-| Icon | Current State | Required Fix |
-|------|--------------|--------------|
-| ZendeskIcon | Generic path design | Use official Zendesk "Z" logo (#03363D) |
-| TidioIcon | Generic chat bubble | Use official Tidio logo (blue gradient) |
-| SmartsuppIcon | Generic checkmark | Use official Smartsupp chat bubble (#F26322) |
-| CrispIcon | Generic speech bubble | Use official Crisp purple logo |
-| JivoChatIcon | Generic chat icon | Use official JivoChat green gradient logo |
-| GetButtonIcon | Simple circles | Use official GetButton multi-dot logo |
-| BeamerIcon | Generic globe icon | Use official Beamer megaphone/bell (#7C3AED) |
-| GetSiteControlIcon | Generic form | Use official GetSiteControl logo (#14B8A6) |
-| YandexMetrikaIcon | Generic circles | Use official Yandex.Metrika target logo (#FC3F1D) |
-| OneSignalIcon | Generic circles | Use official OneSignal bell logo (#E54B4D) |
+```text
++--------------------+          +-----------------+
+|   panel_domains    |  <--->   |     panels      |
++--------------------+          +-----------------+
+| id                 |          | id              |
+| panel_id (FK)      |  sync    | custom_domain   |
+| domain             |  <--->   | domain_status   |
+| verification_status|          | ssl_status      |
+| ssl_status         |          | subdomain       |
++--------------------+          +-----------------+
+```
 
-### File to Update
-**`src/components/icons/IntegrationIcons.tsx`**
+When domain is added/verified:
+1. Insert into `panel_domains`
+2. Update `panels.custom_domain` and `panels.domain_verification_status`
 
-Replace all placeholder icons with official brand SVG paths from SimpleIcons or brand guidelines.
+### New Simplified UI Structure
+
+```text
+Domain Settings Page (2 sections only)
+├── Section 1: Your Panel URLs
+│   ├── Default Subdomain: {subdomain}.smmpilot.online ✅ Live
+│   └── Custom Domain: {domain} [Status Badge]
+│
+└── Section 2: Add/Manage Custom Domain
+    ├── If no domain: Simple input + DNS instructions
+    └── If has domain: Status card + DNS instructions + Remove button
+```
+
+### DNS Configuration (Lovable Only)
+
+| Type | Name | Value | Purpose |
+|------|------|-------|---------|
+| A | @ | 185.158.133.1 | Root domain |
+| A | www | 185.158.133.1 | WWW subdomain |
+| TXT | _lovable | lovable_verify={panel_id} | Ownership proof |
+
+**Note:** NO nameserver changes. NO CNAME to vercel-dns.com. Simple A records only.
 
 ---
 
-## Part 2: Service Integrations - Storefront Injection
+## Implementation Plan
 
-### Current Issue
-TenantHead.tsx does NOT inject enabled service integrations (Google Analytics, Facebook Chat, custom code, etc.) into the storefront pages.
+### Files to DELETE (Clean Codebase)
 
-### Required Changes
+| File | Lines | Reason |
+|------|-------|--------|
+| `CustomDomainWizard.tsx` | 413 | Recommends dangerous nameserver changes |
+| `HostingProviderSelector.tsx` | ~150 | Multi-provider unnecessary |
+| `VercelDeploymentGuide.tsx` | ~200 | Vercel-specific |
+| `SubdomainManager.tsx` | ~200 | Automatic via wildcard |
+| `DomainTransfer.tsx` | ~250 | Rarely used feature |
+| `DomainPurchaseLinks.tsx` | ~100 | Inline links sufficient |
+| `DNSRecordGuide.tsx` | ~150 | Duplicate |
+| `DnsRecordsDisplay.tsx` | ~100 | Duplicate |
+| `DomainConfigWizard.tsx` | ~200 | Replace with simpler version |
+| **Total removed:** | ~1,750+ lines | Massive simplification |
 
-#### 2.1 Update TenantHead.tsx to Inject Scripts
+### Files to KEEP but SIMPLIFY
 
-**File:** `src/components/tenant/TenantHead.tsx`
+| File | Keep/Modify |
+|------|-------------|
+| `SimpleDomainSetup.tsx` | Keep - already simplified |
+| `DNSPropagationTracker.tsx` | Keep - useful for debugging |
+| `DomainDiagnostics.tsx` | Simplify - remove multi-provider |
+| `SSLMonitoringDashboard.tsx` | Keep - useful for SSL status |
+| `DomainTroubleshootingGuide.tsx` | Keep - helpful for support |
+| `TenantDomainSetup.tsx` | Review - may be duplicate |
 
-Add a new useEffect that:
-1. Fetches panel_settings.integrations JSONB column
-2. Loops through enabled integrations
-3. Injects scripts/code into `<head>` or `<body>` as appropriate
+### New `DomainSettings.tsx` Structure (Target: ~400 lines max)
 
-**Integrations to inject:**
-
-| Integration | Injection Location | Method |
-|-------------|-------------------|--------|
-| Google Analytics | `<head>` | Parse and inject gtag.js code |
-| Google Tag Manager | `<head>` | Inject GTM container script |
-| Yandex.Metrika | `<head>` | Inject counter code |
-| OneSignal | `<head>` | Inject OneSignal SDK + init |
-| Facebook Chat | `<body>` | Inject Messenger plugin HTML |
-| Crisp | `<head>` | Inject Crisp loader with website_id |
-| Tidio | `<body>` | Inject Tidio script |
-| Zendesk | `<body>` | Inject Zendesk widget code |
-| Smartsupp | `<body>` | Inject Smartsupp code |
-| JivoChat | `<body>` | Inject JivoChat widget |
-| GetButton | `<body>` | Inject GetButton code |
-| Beamer | `<head>` | Inject Beamer script with product_id |
-| GetSiteControl | `<body>` | Inject GSC code |
-| Custom Head Code | `<head>` | Inject raw HTML |
-
-**Implementation Pattern:**
 ```typescript
-useEffect(() => {
-  const injectIntegrations = async () => {
-    if (!panel?.id) return;
-    
-    const { data } = await supabase
-      .from('panel_settings')
-      .select('integrations')
-      .eq('panel_id', panel.id)
-      .single();
-    
-    if (!data?.integrations) return;
-    const integrations = data.integrations as Record<string, any>;
-    
-    // Google Analytics
-    if (integrations.google_analytics?.enabled && integrations.google_analytics?.code) {
-      const range = document.createRange();
-      const fragment = range.createContextualFragment(integrations.google_analytics.code);
-      document.head.appendChild(fragment);
-    }
-    
-    // Crisp Chat
-    if (integrations.crisp?.enabled && integrations.crisp?.website_id) {
-      window.$crisp = [];
-      window.CRISP_WEBSITE_ID = integrations.crisp.website_id;
-      const script = document.createElement('script');
-      script.src = 'https://client.crisp.chat/l.js';
-      script.async = true;
-      document.head.appendChild(script);
-    }
-    
-    // ... other integrations
-  };
+// Simplified DomainSettings.tsx
+const DomainSettings = () => {
+  // State: panel, customDomain (singular), verificationStatus
   
-  injectIntegrations();
-}, [panel?.id]);
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <Header title="Domain Settings" />
+      
+      {/* Section 1: Your Panel URLs */}
+      <PanelURLsCard 
+        subdomain={panel.subdomain}
+        customDomain={customDomain}
+      />
+      
+      {/* Section 2: Custom Domain Setup */}
+      {!customDomain ? (
+        <AddDomainCard 
+          onDomainAdded={handleDomainAdded}
+          panelId={panel.id}
+        />
+      ) : (
+        <DomainStatusCard 
+          domain={customDomain}
+          status={verificationStatus}
+          onRemove={handleRemoveDomain}
+          onRetryVerification={handleRetry}
+        />
+      )}
+      
+      {/* Optional: Collapsible Help Section */}
+      <Collapsible>
+        <DNSHelpSection />
+      </Collapsible>
+    </div>
+  );
+};
 ```
 
-#### 2.2 FloatingChatWidget Integration
+### Update Edge Functions
 
-The FloatingChatWidget already correctly reads from panel_settings and renders WhatsApp, Telegram, Messenger, Discord buttons. Verify it receives the configuration from all buyer themes.
+| Function | Change |
+|----------|--------|
+| `add-vercel-domain` | Rename to `add-domain`, remove Vercel API calls |
+| `verify-domain-txt` | Standardize to `_lovable.{domain}` |
+| `verify-domain-dns` | Use only `185.158.133.1` as target |
+| `domain-health-check` | Remove multi-provider logic |
 
-**Themes to verify receive FloatingChatWidget:**
-- AliPanelHomepage.tsx
-- FlySMMHomepage.tsx
-- SMMStayHomepage.tsx
-- SMMVisitHomepage.tsx
-- TGRefHomepage.tsx
+### Update `hosting-config.ts`
 
-Check that BuyerThemeWrapper or BuyerLayout includes `<FloatingChatWidget panelId={...} />` for all themes.
+Remove multi-provider constants. Keep only:
 
----
-
-## Part 3: Translation Keys - Add Missing Keys
-
-### Missing Keys Found in Themes
-
-| Key Used | File | Current State |
-|----------|------|---------------|
-| `buyer.payment.weAccept` | FlySMMHomepage | NOT in translations |
-| `buyer.stats.happyUsers` | FlySMMHomepage, SMMVisitHomepage | NOT in translations |
-| `buyer.stats.ordersDone` | FlySMMHomepage | NOT in translations |
-| `buyer.howItWorks.howIt` | FlySMMHomepage | NOT in translations |
-| `buyer.howItWorks.works` | FlySMMHomepage | NOT in translations |
-| `buyer.platforms.allMajor` | TGRefHomepage | NOT in translations |
-| `buyer.auth.resetPassword` | SMMVisitHomepage | NOT in translations |
-
-### File to Update
-**`src/lib/platform-translations.ts`**
-
-Add the following keys to ALL 10 languages (en, es, pt, ar, tr, ru, fr, de, zh, hi):
-
-**English (en) additions:**
 ```typescript
-// Payment
-'buyer.payment.weAccept': 'We accept',
-
-// Stats - additional
-'buyer.stats.happyUsers': 'Happy Users',
-'buyer.stats.ordersDone': 'Orders Done',
-
-// How It Works - split
-'buyer.howItWorks.howIt': 'How It',
-'buyer.howItWorks.works': 'Works',
-
-// Platforms - additional
-'buyer.platforms.allMajor': 'All major social networks in one place',
-
-// Auth - additional
-'buyer.auth.resetPassword': 'Reset Password',
+export const LOVABLE_IP = '185.158.133.1';
+export const DNS_RECORDS = [
+  { type: 'A', name: '@', value: '185.158.133.1' },
+  { type: 'A', name: 'www', value: '185.158.133.1' },
+  { type: 'TXT', name: '_lovable', value: 'lovable_verify={panel_id}' }
+];
 ```
-
-**Spanish (es) additions:**
-```typescript
-'buyer.payment.weAccept': 'Aceptamos',
-'buyer.stats.happyUsers': 'Usuarios Felices',
-'buyer.stats.ordersDone': 'Pedidos Realizados',
-'buyer.howItWorks.howIt': 'Cómo',
-'buyer.howItWorks.works': 'Funciona',
-'buyer.platforms.allMajor': 'Todas las redes sociales en un solo lugar',
-'buyer.auth.resetPassword': 'Restablecer Contraseña',
-```
-
-Similar translations needed for: Portuguese, Arabic, Turkish, Russian, French, German, Chinese, Hindi
 
 ---
 
-## Part 4: Verification Checklist
+## New User Flow
 
-### Integration Testing Matrix
-
-| Integration | Config UI | Saves to DB | Injects to Storefront | Works All Themes |
-|-------------|-----------|-------------|----------------------|------------------|
-| Google OAuth | ✅ | ✅ | N/A (Auth) | ✅ |
-| Telegram OAuth | ✅ | ✅ | N/A (Auth) | ✅ |
-| VK OAuth | ✅ | ✅ | N/A (Auth) | ✅ |
-| Discord OAuth | ✅ | ✅ | N/A (Auth) | ✅ |
-| WhatsApp Button | ✅ | ✅ | ⚠️ Verify | ⚠️ Verify |
-| Telegram Bot | ✅ | ✅ | N/A (Backend) | ✅ |
-| Google Analytics | ✅ | ✅ | ❌ Need to add | ❌ |
-| Google Tag Manager | ✅ | ✅ | ❌ Need to add | ❌ |
-| Yandex.Metrika | ✅ | ✅ | ❌ Need to add | ❌ |
-| Facebook Chat | ✅ | ✅ | ❌ Need to add | ❌ |
-| Crisp | ✅ | ✅ | ❌ Need to add | ❌ |
-| Tidio | ✅ | ✅ | ❌ Need to add | ❌ |
-| Custom Head Code | ✅ | ✅ | ❌ Need to add | ❌ |
-
-### Theme Translation Coverage
-
-| Theme | Uses t() | Fallbacks | Missing Keys |
-|-------|----------|-----------|--------------|
-| AliPanel | ✅ | ✅ | buyer.features.securePayments (needs check) |
-| FlySMM | ✅ | ✅ | 5 keys missing |
-| SMMStay | ✅ | ✅ | None |
-| SMMVisit | ✅ | ✅ | 2 keys missing |
-| TGRef | ✅ | ✅ | 1 key missing |
+```text
+1. Panel owner opens Domain Settings
+   ↓
+2. Sees default subdomain (always active)
+   ↓
+3. Clicks "Add Custom Domain"
+   ↓
+4. Enters domain (e.g., mysmmpanel.com)
+   ↓
+5. System shows DNS instructions:
+   - A record @ → 185.158.133.1
+   - A record www → 185.158.133.1
+   - TXT _lovable → lovable_verify=abc123
+   ↓
+6. User adds records at registrar
+   ↓
+7. System auto-verifies every 60 seconds
+   ↓
+8. When verified: Status changes to "Active" ✅
+   ↓
+9. Panel accessible at custom domain
+```
 
 ---
 
-## Files to Modify
+## Files to Create/Modify
 
-| File | Action | Changes |
-|------|--------|---------|
-| `src/components/icons/IntegrationIcons.tsx` | Modify | Update all 10+ icons to official brand SVGs |
-| `src/components/tenant/TenantHead.tsx` | Modify | Add integration script injection logic |
-| `src/lib/platform-translations.ts` | Modify | Add 7 missing keys × 10 languages = 70 translations |
-| `src/components/buyer-themes/BuyerThemeWrapper.tsx` | Verify | Ensure FloatingChatWidget is rendered |
+| File | Action | Description |
+|------|--------|-------------|
+| `src/pages/panel/DomainSettings.tsx` | **REWRITE** | 970 → ~400 lines |
+| `src/components/domain/SimpleDomainSetup.tsx` | Keep | Already good |
+| `src/components/domain/AddDomainCard.tsx` | **CREATE** | Simple domain input |
+| `src/components/domain/DomainStatusCard.tsx` | **CREATE** | Status display |
+| `src/components/domain/PanelURLsCard.tsx` | **CREATE** | Show subdomain + custom |
+| `src/lib/hosting-config.ts` | **SIMPLIFY** | Remove multi-provider |
+| 8+ domain components | **DELETE** | See list above |
+| `supabase/functions/add-domain/index.ts` | **CREATE** | Replace add-vercel-domain |
+| `supabase/functions/verify-domain-txt/index.ts` | **UPDATE** | Standardize to _lovable |
 
 ---
 
 ## Summary
 
-This plan will:
-1. **Replace all placeholder icons** with official brand SVG icons matching their brand guidelines
-2. **Enable service integrations** by injecting enabled scripts (GA, GTM, Crisp, etc.) into tenant storefronts
-3. **Fix all translation errors** by adding 7 missing keys across all 10 supported languages
-4. **Verify FloatingChatWidget** renders correctly across all 5 buyer themes
+This rewrite will:
+
+1. **Delete ~1,750 lines** of redundant code (8+ components)
+2. **Simplify from 7 tabs to 2 sections**
+3. **Remove dangerous nameserver recommendations**
+4. **Standardize on single IP** (185.158.133.1)
+5. **Sync panel_domains with panels table**
+6. **Auto-verify domains** (no manual button spam)
+7. **Consistent branding** (_lovable prefix for TXT)
+8. **One custom domain per panel** (MVP constraint)
+
+The result will be a clean, user-friendly domain management experience that panel owners can actually use without confusion or risk of breaking their email.
+
