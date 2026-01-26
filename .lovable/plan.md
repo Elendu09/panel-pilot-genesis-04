@@ -1,229 +1,183 @@
 
-# Plan: Complete Integration Verification + SVG Icon Updates + Translation Fixes
+# Plan: Comprehensive Fix for Integrations, Domain DNS, Icons & FloatingChatWidget
 
-## Overview
-This plan addresses three major areas:
-1. **Integration Icons Fix** - Update all SVG icons to match official brand guidelines
-2. **Service Integrations Injection** - Ensure integrations work on tenant storefronts across all themes
-3. **Translation Keys Fix** - Add missing translation keys used across all buyer themes
+## Summary of Issues Found
 
----
+### Issue 1: FloatingChatWidget Not Showing
+**Root Cause:** The widget IS rendered in `Storefront.tsx` (lines 303 & 308), but it relies on fetching settings from `panel_settings` via the `panelId` prop. The issue is likely the fetch returning `floating_chat_enabled: false` by default for most panels.
 
-## Part 1: Integration Icons - Official Brand SVG Updates
+**Solution:** The visibility logic was already fixed (line 374 shows `hasAnyChatOption` includes `enableAI`), but we need to verify the widget is visible when `enableAI=true` (default).
 
-### Current Issues Found
-Several icons in `IntegrationIcons.tsx` use generic placeholder designs instead of official brand icons:
+### Issue 2: Service Integrations Not Injecting on Storefront
+**Root Cause:** `TenantHead` component (which contains all integration injection logic) is **NOT rendered in Storefront.tsx**. It's only rendered in `BuyerLayout.tsx` (line 176) for authenticated buyer pages.
 
-| Icon | Current State | Required Fix |
-|------|--------------|--------------|
-| ZendeskIcon | Generic path design | Use official Zendesk "Z" logo (#03363D) |
-| TidioIcon | Generic chat bubble | Use official Tidio logo (blue gradient) |
-| SmartsuppIcon | Generic checkmark | Use official Smartsupp chat bubble (#F26322) |
-| CrispIcon | Generic speech bubble | Use official Crisp purple logo |
-| JivoChatIcon | Generic chat icon | Use official JivoChat green gradient logo |
-| GetButtonIcon | Simple circles | Use official GetButton multi-dot logo |
-| BeamerIcon | Generic globe icon | Use official Beamer megaphone/bell (#7C3AED) |
-| GetSiteControlIcon | Generic form | Use official GetSiteControl logo (#14B8A6) |
-| YandexMetrikaIcon | Generic circles | Use official Yandex.Metrika target logo (#FC3F1D) |
-| OneSignalIcon | Generic circles | Use official OneSignal bell logo (#E54B4D) |
+**Impact:** Google Analytics, Facebook Chat, Crisp, Custom Code, and all other integrations are ONLY injected when users are logged in to their buyer dashboard, NOT on the public storefront homepage.
 
-### File to Update
-**`src/components/icons/IntegrationIcons.tsx`**
+**Solution:** Add `<TenantHead />` to `Storefront.tsx` so integrations work on public pages.
 
-Replace all placeholder icons with official brand SVG paths from SimpleIcons or brand guidelines.
+### Issue 3: DNS IP Address (76.76.21.21)
+**Clarification:** Vercel uses Anycast networking, meaning different IPs can serve the same domain based on geographic location. `76.76.21.21` is Vercel's **official recommended A record IP** for apex domains.
 
----
+Your current subdomain might resolve to a different IP because:
+- Subdomains use CNAME records (which Vercel manages dynamically)
+- Anycast routing may show different IPs in different regions
 
-## Part 2: Service Integrations - Storefront Injection
+**For custom domains**, users should still configure:
+- **A record:** `76.76.21.21` (Vercel's canonical IP)
+- **CNAME for www:** `cname.vercel-dns.com`
 
-### Current Issue
-TenantHead.tsx does NOT inject enabled service integrations (Google Analytics, Facebook Chat, custom code, etc.) into the storefront pages.
+This is correct and matches Vercel's official documentation.
 
-### Required Changes
+### Issue 4: TXT Record Naming (`_smmpilot` vs `_homeofsmm`)
+**Current State:** Inconsistent naming across files:
+- `hosting-config.ts` uses `_smmpilot`
+- `tenant-domain-config.ts` uses `_homeofsmm`
+- Edge functions use `_homeofsmm`
 
-#### 2.1 Update TenantHead.tsx to Inject Scripts
+**Solution:** Rename all to `_homeofsmm` for consistency (matching the platform brand "homeofsmm.com").
 
-**File:** `src/components/tenant/TenantHead.tsx`
+### Issue 5: Integration Icons Background Colors
+**Problem:** Icons use proper SVG paths, but the background gradients in `Integrations.tsx` don't match official brand colors.
 
-Add a new useEffect that:
-1. Fetches panel_settings.integrations JSONB column
-2. Loops through enabled integrations
-3. Injects scripts/code into `<head>` or `<body>` as appropriate
+**Example Issue - Google OAuth:**
+- Icon: Correct multi-color logo ✅
+- Background: `from-red-500 to-yellow-500` ❌ (Not Google's brand colors)
 
-**Integrations to inject:**
+Google's official brand color is solid white background with the colorful "G". The gradient approach doesn't match.
 
-| Integration | Injection Location | Method |
-|-------------|-------------------|--------|
-| Google Analytics | `<head>` | Parse and inject gtag.js code |
-| Google Tag Manager | `<head>` | Inject GTM container script |
-| Yandex.Metrika | `<head>` | Inject counter code |
-| OneSignal | `<head>` | Inject OneSignal SDK + init |
-| Facebook Chat | `<body>` | Inject Messenger plugin HTML |
-| Crisp | `<head>` | Inject Crisp loader with website_id |
-| Tidio | `<body>` | Inject Tidio script |
-| Zendesk | `<body>` | Inject Zendesk widget code |
-| Smartsupp | `<body>` | Inject Smartsupp code |
-| JivoChat | `<body>` | Inject JivoChat widget |
-| GetButton | `<body>` | Inject GetButton code |
-| Beamer | `<head>` | Inject Beamer script with product_id |
-| GetSiteControl | `<body>` | Inject GSC code |
-| Custom Head Code | `<head>` | Inject raw HTML |
-
-**Implementation Pattern:**
-```typescript
-useEffect(() => {
-  const injectIntegrations = async () => {
-    if (!panel?.id) return;
-    
-    const { data } = await supabase
-      .from('panel_settings')
-      .select('integrations')
-      .eq('panel_id', panel.id)
-      .single();
-    
-    if (!data?.integrations) return;
-    const integrations = data.integrations as Record<string, any>;
-    
-    // Google Analytics
-    if (integrations.google_analytics?.enabled && integrations.google_analytics?.code) {
-      const range = document.createRange();
-      const fragment = range.createContextualFragment(integrations.google_analytics.code);
-      document.head.appendChild(fragment);
-    }
-    
-    // Crisp Chat
-    if (integrations.crisp?.enabled && integrations.crisp?.website_id) {
-      window.$crisp = [];
-      window.CRISP_WEBSITE_ID = integrations.crisp.website_id;
-      const script = document.createElement('script');
-      script.src = 'https://client.crisp.chat/l.js';
-      script.async = true;
-      document.head.appendChild(script);
-    }
-    
-    // ... other integrations
-  };
-  
-  injectIntegrations();
-}, [panel?.id]);
-```
-
-#### 2.2 FloatingChatWidget Integration
-
-The FloatingChatWidget already correctly reads from panel_settings and renders WhatsApp, Telegram, Messenger, Discord buttons. Verify it receives the configuration from all buyer themes.
-
-**Themes to verify receive FloatingChatWidget:**
-- AliPanelHomepage.tsx
-- FlySMMHomepage.tsx
-- SMMStayHomepage.tsx
-- SMMVisitHomepage.tsx
-- TGRefHomepage.tsx
-
-Check that BuyerThemeWrapper or BuyerLayout includes `<FloatingChatWidget panelId={...} />` for all themes.
-
----
-
-## Part 3: Translation Keys - Add Missing Keys
-
-### Missing Keys Found in Themes
-
-| Key Used | File | Current State |
-|----------|------|---------------|
-| `buyer.payment.weAccept` | FlySMMHomepage | NOT in translations |
-| `buyer.stats.happyUsers` | FlySMMHomepage, SMMVisitHomepage | NOT in translations |
-| `buyer.stats.ordersDone` | FlySMMHomepage | NOT in translations |
-| `buyer.howItWorks.howIt` | FlySMMHomepage | NOT in translations |
-| `buyer.howItWorks.works` | FlySMMHomepage | NOT in translations |
-| `buyer.platforms.allMajor` | TGRefHomepage | NOT in translations |
-| `buyer.auth.resetPassword` | SMMVisitHomepage | NOT in translations |
-
-### File to Update
-**`src/lib/platform-translations.ts`**
-
-Add the following keys to ALL 10 languages (en, es, pt, ar, tr, ru, fr, de, zh, hi):
-
-**English (en) additions:**
-```typescript
-// Payment
-'buyer.payment.weAccept': 'We accept',
-
-// Stats - additional
-'buyer.stats.happyUsers': 'Happy Users',
-'buyer.stats.ordersDone': 'Orders Done',
-
-// How It Works - split
-'buyer.howItWorks.howIt': 'How It',
-'buyer.howItWorks.works': 'Works',
-
-// Platforms - additional
-'buyer.platforms.allMajor': 'All major social networks in one place',
-
-// Auth - additional
-'buyer.auth.resetPassword': 'Reset Password',
-```
-
-**Spanish (es) additions:**
-```typescript
-'buyer.payment.weAccept': 'Aceptamos',
-'buyer.stats.happyUsers': 'Usuarios Felices',
-'buyer.stats.ordersDone': 'Pedidos Realizados',
-'buyer.howItWorks.howIt': 'Cómo',
-'buyer.howItWorks.works': 'Funciona',
-'buyer.platforms.allMajor': 'Todas las redes sociales en un solo lugar',
-'buyer.auth.resetPassword': 'Restablecer Contraseña',
-```
-
-Similar translations needed for: Portuguese, Arabic, Turkish, Russian, French, German, Chinese, Hindi
-
----
-
-## Part 4: Verification Checklist
-
-### Integration Testing Matrix
-
-| Integration | Config UI | Saves to DB | Injects to Storefront | Works All Themes |
-|-------------|-----------|-------------|----------------------|------------------|
-| Google OAuth | ✅ | ✅ | N/A (Auth) | ✅ |
-| Telegram OAuth | ✅ | ✅ | N/A (Auth) | ✅ |
-| VK OAuth | ✅ | ✅ | N/A (Auth) | ✅ |
-| Discord OAuth | ✅ | ✅ | N/A (Auth) | ✅ |
-| WhatsApp Button | ✅ | ✅ | ⚠️ Verify | ⚠️ Verify |
-| Telegram Bot | ✅ | ✅ | N/A (Backend) | ✅ |
-| Google Analytics | ✅ | ✅ | ❌ Need to add | ❌ |
-| Google Tag Manager | ✅ | ✅ | ❌ Need to add | ❌ |
-| Yandex.Metrika | ✅ | ✅ | ❌ Need to add | ❌ |
-| Facebook Chat | ✅ | ✅ | ❌ Need to add | ❌ |
-| Crisp | ✅ | ✅ | ❌ Need to add | ❌ |
-| Tidio | ✅ | ✅ | ❌ Need to add | ❌ |
-| Custom Head Code | ✅ | ✅ | ❌ Need to add | ❌ |
-
-### Theme Translation Coverage
-
-| Theme | Uses t() | Fallbacks | Missing Keys |
-|-------|----------|-----------|--------------|
-| AliPanel | ✅ | ✅ | buyer.features.securePayments (needs check) |
-| FlySMM | ✅ | ✅ | 5 keys missing |
-| SMMStay | ✅ | ✅ | None |
-| SMMVisit | ✅ | ✅ | 2 keys missing |
-| TGRef | ✅ | ✅ | 1 key missing |
+**Solution:** Update all OAuth and Service integration background colors to match official brand guidelines.
 
 ---
 
 ## Files to Modify
 
-| File | Action | Changes |
-|------|--------|---------|
-| `src/components/icons/IntegrationIcons.tsx` | Modify | Update all 10+ icons to official brand SVGs |
-| `src/components/tenant/TenantHead.tsx` | Modify | Add integration script injection logic |
-| `src/lib/platform-translations.ts` | Modify | Add 7 missing keys × 10 languages = 70 translations |
-| `src/components/buyer-themes/BuyerThemeWrapper.tsx` | Verify | Ensure FloatingChatWidget is rendered |
+| File | Action | Description |
+|------|--------|-------------|
+| `src/pages/Storefront.tsx` | Add TenantHead | Add `<TenantHead />` to inject integrations on public storefront |
+| `src/lib/hosting-config.ts` | Fix TXT naming | Change `_smmpilot` to `_homeofsmm` |
+| `supabase/functions/verify-domain-txt/index.ts` | Fix TXT naming | Change `_smmpilot` to `_homeofsmm` |
+| `src/pages/panel/DomainSettings.tsx` | Update instructions | Ensure DNS instructions show `_homeofsmm` |
+| `src/pages/panel/Integrations.tsx` | Fix icon backgrounds | Update all gradient colors to match brand guidelines |
+
+---
+
+## Part 1: Add TenantHead to Storefront.tsx
+
+This is the **critical fix** for integrations not appearing on the public storefront.
+
+```tsx
+// In Storefront.tsx - after existing imports
+import { TenantHead } from '@/components/tenant/TenantHead';
+
+// In the return statement, add TenantHead after Helmet
+return (
+  <>
+    <Helmet>
+      {/* ... existing helmet content ... */}
+    </Helmet>
+    <TenantHead />  // ← ADD THIS
+    {/* ... rest of component ... */}
+  </>
+);
+```
+
+---
+
+## Part 2: Fix TXT Record Naming to `_homeofsmm`
+
+### hosting-config.ts
+Change line 42:
+```typescript
+// Before:
+host: '_smmpilot',
+value: `smmpilot-verify=${verificationToken}`,
+
+// After:
+host: '_homeofsmm',
+value: `homeofsmm-verify=${verificationToken}`,
+```
+
+### verify-domain-txt/index.ts
+Change line 30:
+```typescript
+// Before:
+const verificationHost = `_smmpilot.${domain}`;
+
+// After:
+const verificationHost = `_homeofsmm.${domain}`;
+```
+
+---
+
+## Part 3: Fix Integration Icon Background Colors
+
+Update `Integrations.tsx` OAuth providers section (lines 90-143):
+
+| Provider | Current Background | Official Brand Color | New Background |
+|----------|-------------------|---------------------|----------------|
+| Google | `from-red-500 to-yellow-500` | White with colorful G | `bg-white` (no gradient) |
+| Telegram | `from-sky-500 to-blue-600` | #26A5E4 (solid) | `from-sky-400 to-sky-600` ✅ (already close) |
+| VK | `from-blue-600 to-blue-700` | #0077FF (solid) | `bg-blue-600` (solid) |
+| Discord | `from-indigo-500 to-purple-600` | #5865F2 (solid) | `bg-indigo-500` (solid) |
+
+For service integrations (lines 162-350+):
+
+| Service | Current | Official Brand | Recommendation |
+|---------|---------|----------------|----------------|
+| WhatsApp | `from-green-500 to-emerald-600` | #25D366 | Keep ✅ |
+| Facebook | `from-blue-600 to-blue-700` | #1877F2 | Keep ✅ |
+| Google Analytics | `from-orange-500 to-yellow-600` | #F9AB00 + #E37400 | Keep ✅ |
+| Zendesk | `from-emerald-500 to-teal-600` | #03363D (dark teal) | `from-teal-600 to-teal-800` |
+| Tidio | `from-blue-400 to-blue-600` | #0066FF | Keep ✅ |
+| Crisp | `from-purple-500 to-pink-600` | #7C3AED | `from-purple-500 to-purple-700` |
+| OneSignal | (missing row) | #E54B4D (coral red) | `from-red-400 to-red-600` |
+
+---
+
+## Part 4: Subdomain to Custom Domain Flow (Reference)
+
+This is for your question about what happens when a user upgrades from subdomain to custom domain:
+
+```text
+FREE TIER:
+  User creates panel "demo"
+  → System creates: demo.smmpilot.online
+  → Wildcard DNS *.smmpilot.online → Vercel (automatic)
+  → Status: ACTIVE immediately
+  → TenantRouter detects hostname, serves panel
+
+PRO TIER UPGRADE:
+  User clicks "Add Custom Domain"
+  → Enters: smmking.com
+  → System generates: verification token (e.g., abc123)
+  → Shows DNS instructions:
+    • A @ → 76.76.21.21
+    • CNAME www → cname.vercel-dns.com
+    • TXT _homeofsmm → homeofsmm-verify=abc123
+  → User adds records at registrar (Namecheap, GoDaddy, etc.)
+  
+  User clicks "Verify"
+  → System checks DNS via Google DNS-over-HTTPS
+  → If A record points to 76.76.21.21 ✅
+  → If TXT record contains verification token ✅
+  → Call Vercel API to add domain to project
+  → Vercel auto-provisions SSL
+  → Status: ACTIVE
+
+POST-UPGRADE:
+  • demo.smmpilot.online → Still works (optional redirect to custom)
+  • smmking.com → Primary domain, same panel
+  • www.smmking.com → Redirects to smmking.com (Vercel handles)
+```
 
 ---
 
 ## Summary
 
 This plan will:
-1. **Replace all placeholder icons** with official brand SVG icons matching their brand guidelines
-2. **Enable service integrations** by injecting enabled scripts (GA, GTM, Crisp, etc.) into tenant storefronts
-3. **Fix all translation errors** by adding 7 missing keys across all 10 supported languages
-4. **Verify FloatingChatWidget** renders correctly across all 5 buyer themes
+
+1. **Fix service integrations on public storefront** by adding `TenantHead` to `Storefront.tsx`
+2. **Standardize TXT verification** to `_homeofsmm` across all files
+3. **Confirm Vercel IP is correct** (`76.76.21.21` is official)
+4. **Update integration icon backgrounds** to match official brand colors
+5. **Ensure FloatingChatWidget visibility** by verifying the AI chat default behavior
