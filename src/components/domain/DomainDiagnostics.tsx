@@ -3,13 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { 
   CheckCircle, 
   XCircle, 
   Loader2, 
   Globe, 
-  Shield, 
   Server,
   AlertTriangle,
   RefreshCw,
@@ -17,14 +15,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
-import { cn } from "@/lib/utils";
-import { 
-  HOSTING_PROVIDERS, 
-  type HostingProvider,
-  getExpectedTargetForProvider,
-  validateDnsForProvider
-} from "@/lib/hosting-config";
-import { HostingProviderSelector } from "./HostingProviderSelector";
+import { VERCEL_IP, validateDnsForVercel } from "@/lib/hosting-config";
 
 interface DiagnosticResult {
   domain: string;
@@ -33,39 +24,29 @@ interface DiagnosticResult {
   httpOk: boolean;
   aRecords: string[];
   cnameRecords: string[];
-  dnsMatchType: string;
   checkedAt: string;
-  durationMs: number;
 }
 
 interface DomainDiagnosticsProps {
   panelSubdomain?: string;
   customDomains?: Array<{ domain: string; verification_status: string }>;
-  hostingProvider?: HostingProvider;
 }
 
 export const DomainDiagnostics = ({ 
   panelSubdomain, 
-  customDomains = [],
-  hostingProvider: initialProvider = 'lovable'
+  customDomains = []
 }: DomainDiagnosticsProps) => {
   const [results, setResults] = useState<Record<string, DiagnosticResult>>({});
   const [loading, setLoading] = useState<Record<string, boolean>>({});
   const [customDomain, setCustomDomain] = useState("");
   const [isCheckingCustom, setIsCheckingCustom] = useState(false);
-  const [hostingProvider, setHostingProvider] = useState<HostingProvider>(initialProvider);
-  const [customTarget, setCustomTarget] = useState("");
 
   const checkDomain = async (domain: string) => {
     setLoading(prev => ({ ...prev, [domain]: true }));
     
     try {
       const { data, error } = await supabase.functions.invoke("domain-health-check", {
-        body: { 
-          domain,
-          hostingProvider,
-          expectedTarget: hostingProvider === 'custom' ? customTarget : undefined
-        }
+        body: { domain }
       });
 
       if (error) throw error;
@@ -79,9 +60,7 @@ export const DomainDiagnostics = ({
           httpOk: data.http_ok,
           aRecords: data.a_records || [],
           cnameRecords: data.cname_records || [],
-          dnsMatchType: data.dns_match_type || 'none',
-          checkedAt: data.checked_at,
-          durationMs: data.duration_ms
+          checkedAt: data.checked_at
         }
       }));
     } catch (error) {
@@ -95,9 +74,7 @@ export const DomainDiagnostics = ({
           httpOk: false,
           aRecords: [],
           cnameRecords: [],
-          dnsMatchType: 'none',
-          checkedAt: new Date().toISOString(),
-          durationMs: 0
+          checkedAt: new Date().toISOString()
         }
       }));
     } finally {
@@ -129,20 +106,10 @@ export const DomainDiagnostics = ({
       : <XCircle className="w-4 h-4 text-red-500" />;
   };
 
-  const getExpectedTargets = () => {
-    if (hostingProvider === 'custom' && customTarget) {
-      return [customTarget];
-    }
-    return getExpectedTargetForProvider(hostingProvider);
-  };
-
   const allDomains = [
     panelSubdomain ? { domain: `${panelSubdomain}.smmpilot.online`, type: 'subdomain' } : null,
     ...customDomains.map(d => ({ domain: d.domain, type: 'custom' }))
   ].filter(Boolean) as Array<{ domain: string; type: string }>;
-
-  const providerConfig = HOSTING_PROVIDERS[hostingProvider];
-  const expectedTargets = getExpectedTargets();
 
   return (
     <Card className="glass-card">
@@ -153,20 +120,6 @@ export const DomainDiagnostics = ({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Hosting Provider Selection */}
-        <div className="space-y-3">
-          <Label className="text-sm font-medium">Select Your Hosting Provider</Label>
-          <p className="text-xs text-muted-foreground mb-2">
-            Choose where your site is hosted to check correct DNS targets
-          </p>
-          <HostingProviderSelector
-            selected={hostingProvider}
-            onSelect={setHostingProvider}
-            customTarget={customTarget}
-            onCustomTargetChange={setCustomTarget}
-          />
-        </div>
-
         {/* Expected DNS Target Info */}
         <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
           <div className="flex items-start gap-2">
@@ -174,10 +127,8 @@ export const DomainDiagnostics = ({
             <div className="text-sm">
               <p className="font-medium text-primary">Expected DNS Configuration</p>
               <p className="text-muted-foreground mt-1">
-                {providerConfig.dnsType === 'A' ? 'A Record' : 'CNAME Record'} should point to:{' '}
-                <code className="bg-muted px-1.5 py-0.5 rounded text-xs">
-                  {expectedTargets[0] || 'Not configured'}
-                </code>
+                A Record should point to:{' '}
+                <code className="bg-muted px-1.5 py-0.5 rounded text-xs">{VERCEL_IP}</code>
               </p>
             </div>
           </div>
@@ -199,15 +150,8 @@ export const DomainDiagnostics = ({
           {allDomains.map(({ domain, type }) => {
             const result = results[domain];
             const isLoading = loading[domain];
-
-            // Validate against selected hosting provider
             const validation = result 
-              ? validateDnsForProvider(
-                  hostingProvider, 
-                  result.aRecords, 
-                  result.cnameRecords,
-                  hostingProvider === 'custom' ? customTarget : undefined
-                )
+              ? validateDnsForVercel(result.aRecords, result.cnameRecords)
               : null;
 
             return (
@@ -234,9 +178,7 @@ export const DomainDiagnostics = ({
                           <div>
                             <p className="text-xs font-medium">DNS</p>
                             <p className="text-xs text-muted-foreground">
-                              {result.dnsOk 
-                                ? `${result.dnsMatchType} match` 
-                                : 'Not configured'}
+                              {result.dnsOk ? 'Configured' : 'Not configured'}
                             </p>
                           </div>
                         </div>
@@ -354,16 +296,6 @@ export const DomainDiagnostics = ({
                   <span className="text-sm">HTTP: {results[customDomain].httpOk ? 'OK' : 'Failed'}</span>
                 </div>
               </div>
-              {(results[customDomain].aRecords.length > 0 || results[customDomain].cnameRecords.length > 0) && (
-                <div className="text-xs text-muted-foreground mt-2 space-y-1">
-                  {results[customDomain].aRecords.length > 0 && (
-                    <p>A Records: {results[customDomain].aRecords.join(', ')}</p>
-                  )}
-                  {results[customDomain].cnameRecords.length > 0 && (
-                    <p>CNAME Records: {results[customDomain].cnameRecords.join(', ')}</p>
-                  )}
-                </div>
-              )}
             </motion.div>
           )}
         </div>
@@ -371,9 +303,9 @@ export const DomainDiagnostics = ({
         {/* Help Text */}
         <div className="p-3 rounded-lg bg-muted/50 border border-border/50">
           <p className="text-xs text-muted-foreground">
-            <strong>Hosting Provider:</strong> {providerConfig.name}<br />
-            <strong>DNS Type:</strong> {providerConfig.dnsType} Record<br />
-            <strong>Target:</strong> {expectedTargets[0] || 'Configure custom target above'}
+            <strong>Hosting:</strong> Vercel<br />
+            <strong>DNS Type:</strong> A Record<br />
+            <strong>Target:</strong> {VERCEL_IP}
           </p>
         </div>
       </CardContent>

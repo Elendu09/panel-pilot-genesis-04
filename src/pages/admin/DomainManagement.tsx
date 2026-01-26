@@ -22,11 +22,10 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { SubdomainManager } from "@/components/domain/SubdomainManager";
 import { DomainPurchaseLinks } from "@/components/domain/DomainPurchaseLinks";
 import { SSLMonitoringDashboard } from "@/components/domain/SSLMonitoringDashboard";
 import { DomainTroubleshootingGuide } from "@/components/domain/DomainTroubleshootingGuide";
-import { VERCEL_NAMESERVERS } from "@/lib/hosting-config";
+import { VERCEL_NAMESERVERS, PLATFORM_DOMAIN } from "@/lib/hosting-config";
 import { ResponsiveTabs } from "@/components/admin/ResponsiveTabs";
 
 interface PanelData {
@@ -36,7 +35,6 @@ interface PanelData {
   status: string;
   owner_id: string;
   created_at: string;
-  profiles?: { email: string } | null;
 }
 
 interface DomainData {
@@ -48,18 +46,13 @@ interface DomainData {
   dns_configured: boolean;
   created_at: string;
   verified_at: string | null;
-  hosting_provider: string;
-  panels?: { name: string; subdomain: string } | null;
 }
-
-const PLATFORM_DOMAIN = "smmpilot.online";
 
 const DomainManagement = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [panels, setPanels] = useState<PanelData[]>([]);
   const [domains, setDomains] = useState<DomainData[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
   const [verifyingDomains, setVerifyingDomains] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState("overview");
 
@@ -78,7 +71,7 @@ const DomainManagement = () => {
 
       const { data: domainsData } = await supabase
         .from('panel_domains')
-        .select('id, domain, panel_id, verification_status, ssl_status, dns_configured, created_at, verified_at, hosting_provider')
+        .select('id, domain, panel_id, verification_status, ssl_status, dns_configured, created_at, verified_at')
         .order('created_at', { ascending: false });
       setDomains(domainsData || []);
     } catch (error) {
@@ -172,7 +165,6 @@ const DomainManagement = () => {
           { value: "buy", label: "Buy Domains", icon: ShoppingCart },
         ]}
       >
-
         <TabsContent value="overview" className="space-y-6">
           <div className="grid md:grid-cols-2 gap-6">
             <Card className="glass-card border-primary/20">
@@ -199,8 +191,43 @@ const DomainManagement = () => {
           </div>
         </TabsContent>
 
-        <TabsContent value="subdomains">
-          <SubdomainManager panels={panels.map(p => ({ id: p.id, name: p.name, subdomain: p.subdomain, status: p.status as 'active' | 'pending' | 'suspended', created_at: p.created_at }))} platformDomain={PLATFORM_DOMAIN} onRefresh={fetchData} loading={loading} />
+        <TabsContent value="subdomains" className="space-y-6">
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle>Panel Subdomains</CardTitle>
+              <CardDescription>All panels with their {PLATFORM_DOMAIN} subdomains</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Panel</TableHead>
+                    <TableHead>Subdomain</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {panels.map(panel => (
+                    <TableRow key={panel.id}>
+                      <TableCell className="font-medium">{panel.name}</TableCell>
+                      <TableCell>
+                        <code className="font-mono text-sm">{panel.subdomain}.{PLATFORM_DOMAIN}</code>
+                      </TableCell>
+                      <TableCell>{getStatusBadge(panel.status)}</TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="sm" asChild>
+                          <a href={`https://${panel.subdomain}.${PLATFORM_DOMAIN}`} target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="w-4 h-4" />
+                          </a>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="custom" className="space-y-6">
@@ -237,7 +264,7 @@ const DomainManagement = () => {
               <Alert className="border-green-500/20 bg-green-500/5"><CheckCircle className="w-4 h-4 text-green-500" /><AlertDescription><strong>Recommended:</strong> Use Vercel nameservers for automatic wildcard SSL.</AlertDescription></Alert>
               <div className="space-y-3">
                 <h3 className="font-semibold">Step 1: Change Nameservers</h3>
-                {VERCEL_NAMESERVERS.map((ns, i) => (
+                {VERCEL_NAMESERVERS.map((ns) => (
                   <div key={ns} className="flex items-center justify-between p-3 bg-muted rounded-lg">
                     <code className="font-mono">{ns}</code>
                     <Button variant="ghost" size="sm" onClick={() => copyToClipboard(ns)}><Copy className="w-4 h-4" /></Button>

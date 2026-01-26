@@ -370,9 +370,11 @@ export const FloatingChatWidget = ({
     };
   }, [messages, scrollToBottom, isLoading]);
 
+  // Show widget if AI is enabled OR any social platform is configured
   const hasAnyChatOption = settings.whatsapp || settings.telegram || settings.messenger || settings.discord || settings.customUrl || enableAI;
   
-  if (!settings.enabled && !hasAnyChatOption) {
+  // Only hide if truly no options exist
+  if (!hasAnyChatOption) {
     return null;
   }
 
