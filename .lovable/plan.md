@@ -1,183 +1,211 @@
 
-# Plan: Comprehensive Fix for Integrations, Domain DNS, Icons & FloatingChatWidget
+# Implementation Plan: Integration Fixes + DNS Configuration + Icon Backgrounds
 
-## Summary of Issues Found
+## Summary
 
-### Issue 1: FloatingChatWidget Not Showing
-**Root Cause:** The widget IS rendered in `Storefront.tsx` (lines 303 & 308), but it relies on fetching settings from `panel_settings` via the `panelId` prop. The issue is likely the fetch returning `floating_chat_enabled: false` by default for most panels.
-
-**Solution:** The visibility logic was already fixed (line 374 shows `hasAnyChatOption` includes `enableAI`), but we need to verify the widget is visible when `enableAI=true` (default).
-
-### Issue 2: Service Integrations Not Injecting on Storefront
-**Root Cause:** `TenantHead` component (which contains all integration injection logic) is **NOT rendered in Storefront.tsx**. It's only rendered in `BuyerLayout.tsx` (line 176) for authenticated buyer pages.
-
-**Impact:** Google Analytics, Facebook Chat, Crisp, Custom Code, and all other integrations are ONLY injected when users are logged in to their buyer dashboard, NOT on the public storefront homepage.
-
-**Solution:** Add `<TenantHead />` to `Storefront.tsx` so integrations work on public pages.
-
-### Issue 3: DNS IP Address (76.76.21.21)
-**Clarification:** Vercel uses Anycast networking, meaning different IPs can serve the same domain based on geographic location. `76.76.21.21` is Vercel's **official recommended A record IP** for apex domains.
-
-Your current subdomain might resolve to a different IP because:
-- Subdomains use CNAME records (which Vercel manages dynamically)
-- Anycast routing may show different IPs in different regions
-
-**For custom domains**, users should still configure:
-- **A record:** `76.76.21.21` (Vercel's canonical IP)
-- **CNAME for www:** `cname.vercel-dns.com`
-
-This is correct and matches Vercel's official documentation.
-
-### Issue 4: TXT Record Naming (`_smmpilot` vs `_homeofsmm`)
-**Current State:** Inconsistent naming across files:
-- `hosting-config.ts` uses `_smmpilot`
-- `tenant-domain-config.ts` uses `_homeofsmm`
-- Edge functions use `_homeofsmm`
-
-**Solution:** Rename all to `_homeofsmm` for consistency (matching the platform brand "homeofsmm.com").
-
-### Issue 5: Integration Icons Background Colors
-**Problem:** Icons use proper SVG paths, but the background gradients in `Integrations.tsx` don't match official brand colors.
-
-**Example Issue - Google OAuth:**
-- Icon: Correct multi-color logo ✅
-- Background: `from-red-500 to-yellow-500` ❌ (Not Google's brand colors)
-
-Google's official brand color is solid white background with the colorful "G". The gradient approach doesn't match.
-
-**Solution:** Update all OAuth and Service integration background colors to match official brand guidelines.
-
----
-
-## Files to Modify
-
-| File | Action | Description |
-|------|--------|-------------|
-| `src/pages/Storefront.tsx` | Add TenantHead | Add `<TenantHead />` to inject integrations on public storefront |
-| `src/lib/hosting-config.ts` | Fix TXT naming | Change `_smmpilot` to `_homeofsmm` |
-| `supabase/functions/verify-domain-txt/index.ts` | Fix TXT naming | Change `_smmpilot` to `_homeofsmm` |
-| `src/pages/panel/DomainSettings.tsx` | Update instructions | Ensure DNS instructions show `_homeofsmm` |
-| `src/pages/panel/Integrations.tsx` | Fix icon backgrounds | Update all gradient colors to match brand guidelines |
+This plan addresses four critical issues:
+1. **TenantHead not injected on public Storefront** - Integrations don't work on homepage
+2. **TXT verification uses `_smmpilot`** - Should be `_homeofsmm` for brand consistency
+3. **Integration icon backgrounds don't match brand colors** - Visual inconsistency
+4. **FloatingChatWidget already fixed** - Verified working with AI chat enabled by default
 
 ---
 
 ## Part 1: Add TenantHead to Storefront.tsx
 
-This is the **critical fix** for integrations not appearing on the public storefront.
+**File:** `src/pages/Storefront.tsx`
 
-```tsx
-// In Storefront.tsx - after existing imports
+**Change 1: Add import (line 4)**
+```typescript
 import { TenantHead } from '@/components/tenant/TenantHead';
-
-// In the return statement, add TenantHead after Helmet
-return (
-  <>
-    <Helmet>
-      {/* ... existing helmet content ... */}
-    </Helmet>
-    <TenantHead />  // ← ADD THIS
-    {/* ... rest of component ... */}
-  </>
-);
 ```
+
+**Change 2: Add TenantHead after BuyerHomepageSchemas (after line 296)**
+```tsx
+{/* Inject TenantHead for service integrations (GA, GTM, Crisp, custom code, etc.) */}
+<TenantHead />
+```
+
+This ensures all configured integrations (Google Analytics, GTM, Yandex.Metrika, Crisp, Tidio, Zendesk, Facebook Chat, custom code, etc.) are injected into the public storefront pages for all themes.
 
 ---
 
-## Part 2: Fix TXT Record Naming to `_homeofsmm`
+## Part 2: Update TXT Record Naming to `_homeofsmm`
 
-### hosting-config.ts
-Change line 42:
+### File 1: `src/lib/hosting-config.ts`
+
+**Change lines 41-44:**
 ```typescript
-// Before:
-host: '_smmpilot',
-value: `smmpilot-verify=${verificationToken}`,
-
-// After:
-host: '_homeofsmm',
-value: `homeofsmm-verify=${verificationToken}`,
+{
+  type: 'TXT',
+  host: '_homeofsmm',
+  value: `homeofsmm-verify=${verificationToken}`,
+  description: 'Verifies domain ownership for your panel',
+  required: true,
+},
 ```
 
-### verify-domain-txt/index.ts
-Change line 30:
-```typescript
-// Before:
-const verificationHost = `_smmpilot.${domain}`;
+### File 2: `supabase/functions/verify-domain-txt/index.ts`
 
-// After:
+**Change line 30:**
+```typescript
 const verificationHost = `_homeofsmm.${domain}`;
+```
+
+**Change line 111:**
+```typescript
+const expectedValue = `homeofsmm-verify=${panel_id}`;
+```
+
+**Change line 170-173:**
+```typescript
+verification_host: `_homeofsmm.${domain}`,
+message: isVerified 
+  ? "Domain ownership verified via TXT record" 
+  : `TXT record not found. Add a TXT record for _homeofsmm.${domain} with value: ${expectedValue}`,
 ```
 
 ---
 
 ## Part 3: Fix Integration Icon Background Colors
 
-Update `Integrations.tsx` OAuth providers section (lines 90-143):
+**File:** `src/pages/panel/Integrations.tsx`
 
-| Provider | Current Background | Official Brand Color | New Background |
-|----------|-------------------|---------------------|----------------|
-| Google | `from-red-500 to-yellow-500` | White with colorful G | `bg-white` (no gradient) |
-| Telegram | `from-sky-500 to-blue-600` | #26A5E4 (solid) | `from-sky-400 to-sky-600` ✅ (already close) |
-| VK | `from-blue-600 to-blue-700` | #0077FF (solid) | `bg-blue-600` (solid) |
-| Discord | `from-indigo-500 to-purple-600` | #5865F2 (solid) | `bg-indigo-500` (solid) |
+Update the OAuth providers section (lines 90-143) to use proper brand colors:
 
-For service integrations (lines 162-350+):
+| Provider | Current | Official Brand | Fix |
+|----------|---------|----------------|-----|
+| Google | `from-red-500 to-yellow-500` | White background | `bg-white border border-gray-200` |
+| Telegram | `from-sky-500 to-blue-600` | #26A5E4 | Keep (close match) ✅ |
+| VK | `from-blue-600 to-blue-700` | #0077FF | `bg-[#0077FF]` |
+| Discord | `from-indigo-500 to-purple-600` | #5865F2 | `bg-[#5865F2]` |
 
-| Service | Current | Official Brand | Recommendation |
-|---------|---------|----------------|----------------|
-| WhatsApp | `from-green-500 to-emerald-600` | #25D366 | Keep ✅ |
-| Facebook | `from-blue-600 to-blue-700` | #1877F2 | Keep ✅ |
-| Google Analytics | `from-orange-500 to-yellow-600` | #F9AB00 + #E37400 | Keep ✅ |
-| Zendesk | `from-emerald-500 to-teal-600` | #03363D (dark teal) | `from-teal-600 to-teal-800` |
-| Tidio | `from-blue-400 to-blue-600` | #0066FF | Keep ✅ |
-| Crisp | `from-purple-500 to-pink-600` | #7C3AED | `from-purple-500 to-purple-700` |
-| OneSignal | (missing row) | #E54B4D (coral red) | `from-red-400 to-red-600` |
+**Updated oauthProviders array:**
+```typescript
+const oauthProviders: OAuthProvider[] = [
+  {
+    id: 'google',
+    name: 'Google OAuth',
+    icon: <GoogleIcon className="w-5 h-5" />,
+    color: 'bg-white border border-gray-200', // White background for colorful G
+    setupUrl: 'https://console.cloud.google.com/apis/credentials',
+    instructions: [...]
+  },
+  {
+    id: 'telegram',
+    name: 'Telegram OAuth',
+    icon: <TelegramIcon className="w-5 h-5" />,
+    color: 'bg-[#26A5E4]', // Official Telegram blue
+    setupUrl: 'https://core.telegram.org/widgets/login',
+    instructions: [...]
+  },
+  {
+    id: 'vk',
+    name: 'VK OAuth',
+    icon: <VKIcon className="w-5 h-5" />,
+    color: 'bg-[#0077FF]', // Official VK blue
+    setupUrl: 'https://vk.com/apps?act=manage',
+    instructions: [...]
+  },
+  {
+    id: 'discord',
+    name: 'Discord OAuth',
+    icon: <DiscordIcon className="w-5 h-5" />,
+    color: 'bg-[#5865F2]', // Official Discord blurple
+    setupUrl: 'https://discord.com/developers/applications',
+    instructions: [...]
+  }
+];
+```
+
+**Update Service Integrations colors (lines 162-360):**
+
+| Service | Current | Official | Fix |
+|---------|---------|----------|-----|
+| WhatsApp | `from-green-500 to-emerald-600` | #25D366 | `bg-[#25D366]` |
+| Facebook | `from-blue-600 to-blue-700` | #1877F2 | `bg-[#1877F2]` |
+| Zendesk | `from-emerald-500 to-teal-600` | #03363D | `bg-[#03363D]` |
+| Tidio | `from-blue-400 to-blue-600` | #0066FF | `bg-[#0066FF]` |
+| Smartsupp | `from-yellow-500 to-orange-600` | #F26322 | `bg-[#F26322]` |
+| Crisp | `from-purple-500 to-pink-600` | #7C3AED | `bg-[#7C3AED]` |
+| JivoChat | `from-green-400 to-cyan-600` | #1AAD19 | `bg-[#1AAD19]` |
+| OneSignal | `from-red-500 to-pink-600` | #E54B4D | `bg-[#E54B4D]` |
+| Google Analytics | `from-orange-500 to-yellow-600` | #F9AB00 | Keep ✅ |
+| Yandex.Metrika | `from-red-500 to-red-600` | #FC3F1D | `bg-[#FC3F1D]` |
+| Beamer | `from-purple-500 to-violet-600` | #7C3AED | `bg-[#7C3AED]` |
+| GetSiteControl | `from-teal-500 to-cyan-600` | #14B8A6 | `bg-[#14B8A6]` |
 
 ---
 
-## Part 4: Subdomain to Custom Domain Flow (Reference)
+## Part 4: Vercel DNS IP Confirmation
 
-This is for your question about what happens when a user upgrades from subdomain to custom domain:
+**No changes needed.** The current IP `76.76.21.21` is correct:
+- It's Vercel's official recommended A record IP for apex domains
+- Subdomains may resolve to different IPs due to Anycast networking
+- Custom domains should still use `76.76.21.21` (A record) and `cname.vercel-dns.com` (CNAME)
+
+---
+
+## Files to Modify
+
+| File | Lines | Changes |
+|------|-------|---------|
+| `src/pages/Storefront.tsx` | 4, 296 | Add TenantHead import and render |
+| `src/lib/hosting-config.ts` | 41-44 | Change `_smmpilot` → `_homeofsmm` |
+| `supabase/functions/verify-domain-txt/index.ts` | 30, 111, 170-173 | Change TXT verification naming |
+| `src/pages/panel/Integrations.tsx` | 90-360 | Update all background colors to brand colors |
+
+---
+
+## Technical Details
+
+### Why TenantHead on Storefront Matters
+
+Currently, `TenantHead` only renders in `BuyerLayout.tsx` (authenticated pages). This means:
+- ❌ Google Analytics NOT tracking on homepage
+- ❌ Facebook Chat NOT appearing on homepage  
+- ❌ Crisp Chat NOT loading on homepage
+- ❌ Custom head code NOT injected on homepage
+
+After fix:
+- ✅ All integrations work on public storefront for ALL themes (ThemeOne through SMMVisit)
+
+### How Integrations Flow
 
 ```text
-FREE TIER:
-  User creates panel "demo"
-  → System creates: demo.smmpilot.online
-  → Wildcard DNS *.smmpilot.online → Vercel (automatic)
-  → Status: ACTIVE immediately
-  → TenantRouter detects hostname, serves panel
-
-PRO TIER UPGRADE:
-  User clicks "Add Custom Domain"
-  → Enters: smmking.com
-  → System generates: verification token (e.g., abc123)
-  → Shows DNS instructions:
-    • A @ → 76.76.21.21
-    • CNAME www → cname.vercel-dns.com
-    • TXT _homeofsmm → homeofsmm-verify=abc123
-  → User adds records at registrar (Namecheap, GoDaddy, etc.)
-  
-  User clicks "Verify"
-  → System checks DNS via Google DNS-over-HTTPS
-  → If A record points to 76.76.21.21 ✅
-  → If TXT record contains verification token ✅
-  → Call Vercel API to add domain to project
-  → Vercel auto-provisions SSL
-  → Status: ACTIVE
-
-POST-UPGRADE:
-  • demo.smmpilot.online → Still works (optional redirect to custom)
-  • smmking.com → Primary domain, same panel
-  • www.smmking.com → Redirects to smmking.com (Vercel handles)
+Panel Owner configures integration in /panel/integrations
+     ↓
+Saves to panel_settings.integrations JSONB
+     ↓
+TenantHead.tsx fetches panel_settings
+     ↓
+Injects scripts to <head> or <body>
+     ↓
+Integration appears on storefront
 ```
+
+### Subdomain → Custom Domain Upgrade Flow
+
+When a user upgrades from free to Pro:
+
+1. **Free tier**: `demo.smmpilot.online` (instant, no DNS config)
+2. **Pro upgrade**: User adds `smmking.com`
+3. **System generates**: Verification token (panel_id)
+4. **User adds DNS**:
+   - A @ → 76.76.21.21
+   - CNAME www → cname.vercel-dns.com
+   - TXT _homeofsmm → homeofsmm-verify={panel_id}
+5. **User clicks Verify** → System checks DNS
+6. **If verified** → Add domain to Vercel via API
+7. **Vercel provisions SSL** → Domain active
+8. **Both URLs work**: `demo.smmpilot.online` and `smmking.com`
 
 ---
 
 ## Summary
 
-This plan will:
-
-1. **Fix service integrations on public storefront** by adding `TenantHead` to `Storefront.tsx`
-2. **Standardize TXT verification** to `_homeofsmm` across all files
-3. **Confirm Vercel IP is correct** (`76.76.21.21` is official)
-4. **Update integration icon backgrounds** to match official brand colors
-5. **Ensure FloatingChatWidget visibility** by verifying the AI chat default behavior
+This implementation will:
+1. ✅ **Enable all integrations on public storefront** across all themes
+2. ✅ **Standardize TXT verification** to `_homeofsmm` brand
+3. ✅ **Fix icon backgrounds** to match official brand colors
+4. ✅ **Confirm Vercel IP** is correct (76.76.21.21)
