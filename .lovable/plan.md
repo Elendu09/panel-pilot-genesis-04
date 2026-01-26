@@ -1,211 +1,202 @@
 
-# Implementation Plan: Integration Fixes + DNS Configuration + Icon Backgrounds
+# Plan: Fix Button Routes, Unify Integrations Page & Verify Icon Rendering
 
-## Summary
+## Issues Identified
 
-This plan addresses four critical issues:
-1. **TenantHead not injected on public Storefront** - Integrations don't work on homepage
-2. **TXT verification uses `_smmpilot`** - Should be `_homeofsmm` for brand consistency
-3. **Integration icon backgrounds don't match brand colors** - Visual inconsistency
-4. **FloatingChatWidget already fixed** - Verified working with AI chat enabled by default
+### Issue 1: Incorrect Routes for "Add Funds" and "Upgrade" Buttons
+**Location:** `src/pages/panel/PanelOverview.tsx` (lines 569, 578)
+
+The buttons navigate to `/billing` instead of `/panel/billing`:
+```typescript
+// Current (broken):
+onClick={() => navigate('/billing')}  // ❌ Goes to wrong route
+
+// Should be:
+onClick={() => navigate('/panel/billing')}  // ✅ Correct panel route
+```
+
+### Issue 2: Integrations Page Has Tab Divisions
+**Location:** `src/pages/panel/Integrations.tsx` (lines 629-906)
+
+Currently the page uses:
+- Tab 1: OAuth Integrations
+- Tab 2: Service Integrations (with 4 sub-cards: Chat, Analytics, Notifications, Other)
+
+User wants a **single scrollable page** without tabs.
+
+### Issue 3: Missing Sidebar Link for Integrations
+**Location:** `src/pages/PanelOwnerDashboard.tsx` (lines 121-131)
+
+The `settingsNavigation` array doesn't include Integrations, making it only accessible via the mobile MoreMenu.
+
+### Issue 4: Icon Background Gradient Issue
+**Location:** `src/pages/panel/Integrations.tsx` (lines 671, 743, 791, 839, 887)
+
+The icon containers use `bg-gradient-to-br` class combined with solid brand colors. For solid brand colors like `bg-[#26A5E4]`, the gradient class is unnecessary and can cause visual inconsistency.
 
 ---
 
-## Part 1: Add TenantHead to Storefront.tsx
+## Implementation Plan
 
-**File:** `src/pages/Storefront.tsx`
+### Part 1: Fix Button Routes in PanelOverview
 
-**Change 1: Add import (line 4)**
+**File:** `src/pages/panel/PanelOverview.tsx`
+
+| Line | Current | Fix |
+|------|---------|-----|
+| 569 | `navigate('/billing')` | `navigate('/panel/billing')` |
+| 578 | `navigate('/billing')` | `navigate('/panel/billing')` |
+
+### Part 2: Add Integrations to Sidebar Navigation
+
+**File:** `src/pages/PanelOwnerDashboard.tsx`
+
+Add to `settingsNavigation` array (after line 129):
 ```typescript
-import { TenantHead } from '@/components/tenant/TenantHead';
+{ name: 'Integrations', href: '/panel/integrations', icon: Plug, tourId: 'integrations' },
 ```
 
-**Change 2: Add TenantHead after BuyerHomepageSchemas (after line 296)**
-```tsx
-{/* Inject TenantHead for service integrations (GA, GTM, Crisp, custom code, etc.) */}
-<TenantHead />
-```
-
-This ensures all configured integrations (Google Analytics, GTM, Yandex.Metrika, Crisp, Tidio, Zendesk, Facebook Chat, custom code, etc.) are injected into the public storefront pages for all themes.
-
----
-
-## Part 2: Update TXT Record Naming to `_homeofsmm`
-
-### File 1: `src/lib/hosting-config.ts`
-
-**Change lines 41-44:**
-```typescript
-{
-  type: 'TXT',
-  host: '_homeofsmm',
-  value: `homeofsmm-verify=${verificationToken}`,
-  description: 'Verifies domain ownership for your panel',
-  required: true,
-},
-```
-
-### File 2: `supabase/functions/verify-domain-txt/index.ts`
-
-**Change line 30:**
-```typescript
-const verificationHost = `_homeofsmm.${domain}`;
-```
-
-**Change line 111:**
-```typescript
-const expectedValue = `homeofsmm-verify=${panel_id}`;
-```
-
-**Change line 170-173:**
-```typescript
-verification_host: `_homeofsmm.${domain}`,
-message: isVerified 
-  ? "Domain ownership verified via TXT record" 
-  : `TXT record not found. Add a TXT record for _homeofsmm.${domain} with value: ${expectedValue}`,
-```
-
----
-
-## Part 3: Fix Integration Icon Background Colors
+### Part 3: Unify Integrations Page (Remove Tabs)
 
 **File:** `src/pages/panel/Integrations.tsx`
 
-Update the OAuth providers section (lines 90-143) to use proper brand colors:
+Transform from tabbed layout to single-page layout:
 
-| Provider | Current | Official Brand | Fix |
-|----------|---------|----------------|-----|
-| Google | `from-red-500 to-yellow-500` | White background | `bg-white border border-gray-200` |
-| Telegram | `from-sky-500 to-blue-600` | #26A5E4 | Keep (close match) ✅ |
-| VK | `from-blue-600 to-blue-700` | #0077FF | `bg-[#0077FF]` |
-| Discord | `from-indigo-500 to-purple-600` | #5865F2 | `bg-[#5865F2]` |
-
-**Updated oauthProviders array:**
-```typescript
-const oauthProviders: OAuthProvider[] = [
-  {
-    id: 'google',
-    name: 'Google OAuth',
-    icon: <GoogleIcon className="w-5 h-5" />,
-    color: 'bg-white border border-gray-200', // White background for colorful G
-    setupUrl: 'https://console.cloud.google.com/apis/credentials',
-    instructions: [...]
-  },
-  {
-    id: 'telegram',
-    name: 'Telegram OAuth',
-    icon: <TelegramIcon className="w-5 h-5" />,
-    color: 'bg-[#26A5E4]', // Official Telegram blue
-    setupUrl: 'https://core.telegram.org/widgets/login',
-    instructions: [...]
-  },
-  {
-    id: 'vk',
-    name: 'VK OAuth',
-    icon: <VKIcon className="w-5 h-5" />,
-    color: 'bg-[#0077FF]', // Official VK blue
-    setupUrl: 'https://vk.com/apps?act=manage',
-    instructions: [...]
-  },
-  {
-    id: 'discord',
-    name: 'Discord OAuth',
-    icon: <DiscordIcon className="w-5 h-5" />,
-    color: 'bg-[#5865F2]', // Official Discord blurple
-    setupUrl: 'https://discord.com/developers/applications',
-    instructions: [...]
-  }
-];
+**Before (structure):**
+```text
+┌─ Tabs ─────────────────────────────┐
+│ [OAuth] [Services]                 │
+├────────────────────────────────────┤
+│ Tab Content (only one visible)     │
+└────────────────────────────────────┘
 ```
 
-**Update Service Integrations colors (lines 162-360):**
+**After (structure):**
+```text
+┌─ Single Page ──────────────────────┐
+│ 1. OAuth Integrations Card         │
+│ 2. Chat Widgets Card               │
+│ 3. Analytics & Tracking Card       │
+│ 4. Notifications & Widgets Card    │
+│ 5. Other Integrations Card         │
+└────────────────────────────────────┘
+```
 
-| Service | Current | Official | Fix |
-|---------|---------|----------|-----|
-| WhatsApp | `from-green-500 to-emerald-600` | #25D366 | `bg-[#25D366]` |
-| Facebook | `from-blue-600 to-blue-700` | #1877F2 | `bg-[#1877F2]` |
-| Zendesk | `from-emerald-500 to-teal-600` | #03363D | `bg-[#03363D]` |
-| Tidio | `from-blue-400 to-blue-600` | #0066FF | `bg-[#0066FF]` |
-| Smartsupp | `from-yellow-500 to-orange-600` | #F26322 | `bg-[#F26322]` |
-| Crisp | `from-purple-500 to-pink-600` | #7C3AED | `bg-[#7C3AED]` |
-| JivoChat | `from-green-400 to-cyan-600` | #1AAD19 | `bg-[#1AAD19]` |
-| OneSignal | `from-red-500 to-pink-600` | #E54B4D | `bg-[#E54B4D]` |
-| Google Analytics | `from-orange-500 to-yellow-600` | #F9AB00 | Keep ✅ |
-| Yandex.Metrika | `from-red-500 to-red-600` | #FC3F1D | `bg-[#FC3F1D]` |
-| Beamer | `from-purple-500 to-violet-600` | #7C3AED | `bg-[#7C3AED]` |
-| GetSiteControl | `from-teal-500 to-cyan-600` | #14B8A6 | `bg-[#14B8A6]` |
+Changes required:
+1. Remove `Tabs`, `TabsList`, `TabsTrigger`, `TabsContent` components
+2. Remove `activeTab` state variable
+3. Render all sections sequentially in a single scrollable layout
+4. Keep all existing cards but remove tab wrappers
 
----
+### Part 4: Fix Icon Background Rendering
 
-## Part 4: Vercel DNS IP Confirmation
+**File:** `src/pages/panel/Integrations.tsx`
 
-**No changes needed.** The current IP `76.76.21.21` is correct:
-- It's Vercel's official recommended A record IP for apex domains
-- Subdomains may resolve to different IPs due to Anycast networking
-- Custom domains should still use `76.76.21.21` (A record) and `cname.vercel-dns.com` (CNAME)
+Remove `bg-gradient-to-br` class from icon containers when using solid brand colors:
+
+| Line | Current | Fix |
+|------|---------|-----|
+| 671 | `bg-gradient-to-br flex items-center justify-center` | `flex items-center justify-center` |
+| 743 | `bg-gradient-to-br flex items-center justify-center` | `flex items-center justify-center` |
+| 791 | `bg-gradient-to-br flex items-center justify-center` | `flex items-center justify-center` |
+| 839 | `bg-gradient-to-br flex items-center justify-center` | `flex items-center justify-center` |
+| 887 | `bg-gradient-to-br flex items-center justify-center` | `flex items-center justify-center` |
+| 914 | `bg-gradient-to-br flex items-center justify-center` | `flex items-center justify-center` |
+| 1045 | `bg-gradient-to-br flex items-center justify-center` | `flex items-center justify-center` |
 
 ---
 
 ## Files to Modify
 
-| File | Lines | Changes |
-|------|-------|---------|
-| `src/pages/Storefront.tsx` | 4, 296 | Add TenantHead import and render |
-| `src/lib/hosting-config.ts` | 41-44 | Change `_smmpilot` → `_homeofsmm` |
-| `supabase/functions/verify-domain-txt/index.ts` | 30, 111, 170-173 | Change TXT verification naming |
-| `src/pages/panel/Integrations.tsx` | 90-360 | Update all background colors to brand colors |
+| File | Changes |
+|------|---------|
+| `src/pages/panel/PanelOverview.tsx` | Fix 2 navigation routes from `/billing` to `/panel/billing` |
+| `src/pages/PanelOwnerDashboard.tsx` | Add Integrations to sidebar navigation |
+| `src/pages/panel/Integrations.tsx` | Remove tabs, unify to single page, fix icon background classes |
 
 ---
 
-## Technical Details
+## New Integrations Page Structure
 
-### Why TenantHead on Storefront Matters
-
-Currently, `TenantHead` only renders in `BuyerLayout.tsx` (authenticated pages). This means:
-- ❌ Google Analytics NOT tracking on homepage
-- ❌ Facebook Chat NOT appearing on homepage  
-- ❌ Crisp Chat NOT loading on homepage
-- ❌ Custom head code NOT injected on homepage
-
-After fix:
-- ✅ All integrations work on public storefront for ALL themes (ThemeOne through SMMVisit)
-
-### How Integrations Flow
+After changes, the page will render as:
 
 ```text
-Panel Owner configures integration in /panel/integrations
-     ↓
-Saves to panel_settings.integrations JSONB
-     ↓
-TenantHead.tsx fetches panel_settings
-     ↓
-Injects scripts to <head> or <body>
-     ↓
-Integration appears on storefront
+┌─────────────────────────────────────────────────────────┐
+│ INTEGRATIONS                           [2 OAuth] [5 Svc]│
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│ ┌─────────────────────────────────────────────────────┐ │
+│ │ 🛡️ OAuth Integrations                              │ │
+│ │ Allow customers to sign up using social accounts   │ │
+│ │ ┌─────────────┐ ┌─────────────┐                    │ │
+│ │ │ 🔵 Google   │ │ 🔵 Telegram │                    │ │
+│ │ └─────────────┘ └─────────────┘                    │ │
+│ │ ┌─────────────┐ ┌─────────────┐                    │ │
+│ │ │ 🔵 VK       │ │ 🔵 Discord  │                    │ │
+│ │ └─────────────┘ └─────────────┘                    │ │
+│ └─────────────────────────────────────────────────────┘ │
+│                                                         │
+│ ┌─────────────────────────────────────────────────────┐ │
+│ │ 💬 Chat Widgets                                     │ │
+│ │ Add live chat and support widgets                  │ │
+│ │ [Telegram] [WhatsApp] [Crisp] [Tidio] ...          │ │
+│ └─────────────────────────────────────────────────────┘ │
+│                                                         │
+│ ┌─────────────────────────────────────────────────────┐ │
+│ │ 📊 Analytics & Tracking                            │ │
+│ │ Track visitor behavior and measure conversions     │ │
+│ │ [Google Analytics] [GTM] [Yandex.Metrika]          │ │
+│ └─────────────────────────────────────────────────────┘ │
+│                                                         │
+│ ┌─────────────────────────────────────────────────────┐ │
+│ │ 🔔 Notifications & Widgets                         │ │
+│ │ Push notifications, popups, and announcements      │ │
+│ │ [OneSignal] [GetSiteControl] [Beamer]              │ │
+│ └─────────────────────────────────────────────────────┘ │
+│                                                         │
+│ ┌─────────────────────────────────────────────────────┐ │
+│ │ 🔧 Other Integrations                              │ │
+│ │ Announcements, custom code, and more               │ │
+│ │ [Announcements] [Custom Code]                      │ │
+│ └─────────────────────────────────────────────────────┘ │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
 ```
 
-### Subdomain → Custom Domain Upgrade Flow
+---
 
-When a user upgrades from free to Pro:
+## Icon Brand Colors Verification
 
-1. **Free tier**: `demo.smmpilot.online` (instant, no DNS config)
-2. **Pro upgrade**: User adds `smmking.com`
-3. **System generates**: Verification token (panel_id)
-4. **User adds DNS**:
-   - A @ → 76.76.21.21
-   - CNAME www → cname.vercel-dns.com
-   - TXT _homeofsmm → homeofsmm-verify={panel_id}
-5. **User clicks Verify** → System checks DNS
-6. **If verified** → Add domain to Vercel via API
-7. **Vercel provisions SSL** → Domain active
-8. **Both URLs work**: `demo.smmpilot.online` and `smmking.com`
+All icons are correctly using official brand colors:
+
+| Icon | SVG Fill Color | Background Color | Status |
+|------|----------------|------------------|--------|
+| Google | Multi-color (#4285F4, #34A853, #FBBC05, #EA4335) | `bg-white border border-gray-200` | ✅ |
+| Telegram | #26A5E4 | `bg-[#26A5E4]` | ✅ |
+| VK | #0077FF | `bg-[#0077FF]` | ✅ |
+| Discord | #5865F2 | `bg-[#5865F2]` | ✅ |
+| WhatsApp | #25D366 | `bg-[#25D366]` | ✅ |
+| Facebook | #1877F2 | `bg-[#1877F2]` | ✅ |
+| Google Analytics | #F9AB00, #E37400 | `bg-[#F9AB00]` | ✅ |
+| Google Tag Manager | #8AB4F8, #4285F4, #246FDB | `bg-[#246FDB]` | ✅ |
+| Yandex.Metrika | #FC3F1D | `bg-[#FC3F1D]` | ✅ |
+| OneSignal | #E54B4D | `bg-[#E54B4D]` | ✅ |
+| Zendesk | #03363D | `bg-[#03363D]` | ✅ |
+| Tidio | #0066FF | `bg-[#0066FF]` | ✅ |
+| Smartsupp | #F26322 | `bg-[#F26322]` | ✅ |
+| Crisp | #7C3AED | `bg-[#7C3AED]` | ✅ |
+| JivoChat | Gradient (#5CC970 → #1AAD19) | `bg-[#1AAD19]` | ✅ |
+| GetButton | Multi-color circles | `bg-[#0066FF]` | ✅ |
+| Beamer | #7C3AED | `bg-[#7C3AED]` | ✅ |
+| GetSiteControl | #14B8A6 | `bg-[#14B8A6]` | ✅ |
 
 ---
 
 ## Summary
 
-This implementation will:
-1. ✅ **Enable all integrations on public storefront** across all themes
-2. ✅ **Standardize TXT verification** to `_homeofsmm` brand
-3. ✅ **Fix icon backgrounds** to match official brand colors
-4. ✅ **Confirm Vercel IP** is correct (76.76.21.21)
+This plan will:
+1. **Fix "Add Funds" and "Upgrade" button routes** to correctly navigate to `/panel/billing`
+2. **Add Integrations to sidebar** so it's accessible from desktop navigation
+3. **Unify integrations page** into a single scrollable layout without tabs
+4. **Fix icon background classes** by removing unnecessary gradient class for solid colors
+5. **Verify all icons render correctly** with official brand colors
