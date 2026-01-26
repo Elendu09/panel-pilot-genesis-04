@@ -1515,6 +1515,16 @@ export const platformTranslations = {
     'buyer.signUpFree': 'Бесплатная Регистрация',
     'buyer.viewAllServices': 'Все Услуги',
     
+    // Additional theme keys - prefixed versions
+    'buyer.payment.weAccept': 'Мы принимаем',
+    'buyer.stats.happyUsers': 'Довольных Пользователей',
+    'buyer.stats.ordersDone': 'Выполненных Заказов',
+    'buyer.howItWorks.howIt': 'Как',
+    'buyer.howItWorks.works': 'Работает',
+    'buyer.platforms.allMajor': 'Все социальные сети в одном месте',
+    'buyer.auth.resetPassword': 'Сбросить Пароль',
+    'buyer.features.securePayments': 'Безопасные Платежи',
+    
     // Navigation - additional
     'buyer.nav.getStarted': 'Начать',
     
@@ -1771,6 +1781,16 @@ export const platformTranslations = {
     'buyer.joinNow': 'Rejoindre',
     'buyer.signUpFree': 'Inscription Gratuite',
     'buyer.viewAllServices': 'Voir Tous les Services',
+    
+    // Additional theme keys - prefixed versions
+    'buyer.payment.weAccept': 'Nous acceptons',
+    'buyer.stats.happyUsers': 'Utilisateurs Satisfaits',
+    'buyer.stats.ordersDone': 'Commandes Réalisées',
+    'buyer.howItWorks.howIt': 'Comment Ça',
+    'buyer.howItWorks.works': 'Marche',
+    'buyer.platforms.allMajor': 'Tous les réseaux sociaux en un seul endroit',
+    'buyer.auth.resetPassword': 'Réinitialiser le Mot de Passe',
+    'buyer.features.securePayments': 'Paiements Sécurisés',
     
     // Navigation - additional
     'buyer.nav.getStarted': 'Commencer',
@@ -2029,6 +2049,16 @@ export const platformTranslations = {
     'buyer.signUpFree': 'Kostenlos Registrieren',
     'buyer.viewAllServices': 'Alle Services Ansehen',
     
+    // Additional theme keys - prefixed versions
+    'buyer.payment.weAccept': 'Wir akzeptieren',
+    'buyer.stats.happyUsers': 'Zufriedene Benutzer',
+    'buyer.stats.ordersDone': 'Erledigte Bestellungen',
+    'buyer.howItWorks.howIt': 'So',
+    'buyer.howItWorks.works': 'Funktioniert Es',
+    'buyer.platforms.allMajor': 'Alle sozialen Netzwerke an einem Ort',
+    'buyer.auth.resetPassword': 'Passwort Zurücksetzen',
+    'buyer.features.securePayments': 'Sichere Zahlungen',
+    
     // Navigation - additional
     'buyer.nav.getStarted': 'Loslegen',
     
@@ -2286,6 +2316,16 @@ export const platformTranslations = {
     'buyer.signUpFree': '免费注册',
     'buyer.viewAllServices': '查看所有服务',
     
+    // Additional theme keys - prefixed versions
+    'buyer.payment.weAccept': '我们接受',
+    'buyer.stats.happyUsers': '满意用户',
+    'buyer.stats.ordersDone': '已完成订单',
+    'buyer.howItWorks.howIt': '如何',
+    'buyer.howItWorks.works': '使用',
+    'buyer.platforms.allMajor': '所有社交网络一站式服务',
+    'buyer.auth.resetPassword': '重置密码',
+    'buyer.features.securePayments': '安全支付',
+    
     // Navigation - additional
     'buyer.nav.getStarted': '开始',
     
@@ -2542,6 +2582,16 @@ export const platformTranslations = {
     'buyer.joinNow': 'अभी जुड़ें',
     'buyer.signUpFree': 'मुफ्त साइन अप',
     'buyer.viewAllServices': 'सभी सेवाएं देखें',
+    
+    // Additional theme keys - prefixed versions
+    'buyer.payment.weAccept': 'हम स्वीकार करते हैं',
+    'buyer.stats.happyUsers': 'खुश उपयोगकर्ता',
+    'buyer.stats.ordersDone': 'पूर्ण ऑर्डर',
+    'buyer.howItWorks.howIt': 'यह कैसे',
+    'buyer.howItWorks.works': 'काम करता है',
+    'buyer.platforms.allMajor': 'सभी सोशल नेटवर्क एक जगह',
+    'buyer.auth.resetPassword': 'पासवर्ड रीसेट करें',
+    'buyer.features.securePayments': 'सुरक्षित भुगतान',
     
     // Navigation - additional
     'buyer.nav.getStarted': 'शुरू करें',
