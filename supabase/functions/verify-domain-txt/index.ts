@@ -26,7 +26,7 @@ interface GoogleDNSResponse {
 async function lookupTXTRecords(domain: string): Promise<string[]> {
   const txtRecords: string[] = [];
   
-  // Check _smmpilot subdomain for verification TXT record
+  // Check _smmpilot subdomain for verification TXT record (Vercel hosting)
   const verificationHost = `_smmpilot.${domain}`;
   
   console.log(`[verify-domain-txt] Looking up TXT records for: ${verificationHost}`);
