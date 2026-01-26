@@ -26,8 +26,8 @@ interface GoogleDNSResponse {
 async function lookupTXTRecords(domain: string): Promise<string[]> {
   const txtRecords: string[] = [];
   
-  // Check _smmpilot subdomain for verification TXT record (Vercel hosting)
-  const verificationHost = `_smmpilot.${domain}`;
+  // Check _homeofsmm subdomain for verification TXT record (Vercel hosting)
+  const verificationHost = `_homeofsmm.${domain}`;
   
   console.log(`[verify-domain-txt] Looking up TXT records for: ${verificationHost}`);
   
@@ -108,7 +108,7 @@ serve(async (req) => {
     console.log(`[verify-domain-txt] Verifying TXT record for domain: ${domain}, panel: ${panel_id}`);
 
     // Expected TXT record value
-    const expectedValue = `smmpilot-verify=${panel_id}`;
+    const expectedValue = `homeofsmm-verify=${panel_id}`;
     console.log(`[verify-domain-txt] Expected TXT value: ${expectedValue}`);
 
     // Lookup TXT records
@@ -167,10 +167,10 @@ serve(async (req) => {
         panel_id,
         txt_records_found: txtRecords,
         expected_value: expectedValue,
-        verification_host: `_smmpilot.${domain}`,
+        verification_host: `_homeofsmm.${domain}`,
         message: isVerified 
           ? "Domain ownership verified via TXT record" 
-          : `TXT record not found. Add a TXT record for _smmpilot.${domain} with value: ${expectedValue}`,
+          : `TXT record not found. Add a TXT record for _homeofsmm.${domain} with value: ${expectedValue}`,
       }),
       { 
         status: 200, 
