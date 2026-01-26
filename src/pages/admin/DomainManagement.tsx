@@ -14,20 +14,16 @@ import {
   RefreshCw,
   CheckCircle,
   Clock,
-  ShoppingCart,
   Loader2,
   Activity,
-  Network,
   Eye
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { SubdomainManager } from "@/components/domain/SubdomainManager";
-import { DomainPurchaseLinks } from "@/components/domain/DomainPurchaseLinks";
 import { SSLMonitoringDashboard } from "@/components/domain/SSLMonitoringDashboard";
 import { DomainTroubleshootingGuide } from "@/components/domain/DomainTroubleshootingGuide";
-import { VERCEL_NAMESERVERS } from "@/lib/hosting-config";
 import { ResponsiveTabs } from "@/components/admin/ResponsiveTabs";
+import { LOVABLE_IP, PLATFORM_DOMAIN } from "@/lib/hosting-config";
 
 interface PanelData {
   id: string;
@@ -36,7 +32,6 @@ interface PanelData {
   status: string;
   owner_id: string;
   created_at: string;
-  profiles?: { email: string } | null;
 }
 
 interface DomainData {
@@ -49,17 +44,13 @@ interface DomainData {
   created_at: string;
   verified_at: string | null;
   hosting_provider: string;
-  panels?: { name: string; subdomain: string } | null;
 }
-
-const PLATFORM_DOMAIN = "smmpilot.online";
 
 const DomainManagement = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [panels, setPanels] = useState<PanelData[]>([]);
   const [domains, setDomains] = useState<DomainData[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
   const [verifyingDomains, setVerifyingDomains] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState("overview");
 
@@ -91,7 +82,9 @@ const DomainManagement = () => {
   const verifyDomain = async (domainId: string, domainName: string) => {
     setVerifyingDomains(prev => new Set(prev).add(domainId));
     try {
-      const { data } = await supabase.functions.invoke("domain-health-check", { body: { domain: domainName } });
+      const { data } = await supabase.functions.invoke("domain-health-check", { 
+        body: { domain: domainName, expectedTarget: LOVABLE_IP } 
+      });
       await supabase.from('panel_domains').update({
         verification_status: data?.dns_ok ? 'verified' : 'pending',
         ssl_status: data?.https_ok ? 'active' : 'pending',
@@ -168,8 +161,6 @@ const DomainManagement = () => {
           { value: "subdomains", label: "Subdomains", icon: Server },
           { value: "custom", label: "Custom Domains", icon: Globe },
           { value: "monitoring", label: "Monitoring", icon: Eye },
-          { value: "vercel", label: "Vercel Setup", icon: Network },
-          { value: "buy", label: "Buy Domains", icon: ShoppingCart },
         ]}
       >
 
@@ -183,41 +174,75 @@ const DomainManagement = () => {
                   <Badge className="bg-green-500/10 text-green-500 border-green-500/20"><CheckCircle className="w-3 h-3 mr-1" /> Active</Badge>
                 </div>
                 <div className="flex gap-2">
-                  <Badge variant="outline"><Server className="w-3 h-3 mr-1" /> Vercel</Badge>
-                  <Badge variant="outline"><Shield className="w-3 h-3 mr-1" /> Wildcard SSL</Badge>
+                  <Badge variant="outline"><Server className="w-3 h-3 mr-1" /> Lovable</Badge>
+                  <Badge variant="outline"><Shield className="w-3 h-3 mr-1" /> SSL Active</Badge>
                 </div>
+                <Alert className="border-primary/20 bg-primary/5">
+                  <AlertDescription className="text-sm">
+                    <strong>DNS Target:</strong> A record pointing to <code className="bg-muted px-1 rounded">{LOVABLE_IP}</code>
+                  </AlertDescription>
+                </Alert>
               </CardContent>
             </Card>
             <Card className="glass-card">
               <CardHeader><CardTitle>Quick Actions</CardTitle></CardHeader>
               <CardContent className="space-y-3">
-                <Button variant="outline" className="w-full justify-start" onClick={() => setActiveTab('vercel')}><Network className="w-4 h-4 mr-2" /> View Vercel Setup Guide</Button>
-                <Button variant="outline" className="w-full justify-start" onClick={() => setActiveTab('subdomains')}><Server className="w-4 h-4 mr-2" /> Manage {totalPanels} Subdomains</Button>
-                <Button variant="outline" className="w-full justify-start" onClick={() => setActiveTab('buy')}><ShoppingCart className="w-4 h-4 mr-2" /> Domain Referral Links</Button>
+                <Button variant="outline" className="w-full justify-start" onClick={() => setActiveTab('subdomains')}><Server className="w-4 h-4 mr-2" /> View {totalPanels} Panel Subdomains</Button>
+                <Button variant="outline" className="w-full justify-start" onClick={() => setActiveTab('custom')}><Globe className="w-4 h-4 mr-2" /> Manage {totalDomains} Custom Domains</Button>
+                <Button variant="outline" className="w-full justify-start" onClick={() => setActiveTab('monitoring')}><Eye className="w-4 h-4 mr-2" /> SSL Monitoring</Button>
               </CardContent>
             </Card>
           </div>
         </TabsContent>
 
-        <TabsContent value="subdomains">
-          <SubdomainManager panels={panels.map(p => ({ id: p.id, name: p.name, subdomain: p.subdomain, status: p.status as 'active' | 'pending' | 'suspended', created_at: p.created_at }))} platformDomain={PLATFORM_DOMAIN} onRefresh={fetchData} loading={loading} />
-        </TabsContent>
-
-        <TabsContent value="custom" className="space-y-6">
+        <TabsContent value="subdomains" className="space-y-6">
           <Card className="glass-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Server className="w-5 h-5 text-primary" />
+                Panel Subdomains
+              </CardTitle>
+              <CardDescription>All panel subdomains on {PLATFORM_DOMAIN}</CardDescription>
+            </CardHeader>
             <CardContent className="p-0">
               <Table>
-                <TableHeader><TableRow><TableHead>Domain</TableHead><TableHead>Verification</TableHead><TableHead>SSL</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Panel</TableHead>
+                    <TableHead>Subdomain</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
                 <TableBody>
-                  {domains.length === 0 ? <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">No custom domains found</TableCell></TableRow> : domains.map(domain => (
-                    <TableRow key={domain.id}>
-                      <TableCell><code className="font-mono">{domain.domain}</code></TableCell>
-                      <TableCell>{getStatusBadge(domain.verification_status)}</TableCell>
-                      <TableCell>{getStatusBadge(domain.ssl_status)}</TableCell>
+                  {panels.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                        No panels found
+                      </TableCell>
+                    </TableRow>
+                  ) : panels.map(panel => (
+                    <TableRow key={panel.id}>
+                      <TableCell className="font-medium">{panel.name}</TableCell>
+                      <TableCell>
+                        <code className="text-sm">{panel.subdomain}.{PLATFORM_DOMAIN}</code>
+                      </TableCell>
+                      <TableCell>{getStatusBadge(panel.status)}</TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" onClick={() => verifyDomain(domain.id, domain.domain)} disabled={verifyingDomains.has(domain.id)}>
-                          {verifyingDomains.has(domain.id) ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-                        </Button>
+                        <div className="flex justify-end gap-1">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => copyToClipboard(`https://${panel.subdomain}.${PLATFORM_DOMAIN}`)}
+                          >
+                            <Copy className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" asChild>
+                            <a href={`https://${panel.subdomain}.${PLATFORM_DOMAIN}`} target="_blank">
+                              <ExternalLink className="w-4 h-4" />
+                            </a>
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -227,28 +252,48 @@ const DomainManagement = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="vercel" className="space-y-6">
-          <Card className="glass-card border-primary/20">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2"><Network className="w-5 h-5 text-primary" /> Vercel Wildcard DNS Configuration</CardTitle>
-              <CardDescription>Configure your domain with Vercel for automatic wildcard SSL certificates</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <Alert className="border-green-500/20 bg-green-500/5"><CheckCircle className="w-4 h-4 text-green-500" /><AlertDescription><strong>Recommended:</strong> Use Vercel nameservers for automatic wildcard SSL.</AlertDescription></Alert>
-              <div className="space-y-3">
-                <h3 className="font-semibold">Step 1: Change Nameservers</h3>
-                {VERCEL_NAMESERVERS.map((ns, i) => (
-                  <div key={ns} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                    <code className="font-mono">{ns}</code>
-                    <Button variant="ghost" size="sm" onClick={() => copyToClipboard(ns)}><Copy className="w-4 h-4" /></Button>
-                  </div>
-                ))}
-              </div>
-              <div className="space-y-3">
-                <h3 className="font-semibold">Step 2: Add Domains in Vercel</h3>
-                <div className="p-3 bg-muted rounded-lg"><code>{PLATFORM_DOMAIN}</code> and <code>*.{PLATFORM_DOMAIN}</code></div>
-              </div>
-              <Button variant="outline" asChild><a href="https://vercel.com/docs/projects/domains" target="_blank"><ExternalLink className="w-4 h-4 mr-2" /> Vercel Docs</a></Button>
+        <TabsContent value="custom" className="space-y-6">
+          <Card className="glass-card">
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Domain</TableHead>
+                    <TableHead>Verification</TableHead>
+                    <TableHead>SSL</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {domains.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                        No custom domains found
+                      </TableCell>
+                    </TableRow>
+                  ) : domains.map(domain => (
+                    <TableRow key={domain.id}>
+                      <TableCell><code className="font-mono">{domain.domain}</code></TableCell>
+                      <TableCell>{getStatusBadge(domain.verification_status)}</TableCell>
+                      <TableCell>{getStatusBadge(domain.ssl_status)}</TableCell>
+                      <TableCell className="text-right">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => verifyDomain(domain.id, domain.domain)} 
+                          disabled={verifyingDomains.has(domain.id)}
+                        >
+                          {verifyingDomains.has(domain.id) ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <RefreshCw className="w-4 h-4" />
+                          )}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
         </TabsContent>
@@ -267,8 +312,6 @@ const DomainManagement = () => {
             domain={domains.length > 0 ? domains[0].domain : undefined}
           />
         </TabsContent>
-
-        <TabsContent value="buy"><DomainPurchaseLinks /></TabsContent>
       </ResponsiveTabs>
     </div>
   );
