@@ -444,31 +444,71 @@ export const FloatingChatWidget = ({
     }
   };
 
-  const getPrimaryIcon = () => {
-    if (settings.whatsapp) return <WhatsAppIcon />;
-    if (settings.telegram) return <TelegramIcon />;
-    if (settings.messenger) return <MessengerIcon />;
-    if (settings.discord) return <DiscordIcon />;
-    return <MessageCircle className="w-6 h-6" />;
-  };
-
-  const getPrimaryColor = () => {
-    if (settings.whatsapp) return 'bg-green-500 hover:bg-green-600';
-    if (settings.telegram) return 'bg-sky-500 hover:bg-sky-600';
-    if (settings.messenger) return 'bg-blue-500 hover:bg-blue-600';
-    if (settings.discord) return 'bg-indigo-500 hover:bg-indigo-600';
-    return 'bg-primary hover:bg-primary/90';
-  };
+  // AI Chat always uses MessageCircle icon - social platforms are separate
+  const getAIIcon = () => <MessageCircle className="w-6 h-6" />;
+  
+  // Check which social platforms are configured
+  const hasSocialPlatforms = settings.whatsapp || settings.telegram || settings.messenger || settings.discord;
 
   return (
     <div className={`fixed bottom-20 sm:bottom-6 ${positionClasses} z-40`}>
+      {/* Social Platform Quick Buttons - positioned above AI chat */}
+      {!isOpen && hasSocialPlatforms && (
+        <div className="flex flex-col gap-2 mb-3">
+          {settings.whatsapp && (
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleWhatsApp}
+              className="p-3 rounded-full text-white shadow-lg bg-green-500 hover:bg-green-600 transition-colors"
+              title="WhatsApp"
+            >
+              <WhatsAppIcon />
+            </motion.button>
+          )}
+          {settings.telegram && (
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleTelegram}
+              className="p-3 rounded-full text-white shadow-lg bg-sky-500 hover:bg-sky-600 transition-colors"
+              title="Telegram"
+            >
+              <TelegramIcon />
+            </motion.button>
+          )}
+          {settings.messenger && (
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleMessenger}
+              className="p-3 rounded-full text-white shadow-lg bg-blue-500 hover:bg-blue-600 transition-colors"
+              title="Messenger"
+            >
+              <MessengerIcon />
+            </motion.button>
+          )}
+          {settings.discord && (
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleDiscord}
+              className="p-3 rounded-full text-white shadow-lg bg-indigo-500 hover:bg-indigo-600 transition-colors"
+              title="Discord"
+            >
+              <DiscordIcon />
+            </motion.button>
+          )}
+        </div>
+      )}
+      
       <AnimatePresence>
         {isOpen && (
           <motion.div
             initial={{ opacity: 0, y: 20, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.9 }}
-            className="mb-4 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden w-80"
+            className="mb-4 bg-card rounded-2xl shadow-2xl border border-border overflow-hidden w-80"
           >
             {/* Header */}
             <div className="bg-gradient-to-r from-primary to-primary/80 p-4 text-white">
@@ -517,7 +557,7 @@ export const FloatingChatWidget = ({
                           className={`max-w-[85%] px-3 py-2 rounded-xl ${
                             msg.role === 'user'
                               ? 'bg-primary text-white rounded-br-sm'
-                              : 'bg-slate-100 dark:bg-slate-700 text-foreground rounded-bl-sm'
+                              : 'bg-muted text-foreground rounded-bl-sm'
                           }`}
                         >
                           {msg.role === 'assistant' ? (
@@ -530,14 +570,14 @@ export const FloatingChatWidget = ({
                     ))}
                     {isLoading && (
                       <div className="flex justify-start">
-                        <div className="bg-slate-100 dark:bg-slate-700 px-4 py-2 rounded-xl rounded-bl-sm">
+                        <div className="bg-muted px-4 py-2 rounded-xl rounded-bl-sm">
                           <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
                         </div>
                       </div>
                     )}
                   </div>
                 </div>
-                <div className="p-3 border-t dark:border-slate-700">
+                <div className="p-3 border-t border-border">
                   <form
                     onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }}
                     className="flex gap-2"
@@ -689,45 +729,47 @@ export const FloatingChatWidget = ({
         )}
       </AnimatePresence>
 
-      {/* Floating Button */}
-      <motion.button
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.95 }}
-        onClick={() => setIsOpen(!isOpen)}
-        className={`p-4 rounded-full text-white shadow-lg ${getPrimaryColor()} transition-colors relative`}
-      >
-        <AnimatePresence mode="wait">
-          {isOpen ? (
-            <motion.div
-              key="close"
-              initial={{ rotate: -90, opacity: 0 }}
-              animate={{ rotate: 0, opacity: 1 }}
-              exit={{ rotate: 90, opacity: 0 }}
-            >
-              <X className="w-6 h-6" />
-            </motion.div>
-          ) : (
-            <motion.div
-              key="open"
-              initial={{ rotate: 90, opacity: 0 }}
-              animate={{ rotate: 0, opacity: 1 }}
-              exit={{ rotate: -90, opacity: 0 }}
-            >
-              {getPrimaryIcon()}
-            </motion.div>
+      {/* AI Chat Floating Button - Always uses MessageCircle icon */}
+      {enableAI && (
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => setIsOpen(!isOpen)}
+          className="p-4 rounded-full text-white shadow-lg bg-primary hover:bg-primary/90 transition-colors relative"
+        >
+          <AnimatePresence mode="wait">
+            {isOpen ? (
+              <motion.div
+                key="close"
+                initial={{ rotate: -90, opacity: 0 }}
+                animate={{ rotate: 0, opacity: 1 }}
+                exit={{ rotate: 90, opacity: 0 }}
+              >
+                <X className="w-6 h-6" />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="open"
+                initial={{ rotate: 90, opacity: 0 }}
+                animate={{ rotate: 0, opacity: 1 }}
+                exit={{ rotate: -90, opacity: 0 }}
+              >
+                {getAIIcon()}
+              </motion.div>
+            )}
+          </AnimatePresence>
+          
+          {/* Notification dot when there's a previous session */}
+          {!isOpen && hasPreviousSession && (
+            <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
           )}
-        </AnimatePresence>
-        
-        {/* Notification dot when there's a previous session */}
-        {!isOpen && hasPreviousSession && (
-          <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
-        )}
-        
-        {/* Pulse animation when closed */}
-        {!isOpen && !hasPreviousSession && (
-          <span className="absolute inset-0 rounded-full animate-ping opacity-30 bg-current" />
-        )}
-      </motion.button>
+          
+          {/* Pulse animation when closed */}
+          {!isOpen && !hasPreviousSession && (
+            <span className="absolute inset-0 rounded-full animate-ping opacity-30 bg-current" />
+          )}
+        </motion.button>
+      )}
     </div>
   );
 };

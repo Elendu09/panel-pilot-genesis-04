@@ -105,7 +105,7 @@ export const LanguageSelector = () => {
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56 max-h-80 overflow-y-auto bg-popover border border-border shadow-lg z-50">
+      <DropdownMenuContent align="end" side="bottom" sideOffset={8} className="w-56 max-h-80 overflow-y-auto bg-popover border border-border shadow-lg z-[100]">
         <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
           Select Language
         </div>

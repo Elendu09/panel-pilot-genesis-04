@@ -346,7 +346,11 @@ export const TenantHead = ({ title, description }: TenantHeadProps) => {
         }
         
         // Custom Head Code - inject raw HTML/scripts (sanitized)
-        if (integrations.custom_head_code?.enabled && integrations.custom_head_code?.code) {
+        // Skip injection on auth pages to prevent custom HTML from polluting login/signup
+        const currentPath = window.location.pathname;
+        const isAuthPage = currentPath.includes('/auth') || currentPath.includes('/login') || currentPath.includes('/signup');
+        
+        if (!isAuthPage && integrations.custom_head_code?.enabled && integrations.custom_head_code?.code) {
           try {
             let code = integrations.custom_head_code.code;
             
