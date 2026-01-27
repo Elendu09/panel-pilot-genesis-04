@@ -424,13 +424,11 @@ export default function DocsHub() {
                       <div><span className="text-cyan-400 font-semibold">curl</span> <span className="text-yellow-400">-X POST</span> \</div>
                       <div className="pl-4"><span className="text-amber-300">"https://yourpanel.homeofsmm.com/api/v2"</span> \</div>
                       <div className="pl-4"><span className="text-yellow-400">-d</span> <span className="text-amber-300">'&#123;"key":"API_KEY","action":"services"&#125;'</span></div>
-                      <div className="text-zinc-500 italic mt-4 mb-1"># Response</div>
-                      <pre className="text-xs text-zinc-400">
-{`[
-  { "service": "1", "name": "Instagram Followers", 
-    "rate": "0.50", "min": 100, "max": 10000 }
-]`}
-                      </pre>
+                      <div className="text-zinc-500 italic mt-4 mb-1"># Panel Owner API (Management)</div>
+                      <div><span className="text-cyan-400 font-semibold">curl</span> <span className="text-yellow-400">-X POST</span> \</div>
+                      <div className="pl-4"><span className="text-amber-300">"https://homeofsmm.com/api/v2/panel"</span> \</div>
+                      <div className="pl-4"><span className="text-yellow-400">-H</span> <span className="text-amber-300">"Content-Type: application/json"</span> \</div>
+                      <div className="pl-4"><span className="text-yellow-400">-d</span> <span className="text-amber-300">'&#123;"key":"sk_live_...","action":"orders"&#125;'</span></div>
                     </div>
                   </div>
                 </div>

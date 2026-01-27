@@ -88,12 +88,16 @@ const APIManagement = () => {
 
   const { sending, deliveries, testWebhook: sendTestWebhook } = useWebhooks();
 
-  // Compute real API base URL from panel's domain
-  const apiBaseUrl = panel?.custom_domain 
-    ? `https://${panel.custom_domain}` 
+  // Panel Owner API is centralized at homeofsmm.com/api/v2/panel
+  // This is different from Buyer API which uses tenant subdomains
+  const apiBaseUrl = "https://homeofsmm.com";
+  
+  // For reference: Buyer API (storefront) uses tenant domains
+  const buyerApiUrl = panel?.custom_domain 
+    ? `https://${panel.custom_domain}/api/v2`
     : panel?.subdomain 
-      ? `https://${panel.subdomain}.smmpilot.online`
-      : "https://yourpanel.smmpilot.online";
+      ? `https://${panel.subdomain}.homeofsmm.com/api/v2`
+      : "https://yourpanel.homeofsmm.com/api/v2";
 
   // Fetch API key and logs
   useEffect(() => {
@@ -272,11 +276,11 @@ const APIManagement = () => {
   ];
 
   const sdkExamples = {
-    curl: `curl -X POST "${apiBaseUrl}/api/v2" \\
-  -d "key=${maskedKey}" \\
-  -d "action=services"`,
+    curl: `curl -X POST "${apiBaseUrl}/api/v2/panel" \\
+  -H "Content-Type: application/json" \\
+  -d '{"key":"${maskedKey}","action":"services"}'`,
     php: `<?php
-$api_url = "${apiBaseUrl}/api/v2";
+$api_url = "${apiBaseUrl}/api/v2/panel";
 $data = [
     'key' => '${maskedKey}',
     'action' => 'services'
@@ -284,7 +288,8 @@ $data = [
 
 $ch = curl_init($api_url);
 curl_setopt($ch, CURLOPT_POST, true);
-curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
+curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 $response = curl_exec($ch);
 curl_close($ch);
@@ -293,22 +298,22 @@ $result = json_decode($response, true);
 print_r($result);`,
     python: `import requests
 
-api_url = "${apiBaseUrl}/api/v2"
+api_url = "${apiBaseUrl}/api/v2/panel"
 data = {
     "key": "${maskedKey}",
     "action": "services"
 }
 
-response = requests.post(api_url, data=data)
+response = requests.post(api_url, json=data)
 result = response.json()
 print(result)`,
     nodejs: `const axios = require('axios');
 
-const apiUrl = '${apiBaseUrl}/api/v2';
-const data = new URLSearchParams({
+const apiUrl = '${apiBaseUrl}/api/v2/panel';
+const data = {
     key: '${maskedKey}',
     action: 'services'
-});
+};
 
 axios.post(apiUrl, data)
     .then(response => console.log(response.data))
@@ -374,19 +379,31 @@ axios.post(apiUrl, data)
                 <Code className="w-6 h-6 text-primary" />
               </div>
               <div className="flex-1 space-y-1">
-                <h3 className="font-semibold">Your API Endpoint</h3>
+                <h3 className="font-semibold">Panel Owner API (Management)</h3>
                 <p className="text-sm text-muted-foreground">
-                  Use this base URL for all API requests. All endpoints use POST method with form-data or JSON body.
+                  Centralized endpoint for panel management tasks. Use JSON body with your API key.
                 </p>
               </div>
               <div className="flex items-center gap-2">
                 <code className="bg-muted px-4 py-2 rounded-lg text-sm font-mono whitespace-nowrap">
-                  {apiBaseUrl}/api/v2
+                  {apiBaseUrl}/api/v2/panel
                 </code>
-                <Button variant="ghost" size="icon" onClick={() => copyToClipboard(`${apiBaseUrl}/api/v2`)}>
+                <Button variant="ghost" size="icon" onClick={() => copyToClipboard(`${apiBaseUrl}/api/v2/panel`)}>
                   <Copy className="w-4 h-4" />
                 </Button>
               </div>
+            </div>
+            
+            {/* Buyer API Reference */}
+            <div className="mt-4 pt-4 border-t border-border/50 flex flex-col md:flex-row md:items-center gap-4">
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground">
+                  <span className="font-medium text-foreground">Buyer API (Storefront):</span> Your customers use this endpoint for placing orders.
+                </p>
+              </div>
+              <code className="bg-muted/50 px-3 py-1.5 rounded text-xs font-mono text-muted-foreground">
+                {buyerApiUrl}
+              </code>
             </div>
           </CardContent>
         </Card>
@@ -471,10 +488,10 @@ axios.post(apiUrl, data)
 
                 {/* API Base URL */}
                 <div className="glass-card p-4 rounded-xl space-y-2">
-                  <Label className="text-sm text-muted-foreground">API Base URL</Label>
+                  <Label className="text-sm text-muted-foreground">Panel Owner API URL</Label>
                   <div className="flex items-center gap-2">
-                    <code className="flex-1 bg-muted px-3 py-2 rounded text-sm font-mono">{apiBaseUrl}/api/v2</code>
-                    <Button variant="ghost" size="icon" onClick={() => copyToClipboard(`${apiBaseUrl}/api/v2`)}>
+                    <code className="flex-1 bg-muted px-3 py-2 rounded text-sm font-mono">{apiBaseUrl}/api/v2/panel</code>
+                    <Button variant="ghost" size="icon" onClick={() => copyToClipboard(`${apiBaseUrl}/api/v2/panel`)}>
                       <Copy className="w-4 h-4" />
                     </Button>
                   </div>
