@@ -86,8 +86,7 @@ import { BulkEmailDialog } from "@/components/customers/BulkEmailDialog";
 import { BulkDiscountDialog } from "@/components/customers/BulkDiscountDialog";
 import { BulkBalanceDialog } from "@/components/customers/BulkBalanceDialog";
 import { BulkEditDialog } from "@/components/customers/BulkEditDialog";
-import { CustomerDetailsSheet } from "@/components/customers/CustomerDetailsSheet";
-import { CustomerEditDialog } from "@/components/customers/CustomerEditDialog";
+import { CustomerDetailPage } from "@/components/customers/CustomerDetailPage";
 
 interface Customer {
   id: string;
@@ -107,6 +106,9 @@ interface Customer {
   referredBy?: string;
   referralCount?: number;
   customDiscount?: number;
+  isBanned?: boolean;
+  bannedAt?: string;
+  banReason?: string;
 }
 
 const CustomerManagement = () => {
@@ -231,7 +233,7 @@ const CustomerManagement = () => {
         name: c.full_name || c.email.split('@')[0],
         email: c.email,
         username: c.username || undefined,
-        status: c.is_active ? 'active' : 'suspended',
+        status: c.is_banned ? 'suspended' : (c.is_active ? 'active' : 'suspended'),
         segment: (c.total_spent || 0) >= 1000 ? 'vip' : (c.total_spent || 0) >= 100 ? 'regular' : 'new',
         balance: c.balance || 0,
         totalSpent: c.total_spent || 0,
@@ -242,6 +244,9 @@ const CustomerManagement = () => {
         referralCode: c.referral_code || undefined,
         referralCount: c.referral_count || 0,
         customDiscount: c.custom_discount || 0,
+        isBanned: c.is_banned || false,
+        bannedAt: c.banned_at || undefined,
+        banReason: c.ban_reason || undefined,
       }));
 
       // Calculate changes - count customers added in last 30 days vs previous 30 days
@@ -1045,17 +1050,20 @@ const CustomerManagement = () => {
         onAdjustBalance={handleBulkBalance}
       />
 
-      {/* Customer Details Sheet */}
+      {/* Unified Customer Detail Page (combines View + Edit) */}
       {selectedCustomer && (
-        <CustomerDetailsSheet
-          open={showDetailsSheet}
-          onOpenChange={setShowDetailsSheet}
+        <CustomerDetailPage
+          open={showDetailsSheet || showEditDialog}
+          onOpenChange={(open) => {
+            setShowDetailsSheet(open);
+            setShowEditDialog(open);
+          }}
           customer={{
             id: selectedCustomer.id,
             name: selectedCustomer.name,
             email: selectedCustomer.email,
             username: selectedCustomer.username,
-            status: selectedCustomer.status,
+            status: selectedCustomer.isBanned ? 'banned' : selectedCustomer.status,
             segment: selectedCustomer.segment,
             balance: selectedCustomer.balance,
             totalSpent: selectedCustomer.totalSpent,
@@ -1065,35 +1073,9 @@ const CustomerManagement = () => {
             isOnline: selectedCustomer.isOnline,
             referralCode: selectedCustomer.referralCode,
             customDiscount: selectedCustomer.customDiscount,
-            isBanned: selectedCustomer.status === 'suspended',
-          }}
-          onEdit={() => handleEditCustomer(selectedCustomer)}
-          onAdjustBalance={() => { setShowDetailsSheet(false); setShowBalanceModal(true); }}
-          onSetPricing={() => { setShowDetailsSheet(false); setShowPricingDialog(true); }}
-          onSuspend={() => handleSingleSuspend(selectedCustomer.id)}
-          onActivate={() => handleSingleActivate(selectedCustomer.id)}
-          onBan={(reason) => handleSingleBan(selectedCustomer.id, reason)}
-          onUnban={() => handleSingleUnban(selectedCustomer.id)}
-        />
-      )}
-
-      {/* Customer Edit Dialog */}
-      {selectedCustomer && (
-        <CustomerEditDialog
-          open={showEditDialog}
-          onOpenChange={setShowEditDialog}
-          customer={{
-            id: selectedCustomer.id,
-            email: selectedCustomer.email,
-            full_name: selectedCustomer.name,
-            username: selectedCustomer.username || null,
-            balance: selectedCustomer.balance,
-            total_spent: selectedCustomer.totalSpent,
-            is_active: selectedCustomer.status === 'active',
-            is_banned: selectedCustomer.status === 'suspended',
-            custom_discount: selectedCustomer.customDiscount || 0,
-            referral_code: selectedCustomer.referralCode || null,
-            created_at: selectedCustomer.joinedAt,
+            isBanned: selectedCustomer.isBanned || false,
+            bannedAt: selectedCustomer.bannedAt,
+            banReason: selectedCustomer.banReason,
           }}
           onSave={handleCustomerSaved}
         />
