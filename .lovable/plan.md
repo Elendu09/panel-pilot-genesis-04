@@ -1,39 +1,44 @@
 # Plan: Fix API Management URLs & Verify All Integrations ✅ COMPLETED
 
-## Summary
+## API URL Structure (Final - Per Documentation)
 
-All API URL issues have been fixed and integrations verified.
+### Panel Owner API (Management) - Centralized
+```
+https://homeofsmm.com/api/v2/panel
+```
+- **Purpose**: Panel management tasks (fetch orders, customers, sync services)
+- **Auth**: Panel API Key (`sk_live_...`)
+- **Format**: JSON body with `{ success, data, error }` response
 
-### Changes Made
+### Buyer API (Storefront) - Tenant-Specific
+```
+https://{custom_domain}/api/v2     (e.g., https://the-owlet.com/api/v2)
+https://{subdomain}.homeofsmm.com/api/v2  (e.g., https://mypanel.homeofsmm.com/api/v2)
+```
+- **Purpose**: Customer operations (place orders, check balance)
+- **Auth**: Customer API Key
+- **Format**: Industry-standard SMM panel response format
+
+---
+
+## Changes Made
 
 | File | Change |
 |------|--------|
-| `src/pages/buyer/BuyerAPI.tsx` | ✅ Removed Supabase URL fallback, now uses `{subdomain}.smmpilot.online/api/v2` |
-| `src/pages/docs/DocsHub.tsx` | ✅ Updated API example from `/api/v1` to `/api/v2` |
-| `src/pages/panel/APIManagement.tsx` | ✅ Added prominent API endpoint info card with copy button |
+| `src/pages/panel/APIManagement.tsx` | ✅ Panel Owner API now uses `https://homeofsmm.com/api/v2/panel` |
+| `src/pages/panel/APIManagement.tsx` | ✅ Added Buyer API reference with tenant domain |
+| `src/pages/panel/APIManagement.tsx` | ✅ SDK examples use JSON body with `/api/v2/panel` path |
+| `src/pages/buyer/BuyerAPI.tsx` | ✅ Uses tenant's subdomain `.homeofsmm.com/api/v2` |
+| `src/pages/docs/DocsHub.tsx` | ✅ Shows both Buyer API and Panel Owner API examples |
 
-### API URL Structure (Final)
+---
 
-**For All Users (Consistent `/api/v2`):**
-```
-https://the-owlet.com/api/v2          (custom domain)
-https://{subdomain}.smmpilot.online/api/v2  (subdomain)
-```
+## Integration Icons Status: All Verified ✅
 
-### Integration Icons Status: All Verified ✅
+All 21 integration icons have official brand colors and SVG paths.
 
-All 21 integration icons have official brand colors and SVG paths:
-- Google (multi-color), Telegram (#26A5E4), VK (#0077FF), Discord (#5865F2)
-- WhatsApp (#25D366), Facebook (#1877F2), Google Analytics (#F9AB00/#E37400)
-- GTM (#8AB4F8/#4285F4/#246FDB), Yandex (#FC3F1D), OneSignal (#E54B4D)
-- Zendesk (#03363D), Tidio (#0066FF), Smartsupp (#F26322), Crisp (#7C3AED)
-- JivoChat (green gradient), GetButton (multi-color), Beamer (#7C3AED)
-- GetSiteControl (#14B8A6), Intercom (#1F8DED), LiveChat (#FF5100), Tawk.to (#03A84E)
+## Integration Injection: All Working ✅
 
-### Integration Injection: All Working ✅
-
-- **Chat Widgets (Body):** Tidio, Zendesk, Smartsupp, JivoChat, GetButton, GetSiteControl, Facebook Chat, Intercom, LiveChat, Tawk.to
-- **Analytics (Head):** Google Analytics, Google Tag Manager, Yandex.Metrika
-- **Notifications:** Beamer, OneSignal
-- **Social Platforms (Floating):** WhatsApp, Telegram, Messenger, Discord
-- **Auth Page Protection:** Custom code skipped on `/auth`, `/login`, `/signup`
+- Auth page protection active
+- Social platforms stack vertically above AI chat
+- Analytics in head, chat widgets in body

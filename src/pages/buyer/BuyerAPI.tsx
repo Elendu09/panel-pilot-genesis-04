@@ -23,11 +23,12 @@ const BuyerAPI = () => {
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [expandedEndpoint, setExpandedEndpoint] = useState<string | null>("services");
 
+  // Buyer API uses tenant's domain (custom domain or subdomain)
   const apiBaseUrl = panel?.custom_domain 
     ? `https://${panel.custom_domain}/api/v2`
     : panel?.subdomain 
-      ? `https://${panel.subdomain}.smmpilot.online/api/v2`
-      : "https://yourpanel.smmpilot.online/api/v2";
+      ? `https://${panel.subdomain}.homeofsmm.com/api/v2`
+      : "https://yourpanel.homeofsmm.com/api/v2";
 
   const copyToClipboard = async (text: string, id: string) => {
     try {
