@@ -245,9 +245,9 @@ export const ThemeNavigation = ({
             </div>
 
             {/* Mobile Menu Button */}
-            <div className="flex md:hidden items-center gap-2">
+            <div className="flex md:hidden items-center gap-2 overflow-visible">
               {/* Mobile Language Selector */}
-              <div className="shrink-0 flex-shrink-0">
+              <div className="shrink-0 flex-shrink-0 overflow-visible">
                 <LanguageSelector />
               </div>
               
