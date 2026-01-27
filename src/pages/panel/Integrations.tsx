@@ -694,7 +694,11 @@ const Integrations = () => {
                   )}>
                     <div className="flex items-center gap-3">
                       <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center text-xl", provider.color)}>
-                        {provider.icon}
+                        {provider.id === 'google' 
+                          ? provider.icon 
+                          : React.isValidElement(provider.icon) 
+                            ? React.cloneElement(provider.icon as React.ReactElement<any>, { fill: "white", className: "w-5 h-5" })
+                            : provider.icon}
                       </div>
                       <div>
                         <div className="flex items-center gap-2">

@@ -27,6 +27,17 @@ export const LiveStorefrontPreview = ({ panelId, subdomain, customDomain }: Live
   const [loading, setLoading] = useState(false);
   const [isReachable, setIsReachable] = useState<boolean | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
+
+  // Detect actual mobile viewport
+  useEffect(() => {
+    const checkViewport = () => {
+      setIsMobileViewport(window.innerWidth < 768);
+    };
+    checkViewport();
+    window.addEventListener('resize', checkViewport);
+    return () => window.removeEventListener('resize', checkViewport);
+  }, []);
 
   // Prioritize custom domain over subdomain
   const storefrontUrl = customDomain 
@@ -37,10 +48,17 @@ export const LiveStorefrontPreview = ({ panelId, subdomain, customDomain }: Live
   
   const displayDomain = customDomain || (subdomain ? `${subdomain}.smmpilot.online` : null);
 
-  const deviceSizes = {
-    desktop: { width: "100%", height: "100%" },
-    tablet: { width: "768px", height: "100%" },
-    mobile: { width: "375px", height: "100%" },
+  // Device sizes - use responsive widths on mobile viewport
+  const getDeviceWidth = () => {
+    if (isMobileViewport) {
+      return "100%"; // Use full width on mobile viewports
+    }
+    switch (device) {
+      case "desktop": return "100%";
+      case "tablet": return "768px";
+      case "mobile": return "375px";
+      default: return "100%";
+    }
   };
 
   const checkReachability = async (retryCount = 0) => {
@@ -171,15 +189,30 @@ export const LiveStorefrontPreview = ({ panelId, subdomain, customDomain }: Live
         </div>
       </div>
 
+      {/* Mobile viewport notice */}
+      {isMobileViewport && (
+        <div className="px-3 py-2 bg-muted/30 border-b text-center">
+          <p className="text-xs text-muted-foreground">
+            Preview at {device} size. 
+            <button 
+              className="text-primary underline ml-1" 
+              onClick={() => window.open(storefrontUrl || '', '_blank')}
+            >
+              Open full preview
+            </button>
+          </p>
+        </div>
+      )}
+
       {/* Preview Content */}
-      <div className="flex-1 p-4 overflow-auto flex items-start justify-center bg-[#1a1a2e]">
+      <div className="flex-1 p-2 md:p-4 overflow-auto flex items-start justify-center bg-[#1a1a2e]">
         <motion.div
           layout
-          className="bg-background rounded-lg overflow-hidden shadow-2xl transition-all duration-300"
+          className="bg-background rounded-lg overflow-hidden shadow-2xl transition-all duration-300 w-full"
           style={{
-            width: deviceSizes[device].width,
-            maxWidth: deviceSizes[device].width,
-            height: "calc(100% - 2rem)",
+            width: getDeviceWidth(),
+            maxWidth: isMobileViewport ? "100%" : getDeviceWidth(),
+            height: "calc(100% - 1rem)",
           }}
         >
           {isReachable === false ? (
