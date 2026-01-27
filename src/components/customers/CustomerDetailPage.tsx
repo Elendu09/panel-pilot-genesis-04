@@ -555,7 +555,10 @@ export function CustomerDetailPage({
                     <Label htmlFor="status-active" className="flex-1 cursor-pointer flex items-center gap-2">
                       <UserCheck className="w-4 h-4 text-green-500" />
                       <div>
-                        <p className="font-medium">Active</p>
+                        <p className="font-medium">
+                          Active {customer.status === 'suspended' && !customer.isBanned && <span className="text-green-500">(Unsuspend)</span>}
+                          {customer.isBanned && <span className="text-green-500">(Unban)</span>}
+                        </p>
                         <p className="text-xs text-muted-foreground">Full access to all features</p>
                       </div>
                     </Label>

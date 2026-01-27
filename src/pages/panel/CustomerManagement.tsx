@@ -54,6 +54,7 @@ import {
   ArrowDownRight,
   Crown,
   UserCheck,
+  UserX,
   Plus,
   Minus,
   History,
@@ -281,12 +282,15 @@ const CustomerManagement = () => {
   };
 
   const onlineCount = customers.filter(c => c.isOnline).length;
-  const bannedCount = customers.filter(c => c.status === "suspended").length;
+  const suspendedCount = customers.filter(c => c.status === "suspended" && !c.isBanned).length;
+  const bannedCount = customers.filter(c => c.isBanned === true).length;
 
   const statsArr = [
     { title: "Total Customers", value: customers.length, change: statsChanges.total.value, trend: statsChanges.total.trend, icon: Users },
     { title: "Online Now", value: onlineCount, change: statsChanges.online.value, trend: "neutral", icon: Circle },
-    { title: "Active Users", value: customers.filter(c => c.status === "active").length, change: statsChanges.active.value, trend: statsChanges.active.trend, icon: UserCheck },
+    { title: "Active", value: customers.filter(c => c.status === "active" && !c.isBanned).length, change: statsChanges.active.value, trend: statsChanges.active.trend, icon: UserCheck },
+    { title: "Suspended", value: suspendedCount, change: "+0", trend: "neutral" as const, icon: UserX },
+    { title: "Banned", value: bannedCount, change: "+0", trend: "neutral" as const, icon: Ban },
     { title: "VIP Members", value: customers.filter(c => c.segment === "vip").length, change: statsChanges.vip.value, trend: statsChanges.vip.trend, icon: Crown },
   ];
 

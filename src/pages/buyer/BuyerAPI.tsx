@@ -23,12 +23,32 @@ const BuyerAPI = () => {
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [expandedEndpoint, setExpandedEndpoint] = useState<string | null>("services");
 
+  // Detect current platform domain dynamically
+  const getPlatformDomain = (): string => {
+    if (typeof window !== 'undefined') {
+      const hostname = window.location.hostname;
+      const parts = hostname.split('.');
+      if (parts.length >= 2) {
+        const rootDomain = parts.slice(-2).join('.');
+        if (['homeofsmm.com', 'smmpilot.online'].includes(rootDomain)) {
+          return rootDomain;
+        }
+      }
+      if (hostname.includes('localhost') || hostname.includes('lovable.app')) {
+        return 'smmpilot.online';
+      }
+    }
+    return 'smmpilot.online';
+  };
+
+  const platformDomain = getPlatformDomain();
+
   // Buyer API uses tenant's domain (custom domain or subdomain)
   const apiBaseUrl = panel?.custom_domain 
     ? `https://${panel.custom_domain}/api/v2`
     : panel?.subdomain 
-      ? `https://${panel.subdomain}.homeofsmm.com/api/v2`
-      : "https://yourpanel.homeofsmm.com/api/v2";
+      ? `https://${panel.subdomain}.${platformDomain}/api/v2`
+      : `https://yourpanel.${platformDomain}/api/v2`;
 
   const copyToClipboard = async (text: string, id: string) => {
     try {
