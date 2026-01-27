@@ -304,21 +304,25 @@ export const FloatingChatWidget = ({
       const fetchSettings = async () => {
         const { data } = await supabase
           .from('panel_settings')
-          .select('floating_chat_enabled, floating_chat_whatsapp, floating_chat_telegram, floating_chat_messenger, floating_chat_discord, floating_chat_custom_url, floating_chat_custom_label, floating_chat_position, floating_chat_message')
+          .select('floating_chat_enabled, floating_chat_whatsapp, floating_chat_telegram, floating_chat_messenger, floating_chat_discord, floating_chat_custom_url, floating_chat_custom_label, floating_chat_position, floating_chat_message, integrations')
           .eq('panel_id', panelId)
           .single();
 
         if (data) {
+          // Check integrations JSONB for social platforms (new integration system)
+          const integrations = data.integrations as Record<string, any> || {};
+          
           setSettings({
             enabled: data.floating_chat_enabled || false,
-            whatsapp: data.floating_chat_whatsapp || '',
-            telegram: data.floating_chat_telegram || '',
-            messenger: data.floating_chat_messenger || '',
-            discord: data.floating_chat_discord || '',
+            // Priority: floating_chat columns > integrations JSONB
+            whatsapp: data.floating_chat_whatsapp || integrations.whatsapp?.phone || '',
+            telegram: data.floating_chat_telegram || integrations.telegram?.username || '',
+            messenger: data.floating_chat_messenger || integrations.messenger?.username || '',
+            discord: data.floating_chat_discord || integrations.discord?.invite_url || '',
             customUrl: data.floating_chat_custom_url || '',
             customLabel: data.floating_chat_custom_label || 'Live Chat',
             position: (data.floating_chat_position as 'bottom-right' | 'bottom-left') || 'bottom-right',
-            message: data.floating_chat_message || 'Need help? Chat with us!'
+            message: data.floating_chat_message || integrations.whatsapp?.message || 'Need help? Chat with us!'
           });
         }
       };

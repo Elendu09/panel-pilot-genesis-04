@@ -97,7 +97,7 @@ export const LanguageSelector = () => {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative h-8 w-8 sm:h-9 sm:w-9" title="Change language">
+        <Button variant="ghost" size="icon" className="relative h-8 w-8 sm:h-9 sm:w-9 shrink-0 flex-shrink-0" title="Change language">
           {currentLanguage ? (
             <currentLanguage.FlagComponent className="w-5 h-5 sm:w-6 sm:h-6 rounded-sm" />
           ) : (

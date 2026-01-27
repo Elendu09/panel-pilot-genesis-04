@@ -345,13 +345,41 @@ export const TenantHead = ({ title, description }: TenantHeadProps) => {
           }
         }
         
-        // Custom Head Code - inject raw HTML/scripts
+        // Custom Head Code - inject raw HTML/scripts (sanitized)
         if (integrations.custom_head_code?.enabled && integrations.custom_head_code?.code) {
           try {
-            const code = integrations.custom_head_code.code;
-            const range = document.createRange();
-            const fragment = range.createContextualFragment(code);
-            document.head.appendChild(fragment);
+            let code = integrations.custom_head_code.code;
+            
+            // Sanitize: Remove full HTML document structure if present
+            // Extract only the content that should be injected
+            if (code.includes('<!DOCTYPE') || code.includes('<html')) {
+              // Extract style tags
+              const styleMatches = code.match(/<style[^>]*>([\s\S]*?)<\/style>/gi) || [];
+              const styles = styleMatches.join('\n');
+              
+              // Extract body content
+              const bodyMatch = code.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+              const bodyContent = bodyMatch ? bodyMatch[1] : '';
+              
+              // For head injection, only inject styles
+              if (styles) {
+                const styleRange = document.createRange();
+                const styleFragment = styleRange.createContextualFragment(styles);
+                document.head.appendChild(styleFragment);
+              }
+              
+              // For body content, inject into body
+              if (bodyContent.trim()) {
+                const bodyRange = document.createRange();
+                const bodyFragment = bodyRange.createContextualFragment(bodyContent);
+                document.body.appendChild(bodyFragment);
+              }
+            } else {
+              // Normal code injection
+              const range = document.createRange();
+              const fragment = range.createContextualFragment(code);
+              document.head.appendChild(fragment);
+            }
           } catch (e) {
             console.error('Failed to inject custom head code:', e);
           }

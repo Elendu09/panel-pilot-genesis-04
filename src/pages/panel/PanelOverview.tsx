@@ -873,15 +873,28 @@ const PanelOverview = () => {
                 {(() => {
                   const themeLabels: Record<string, string> = {
                     default: 'Default Theme',
+                    dark_gradient: 'Default Theme',
+                    theme_one: 'Default Theme',
                     alipanel: 'AliPanel Style',
+                    theme_alipanel: 'AliPanel Style',
                     flysmm: 'FlySMM Style',
+                    theme_flysmm: 'FlySMM Style',
                     smmstay: 'SMMStay Style',
+                    theme_smmstay: 'SMMStay Style',
                     tgref: 'TGRef Style',
+                    theme_tgref: 'TGRef Style',
                     smmvisit: 'SMMVisit Style',
+                    theme_smmvisit: 'SMMVisit Style',
                   };
+                  // Check multiple sources in priority order
+                  const customBranding = panelData?.custom_branding as any;
                   const panelSettings = panelData?.panel_settings as any;
-                  const buyerTheme = panelSettings?.buyer_theme || 'default';
-                  return themeLabels[buyerTheme] || 'Default Theme';
+                  const selectedTheme = 
+                    customBranding?.selectedTheme || 
+                    panelData?.buyer_theme || 
+                    panelSettings?.buyer_theme || 
+                    'default';
+                  return themeLabels[selectedTheme] || 'Default Theme';
                 })()}
               </Badge>
             </div>
