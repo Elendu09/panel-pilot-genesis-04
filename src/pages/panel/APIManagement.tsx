@@ -88,16 +88,35 @@ const APIManagement = () => {
 
   const { sending, deliveries, testWebhook: sendTestWebhook } = useWebhooks();
 
-  // Panel Owner API is centralized at homeofsmm.com/api/v2/panel
-  // This is different from Buyer API which uses tenant subdomains
-  const apiBaseUrl = "https://homeofsmm.com";
+  // Detect current platform domain dynamically
+  const getPlatformDomain = () => {
+    if (typeof window !== 'undefined') {
+      const hostname = window.location.hostname;
+      const parts = hostname.split('.');
+      if (parts.length >= 2) {
+        const rootDomain = parts.slice(-2).join('.');
+        // Whitelist known platform domains
+        if (['homeofsmm.com', 'smmpilot.online'].includes(rootDomain)) {
+          return `https://${rootDomain}`;
+        }
+      }
+      // For development/preview environments, show brand domain
+      if (hostname.includes('localhost') || hostname.includes('lovable.app')) {
+        return 'https://homeofsmm.com';
+      }
+    }
+    return 'https://homeofsmm.com';
+  };
+
+  // Panel Owner API is centralized at the platform domain
+  const apiBaseUrl = getPlatformDomain();
   
-  // For reference: Buyer API (storefront) uses tenant domains
+  // Buyer API URL (for reference - uses tenant domains)
   const buyerApiUrl = panel?.custom_domain 
     ? `https://${panel.custom_domain}/api/v2`
     : panel?.subdomain 
-      ? `https://${panel.subdomain}.homeofsmm.com/api/v2`
-      : "https://yourpanel.homeofsmm.com/api/v2";
+      ? `https://${panel.subdomain}.${apiBaseUrl.replace('https://', '')}/api/v2`
+      : `https://yourpanel.${apiBaseUrl.replace('https://', '')}/api/v2`;
 
   // Fetch API key and logs
   useEffect(() => {
@@ -216,62 +235,71 @@ const APIManagement = () => {
   const displayKey = apiKey?.api_key || "";
   const maskedKey = displayKey ? displayKey.substring(0, 12) + "..." + displayKey.slice(-4) : "No API key";
 
+  // Panel Owner Management API Endpoints (different from Buyer API)
   const endpoints = [
     {
       id: "services",
-      method: "GET",
-      path: "/api/v2/services",
-      description: "Get all available services",
-      params: [],
-      response: `{"status":"success","data":[{"service":1,"name":"Instagram Followers","type":"default","rate":"2.50","min":"100","max":"10000","category":"Instagram"}]}`
+      method: "POST",
+      path: "/api/v2/panel",
+      description: "Get all panel services",
+      params: ["key", "action=services"],
+      response: `{"success":true,"data":[{"id":"uuid","service_id":1,"name":"Instagram Followers","rate":"2.50","min":100,"max":10000,"category":"Instagram","status":"active"}]}`
     },
     {
-      id: "add-order",
+      id: "customers",
       method: "POST",
-      path: "/api/v2/order",
-      description: "Add new order",
-      params: ["key", "action=add", "service", "link", "quantity"],
-      response: `{"order":12345}`
+      path: "/api/v2/panel",
+      description: "Get all customers",
+      params: ["key", "action=customers", "page (optional)", "limit (optional)"],
+      response: `{"success":true,"data":[{"id":"uuid","email":"user@example.com","balance":"150.50","total_spent":"500.00","status":"active","created_at":"2024-01-15"}],"pagination":{"page":1,"limit":20,"total":156}}`
     },
     {
-      id: "order-status",
+      id: "orders",
       method: "POST",
-      path: "/api/v2/status",
-      description: "Get order status",
-      params: ["key", "action=status", "order"],
-      response: `{"charge":"2.50","start_count":"1000","status":"In progress","remains":"500","currency":"USD"}`
+      path: "/api/v2/panel",
+      description: "Get all panel orders",
+      params: ["key", "action=orders", "status (optional)", "page (optional)"],
+      response: `{"success":true,"data":[{"id":"uuid","order_number":"ORD-12345","service":"Instagram Followers","quantity":1000,"price":"2.50","status":"completed","created_at":"2024-01-20"}]}`
     },
     {
-      id: "multi-status",
+      id: "stats",
       method: "POST",
-      path: "/api/v2/status",
-      description: "Get multiple orders status",
-      params: ["key", "action=status", "orders (comma separated)"],
-      response: `{"1":{"charge":"2.50","status":"Completed"},"2":{"charge":"5.00","status":"In progress"}}`
+      path: "/api/v2/panel",
+      description: "Get panel statistics",
+      params: ["key", "action=stats"],
+      response: `{"success":true,"data":{"total_orders":1250,"total_revenue":"15000.00","total_customers":450,"active_services":125,"orders_today":45}}`
     },
     {
-      id: "balance",
+      id: "services-sync",
       method: "POST",
-      path: "/api/v2/balance",
-      description: "Get account balance",
-      params: ["key", "action=balance"],
-      response: `{"balance":"150.50","currency":"USD"}`
+      path: "/api/v2/panel",
+      description: "Sync services from provider",
+      params: ["key", "action=services.sync", "provider_id"],
+      response: `{"success":true,"message":"Synced 125 services","imported":125,"updated":30,"failed":2}`
     },
     {
-      id: "refill",
+      id: "customer-balance",
       method: "POST",
-      path: "/api/v2/refill",
-      description: "Request order refill",
-      params: ["key", "action=refill", "order"],
-      response: `{"refill":1}`
+      path: "/api/v2/panel",
+      description: "Adjust customer balance",
+      params: ["key", "action=balance.adjust", "customer_id", "amount", "type (add/subtract)", "reason (optional)"],
+      response: `{"success":true,"customer_id":"uuid","new_balance":"175.50","transaction_id":"tx_123"}`
     },
     {
-      id: "cancel",
+      id: "customer-status",
       method: "POST",
-      path: "/api/v2/cancel",
-      description: "Cancel order",
-      params: ["key", "action=cancel", "orders (comma separated)"],
-      response: `[{"order":1,"cancel":{"error":"Incorrect order ID"}}]`
+      path: "/api/v2/panel",
+      description: "Update customer status",
+      params: ["key", "action=customer.status", "customer_id", "status (active/suspended/banned)"],
+      response: `{"success":true,"customer_id":"uuid","status":"suspended"}`
+    },
+    {
+      id: "order-update",
+      method: "POST",
+      path: "/api/v2/panel",
+      description: "Update order status",
+      params: ["key", "action=order.update", "order_id", "status (pending/in_progress/paused/completed/cancelled)"],
+      response: `{"success":true,"order_id":"uuid","status":"completed"}`
     },
   ];
 
