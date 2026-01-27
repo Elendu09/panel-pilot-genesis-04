@@ -10,7 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { useNavigate } from "react-router-dom";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useNavigate, Link } from "react-router-dom";
 import { useTenant } from "@/hooks/useTenant";
 import { useBuyerAuth } from "@/contexts/BuyerAuthContext";
 import { toast } from "@/hooks/use-toast";
@@ -430,6 +431,19 @@ axios.post(apiUrl, new URLSearchParams({
             v2.0
           </Badge>
         </div>
+
+        {/* API Key Notice */}
+        {!(buyer as any)?.api_key && (
+          <Alert className="border-amber-500/30 bg-amber-500/10">
+            <AlertCircle className="h-4 w-4 text-amber-500" />
+            <AlertDescription className="text-amber-700 dark:text-amber-300">
+              You need an API key to use the API.{' '}
+              <Link to="/profile" className="font-medium underline hover:no-underline">
+                Generate one in your profile
+              </Link>
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Quick Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

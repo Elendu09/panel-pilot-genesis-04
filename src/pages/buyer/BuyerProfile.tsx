@@ -25,7 +25,10 @@ import {
   Smartphone,
   ShieldCheck,
   Compass,
-  Link2
+  Link2,
+  Eye,
+  EyeOff,
+  ExternalLink
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -78,6 +81,8 @@ const BuyerProfile = () => {
   const [resendingVerification, setResendingVerification] = useState(false);
   const [mfaEnabled, setMfaEnabled] = useState(false);
   const [mfaLoading, setMfaLoading] = useState(false);
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [generatingKey, setGeneratingKey] = useState(false);
   const [profileData, setProfileData] = useState({
     name: "",
     email: "",
@@ -144,6 +149,38 @@ const BuyerProfile = () => {
     if (profileData.referralCode) {
       navigator.clipboard.writeText(profileData.referralCode);
       toast({ title: "Copied!", description: "Referral code copied to clipboard" });
+    }
+  };
+
+  const copyApiKey = () => {
+    if ((buyer as any)?.api_key) {
+      navigator.clipboard.writeText((buyer as any).api_key);
+      toast({ title: "Copied!", description: "API key copied to clipboard" });
+    }
+  };
+
+  const handleGenerateApiKey = async () => {
+    if (!buyer?.id) return;
+    
+    setGeneratingKey(true);
+    try {
+      // Generate a secure random API key
+      const key = `sk_${crypto.randomUUID().replace(/-/g, '')}`;
+      
+      const { error } = await supabase
+        .from('client_users')
+        .update({ api_key: key } as any)
+        .eq('id', buyer.id);
+      
+      if (error) throw error;
+      
+      await refreshBuyer();
+      toast({ title: "API Key Generated", description: "Your new API key is ready to use" });
+    } catch (error) {
+      console.error('Error generating API key:', error);
+      toast({ variant: "destructive", title: "Error", description: "Failed to generate API key" });
+    } finally {
+      setGeneratingKey(false);
     }
   };
 
@@ -369,6 +406,72 @@ const BuyerProfile = () => {
             </Card>
           </motion.div>
         </div>
+
+        {/* API Access Section */}
+        <motion.div variants={itemVariants}>
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Key className="w-5 h-5" />
+                API Access
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Use your API key to integrate with external systems and automate orders.
+              </p>
+              
+              {(buyer as any)?.api_key ? (
+                <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-lg">
+                  <code className="flex-1 font-mono text-sm truncate">
+                    {showApiKey ? (buyer as any).api_key : '••••••••••••••••••••••••••••••••'}
+                  </code>
+                  <Button size="icon" variant="ghost" onClick={() => setShowApiKey(!showApiKey)}>
+                    {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </Button>
+                  <Button size="icon" variant="ghost" onClick={copyApiKey}>
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="text-center py-4 bg-muted/20 rounded-lg">
+                  <Key className="w-8 h-8 mx-auto mb-2 text-muted-foreground/50" />
+                  <p className="text-sm text-muted-foreground">No API key generated yet</p>
+                </div>
+              )}
+              
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={handleGenerateApiKey}
+                disabled={generatingKey}
+              >
+                {generatingKey ? (
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                ) : (
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                )}
+                {(buyer as any)?.api_key ? 'Regenerate API Key' : 'Generate API Key'}
+              </Button>
+              
+              {(buyer as any)?.api_key && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  Regenerating will invalidate your current key
+                </p>
+              )}
+              
+              <div className="flex items-center justify-between pt-2 border-t border-border/50">
+                <p className="text-xs text-muted-foreground">
+                  Learn how to use the API
+                </p>
+                <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => window.location.href = '/api'}>
+                  View Documentation <ExternalLink className="w-3 h-3 ml-1" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
 
         {/* Security */}
         <motion.div variants={itemVariants}>
