@@ -6,6 +6,16 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -94,6 +104,7 @@ export function CustomerDetailsSheet({
   const [orders, setOrders] = useState<Order[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [banReason, setBanReason] = useState("");
+  const [showBanWarning, setShowBanWarning] = useState(false);
   const [showBanInput, setShowBanInput] = useState(false);
 
   useEffect(() => {
@@ -278,7 +289,7 @@ export function CustomerDetailsSheet({
                     onClick={onActivate}
                   >
                     <UserCheck className="w-4 h-4 mr-2" />
-                    Activate Account
+                    Unsuspend Account
                   </Button>
                 ) : (
                   <Button 
@@ -287,7 +298,7 @@ export function CustomerDetailsSheet({
                     onClick={onSuspend}
                   >
                     <UserX className="w-4 h-4 mr-2" />
-                    Suspend Account
+                    Suspend Account (Temporary)
                   </Button>
                 )}
                 
@@ -322,12 +333,38 @@ export function CustomerDetailsSheet({
                   <Button 
                     variant="outline" 
                     className="w-full justify-start text-red-500 hover:text-red-600"
-                    onClick={() => setShowBanInput(true)}
+                    onClick={() => setShowBanWarning(true)}
                   >
                     <Ban className="w-4 h-4 mr-2" />
-                    Ban Account
+                    Ban Account (Permanent)
                   </Button>
                 )}
+
+                {/* Ban Warning Dialog */}
+                <AlertDialog open={showBanWarning} onOpenChange={setShowBanWarning}>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle className="flex items-center gap-2 text-red-500">
+                        <AlertTriangle className="w-5 h-5" />
+                        Permanent Ban Warning
+                      </AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This action will <strong>permanently ban</strong> this customer. 
+                        They will not be able to access your panel or place orders. 
+                        This is different from suspension which is temporary.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction 
+                        className="bg-red-500 hover:bg-red-600 text-white"
+                        onClick={() => { setShowBanWarning(false); setShowBanInput(true); }}
+                      >
+                        Proceed to Ban
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </>
             )}
           </CardContent>

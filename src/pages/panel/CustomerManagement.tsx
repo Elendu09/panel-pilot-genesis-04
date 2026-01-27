@@ -944,11 +944,20 @@ const CustomerManagement = () => {
                             )}
                             <DropdownMenuSeparator />
                             <DropdownMenuItem 
-                              className="text-destructive"
+                              className={customer.status === 'suspended' ? "text-green-500" : "text-amber-500"}
                               onClick={() => customer.status === 'suspended' ? handleSingleActivate(customer.id) : handleSingleSuspend(customer.id)}
                             >
-                              <Ban className="w-4 h-4 mr-2" /> 
-                              {customer.status === 'suspended' ? 'Activate' : 'Suspend'}
+                              {customer.status === 'suspended' ? (
+                                <>
+                                  <UserCheck className="w-4 h-4 mr-2" /> 
+                                  Unsuspend
+                                </>
+                              ) : (
+                                <>
+                                  <Ban className="w-4 h-4 mr-2" /> 
+                                  Suspend (Temporary)
+                                </>
+                              )}
                             </DropdownMenuItem>
                             <DropdownMenuItem 
                               className="text-destructive"

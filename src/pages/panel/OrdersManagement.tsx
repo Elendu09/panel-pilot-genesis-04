@@ -24,7 +24,9 @@ import {
   List,
   Trash2,
   CheckSquare,
-  Square
+  Square,
+  Pause,
+  Play
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -82,6 +84,7 @@ interface Order {
 const statusConfig: Record<string, { label: string; color: string; icon: any; glow: string }> = {
   pending: { label: "Pending", color: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20", icon: Clock, glow: "shadow-yellow-500/20" },
   in_progress: { label: "In Progress", color: "bg-blue-500/10 text-blue-500 border-blue-500/20", icon: Loader2, glow: "shadow-blue-500/20" },
+  paused: { label: "Paused", color: "bg-purple-500/10 text-purple-500 border-purple-500/20", icon: Pause, glow: "shadow-purple-500/20" },
   completed: { label: "Completed", color: "bg-green-500/10 text-green-500 border-green-500/20", icon: CheckCircle, glow: "shadow-green-500/20" },
   partial: { label: "Partial", color: "bg-orange-500/10 text-orange-500 border-orange-500/20", icon: AlertCircle, glow: "shadow-orange-500/20" },
   cancelled: { label: "Cancelled", color: "bg-red-500/10 text-red-500 border-red-500/20", icon: XCircle, glow: "shadow-red-500/20" },
@@ -90,6 +93,7 @@ const statusConfig: Record<string, { label: string; color: string; icon: any; gl
 const kanbanColumns = [
   { id: "pending", title: "Pending", color: "bg-yellow-500" },
   { id: "in_progress", title: "In Progress", color: "bg-blue-500" },
+  { id: "paused", title: "Paused", color: "bg-purple-500" },
   { id: "completed", title: "Completed", color: "bg-green-500" },
   { id: "cancelled", title: "Cancelled", color: "bg-red-500" },
 ];
@@ -210,6 +214,16 @@ const OrdersManagement = () => {
     await updateOrderStatus(orderId, 'cancelled');
   };
 
+  const pauseOrder = async (orderId: string) => {
+    await updateOrderStatus(orderId, 'paused');
+    toast({ title: "Order paused", description: "Order has been paused and can be resumed later" });
+  };
+
+  const resumeOrder = async (orderId: string) => {
+    await updateOrderStatus(orderId, 'in_progress');
+    toast({ title: "Order resumed", description: "Order is now back in progress" });
+  };
+
   const openRefundDialog = (order: Order) => {
     setSelectedOrder(order);
     setRefundAmount(order.price.toFixed(2));
@@ -269,6 +283,18 @@ const OrdersManagement = () => {
           .update({ status: 'in_progress' as any, updated_at: new Date().toISOString() })
           .in('id', orderIds);
         toast({ title: `${orderIds.length} orders set to in progress` });
+      } else if (bulkAction === "pause") {
+        await supabase
+          .from('orders')
+          .update({ status: 'paused' as any, updated_at: new Date().toISOString() })
+          .in('id', orderIds);
+        toast({ title: `${orderIds.length} orders paused` });
+      } else if (bulkAction === "resume") {
+        await supabase
+          .from('orders')
+          .update({ status: 'in_progress' as any, updated_at: new Date().toISOString() })
+          .in('id', orderIds);
+        toast({ title: `${orderIds.length} orders resumed` });
       } else if (bulkAction === "refund") {
         // Process refunds
         for (const orderId of orderIds) {
@@ -567,6 +593,8 @@ const OrdersManagement = () => {
                 <SelectItem value="cancel">Cancel Orders</SelectItem>
                 <SelectItem value="complete">Mark Complete</SelectItem>
                 <SelectItem value="in_progress">Set In Progress</SelectItem>
+                <SelectItem value="pause">Pause Orders</SelectItem>
+                <SelectItem value="resume">Resume Orders</SelectItem>
                 <SelectItem value="refund">Process Refund</SelectItem>
               </SelectContent>
             </Select>
@@ -591,7 +619,7 @@ const OrdersManagement = () => {
         transition={{ delay: 0.2 }}
         className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 md:flex-wrap scrollbar-hide"
       >
-        {["all", "pending", "in_progress", "completed", "partial", "cancelled"].map((status) => {
+        {["all", "pending", "in_progress", "paused", "completed", "partial", "cancelled"].map((status) => {
           const isActive = statusFilter === status;
           const config = status !== "all" ? statusConfig[status] : null;
           return (
