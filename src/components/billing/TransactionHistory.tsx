@@ -93,19 +93,19 @@ export const TransactionHistory = ({ panelId }: TransactionHistoryProps) => {
   }, [panelId]);
 
   const fetchTransactions = async () => {
+    if (!panelId) {
+      setLoading(false);
+      return;
+    }
+    
     setLoading(true);
     try {
-      let query = supabase
+      const { data, error } = await supabase
         .from('transactions')
         .select('*')
+        .eq('panel_id', panelId)
         .order('created_at', { ascending: false })
         .limit(100);
-
-      if (panelId) {
-        query = query.eq('panel_id', panelId);
-      }
-
-      const { data, error } = await query;
 
       if (error) throw error;
       setTransactions(data || []);

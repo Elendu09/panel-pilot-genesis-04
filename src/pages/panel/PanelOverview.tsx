@@ -16,7 +16,7 @@ import {
   Clock,
   Activity,
   ExternalLink,
-  Plus,
+  Plug,
   RefreshCw,
   Radio,
   Loader2,
@@ -406,7 +406,7 @@ const PanelOverview = () => {
       : '/';
 
   const quickActions = [
-    { title: "Add Service", icon: Plus, href: "/panel/services", gradient: "from-blue-500 to-blue-600", bg: "bg-blue-500/10" },
+    { title: "Integrations", icon: Plug, href: "/panel/integrations", gradient: "from-blue-500 to-blue-600", bg: "bg-blue-500/10" },
     { title: "Analytics", icon: BarChart3, href: "/panel/analytics", gradient: "from-emerald-500 to-emerald-600", bg: "bg-emerald-500/10" },
     { title: "Providers", icon: Activity, href: "/panel/providers", gradient: "from-violet-500 to-violet-600", bg: "bg-violet-500/10" },
     { title: "Design", icon: Palette, href: "/panel/design", gradient: "from-pink-500 to-pink-600", bg: "bg-pink-500/10" },

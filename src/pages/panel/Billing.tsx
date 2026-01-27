@@ -24,7 +24,6 @@ import { motion } from 'framer-motion';
 import { TransactionHistory } from '@/components/billing/TransactionHistory';
 import { CommissionTracker } from '@/components/billing/CommissionTracker';
 import { QuickDeposit } from '@/components/billing/QuickDeposit';
-import { PaymentMethodsQuickAccess } from '@/components/billing/PaymentMethodsQuickAccess';
 import { usePanel } from '@/hooks/usePanel';
 import { useAvailablePaymentGateways } from '@/hooks/useAvailablePaymentGateways';
 
@@ -471,16 +470,15 @@ const Billing = () => {
         </Card>
       </motion.div>
 
-      {/* Main Grid - Deposit + Payment Methods / Commission */}
+      {/* Main Grid - Deposit + Commission */}
       <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Quick Deposit */}
         <div className="lg:col-span-2">
           <QuickDeposit onDeposit={handleDeposit} loading={depositLoading} />
         </div>
 
-        {/* Sidebar - Payment Methods & Commission */}
+        {/* Sidebar - Commission */}
         <div className="space-y-6">
-          <PaymentMethodsQuickAccess />
           <CommissionTracker 
             commissionRate={commissionData.commissionRate}
             earnedThisMonth={commissionData.earnedThisMonth}

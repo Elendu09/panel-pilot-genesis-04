@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { 
   Plug, 
@@ -763,7 +763,9 @@ const Integrations = () => {
                   )} onClick={() => openServiceDialog(service)}>
                     <div className="flex items-center gap-2.5">
                       <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center text-sm", service.color)}>
-                        {service.icon}
+                        {React.isValidElement(service.icon) 
+                          ? React.cloneElement(service.icon as React.ReactElement<any>, { fill: "white", className: "w-5 h-5" })
+                          : service.icon}
                       </div>
                       <div>
                         <div className="flex items-center gap-1.5">
@@ -811,7 +813,9 @@ const Integrations = () => {
                   )} onClick={() => openServiceDialog(service)}>
                     <div className="flex items-center gap-2.5">
                       <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center text-sm", service.color)}>
-                        {service.icon}
+                        {React.isValidElement(service.icon) 
+                          ? React.cloneElement(service.icon as React.ReactElement<any>, { fill: "white", className: "w-5 h-5" })
+                          : service.icon}
                       </div>
                       <div>
                         <div className="flex items-center gap-1.5">
@@ -859,7 +863,9 @@ const Integrations = () => {
                   )} onClick={() => openServiceDialog(service)}>
                     <div className="flex items-center gap-2.5">
                       <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center text-sm", service.color)}>
-                        {service.icon}
+                        {React.isValidElement(service.icon) 
+                          ? React.cloneElement(service.icon as React.ReactElement<any>, { fill: "white", className: "w-5 h-5" })
+                          : service.icon}
                       </div>
                       <div>
                         <div className="flex items-center gap-1.5">
@@ -907,7 +913,9 @@ const Integrations = () => {
                   )} onClick={() => openServiceDialog(service)}>
                     <div className="flex items-center gap-2.5">
                       <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center text-sm", service.color)}>
-                        {service.icon}
+                        {React.isValidElement(service.icon) 
+                          ? React.cloneElement(service.icon as React.ReactElement<any>, { fill: "white", className: "w-5 h-5" })
+                          : service.icon}
                       </div>
                       <div>
                         <div className="flex items-center gap-1.5">
