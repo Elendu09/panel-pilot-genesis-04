@@ -422,7 +422,7 @@ export default function DocsHub() {
                     <div className="p-4 font-mono text-sm">
                       <div className="text-zinc-500 italic mb-1"># Get all services (Buyer API)</div>
                       <div><span className="text-cyan-400 font-semibold">curl</span> <span className="text-yellow-400">-X POST</span> \</div>
-                      <div className="pl-4"><span className="text-amber-300">"https://yourpanel.homeofsmm.com/api/v1"</span> \</div>
+                      <div className="pl-4"><span className="text-amber-300">"https://yourpanel.homeofsmm.com/api/v2"</span> \</div>
                       <div className="pl-4"><span className="text-yellow-400">-d</span> <span className="text-amber-300">'&#123;"key":"API_KEY","action":"services"&#125;'</span></div>
                       <div className="text-zinc-500 italic mt-4 mb-1"># Response</div>
                       <pre className="text-xs text-zinc-400">

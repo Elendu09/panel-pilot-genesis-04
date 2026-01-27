@@ -365,6 +365,33 @@ axios.post(apiUrl, data)
         <p className="text-muted-foreground">Manage API keys, view documentation, and monitor usage</p>
       </motion.div>
 
+      {/* API Endpoint Info Card */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+        <Card className="glass-card border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
+          <CardContent className="p-4">
+            <div className="flex flex-col md:flex-row md:items-center gap-4">
+              <div className="p-3 rounded-xl bg-primary/10 shrink-0">
+                <Code className="w-6 h-6 text-primary" />
+              </div>
+              <div className="flex-1 space-y-1">
+                <h3 className="font-semibold">Your API Endpoint</h3>
+                <p className="text-sm text-muted-foreground">
+                  Use this base URL for all API requests. All endpoints use POST method with form-data or JSON body.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <code className="bg-muted px-4 py-2 rounded-lg text-sm font-mono whitespace-nowrap">
+                  {apiBaseUrl}/api/v2
+                </code>
+                <Button variant="ghost" size="icon" onClick={() => copyToClipboard(`${apiBaseUrl}/api/v2`)}>
+                  <Copy className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
       {/* Real Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
