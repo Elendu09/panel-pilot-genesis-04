@@ -1,250 +1,339 @@
 
-# Plan: Fix API Documentation, Custom 404 Page, Customer Management & Order Resume
+# Plan: API Dynamic Detection, Integration Icons, Customer Management & Settings Enhancement
 
-## Summary of Issues to Fix
+## Issues Identified & Solutions
 
-### Issue 1: API Endpoints Not Showing Action Names
-**Current Problem:** Screenshot shows all endpoints display only `POST /api/v2/panel` without showing what the action is (services, customers, orders, etc.)
+### Issue 1: API Base URL for Tenant Not Detecting Current Domain
 
-**Fix Required:** Update the API documentation UI to show the action name inline with each endpoint card (e.g., `POST /api/v2/panel action=services`).
-
-**File:** `src/pages/panel/APIManagement.tsx`
-
-### Issue 2: API URL Returns 404 Error
-**Root Cause:** The API calls are going to the wrong domain. The Vercel rewrite (`vercel.json`) sends all requests to `/` (the SPA), but API calls need to route to Supabase Edge Functions.
-
-**Note:** The `/api/v2/panel` path does not exist as a frontend route - it needs to be proxied to Supabase Edge Functions. Currently the platform uses direct edge function calls, not a custom domain API proxy.
-
-**Fix Required:**
-1. Add proper rewrite rules in `vercel.json` to proxy `/api/v2/*` requests to Supabase Edge Functions
-2. OR update documentation to show the actual working endpoint URL
-
-### Issue 3: Custom 404 Page Design (✨🤍🖤 Theme)
-**Current:** Basic plain 404 page
-
-**Fix Required:** Create a beautiful, premium 404 page with:
-- Dark/light theme support
-- Sparkle/gradient effects
-- Black/white color scheme with accent colors
-- Animated elements
-- Links back to home, dashboard, support
-
-**File:** `src/pages/NotFound.tsx`
-
-### Issue 4: Customer Suspend Shows as Ban
-**Root Cause:** Found the bug on lines 1068 and 1093 of `CustomerManagement.tsx`:
+**Current Problem (BuyerAPI.tsx lines 27-31):**
 ```typescript
-isBanned: selectedCustomer.status === 'suspended', // Wrong!
-is_banned: selectedCustomer.status === 'suspended', // Wrong!
+const apiBaseUrl = panel?.custom_domain 
+  ? `https://${panel.custom_domain}/api/v2`
+  : panel?.subdomain 
+    ? `https://${panel.subdomain}.homeofsmm.com/api/v2`
+    : "https://yourpanel.homeofsmm.com/api/v2";
 ```
 
-This incorrectly marks suspended customers as banned. The mapping should check actual banned state, not suspended state.
+The code hardcodes `homeofsmm.com` instead of detecting the current platform domain.
 
-**Fix Required:** Track banned state separately from suspended state in the Customer interface and state management.
-
-**Files:** 
-- `src/pages/panel/CustomerManagement.tsx`
-- Customer interface needs `isBanned` field
-
-### Issue 5: Combine View and Edit into One Page/Fragment
-**Current:** Separate dialogs for View (Sheet) and Edit (Dialog)
-
-**Fix Required:** Replace separate View/Edit components with a unified CustomerDetailPage that:
-- Shows all customer info in a scrollable page/fragment
-- Allows inline editing of all fields
-- Combines profile, balance, orders, settings in one scrollable view
-- Is accessible from the customer list
-
-**Files:**
-- Create new `src/components/customers/CustomerDetailPage.tsx`
-- Update `CustomerManagement.tsx` to use the combined view
-
-### Issue 6: Order Resume vs Refill Clarification
-**Answer:** SMM providers typically support:
-- **Refill:** Request to top up an order that lost followers/likes (standard SMM action)
-- **Resume:** Not a standard SMM API action - this is internal panel management
-
-**Fix Required:** Replace "Resume" with "Refill" for provider-synced orders, keep "Resume" for paused internal orders only. The pause/resume feature is for panel owner control, not provider integration.
-
----
-
-## Implementation Details
-
-### Part 1: Fix API Endpoint Display
-
-**File:** `src/pages/panel/APIManagement.tsx`
-
-Update the endpoint card display (around line 569-576) to show action name:
-
-```text
-Current: POST /api/v2/panel
-Fixed:   POST /api/v2/panel • services
-         POST /api/v2/panel • customers
-         POST /api/v2/panel • orders
-         etc.
-```
-
-Also update the endpoint paths in the `endpoints` array to include the action label.
-
-### Part 2: API URL 404 Fix
-
-**Option A - Update vercel.json:**
-Add rewrite rules to proxy API requests to Supabase Edge Functions. However, this requires Supabase URL knowledge at build time.
-
-**Option B (Recommended):** 
-In APIManagement.tsx, update the base URL display to show the actual working edge function URL format with a note that custom domain routing needs DNS configuration.
-
-Add a note in the API documentation:
-- For production: Use custom domain + API proxy configuration
-- For development: Use direct Supabase edge function URL
-
-### Part 3: Custom 404 Page Design
-
-**File:** `src/pages/NotFound.tsx`
-
-Create a premium 404 page with:
-- Animated 404 text with gradient/glow effects
-- Particle or sparkle background animation
-- Black/white/primary color scheme
-- "Lost in space" or creative theme
-- Clear navigation buttons
-- Mobile responsive design
-- Dark/light mode support
-
-### Part 4: Fix Customer Suspend/Ban Mapping
-
-**File:** `src/pages/panel/CustomerManagement.tsx`
-
-1. Update Customer interface to include `isBanned` field
-2. Fix data mapping from Supabase to properly set `isBanned` from `is_banned` column
-3. Update lines 1068 and 1093 to use actual banned state:
+**Solution:** Add dynamic domain detection similar to what was done in APIManagement.tsx:
 
 ```typescript
-// Line 1068 - CustomerDetailsSheet
-isBanned: actualBannedState, // From database is_banned field
+// Detect current platform domain dynamically
+const getPlatformDomain = () => {
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    const parts = hostname.split('.');
+    if (parts.length >= 2) {
+      const rootDomain = parts.slice(-2).join('.');
+      if (['homeofsmm.com', 'smmpilot.online'].includes(rootDomain)) {
+        return rootDomain;
+      }
+    }
+    if (hostname.includes('localhost') || hostname.includes('lovable.app')) {
+      return 'smmpilot.online';
+    }
+  }
+  return 'smmpilot.online';
+};
 
-// Line 1093 - CustomerEditDialog  
-is_banned: actualBannedState, // From database is_banned field
+const platformDomain = getPlatformDomain();
+const apiBaseUrl = panel?.custom_domain 
+  ? `https://${panel.custom_domain}/api/v2`
+  : panel?.subdomain 
+    ? `https://${panel.subdomain}.${platformDomain}/api/v2`
+    : `https://yourpanel.${platformDomain}/api/v2`;
 ```
 
-### Part 5: Combined Customer View/Edit Page
-
-**New File:** `src/components/customers/CustomerDetailPage.tsx`
-
-Create a unified customer detail component that:
-- Uses Sheet (slides in from right) for the container
-- Has scrollable content with sections:
-  1. **Header**: Avatar, name, status badges, quick actions
-  2. **Overview Cards**: Balance, Total Spent, Orders, Join Date
-  3. **Profile Section**: Editable name, email, username
-  4. **Balance Management**: Add/deduct funds with history
-  5. **Discount Settings**: Custom discount percentage
-  6. **Account Status**: Active/Suspended/Banned radio options
-  7. **Password Management**: Reset password button
-  8. **Recent Orders**: Last 10 orders list
-  9. **Danger Zone**: Delete account
-
-All fields are editable inline with a floating "Save Changes" button.
-
-### Part 6: Order Pause/Resume Clarification
-
-**File:** `src/pages/panel/OrdersManagement.tsx`
-
-Keep the pause/resume feature but clarify:
-- **Pause/Resume**: Panel owner internal control (stops processing on your end)
-- **Refill**: Request from provider (for drop protection orders)
-
-No code changes needed - the current implementation is correct for internal management. The pause feature is local control, not an API call to providers.
+**Files to modify:**
+- `src/pages/buyer/BuyerAPI.tsx` - Add dynamic domain detection
 
 ---
 
-## Files to Create/Modify
+### Issue 2: Integration Icons Not Showing Branded Icons
 
-| File | Action | Description |
-|------|--------|-------------|
-| `src/pages/NotFound.tsx` | Rewrite | Premium 404 page with animations |
-| `src/pages/panel/APIManagement.tsx` | Modify | Show action names in endpoint cards |
-| `src/pages/panel/CustomerManagement.tsx` | Modify | Fix banned state mapping, integrate unified view |
-| `src/components/customers/CustomerDetailPage.tsx` | Create | Unified view/edit customer page |
-| `vercel.json` | Modify | Add API proxy rewrites (optional) |
+**Current Problem:** Icons are rendered inside colored containers (`service.color` class like `bg-[#26A5E4]`), but the SVG icons also have their own fill colors. When placed on a same-colored background, they become invisible.
+
+**Root Cause (Integrations.tsx lines 764-766):**
+```tsx
+<div className={cn("w-8 h-8 rounded-lg flex items-center justify-center text-sm", service.color)}>
+  {service.icon}
+</div>
+```
+
+The icon has its own fill color (e.g., Telegram #26A5E4) matching the background (#26A5E4), making it invisible.
+
+**Solution:** Pass `fill="white"` to icons when on colored backgrounds:
+
+```tsx
+<div className={cn("w-8 h-8 rounded-lg flex items-center justify-center", service.color)}>
+  {React.cloneElement(service.icon as React.ReactElement, { fill: "white" })}
+</div>
+```
+
+**Files to modify:**
+- `src/pages/panel/Integrations.tsx` - Update icon rendering in all 4 sections (OAuth, Chat, Analytics, Notifications, Other) to pass `fill="white"`
 
 ---
 
-## UI/UX Improvements
+### Issue 3: Customer Management Statistics Missing Suspended Count
 
-### 404 Page Mockup
-```text
-┌─────────────────────────────────────────┐
-│            ✨  4 0 4  ✨                │
-│     (Large gradient animated text)      │
-│                                         │
-│        Page Not Found                   │
-│   The page you're looking for           │
-│   doesn't exist or has been moved.      │
-│                                         │
-│   ┌───────────┐  ┌───────────┐          │
-│   │  Go Home  │  │  Support  │          │
-│   └───────────┘  └───────────┘          │
-│                                         │
-│        (Sparkle particles)              │
-└─────────────────────────────────────────┘
+**Current Problem (CustomerManagement.tsx line 284):**
+```typescript
+const bannedCount = customers.filter(c => c.status === "suspended").length;
 ```
 
-### API Endpoint Display Mockup
-```text
-┌─────────────────────────────────────────┐
-│ POST  /api/v2/panel • services       ▸ │
-├─────────────────────────────────────────┤
-│ POST  /api/v2/panel • customers      ▸ │
-├─────────────────────────────────────────┤
-│ POST  /api/v2/panel • orders         ▸ │
-├─────────────────────────────────────────┤
-│ POST  /api/v2/panel • stats          ▸ │
-└─────────────────────────────────────────┘
+The code conflates "suspended" with "banned". Need separate counts:
+- Suspended: `is_active = false` AND `is_banned = false`
+- Banned: `is_banned = true`
+
+**Solution:** Add separate suspended and banned statistics:
+
+```typescript
+const suspendedCount = customers.filter(c => c.status === "suspended" && !c.isBanned).length;
+const bannedCount = customers.filter(c => c.isBanned === true).length;
+
+const statsArr = [
+  { title: "Total Customers", value: customers.length, ... },
+  { title: "Online Now", value: onlineCount, ... },
+  { title: "Active Users", value: customers.filter(c => c.status === "active" && !c.isBanned).length, ... },
+  { title: "Suspended", value: suspendedCount, icon: UserX, color: "amber" },
+  { title: "Banned", value: bannedCount, icon: Ban, color: "red" },
+  { title: "VIP Members", value: customers.filter(c => c.segment === "vip").length, ... },
+];
 ```
 
-### Customer Detail Page Mockup
+**Files to modify:**
+- `src/pages/panel/CustomerManagement.tsx` - Add suspended/banned statistics separately
+
+---
+
+### Issue 4: Unsuspend/Activate Button Not Visible
+
+**Root Cause Analysis:** Looking at `CustomerDetailPage.tsx` lines 122-128, the account status is determined correctly:
+
+```typescript
+const status = customer.isBanned 
+  ? 'banned' 
+  : customer.status === 'active' 
+    ? 'active' 
+    : 'suspended';
+```
+
+However, the issue is the radio button group allows changing from suspended to active (which unsuspends). The problem is when a user is suspended, the "Active" radio option should function as "Unsuspend".
+
+**Solution:** Improve the UI labels in the account status section to make it clear:
+
+```tsx
+<RadioGroup value={accountStatus} onValueChange={handleStatusChange}>
+  <div className="flex items-center space-x-2">
+    <RadioGroupItem value="active" id="active" />
+    <Label htmlFor="active" className="flex items-center gap-2">
+      <UserCheck className="w-4 h-4 text-green-500" />
+      Active {customer.status === 'suspended' && !customer.isBanned && '(Unsuspend)'}
+    </Label>
+  </div>
+  <div className="flex items-center space-x-2">
+    <RadioGroupItem value="suspended" id="suspended" />
+    <Label htmlFor="suspended" className="flex items-center gap-2">
+      <UserX className="w-4 h-4 text-amber-500" />
+      Suspended (Temporary)
+    </Label>
+  </div>
+  <div className="flex items-center space-x-2">
+    <RadioGroupItem value="banned" id="banned" />
+    <Label htmlFor="banned" className="flex items-center gap-2">
+      <Ban className="w-4 h-4 text-red-500" />
+      Banned (Permanent)
+    </Label>
+  </div>
+</RadioGroup>
+```
+
+**Files to modify:**
+- `src/components/customers/CustomerDetailPage.tsx` - Update radio labels to show "Unsuspend" when applicable
+
+---
+
+### Issue 5: Panel Dashboard - Rename "Add Service" to "Integrations"
+
+**Current (PanelOverview.tsx lines 408-415):**
+```typescript
+const quickActions = [
+  { title: "Add Service", icon: Plus, href: "/panel/services", ... },
+  ...
+];
+```
+
+**Solution:** Change to:
+```typescript
+const quickActions = [
+  { title: "Integrations", icon: Plug, href: "/panel/integrations", ... },
+  ...
+];
+```
+
+**Files to modify:**
+- `src/pages/panel/PanelOverview.tsx` - Update quick actions
+
+---
+
+### Issue 6: Billing Page - Remove Payment Methods Section
+
+**Current Problem:** `PaymentMethodsQuickAccess` component is being rendered in the billing page (line 483), but user wants it removed as it's unnecessary.
+
+**Solution:** Remove the `<PaymentMethodsQuickAccess />` component from the sidebar.
+
+**Files to modify:**
+- `src/pages/panel/Billing.tsx` - Remove PaymentMethodsQuickAccess component
+
+---
+
+### Issue 7: Transaction History Error
+
+**Current Problem:** TransactionHistory component fetches transactions without proper panel_id filtering if not passed.
+
+**Root Cause (TransactionHistory.tsx lines 104-107):**
+```typescript
+if (panelId) {
+  query = query.eq('panel_id', panelId);
+}
+```
+
+This means if `panelId` is undefined, ALL transactions are fetched (potential security/performance issue). Need to ensure panelId is always passed from Billing.tsx.
+
+**Solution:** Update Billing.tsx to pass panel?.id to TransactionHistory:
+
+```tsx
+<TransactionHistory panelId={panel?.id} />
+```
+
+**Files to modify:**
+- `src/pages/panel/Billing.tsx` - Ensure panelId is passed to TransactionHistory
+
+---
+
+### Issue 8: Settings Page Enhancement
+
+**Current State:** GeneralSettings.tsx uses an Accordion layout with multiple sections (Panel Info, Panel Status, SEO, Ads, Legal). The UI is functional but could be more visually appealing.
+
+**Enhancement Plan:**
+
+1. **Add visual section icons with gradients**
+2. **Improve spacing and card styling**
+3. **Add a quick summary dashboard at top**
+4. **Better organization of settings into clear categories**
+5. **Add confirmation for maintenance mode toggle**
+
+**New Structure:**
 ```text
-┌───────────────────────────────────────┐
-│ ←  Customer Details                   │
-├───────────────────────────────────────┤
-│  ┌──┐ John Doe                        │
-│  │🧑│ john@example.com                │
-│  └──┘ ● Active   VIP                  │
-│                                       │
-│  ┌─────────┐ ┌─────────┐              │
-│  │ $150.50 │ │ $2,450  │              │
-│  │ Balance │ │  Spent  │              │
-│  └─────────┘ └─────────┘              │
-│                                       │
-│  ═══ Profile ══════════════════════   │
-│  Full Name: [John Doe          ]      │
-│  Email:     [john@example.com  ]      │
-│  Username:  [johnd             ]      │
-│                                       │
-│  ═══ Balance ══════════════════════   │
-│  [+$10] [-$10]                        │
-│  Reason: [                    ]       │
-│                                       │
-│  ═══ Discount ═════════════════════   │
-│  Custom: [10] %                       │
-│                                       │
-│  ═══ Account Status ═══════════════   │
-│  ○ Active  ○ Suspended  ○ Banned      │
-│                                       │
-│  ══════════════════════════════════   │
-│  [       Save Changes       ]         │
-└───────────────────────────────────────┘
+┌─────────────────────────────────────────────┐
+│ General Settings                    [Save]  │
+├─────────────────────────────────────────────┤
+│ ┌───────────┐ ┌───────────┐ ┌───────────┐   │
+│ │ SEO Score │ │ Status    │ │ Features  │   │
+│ │    75%    │ │  Active   │ │   5/7     │   │
+│ └───────────┘ └───────────┘ └───────────┘   │
+│                                             │
+│ ▼ Panel Information                         │
+│   [Panel Name] [Support Email]              │
+│   [Description]                             │
+│                                             │
+│ ▼ Panel Status                              │
+│   [Maintenance Mode Toggle]                 │
+│   [Registration Toggle]                     │
+│                                             │
+│ ▼ SEO & Meta Tags                           │
+│   [Title] [Description] [Keywords]          │
+│                                             │
+│ ▼ Branding & Images                         │
+│   [Logo] [Favicon] [OG Image]               │
+│                                             │
+│ ▼ Order Settings                            │
+│   [Currency] [Min/Max Order]                │
+│                                             │
+│ ▼ Legal Pages                               │
+│   [Terms of Service] [Privacy Policy]       │
+└─────────────────────────────────────────────┘
+```
+
+**Files to modify:**
+- `src/pages/panel/GeneralSettings.tsx` - Enhanced UI with better structure
+
+---
+
+## Files to Create/Modify Summary
+
+| File | Action | Changes |
+|------|--------|---------|
+| `src/pages/buyer/BuyerAPI.tsx` | Modify | Add dynamic platform domain detection |
+| `src/pages/panel/Integrations.tsx` | Modify | Pass `fill="white"` to icons on colored backgrounds |
+| `src/pages/panel/CustomerManagement.tsx` | Modify | Add separate suspended/banned statistics |
+| `src/components/customers/CustomerDetailPage.tsx` | Modify | Update radio labels to show "(Unsuspend)" when applicable |
+| `src/pages/panel/PanelOverview.tsx` | Modify | Change "Add Service" to "Integrations" with route change |
+| `src/pages/panel/Billing.tsx` | Modify | Remove PaymentMethodsQuickAccess, ensure panelId passed to TransactionHistory |
+| `src/pages/panel/GeneralSettings.tsx` | Modify | Enhanced UI with visual improvements and better organization |
+
+---
+
+## Technical Details
+
+### Domain Detection Function
+```typescript
+const getPlatformDomain = (): string => {
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    const parts = hostname.split('.');
+    if (parts.length >= 2) {
+      const rootDomain = parts.slice(-2).join('.');
+      if (['homeofsmm.com', 'smmpilot.online'].includes(rootDomain)) {
+        return rootDomain;
+      }
+    }
+    if (hostname.includes('localhost') || hostname.includes('lovable.app')) {
+      return 'smmpilot.online';
+    }
+  }
+  return 'smmpilot.online';
+};
+```
+
+### Icon Fix Pattern
+```tsx
+// Before (invisible on colored background)
+<div className={cn("w-8 h-8 rounded-lg flex items-center justify-center", service.color)}>
+  {service.icon}
+</div>
+
+// After (white icon on colored background)
+<div className={cn("w-8 h-8 rounded-lg flex items-center justify-center", service.color)}>
+  {React.isValidElement(service.icon) 
+    ? React.cloneElement(service.icon as React.ReactElement<any>, { fill: "white" })
+    : service.icon}
+</div>
+```
+
+### Stats Array Update
+```typescript
+const statsArr = [
+  { title: "Total Customers", value: customers.length, change: statsChanges.total.value, trend: statsChanges.total.trend, icon: Users },
+  { title: "Online Now", value: onlineCount, change: statsChanges.online.value, trend: "neutral", icon: Circle },
+  { title: "Active", value: customers.filter(c => c.status === "active" && !c.isBanned).length, change: statsChanges.active.value, trend: statsChanges.active.trend, icon: UserCheck },
+  { title: "Suspended", value: customers.filter(c => c.status === "suspended" && !c.isBanned).length, change: "+0", trend: "neutral", icon: UserX },
+  { title: "Banned", value: customers.filter(c => c.isBanned === true).length, change: "+0", trend: "neutral", icon: Ban },
+  { title: "VIP Members", value: customers.filter(c => c.segment === "vip").length, change: statsChanges.vip.value, trend: statsChanges.vip.trend, icon: Crown },
+];
 ```
 
 ---
 
 ## Summary
 
-This plan fixes:
-1. API endpoints showing action names in the card view
-2. API 404 error with proper URL routing/documentation
-3. Beautiful custom 404 page with sparkle/gradient effects
-4. Customer suspend incorrectly showing as ban (data mapping bug)
-5. Combined View/Edit customer page instead of separate dialogs
-6. Clarification on pause/resume vs refill (already correct implementation)
+This plan addresses:
+1. **Dynamic API URL detection** - Detects platform domain automatically
+2. **Integration icons visibility** - White icons on colored backgrounds
+3. **Customer stats** - Separate suspended vs banned counts
+4. **Unsuspend visibility** - Clear labeling when activating suspended users
+5. **Dashboard quick actions** - Renamed to Integrations
+6. **Billing cleanup** - Removed duplicate payment methods section
+7. **Settings enhancement** - Improved visual organization and UX
