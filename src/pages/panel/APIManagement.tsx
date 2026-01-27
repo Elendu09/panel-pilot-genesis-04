@@ -241,6 +241,7 @@ const APIManagement = () => {
       id: "services",
       method: "POST",
       path: "/api/v2/panel",
+      action: "services",
       description: "Get all panel services",
       params: ["key", "action=services"],
       response: `{"success":true,"data":[{"id":"uuid","service_id":1,"name":"Instagram Followers","rate":"2.50","min":100,"max":10000,"category":"Instagram","status":"active"}]}`
@@ -249,6 +250,7 @@ const APIManagement = () => {
       id: "customers",
       method: "POST",
       path: "/api/v2/panel",
+      action: "customers",
       description: "Get all customers",
       params: ["key", "action=customers", "page (optional)", "limit (optional)"],
       response: `{"success":true,"data":[{"id":"uuid","email":"user@example.com","balance":"150.50","total_spent":"500.00","status":"active","created_at":"2024-01-15"}],"pagination":{"page":1,"limit":20,"total":156}}`
@@ -257,6 +259,7 @@ const APIManagement = () => {
       id: "orders",
       method: "POST",
       path: "/api/v2/panel",
+      action: "orders",
       description: "Get all panel orders",
       params: ["key", "action=orders", "status (optional)", "page (optional)"],
       response: `{"success":true,"data":[{"id":"uuid","order_number":"ORD-12345","service":"Instagram Followers","quantity":1000,"price":"2.50","status":"completed","created_at":"2024-01-20"}]}`
@@ -265,6 +268,7 @@ const APIManagement = () => {
       id: "stats",
       method: "POST",
       path: "/api/v2/panel",
+      action: "stats",
       description: "Get panel statistics",
       params: ["key", "action=stats"],
       response: `{"success":true,"data":{"total_orders":1250,"total_revenue":"15000.00","total_customers":450,"active_services":125,"orders_today":45}}`
@@ -273,6 +277,7 @@ const APIManagement = () => {
       id: "services-sync",
       method: "POST",
       path: "/api/v2/panel",
+      action: "services.sync",
       description: "Sync services from provider",
       params: ["key", "action=services.sync", "provider_id"],
       response: `{"success":true,"message":"Synced 125 services","imported":125,"updated":30,"failed":2}`
@@ -281,6 +286,7 @@ const APIManagement = () => {
       id: "customer-balance",
       method: "POST",
       path: "/api/v2/panel",
+      action: "balance.adjust",
       description: "Adjust customer balance",
       params: ["key", "action=balance.adjust", "customer_id", "amount", "type (add/subtract)", "reason (optional)"],
       response: `{"success":true,"customer_id":"uuid","new_balance":"175.50","transaction_id":"tx_123"}`
@@ -289,6 +295,7 @@ const APIManagement = () => {
       id: "customer-status",
       method: "POST",
       path: "/api/v2/panel",
+      action: "customer.status",
       description: "Update customer status",
       params: ["key", "action=customer.status", "customer_id", "status (active/suspended/banned)"],
       response: `{"success":true,"customer_id":"uuid","status":"suspended"}`
@@ -297,6 +304,7 @@ const APIManagement = () => {
       id: "order-update",
       method: "POST",
       path: "/api/v2/panel",
+      action: "order.update",
       description: "Update order status",
       params: ["key", "action=order.update", "order_id", "status (pending/in_progress/paused/completed/cancelled)"],
       response: `{"success":true,"order_id":"uuid","status":"completed"}`
@@ -560,9 +568,17 @@ axios.post(apiUrl, data)
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <p className="text-sm text-muted-foreground mb-4">
-                  Base URL: <code className="bg-muted px-2 py-1 rounded">{apiBaseUrl}/api/v2</code>
-                </p>
+                <div className="space-y-2 mb-4">
+                  <p className="text-sm text-muted-foreground">
+                    Panel Owner API Base URL:
+                  </p>
+                  <code className="block bg-muted px-3 py-2 rounded-lg text-sm break-all">
+                    {apiBaseUrl}/api/v2/panel
+                  </code>
+                  <p className="text-xs text-muted-foreground/70">
+                    All requests require your API key and an <code className="bg-muted px-1 rounded">action</code> parameter.
+                  </p>
+                </div>
                 {endpoints.map((endpoint) => (
                   <Collapsible key={endpoint.id} open={expandedEndpoint === endpoint.id} onOpenChange={() => setExpandedEndpoint(expandedEndpoint === endpoint.id ? null : endpoint.id)}>
                     <CollapsibleTrigger className="w-full">
@@ -573,6 +589,11 @@ axios.post(apiUrl, data)
                             "bg-blue-500/10 text-blue-500 border-blue-500/20"
                           )}>{endpoint.method}</Badge>
                           <code className="text-sm font-mono">{endpoint.path}</code>
+                          {(endpoint as any).action && (
+                            <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20 font-mono text-xs">
+                              {(endpoint as any).action}
+                            </Badge>
+                          )}
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="text-sm text-muted-foreground hidden md:block">{endpoint.description}</span>
