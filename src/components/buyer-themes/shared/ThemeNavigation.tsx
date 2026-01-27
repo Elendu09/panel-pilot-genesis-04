@@ -247,7 +247,9 @@ export const ThemeNavigation = ({
             {/* Mobile Menu Button */}
             <div className="flex md:hidden items-center gap-2">
               {/* Mobile Language Selector */}
-              <LanguageSelector />
+              <div className="shrink-0 flex-shrink-0">
+                <LanguageSelector />
+              </div>
               
               {/* Mobile Theme Toggle - hidden for light-mode-only themes like SMMVisit */}
               {!hideThemeToggle && (
