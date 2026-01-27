@@ -817,9 +817,12 @@ const Integrations = () => {
                   )} onClick={() => openServiceDialog(service)}>
                     <div className="flex items-center gap-2.5">
                       <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center text-sm", service.color)}>
-                        {React.isValidElement(service.icon) 
-                          ? React.cloneElement(service.icon as React.ReactElement<any>, { fill: "white", className: "w-5 h-5" })
-                          : service.icon}
+                        {/* Keep branded multi-color icons for analytics (Google Analytics, GTM, Yandex) */}
+                        {service.id === 'google_analytics' || service.id === 'google_tag_manager' || service.id === 'yandex_metrika'
+                          ? service.icon
+                          : React.isValidElement(service.icon) 
+                            ? React.cloneElement(service.icon as React.ReactElement<any>, { fill: "white", className: "w-5 h-5" })
+                            : service.icon}
                       </div>
                       <div>
                         <div className="flex items-center gap-1.5">
@@ -867,9 +870,12 @@ const Integrations = () => {
                   )} onClick={() => openServiceDialog(service)}>
                     <div className="flex items-center gap-2.5">
                       <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center text-sm", service.color)}>
-                        {React.isValidElement(service.icon) 
-                          ? React.cloneElement(service.icon as React.ReactElement<any>, { fill: "white", className: "w-5 h-5" })
-                          : service.icon}
+                        {/* Keep branded gradient icon for OneSignal */}
+                        {service.id === 'onesignal'
+                          ? service.icon
+                          : React.isValidElement(service.icon) 
+                            ? React.cloneElement(service.icon as React.ReactElement<any>, { fill: "white", className: "w-5 h-5" })
+                            : service.icon}
                       </div>
                       <div>
                         <div className="flex items-center gap-1.5">

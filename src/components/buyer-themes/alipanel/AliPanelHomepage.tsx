@@ -88,8 +88,8 @@ export const AliPanelHomepage = ({
   const displayLogo = customization.logoUrl || logoUrl;
   const companyName = customization.companyName || panelName;
 
-  // Blog toggle
-  const showBlogInMenu = customization.showBlogInMenu === true;
+  // Blog toggle - use nullish coalescing to properly handle undefined/false values
+  const showBlogInMenu = customization.showBlogInMenu ?? false;
 
   // Fast Order toggle - determines CTA buttons
   const enableFastOrder = customization.enableFastOrder !== false;

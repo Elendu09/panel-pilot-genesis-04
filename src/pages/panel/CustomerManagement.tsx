@@ -762,27 +762,32 @@ const CustomerManagement = () => {
         </div>
       </div>
 
-      {/* Stats Cards - Horizontal Scroll on Mobile */}
-      <div className="overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
-        <div className="flex gap-3 min-w-max sm:grid sm:grid-cols-3 lg:grid-cols-6 sm:min-w-0">
-          {statsArr.map((stat, index) => (
-            <motion.div key={index} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }} className="min-w-[130px] sm:min-w-0">
-              <Card className="bg-card/60 backdrop-blur-xl border-border/50 hover:border-primary/30 transition-all h-full">
-                <CardContent className="p-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                      <stat.icon className="w-4 h-4 text-primary" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[10px] text-muted-foreground truncate">{stat.title}</p>
-                      <p className="text-lg font-bold">{stat.value.toLocaleString()}</p>
-                    </div>
+      {/* Stats Grid - 2 columns on mobile, 3 on tablet, 6 on desktop with colored backgrounds */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        {[
+          { title: "All Customers", value: customers.length, icon: Users, bgColor: "bg-blue-100 dark:bg-blue-950/50", iconBg: "bg-blue-500", iconColor: "text-white" },
+          { title: "Online Now", value: onlineCount, icon: Circle, bgColor: "bg-emerald-100 dark:bg-emerald-950/50", iconBg: "bg-emerald-500", iconColor: "text-white" },
+          { title: "Active", value: customers.filter(c => c.status === "active" && !c.isBanned).length, icon: UserCheck, bgColor: "bg-green-100 dark:bg-green-950/50", iconBg: "bg-green-500", iconColor: "text-white" },
+          { title: "Suspended", value: suspendedCount, icon: UserX, bgColor: "bg-amber-100 dark:bg-amber-950/50", iconBg: "bg-amber-500", iconColor: "text-white" },
+          { title: "Banned", value: bannedCount, icon: Ban, bgColor: "bg-red-100 dark:bg-red-950/50", iconBg: "bg-red-500", iconColor: "text-white" },
+          { title: "VIP Members", value: customers.filter(c => c.segment === "vip").length, icon: Crown, bgColor: "bg-purple-100 dark:bg-purple-950/50", iconBg: "bg-purple-500", iconColor: "text-white" },
+        ].map((stat, index) => (
+          <motion.div key={index} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}>
+            <Card className={cn("border-0 shadow-sm h-full", stat.bgColor)}>
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex items-center gap-3">
+                  <div className={cn("w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0", stat.iconBg)}>
+                    <stat.icon className={cn("w-4 h-4 sm:w-5 sm:h-5", stat.iconColor)} />
                   </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
-        </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{stat.title}</p>
+                    <p className="text-lg sm:text-xl font-bold">{stat.value.toLocaleString()}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        ))}
       </div>
 
       {/* Quick Search - Mobile Visible */}

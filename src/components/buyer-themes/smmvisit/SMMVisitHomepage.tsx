@@ -154,8 +154,8 @@ export const SMMVisitHomepage = ({
   const displayLogo = customization.logoUrl || logoUrl;
   const companyName = customization.companyName || panelName;
 
-  // Toggles
-  const showBlogInMenu = customization.showBlogInMenu === true;
+  // Toggles - use nullish coalescing to properly handle undefined/false values
+  const showBlogInMenu = customization.showBlogInMenu ?? false;
   const enableFastOrder = customization.enableFastOrder !== false;
   const showStats = customization.enableStats !== false;
   const showFeatures = customization.enableFeatures !== false;
