@@ -25,7 +25,9 @@ const BuyerAPI = () => {
 
   const apiBaseUrl = panel?.custom_domain 
     ? `https://${panel.custom_domain}/api/v2`
-    : `https://tooudgubuhxjbbvzjcgx.supabase.co/functions/v1/buyer-api`;
+    : panel?.subdomain 
+      ? `https://${panel.subdomain}.smmpilot.online/api/v2`
+      : "https://yourpanel.smmpilot.online/api/v2";
 
   const copyToClipboard = async (text: string, id: string) => {
     try {
