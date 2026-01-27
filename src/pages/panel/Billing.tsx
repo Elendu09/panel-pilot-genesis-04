@@ -276,22 +276,41 @@ const Billing = () => {
   };
 
   const handleDeposit = async (amount: number, method: string) => {
-    if (!panel?.id || !profile?.id) return;
+    if (!panel?.id || !profile?.id) {
+      toast({
+        variant: 'destructive',
+        title: 'Session Error',
+        description: 'Panel or user session not available. Please refresh the page.'
+      });
+      return;
+    }
+
+    if (!method) {
+      toast({
+        variant: 'destructive',
+        title: 'No Payment Method',
+        description: 'Please select a payment method to continue.'
+      });
+      return;
+    }
 
     setDepositLoading(true);
     try {
-      // Create transaction and initiate payment
+      // Create transaction and initiate payment for panel owner deposit
       const { data, error } = await supabase.functions.invoke('process-payment', {
         body: {
           gateway: method,
           amount,
           panelId: panel.id,
-          buyerId: profile.id,
+          userId: profile.id, // Use userId for panel owner context
+          isOwnerDeposit: true, // Flag for panel owner deposit
           returnUrl: `${window.location.origin}/panel/billing?deposit=success`,
           cancelUrl: `${window.location.origin}/panel/billing?deposit=cancelled`,
           metadata: {
             type: 'panel_deposit',
-            panelId: panel.id
+            panelId: panel.id,
+            panelName: panel.name,
+            ownerEmail: profile.email
           }
         }
       });
@@ -311,7 +330,7 @@ const Billing = () => {
       toast({ 
         variant: 'destructive', 
         title: 'Deposit Failed', 
-        description: error.message || 'Failed to initiate deposit. Please try again.' 
+        description: error.message || 'Failed to initiate deposit. Please check your payment gateway configuration.' 
       });
     } finally {
       setDepositLoading(false);

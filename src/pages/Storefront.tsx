@@ -164,6 +164,8 @@ const Storefront = () => {
     secondaryColor: customBranding?.secondaryColor || panel?.secondary_color || '#8B5CF6',
     themeMode, // Pass current theme mode
     setThemeMode, // Pass setter so components can toggle
+    // Pass blog menu visibility from panel settings
+    showBlogInMenu: customBranding?.showBlogInMenu ?? (panel as any)?.blog_enabled ?? false,
   };
 
   const themeProps = {

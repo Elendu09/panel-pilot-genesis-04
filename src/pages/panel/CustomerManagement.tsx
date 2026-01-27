@@ -762,29 +762,40 @@ const CustomerManagement = () => {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-        {statsArr.map((stat, index) => (
-          <motion.div key={index} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1 }}>
-            <Card className="bg-card/60 backdrop-blur-xl border-border/50 hover:border-primary/30 transition-all">
-              <CardContent className="p-4 md:p-6">
-                <div className="flex items-center justify-between">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs md:text-sm text-muted-foreground truncate">{stat.title}</p>
-                    <p className="text-xl md:text-3xl font-bold mt-1">{stat.value.toLocaleString()}</p>
-                    <div className="flex items-center mt-2">
-                      {stat.trend === "up" ? <TrendingUp className="w-3 h-3 md:w-4 md:h-4 text-green-500 mr-1" /> : <TrendingDown className="w-3 h-3 md:w-4 md:h-4 text-destructive mr-1" />}
-                      <span className={`text-xs md:text-sm font-medium ${stat.trend === "up" ? "text-green-500" : "text-destructive"}`}>{stat.change}</span>
+      {/* Stats Cards - Horizontal Scroll on Mobile */}
+      <div className="overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
+        <div className="flex gap-3 min-w-max sm:grid sm:grid-cols-3 lg:grid-cols-6 sm:min-w-0">
+          {statsArr.map((stat, index) => (
+            <motion.div key={index} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }} className="min-w-[130px] sm:min-w-0">
+              <Card className="bg-card/60 backdrop-blur-xl border-border/50 hover:border-primary/30 transition-all h-full">
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                      <stat.icon className="w-4 h-4 text-primary" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] text-muted-foreground truncate">{stat.title}</p>
+                      <p className="text-lg font-bold">{stat.value.toLocaleString()}</p>
                     </div>
                   </div>
-                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                    <stat.icon className="w-5 h-5 md:w-6 md:h-6 text-primary" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        ))}
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+
+      {/* Quick Search - Mobile Visible */}
+      <div className="block md:hidden">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+          <Input
+            placeholder="Search customers..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 bg-background/60"
+          />
+        </div>
       </div>
 
       {/* Kanban-style Status Tabs */}
