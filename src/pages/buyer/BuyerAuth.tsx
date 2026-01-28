@@ -267,24 +267,6 @@ const BuyerAuth = () => {
   return (
     <BuyerThemeWrapper panelId={panelId || undefined}>
       <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4">
-      {/* Back to Storefront Link */}
-      <motion.div 
-        className="absolute top-6 left-6 z-10"
-        initial={{ opacity: 0, x: -20 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ delay: 0.2 }}
-      >
-        <Button 
-          variant="ghost" 
-          asChild 
-          className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
-        >
-          <Link to="/">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Storefront
-          </Link>
-        </Button>
-      </motion.div>
 
       {/* Auth Card */}
       <motion.div

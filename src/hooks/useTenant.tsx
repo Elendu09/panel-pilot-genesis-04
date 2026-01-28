@@ -322,7 +322,7 @@ export function useTenant(): TenantDetectionResult {
             .select(`
               id, name, subdomain, custom_domain, theme_type, primary_color,
               secondary_color, logo_url, status, custom_branding, settings,
-              panel_settings (seo_title, seo_description, seo_keywords, maintenance_mode, maintenance_message, contact_info, social_links)
+              panel_settings (seo_title, seo_description, seo_keywords, maintenance_mode, maintenance_message, contact_info, social_links, blog_enabled)
             `)
             .eq('custom_domain', hostname)
             .in('status', ['active', 'pending'])
@@ -386,7 +386,8 @@ export function useTenant(): TenantDetectionResult {
                 maintenance_mode,
                 maintenance_message,
                 contact_info,
-                social_links
+                social_links,
+                blog_enabled
               )
             `)
             .or(`custom_domain.eq.${hostname}`)
@@ -443,7 +444,8 @@ export function useTenant(): TenantDetectionResult {
                   maintenance_mode,
                   maintenance_message,
                   contact_info,
-                  social_links
+                  social_links,
+                  blog_enabled
                 )
               `)
               .eq('id', domainData.panel_id)
@@ -461,7 +463,7 @@ export function useTenant(): TenantDetectionResult {
         // PRIORITY 4: Fallback subdomain search for non-smmpilot domains
         if (!panelData && subdomain && !isSubdomainOfPlatform) {
           searchAttempts.push(`subdomain=${subdomain}`);
-          const { data: subdomainPanel, error: subdomainError } = await supabase
+            const { data: subdomainPanel, error: subdomainError } = await supabase
             .from('panels')
             .select(`
               id,
@@ -482,7 +484,8 @@ export function useTenant(): TenantDetectionResult {
                 maintenance_mode,
                 maintenance_message,
                 contact_info,
-                social_links
+                social_links,
+                blog_enabled
               )
             `)
             .eq('subdomain', subdomain)
@@ -525,7 +528,8 @@ export function useTenant(): TenantDetectionResult {
                   maintenance_mode,
                   maintenance_message,
                   contact_info,
-                  social_links
+                  social_links,
+                  blog_enabled
                 )
               `)
               .eq('subdomain', extractedSubdomain)

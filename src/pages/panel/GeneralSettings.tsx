@@ -33,7 +33,6 @@ import {
   FileText,
   Search,
   Image,
-  Megaphone,
   Plus,
   Trash2,
   Copy,
@@ -105,10 +104,6 @@ const GeneralSettings = () => {
     logoUrl: "",
     heroImageUrl: "",
     
-    // Ad Settings (NEW)
-    adsEnabled: false,
-    adHtml: "",
-    adPosition: "sidebar" as "header" | "sidebar" | "footer",
   });
 
   const [customMetaTags, setCustomMetaTags] = useState<CustomMetaTag[]>([]);
@@ -168,7 +163,7 @@ const GeneralSettings = () => {
         const panelSettingsData = panel.settings as Record<string, any> || {};
         const generalSettings = panelSettingsData.general || {};
         const seoSettings = panelSettingsData.seo || {};
-        const adSettings = panelSettingsData.ads || {};
+        
         const contactInfo = panelSettings?.contact_info as Record<string, any> || {};
         const customBranding = panel.custom_branding as Record<string, any> || {};
 
@@ -206,10 +201,6 @@ const GeneralSettings = () => {
           logoUrl: panel.logo_url || customBranding.logoUrl || "",
           heroImageUrl: customBranding.heroImageUrl || "",
           
-          // Ads
-          adsEnabled: adSettings.enabled ?? false,
-          adHtml: adSettings.html || "",
-          adPosition: adSettings.position || "sidebar",
         });
 
         // Load custom meta tags
@@ -239,7 +230,17 @@ const GeneralSettings = () => {
 
     setSaving(true);
     try {
-      // Update panel
+      // CRITICAL: First fetch existing data to preserve unrelated settings
+      const { data: existingPanel } = await supabase
+        .from('panels')
+        .select('settings, custom_branding')
+        .eq('id', panelId)
+        .single();
+
+      const existingSettings = (existingPanel?.settings as Record<string, any>) || {};
+      const existingBranding = (existingPanel?.custom_branding as Record<string, any>) || {};
+
+      // Update panel with MERGED settings (preserves theme, payment methods, etc.)
       const { error: panelError } = await supabase
         .from('panels')
         .update({
@@ -247,6 +248,7 @@ const GeneralSettings = () => {
           description: settings.description,
           logo_url: settings.logoUrl,
           custom_branding: {
+            ...existingBranding,  // PRESERVE existing branding (selectedTheme, colors, etc.)
             faviconUrl: settings.faviconUrl,
             appleTouchIconUrl: settings.appleTouchIconUrl,
             ogImageUrl: settings.ogImageUrl,
@@ -254,6 +256,7 @@ const GeneralSettings = () => {
             heroImageUrl: settings.heroImageUrl,
           },
           settings: {
+            ...existingSettings,  // PRESERVE existing settings (buyer_theme, payment configs, etc.)
             general: {
               allowRegistration: settings.allowRegistration,
               requireEmailVerification: settings.requireEmailVerification,
@@ -281,11 +284,6 @@ const GeneralSettings = () => {
                 content: tag.content,
                 placement: tag.placement,
               })),
-            },
-            ads: {
-              enabled: settings.adsEnabled,
-              html: settings.adHtml,
-              position: settings.adPosition,
             },
           },
         })
@@ -1041,118 +1039,6 @@ const GeneralSettings = () => {
           </AccordionContent>
         </AccordionItem>
 
-        {/* Ad Display */}
-        <AccordionItem
-          value="ads"
-          className="border border-border rounded-xl bg-gradient-card overflow-hidden"
-        >
-          <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-accent/30">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-destructive/10 flex items-center justify-center">
-                <Megaphone className="w-5 h-5 text-destructive" />
-              </div>
-              <div className="text-left">
-                <h3 className="font-semibold">Ad Display</h3>
-                <p className="text-sm text-muted-foreground">
-                  Configure advertisement banner
-                </p>
-              </div>
-            </div>
-          </AccordionTrigger>
-          <AccordionContent className="px-6 pb-6">
-            <div className="space-y-6 pt-2">
-              <div className="flex items-center justify-between p-4 bg-accent/20 rounded-lg">
-                <div className="space-y-0.5">
-                  <Label>Enable Ads</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Show ad banner on your storefront
-                  </p>
-                </div>
-                <Switch
-                  checked={settings.adsEnabled}
-                  onCheckedChange={(checked) =>
-                    setSettings({ ...settings, adsEnabled: checked })
-                  }
-                />
-              </div>
-
-              {settings.adsEnabled && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  className="space-y-4"
-                >
-                  <div className="space-y-2">
-                    <Label>Ad Position</Label>
-                    <Select
-                      value={settings.adPosition}
-                      onValueChange={(v) =>
-                        setSettings({
-                          ...settings,
-                          adPosition: v as "header" | "sidebar" | "footer",
-                        })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="header">Header (Top)</SelectItem>
-                        <SelectItem value="sidebar">Sidebar</SelectItem>
-                        <SelectItem value="footer">Footer (Bottom)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="adHtml">Ad HTML/Script</Label>
-                    <Textarea
-                      id="adHtml"
-                      value={settings.adHtml}
-                      onChange={(e) =>
-                        setSettings({ ...settings, adHtml: e.target.value })
-                      }
-                      placeholder="Paste your ad HTML or script here..."
-                      rows={4}
-                      className="font-mono text-sm"
-                    />
-                  </div>
-
-                  {/* Ad Preview with Rainbow Border */}
-                  <div className="space-y-2">
-                    <Label>Preview</Label>
-                    <div className="animate-rainbow-border rounded-xl p-1">
-                      <div className="bg-card rounded-lg p-6 text-center">
-                        {settings.adHtml ? (
-                          <div
-                            className="text-sm"
-                            dangerouslySetInnerHTML={{
-                              __html: settings.adHtml.substring(0, 200),
-                            }}
-                          />
-                        ) : (
-                          <div className="space-y-2">
-                            <p className="text-muted-foreground font-medium">
-                              Your Ad Here
-                            </p>
-                            <p className="text-xs text-muted-foreground/70">
-                              728x90 Banner Preview
-                            </p>
-                            <div className="w-full h-20 bg-gradient-to-r from-primary/20 via-info/20 to-success/20 rounded-lg flex items-center justify-center border-2 border-dashed border-border">
-                              <span className="text-sm text-muted-foreground">
-                                Ad Content
-                              </span>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
 
         {/* Legal Pages */}
         <AccordionItem
