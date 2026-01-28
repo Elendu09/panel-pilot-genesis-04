@@ -22,6 +22,7 @@ import {
   BuyerThemeSMMVisit,
 } from '@/components/buyer-themes';
 import { FloatingChatWidget } from '@/components/storefront/FloatingChatWidget';
+import { FreeTierBanner } from '@/components/storefront/FreeTierBanner';
 import { BuyerHomepageSchemas, FAQPageSchema } from '@/components/seo/JsonLdSchema';
 import { supabase } from '@/integrations/supabase/client';
 import { AlertTriangle } from 'lucide-react';
@@ -58,6 +59,11 @@ const Storefront = () => {
   const { panel, loading: tenantLoading, error: tenantError } = useTenant();
   const { services } = useTenantServices(panel?.id);
   const [renderError, setRenderError] = useState<string | null>(null);
+  
+  // Free tier banner state - persists for session
+  const [bannerDismissed, setBannerDismissed] = useState(() => {
+    return sessionStorage.getItem('freeTierBannerDismissed') === 'true';
+  });
   
   // Use the buyer theme context for light/dark mode (allows buyers to toggle)
   const { themeMode, setThemeMode } = useBuyerThemeMode();
@@ -165,7 +171,7 @@ const Storefront = () => {
     themeMode, // Pass current theme mode
     setThemeMode, // Pass setter so components can toggle
     // Pass blog menu visibility from panel settings (from panel_settings table or custom_branding)
-    showBlogInMenu: customBranding?.showBlogInMenu ?? (panel?.settings as any)?.blog_enabled ?? (panel as any)?.blog_enabled ?? false,
+    showBlogInMenu: customBranding?.showBlogInMenu ?? (panel as any)?.panel_settings?.blog_enabled ?? (panel?.settings as any)?.blog_enabled ?? false,
   };
 
   const themeProps = {
@@ -254,6 +260,10 @@ const Storefront = () => {
   // Check if Fast Order is enabled
   const enableFastOrder = (design as any)?.enableFastOrder !== false;
 
+  // Check if panel is on free tier (no subscription or 'free' tier)
+  const isFreeTier = !(panel as any)?.subscription_tier || (panel as any)?.subscription_tier === 'free';
+  const showFreeBanner = isFreeTier && !bannerDismissed;
+
   // Get favicon URL - use panel's custom favicon -> logo -> default
   const faviconUrl = customBranding?.faviconUrl || panel.logo_url || '/default-panel-favicon.png';
   const appleTouchIconUrl = customBranding?.appleTouchIconUrl || faviconUrl;
@@ -306,11 +316,27 @@ const Storefront = () => {
         <ThemeWrapper themeMode={themeMode}>
           {themeContent}
           <FloatingChatWidget panelId={panel?.id} panelName={panel?.name} />
+          {showFreeBanner && (
+            <FreeTierBanner 
+              onDismiss={() => {
+                sessionStorage.setItem('freeTierBannerDismissed', 'true');
+                setBannerDismissed(true);
+              }}
+            />
+          )}
         </ThemeWrapper>
       ) : (
         <div className={`buyer-theme-wrapper ${themeMode}`}>
           {themeContent}
           <FloatingChatWidget panelId={panel?.id} panelName={panel?.name} />
+          {showFreeBanner && (
+            <FreeTierBanner 
+              onDismiss={() => {
+                sessionStorage.setItem('freeTierBannerDismissed', 'true');
+                setBannerDismissed(true);
+              }}
+            />
+          )}
         </div>
       )}
     </>
