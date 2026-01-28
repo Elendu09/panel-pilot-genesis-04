@@ -204,16 +204,21 @@ export const LiveStorefrontPreview = ({ panelId, subdomain, customDomain }: Live
         </div>
       )}
 
-      {/* Preview Content */}
-      <div className="flex-1 p-2 md:p-4 overflow-auto flex items-start justify-center bg-[#1a1a2e]" style={{ minHeight: isMobileViewport ? '300px' : '500px' }}>
+      {/* Preview Content - fixed heights for proper mobile display */}
+      <div 
+        className={cn(
+          "flex-1 p-2 md:p-4 overflow-auto flex items-start justify-center bg-[#1a1a2e]",
+          isMobileViewport ? "min-h-[350px]" : "min-h-[500px]"
+        )}
+      >
         <motion.div
           layout
-          className="bg-background rounded-lg overflow-hidden shadow-2xl transition-all duration-300 w-full"
+          className="bg-background rounded-lg overflow-hidden shadow-2xl transition-all duration-300"
           style={{
-            width: getDeviceWidth(),
+            width: "100%",
             maxWidth: isMobileViewport ? "100%" : getDeviceWidth(),
-            height: isMobileViewport ? "min(400px, 60vh)" : "calc(100% - 1rem)",
-            minHeight: isMobileViewport ? "300px" : "500px",
+            height: isMobileViewport ? "320px" : "calc(100% - 1rem)",
+            minHeight: isMobileViewport ? "320px" : "500px",
           }}
         >
           {isReachable === false ? (

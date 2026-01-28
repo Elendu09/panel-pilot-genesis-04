@@ -305,11 +305,11 @@ export function useTenant(): TenantDetectionResult {
           }
         }
         
-        // Panel query selection
+        // Panel query selection - includes blog_enabled for navigation
         const panelFields = `
           id, name, subdomain, custom_domain, theme_type, primary_color,
           secondary_color, logo_url, status, custom_branding, settings,
-          panel_settings (seo_title, seo_description, seo_keywords, maintenance_mode, maintenance_message, contact_info, social_links)
+          panel_settings (seo_title, seo_description, seo_keywords, maintenance_mode, maintenance_message, contact_info, social_links, blog_enabled)
         `;
 
         // PRIORITY 0: Try full hostname as custom_domain first (for any custom domain)

@@ -26,7 +26,10 @@ import {
   Code,
   Megaphone,
   HelpCircle,
-  Info
+  Info,
+  Tag,
+  Activity,
+  MousePointer2
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -817,10 +820,14 @@ const Integrations = () => {
                   )} onClick={() => openServiceDialog(service)}>
                     <div className="flex items-center gap-2.5">
                       <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center text-sm", service.color)}>
-                        {/* Keep branded multi-color icons for analytics (Google Analytics, GTM, Yandex) */}
-                        {service.id === 'google_analytics' || service.id === 'google_tag_manager' || service.id === 'yandex_metrika'
-                          ? service.icon
-                          : React.isValidElement(service.icon) 
+                        {/* Use generic white icons for multi-color branded icons that clash with backgrounds */}
+                        {service.id === 'google_analytics' ? <BarChart3 className="w-5 h-5 text-white" /> :
+                         service.id === 'google_tag_manager' ? <Tag className="w-5 h-5 text-white" /> :
+                         service.id === 'yandex_metrika' ? <BarChart3 className="w-5 h-5 text-white" /> :
+                         service.id === 'facebook_pixel' ? <Activity className="w-5 h-5 text-white" /> :
+                         service.id === 'hotjar' ? <MousePointer2 className="w-5 h-5 text-white" /> :
+                         service.id === 'clarity' ? <MousePointer2 className="w-5 h-5 text-white" /> :
+                         React.isValidElement(service.icon) 
                             ? React.cloneElement(service.icon as React.ReactElement<any>, { fill: "white", className: "w-5 h-5" })
                             : service.icon}
                       </div>
@@ -870,10 +877,11 @@ const Integrations = () => {
                   )} onClick={() => openServiceDialog(service)}>
                     <div className="flex items-center gap-2.5">
                       <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center text-sm", service.color)}>
-                        {/* Keep branded gradient icon for OneSignal */}
-                        {service.id === 'onesignal'
-                          ? service.icon
-                          : React.isValidElement(service.icon) 
+                        {/* Use generic white icons for multi-color branded notification icons */}
+                        {service.id === 'onesignal' ? <Bell className="w-5 h-5 text-white" /> :
+                         service.id === 'beamer' ? <Megaphone className="w-5 h-5 text-white" /> :
+                         service.id === 'getsitecontrol' ? <MessageSquare className="w-5 h-5 text-white" /> :
+                         React.isValidElement(service.icon) 
                             ? React.cloneElement(service.icon as React.ReactElement<any>, { fill: "white", className: "w-5 h-5" })
                             : service.icon}
                       </div>
