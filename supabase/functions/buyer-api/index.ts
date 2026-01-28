@@ -91,20 +91,40 @@ serve(async (req) => {
 
     console.log(`[buyer-api] action=${action}, key=${key.substring(0, 10)}...`);
 
-    // Validate API key and get panel
-    const { data: apiKeyData, error: apiKeyError } = await supabase
+    // Validate API key - check both panel_api_keys and client_users tables
+    let panelId: string | null = null;
+    let buyerId: string | null = null;
+    
+    // First try panel_api_keys (panel owner keys)
+    const { data: panelKeyData, error: panelKeyError } = await supabase
       .from('panel_api_keys')
       .select('panel_id, is_active')
       .eq('api_key', key)
       .eq('is_active', true)
       .maybeSingle();
 
-    if (apiKeyError || !apiKeyData) {
+    if (panelKeyData) {
+      console.log('[buyer-api] Valid panel API key found');
+      panelId = panelKeyData.panel_id;
+    } else {
+      // Try client_users for buyer-level API keys
+      const { data: buyerKeyData, error: buyerKeyError } = await supabase
+        .from('client_users')
+        .select('id, panel_id, api_key')
+        .eq('api_key', key)
+        .maybeSingle();
+
+      if (buyerKeyData) {
+        console.log('[buyer-api] Valid buyer API key found for buyer:', buyerKeyData.id);
+        panelId = buyerKeyData.panel_id;
+        buyerId = buyerKeyData.id;
+      }
+    }
+
+    if (!panelId) {
       console.log('[buyer-api] Invalid API key attempt:', key.substring(0, 10));
       return errorResponse("Invalid API key");
     }
-
-    const panelId = apiKeyData.panel_id;
 
     // Route to appropriate handler
     let response: Response;

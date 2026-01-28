@@ -133,7 +133,7 @@ const CustomerManagement = () => {
   const [balanceReason, setBalanceReason] = useState("");
   const [sortColumn, setSortColumn] = useState<keyof Customer>("totalSpent");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
-  const [statusFilter, setStatusFilter] = useState<"all" | "online" | "banned">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "online" | "banned" | "active" | "suspended" | "vip">("all");
   const [selectedCustomers, setSelectedCustomers] = useState<string[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [statsChanges, setStatsChanges] = useState<{
@@ -302,7 +302,10 @@ const CustomerManagement = () => {
         (customer.username && customer.username.toLowerCase().includes(searchTerm.toLowerCase()));
       
       if (statusFilter === "online") return matchesSearch && customer.isOnline;
-      if (statusFilter === "banned") return matchesSearch && customer.status === "suspended";
+      if (statusFilter === "banned") return matchesSearch && customer.isBanned;
+      if (statusFilter === "active") return matchesSearch && customer.status === "active" && !customer.isBanned;
+      if (statusFilter === "suspended") return matchesSearch && customer.status === "suspended" && !customer.isBanned;
+      if (statusFilter === "vip") return matchesSearch && customer.segment === "vip";
       return matchesSearch;
     });
     
@@ -762,18 +765,25 @@ const CustomerManagement = () => {
         </div>
       </div>
 
-      {/* Stats Grid - 2 columns on mobile, 3 on tablet, 6 on desktop with colored backgrounds */}
+      {/* Stats Grid - 2 columns on mobile, 3 on tablet, 6 on desktop - clickable filter cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {[
-          { title: "All Customers", value: customers.length, icon: Users, bgColor: "bg-blue-100 dark:bg-blue-950/50", iconBg: "bg-blue-500", iconColor: "text-white" },
-          { title: "Online Now", value: onlineCount, icon: Circle, bgColor: "bg-emerald-100 dark:bg-emerald-950/50", iconBg: "bg-emerald-500", iconColor: "text-white" },
-          { title: "Active", value: customers.filter(c => c.status === "active" && !c.isBanned).length, icon: UserCheck, bgColor: "bg-green-100 dark:bg-green-950/50", iconBg: "bg-green-500", iconColor: "text-white" },
-          { title: "Suspended", value: suspendedCount, icon: UserX, bgColor: "bg-amber-100 dark:bg-amber-950/50", iconBg: "bg-amber-500", iconColor: "text-white" },
-          { title: "Banned", value: bannedCount, icon: Ban, bgColor: "bg-red-100 dark:bg-red-950/50", iconBg: "bg-red-500", iconColor: "text-white" },
-          { title: "VIP Members", value: customers.filter(c => c.segment === "vip").length, icon: Crown, bgColor: "bg-purple-100 dark:bg-purple-950/50", iconBg: "bg-purple-500", iconColor: "text-white" },
+          { title: "All Customers", value: customers.length, icon: Users, filter: "all" as const, bgColor: "bg-blue-100 dark:bg-blue-950/50", iconBg: "bg-blue-500", iconColor: "text-white", ringColor: "ring-blue-500" },
+          { title: "Online Now", value: onlineCount, icon: Circle, filter: "online" as const, bgColor: "bg-emerald-100 dark:bg-emerald-950/50", iconBg: "bg-emerald-500", iconColor: "text-white", ringColor: "ring-emerald-500" },
+          { title: "Active", value: customers.filter(c => c.status === "active" && !c.isBanned).length, icon: UserCheck, filter: "active" as const, bgColor: "bg-green-100 dark:bg-green-950/50", iconBg: "bg-green-500", iconColor: "text-white", ringColor: "ring-green-500" },
+          { title: "Suspended", value: suspendedCount, icon: UserX, filter: "suspended" as const, bgColor: "bg-amber-100 dark:bg-amber-950/50", iconBg: "bg-amber-500", iconColor: "text-white", ringColor: "ring-amber-500" },
+          { title: "Banned", value: bannedCount, icon: Ban, filter: "banned" as const, bgColor: "bg-red-100 dark:bg-red-950/50", iconBg: "bg-red-500", iconColor: "text-white", ringColor: "ring-red-500" },
+          { title: "VIP Members", value: customers.filter(c => c.segment === "vip").length, icon: Crown, filter: "vip" as const, bgColor: "bg-purple-100 dark:bg-purple-950/50", iconBg: "bg-purple-500", iconColor: "text-white", ringColor: "ring-purple-500" },
         ].map((stat, index) => (
           <motion.div key={index} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}>
-            <Card className={cn("border-0 shadow-sm h-full", stat.bgColor)}>
+            <Card 
+              className={cn(
+                "border-0 shadow-sm h-full cursor-pointer transition-all duration-200 hover:scale-[1.02]", 
+                stat.bgColor,
+                statusFilter === stat.filter && `ring-2 ring-offset-2 ${stat.ringColor}`
+              )}
+              onClick={() => setStatusFilter(stat.filter)}
+            >
               <CardContent className="p-3 sm:p-4">
                 <div className="flex items-center gap-3">
                   <div className={cn("w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0", stat.iconBg)}>
@@ -803,16 +813,7 @@ const CustomerManagement = () => {
         </div>
       </div>
 
-      {/* Kanban-style Status Tabs */}
-      <CustomerStatusTabs
-        activeTab={statusFilter}
-        onTabChange={setStatusFilter}
-        counts={{
-          all: customers.length,
-          online: onlineCount,
-          banned: bannedCount,
-        }}
-      />
+      {/* Status Tabs removed - now using clickable stat cards above */}
 
       {/* Customer Overview */}
       <CustomerOverview 
