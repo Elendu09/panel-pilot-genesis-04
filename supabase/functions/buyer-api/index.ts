@@ -142,7 +142,7 @@ serve(async (req) => {
         break;
       
       case 'balance':
-        response = await handleBalance(supabase, panelId, key);
+        response = await handleBalance(supabase, panelId, key, buyerId);
         break;
       
       case 'refill':
@@ -342,15 +342,28 @@ async function handleStatus(supabase: any, panelId: string, params: BuyerApiRequ
 }
 
 // Get buyer balance - returns customer-specific balance if using customer API key
-async function handleBalance(supabase: any, panelId: string, apiKey: string) {
-  // First try to find a customer with this API key stored in their metadata
-  // For now, we look up the panel's balance as a fallback
-  // In a full implementation, customers would have their own API keys
+async function handleBalance(supabase: any, panelId: string, apiKey: string, buyerId: string | null) {
+  // If this is a buyer-specific API key, return the buyer's balance
+  if (buyerId) {
+    const { data: buyer, error } = await supabase
+      .from('client_users')
+      .select('balance')
+      .eq('id', buyerId)
+      .single();
+    
+    if (error || !buyer) {
+      console.error('[buyer-api] Buyer balance fetch error:', error);
+      return errorResponse("Failed to fetch balance");
+    }
+    
+    console.log(`[buyer-api] Returning buyer balance for ${buyerId}: ${buyer.balance}`);
+    return jsonResponse({
+      balance: parseFloat(buyer.balance || 0).toFixed(4),
+      currency: "USD"
+    });
+  }
   
-  // Check if this is a customer-specific key pattern (if implemented)
-  // For now, return the balance from client_users if we can match by some criteria
-  // Fallback to panel balance for backward compatibility
-  
+  // Otherwise return panel balance (for panel-level API keys)
   const { data: panel, error } = await supabase
     .from('panels')
     .select('balance, default_currency')
