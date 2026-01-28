@@ -337,32 +337,91 @@ const BuyerDeposit = () => {
     };
   }, [buyer?.id, refreshBuyer]);
 
-  // Check for payment success/cancel URL params on mount
+  // Check for payment success/cancel URL params on mount - VERIFY actual status from DB
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const success = params.get('success');
-    const cancelled = params.get('cancelled');
-    const transactionId = params.get('transaction_id');
+    const verifyPaymentStatus = async () => {
+      const params = new URLSearchParams(window.location.search);
+      const successParam = params.get('success');
+      const cancelledParam = params.get('cancelled');
+      const transactionId = params.get('transaction_id');
+      
+      // Clean up URL immediately
+      if (successParam || cancelledParam || transactionId) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+      
+      // If cancelled explicitly, show error and update transaction
+      if (cancelledParam === 'true') {
+        toast({ 
+          variant: "destructive",
+          title: "Payment Cancelled", 
+          description: "Your deposit was not completed." 
+        });
+        // Update transaction to failed if we have ID
+        if (transactionId) {
+          await supabase.from('transactions')
+            .update({ status: 'failed' })
+            .eq('id', transactionId);
+        }
+        fetchTransactions();
+        return;
+      }
+      
+      // If we have a transaction ID, verify actual status from database
+      if (transactionId && successParam === 'true') {
+        toast({ 
+          title: "Verifying Payment...", 
+          description: "Please wait while we confirm your payment." 
+        });
+        
+        // Poll for status update (webhooks may take a moment)
+        let attempts = 0;
+        const maxAttempts = 10;
+        
+        const checkStatus = async (): Promise<void> => {
+          const { data: tx } = await supabase
+            .from('transactions')
+            .select('status, amount')
+            .eq('id', transactionId)
+            .single();
+          
+          if (tx?.status === 'completed') {
+            toast({ 
+              title: "Payment Successful!", 
+              description: `$${Number(tx.amount).toFixed(2)} has been added to your balance.` 
+            });
+            refreshBuyer();
+            fetchTransactions();
+            return;
+          } else if (tx?.status === 'failed') {
+            toast({ 
+              variant: "destructive",
+              title: "Payment Failed", 
+              description: "Your payment could not be processed." 
+            });
+            fetchTransactions();
+            return;
+          }
+          
+          attempts++;
+          if (attempts < maxAttempts) {
+            // Check every 2 seconds
+            setTimeout(checkStatus, 2000);
+          } else {
+            // After 20 seconds, show pending message
+            toast({ 
+              title: "Payment Processing", 
+              description: "Your payment is still being verified. Check back shortly." 
+            });
+            fetchTransactions();
+          }
+        };
+        
+        checkStatus();
+      }
+    };
     
-    if (success === 'true' && transactionId) {
-      // Payment was successful - verify and show confirmation
-      toast({ 
-        title: "Payment Successful!", 
-        description: "Your balance will be updated shortly." 
-      });
-      // Refresh buyer data
-      refreshBuyer();
-      // Clean up URL
-      window.history.replaceState({}, document.title, window.location.pathname);
-    } else if (cancelled === 'true') {
-      toast({ 
-        variant: "destructive",
-        title: "Payment Cancelled", 
-        description: "Your deposit was not completed." 
-      });
-      // Clean up URL
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
+    verifyPaymentStatus();
   }, [refreshBuyer]);
 
   const handleDeposit = async (overrideMethodId?: string) => {
@@ -695,10 +754,10 @@ const BuyerDeposit = () => {
                       const isFailed = tx.status === 'failed' || tx.status === 'cancelled';
                       
                       return (
-                        <div key={tx.id} className="p-3 md:p-4 flex items-center justify-between">
-                          <div className="flex items-center gap-2 md:gap-3">
+                        <div key={tx.id} className="p-3 md:p-4 flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
                             <div className={cn(
-                              "p-1.5 md:p-2 rounded-lg",
+                              "p-1.5 md:p-2 rounded-lg shrink-0",
                               isCompleted && "bg-green-500/10",
                               isPending && "bg-yellow-500/10",
                               isFailed && "bg-red-500/10"
@@ -711,9 +770,20 @@ const BuyerDeposit = () => {
                                 <XCircle className="w-3.5 h-3.5 md:w-4 md:h-4 text-red-500" />
                               )}
                             </div>
-                            <div>
-                              <p className="font-medium text-sm md:text-base">${tx.amount.toFixed(2)}</p>
-                              <p className="text-[10px] md:text-xs text-muted-foreground">
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="font-medium text-sm md:text-base">${tx.amount.toFixed(2)}</p>
+                                {/* Transaction ID with copy */}
+                                <button 
+                                  onClick={() => copyToClipboard(tx.id)}
+                                  className="text-[10px] font-mono text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors"
+                                  title="Copy Transaction ID"
+                                >
+                                  #{tx.id.slice(0, 8).toUpperCase()}
+                                  <Copy className="w-2.5 h-2.5" />
+                                </button>
+                              </div>
+                              <p className="text-[10px] md:text-xs text-muted-foreground truncate">
                                 {tx.payment_method || 'Payment'} • {new Date(tx.created_at).toLocaleDateString()}
                               </p>
                             </div>
@@ -721,7 +791,7 @@ const BuyerDeposit = () => {
                           <Badge 
                             variant={isCompleted ? 'default' : 'secondary'}
                             className={cn(
-                              "text-[10px] md:text-xs capitalize",
+                              "text-[10px] md:text-xs capitalize shrink-0",
                               isCompleted && "bg-green-500/10 text-green-500 border-green-500/20",
                               isPending && "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
                               isFailed && "bg-red-500/10 text-red-500 border-red-500/20"
