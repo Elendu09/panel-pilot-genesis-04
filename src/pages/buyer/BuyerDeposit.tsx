@@ -293,44 +293,70 @@ const BuyerDeposit = () => {
   }, [buyer?.id]);
 
   // Real-time subscription for transaction updates and balance sync
+  // Subscribe to all transactions and filter client-side (more reliable)
   useEffect(() => {
     if (!buyer?.id) return;
 
-    // Subscribe to updates using user_id (how transactions are stored)
+    // Subscribe to transaction changes - listen to all events and filter by buyer
     const channel = supabase
-      .channel(`buyer-transactions-${buyer.id}`)
+      .channel(`buyer-transactions-realtime-${buyer.id}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'transactions',
-          filter: `user_id=eq.${buyer.id}`
+          table: 'transactions'
         },
         async (payload) => {
-          console.log('Transaction update:', payload);
+          // Check if this transaction belongs to this buyer (user_id or buyer_id)
+          const newRecord = payload.new as any;
+          const oldRecord = payload.old as any;
+          const recordUserId = newRecord?.user_id || oldRecord?.user_id;
+          const recordBuyerId = newRecord?.buyer_id || oldRecord?.buyer_id;
           
-          // Refresh transactions list
-          fetchTransactions();
-          
-          // If a transaction was updated to completed, refresh buyer balance
-          if (payload.eventType === 'UPDATE' && payload.new?.status === 'completed') {
-            refreshBuyer();
-            toast({
-              title: "Balance Updated!",
-              description: `$${payload.new.amount} has been added to your balance.`
-            });
+          // Only process if this transaction belongs to this buyer
+          if (recordUserId !== buyer.id && recordBuyerId !== buyer.id) {
+            return;
           }
           
-          // Also handle INSERT for new transactions
-          if (payload.eventType === 'INSERT') {
-            if (payload.new?.status === 'completed') {
+          console.log('Transaction update for buyer:', payload.eventType, payload);
+          
+          // Always refresh transactions list immediately
+          fetchTransactions();
+          
+          // Handle status changes
+          if (payload.eventType === 'UPDATE') {
+            const previousStatus = oldRecord?.status;
+            const newStatus = newRecord?.status;
+            
+            // Status changed to completed - update balance
+            if (newStatus === 'completed' && previousStatus !== 'completed') {
               refreshBuyer();
+              toast({
+                title: "Payment Successful!",
+                description: `$${Number(newRecord.amount).toFixed(2)} has been added to your balance.`
+              });
             }
+            
+            // Status changed to failed
+            if (newStatus === 'failed' && previousStatus !== 'failed') {
+              toast({
+                variant: "destructive",
+                title: "Payment Failed",
+                description: "Your payment could not be processed."
+              });
+            }
+          }
+          
+          // Handle new transactions with completed status (rare but possible)
+          if (payload.eventType === 'INSERT' && newRecord?.status === 'completed') {
+            refreshBuyer();
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Transaction subscription status:', status);
+      });
 
     return () => {
       supabase.removeChannel(channel);
@@ -473,9 +499,19 @@ const BuyerDeposit = () => {
         throw new Error(result.error || 'Payment processing failed');
       }
 
+      // ALWAYS refresh transactions immediately after initiating - shows pending status
+      fetchTransactions();
+
       if (result.redirectUrl) {
-        // Redirect to payment gateway
-        window.location.href = result.redirectUrl;
+        // Show pending notification before redirect
+        toast({ 
+          title: "Deposit Initiated", 
+          description: "Redirecting to payment gateway..." 
+        });
+        // Small delay to ensure transaction list shows the new pending transaction
+        setTimeout(() => {
+          window.location.href = result.redirectUrl;
+        }, 500);
       } else if (result.requiresManualTransfer || selectedPaymentMethod?.isManual) {
         // Manual payment - show dialog with bank details and instructions
         setManualPaymentDetails({
@@ -486,6 +522,9 @@ const BuyerDeposit = () => {
           title: methodName
         });
         setManualDialogOpen(true);
+        // Clear form
+        setAmount("");
+        setSelectedMethod(null);
       } else {
         // If no redirect (some gateways might complete instantly)
         toast({ 
