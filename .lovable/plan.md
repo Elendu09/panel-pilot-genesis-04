@@ -1,316 +1,329 @@
 
-# Comprehensive Plan: Complete Implementation of All Remaining Fixes
+# Comprehensive Fix Plan: Storefront Bugs, API Keys, Navigation, Loading, and Fast Order
+
+---
 
 ## Overview
 
-This plan completes the previous implementation and addresses 10 additional requirements:
+This plan addresses 12 critical issues reported:
 
-1. Complete API key generation (database migration was approved)
-2. Blog to show in header/navigation (not just menu) across all themes
-3. CTA defaults: Primary = "Get Started", Secondary = "Fast Order"
-4. WhatsApp icon should be white in both light AND dark mode
-5. Footer should detect tenant/company name properly
-6. Create About Us page for each storefront
-7. Document how Panel Settings affect buyer storefront and SEO
-8. Fix dashboard loading - theme colors and panel name sync
-9. Fix 404 page and main site footer "Support" links to go to "/contact" instead of "/support"
-
----
-
-## Issue 1: Complete API Key Generation
-
-The database migration adding `api_key` column to `client_users` was approved. Now we verify the code changes in `BuyerProfile.tsx` are working correctly:
-
-**Status:** Already implemented in previous response with secure key generation:
-- Key format: `sk_[panel_id_8chars]_[uuid]`
-- Unique constraint prevents duplicates
-- Retry logic for collision edge cases
+1. **About Us page redirecting to Auth** - Incorrect route handling
+2. **Footer showing `{companyName}` instead of tenant name** - Variable interpolation not working
+3. **Blog not in storefront header** - Using wrong setting source
+4. **API key generation showing "API Generated" but no key** - Need to read `api_key` from buyer
+5. **Default CTA buttons wrong** - Need "Get Started" + "Fast Order" as defaults
+6. **enableFastOrder toggle changing CTAs** - Need proper routing logic
+7. **Services categorization/arrangement in Fast Order** - Sync with New Order page
+8. **Auto-categorization losing categories** - Not an issue in current code flow
+9. **Theme loading flicker** - Improve localStorage caching
+10. **Navigation for public visitors** - Show public-only header with Services, Blog, FAQ links
+11. **Get Started should be login-aware** - Go to dashboard if logged in, otherwise signup
+12. **WhatsApp icon visibility** - Already fixed to white
 
 ---
 
-## Issue 2: Blog in Header Navigation (All Themes)
+## Issue 1: About Us Page Redirecting to Auth
 
-Currently, blog only appears in the navigation menu IF `showBlogInMenu` is true. The user wants blog to appear in the **header** as a direct link (not hidden in menu).
+### Root Cause
+The `BuyerAbout` page uses `BuyerLayout` which requires authentication. But `/about` should be a PUBLIC route (not protected).
 
-**Root Cause:** The `ThemeNavigation` component (line 78) adds blog to `defaultLinks` which is already in the header:
+### Solution
+The route is already defined as public in `TenantRouter.tsx` (line 359). The issue is that `BuyerAbout.tsx` wraps content in `BuyerLayout` which checks for buyer auth.
+
+**Fix:** Remove `BuyerLayout` wrapper from `BuyerAbout.tsx` and use a standalone layout that doesn't require auth.
+
+### Files to Modify
+| File | Change |
+|------|--------|
+| `src/pages/buyer/BuyerAbout.tsx` | Remove BuyerLayout, use standalone public layout with themed styling |
+
+---
+
+## Issue 2: Footer Showing `{companyName}` Literal Text
+
+### Root Cause
+In `StorefrontFooter.tsx` line 136, the `footerText` prop contains literal string `© 2025 {companyName}. All rights reserved.` from `DesignCustomization.tsx` defaults (line 264).
+
+The `{companyName}` placeholder is NOT being interpolated - it's displayed as-is.
+
+### Solution
+Replace the placeholder `{companyName}` with actual panel name at render time.
+
+**Fix:** In `StorefrontFooter.tsx`, replace `{companyName}` in `footerText` with the actual `panelName` prop.
+
+### Files to Modify
+| File | Change |
+|------|--------|
+| `src/components/storefront/StorefrontFooter.tsx` | Interpolate `{companyName}` placeholder with actual `panelName` |
+| All theme homepages | Ensure `footerText` placeholder is replaced at render |
+
+---
+
+## Issue 3: Blog Not Showing in Storefront Header Navigation
+
+### Root Cause
+User confirmed the blog visibility should come from `panel_settings.blog_enabled`, but the themes only check `customization.showBlogInMenu`.
+
+Looking at `Storefront.tsx` line 174:
 ```tsx
-...(showBlogInMenu ? [{ label: 'Blog', to: '/blog' }] : []),
+showBlogInMenu: customBranding?.showBlogInMenu ?? (panel as any)?.panel_settings?.blog_enabled ?? (panel?.settings as any)?.blog_enabled ?? false,
 ```
 
-This IS the header, not a hidden menu. The issue is `showBlogInMenu` is not being set to `true`.
+This is correct, but `panel_settings` is only fetched if it's in the panels query. Checking `useTenant.tsx` - it does select `panel_settings` with `blog_enabled`.
 
-**Solution:** Ensure all theme homepages pass `showBlogInMenu` prop correctly:
+The issue: The `panel_settings` object is an array `[{...}]`, not a single object. Need to access `[0].blog_enabled`.
 
-**Files to verify/update:**
-- `src/components/buyer-themes/tgref/TGRefHomepage.tsx` - Line 185: `showBlogInMenu={showBlogInMenu}` ✓
-- `src/components/buyer-themes/alipanel/AliPanelHomepage.tsx` - Line 205: `showBlogInMenu={showBlogInMenu}` ✓
-- `src/components/buyer-themes/flysmm/FlySMMHomepage.tsx`
-- `src/components/buyer-themes/smmstay/SMMStayHomepage.tsx`
-- `src/components/buyer-themes/smmvisit/SMMVisitHomepage.tsx`
+### Solution
+Fix the `panel_settings` access in `Storefront.tsx` to handle array format.
 
-**Also check:** The `Storefront.tsx` fullCustomization must correctly set `showBlogInMenu` from panel settings.
-
----
-
-## Issue 3: CTA Defaults - "Get Started" + "Fast Order"
-
-**Current status:** Already updated in previous response:
-- `DesignCustomization.tsx` line 184-185:
-  ```tsx
-  heroCTAText: 'Get Started',
-  heroSecondaryCTAText: 'Fast Order',
-  ```
-
-**Additional updates needed:**
-- Ensure all theme homepages correctly render these CTAs
-- Update `platform-translations.ts` fallbacks
+### Files to Modify
+| File | Change |
+|------|--------|
+| `src/pages/Storefront.tsx` | Fix panel_settings access: `(panel as any)?.panel_settings?.[0]?.blog_enabled` |
 
 ---
 
-## Issue 4: WhatsApp Icon - White in BOTH Light and Dark Mode
+## Issue 4: API Key Generation - Shows "Generated" but No Key Visible
 
-**Current code** in `FloatingChatWidget.tsx` line 123-127:
-```tsx
-const WhatsAppIcon = () => (
-  <svg viewBox="0 0 24 24" className="w-6 h-6 text-white" fill="currentColor">
-    <path d="M17.472..."/>
-  </svg>
-);
+### Root Cause
+In `BuyerProfile.tsx`, after generating the key, it calls `refreshBuyer()`. However, the `BuyerAuthContext` fetch action doesn't return `api_key` from the edge function.
+
+Looking at `buyer-auth/index.ts` line 439:
+```typescript
+const { password_hash, password_temp, ...safeUser } = user;
 ```
 
-This should already be white, but the button container may have styling issues.
+This DOES include `api_key` in safeUser. But the `BuyerUser` interface in `BuyerAuthContext.tsx` doesn't have `api_key`.
 
-**Solution:** Force white fill regardless of mode:
+The `buyer-api/index.ts` edge function validates API keys but that's a different flow.
+
+### Solution
+1. Add `api_key` to `BuyerUser` interface in `BuyerAuthContext.tsx`
+2. Ensure `BuyerProfile.tsx` correctly displays the key after generation
+3. The key is being cast with `(buyer as any)?.api_key` which should work if the data is returned
+
+Check if the issue is that the `api_key` column exists in the database. The migration was approved, so it should be there.
+
+### Files to Modify
+| File | Change |
+|------|--------|
+| `src/contexts/BuyerAuthContext.tsx` | Add `api_key?: string;` to `BuyerUser` interface |
+| `src/pages/buyer/BuyerProfile.tsx` | Clean up type casting, use proper `buyer.api_key` access |
+
+---
+
+## Issue 5 & 6: Default CTA Buttons and enableFastOrder Logic
+
+### Requirements
+- **Default state** (enableFastOrder OFF): Primary = "Get Started", Secondary = "Fast Order"
+- **enableFastOrder ON**: Primary = "Fast Order", Secondary = "View Services"
+- **Get Started** should go to `/dashboard` if logged in, or `/auth?tab=signup` if not
+- **Fast Order** should go to `/fast-order`
+
+### Current Code Analysis
+Looking at `AliPanelHomepage.tsx` lines 275-304:
+- When `enableFastOrder=true`: Shows "Fast Order" + "View Services" buttons
+- When `enableFastOrder=false`: Shows "Get Started" + "View Services" buttons
+
+This is backwards from what user wants:
+- **Default (OFF)**: "Get Started" + "Fast Order" (both as CTAs)
+- **When ON**: "Fast Order" + "View Services" (Fast Order becomes primary)
+
+### Solution
+Update all theme homepages to:
+1. Default (enableFastOrder=false): Show "Get Started" (login-aware) + "Fast Order" buttons
+2. When enableFastOrder=true: Show "Fast Order" + "View Services" buttons (current behavior)
+
+Also make "Get Started" button login-aware.
+
+### Files to Modify
+| File | Change |
+|------|--------|
+| `src/components/buyer-themes/tgref/TGRefHomepage.tsx` | Update CTA logic |
+| `src/components/buyer-themes/alipanel/AliPanelHomepage.tsx` | Update CTA logic |
+| `src/components/buyer-themes/flysmm/FlySMMHomepage.tsx` | Update CTA logic |
+| `src/components/buyer-themes/smmstay/SMMStayHomepage.tsx` | Update CTA logic |
+| `src/components/buyer-themes/smmvisit/SMMVisitHomepage.tsx` | Update CTA logic |
+| `src/pages/panel/DesignCustomization.tsx` | Update default `heroSecondaryCTAText` to "Fast Order" |
+
+---
+
+## Issue 7: Fast Order Service Categorization/Arrangement
+
+### Requirements
+Services in Fast Order page should have the same category structure and order as the New Order page.
+
+### Current Implementation
+Both pages use `useUnifiedServices` hook which provides consistent data. The categorization in `FastOrderSection.tsx` uses `detectServiceType` from `lib/service-icon-detection.ts`.
+
+The category ordering in Fast Order (lines 318-336 of FastOrder.tsx) is already consistent with BuyerNewOrder. No changes needed unless specific ordering issues are identified.
+
+### Files to Check (Read-only)
+- Fast Order page already uses unified services
+- No changes needed
+
+---
+
+## Issue 8: Theme Loading Flicker (Panel Name Shows "panel")
+
+### Root Cause
+When tenant pages load, the initial render shows "Panel" before the actual panel name loads. This is because:
+1. `useTenant` hook fetches data asynchronously
+2. The fallback `panel?.name || 'Panel'` shows during loading
+
+### Solution
+Already partially addressed with:
+1. localStorage caching in `useTenant.tsx`
+2. Skeleton loaders in `TenantRouter.tsx`
+
+Improve by:
+1. Cache panel name in localStorage separately for instant title render
+2. Use themed skeleton that matches panel colors
+
+### Files to Modify
+| File | Change |
+|------|--------|
+| `src/hooks/useTenant.tsx` | Cache panel name immediately to localStorage on fetch |
+| `src/pages/buyer/BuyerLayout.tsx` | Read cached panel name on initial render |
+
+---
+
+## Issue 9: Public Navigation for Visitors
+
+### Requirements
+For non-logged-in visitors, show:
+- Services link
+- Blog link (if enabled)
+- FAQ link (scroll anchor)
+- Get Started button (login-aware)
+- Fast Order button
+
+Currently, `ThemeNavigation.tsx` shows "Login" and "Sign Up" buttons for non-authenticated users.
+
+### Solution
+Update navigation to show public-friendly links for visitors:
+1. Keep Services/Support links
+2. Add Blog link when `showBlogInMenu=true`
+3. Change "Login" to "Get Started" (login-aware)
+4. Keep "Sign Up"/"Register" button
+
+### Files to Modify
+| File | Change |
+|------|--------|
+| `src/components/buyer-themes/shared/ThemeNavigation.tsx` | Update non-auth button labels and routes |
+
+---
+
+## Technical Implementation Details
+
+### CTA Button Logic Update (All Themes)
 ```tsx
-const WhatsAppIcon = () => (
-  <svg viewBox="0 0 24 24" className="w-6 h-6" fill="#FFFFFF">
-    <path d="M17.472..."/>
-  </svg>
-);
+// Default (enableFastOrder = false) - Show both CTA options
+{!enableFastOrder ? (
+  <>
+    <Button 
+      size="lg" 
+      onClick={() => {
+        // Login-aware: go to dashboard if logged in, signup if not
+        if (buyer) {
+          navigate('/dashboard');
+        } else {
+          navigate('/auth?tab=signup');
+        }
+      }}
+      className="..." 
+      style={primaryButtonStyle}
+    >
+      {heroCTA || 'Get Started'} <ArrowRight className="w-5 h-5 ml-2" />
+    </Button>
+    <Button size="lg" variant="outline" asChild className="..." style={outlineButtonStyle}>
+      <Link to="/fast-order">
+        <Zap className="w-5 h-5 mr-2" />
+        {t('buyer.fastOrder.title') || 'Fast Order'}
+      </Link>
+    </Button>
+  </>
+) : (
+  // enableFastOrder = true - Fast Order becomes primary
+  <>
+    <Button 
+      size="lg" 
+      onClick={() => navigate('/fast-order')}
+      className="..." 
+      style={primaryButtonStyle}
+    >
+      <Zap className="w-5 h-5 mr-2" />
+      {t('buyer.fastOrder.title') || 'Fast Order'}
+    </Button>
+    <Button size="lg" variant="outline" asChild className="..." style={outlineButtonStyle}>
+      <Link to="/services">{t('buyer.services.viewAll') || 'View Services'}</Link>
+    </Button>
+  </>
+)}
+```
+
+### Footer Text Interpolation
+```tsx
+// In StorefrontFooter.tsx
+const interpolatedFooterText = footerText
+  ? footerText.replace(/\{companyName\}/g, panelName || 'SMM Panel')
+  : `© ${currentYear} ${panelName || 'SMM Panel'}. All rights reserved.`;
+```
+
+### Blog Visibility Fix in Storefront.tsx
+```tsx
+// Fix panel_settings access (it's an array)
+const panelSettingsData = Array.isArray((panel as any)?.panel_settings) 
+  ? (panel as any)?.panel_settings[0] 
+  : (panel as any)?.panel_settings;
+
+showBlogInMenu: customBranding?.showBlogInMenu ?? panelSettingsData?.blog_enabled ?? (panel?.settings as any)?.blog_enabled ?? false,
 ```
 
 ---
 
-## Issue 5: Footer - Detect Tenant/Company Name
-
-**Problem:** `StorefrontFooter.tsx` receives `panelName` as a prop but may not be getting the correct value from parent components.
-
-**Current prop interface** (line 15-20):
-```tsx
-interface StorefrontFooterProps {
-  panelName: string;
-  footerAbout?: string;
-  footerText?: string;
-  socialPlatforms?: SocialPlatform[];
-  primaryColor?: string;
-  variant?: 'dark' | 'light';
-}
-```
-
-**Solution:** Verify all theme homepages pass `panelName` correctly:
-- Each theme homepage receives `panelName` prop and should pass it to `StorefrontFooter`
-- Add fallback: `panelName || companyName || 'SMM Panel'`
-
----
-
-## Issue 6: Create About Us Page for Storefronts
-
-**Create new file:** `src/pages/buyer/BuyerAbout.tsx`
-
-This page should:
-- Display tenant company info dynamically
-- Show panel name, description, and branding
-- Include contact information from panel settings
-- Have professional layout matching storefront theme
-
-**Also update:**
-- `src/components/storefront/StorefrontFooter.tsx` - Change "About Us" link to `/about` instead of `/support`
-- Add route in `TenantRouter.tsx` for `/about`
-
----
-
-## Issue 7: Document Panel Settings Effects on Storefront & SEO
-
-Create documentation section explaining:
-
-### Panel Settings → Storefront Effects
-
-| Setting | Location | Storefront Effect |
-|---------|----------|-------------------|
-| Panel Name | General Settings | Displayed in header, footer, SEO title |
-| Logo URL | General Settings | Header logo, favicon |
-| Description | General Settings | SEO meta description, About section |
-| Primary Color | Design Customization | Theme colors throughout storefront |
-| Theme Type | Design Customization | Entire visual layout/style |
-| Hero Title/Subtitle | Design Customization | Homepage hero section |
-| Sections Toggle | Design Customization | Show/hide Stats, Features, Testimonials, FAQs |
-| SEO Title | SEO Settings | Browser tab, Google search title |
-| SEO Description | SEO Settings | Google search snippet |
-| SEO Keywords | SEO Settings | Meta keywords (limited SEO impact) |
-| OG Image | SEO Settings | Social media sharing preview |
-| Blog Enabled | Blog Management | Shows/hides blog in navigation |
-| Social Links | Integrations | Footer social icons |
-| WhatsApp/Telegram | Integrations | Floating chat widget |
-
-### SEO Improvements via Panel Settings:
-1. **SEO Title** - Target keyword at beginning, under 60 chars
-2. **SEO Description** - Compelling call-to-action, 150-160 chars
-3. **OG Image** - Eye-catching image for social shares
-4. **Structured Data** - FAQs automatically generate FAQPage schema
-5. **Blog** - Regular content improves organic traffic
-
----
-
-## Issue 8: Dashboard Loading - Theme Colors & Panel Name Sync
-
-**Problem:** Theme colors take time to load, causing flash of default styles. Panel name appears as "panel" before actual name loads.
-
-**Root Cause:** 
-- `BuyerLayout.tsx` fetches panel data asynchronously
-- CSS variables are set after data loads
-- No skeleton/placeholder for branding during load
-
-**Solutions:**
-
-### A. Add loading state with skeleton UI
-```tsx
-if (panelLoading) {
-  return (
-    <div className="min-h-screen bg-background">
-      <header className="h-16 border-b animate-pulse bg-muted/30">
-        <Skeleton className="w-32 h-8" /> {/* Logo placeholder */}
-      </header>
-      <main className="p-6">
-        <Skeleton className="w-full h-48" />
-      </main>
-    </div>
-  );
-}
-```
-
-### B. Cache theme colors in localStorage
-```tsx
-// On panel load
-localStorage.setItem(`panel_theme_${panelId}`, JSON.stringify(themeColors));
-
-// On initial render, use cached values
-const cachedTheme = localStorage.getItem(`panel_theme_${panelId}`);
-if (cachedTheme) {
-  applyThemeColors(JSON.parse(cachedTheme));
-}
-```
-
-### C. Pre-apply CSS variables in TenantHead
-The `TenantHead` component already sets CSS variables. Ensure it runs early and caches values.
-
----
-
-## Issue 9: Fix 404 Page and Main Footer - Support → Contact
-
-**404 Page** (`src/pages/NotFound.tsx`):
-- Line 163-168: Change `<Link to="/support">` to `<Link to="/contact">`
-
-**Main Footer** (`src/components/layout/Footer.tsx`):
-- Line 134-137: Change `/support` to `/contact` in Resources section
-
----
-
-## Files to Create/Modify Summary
+## Files to Modify Summary
 
 | File | Changes |
 |------|---------|
-| `src/components/storefront/FloatingChatWidget.tsx` | Force WhatsApp icon fill to `#FFFFFF` |
-| `src/components/storefront/StorefrontFooter.tsx` | Change About Us link to `/about`, ensure panelName fallback |
-| `src/pages/NotFound.tsx` | Change "Get Support" link to `/contact` |
-| `src/components/layout/Footer.tsx` | Change Support link to `/contact` |
-| `src/pages/buyer/BuyerAbout.tsx` | **NEW** - About Us page for storefronts |
-| `src/App.tsx` or `TenantRouter.tsx` | Add route for `/about` |
-| `src/components/buyer-themes/flysmm/FlySMMHomepage.tsx` | Ensure showBlogInMenu passed to nav |
-| `src/components/buyer-themes/smmstay/SMMStayHomepage.tsx` | Ensure showBlogInMenu passed to nav |
-| `src/components/buyer-themes/smmvisit/SMMVisitHomepage.tsx` | Ensure showBlogInMenu passed to nav |
-| `src/pages/buyer/BuyerLayout.tsx` | Add loading skeleton, theme caching |
-| `src/pages/buyer/BuyerDashboard.tsx` | Add loading state improvements |
+| `src/pages/buyer/BuyerAbout.tsx` | Make public (remove auth requirement), add own navigation/footer |
+| `src/components/storefront/StorefrontFooter.tsx` | Interpolate `{companyName}` placeholder with actual panelName |
+| `src/pages/Storefront.tsx` | Fix `panel_settings` array access for `blog_enabled` |
+| `src/contexts/BuyerAuthContext.tsx` | Add `api_key?: string` to BuyerUser interface |
+| `src/pages/buyer/BuyerProfile.tsx` | Clean up api_key access, ensure key displays after generation |
+| `src/components/buyer-themes/tgref/TGRefHomepage.tsx` | Update CTA logic, add buyer context check |
+| `src/components/buyer-themes/alipanel/AliPanelHomepage.tsx` | Update CTA logic, add buyer context check |
+| `src/components/buyer-themes/flysmm/FlySMMHomepage.tsx` | Update CTA logic, add buyer context check |
+| `src/components/buyer-themes/smmstay/SMMStayHomepage.tsx` | Update CTA logic, add buyer context check |
+| `src/components/buyer-themes/smmvisit/SMMVisitHomepage.tsx` | Update CTA logic, add buyer context check |
+| `src/pages/panel/DesignCustomization.tsx` | Update heroSecondaryCTAText default to "Fast Order" |
+| `src/hooks/useTenant.tsx` | Cache panel name for faster initial render |
+| `src/components/buyer-themes/shared/ThemeNavigation.tsx` | Update Get Started route to be login-aware |
 
 ---
 
 ## Implementation Order
 
-1. **WhatsApp icon fix** - Simple SVG fill change
-2. **404 and Footer links** - Change /support to /contact
-3. **StorefrontFooter** - Fix About Us link and panelName fallback
-4. **Create BuyerAbout.tsx** - New About Us page
-5. **Add /about route** - In TenantRouter
-6. **Verify all themes pass showBlogInMenu**
-7. **Dashboard loading improvements** - Skeleton and caching
-
----
-
-## BuyerAbout.tsx Component Structure
-
-```tsx
-// New About Us page for tenant storefronts
-const BuyerAbout = () => {
-  const { panel, loading } = useTenant();
-  const { t } = useLanguage();
-  
-  const companyName = panel?.name || 'Our Company';
-  const description = panel?.description || 'Professional SMM services';
-  const customBranding = panel?.custom_branding || {};
-  
-  return (
-    <BuyerLayout>
-      <div className="min-h-screen">
-        {/* Hero */}
-        <section className="py-20 bg-gradient-to-b from-primary/10 to-background">
-          <div className="container max-w-4xl mx-auto text-center">
-            <h1 className="text-4xl font-bold mb-4">About {companyName}</h1>
-            <p className="text-lg text-muted-foreground">{description}</p>
-          </div>
-        </section>
-        
-        {/* Mission/Values */}
-        <section className="py-16">
-          <div className="container max-w-4xl mx-auto">
-            <h2>Our Mission</h2>
-            <p>To provide the best social media marketing services...</p>
-            
-            <h2>Why Choose Us</h2>
-            <ul>
-              <li>Instant delivery</li>
-              <li>24/7 support</li>
-              <li>Competitive prices</li>
-              <li>High quality services</li>
-            </ul>
-          </div>
-        </section>
-        
-        {/* Contact CTA */}
-        <section className="py-16 bg-muted/20">
-          <div className="text-center">
-            <h2>Get In Touch</h2>
-            <Button asChild>
-              <Link to="/support">Contact Us</Link>
-            </Button>
-          </div>
-        </section>
-      </div>
-    </BuyerLayout>
-  );
-};
-```
+1. **Fix About page auth** - Make it public
+2. **Fix footer {companyName} interpolation**
+3. **Fix blog visibility** - Access panel_settings correctly
+4. **Fix API key display** - Add to BuyerUser interface
+5. **Update CTA buttons** - All 5 themes + defaults
+6. **Improve loading** - Cache panel name
+7. **Update navigation** - Login-aware Get Started button
 
 ---
 
 ## Testing Checklist
 
 After implementation:
-- [ ] WhatsApp chat icon is white in both light and dark mode
-- [ ] 404 page "Get Support" button goes to /contact
-- [ ] Main site footer "Support" link goes to /contact
-- [ ] Storefront footer "About Us" goes to /about page
-- [ ] About Us page displays tenant name and description
-- [ ] Blog link appears in header navigation when enabled
-- [ ] Dashboard shows skeleton during loading
-- [ ] Theme colors load without visible flash
-- [ ] Panel name displays correctly (not "panel" placeholder)
-- [ ] CTA buttons show "Get Started" and "Fast Order" by default
+- [ ] Navigate to /about on tenant - should NOT redirect to auth
+- [ ] Footer shows actual panel name (not {companyName})
+- [ ] Enable Blog in panel settings - Blog appears in header navigation
+- [ ] Generate API key in profile - key is visible and copyable
+- [ ] Default storefront shows "Get Started" + "Fast Order" buttons
+- [ ] Click Get Started while logged in - goes to dashboard
+- [ ] Click Get Started while logged out - goes to signup
+- [ ] Enable Fast Order toggle - buttons change to "Fast Order" + "View Services"
+- [ ] Theme loads without showing "panel" placeholder
+- [ ] All themes display correctly with proper colors
