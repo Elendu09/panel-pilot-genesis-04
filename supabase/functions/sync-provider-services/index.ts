@@ -338,20 +338,49 @@ serve(async (req) => {
       };
 
       try {
-        // Fetch services from provider API
-        const url = new URL(provider.api_endpoint);
+        // Validate and build provider API URL
+        let url: URL;
+        try {
+          url = new URL(provider.api_endpoint);
+        } catch (urlError) {
+          result.errors.push(`Invalid API endpoint URL: ${provider.api_endpoint}`);
+          results.push(result);
+          continue;
+        }
         url.searchParams.set('key', provider.api_key);
         url.searchParams.set('action', 'services');
 
         console.log(`Fetching services from ${provider.name}...`);
 
-        const response = await fetch(url.toString(), {
-          method: 'GET',
-          headers: { 'User-Agent': 'SMM-Panel/2.0' },
-        });
+        // Add timeout with AbortController (30 seconds)
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 30000);
+
+        let response: Response;
+        try {
+          response = await fetch(url.toString(), {
+            method: 'GET',
+            headers: { 
+              'User-Agent': 'SMM-Panel/2.0',
+              'Accept': 'application/json'
+            },
+            signal: controller.signal
+          });
+          clearTimeout(timeout);
+        } catch (fetchError: any) {
+          clearTimeout(timeout);
+          if (fetchError.name === 'AbortError') {
+            result.errors.push(`Provider API timed out after 30 seconds`);
+          } else {
+            result.errors.push(`Network error: ${fetchError.message || 'Failed to connect to provider'}`);
+          }
+          results.push(result);
+          continue;
+        }
 
         if (!response.ok) {
-          result.errors.push(`API returned ${response.status}`);
+          const errorText = await response.text().catch(() => 'Unknown error');
+          result.errors.push(`API returned ${response.status}: ${errorText.slice(0, 200)}`);
           results.push(result);
           continue;
         }

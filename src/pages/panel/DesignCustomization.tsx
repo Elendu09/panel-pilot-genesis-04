@@ -1691,18 +1691,27 @@ export default function DesignCustomization() {
                     {customization.themeMode === 'light' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
                     <span className="font-medium">Theme Mode</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">
-                      {customization.themeMode === 'light' ? 'Light' : 'Dark'}
-                    </span>
-                    <Switch 
-                      checked={customization.themeMode === 'light'} 
-                      onCheckedChange={(checked) => {
-                        updateCustomization('themeMode', checked ? 'light' : 'dark');
-                        setPreviewThemeMode(checked ? 'light' : 'dark');
-                      }} 
-                    />
-                  </div>
+                  {/* Hide dark mode switch for SMMVisit theme (light mode only) */}
+                  {customization.selectedTheme !== 'smmvisit' && 
+                   customization.selectedTheme !== 'theme_smmvisit' && 
+                   customization.selectedTheme !== 'BuyerThemeSMMVisit' ? (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">
+                        {customization.themeMode === 'light' ? 'Light' : 'Dark'}
+                      </span>
+                      <Switch 
+                        checked={customization.themeMode === 'light'} 
+                        onCheckedChange={(checked) => {
+                          updateCustomization('themeMode', checked ? 'light' : 'dark');
+                          setPreviewThemeMode(checked ? 'light' : 'dark');
+                        }} 
+                      />
+                    </div>
+                  ) : (
+                    <Badge variant="outline" className="text-amber-500 border-amber-500/50">
+                      <Sun className="w-3 h-3 mr-1" /> Light Mode Only
+                    </Badge>
+                  )}
                 </div>
               );
             })()}

@@ -311,24 +311,54 @@ serve(async (req) => {
 
     console.log(`Fetching services from provider: ${apiEndpoint}`);
 
-    // Build the request URL with proper query params
-    const url = new URL(apiEndpoint);
+    // Validate and build the request URL with proper query params
+    let url: URL;
+    try {
+      url = new URL(apiEndpoint);
+    } catch (urlError) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid API endpoint URL format', details: apiEndpoint }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     url.searchParams.set('key', apiKey);
     url.searchParams.set('action', action);
 
-    const response = await fetch(url.toString(), {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'User-Agent': 'SMM-Panel/2.0',
-      },
-    });
+    // Add timeout with AbortController (30 seconds)
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
+
+    let response: Response;
+    try {
+      response = await fetch(url.toString(), {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'SMM-Panel/2.0',
+          'Accept': 'application/json',
+        },
+        signal: controller.signal
+      });
+      clearTimeout(timeout);
+    } catch (fetchError: any) {
+      clearTimeout(timeout);
+      if (fetchError.name === 'AbortError') {
+        return new Response(
+          JSON.stringify({ error: 'Provider API timed out after 30 seconds' }),
+          { status: 504, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      return new Response(
+        JSON.stringify({ error: 'Network error connecting to provider', details: fetchError.message }),
+        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     if (!response.ok) {
-      const errorText = await response.text();
+      const errorText = await response.text().catch(() => 'Unknown error');
       console.error('Provider API error:', response.status, errorText);
       return new Response(
-        JSON.stringify({ error: `Provider API error: ${response.status}`, details: errorText }),
+        JSON.stringify({ error: `Provider API error: ${response.status}`, details: errorText.slice(0, 500) }),
         { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

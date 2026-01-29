@@ -85,7 +85,7 @@ const PaymentMethods = () => {
   const { toast } = useToast();
   const { panel, refreshPanel } = usePanel();
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeCategory, setActiveCategory] = useState<keyof typeof paymentGateways>("cards");
+  const [activeCategory, setActiveCategory] = useState<"all" | keyof typeof paymentGateways>("all");
   const [configuredGateways, setConfiguredGateways] = useState<Record<string, { enabled: boolean; apiKey: string; secretKey: string }>>({});
   const [configDialogOpen, setConfigDialogOpen] = useState(false);
   const [selectedGateway, setSelectedGateway] = useState<typeof paymentGateways.cards[0] | null>(null);
@@ -249,7 +249,15 @@ const PaymentMethods = () => {
   
   // Removed: One-click platform gateways - panel owners must configure their own API keys
 
-  const filteredGateways = paymentGateways[activeCategory]
+  // Get all gateways for "all" category or specific category
+  const getGatewaysForCategory = () => {
+    if (activeCategory === "all") {
+      return Object.values(paymentGateways).flat();
+    }
+    return paymentGateways[activeCategory];
+  };
+
+  const filteredGateways = getGatewaysForCategory()
     .filter(g => {
       // If platform providers are available, hide anything not enabled by admin.
       if (!platformProvidersLoaded) return true;

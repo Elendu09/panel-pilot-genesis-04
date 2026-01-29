@@ -114,7 +114,7 @@ const Analytics = () => {
     avgDiscount: 0,
     totalBalance: 0,
   });
-  const [liveOrdersWithService, setLiveOrdersWithService] = useState<any[]>([]);
+  // Removed: liveOrdersWithService state - orders managed in Orders Management page
   const [serviceStats, setServiceStats] = useState({
     totalActive: 0,
     totalInactive: 0,
@@ -200,19 +200,7 @@ const Analytics = () => {
         .select('*, client_users(full_name, email)')
         .eq('panel_id', panel.id);
 
-      // Fetch recent live orders with service names
-      const { data: liveOrders } = await supabase
-        .from('orders')
-        .select('*, services(name, category)')
-        .eq('panel_id', panel.id)
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      setLiveOrdersWithService(liveOrders?.map(o => ({
-        ...o,
-        serviceName: (o.services as any)?.name || 'Unknown Service',
-        serviceCategory: (o.services as any)?.category || 'other'
-      })) || []);
+      // Removed: Live orders fetch - orders managed in Orders Management page
 
       // Calculate transaction stats
       const completedTxns = transactions?.filter(t => t.status === 'completed') || [];
@@ -1091,66 +1079,7 @@ const Analytics = () => {
           </Card>
         </TabsContent>
 
-        {/* Live Orders Tab */}
-        <TabsContent value="orders" className="space-y-6">
-          <Card className="glass-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Package className="w-5 h-5 text-primary" />
-                Recent Orders with Service Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {liveOrdersWithService.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Package className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                    <p>No orders yet</p>
-                  </div>
-                ) : (
-                  liveOrdersWithService.map((order) => (
-                    <div key={order.id} className="p-4 rounded-xl bg-muted/30 border border-border/50">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-3">
-                          <div className={`p-2 rounded-lg ${
-                            order.status === 'completed' ? 'bg-green-500/20' :
-                            order.status === 'in_progress' ? 'bg-blue-500/20' :
-                            order.status === 'pending' ? 'bg-yellow-500/20' : 'bg-red-500/20'
-                          }`}>
-                            <Package className={`w-4 h-4 ${
-                              order.status === 'completed' ? 'text-green-500' :
-                              order.status === 'in_progress' ? 'text-blue-500' :
-                              order.status === 'pending' ? 'text-yellow-500' : 'text-red-500'
-                            }`} />
-                          </div>
-                          <div>
-                            <p className="font-semibold">{order.order_number}</p>
-                            <p className="text-sm text-muted-foreground">{order.serviceName}</p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-bold">${Number(order.price).toFixed(2)}</p>
-                          <Badge variant="outline" className={
-                            order.status === 'completed' ? 'bg-green-500/10 text-green-500' :
-                            order.status === 'in_progress' ? 'bg-blue-500/10 text-blue-500' :
-                            order.status === 'pending' ? 'bg-yellow-500/10 text-yellow-500' : 'bg-red-500/10 text-red-500'
-                          }>
-                            {order.status?.replace('_', ' ')}
-                          </Badge>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between text-xs text-muted-foreground mt-2 pt-2 border-t border-border/30">
-                        <span>Qty: {order.quantity}</span>
-                        <span className="truncate max-w-[200px]">{order.target_url}</span>
-                        <span>{new Date(order.created_at).toLocaleString()}</span>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+        {/* Live Orders Tab removed - orders managed in Orders Management page */}
 
       </Tabs>
     </div>

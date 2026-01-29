@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -18,7 +19,8 @@ import {
   CreditCard,
   Filter,
   RefreshCw,
-  Copy
+  Copy,
+  Search
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -47,6 +49,7 @@ export const UnifiedTransactionManager = ({ panelId }: UnifiedTransactionManager
   const [refreshing, setRefreshing] = useState(false);
   const [processing, setProcessing] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'pending' | 'all'>('pending');
+  const [searchQuery, setSearchQuery] = useState("");
   const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; tx: Transaction | null; action: 'approve' | 'reject' }>({
     open: false,
     tx: null,
@@ -213,7 +216,22 @@ export const UnifiedTransactionManager = ({ panelId }: UnifiedTransactionManager
   };
 
   const pendingTransactions = transactions.filter(tx => tx.status === 'pending');
-  const displayTransactions = activeTab === 'pending' ? pendingTransactions : transactions;
+  
+  // Filter transactions based on search query
+  const filteredTransactions = transactions.filter(tx => {
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      tx.id.toLowerCase().includes(query) ||
+      tx.buyer_name?.toLowerCase().includes(query) ||
+      tx.buyer_email?.toLowerCase().includes(query) ||
+      tx.amount.toString().includes(query) ||
+      tx.payment_method?.toLowerCase().includes(query)
+    );
+  });
+
+  const filteredPending = filteredTransactions.filter(tx => tx.status === 'pending');
+  const displayTransactions = activeTab === 'pending' ? filteredPending : filteredTransactions;
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -288,15 +306,26 @@ export const UnifiedTransactionManager = ({ panelId }: UnifiedTransactionManager
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+            <Input 
+              placeholder="Search by user, amount, or reference..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'pending' | 'all')}>
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="pending" className="gap-2">
                 <Clock className="w-4 h-4" />
-                Pending ({pendingTransactions.length})
+                Pending ({filteredPending.length})
               </TabsTrigger>
               <TabsTrigger value="all" className="gap-2">
                 <Filter className="w-4 h-4" />
-                All Deposits ({transactions.length})
+                All Deposits ({filteredTransactions.length})
               </TabsTrigger>
             </TabsList>
 
