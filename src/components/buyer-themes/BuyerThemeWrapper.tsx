@@ -191,7 +191,7 @@ export const BuyerThemeWrapper = ({
       heroSubtitle: branding.heroSubtitle || '',
       heroBadgeText: branding.heroBadgeText || '',
       heroCTAText: branding.heroCTAText || 'Get Started',
-      heroSecondaryCTAText: branding.heroSecondaryCTAText || 'View Services',
+      heroSecondaryCTAText: branding.heroSecondaryCTAText || 'Fast Order',
       featureCards: branding.featureCards || [],
       testimonials: branding.testimonials || [],
       faqs: branding.faqs || [],

@@ -764,6 +764,7 @@ export type Database = {
       }
       client_users: {
         Row: {
+          api_key: string | null
           avatar_url: string | null
           balance: number | null
           ban_reason: string | null
@@ -797,6 +798,7 @@ export type Database = {
           vip_since: string | null
         }
         Insert: {
+          api_key?: string | null
           avatar_url?: string | null
           balance?: number | null
           ban_reason?: string | null
@@ -830,6 +832,7 @@ export type Database = {
           vip_since?: string | null
         }
         Update: {
+          api_key?: string | null
           avatar_url?: string | null
           balance?: number | null
           ban_reason?: string | null
