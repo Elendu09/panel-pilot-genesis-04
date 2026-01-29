@@ -27,6 +27,7 @@ interface BuyerUser {
   oauth_provider: string | null;
   oauth_provider_id: string | null;
   avatar_url: string | null;
+  api_key: string | null;
 }
 
 interface BuyerSession {

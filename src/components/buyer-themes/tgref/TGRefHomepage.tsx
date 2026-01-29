@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useContext } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Terminal, Zap, Shield, Users, Star, ArrowRight, CheckCircle, Globe, Cpu, Play,
@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link, useNavigate } from 'react-router-dom';
+import { BuyerAuthContext } from '@/contexts/BuyerAuthContext';
 import { Helmet } from 'react-helmet-async';
 import { ThemeCustomization } from '@/types/theme-customization';
 import { 
@@ -41,6 +42,10 @@ export const TGRefHomepage = ({
 }: TGRefHomepageProps) => {
   const navigate = useNavigate();
   const { t } = useLanguage();
+  
+  // Check if buyer is logged in for login-aware CTA
+  const buyerAuthContext = useContext(BuyerAuthContext);
+  const buyer = buyerAuthContext?.buyer || null;
   
   // Theme mode - reactive to customization prop (no local state)
   const themeMode = customization.themeMode || 'dark';
@@ -248,9 +253,10 @@ export const TGRefHomepage = ({
                 <span style={{ color: secondary }}>$</span> {heroSubtitle}
               </p>
 
-              {/* Dynamic CTA based on enableFastOrder */}
+              {/* Dynamic CTA based on enableFastOrder - Default: Get Started + Fast Order */}
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                 {enableFastOrder ? (
+                  // When enableFastOrder is ON: Fast Order primary + View Services secondary
                   <>
                     <Button 
                       size="lg" 
@@ -269,18 +275,26 @@ export const TGRefHomepage = ({
                     </Button>
                   </>
                 ) : (
+                  // Default (enableFastOrder OFF): Get Started (login-aware) + Fast Order
                   <>
-                    <Button size="lg" asChild className="font-bold font-mono text-lg px-8 hover:opacity-90" style={primaryButtonStyle}>
-                      <Link to="/services" className="flex items-center gap-2">
-                        <Play className="w-5 h-5" />
-                        ./start --now
-                      </Link>
+                    <Button 
+                      size="lg" 
+                      onClick={() => buyer ? navigate('/dashboard') : navigate('/auth?tab=signup')}
+                      className="font-bold font-mono text-lg px-8 hover:opacity-90" 
+                      style={primaryButtonStyle}
+                    >
+                      <Play className="w-5 h-5 mr-2" />
+                      {buyer ? './dashboard' : './get-started'}
                     </Button>
-                    <Button size="lg" variant="outline" asChild className="font-mono" style={{ borderColor: `${accent}80`, color: accent }}>
-                      <Link to="/auth" className="flex items-center gap-2">
-                        <Terminal className="w-5 h-5" />
-                        ./create-account
-                      </Link>
+                    <Button 
+                      size="lg" 
+                      variant="outline" 
+                      onClick={() => navigate('/fast-order')}
+                      className="font-mono" 
+                      style={{ borderColor: `${accent}80`, color: accent }}
+                    >
+                      <Zap className="w-5 h-5 mr-2" />
+                      ./fast-order
                     </Button>
                   </>
                 )}

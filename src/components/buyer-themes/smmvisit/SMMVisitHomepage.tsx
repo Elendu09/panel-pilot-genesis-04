@@ -270,8 +270,9 @@ export const SMMVisitHomepage = ({
               </h1>
               <p className="text-lg mb-8 max-w-2xl mx-auto" style={{ color: mutedColor }}>{heroSubtitle}</p>
               
-              {/* CTA Buttons */}
+              {/* CTA Buttons - Default: Get Started + Fast Order */}
               {enableFastOrder ? (
+                // When enableFastOrder is ON: Fast Order primary + View Services secondary
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                   <Button 
                     size="lg" 
@@ -287,9 +288,27 @@ export const SMMVisitHomepage = ({
                   </Button>
                 </div>
               ) : (
-                <Button size="lg" asChild className="font-semibold text-lg px-10 text-white shadow-xl hover:opacity-90" style={primaryButtonStyle}>
-                  <Link to="/services">{heroCTA} <ArrowRight className="w-5 h-5 ml-2" /></Link>
-                </Button>
+                // Default (enableFastOrder OFF): Get Started (login-aware) + Fast Order
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                  <Button 
+                    size="lg" 
+                    onClick={() => buyer ? navigate('/dashboard') : navigate('/auth?tab=signup')}
+                    className="font-semibold text-lg px-10 text-white shadow-xl hover:opacity-90" 
+                    style={primaryButtonStyle}
+                  >
+                    {buyer ? (t('buyer.nav.dashboard') || 'Dashboard') : (heroCTA || 'Get Started')} <ArrowRight className="w-5 h-5 ml-2" />
+                  </Button>
+                  <Button 
+                    size="lg" 
+                    variant="outline" 
+                    onClick={() => navigate('/fast-order')}
+                    className="font-semibold" 
+                    style={{ borderColor: primary, color: textCol }}
+                  >
+                    <Zap className="w-5 h-5 mr-2" />
+                    {t('buyer.fastOrder.title') || 'Fast Order'}
+                  </Button>
+                </div>
               )}
             </motion.div>
           </div>
