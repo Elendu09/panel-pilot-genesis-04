@@ -1,353 +1,260 @@
 
-# Comprehensive Fix Plan: Routing, Deposits, Payment Management, Translations & More
+## Goals (what will be fixed)
+1. Rewrite the tenant “About Us” page to a simple, consistent page (header + footer + short content) like other tenant pages.
+2. Restructure **Payment Management** into a clean **2-tab** page that clearly separates:
+   - **Buyer/Tenant Payment Methods** (what your buyers use)
+   - **Panel Owner Billing & Deposits** (what you as panel owner use for subscription/deposits + approvals/analytics)
+3. Remove “Live Orders” tab from Analytics (you requested it removed).
+4. Enhance Customer Management visuals (clearer UI, better actions visibility, fewer “busy” sections).
+5. Make Design Customization preview/background clearly change on Light mode (white/light background, not dark-looking).
+6. Fix tenant API 404 on `/api/v2` (root cause: wrong base URL path) and ensure the API key works with the correct endpoint.
+7. Fix remaining TGRef + SMMVisit translation key leaks (e.g. `buyer.cta.execute`, `buyer.testimonials.userReviews`, `buyer.home.scrollMore`, etc.) across all 10 languages.
 
 ---
 
-## Overview
+## 1) Rewrite tenant “About Us” (simple page)
+### Problem
+Tenant About page currently is a large, “feature-heavy” page (BuyerAbout.tsx) and doesn’t match your “simple page with header/footer” request.
 
-This plan addresses all the remaining issues from the previous implementation:
+### Approach
+- Replace the content structure in `src/pages/buyer/BuyerAbout.tsx` with:
+  - A simple hero (title + 2-3 line description)
+  - 3 small “why us” bullets (optional)
+  - A short “Contact us” CTA button
+  - Use tenant styling via `BuyerLayout` (so it automatically has consistent sidebar/header/footer behavior for tenant).
+- Keep SEO title/description via `Helmet`.
+- Keep using `panel.custom_branding.footerAbout/description` if present, but don’t force large sections.
 
-1. **About Us Routing** - Footer links incorrectly redirect to `/support` instead of `/about`
-2. **Manual Deposit Not Showing in Recent Deposits** - Transaction creation flow issue
-3. **Payment Management Page Enhancements** - Unified view and analytics
-4. **TGRef + SMMVisit Language Errors** - Footer labels showing translation keys
-5. **Customer Overview Toggle** - Verify Supabase persistence (already implemented)
-6. **Payment System Separation** - Verify admin vs panel-owner gateways (already implemented)
-7. **Customer Balance Updates** - Verify panel_id/buyer_id in transactions (already implemented)
+### Files
+- Edit: `src/pages/buyer/BuyerAbout.tsx`
 
----
-
-## Issue 1: About Us Routing - Footer Links Redirect to /support Instead of /about
-
-**Root Cause:**
-All buyer theme footers (TGRef, SMMVisit, AliPanel, FlySMM, SMMStay) have their "About Us" link pointing to `/support` instead of `/about`.
-
-**Current Code (5 theme files):**
-```tsx
-<li><Link to="/support">{t('buyer.footer.aboutUs') || 'About Us'}</Link></li>
-<li><Link to="/support">{t('buyer.footer.contact') || 'Contact'}</Link></li>
-```
-
-**Fix:**
-Update footer links to use correct routes:
-- "About Us" → `/about`
-- "Contact" → `/contact`
-
-**Files to Modify:**
-| File | Change |
-|------|--------|
-| `src/components/buyer-themes/tgref/TGRefHomepage.tsx` | Line 576-577: Change `/support` to `/about` and `/contact` |
-| `src/components/buyer-themes/smmvisit/SMMVisitHomepage.tsx` | Line 705-706: Same change |
-| `src/components/buyer-themes/alipanel/AliPanelHomepage.tsx` | Line 577-578: Same change |
-| `src/components/buyer-themes/flysmm/FlySMMHomepage.tsx` | Line 536-537: Same change |
-| `src/components/buyer-themes/smmstay/SMMStayHomepage.tsx` | Line 498-499: Same change |
+### Acceptance checks
+- Visiting `https://TENANT_DOMAIN/about` shows a simple page, consistent with other tenant pages, no redirect to auth unless your routing intentionally requires auth (it currently does not for /about in TenantRouter).
 
 ---
 
-## Issue 2: Manual Deposit Not Showing in Recent Deposits
+## 2) Payment Management: rebuild into a 2-tab layout (as you requested)
+### Problem
+Your PaymentMethods page currently mixes:
+- Buyer gateway configuration
+- Deposit approvals / transaction analytics
+…and it’s easy to think “buyer payments = panel owner billing payments”, which you’ve said must be separated.
 
-**Root Cause Analysis:**
-Looking at the `process-payment` edge function (lines 108-141), when a manual transfer is initiated:
+### Target UX (2 tabs)
+In `Payment Methods` (panel owner dashboard):
+- Tab A: **Buyer Payment Methods**
+  - Configure gateways your buyers can use on storefront deposit page (panel settings)
+  - Manual payment methods config
+  - Platform-enabled providers filtering stays (admin controls what is allowed)
+  - Clear explanation banner: “This tab controls what buyers see on /deposit”
+- Tab B: **Panel Owner Billing & Deposits**
+  - Show **admin-managed billing gateways** (platform_payment_providers) (read-only + “contact admin” note if needed)
+  - Show **UnifiedTransactionManager** for deposit approvals + analytics (this is panel operational finance)
+  - Move “Top depositors / payment method usage / recent transactions” into this tab only (because that is deposit/transaction analytics)
 
-1. The edge function creates a transaction with `status: 'pending'` (line 123)
-2. The manual transfer response returns `requiresManualTransfer: true` but does NOT change the transaction status to `pending_verification`
-3. The `BuyerDeposit.tsx` filters by `type: 'deposit'` and fetches transactions, but the newly created transaction should appear
+### Important tech correction
+Currently, `src/pages/panel/PaymentMethods.tsx` imports `useAvailablePaymentGateways` (buyer-focused).  
+For the Billing tab, we will use the already-created `useAdminPaymentGateways` hook (admin billing gateways).
 
-**The Real Problem:**
-Looking at line 122-123 in `process-payment/index.ts`:
-```typescript
-status: 'pending',
-description: txDescription,
-```
+### Files
+- Edit: `src/pages/panel/PaymentMethods.tsx`
+- Likely edit (if needed for clarity): `src/components/billing/UnifiedTransactionManager.tsx` (e.g., add quick filters for pending verification/manual, and clearer status legend)
 
-The transaction is created with `status: 'pending'`, which is correct. But the issue is that the edge function returns BEFORE refreshing/confirming the insert succeeded in some edge cases.
-
-**Actual Fix Needed:**
-The issue is in `BuyerDeposit.tsx` - after `handleDeposit()` calls the edge function and it returns `requiresManualTransfer`, the code does call `fetchTransactions()` (line 522). However, there may be a race condition where the insert hasn't fully propagated.
-
-**Solution:**
-1. Add a small delay before the first fetch after manual transfer creation
-2. Ensure the transaction status is explicitly set for manual transfers
-3. Add explicit logging to debug
-
-**Files to Modify:**
-| File | Change |
-|------|--------|
-| `src/pages/buyer/BuyerDeposit.tsx` | Add 500ms delay before fetchTransactions() for manual transfers |
-| `supabase/functions/process-payment/index.ts` | Add explicit status update for manual transfers |
-
-**Implementation for BuyerDeposit.tsx (lines 534-546):**
-```typescript
-} else if (result.requiresManualTransfer || selectedPaymentMethod?.isManual) {
-  // Manual payment - show dialog with bank details and instructions
-  setManualPaymentDetails({
-    transactionId: result.transactionId,
-    amount: depositAmount,
-    bankDetails: result.config?.bankDetails || selectedPaymentMethod?.bankDetails || '',
-    instructions: result.config?.instructions || selectedPaymentMethod?.instructions || 'Please complete the transfer and your balance will be credited once confirmed.',
-    title: methodName
-  });
-  setManualDialogOpen(true);
-  
-  // Wait briefly for DB propagation, then fetch
-  setTimeout(() => {
-    fetchTransactions();
-  }, 800);
-  
-  // Clear form
-  setAmount("");
-  setSelectedMethod(null);
-}
-```
-
-**Implementation for process-payment/index.ts (line 1069-1086):**
-```typescript
-case 'manual_transfer':
-default: {
-  if (gateway.startsWith('manual_') || gateway === 'manual_transfer') {
-    // Explicitly update status to pending_verification for manual transfers
-    await supabase
-      .from('transactions')
-      .update({ status: 'pending_verification' })
-      .eq('id', transactionIdToUse);
-    
-    return new Response(
-      JSON.stringify({ 
-        success: true,
-        gateway: gateway,
-        requiresManualTransfer: true,
-        transactionId: transactionIdToUse,
-        amount,
-        currency: currency.toUpperCase(),
-        config: gatewayConfig,
-        message: 'Please complete the transfer manually.',
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
-  // ...
-}
-```
+### Acceptance checks
+- Buyer payment methods displayed/configurable in Tab A only
+- Panel owner billing gateways shown in Tab B only
+- Clear separation messaging visible in UI
 
 ---
 
-## Issue 3: TGRef + SMMVisit Language Translation Errors
+## 3) Remove “Live Orders” tab from Analytics (fully)
+### Problem
+`src/pages/panel/Analytics.tsx` shows “Live Orders” TabTrigger even though the content says removed; this is inconsistent.
 
-**Root Cause:**
-Footer labels showing raw translation keys like `buyer.footer.about` instead of translated text. This happens when the translation key doesn't exist in `platform-translations.ts`.
+### Fix
+- Remove the `TabsTrigger` for “Live Orders”
+- Ensure the `TabsContent` for it is removed (it appears already commented/removed, but we’ll confirm the render tree)
 
-**Analysis:**
-Looking at TGRefHomepage.tsx line 576:
-```tsx
-{t('buyer.footer.about') || 'About'}
-```
+### Files
+- Edit: `src/pages/panel/Analytics.tsx`
 
-And SMMVisitHomepage.tsx line 705:
-```tsx
-{t('buyer.footer.aboutUs') || 'About Us'}
-```
-
-The translations file has both `buyer.footer.about` and `buyer.footer.aboutUs` defined, so this may be a context issue where `t()` returns the key instead of the value.
-
-**Potential Causes:**
-1. LanguageContext not properly wrapping the component
-2. Translation lookup failing silently
-
-**Fix:**
-Ensure all theme files use the same consistent translation keys that exist in `platform-translations.ts`:
-- Use `buyer.footer.aboutUs` (not `buyer.footer.about`)
-- Add missing fallback values
-
-**Files to Modify:**
-| File | Change |
-|------|--------|
-| `src/components/buyer-themes/tgref/TGRefHomepage.tsx` | Line 576: Use `buyer.footer.aboutUs` consistently |
-| `src/lib/platform-translations.ts` | Verify all keys exist for all 10 languages |
+### Acceptance checks
+- No “Live Orders” tab in Analytics
 
 ---
 
-## Issue 4: Payment Management Page Enhancements (Already Partially Done)
+## 4) Customer Management visual enhancements (UI polish + clarity)
+### Current state
+CustomerManagement is feature-rich but visually dense.
 
-**Current State:**
-- "All" category tab added ✓
-- Search bar in UnifiedTransactionManager added ✓
-- Analytics summary cards added ✓
+### Enhancements (non-breaking)
+- Improve header hierarchy and spacing (reduce “wall of controls”)
+- Make primary actions more obvious (Add Customer, Export, Bulk Actions)
+- Improve table readability:
+  - stronger zebra/hover states
+  - better status badges + VIP marker
+- Keep your existing Supabase-persisted overview toggle (it’s already correct: `panels.settings.ui.customerOverviewVisible`)
 
-**Remaining Enhancement:**
-The analytics cards are inside `UnifiedTransactionManager.tsx` but may not be visible enough. We should verify they display correctly.
+### Files
+- Edit: `src/pages/panel/CustomerManagement.tsx`
+- Potentially edit a reusable component if needed:
+  - `src/components/customers/CustomerMobileCard.tsx`
+  - `src/components/customers/CustomerOverview.tsx`
 
-**Verification Required:**
-The implementation from the previous plan should already include:
-1. Total Deposits, Pending, Manual Awaiting, and Total Transactions summary cards
-2. Search bar for filtering transactions
-
----
-
-## Issue 5: Customer Overview Toggle Supabase Persistence (Already Implemented)
-
-**Status:** Previously implemented - persists to `panels.settings.ui.customerOverviewVisible`
-
-**Verification:**
-The toggle in `CustomerManagement.tsx` (lines 141-172) now:
-1. Reads from `panel.settings.ui.customerOverviewVisible`
-2. Updates Supabase on toggle change
-3. Syncs when panel settings load
+### Acceptance checks
+- Page feels cleaner, key actions are visible
+- No loss of existing features
 
 ---
 
-## Issue 6: Payment System Separation (Already Implemented)
+## 5) Integrations: “Announcements” and other integrations not visibly doing anything
+### Root cause (from code)
+- `Integrations.tsx` stores “announcements” config into `panel_settings.integrations`.
+- `TenantHead.tsx` injects many integrations (GA, GTM, Crisp, etc.), but **does not implement an announcements UI bar**.
+So enabling “Announcements” currently won’t show anything on storefront.
 
-**Status:** Previously implemented via `useAdminPaymentGateways` hook
+### Fix
+- Implement a small storefront-visible **AnnouncementBar** that:
+  - Reads `panel_settings.integrations.announcements`
+  - If enabled: shows a top banner with text + optional link
+  - Is dismissible per-session (sessionStorage)
+- Render it in the tenant storefront entry:
+  - `src/pages/Storefront.tsx` (best place so it applies regardless of theme)
 
-**Architecture:**
-- Panel owner billing (`Billing.tsx`, `QuickDeposit.tsx`) uses `useAdminPaymentGateways` → fetches from `platform_payment_providers`
-- Buyer deposits (`BuyerDeposit.tsx`) uses `useAvailablePaymentGateways` → fetches from panel settings AND platform providers intersection
+### Files
+- Create: `src/components/storefront/AnnouncementBar.tsx`
+- Edit: `src/pages/Storefront.tsx`
 
----
-
-## Files to Modify Summary
-
-| File | Action | Changes |
-|------|--------|---------|
-| `src/components/buyer-themes/tgref/TGRefHomepage.tsx` | Modify | Fix footer links: `/support` → `/about` and `/contact`, fix translation key |
-| `src/components/buyer-themes/smmvisit/SMMVisitHomepage.tsx` | Modify | Fix footer links: `/support` → `/about` and `/contact` |
-| `src/components/buyer-themes/alipanel/AliPanelHomepage.tsx` | Modify | Fix footer links: `/support` → `/about` and `/contact` |
-| `src/components/buyer-themes/flysmm/FlySMMHomepage.tsx` | Modify | Fix footer links: `/support` → `/about` and `/contact` |
-| `src/components/buyer-themes/smmstay/SMMStayHomepage.tsx` | Modify | Fix footer links: `/support` → `/about` and `/contact` |
-| `src/pages/buyer/BuyerDeposit.tsx` | Modify | Add delay before fetchTransactions() for manual transfers |
-| `supabase/functions/process-payment/index.ts` | Modify | Set status to `pending_verification` for manual transfers |
-
----
-
-## Implementation Details
-
-### Footer Link Fixes (All 5 Theme Files)
-
-**Before:**
-```tsx
-<li><Link to="/support" ...>{t('buyer.footer.aboutUs') || 'About Us'}</Link></li>
-<li><Link to="/support" ...>{t('buyer.footer.contact') || 'Contact'}</Link></li>
-```
-
-**After:**
-```tsx
-<li><Link to="/about" ...>{t('buyer.footer.aboutUs') || 'About Us'}</Link></li>
-<li><Link to="/contact" ...>{t('buyer.footer.contact') || 'Contact'}</Link></li>
-```
-
-### TGRef Translation Key Fix
-
-**Before (line 576):**
-```tsx
-<li><Link to="/support" ...>{t('buyer.footer.about') || 'About'}</Link></li>
-```
-
-**After:**
-```tsx
-<li><Link to="/about" ...>{t('buyer.footer.aboutUs') || 'About Us'}</Link></li>
-```
-
-### Manual Deposit Fix - BuyerDeposit.tsx
-
-Add delay after manual transfer dialog opens to ensure DB propagation:
-
-```tsx
-// After line 543 (setManualDialogOpen(true))
-// Add a brief delay before fetching to allow DB write to complete
-setTimeout(() => {
-  fetchTransactions();
-}, 800);
-```
-
-### Manual Deposit Fix - process-payment Edge Function
-
-Update the manual transfer case to explicitly set `pending_verification` status:
-
-```typescript
-// In case 'manual_transfer' section
-if (gateway.startsWith('manual_') || gateway === 'manual_transfer') {
-  // Update status to pending_verification for manual transfers
-  await supabase
-    .from('transactions')
-    .update({ status: 'pending_verification' })
-    .eq('id', transactionIdToUse);
-    
-  return new Response(
-    JSON.stringify({ 
-      success: true,
-      gateway: gateway,
-      requiresManualTransfer: true,
-      transactionId: transactionIdToUse,
-      amount,
-      currency: currency.toUpperCase(),
-      config: gatewayConfig,
-      message: 'Please complete the transfer manually.',
-    }),
-    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-  );
-}
-```
+### Acceptance checks
+- Enable Announcements in panel Integrations
+- Tenant storefront shows announcement banner immediately
 
 ---
 
-## Manual Deposit Flow Diagram
+## 6) Design Customization: light mode must look truly light (white background)
+### What’s happening
+- You have `themeMode` and even `lightModeColors`, but the preview CSS generation and theme variable generation often still use the “dark” background color values.
+- Also the editor shell uses `from-background` which is controlled by the app theme (default is dark), not by your preview mode.
 
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│                     BUYER INITIATES DEPOSIT                      │
-└─────────────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  BuyerDeposit.tsx: handleDeposit()                              │
-│  - Calls process-payment edge function                          │
-└─────────────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  process-payment Edge Function                                   │
-│  1. Creates transaction with status: 'pending'                   │
-│  2. Detects manual gateway                                       │
-│  3. *** FIX: Update status to 'pending_verification' ***         │
-│  4. Returns { requiresManualTransfer: true, transactionId }      │
-└─────────────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  BuyerDeposit.tsx: Receives response                             │
-│  1. Shows ManualPaymentDetails dialog                            │
-│  2. *** FIX: Wait 800ms for DB propagation ***                   │
-│  3. Calls fetchTransactions()                                    │
-└─────────────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  Recent Deposits List                                            │
-│  - Shows transaction with status: 'pending_verification'         │
-│  - Badge: "Pending Verification"                                 │
-│  - Polling active for status updates                             │
-└─────────────────────────────────────────────────────────────────┘
-```
+### Fix (two parts)
+1) **Preview correctness**
+- When `customization.themeMode === 'light'`, generate CSS vars using `customization.lightModeColors` (background/surface/text/border) rather than the dark ones.
+- Ensure SMMVisit preview remains consistent (it’s light-mode only already in BuyerLayout).
+
+2) **Editor shell clarity**
+- In `DesignCustomization.tsx`, change the preview container background to follow `previewThemeMode`:
+  - Light mode = white/very light background
+  - Dark mode = dark gradient background
+This makes the difference obvious while editing.
+
+### Files
+- Edit: `src/pages/panel/DesignCustomization.tsx`
+- Possibly edit: `src/lib/color-utils.ts` (if `generateBuyerThemeCSS` should accept themeMode and mode color maps cleanly)
+
+### Acceptance checks
+- Clicking Light mode in design customization produces a clearly white/light preview background
 
 ---
 
-## Testing Checklist
+## 7) Tenant API base URL returns 404 (and provider marketplace can’t work)
+### Most likely cause (based on your current code)
+Your Buyer API UI uses:
+- `apiBaseUrl = https://TENANT_DOMAIN/api/v2`
+…but your rewrite is:
+- `/api/v2/:path*` → `.../functions/v1/:path*`
 
-After implementation:
-- [ ] Click "About Us" in TGRef theme footer → goes to `/about` page (not `/support`)
-- [ ] Click "About Us" in SMMVisit theme footer → goes to `/about` page
-- [ ] Click "Contact" in all theme footers → goes to `/contact` page
-- [ ] Make a manual transfer deposit → appears in Recent Deposits immediately with "Pending Verification" badge
-- [ ] Translation labels show proper text (e.g., "About Us" not "buyer.footer.aboutUs")
-- [ ] Customer Overview toggle persists after page refresh (Supabase)
-- [ ] Panel owner billing shows admin-configured gateways
-- [ ] Buyer deposit shows panel-configured gateways
+So calling `/api/v2` (no path) will rewrite to `/functions/v1/` and return **404**.
+
+### Correct endpoint
+It should be:
+- `https://TENANT_DOMAIN/api/v2/buyer-api`
+
+Because the edge function is named `buyer-api`.
+
+### Fix plan
+- Update Buyer API docs/UI to use:
+  - `.../api/v2/buyer-api`
+- Search for any other place in panel owner provider import/validation that uses `/api/v2` without function name and correct it.
+
+### Files
+- Edit: `src/pages/buyer/BuyerAPI.tsx`
+- Search + fix any other `/api/v2` usage across panel owner provider flows.
+
+### Acceptance checks
+- Calling the tenant API with`POST https://TENANT_DOMAIN/api/v2/buyer-api` works
+- `/api/v2` alone is no longer shown as the base URL in docs
 
 ---
 
-## Priority Order
+## 8) Translation key leaks in TGRef + SMMVisit (and “many more”)
+### Root cause
+`LanguageContext.t()` returns the key if missing. Your themes call keys like:
+- `buyer.cta.execute`
+- `buyer.testimonials.userReviews`
+- `buyer.home.scrollMore`
+and these are missing in `platform-translations.ts` for many languages (and some keys aren’t present at all).
 
-1. **Footer Links Fix** - Quick fix, affects all theme users
-2. **Manual Deposit Flow** - Critical for payment tracking
-3. **Translation Key Fix** - UI polish for TGRef theme
-4. **Verify Previous Implementations** - Confirm Supabase persistence and payment separation work correctly
+### Fix
+- Add missing keys to `src/lib/platform-translations.ts` under **all 10 languages**:
+  - `buyer.cta.execute`
+  - `buyer.testimonials.userReviews`
+  - `buyer.home.scrollMore`
+- Then run a quick scan on buyer themes for `t('buyer.` keys and ensure every key exists in platform translations (or at least has EN + falls back gracefully).
+  - The minimum viable fix: add the keys we found + any other keys that currently leak in TGRef/SMMVisit.
+  - We’ll use `buyer.*` consistent naming and keep semantics stable.
+
+### Files
+- Edit: `src/lib/platform-translations.ts`
+
+### Acceptance checks
+- No visible raw keys like `buyer.cta.execute` anywhere in TGRef/SMMVisit across supported languages
+
+---
+
+## Execution order (fastest to highest impact)
+1) Fix tenant API base URL (`BuyerAPI.tsx`) to stop 404 confusion immediately
+2) Remove Live Orders tab (Analytics)
+3) Rewrite Buyer About page to simple page
+4) Add AnnouncementBar and wire to Storefront
+5) PaymentMethods 2-tab restructure
+6) DesignCustomization light-mode background/preview correction
+7) CustomerManagement visual polish
+8) Translation audit additions (TGRef/SMMVisit + global missing keys)
+
+---
+
+## Testing checklist (end-to-end)
+- Tenant:
+  - Open tenant `/about` and verify it is simple + loads without auth
+  - Open tenant `/api` and verify base URL shows `/api/v2/buyer-api`
+  - Execute a real “services” API request using the shown curl example and confirm 200 response
+- Panel owner:
+  - Payment Methods page: verify tabs separate buyer methods vs billing
+  - Analytics: verify Live Orders tab is gone
+  - Integrations: enable Announcements → verify storefront banner appears on tenant homepage
+- Design customization:
+  - Toggle light mode → preview background becomes clearly white/light
+- Languages:
+  - Switch to affected languages and confirm no `buyer.*` keys show raw in TGRef/SMMVisit
+
+---
+
+## Notes on “API key works to get all data”
+- Your edge function `buyer-api` validates:
+  - panel owner keys from `panel_api_keys` OR
+  - buyer keys from `client_users.api_key`
+So keys should work, but only if you call the correct endpoint: `/api/v2/buyer-api` (and the request is POST with action/key).
+
+---
+
+## Files expected to change
+- `src/pages/buyer/BuyerAbout.tsx`
+- `src/pages/panel/PaymentMethods.tsx`
+- `src/pages/panel/Analytics.tsx`
+- `src/pages/panel/CustomerManagement.tsx`
+- `src/pages/panel/DesignCustomization.tsx`
+- `src/pages/buyer/BuyerAPI.tsx`
+- `src/pages/Storefront.tsx`
+- `src/components/storefront/AnnouncementBar.tsx` (new)
+- `src/lib/platform-translations.ts`
+- (Optional) `src/lib/color-utils.ts` (if needed to properly support mode-based variables)
