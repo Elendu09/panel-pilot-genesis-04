@@ -126,17 +126,17 @@ export function MobileDesignSlider({
 
   return (
     <div className="flex flex-col h-screen bg-slate-950 overflow-hidden">
-      {/* Top Bar */}
-      <div className="flex items-center justify-between px-3 py-2 bg-slate-900/80 backdrop-blur-xl border-b border-white/10">
-        {/* View Mode Toggle */}
-        <div className="flex items-center gap-1 px-1 py-0.5 bg-slate-800/60 rounded-full">
+      {/* Top Bar - Enhanced styling with cleaner contrast */}
+      <div className="flex items-center justify-between px-3 py-2.5 bg-slate-900 border-b border-slate-700/50">
+        {/* View Mode Toggle - Pill with stronger contrast */}
+        <div className="flex items-center gap-0.5 p-0.5 bg-slate-800 rounded-full border border-slate-700/50">
           <button
             onClick={() => setViewMode('preview')}
             className={cn(
-              "px-3 py-1 rounded-full text-xs font-medium transition-all",
+              "px-3.5 py-1.5 rounded-full text-xs font-medium transition-all duration-200",
               viewMode === 'preview' 
-                ? "bg-primary text-primary-foreground" 
-                : "text-white/60 hover:text-white/80"
+                ? "bg-primary text-primary-foreground shadow-md" 
+                : "text-slate-400 hover:text-slate-200"
             )}
           >
             Preview
@@ -144,10 +144,10 @@ export function MobileDesignSlider({
           <button
             onClick={() => setViewMode('controls')}
             className={cn(
-              "px-3 py-1 rounded-full text-xs font-medium transition-all",
+              "px-3.5 py-1.5 rounded-full text-xs font-medium transition-all duration-200",
               viewMode === 'controls' 
-                ? "bg-primary text-primary-foreground" 
-                : "text-white/60 hover:text-white/80"
+                ? "bg-primary text-primary-foreground shadow-md" 
+                : "text-slate-400 hover:text-slate-200"
             )}
           >
             Controls
@@ -200,13 +200,13 @@ export function MobileDesignSlider({
           </div>
         )}
 
-        {/* Section info - Only show in controls mode */}
+        {/* Section info - Only show in controls mode with Presets badge styling */}
         {viewMode === 'controls' && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 px-2 py-1 bg-slate-800/60 rounded-lg border border-slate-700/30">
             <div className={cn("p-1 rounded-lg bg-gradient-to-br", currentSection.color)}>
               <currentSection.icon className="w-3 h-3 text-white" />
             </div>
-            <span className="text-xs font-medium text-white">{currentSection.title}</span>
+            <span className="text-xs font-medium text-slate-200">{currentSection.title}</span>
           </div>
         )}
 
@@ -316,24 +316,24 @@ export function MobileDesignSlider({
             transition={{ duration: 0.2 }}
             className="flex-1 flex flex-col overflow-hidden"
           >
-            {/* Section Navigation */}
-            <div className="flex items-center justify-between px-3 py-2 bg-slate-900/50 border-b border-white/5">
+            {/* Section Navigation - Enhanced with cleaner background */}
+            <div className="flex items-center justify-between px-3 py-2.5 bg-slate-900 border-b border-slate-700/50">
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8"
+                className="h-8 w-8 text-slate-400 hover:text-slate-200 hover:bg-slate-800"
                 onClick={() => handleSectionSwipe('right')}
                 disabled={currentSectionIndex === 0}
               >
                 <ChevronLeft className="w-4 h-4" />
               </Button>
               
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2.5 px-3 py-1.5 bg-slate-800 rounded-full border border-slate-700/50">
                 <div className={cn("p-1.5 rounded-lg bg-gradient-to-br", currentSection.color)}>
                   <currentSection.icon className="w-4 h-4 text-white" />
                 </div>
-                <span className="text-sm font-medium text-white">{currentSection.title}</span>
-                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                <span className="text-sm font-medium text-slate-200">{currentSection.title}</span>
+                <Badge variant="secondary" className="text-[10px] px-2 py-0.5 bg-slate-700 text-slate-300 border border-slate-600">
                   {currentSectionIndex + 1}/{sections.length}
                 </Badge>
               </div>
@@ -341,7 +341,7 @@ export function MobileDesignSlider({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8"
+                className="h-8 w-8 text-slate-400 hover:text-slate-200 hover:bg-slate-800"
                 onClick={() => handleSectionSwipe('left')}
                 disabled={currentSectionIndex === sections.length - 1}
               >
