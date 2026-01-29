@@ -1,263 +1,366 @@
 
-# Comprehensive Fix Plan: API Key, Footer, Transactions & Full Pages Audit
+# Comprehensive Enhancement Plan: Customer Management, Analytics, API, Design & Payments
 
 ---
 
 ## Overview
 
-This plan fixes the **remaining critical issues** and provides a **full audit** of all panel owner and tenant pages that still need enhancement.
+This plan addresses the following improvements:
+
+1. **Customer Overview show/hide toggle** - Default to hidden
+2. **Remove Live Orders from Analytics** - Clean up the Analytics page
+3. **Fix API base URL for tenant (subdomain/custom domain)** - Production fix for global SMM providers
+4. **Visual effects for Customer Management table** - Enhance rows/columns styling
+5. **Hide dark mode switch for SMMVisit theme** - Prevent dark mode in SMMVisit
+6. **Recent deposits debugging** - Verify Supabase sync and reference generation
+7. **Panel Payment Management enhancement** - Add "All" filter, search bar, combine analytics with approve/reject
 
 ---
 
-## Issues to Fix
+## Issue 1: Customer Overview Show/Hide Toggle
 
-### Issue 1: API Key Not Displaying
-
-**Root Cause Analysis:**
-The `api_key` column exists in the database (confirmed via SQL query). The `BuyerUser` interface in `BuyerAuthContext.tsx` has `api_key: string | null` defined (line 30). The edge function `buyer-auth/index.ts` returns `safeUser` which includes all fields except password_hash and password_temp.
-
-**The Real Problem:**
-When `handleGenerateApiKey()` in `BuyerProfile.tsx` runs, it:
-1. Generates a key
-2. Updates the database with `.update({ api_key: key } as any)` - the `as any` is suspicious
-3. Sets `localApiKey` state
-4. Calls `refreshBuyer()`
-
-The issue is that supabase client-side update to `client_users` is blocked by RLS. The update silently fails because buyers don't have UPDATE permissions on `client_users`.
+**Current State:**
+`CustomerOverview` component is always visible on the Customer Management page.
 
 **Solution:**
-Create an edge function endpoint to generate the API key server-side (bypassing RLS), similar to how buyer-auth works.
+Add a toggle switch in the header area that shows/hides the `CustomerOverview` component. Default state: **hidden**. Save preference to localStorage.
 
-### Issue 2: Footer `{companyName}` Not Interpolated in Theme Homepages
-
-**Root Cause:**
-While `StorefrontFooter.tsx` correctly interpolates `{companyName}`, the individual theme homepages (TGRef, AliPanel, FlySMM, SMMStay, SMMVisit) have their OWN footer implementations that don't interpolate the placeholder.
-
-Looking at the code:
-- `TGRefHomepage.tsx` line 595: `{customization.footerText || \`© ${new Date().getFullYear()} [${companyName}]. All rights reserved.\`}`
-- `AliPanelHomepage.tsx` line 596: `{customization.footerText || \`© ${new Date().getFullYear()} ${companyName}. All rights reserved.\`}`
-
-The problem is that when `customization.footerText` contains `{companyName}` (e.g., "© 2025 {companyName}. All rights reserved."), it's displayed literally without interpolation.
-
-**Solution:**
-Add interpolation logic to ALL theme homepage footers to replace `{companyName}` with actual `companyName`.
-
-### Issue 3: Transaction List Not Updating in BuyerDeposit
-
-**Analysis:**
-The `BuyerDeposit.tsx` already has:
-1. Real-time subscription (lines 296-364)
-2. `fetchTransactions()` function that fetches all statuses
-3. Display of pending/completed/failed transactions (lines 788-846)
-
-**The Issue:**
-The real-time subscription at line 301-359 subscribes to all transaction changes but the filter logic may not be working correctly. Also, manual transfers may not be triggering updates because the panel owner's approval changes happen in a different context.
-
-**Solution:**
-Ensure the real-time subscription doesn't filter out any transactions, and add a periodic poll fallback.
-
----
-
-## Files to Modify
-
-### Theme Homepages - Footer Interpolation
+**Files to Modify:**
 | File | Change |
 |------|--------|
-| `src/components/buyer-themes/tgref/TGRefHomepage.tsx` | Interpolate `{companyName}` in footerText |
-| `src/components/buyer-themes/alipanel/AliPanelHomepage.tsx` | Interpolate `{companyName}` in footerText |
-| `src/components/buyer-themes/flysmm/FlySMMHomepage.tsx` | Interpolate `{companyName}` in footerText |
-| `src/components/buyer-themes/smmstay/SMMStayHomepage.tsx` | Interpolate `{companyName}` in footerText |
-| `src/components/buyer-themes/smmvisit/SMMVisitHomepage.tsx` | Interpolate `{companyName}` in footerText |
+| `src/pages/panel/CustomerManagement.tsx` | Add state for `showOverview`, toggle switch, and conditional render |
 
-### API Key Generation
-| File | Change |
-|------|--------|
-| `supabase/functions/buyer-auth/index.ts` | Add `generate-api-key` action handler |
-| `src/pages/buyer/BuyerProfile.tsx` | Call edge function instead of direct DB update |
-
-### Transaction Updates
-| File | Change |
-|------|--------|
-| `src/pages/buyer/BuyerDeposit.tsx` | Add poll fallback, improve subscription reliability |
-
----
-
-## Technical Implementation
-
-### Footer Interpolation (All 5 Themes)
-
+**Implementation:**
 ```tsx
-// Add this helper function in each theme homepage
-const interpolateFooterText = (text: string) => {
-  return text.replace(/\{companyName\}/g, companyName);
+// Add state with localStorage persistence
+const [showOverview, setShowOverview] = useState(() => {
+  return localStorage.getItem('customer_overview_visible') === 'true';
+});
+
+// Toggle handler
+const handleToggleOverview = (value: boolean) => {
+  setShowOverview(value);
+  localStorage.setItem('customer_overview_visible', String(value));
 };
 
-// In the footer section, change:
-// FROM:
-{customization.footerText || `© ${new Date().getFullYear()} ${companyName}. All rights reserved.`}
+// In JSX header area - add switch
+<div className="flex items-center gap-2">
+  <Switch checked={showOverview} onCheckedChange={handleToggleOverview} />
+  <Label>Show Overview</Label>
+</div>
 
-// TO:
-{customization.footerText 
-  ? interpolateFooterText(customization.footerText)
-  : `© ${new Date().getFullYear()} ${companyName}. All rights reserved.`}
+// Conditional render
+{showOverview && <CustomerOverview customers={customers} onSelectCustomer={...} />}
 ```
 
-### API Key Generation via Edge Function
+---
 
+## Issue 2: Remove Live Orders from Analytics
+
+**Current State:**
+Analytics page has a "Live Orders" tab (lines 1094-1160) that shows `liveOrdersWithService` data.
+
+**Solution:**
+Remove the "Live Orders" tab from the Analytics page. Orders are already managed in the Orders Management page.
+
+**Files to Modify:**
+| File | Change |
+|------|--------|
+| `src/pages/panel/Analytics.tsx` | Remove "orders" tab and related state/fetch logic |
+
+**Changes:**
+1. Remove `liveOrdersWithService` state
+2. Remove the fetch logic for live orders (lines 204-215)
+3. Remove the "Orders" tab trigger
+4. Remove the "orders" TabsContent section (lines 1094-1160)
+
+---
+
+## Issue 3: Fix API Base URL for Tenant (Subdomain/Custom Domain)
+
+**Root Cause Analysis:**
+When a panel owner tries to test their provider using their tenant's API URL (e.g., `mypanel.smmpilot.online/api/v2`), it fails because:
+
+1. The Vercel rewrite rule `{ "source": "/api/v2/:path*", "destination": "https://tooudgubuhxjbbvzjcgx.supabase.co/functions/v1/:path*" }` is present
+2. However, the edge functions `provider-services` and `sync-provider-services` call external provider APIs directly
+
+**The Real Issue:**
+Looking at `ProviderManagement.tsx`, the provider's `api_endpoint` is the EXTERNAL provider URL (e.g., `https://smmrush.com/api/v2`), not the tenant's own API.
+
+The issue is likely that:
+1. When fetching provider services, the edge function makes a request to the provider's API endpoint
+2. If CORS or network issues occur, it fails
+
+**Checking `sync-provider-services` (lines 340-356):**
 ```typescript
-// In buyer-auth/index.ts - add new action handler
-async function handleGenerateApiKey(supabaseAdmin: any, body: any) {
-  const { panelId, buyerId, token } = body;
+const url = new URL(provider.api_endpoint);
+url.searchParams.set('key', provider.api_key);
+url.searchParams.set('action', 'services');
+
+const response = await fetch(url.toString(), {
+  method: 'GET',
+  headers: { 'User-Agent': 'SMM-Panel/2.0' },
+});
+```
+
+This is correct - it fetches from the external provider. The issue might be:
+1. Invalid provider URL format
+2. Missing timeout handling
+3. Error responses not properly caught
+
+**Solution:**
+Enhance error handling and add timeout to provider API calls. Also ensure the Vercel rewrite includes all necessary headers.
+
+**Files to Modify:**
+| File | Change |
+|------|--------|
+| `supabase/functions/sync-provider-services/index.ts` | Add timeout, better error handling, validate URL |
+| `supabase/functions/provider-services/index.ts` | Add timeout, better error handling |
+
+**Implementation:**
+```typescript
+// Add timeout and better error handling
+const controller = new AbortController();
+const timeout = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
+try {
+  const response = await fetch(url.toString(), {
+    method: 'GET',
+    headers: { 
+      'User-Agent': 'SMM-Panel/2.0',
+      'Accept': 'application/json'
+    },
+    signal: controller.signal
+  });
+  clearTimeout(timeout);
   
-  // Verify JWT token
-  if (!token) {
-    return jsonResponse({ error: 'Authentication required' });
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Provider returned ${response.status}: ${errorText.slice(0, 200)}`);
   }
-  
-  const verification = await verifyJWT(token);
-  if (!verification.valid || verification.payload?.sub !== buyerId) {
-    return jsonResponse({ error: 'Invalid token' });
+  // ... rest of logic
+} catch (error) {
+  clearTimeout(timeout);
+  if (error.name === 'AbortError') {
+    throw new Error('Provider API timed out after 30 seconds');
   }
-  
-  // Generate secure API key
-  const panelPrefix = panelId.substring(0, 8);
-  const randomPart = crypto.randomUUID().replace(/-/g, '');
-  const apiKey = `sk_${panelPrefix}_${randomPart}`;
-  
-  // Update in database (bypasses RLS)
-  const { error } = await supabaseAdmin
-    .from('client_users')
-    .update({ api_key: apiKey })
-    .eq('id', buyerId)
-    .eq('panel_id', panelId);
-  
-  if (error) {
-    return jsonResponse({ error: 'Failed to generate API key' });
-  }
-  
-  return jsonResponse({ success: true, api_key: apiKey });
+  throw error;
 }
 ```
 
+---
+
+## Issue 4: Visual Effects for Customer Management Table
+
+**Current State:**
+The customer table uses basic styling without visual effects.
+
+**Solution:**
+Add hover effects, gradient backgrounds, subtle animations, and improved row styling.
+
+**Files to Modify:**
+| File | Change |
+|------|--------|
+| `src/pages/panel/CustomerManagement.tsx` | Enhanced table row styling with hover effects, gradients |
+
+**Enhancements:**
+1. Hover effect with scale and background gradient
+2. Alternating row colors with subtle transparency
+3. Status badge glow effects
+4. Smooth transitions on all interactive elements
+
+**Implementation:**
 ```tsx
-// In BuyerProfile.tsx - update handleGenerateApiKey
-const handleGenerateApiKey = async () => {
-  if (!buyer?.id || !buyer.panel_id) return;
-  
-  setGeneratingKey(true);
-  try {
-    const token = getToken?.();
-    
-    const { data, error } = await supabase.functions.invoke('buyer-auth', {
-      body: { 
-        panelId: buyer.panel_id,
-        buyerId: buyer.id,
-        token,
-        action: 'generate-api-key'
-      }
-    });
-    
-    if (error || data?.error) {
-      throw new Error(data?.error || 'Failed to generate API key');
-    }
-    
-    if (data?.api_key) {
-      setLocalApiKey(data.api_key);
-      refreshBuyer();
-      toast({ title: "API Key Generated", description: "Your new API key is ready to use" });
-    }
-  } catch (error) {
-    console.error('Error generating API key:', error);
-    toast({ variant: "destructive", title: "Error", description: "Failed to generate API key" });
-  } finally {
-    setGeneratingKey(false);
-  }
-};
+// Enhanced TableRow styling
+<TableRow 
+  className={cn(
+    "group transition-all duration-200 cursor-pointer",
+    "hover:bg-gradient-to-r hover:from-primary/5 hover:to-transparent",
+    "hover:shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.2)]",
+    index % 2 === 0 ? "bg-muted/20" : "bg-transparent"
+  )}
+>
 ```
 
 ---
 
-## Full Pages Audit: Panel Owner Dashboard
+## Issue 5: Hide Dark Mode Switch for SMMVisit Theme
 
-### Pages Needing Enhancement
+**Current State:**
+Design Customization page shows the dark/light mode toggle for all themes, including SMMVisit which only supports light mode.
 
-| Page | File | Issues/Enhancements Needed |
-|------|------|---------------------------|
-| **Overview** | `PanelOverview.tsx` | ✅ Generally working |
-| **Services** | `ServicesManagement.tsx` | ⚠️ Auto-categorization sometimes loses categories |
-| **Orders** | `OrdersManagement.tsx` | ✅ Generally working |
-| **Customers** | `CustomerManagement.tsx` | ✅ Generally working |
-| **Payment Methods** | `PaymentMethods.tsx` | ⚠️ UnifiedTransactionManager filtering may need panel_id |
-| **Design** | `DesignCustomization.tsx` | ✅ Working but defaults need verification |
-| **Blog** | `BlogManagement.tsx` | ⚠️ Need to verify blog_enabled syncs to storefront |
-| **Analytics** | `Analytics.tsx` | ✅ Generally working |
-| **Support** | `SupportCenter.tsx` | ✅ Generally working |
-| **General Settings** | `GeneralSettings.tsx` | ✅ Generally working |
-| **SEO** | `SEOSettings.tsx` | ✅ Generally working |
-| **Domain** | `DomainSettings.tsx` | ✅ Generally working |
-| **Integrations** | `Integrations.tsx` | ✅ Generally working |
-| **Security** | `SecuritySettings.tsx` | ✅ Generally working |
-| **API** | `APIManagement.tsx` | ✅ Generally working |
-| **Provider** | `ProviderManagement.tsx` | ✅ Generally working |
-| **Promos** | `PromoManagement.tsx` | ✅ Generally working |
-| **Team** | `TeamManagement.tsx` | ✅ Generally working |
-| **Billing** | `Billing.tsx` | ✅ Generally working |
+**Solution:**
+When SMMVisit theme is selected, hide the theme mode switch and display a warning badge.
 
-### Key Issues to Address
+**Files to Modify:**
+| File | Change |
+|------|--------|
+| `src/pages/panel/DesignCustomization.tsx` | Conditionally hide mode switch when SMMVisit is selected |
 
-1. **UnifiedTransactionManager** - The component fetches ALL transactions then filters by `panel_id` buyers. This is correct but may have performance issues with large datasets.
-
-2. **Blog Visibility** - Need to ensure `panel_settings.blog_enabled` properly syncs to storefront header.
+**Implementation:**
+```tsx
+// In the theme mode toggle section
+{selectedThemeId !== 'smmvisit' && selectedThemeId !== 'BuyerThemeSMMVisit' ? (
+  <div className="flex items-center gap-2">
+    <Sun className="w-4 h-4" />
+    <Switch 
+      checked={customization.themeMode === 'dark'} 
+      onCheckedChange={(checked) => handleChange('themeMode', checked ? 'dark' : 'light')}
+    />
+    <Moon className="w-4 h-4" />
+  </div>
+) : (
+  <Badge variant="outline" className="text-amber-500 border-amber-500/50">
+    <Sun className="w-3 h-3 mr-1" /> Light Mode Only
+  </Badge>
+)}
+```
 
 ---
 
-## Full Pages Audit: Tenant/Buyer Pages
+## Issue 6: Recent Deposits - Supabase Sync Verification
 
-### Pages Needing Enhancement
+**Analysis:**
+Looking at `BuyerDeposit.tsx`:
 
-| Page | File | Issues/Enhancements Needed |
-|------|------|---------------------------|
-| **Dashboard** | `BuyerDashboard.tsx` | ⚠️ Loading flicker - panel name shows "Panel" first |
-| **New Order** | `BuyerNewOrder.tsx` | ✅ Generally working |
-| **Fast Order** | `FastOrder.tsx` (main) | ⚠️ Service categorization sync with New Order |
-| **Orders** | `BuyerOrders.tsx` | ✅ Generally working |
-| **Deposit** | `BuyerDeposit.tsx` | ⚠️ Transaction list real-time updates |
-| **Services** | `BuyerServices.tsx` | ✅ Generally working |
-| **Profile** | `BuyerProfile.tsx` | ⚠️ API key generation via edge function |
-| **Support** | `BuyerSupport.tsx` | ✅ Generally working |
-| **Blog** | `BuyerBlog.tsx` | ✅ Generally working |
-| **About** | `BuyerAbout.tsx` | ⚠️ Auth redirect issue (fixed in previous plan) |
-| **Terms** | `BuyerTerms.tsx` | ✅ Generally working |
-| **Privacy** | `BuyerPrivacy.tsx` | ✅ Generally working |
-| **Favorites** | `BuyerFavorites.tsx` | ✅ Generally working |
-| **API** | `BuyerAPI.tsx` | ✅ Generally working |
-| **Contact** | `BuyerContact.tsx` | ✅ Generally working |
+1. **Transaction Creation (lines 504-600):** When a user clicks deposit:
+   - For automatic gateways: Calls `process-payment` edge function which creates a transaction with `pending` status server-side
+   - For manual transfers: Creates a transaction client-side with `pending_verification` status
 
-### Critical Issues Summary
+2. **Reference Generation:** The transaction ID serves as the reference - this is generated:
+   - By the edge function for automatic payments (`transactionIdToUse` in `process-payment`)
+   - By Supabase auto-generated UUID for manual transfers
 
-1. **API Key** - RLS blocking client-side updates → Need edge function
-2. **Footer {companyName}** - Theme homepages don't interpolate → Add replace logic
-3. **Transaction Real-time** - May miss updates → Add poll fallback
-4. **Loading Flicker** - Panel name shows late → Improve caching
+3. **Real-time Updates (lines 296-364):** Already has subscription to `transactions` table
+
+4. **Polling Fallback (lines 367-381):** Already polls every 10 seconds when pending transactions exist
+
+**Current Issues Found:**
+- Manual transfer creates transaction with `pending_verification` status (not `pending`)
+- The polling checks for `status === 'pending'` but manual transfers use `pending_verification`
+
+**Solution:**
+Update the polling to also check for `pending_verification` status.
+
+**Files to Modify:**
+| File | Change |
+|------|--------|
+| `src/pages/buyer/BuyerDeposit.tsx` | Fix polling to include `pending_verification` status |
+
+**Implementation:**
+```tsx
+// Update polling condition (line 373)
+const hasPending = transactions.some(t => 
+  t.status === 'pending' || t.status === 'pending_verification'
+);
+```
+
+---
+
+## Issue 7: Panel Payment Management Enhancement
+
+**Current State:**
+- Payment Methods page has separate sections for gateway configuration and transaction management
+- No "All" filter for payment methods
+- No search bar for transactions
+
+**Solution:**
+1. Add "All" tab to show all payment methods together
+2. Add search bar in UnifiedTransactionManager
+3. Combine analytics with approve/reject section for clearer payment overview
+
+**Files to Modify:**
+| File | Change |
+|------|--------|
+| `src/pages/panel/PaymentMethods.tsx` | Add "All" category tab |
+| `src/components/billing/UnifiedTransactionManager.tsx` | Add search bar, combine analytics |
+
+**Implementation for PaymentMethods.tsx:**
+```tsx
+// Add "all" to categories
+const categories = ["all", "cards", "regional", "ewallets", "bank", "crypto"] as const;
+
+// Filter logic
+const filteredGateways = activeCategory === "all"
+  ? Object.values(paymentGateways).flat().filter(g => ...)
+  : paymentGateways[activeCategory].filter(g => ...);
+```
+
+**Implementation for UnifiedTransactionManager.tsx:**
+```tsx
+// Add search state
+const [searchQuery, setSearchQuery] = useState("");
+
+// Add search input
+<Input 
+  placeholder="Search by user, amount, or reference..."
+  value={searchQuery}
+  onChange={(e) => setSearchQuery(e.target.value)}
+  className="max-w-sm"
+/>
+
+// Filter transactions
+const filteredTransactions = transactions.filter(tx => {
+  if (!searchQuery) return true;
+  const query = searchQuery.toLowerCase();
+  return (
+    tx.user_id?.toLowerCase().includes(query) ||
+    tx.id?.toLowerCase().includes(query) ||
+    tx.amount?.toString().includes(query) ||
+    tx.payment_method?.toLowerCase().includes(query)
+  );
+});
+
+// Sort to show manual first
+const sortedTransactions = filteredTransactions.sort((a, b) => {
+  // Manual transactions first
+  const aIsManual = a.payment_method?.includes('manual');
+  const bIsManual = b.payment_method?.includes('manual');
+  if (aIsManual && !bIsManual) return -1;
+  if (!aIsManual && bIsManual) return 1;
+  // Then by date
+  return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+});
+```
+
+---
+
+## Files to Modify Summary
+
+| File | Changes |
+|------|---------|
+| `src/pages/panel/CustomerManagement.tsx` | Add show/hide toggle for overview, enhance table visual effects |
+| `src/pages/panel/Analytics.tsx` | Remove Live Orders tab |
+| `supabase/functions/sync-provider-services/index.ts` | Add timeout, improve error handling |
+| `supabase/functions/provider-services/index.ts` | Add timeout, improve error handling |
+| `src/pages/panel/DesignCustomization.tsx` | Hide dark mode switch when SMMVisit is selected |
+| `src/pages/buyer/BuyerDeposit.tsx` | Fix polling to include `pending_verification` status |
+| `src/pages/panel/PaymentMethods.tsx` | Add "All" category tab for payment methods |
+| `src/components/billing/UnifiedTransactionManager.tsx` | Add search bar, sort manual first, combine with analytics |
 
 ---
 
 ## Implementation Order
 
-1. **Fix Footer Interpolation** (5 theme files) - Quick fix
-2. **Add API Key Edge Function** - Edge function + profile update
-3. **Improve Transaction Updates** - Add poll fallback
-4. **Verify Blog Visibility** - Check panel_settings sync
+1. **Customer Management Overview Toggle** - Quick UI change
+2. **Remove Live Orders from Analytics** - Simple removal
+3. **Hide Dark Mode for SMMVisit** - Conditional rendering
+4. **Fix Deposit Polling** - One-line fix
+5. **Payment Methods "All" Tab** - UI enhancement
+6. **Transaction Manager Search** - Component enhancement
+7. **Customer Table Visual Effects** - CSS/styling
+8. **Provider API Error Handling** - Edge function improvements
 
 ---
 
 ## Testing Checklist
 
 After implementation:
-- [ ] Footer shows actual panel name in ALL themes (TGRef, AliPanel, FlySMM, SMMStay, SMMVisit)
-- [ ] Generate API key in profile → Key displays immediately and persists after page reload
-- [ ] Copy API key → Correct key copied to clipboard
-- [ ] Make a deposit → Transaction appears in list with correct status
-- [ ] Panel owner approves deposit → Buyer's transaction list updates to "completed"
-- [ ] Enable Blog in panel settings → Blog appears in storefront header
-- [ ] All theme storefronts render correctly with proper branding
+- [ ] Customer Overview is hidden by default, toggle shows/hides it
+- [ ] Analytics page no longer has "Live Orders" tab
+- [ ] Selecting SMMVisit theme hides the dark mode toggle
+- [ ] Manual deposits show as "pending_verification" and poll correctly
+- [ ] Payment Methods page has "All" tab showing all gateways
+- [ ] Transaction Manager has working search bar
+- [ ] Customer table has visual hover effects
+- [ ] Provider import works without timeout errors
