@@ -552,7 +552,9 @@ export const FlySMMHomepage = ({
             
             {/* Copyright */}
             <div className="pt-8 text-center text-sm" style={{ borderTop: `1px solid ${primary}1a`, color: mutedColor }}>
-              {customization.footerText || `© ${new Date().getFullYear()} ${companyName}. All rights reserved.`}
+              {customization.footerText 
+                ? customization.footerText.replace(/\{companyName\}/g, companyName)
+                : `© ${new Date().getFullYear()} ${companyName}. All rights reserved.`}
             </div>
           </div>
         </footer>

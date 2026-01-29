@@ -304,6 +304,8 @@ serve(async (req) => {
         return await handleForgotPassword(supabaseAdmin, body, req);
       case 'change-password':
         return await handleChangePassword(supabaseAdmin, body);
+      case 'generate-api-key':
+        return await handleGenerateApiKey(supabaseAdmin, body);
       default:
         return jsonResponse({ error: 'Invalid action' });
     }
@@ -972,4 +974,74 @@ async function handleChangePassword(supabaseAdmin: any, body: any) {
     success: true, 
     message: 'Password updated successfully' 
   });
+}
+
+// Handle API key generation
+async function handleGenerateApiKey(supabaseAdmin: any, body: any) {
+  const { panelId, buyerId, token } = body;
+  
+  console.log(`Generate API key request: buyerId=${buyerId}, panelId=${panelId}`);
+
+  // Verify JWT token
+  if (!token) {
+    return jsonResponse({ error: 'Authentication required' });
+  }
+  
+  const verification = await verifyJWT(token);
+  if (!verification.valid) {
+    return jsonResponse({ error: 'Session expired. Please login again.', tokenExpired: true });
+  }
+  
+  if (verification.payload?.sub !== buyerId) {
+    return jsonResponse({ error: 'Invalid session' });
+  }
+
+  if (!buyerId || !panelId) {
+    return jsonResponse({ error: 'Missing required fields' });
+  }
+
+  // Generate secure API key with panel prefix
+  const panelPrefix = panelId.substring(0, 8);
+  const randomPart = crypto.randomUUID().replace(/-/g, '');
+  const apiKey = `sk_${panelPrefix}_${randomPart}`;
+
+  // Update in database (bypasses RLS with admin client)
+  const { error: updateError } = await supabaseAdmin
+    .from('client_users')
+    .update({ 
+      api_key: apiKey,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', buyerId)
+    .eq('panel_id', panelId);
+
+  if (updateError) {
+    console.error('Error generating API key:', updateError);
+    
+    // Handle unique constraint violation - retry once
+    if (updateError.code === '23505') {
+      const retryKey = `sk_${panelPrefix}_${crypto.randomUUID().replace(/-/g, '')}`;
+      const { error: retryError } = await supabaseAdmin
+        .from('client_users')
+        .update({ 
+          api_key: retryKey,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', buyerId)
+        .eq('panel_id', panelId);
+      
+      if (retryError) {
+        console.error('Retry error generating API key:', retryError);
+        return jsonResponse({ error: 'Failed to generate API key' });
+      }
+      
+      console.log('API key generated successfully (retry) for buyer:', buyerId);
+      return jsonResponse({ success: true, api_key: retryKey });
+    }
+    
+    return jsonResponse({ error: 'Failed to generate API key' });
+  }
+
+  console.log('API key generated successfully for buyer:', buyerId);
+  return jsonResponse({ success: true, api_key: apiKey });
 }

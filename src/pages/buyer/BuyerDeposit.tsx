@@ -363,6 +363,23 @@ const BuyerDeposit = () => {
     };
   }, [buyer?.id, refreshBuyer]);
 
+  // Poll fallback for transaction updates (catches updates that real-time may miss)
+  useEffect(() => {
+    if (!buyer?.id) return;
+    
+    // Poll every 10 seconds for any pending transactions
+    const pollInterval = setInterval(() => {
+      // Only poll if there are pending transactions
+      const hasPending = transactions.some(t => t.status === 'pending');
+      if (hasPending) {
+        console.log('Polling for transaction updates...');
+        fetchTransactions();
+      }
+    }, 10000);
+    
+    return () => clearInterval(pollInterval);
+  }, [buyer?.id, transactions]);
+
   // Check for payment success/cancel URL params on mount - VERIFY actual status from DB
   useEffect(() => {
     const verifyPaymentStatus = async () => {
