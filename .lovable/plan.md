@@ -1,369 +1,316 @@
 
-# Comprehensive Plan: Fix API Key Generation, Transaction Updates, Blog Navigation, and CTA Defaults
+# Comprehensive Plan: Complete Implementation of All Remaining Fixes
 
-## Executive Summary
+## Overview
 
-This plan addresses 5 critical issues:
-1. **API Key Generation Failure** - Missing `api_key` column in `client_users` table
-2. **Transaction Status Updates** - Recent deposits not updating, balance not syncing on success
-3. **Manual Transfer Approval** - Panel owners need ability to mark transactions as successful/failed
-4. **Blog Navigation** - Blog link not showing in tenant storefront header/navigation across all themes
-5. **Hero CTA Defaults** - Change defaults from "Fast Order + View Services" to "Get Started + Fast Order"
+This plan completes the previous implementation and addresses 10 additional requirements:
 
----
-
-## Issue 1: API Key Generation for Tenants Failing
-
-### Problem Analysis
-The `client_users` table does **NOT** have an `api_key` column. The current code in `BuyerProfile.tsx` (lines 162-184) attempts to update a non-existent column:
-```tsx
-await supabase.from('client_users').update({ api_key: key }).eq('id', buyer.id);
-```
-
-### Solution
-
-**Part A: Add `api_key` column via migration**
-
-Create a new migration to add the `api_key` column with:
-- `api_key TEXT` column (nullable)
-- Unique constraint to prevent duplicate keys across the system
-- Index for fast API key lookups
-
-```sql
--- Add api_key column to client_users
-ALTER TABLE client_users ADD COLUMN api_key TEXT UNIQUE;
-
--- Create index for fast API key lookups
-CREATE INDEX idx_client_users_api_key ON client_users(api_key) WHERE api_key IS NOT NULL;
-```
-
-**Part B: Improve API key generation security**
-
-Update `handleGenerateApiKey` in `src/pages/buyer/BuyerProfile.tsx` to:
-1. Generate cryptographically secure keys with panel prefix for uniqueness
-2. Check if key already exists before saving (collision prevention)
-3. Include panel ID in key prefix for cross-tenant isolation
-
-```tsx
-const handleGenerateApiKey = async () => {
-  if (!buyer?.id || !buyer.panel_id) return;
-  
-  setGeneratingKey(true);
-  try {
-    // Generate secure key with panel prefix for uniqueness
-    const panelPrefix = buyer.panel_id.substring(0, 8);
-    const randomPart = crypto.randomUUID().replace(/-/g, '');
-    const key = `sk_${panelPrefix}_${randomPart}`;
-    
-    // Attempt to save - unique constraint will prevent duplicates
-    const { error } = await supabase
-      .from('client_users')
-      .update({ api_key: key })
-      .eq('id', buyer.id);
-    
-    if (error) {
-      if (error.code === '23505') {
-        // Unique constraint violation - extremely rare, retry once
-        const retryKey = `sk_${panelPrefix}_${crypto.randomUUID().replace(/-/g, '')}`;
-        const { error: retryError } = await supabase
-          .from('client_users')
-          .update({ api_key: retryKey })
-          .eq('id', buyer.id);
-        if (retryError) throw retryError;
-      } else {
-        throw error;
-      }
-    }
-    
-    await refreshBuyer();
-    toast({ title: "API Key Generated", description: "Your new API key is ready to use" });
-  } catch (error) {
-    console.error('Error generating API key:', error);
-    toast({ variant: "destructive", title: "Error", description: "Failed to generate API key" });
-  } finally {
-    setGeneratingKey(false);
-  }
-};
-```
-
-**Part C: Panel Owner API Key Security (Already Implemented)**
-
-The `panel_api_keys` table already handles panel-level API keys with unique constraints. No changes needed.
+1. Complete API key generation (database migration was approved)
+2. Blog to show in header/navigation (not just menu) across all themes
+3. CTA defaults: Primary = "Get Started", Secondary = "Fast Order"
+4. WhatsApp icon should be white in both light AND dark mode
+5. Footer should detect tenant/company name properly
+6. Create About Us page for each storefront
+7. Document how Panel Settings affect buyer storefront and SEO
+8. Fix dashboard loading - theme colors and panel name sync
+9. Fix 404 page and main site footer "Support" links to go to "/contact" instead of "/support"
 
 ---
 
-## Issue 2: Transaction Status Not Updating & Balance Not Syncing
+## Issue 1: Complete API Key Generation
 
-### Problem Analysis
-Looking at `BuyerDeposit.tsx`:
-1. The real-time subscription filters may not be catching all transaction updates
-2. The `fetchTransactions` refresh may have race conditions
-3. Manual transfers need explicit status update path
+The database migration adding `api_key` column to `client_users` was approved. Now we verify the code changes in `BuyerProfile.tsx` are working correctly:
 
-### Solution
-
-**Part A: Improve Real-time Subscription Reliability**
-
-Update the Supabase channel subscription in `BuyerDeposit.tsx` to use a more robust filter pattern:
-
-```tsx
-// Subscribe without filter, then check buyer IDs client-side for reliability
-const channel = supabase
-  .channel(`buyer-deposits-${buyer.id}`)
-  .on(
-    'postgres_changes',
-    {
-      event: '*',
-      schema: 'public',
-      table: 'transactions',
-    },
-    async (payload) => {
-      const newRecord = payload.new as any;
-      const oldRecord = payload.old as any;
-      
-      // Check if this transaction belongs to this buyer
-      const belongsToBuyer = 
-        (newRecord?.user_id === buyer.id) || 
-        (newRecord?.buyer_id === buyer.id) ||
-        (oldRecord?.user_id === buyer.id) ||
-        (oldRecord?.buyer_id === buyer.id);
-      
-      if (!belongsToBuyer) return;
-      
-      // Always refresh transaction list
-      await fetchTransactions();
-      
-      // Handle status transitions
-      if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
-        const newStatus = newRecord?.status;
-        const oldStatus = oldRecord?.status;
-        
-        if (newStatus === 'completed' && oldStatus !== 'completed') {
-          await refreshBuyer(); // Update balance
-          toast({
-            title: "Payment Successful!",
-            description: `$${Number(newRecord.amount).toFixed(2)} has been added to your balance.`
-          });
-        } else if (newStatus === 'failed' && oldStatus !== 'failed') {
-          toast({
-            variant: "destructive",
-            title: "Payment Failed",
-            description: "Your payment could not be processed."
-          });
-        }
-      }
-    }
-  )
-  .subscribe();
-```
-
-**Part B: Add immediate pending transaction display**
-
-After calling `process-payment`, immediately add a local pending transaction to the UI before the database write completes:
-
-```tsx
-const handleDeposit = async () => {
-  // ... validation ...
-  
-  setProcessing(true);
-  try {
-    const response = await supabase.functions.invoke('process-payment', { ... });
-    const result = response.data;
-    
-    // Immediately refresh to show pending transaction
-    await fetchTransactions();
-    
-    if (result.redirectUrl) {
-      window.location.href = result.redirectUrl;
-    } else if (result.manualPayment) {
-      // Show manual payment dialog
-    }
-  } catch (error) {
-    // Error handling
-  } finally {
-    setProcessing(false);
-  }
-};
-```
+**Status:** Already implemented in previous response with secure key generation:
+- Key format: `sk_[panel_id_8chars]_[uuid]`
+- Unique constraint prevents duplicates
+- Retry logic for collision edge cases
 
 ---
 
-## Issue 3: Manual Transfer Status Marking for Panel Owners
+## Issue 2: Blog in Header Navigation (All Themes)
 
-### Problem Analysis
-Panel owners cannot currently mark manual bank transfer transactions as successful or failed. This feature exists only in the admin `TransactionDetailModal.tsx` (lines 314-344).
+Currently, blog only appears in the navigation menu IF `showBlogInMenu` is true. The user wants blog to appear in the **header** as a direct link (not hidden in menu).
 
-### Solution
-
-**Part A: Create Panel Owner Transaction Management Component**
-
-Create a new component `src/components/billing/PanelTransactionManager.tsx` that allows panel owners to:
-1. View all pending manual transfer transactions from their buyers
-2. Mark transactions as "completed" or "failed"
-3. Automatically update buyer balance when marked as completed
-
-**Part B: Add to PaymentMethods Page**
-
-Add a new "Pending Transfers" card in `PaymentMethods.tsx` that shows:
-- List of pending manual transfer transactions
-- Buyer name, amount, transaction ID
-- "Approve" and "Reject" buttons
-- Confirmation dialog before status change
-
-**Part C: Update buyer balance on approval**
-
-When panel owner marks a transaction as "completed":
-```typescript
-// Update transaction status
-await supabase.from('transactions').update({ status: 'completed' }).eq('id', transactionId);
-
-// Update buyer balance
-const { data: tx } = await supabase.from('transactions').select('buyer_id, amount').eq('id', transactionId).single();
-
-if (tx?.buyer_id) {
-  await supabase.rpc('increment_buyer_balance', { 
-    buyer_uuid: tx.buyer_id, 
-    amount_to_add: tx.amount 
-  });
-}
-```
-
-Or use a simple update:
-```sql
-UPDATE client_users SET balance = balance + $amount WHERE id = $buyer_id;
-```
-
----
-
-## Issue 4: Blog Not Showing in All Storefront Theme Navigations
-
-### Problem Analysis
-The blog menu item is correctly implemented in `ThemeNavigation.tsx` (line 78):
+**Root Cause:** The `ThemeNavigation` component (line 78) adds blog to `defaultLinks` which is already in the header:
 ```tsx
 ...(showBlogInMenu ? [{ label: 'Blog', to: '/blog' }] : []),
 ```
 
-However, the `showBlogInMenu` prop is not being correctly passed from all theme homepages. Looking at the themes:
-- `TGRefHomepage.tsx` (line 87): Uses `customization.showBlogInMenu ?? false` ✓
-- But the `ThemeNavigation` inside needs to receive this prop
+This IS the header, not a hidden menu. The issue is `showBlogInMenu` is not being set to `true`.
 
-### Root Cause
-The issue is that each theme homepage renders `ThemeNavigation` but may not be passing `showBlogInMenu` prop.
+**Solution:** Ensure all theme homepages pass `showBlogInMenu` prop correctly:
 
-### Solution
+**Files to verify/update:**
+- `src/components/buyer-themes/tgref/TGRefHomepage.tsx` - Line 185: `showBlogInMenu={showBlogInMenu}` ✓
+- `src/components/buyer-themes/alipanel/AliPanelHomepage.tsx` - Line 205: `showBlogInMenu={showBlogInMenu}` ✓
+- `src/components/buyer-themes/flysmm/FlySMMHomepage.tsx`
+- `src/components/buyer-themes/smmstay/SMMStayHomepage.tsx`
+- `src/components/buyer-themes/smmvisit/SMMVisitHomepage.tsx`
 
-**Part A: Verify all theme homepages pass showBlogInMenu to ThemeNavigation**
-
-Files to update:
-1. `src/components/buyer-themes/tgref/TGRefHomepage.tsx`
-2. `src/components/buyer-themes/alipanel/AliPanelHomepage.tsx`
-3. `src/components/buyer-themes/flysmm/FlySMMHomepage.tsx`
-4. `src/components/buyer-themes/smmstay/SMMStayHomepage.tsx`
-5. `src/components/buyer-themes/smmvisit/SMMVisitHomepage.tsx`
-
-Each should pass:
-```tsx
-<ThemeNavigation
-  showBlogInMenu={customization.showBlogInMenu ?? false}
-  // ... other props
-/>
-```
-
-**Part B: Verify Storefront.tsx correctly passes blog_enabled**
-
-The `fullCustomization` object at line 174 already handles this:
-```tsx
-showBlogInMenu: customBranding?.showBlogInMenu ?? (panel as any)?.panel_settings?.blog_enabled ?? (panel?.settings as any)?.blog_enabled ?? false,
-```
-
-But we need to ensure ALL queries in `useTenant.tsx` include `blog_enabled` in the `panel_settings` selection (already fixed per previous plan).
+**Also check:** The `Storefront.tsx` fullCustomization must correctly set `showBlogInMenu` from panel settings.
 
 ---
 
-## Issue 5: Hero CTA Defaults - Change to "Get Started + Fast Order"
+## Issue 3: CTA Defaults - "Get Started" + "Fast Order"
 
-### Problem Analysis
-Current defaults in `DesignCustomization.tsx` (lines 184-185):
-```tsx
-heroCTAText: 'Get Started',
-heroSecondaryCTAText: 'View Services',
-```
+**Current status:** Already updated in previous response:
+- `DesignCustomization.tsx` line 184-185:
+  ```tsx
+  heroCTAText: 'Get Started',
+  heroSecondaryCTAText: 'Fast Order',
+  ```
 
-The translations in `platform-translations.ts` (lines 10-13):
-```tsx
-'buyer.hero.cta': 'Start Growing',
-'buyer.hero.ctaSecondary': 'View Prices',
-'buyer.hero.fastOrder': 'Fast Order',
-```
-
-### Solution
-
-Update defaults across all locations:
-1. **Primary CTA**: "Get Started" (already correct in defaults)
-2. **Secondary CTA**: "Fast Order" (change from "View Services")
-
-**Files to Update:**
-
-1. `src/pages/panel/DesignCustomization.tsx` - Change `heroSecondaryCTAText`:
-   ```tsx
-   heroCTAText: 'Get Started',
-   heroSecondaryCTAText: 'Fast Order',
-   ```
-
-2. `src/lib/platform-translations.ts` - Update translation:
-   ```tsx
-   'buyer.hero.ctaSecondary': 'Fast Order',
-   ```
-
-3. `src/components/buyer-themes/BuyerThemeWrapper.tsx` - Update fallback:
-   ```tsx
-   heroCTAText: branding.heroCTAText || 'Get Started',
-   heroSecondaryCTAText: branding.heroSecondaryCTAText || 'Fast Order',
-   ```
-
-4. Each theme homepage that uses these CTAs should also check the fallback order.
+**Additional updates needed:**
+- Ensure all theme homepages correctly render these CTAs
+- Update `platform-translations.ts` fallbacks
 
 ---
 
-## Files to Modify Summary
+## Issue 4: WhatsApp Icon - White in BOTH Light and Dark Mode
+
+**Current code** in `FloatingChatWidget.tsx` line 123-127:
+```tsx
+const WhatsAppIcon = () => (
+  <svg viewBox="0 0 24 24" className="w-6 h-6 text-white" fill="currentColor">
+    <path d="M17.472..."/>
+  </svg>
+);
+```
+
+This should already be white, but the button container may have styling issues.
+
+**Solution:** Force white fill regardless of mode:
+```tsx
+const WhatsAppIcon = () => (
+  <svg viewBox="0 0 24 24" className="w-6 h-6" fill="#FFFFFF">
+    <path d="M17.472..."/>
+  </svg>
+);
+```
+
+---
+
+## Issue 5: Footer - Detect Tenant/Company Name
+
+**Problem:** `StorefrontFooter.tsx` receives `panelName` as a prop but may not be getting the correct value from parent components.
+
+**Current prop interface** (line 15-20):
+```tsx
+interface StorefrontFooterProps {
+  panelName: string;
+  footerAbout?: string;
+  footerText?: string;
+  socialPlatforms?: SocialPlatform[];
+  primaryColor?: string;
+  variant?: 'dark' | 'light';
+}
+```
+
+**Solution:** Verify all theme homepages pass `panelName` correctly:
+- Each theme homepage receives `panelName` prop and should pass it to `StorefrontFooter`
+- Add fallback: `panelName || companyName || 'SMM Panel'`
+
+---
+
+## Issue 6: Create About Us Page for Storefronts
+
+**Create new file:** `src/pages/buyer/BuyerAbout.tsx`
+
+This page should:
+- Display tenant company info dynamically
+- Show panel name, description, and branding
+- Include contact information from panel settings
+- Have professional layout matching storefront theme
+
+**Also update:**
+- `src/components/storefront/StorefrontFooter.tsx` - Change "About Us" link to `/about` instead of `/support`
+- Add route in `TenantRouter.tsx` for `/about`
+
+---
+
+## Issue 7: Document Panel Settings Effects on Storefront & SEO
+
+Create documentation section explaining:
+
+### Panel Settings → Storefront Effects
+
+| Setting | Location | Storefront Effect |
+|---------|----------|-------------------|
+| Panel Name | General Settings | Displayed in header, footer, SEO title |
+| Logo URL | General Settings | Header logo, favicon |
+| Description | General Settings | SEO meta description, About section |
+| Primary Color | Design Customization | Theme colors throughout storefront |
+| Theme Type | Design Customization | Entire visual layout/style |
+| Hero Title/Subtitle | Design Customization | Homepage hero section |
+| Sections Toggle | Design Customization | Show/hide Stats, Features, Testimonials, FAQs |
+| SEO Title | SEO Settings | Browser tab, Google search title |
+| SEO Description | SEO Settings | Google search snippet |
+| SEO Keywords | SEO Settings | Meta keywords (limited SEO impact) |
+| OG Image | SEO Settings | Social media sharing preview |
+| Blog Enabled | Blog Management | Shows/hides blog in navigation |
+| Social Links | Integrations | Footer social icons |
+| WhatsApp/Telegram | Integrations | Floating chat widget |
+
+### SEO Improvements via Panel Settings:
+1. **SEO Title** - Target keyword at beginning, under 60 chars
+2. **SEO Description** - Compelling call-to-action, 150-160 chars
+3. **OG Image** - Eye-catching image for social shares
+4. **Structured Data** - FAQs automatically generate FAQPage schema
+5. **Blog** - Regular content improves organic traffic
+
+---
+
+## Issue 8: Dashboard Loading - Theme Colors & Panel Name Sync
+
+**Problem:** Theme colors take time to load, causing flash of default styles. Panel name appears as "panel" before actual name loads.
+
+**Root Cause:** 
+- `BuyerLayout.tsx` fetches panel data asynchronously
+- CSS variables are set after data loads
+- No skeleton/placeholder for branding during load
+
+**Solutions:**
+
+### A. Add loading state with skeleton UI
+```tsx
+if (panelLoading) {
+  return (
+    <div className="min-h-screen bg-background">
+      <header className="h-16 border-b animate-pulse bg-muted/30">
+        <Skeleton className="w-32 h-8" /> {/* Logo placeholder */}
+      </header>
+      <main className="p-6">
+        <Skeleton className="w-full h-48" />
+      </main>
+    </div>
+  );
+}
+```
+
+### B. Cache theme colors in localStorage
+```tsx
+// On panel load
+localStorage.setItem(`panel_theme_${panelId}`, JSON.stringify(themeColors));
+
+// On initial render, use cached values
+const cachedTheme = localStorage.getItem(`panel_theme_${panelId}`);
+if (cachedTheme) {
+  applyThemeColors(JSON.parse(cachedTheme));
+}
+```
+
+### C. Pre-apply CSS variables in TenantHead
+The `TenantHead` component already sets CSS variables. Ensure it runs early and caches values.
+
+---
+
+## Issue 9: Fix 404 Page and Main Footer - Support → Contact
+
+**404 Page** (`src/pages/NotFound.tsx`):
+- Line 163-168: Change `<Link to="/support">` to `<Link to="/contact">`
+
+**Main Footer** (`src/components/layout/Footer.tsx`):
+- Line 134-137: Change `/support` to `/contact` in Resources section
+
+---
+
+## Files to Create/Modify Summary
 
 | File | Changes |
 |------|---------|
-| **Migration (new)** | Add `api_key` column to `client_users` table |
-| `src/pages/buyer/BuyerProfile.tsx` | Fix API key generation with security improvements |
-| `src/pages/buyer/BuyerDeposit.tsx` | Improve real-time subscription reliability |
-| `src/pages/panel/PaymentMethods.tsx` | Add pending transfer approval section |
-| `src/components/billing/PanelTransactionManager.tsx` | **NEW** - Panel owner transaction management |
-| `src/components/buyer-themes/tgref/TGRefHomepage.tsx` | Ensure showBlogInMenu is passed to ThemeNavigation |
-| `src/components/buyer-themes/alipanel/AliPanelHomepage.tsx` | Ensure showBlogInMenu is passed to ThemeNavigation |
-| `src/components/buyer-themes/flysmm/FlySMMHomepage.tsx` | Ensure showBlogInMenu is passed to ThemeNavigation |
-| `src/components/buyer-themes/smmstay/SMMStayHomepage.tsx` | Ensure showBlogInMenu is passed to ThemeNavigation |
-| `src/components/buyer-themes/smmvisit/SMMVisitHomepage.tsx` | Ensure showBlogInMenu is passed to ThemeNavigation |
-| `src/pages/panel/DesignCustomization.tsx` | Update heroSecondaryCTAText default to "Fast Order" |
-| `src/lib/platform-translations.ts` | Update buyer.hero.ctaSecondary translation |
-| `src/components/buyer-themes/BuyerThemeWrapper.tsx` | Update fallback for heroSecondaryCTAText |
+| `src/components/storefront/FloatingChatWidget.tsx` | Force WhatsApp icon fill to `#FFFFFF` |
+| `src/components/storefront/StorefrontFooter.tsx` | Change About Us link to `/about`, ensure panelName fallback |
+| `src/pages/NotFound.tsx` | Change "Get Support" link to `/contact` |
+| `src/components/layout/Footer.tsx` | Change Support link to `/contact` |
+| `src/pages/buyer/BuyerAbout.tsx` | **NEW** - About Us page for storefronts |
+| `src/App.tsx` or `TenantRouter.tsx` | Add route for `/about` |
+| `src/components/buyer-themes/flysmm/FlySMMHomepage.tsx` | Ensure showBlogInMenu passed to nav |
+| `src/components/buyer-themes/smmstay/SMMStayHomepage.tsx` | Ensure showBlogInMenu passed to nav |
+| `src/components/buyer-themes/smmvisit/SMMVisitHomepage.tsx` | Ensure showBlogInMenu passed to nav |
+| `src/pages/buyer/BuyerLayout.tsx` | Add loading skeleton, theme caching |
+| `src/pages/buyer/BuyerDashboard.tsx` | Add loading state improvements |
 
 ---
 
 ## Implementation Order
 
-1. **Database Migration** - Add `api_key` column (prerequisite for API key fix)
-2. **Fix API Key Generation** - Update BuyerProfile.tsx
-3. **Improve Transaction Updates** - Update BuyerDeposit.tsx real-time subscription
-4. **Add Manual Transfer Approval** - Create PanelTransactionManager and integrate into PaymentMethods
-5. **Fix Blog Navigation** - Update all theme homepages to pass showBlogInMenu
-6. **Update CTA Defaults** - Change hero secondary CTA defaults
+1. **WhatsApp icon fix** - Simple SVG fill change
+2. **404 and Footer links** - Change /support to /contact
+3. **StorefrontFooter** - Fix About Us link and panelName fallback
+4. **Create BuyerAbout.tsx** - New About Us page
+5. **Add /about route** - In TenantRouter
+6. **Verify all themes pass showBlogInMenu**
+7. **Dashboard loading improvements** - Skeleton and caching
+
+---
+
+## BuyerAbout.tsx Component Structure
+
+```tsx
+// New About Us page for tenant storefronts
+const BuyerAbout = () => {
+  const { panel, loading } = useTenant();
+  const { t } = useLanguage();
+  
+  const companyName = panel?.name || 'Our Company';
+  const description = panel?.description || 'Professional SMM services';
+  const customBranding = panel?.custom_branding || {};
+  
+  return (
+    <BuyerLayout>
+      <div className="min-h-screen">
+        {/* Hero */}
+        <section className="py-20 bg-gradient-to-b from-primary/10 to-background">
+          <div className="container max-w-4xl mx-auto text-center">
+            <h1 className="text-4xl font-bold mb-4">About {companyName}</h1>
+            <p className="text-lg text-muted-foreground">{description}</p>
+          </div>
+        </section>
+        
+        {/* Mission/Values */}
+        <section className="py-16">
+          <div className="container max-w-4xl mx-auto">
+            <h2>Our Mission</h2>
+            <p>To provide the best social media marketing services...</p>
+            
+            <h2>Why Choose Us</h2>
+            <ul>
+              <li>Instant delivery</li>
+              <li>24/7 support</li>
+              <li>Competitive prices</li>
+              <li>High quality services</li>
+            </ul>
+          </div>
+        </section>
+        
+        {/* Contact CTA */}
+        <section className="py-16 bg-muted/20">
+          <div className="text-center">
+            <h2>Get In Touch</h2>
+            <Button asChild>
+              <Link to="/support">Contact Us</Link>
+            </Button>
+          </div>
+        </section>
+      </div>
+    </BuyerLayout>
+  );
+};
+```
 
 ---
 
 ## Testing Checklist
 
 After implementation:
-- [ ] Generate API key for tenant user - should succeed and show key
-- [ ] Regenerate API key - should create new unique key
-- [ ] Create a deposit transaction - should appear as "pending" immediately
-- [ ] Complete a payment (webhook or manual) - balance should update in real-time
-- [ ] Panel owner can mark pending manual transfer as "completed" - buyer balance updates
-- [ ] Panel owner can mark pending manual transfer as "failed" - transaction shows failed
-- [ ] Enable blog in panel settings - Blog link appears in ALL theme navigations
-- [ ] New panels have "Get Started" and "Fast Order" as default CTAs
+- [ ] WhatsApp chat icon is white in both light and dark mode
+- [ ] 404 page "Get Support" button goes to /contact
+- [ ] Main site footer "Support" link goes to /contact
+- [ ] Storefront footer "About Us" goes to /about page
+- [ ] About Us page displays tenant name and description
+- [ ] Blog link appears in header navigation when enabled
+- [ ] Dashboard shows skeleton during loading
+- [ ] Theme colors load without visible flash
+- [ ] Panel name displays correctly (not "panel" placeholder)
+- [ ] CTA buttons show "Get Started" and "Fast Order" by default
