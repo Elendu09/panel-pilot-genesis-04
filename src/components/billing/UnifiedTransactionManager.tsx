@@ -281,19 +281,6 @@ export const UnifiedTransactionManager = ({ panelId }: UnifiedTransactionManager
     );
   }
 
-  // Analytics calculations
-  const totalDeposits = transactions
-    .filter(t => t.status === 'completed')
-    .reduce((sum, t) => sum + t.amount, 0);
-
-  const pendingAmount = transactions
-    .filter(t => t.status === 'pending')
-    .reduce((sum, t) => sum + t.amount, 0);
-
-  const manualPendingCount = transactions.filter(t => 
-    t.status === 'pending' && t.is_manual
-  ).length;
-
   return (
     <>
       <Card>
@@ -319,26 +306,6 @@ export const UnifiedTransactionManager = ({ panelId }: UnifiedTransactionManager
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Analytics Summary Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3">
-              <p className="text-xs text-muted-foreground">Total Completed</p>
-              <p className="text-xl font-bold text-emerald-500">${totalDeposits.toFixed(2)}</p>
-            </div>
-            <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3">
-              <p className="text-xs text-muted-foreground">Pending Amount</p>
-              <p className="text-xl font-bold text-amber-500">${pendingAmount.toFixed(2)}</p>
-            </div>
-            <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-3">
-              <p className="text-xs text-muted-foreground">Manual Awaiting</p>
-              <p className="text-xl font-bold text-orange-500">{manualPendingCount}</p>
-            </div>
-            <div className="bg-primary/10 border border-primary/20 rounded-lg p-3">
-              <p className="text-xs text-muted-foreground">Total Transactions</p>
-              <p className="text-xl font-bold text-primary">{transactions.length}</p>
-            </div>
-          </div>
-
           {/* Search Bar */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />

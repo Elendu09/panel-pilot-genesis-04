@@ -115,7 +115,7 @@ interface Customer {
 
 const CustomerManagement = () => {
   const { toast } = useToast();
-  const { panel, loading: panelLoading, refreshPanel } = usePanel();
+  const { panel, loading: panelLoading } = usePanel();
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -138,43 +138,14 @@ const CustomerManagement = () => {
   const [selectedCustomers, setSelectedCustomers] = useState<string[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   
-  // Customer overview toggle - default to hidden, persisted in Supabase panel settings
+  // Customer overview toggle - default to hidden
   const [showOverview, setShowOverview] = useState(() => {
-    const settings = panel?.settings as any;
-    return settings?.ui?.customerOverviewVisible === true;
+    return localStorage.getItem('customer_overview_visible') === 'true';
   });
   
-  // Sync showOverview state when panel settings load
-  useEffect(() => {
-    const settings = panel?.settings as any;
-    setShowOverview(settings?.ui?.customerOverviewVisible === true);
-  }, [panel?.settings]);
-  
-  const handleToggleOverview = async (value: boolean) => {
+  const handleToggleOverview = (value: boolean) => {
     setShowOverview(value);
-    
-    if (!panel?.id) return;
-    
-    try {
-      const currentSettings = (panel.settings as any) || {};
-      const updatedSettings = {
-        ...currentSettings,
-        ui: {
-          ...(currentSettings.ui || {}),
-          customerOverviewVisible: value
-        }
-      };
-      
-      await supabase
-        .from('panels')
-        .update({ settings: updatedSettings })
-        .eq('id', panel.id);
-        
-      refreshPanel();
-    } catch (error) {
-      console.error('Error saving overview preference:', error);
-      toast({ variant: 'destructive', title: 'Error', description: 'Failed to save preference' });
-    }
+    localStorage.setItem('customer_overview_visible', String(value));
   };
   const [statsChanges, setStatsChanges] = useState<{
     total: { value: string; trend: 'up' | 'down' | 'neutral' };
@@ -547,14 +518,12 @@ const CustomerManagement = () => {
 
       if (error) throw error;
 
-      // Log the transaction with panel_id and buyer_id for proper RLS
+      // Log the transaction
       await supabase.from('transactions').insert({
-        panel_id: panel?.id,
         user_id: selectedCustomer.id,
-        buyer_id: selectedCustomer.id,
         amount: balanceAction === 'add' ? amount : -amount,
         type: balanceAction === 'add' ? 'deposit' : 'withdrawal',
-        description: balanceReason || `Balance ${balanceAction} by panel owner`,
+        description: balanceReason || `Balance ${balanceAction}`,
         status: 'completed'
       });
 
