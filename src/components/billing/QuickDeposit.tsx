@@ -10,8 +10,8 @@ import {
   Loader2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { usePanel } from "@/hooks/usePanel";
-import { useAvailablePaymentGateways } from "@/hooks/useAvailablePaymentGateways";
+// usePanel removed - not needed since we use admin gateways now
+import { useAdminPaymentGateways } from "@/hooks/useAdminPaymentGateways";
 
 interface QuickDepositProps {
   onDeposit: (amount: number, method: string) => void;
@@ -21,11 +21,8 @@ interface QuickDepositProps {
 const quickAmounts = [10, 25, 50, 100, 250, 500];
 
 export const QuickDeposit = ({ onDeposit, loading }: QuickDepositProps) => {
-  const { panel } = usePanel();
-  const { gateways, loading: gatewaysLoading } = useAvailablePaymentGateways({
-    panelId: panel?.id,
-    panelSettings: (panel?.settings as any) || null,
-  });
+  // Use admin-controlled payment gateways for panel owner deposits (not panel-configured buyer gateways)
+  const { gateways, loading: gatewaysLoading } = useAdminPaymentGateways();
   const [amount, setAmount] = useState<number | string>(50);
   const [selectedMethod, setSelectedMethod] = useState<string>("stripe");
 

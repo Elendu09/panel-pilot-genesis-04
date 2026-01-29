@@ -357,6 +357,9 @@ serve(async (req) => {
         const timeout = setTimeout(() => controller.abort(), 30000);
 
         let response: Response;
+        let lastError: any = null;
+
+        // Try GET first
         try {
           response = await fetch(url.toString(), {
             method: 'GET',
@@ -366,17 +369,38 @@ serve(async (req) => {
             },
             signal: controller.signal
           });
-          clearTimeout(timeout);
-        } catch (fetchError: any) {
-          clearTimeout(timeout);
-          if (fetchError.name === 'AbortError') {
-            result.errors.push(`Provider API timed out after 30 seconds`);
-          } else {
-            result.errors.push(`Network error: ${fetchError.message || 'Failed to connect to provider'}`);
+        } catch (getError: any) {
+          lastError = getError;
+          console.log(`GET request failed for ${provider.name}, trying POST fallback...`);
+          
+          // Try POST as fallback - many providers require POST
+          try {
+            const postBody = new URLSearchParams();
+            postBody.set('key', provider.api_key);
+            postBody.set('action', 'services');
+            
+            response = await fetch(provider.api_endpoint, {
+              method: 'POST',
+              headers: { 
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'User-Agent': 'SMM-Panel/2.0',
+                'Accept': 'application/json'
+              },
+              body: postBody,
+              signal: controller.signal
+            });
+          } catch (postError: any) {
+            clearTimeout(timeout);
+            if (lastError.name === 'AbortError' || postError.name === 'AbortError') {
+              result.errors.push(`Provider API timed out after 30 seconds`);
+            } else {
+              result.errors.push(`Network error: ${lastError.message || postError.message || 'Failed to connect to provider'}`);
+            }
+            results.push(result);
+            continue;
           }
-          results.push(result);
-          continue;
         }
+        clearTimeout(timeout);
 
         if (!response.ok) {
           const errorText = await response.text().catch(() => 'Unknown error');
@@ -385,7 +409,27 @@ serve(async (req) => {
           continue;
         }
 
-        const data = await response.json();
+        // Enhanced JSON parsing with fallback for malformed responses
+        let data;
+        const responseText = await response.text();
+        try {
+          data = JSON.parse(responseText);
+        } catch {
+          // Some providers return malformed JSON - try to clean it
+          const cleaned = responseText
+            .trim()
+            .replace(/^\uFEFF/, '') // Remove BOM
+            .replace(/[\x00-\x1F\x7F]/g, '') // Remove control characters
+            .replace(/,\s*}/g, '}') // Fix trailing commas in objects
+            .replace(/,\s*]/g, ']'); // Fix trailing commas in arrays
+          try {
+            data = JSON.parse(cleaned);
+          } catch {
+            result.errors.push(`Invalid JSON response from provider: ${responseText.slice(0, 200)}`);
+            results.push(result);
+            continue;
+          }
+        }
         
         // Handle different response formats from various providers
         let providerServices: ProviderService[] = [];
