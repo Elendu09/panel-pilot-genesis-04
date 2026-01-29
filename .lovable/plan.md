@@ -1,5 +1,5 @@
 
-# Comprehensive Enhancement Plan: Customer Management, Analytics, API, Design & Payments
+# Comprehensive Enhancement Plan: Customer Management, Provider API, Payment Separation & More
 
 ---
 
@@ -7,320 +7,370 @@
 
 This plan addresses the following improvements:
 
-1. **Customer Overview show/hide toggle** - Default to hidden
-2. **Remove Live Orders from Analytics** - Clean up the Analytics page
-3. **Fix API base URL for tenant (subdomain/custom domain)** - Production fix for global SMM providers
-4. **Visual effects for Customer Management table** - Enhance rows/columns styling
-5. **Hide dark mode switch for SMMVisit theme** - Prevent dark mode in SMMVisit
-6. **Recent deposits debugging** - Verify Supabase sync and reference generation
-7. **Panel Payment Management enhancement** - Add "All" filter, search bar, combine analytics with approve/reject
+1. **Customer Overview Toggle - Persist in Supabase** - Store preference in panel settings instead of localStorage
+2. **Provider API Errors - Enhanced Debugging & Fix** - Improve error handling and ensure all services are returned
+3. **Payment Management Page Enhancement** - Separate payment methods view, add analytics, and improve approve/reject flow
+4. **Customer Balance Updates** - Verify and fix balance update functionality
+5. **Separate Payment Systems** - Panel Owner Billing vs Tenant Payment Methods (critical fix)
 
 ---
 
-## Issue 1: Customer Overview Show/Hide Toggle
+## Issue 1: Customer Overview Toggle - Supabase Persistence
 
 **Current State:**
-`CustomerOverview` component is always visible on the Customer Management page.
+The toggle saves to `localStorage` (line 142-148 in `CustomerManagement.tsx`). This doesn't sync across devices or sessions.
 
 **Solution:**
-Add a toggle switch in the header area that shows/hides the `CustomerOverview` component. Default state: **hidden**. Save preference to localStorage.
+Store the preference in `panels.settings.ui.customerOverviewVisible` JSONB field.
 
 **Files to Modify:**
 | File | Change |
 |------|--------|
-| `src/pages/panel/CustomerManagement.tsx` | Add state for `showOverview`, toggle switch, and conditional render |
+| `src/pages/panel/CustomerManagement.tsx` | Replace localStorage with Supabase panel settings persistence |
 
 **Implementation:**
 ```tsx
-// Add state with localStorage persistence
+// Remove localStorage approach
+// Add state that reads from panel.settings.ui.customerOverviewVisible
 const [showOverview, setShowOverview] = useState(() => {
-  return localStorage.getItem('customer_overview_visible') === 'true';
+  const settings = panel?.settings as any;
+  return settings?.ui?.customerOverviewVisible === true;
 });
 
-// Toggle handler
-const handleToggleOverview = (value: boolean) => {
+// Update Supabase on toggle change
+const handleToggleOverview = async (value: boolean) => {
   setShowOverview(value);
-  localStorage.setItem('customer_overview_visible', String(value));
+  
+  if (!panel?.id) return;
+  
+  try {
+    const currentSettings = (panel.settings as any) || {};
+    const updatedSettings = {
+      ...currentSettings,
+      ui: {
+        ...(currentSettings.ui || {}),
+        customerOverviewVisible: value
+      }
+    };
+    
+    await supabase
+      .from('panels')
+      .update({ settings: updatedSettings })
+      .eq('id', panel.id);
+      
+    refreshPanel();
+  } catch (error) {
+    console.error('Error saving overview preference:', error);
+  }
 };
 
-// In JSX header area - add switch
-<div className="flex items-center gap-2">
-  <Switch checked={showOverview} onCheckedChange={handleToggleOverview} />
-  <Label>Show Overview</Label>
-</div>
-
-// Conditional render
-{showOverview && <CustomerOverview customers={customers} onSelectCustomer={...} />}
+// Sync state when panel loads
+useEffect(() => {
+  const settings = panel?.settings as any;
+  setShowOverview(settings?.ui?.customerOverviewVisible === true);
+}, [panel?.settings]);
 ```
 
 ---
 
-## Issue 2: Remove Live Orders from Analytics
+## Issue 2: Provider API Errors - Enhanced Debugging & Fix
 
 **Current State:**
-Analytics page has a "Live Orders" tab (lines 1094-1160) that shows `liveOrdersWithService` data.
+Edge functions `provider-services` and `sync-provider-services` have 30-second timeout implemented, but users report errors when testing provider connections.
+
+**Analysis:**
+Looking at the `provider-services/index.ts` code (lines 327-362), the timeout and error handling is already in place. The issue may be:
+1. Invalid URL formats from users
+2. Providers requiring POST instead of GET
+3. Response parsing issues for non-standard API responses
 
 **Solution:**
-Remove the "Live Orders" tab from the Analytics page. Orders are already managed in the Orders Management page.
+Enhance error handling with more detailed logging and support both GET/POST methods. Also add better JSON parsing with fallback.
 
 **Files to Modify:**
 | File | Change |
 |------|--------|
-| `src/pages/panel/Analytics.tsx` | Remove "orders" tab and related state/fetch logic |
-
-**Changes:**
-1. Remove `liveOrdersWithService` state
-2. Remove the fetch logic for live orders (lines 204-215)
-3. Remove the "Orders" tab trigger
-4. Remove the "orders" TabsContent section (lines 1094-1160)
-
----
-
-## Issue 3: Fix API Base URL for Tenant (Subdomain/Custom Domain)
-
-**Root Cause Analysis:**
-When a panel owner tries to test their provider using their tenant's API URL (e.g., `mypanel.smmpilot.online/api/v2`), it fails because:
-
-1. The Vercel rewrite rule `{ "source": "/api/v2/:path*", "destination": "https://tooudgubuhxjbbvzjcgx.supabase.co/functions/v1/:path*" }` is present
-2. However, the edge functions `provider-services` and `sync-provider-services` call external provider APIs directly
-
-**The Real Issue:**
-Looking at `ProviderManagement.tsx`, the provider's `api_endpoint` is the EXTERNAL provider URL (e.g., `https://smmrush.com/api/v2`), not the tenant's own API.
-
-The issue is likely that:
-1. When fetching provider services, the edge function makes a request to the provider's API endpoint
-2. If CORS or network issues occur, it fails
-
-**Checking `sync-provider-services` (lines 340-356):**
-```typescript
-const url = new URL(provider.api_endpoint);
-url.searchParams.set('key', provider.api_key);
-url.searchParams.set('action', 'services');
-
-const response = await fetch(url.toString(), {
-  method: 'GET',
-  headers: { 'User-Agent': 'SMM-Panel/2.0' },
-});
-```
-
-This is correct - it fetches from the external provider. The issue might be:
-1. Invalid provider URL format
-2. Missing timeout handling
-3. Error responses not properly caught
-
-**Solution:**
-Enhance error handling and add timeout to provider API calls. Also ensure the Vercel rewrite includes all necessary headers.
-
-**Files to Modify:**
-| File | Change |
-|------|--------|
-| `supabase/functions/sync-provider-services/index.ts` | Add timeout, better error handling, validate URL |
-| `supabase/functions/provider-services/index.ts` | Add timeout, better error handling |
+| `supabase/functions/provider-services/index.ts` | Add POST method fallback, better JSON parsing, detailed error messages |
+| `supabase/functions/sync-provider-services/index.ts` | Same enhancements |
 
 **Implementation:**
 ```typescript
-// Add timeout and better error handling
-const controller = new AbortController();
-const timeout = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+// Enhanced fetch with GET/POST fallback
+let response: Response;
+let lastError: any = null;
 
+// Try GET first
 try {
-  const response = await fetch(url.toString(), {
+  const getUrl = new URL(apiEndpoint);
+  getUrl.searchParams.set('key', apiKey);
+  getUrl.searchParams.set('action', action);
+  
+  response = await fetch(getUrl.toString(), {
     method: 'GET',
-    headers: { 
-      'User-Agent': 'SMM-Panel/2.0',
-      'Accept': 'application/json'
-    },
+    headers: { 'User-Agent': 'SMM-Panel/2.0', 'Accept': 'application/json' },
     signal: controller.signal
   });
-  clearTimeout(timeout);
+} catch (getError: any) {
+  lastError = getError;
   
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Provider returned ${response.status}: ${errorText.slice(0, 200)}`);
+  // Try POST as fallback (some providers require POST)
+  try {
+    const postBody = new URLSearchParams();
+    postBody.set('key', apiKey);
+    postBody.set('action', action);
+    
+    response = await fetch(apiEndpoint, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent': 'SMM-Panel/2.0'
+      },
+      body: postBody,
+      signal: controller.signal
+    });
+  } catch (postError) {
+    throw lastError; // Throw original GET error
   }
-  // ... rest of logic
-} catch (error) {
-  clearTimeout(timeout);
-  if (error.name === 'AbortError') {
-    throw new Error('Provider API timed out after 30 seconds');
+}
+
+// Enhanced JSON parsing with fallback
+let data;
+const responseText = await response.text();
+try {
+  data = JSON.parse(responseText);
+} catch {
+  // Some providers return array wrapped in extra characters
+  const cleaned = responseText.trim().replace(/^\[|\]$/g, '');
+  try {
+    data = JSON.parse(`[${cleaned}]`);
+  } catch {
+    throw new Error(`Invalid JSON response from provider: ${responseText.slice(0, 200)}`);
   }
-  throw error;
+}
+
+// Handle error responses from provider
+if (data?.error) {
+  throw new Error(`Provider error: ${data.error}`);
 }
 ```
 
 ---
 
-## Issue 4: Visual Effects for Customer Management Table
+## Issue 3: Customer Balance Updates - Verification
 
 **Current State:**
-The customer table uses basic styling without visual effects.
-
-**Solution:**
-Add hover effects, gradient backgrounds, subtle animations, and improved row styling.
-
-**Files to Modify:**
-| File | Change |
-|------|--------|
-| `src/pages/panel/CustomerManagement.tsx` | Enhanced table row styling with hover effects, gradients |
-
-**Enhancements:**
-1. Hover effect with scale and background gradient
-2. Alternating row colors with subtle transparency
-3. Status badge glow effects
-4. Smooth transitions on all interactive elements
-
-**Implementation:**
-```tsx
-// Enhanced TableRow styling
-<TableRow 
-  className={cn(
-    "group transition-all duration-200 cursor-pointer",
-    "hover:bg-gradient-to-r hover:from-primary/5 hover:to-transparent",
-    "hover:shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.2)]",
-    index % 2 === 0 ? "bg-muted/20" : "bg-transparent"
-  )}
->
-```
-
----
-
-## Issue 5: Hide Dark Mode Switch for SMMVisit Theme
-
-**Current State:**
-Design Customization page shows the dark/light mode toggle for all themes, including SMMVisit which only supports light mode.
-
-**Solution:**
-When SMMVisit theme is selected, hide the theme mode switch and display a warning badge.
-
-**Files to Modify:**
-| File | Change |
-|------|--------|
-| `src/pages/panel/DesignCustomization.tsx` | Conditionally hide mode switch when SMMVisit is selected |
-
-**Implementation:**
-```tsx
-// In the theme mode toggle section
-{selectedThemeId !== 'smmvisit' && selectedThemeId !== 'BuyerThemeSMMVisit' ? (
-  <div className="flex items-center gap-2">
-    <Sun className="w-4 h-4" />
-    <Switch 
-      checked={customization.themeMode === 'dark'} 
-      onCheckedChange={(checked) => handleChange('themeMode', checked ? 'dark' : 'light')}
-    />
-    <Moon className="w-4 h-4" />
-  </div>
-) : (
-  <Badge variant="outline" className="text-amber-500 border-amber-500/50">
-    <Sun className="w-3 h-3 mr-1" /> Light Mode Only
-  </Badge>
-)}
-```
-
----
-
-## Issue 6: Recent Deposits - Supabase Sync Verification
+Looking at `CustomerManagement.tsx` lines 505-542, the `handleBalanceAdjust` function:
+1. Updates `client_users.balance` in Supabase ✓
+2. Creates a transaction record ✓
+3. Updates local state ✓
 
 **Analysis:**
-Looking at `BuyerDeposit.tsx`:
+The code is correct. The issue may be that the real-time subscription at lines 169-228 listens for changes but may not trigger an immediate refresh.
 
-1. **Transaction Creation (lines 504-600):** When a user clicks deposit:
-   - For automatic gateways: Calls `process-payment` edge function which creates a transaction with `pending` status server-side
-   - For manual transfers: Creates a transaction client-side with `pending_verification` status
+**Verification:**
+The real-time subscription (line 202-217) handles `UPDATE` events and properly updates the balance from the new payload. This should work correctly.
 
-2. **Reference Generation:** The transaction ID serves as the reference - this is generated:
-   - By the edge function for automatic payments (`transactionIdToUse` in `process-payment`)
-   - By Supabase auto-generated UUID for manual transfers
-
-3. **Real-time Updates (lines 296-364):** Already has subscription to `transactions` table
-
-4. **Polling Fallback (lines 367-381):** Already polls every 10 seconds when pending transactions exist
-
-**Current Issues Found:**
-- Manual transfer creates transaction with `pending_verification` status (not `pending`)
-- The polling checks for `status === 'pending'` but manual transfers use `pending_verification`
+**Potential Issue:**
+The transaction insert at line 522-528 may fail due to RLS if the user_id doesn't match properly. The transaction is logged with the customer's ID but may need panel_id for proper RLS.
 
 **Solution:**
-Update the polling to also check for `pending_verification` status.
+Add `panel_id` to the transaction insert for proper RLS handling.
 
 **Files to Modify:**
 | File | Change |
 |------|--------|
-| `src/pages/buyer/BuyerDeposit.tsx` | Fix polling to include `pending_verification` status |
+| `src/pages/panel/CustomerManagement.tsx` | Add panel_id to transaction insert |
 
 **Implementation:**
-```tsx
-// Update polling condition (line 373)
-const hasPending = transactions.some(t => 
-  t.status === 'pending' || t.status === 'pending_verification'
-);
+```typescript
+// Line 522-528 - Add panel_id
+await supabase.from('transactions').insert({
+  panel_id: panel.id, // Add this
+  user_id: selectedCustomer.id,
+  buyer_id: selectedCustomer.id, // Also add buyer_id for proper association
+  amount: balanceAction === 'add' ? amount : -amount,
+  type: balanceAction === 'add' ? 'deposit' : 'withdrawal',
+  description: balanceReason || `Balance ${balanceAction} by panel owner`,
+  status: 'completed'
+});
 ```
 
 ---
 
-## Issue 7: Panel Payment Management Enhancement
+## Issue 4: Separate Payment Systems - CRITICAL FIX
 
-**Current State:**
-- Payment Methods page has separate sections for gateway configuration and transaction management
-- No "All" filter for payment methods
-- No search bar for transactions
+**Root Cause Analysis:**
+The user reports that their panel owner billing page shows the SAME payment methods as their tenant/buyer deposit page. This is incorrect because:
+
+1. **Admin Payment Providers (`platform_payment_providers`)** - Used for platform-level billing (panel owner subscriptions, panel owner deposits)
+2. **Panel Payment Settings (`panels.settings.payments`)** - Used for buyer/tenant deposits
+
+**The Problem:**
+Looking at `Billing.tsx` (lines 117-122) and `QuickDeposit.tsx` (lines 25-28), both use `useAvailablePaymentGateways` which:
+1. Fetches from `platform_payment_providers` (admin-controlled)
+2. Fetches from `panels.settings.payments` (panel owner configured)
+3. Returns the **intersection** of both
+
+This is WRONG for panel owner billing. Panel owners should see admin-configured payment providers for their own subscription/billing payments - NOT their panel's configured buyer payment methods.
 
 **Solution:**
-1. Add "All" tab to show all payment methods together
-2. Add search bar in UnifiedTransactionManager
-3. Combine analytics with approve/reject section for clearer payment overview
+Create separate hooks:
+1. `useAdminPaymentGateways` - For panel owner billing (fetches only from `platform_payment_providers`)
+2. Keep `useAvailablePaymentGateways` - For buyer/tenant deposits (current logic is correct for buyers)
 
 **Files to Modify:**
 | File | Change |
 |------|--------|
-| `src/pages/panel/PaymentMethods.tsx` | Add "All" category tab |
-| `src/components/billing/UnifiedTransactionManager.tsx` | Add search bar, combine analytics |
+| `src/hooks/useAdminPaymentGateways.tsx` | NEW - Hook for admin-controlled gateways only |
+| `src/pages/panel/Billing.tsx` | Use `useAdminPaymentGateways` instead of `useAvailablePaymentGateways` |
+| `src/components/billing/QuickDeposit.tsx` | Use `useAdminPaymentGateways` |
 
-**Implementation for PaymentMethods.tsx:**
-```tsx
-// Add "all" to categories
-const categories = ["all", "cards", "regional", "ewallets", "bank", "crypto"] as const;
+**New Hook Implementation:**
+```typescript
+// src/hooks/useAdminPaymentGateways.tsx
+import { useEffect, useMemo, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
-// Filter logic
-const filteredGateways = activeCategory === "all"
-  ? Object.values(paymentGateways).flat().filter(g => ...)
-  : paymentGateways[activeCategory].filter(g => ...);
+export type AdminGateway = {
+  id: string;
+  displayName: string;
+  category?: string | null;
+  feePercentage?: number | null;
+  fixedFee?: number | null;
+  config?: Record<string, any>;
+};
+
+export const useAdminPaymentGateways = () => {
+  const [loading, setLoading] = useState(true);
+  const [gateways, setGateways] = useState<AdminGateway[]>([]);
+
+  const refresh = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("platform_payment_providers")
+        .select("*")
+        .eq("is_enabled", true);
+
+      if (error) throw error;
+
+      const mapped: AdminGateway[] = (data || []).map((p) => ({
+        id: p.provider_name,
+        displayName: p.display_name,
+        category: p.category,
+        feePercentage: p.fee_percentage,
+        fixedFee: p.fixed_fee,
+        config: p.config || {}
+      }));
+
+      // Sort alphabetically
+      mapped.sort((a, b) => a.displayName.localeCompare(b.displayName));
+      setGateways(mapped);
+    } catch (error) {
+      console.error("Error fetching admin payment gateways:", error);
+      setGateways([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    refresh();
+  }, []);
+
+  return { gateways, loading, refresh };
+};
 ```
 
-**Implementation for UnifiedTransactionManager.tsx:**
+**Update Billing.tsx:**
+```typescript
+// Replace this:
+import { useAvailablePaymentGateways } from '@/hooks/useAvailablePaymentGateways';
+
+// With:
+import { useAdminPaymentGateways } from '@/hooks/useAdminPaymentGateways';
+
+// And update usage:
+const { gateways: availableGateways, loading: gatewaysLoading } = useAdminPaymentGateways();
+```
+
+**Update QuickDeposit.tsx:**
+```typescript
+// Same replacement - use admin gateways for panel owner deposits
+import { useAdminPaymentGateways } from '@/hooks/useAdminPaymentGateways';
+
+export const QuickDeposit = ({ onDeposit, loading }: QuickDepositProps) => {
+  const { gateways, loading: gatewaysLoading } = useAdminPaymentGateways();
+  // ... rest of component
+};
+```
+
+---
+
+## Issue 5: Payment Management Page Enhancement
+
+**Current State:**
+The `PaymentMethods.tsx` page has:
+- Categories: all, cards, regional, ewallets, bank, crypto (added "all" in previous update)
+- `UnifiedTransactionManager` component with search bar
+
+**Enhancements Needed:**
+1. Differentiate payment method configuration from transaction analytics
+2. Add dedicated analytics section with charts
+3. Improve approve/reject flow with better UI
+
+**Solution:**
+Restructure the page with clearer sections and add payment analytics chart.
+
+**Files to Modify:**
+| File | Change |
+|------|--------|
+| `src/pages/panel/PaymentMethods.tsx` | Add analytics section, improve layout |
+| `src/components/billing/UnifiedTransactionManager.tsx` | Add analytics cards at top |
+
+**Implementation for UnifiedTransactionManager:**
 ```tsx
-// Add search state
-const [searchQuery, setSearchQuery] = useState("");
+// Add analytics summary at top
+const totalDeposits = transactions
+  .filter(t => t.status === 'completed')
+  .reduce((sum, t) => sum + t.amount, 0);
 
-// Add search input
-<Input 
-  placeholder="Search by user, amount, or reference..."
-  value={searchQuery}
-  onChange={(e) => setSearchQuery(e.target.value)}
-  className="max-w-sm"
-/>
+const pendingCount = transactions.filter(t => 
+  t.status === 'pending' || t.status === 'pending_verification'
+).length;
 
-// Filter transactions
-const filteredTransactions = transactions.filter(tx => {
-  if (!searchQuery) return true;
-  const query = searchQuery.toLowerCase();
-  return (
-    tx.user_id?.toLowerCase().includes(query) ||
-    tx.id?.toLowerCase().includes(query) ||
-    tx.amount?.toString().includes(query) ||
-    tx.payment_method?.toLowerCase().includes(query)
-  );
-});
+const manualPending = transactions.filter(t => 
+  (t.status === 'pending' || t.status === 'pending_verification') && 
+  t.payment_method?.includes('manual')
+).length;
 
-// Sort to show manual first
-const sortedTransactions = filteredTransactions.sort((a, b) => {
-  // Manual transactions first
-  const aIsManual = a.payment_method?.includes('manual');
-  const bIsManual = b.payment_method?.includes('manual');
-  if (aIsManual && !bIsManual) return -1;
-  if (!aIsManual && bIsManual) return 1;
-  // Then by date
-  return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-});
+// Render analytics cards
+<div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+  <Card className="bg-card/60">
+    <CardContent className="p-4">
+      <p className="text-sm text-muted-foreground">Total Deposits</p>
+      <p className="text-2xl font-bold text-emerald-500">${totalDeposits.toFixed(2)}</p>
+    </CardContent>
+  </Card>
+  <Card className="bg-card/60">
+    <CardContent className="p-4">
+      <p className="text-sm text-muted-foreground">Pending</p>
+      <p className="text-2xl font-bold text-amber-500">{pendingCount}</p>
+    </CardContent>
+  </Card>
+  <Card className="bg-card/60">
+    <CardContent className="p-4">
+      <p className="text-sm text-muted-foreground">Manual Awaiting</p>
+      <p className="text-2xl font-bold text-orange-500">{manualPending}</p>
+    </CardContent>
+  </Card>
+  <Card className="bg-card/60">
+    <CardContent className="p-4">
+      <p className="text-sm text-muted-foreground">Total Transactions</p>
+      <p className="text-2xl font-bold">{transactions.length}</p>
+    </CardContent>
+  </Card>
+</div>
 ```
 
 ---
@@ -329,38 +379,57 @@ const sortedTransactions = filteredTransactions.sort((a, b) => {
 
 | File | Changes |
 |------|---------|
-| `src/pages/panel/CustomerManagement.tsx` | Add show/hide toggle for overview, enhance table visual effects |
-| `src/pages/panel/Analytics.tsx` | Remove Live Orders tab |
-| `supabase/functions/sync-provider-services/index.ts` | Add timeout, improve error handling |
-| `supabase/functions/provider-services/index.ts` | Add timeout, improve error handling |
-| `src/pages/panel/DesignCustomization.tsx` | Hide dark mode switch when SMMVisit is selected |
-| `src/pages/buyer/BuyerDeposit.tsx` | Fix polling to include `pending_verification` status |
-| `src/pages/panel/PaymentMethods.tsx` | Add "All" category tab for payment methods |
-| `src/components/billing/UnifiedTransactionManager.tsx` | Add search bar, sort manual first, combine with analytics |
+| `src/pages/panel/CustomerManagement.tsx` | Supabase persistence for overview toggle, add panel_id to transaction |
+| `src/hooks/useAdminPaymentGateways.tsx` | **NEW** - Hook for admin-controlled payment gateways |
+| `src/pages/panel/Billing.tsx` | Use `useAdminPaymentGateways` instead of `useAvailablePaymentGateways` |
+| `src/components/billing/QuickDeposit.tsx` | Use `useAdminPaymentGateways` |
+| `supabase/functions/provider-services/index.ts` | Add POST fallback, better JSON parsing |
+| `supabase/functions/sync-provider-services/index.ts` | Same enhancements |
+| `src/components/billing/UnifiedTransactionManager.tsx` | Add analytics cards at top |
 
 ---
 
-## Implementation Order
+## Technical Architecture Clarification
 
-1. **Customer Management Overview Toggle** - Quick UI change
-2. **Remove Live Orders from Analytics** - Simple removal
-3. **Hide Dark Mode for SMMVisit** - Conditional rendering
-4. **Fix Deposit Polling** - One-line fix
-5. **Payment Methods "All" Tab** - UI enhancement
-6. **Transaction Manager Search** - Component enhancement
-7. **Customer Table Visual Effects** - CSS/styling
-8. **Provider API Error Handling** - Edge function improvements
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     ADMIN (Platform Owner)                       │
+│  platform_payment_providers table                                │
+│  - Manages which gateways are available platform-wide            │
+│  - Configures Stripe/PayPal/etc with ADMIN credentials           │
+│  - Used for: Panel owner subscriptions & panel owner deposits    │
+└───────────────────────────┬─────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     PANEL OWNER                                  │
+│  panels.settings.payments                                        │
+│  - Configures THEIR OWN Stripe/PayPal/etc credentials            │
+│  - Controls which gateways THEIR BUYERS can use                  │
+│  - Used for: Buyer/tenant deposits on their storefront           │
+└───────────────────────────┬─────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     BUYER (Tenant Customer)                      │
+│  Sees only panel-configured gateways (from panel.settings)       │
+│  Intersection with platform-enabled providers for validation     │
+│  - Deposits go to panel owner's gateway credentials              │
+└─────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
 ## Testing Checklist
 
 After implementation:
-- [ ] Customer Overview is hidden by default, toggle shows/hides it
-- [ ] Analytics page no longer has "Live Orders" tab
-- [ ] Selecting SMMVisit theme hides the dark mode toggle
-- [ ] Manual deposits show as "pending_verification" and poll correctly
-- [ ] Payment Methods page has "All" tab showing all gateways
-- [ ] Transaction Manager has working search bar
-- [ ] Customer table has visual hover effects
-- [ ] Provider import works without timeout errors
+- [ ] Customer Overview toggle persists across page refreshes (saved to Supabase)
+- [ ] Customer Overview toggle syncs across different browser sessions
+- [ ] Provider API test shows all services from valid providers
+- [ ] Provider API shows clear error messages for invalid URLs/credentials
+- [ ] Adding balance to customer in Customer Management updates their balance in real-time
+- [ ] Panel Owner Billing page shows admin-configured payment gateways (platform_payment_providers)
+- [ ] Panel Owner Payment Methods page shows panel's configured gateways for buyers
+- [ ] Buyer/Tenant Deposit page shows panel-configured payment gateways
+- [ ] Payment analytics show correct totals and pending counts
+- [ ] Manual transactions are prioritized at top of approval queue
