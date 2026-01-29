@@ -153,11 +153,24 @@ const BuyerProfile = () => {
   };
 
   const copyApiKey = () => {
-    if (buyer?.api_key) {
-      navigator.clipboard.writeText(buyer.api_key);
+    const keyToCopy = localApiKey || buyer?.api_key;
+    if (keyToCopy) {
+      navigator.clipboard.writeText(keyToCopy);
       toast({ title: "Copied!", description: "API key copied to clipboard" });
     }
   };
+
+  // Local state to store the newly generated key for immediate display
+  const [localApiKey, setLocalApiKey] = useState<string | null>(null);
+  
+  // Sync localApiKey with buyer.api_key when buyer changes
+  useEffect(() => {
+    if (buyer?.api_key) {
+      setLocalApiKey(buyer.api_key);
+    }
+  }, [buyer?.api_key]);
+  
+  const displayApiKey = localApiKey || buyer?.api_key;
 
   const handleGenerateApiKey = async () => {
     if (!buyer?.id || !buyer.panel_id) return;
@@ -184,12 +197,18 @@ const BuyerProfile = () => {
             .update({ api_key: retryKey } as any)
             .eq('id', buyer.id);
           if (retryError) throw retryError;
+          // Update local state immediately with retry key
+          setLocalApiKey(retryKey);
         } else {
           throw error;
         }
+      } else {
+        // Update local state immediately for instant display
+        setLocalApiKey(key);
       }
       
-      await refreshBuyer();
+      // Also refresh buyer context in background
+      refreshBuyer();
       toast({ title: "API Key Generated", description: "Your new API key is ready to use" });
     } catch (error) {
       console.error('Error generating API key:', error);
@@ -436,10 +455,10 @@ const BuyerProfile = () => {
                 Use your API key to integrate with external systems and automate orders.
               </p>
               
-              {buyer?.api_key ? (
+              {displayApiKey ? (
                 <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-lg">
                   <code className="flex-1 font-mono text-sm truncate">
-                    {showApiKey ? buyer.api_key : '••••••••••••••••••••••••••••••••'}
+                    {showApiKey ? displayApiKey : '••••••••••••••••••••••••••••••••'}
                   </code>
                   <Button size="icon" variant="ghost" onClick={() => setShowApiKey(!showApiKey)}>
                     {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -466,10 +485,10 @@ const BuyerProfile = () => {
                 ) : (
                   <RefreshCw className="w-4 h-4 mr-2" />
                 )}
-                {buyer?.api_key ? 'Regenerate API Key' : 'Generate API Key'}
+                {displayApiKey ? 'Regenerate API Key' : 'Generate API Key'}
               </Button>
               
-              {buyer?.api_key && (
+              {displayApiKey && (
                 <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
                   <AlertCircle className="w-3 h-3" />
                   Regenerating will invalidate your current key

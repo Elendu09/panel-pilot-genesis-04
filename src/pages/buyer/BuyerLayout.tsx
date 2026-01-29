@@ -361,9 +361,12 @@ const BuyerLayoutInner = ({ children }: BuyerLayoutProps) => {
       </AnimatePresence>
 
       {/* Mobile Bottom Navigation */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-background/95 backdrop-blur-xl border-t border-border/50 safe-area-bottom">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-xl border-t border-border/50 safe-area-bottom">
         <div className="flex items-center justify-around py-1.5 px-0.5">
           {bottomNavItems.map((item, index) => {
+            // Check active state before any rendering
+            const isActiveItem = !item.isMenu && item.href !== '#menu' && isActive(item.href);
+            
             if (item.isMenu) {
               return (
                 <Sheet key={item.name} open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
@@ -538,6 +541,7 @@ const BuyerLayoutInner = ({ children }: BuyerLayoutProps) => {
 
             // Center button (New Order)
             if (item.isCenter) {
+              const isCenterActive = isActive(item.href);
               return (
                 <Link
                   key={item.name}
@@ -550,14 +554,17 @@ const BuyerLayoutInner = ({ children }: BuyerLayoutProps) => {
                     whileTap={{ scale: 0.95 }}
                     className={cn(
                       "w-12 h-12 rounded-xl flex items-center justify-center shadow-lg transition-all",
-                      isActive(item.href) 
-                        ? "bg-primary text-primary-foreground shadow-primary/30" 
+                      isCenterActive 
+                        ? "bg-primary text-primary-foreground shadow-primary/30 ring-2 ring-primary/50" 
                         : "bg-primary/90 text-primary-foreground shadow-primary/20"
                     )}
                   >
                     <item.icon className="w-5 h-5" />
                   </motion.div>
-                  <span className="absolute -bottom-4 left-1/2 -translate-x-1/2 text-[9px] font-medium whitespace-nowrap">
+                  <span className={cn(
+                    "absolute -bottom-4 left-1/2 -translate-x-1/2 text-[9px] font-medium whitespace-nowrap",
+                    isCenterActive && "text-primary font-semibold"
+                  )}>
                     {item.name}
                   </span>
                 </Link>
@@ -579,13 +586,27 @@ const BuyerLayoutInner = ({ children }: BuyerLayoutProps) => {
                 data-tour={getTourAttribute()}
                 className={cn(
                   "flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl transition-all relative min-w-0",
-                  isActive(item.href) 
+                  isActiveItem 
                     ? "text-primary" 
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                <item.icon className="w-5 h-5" />
-                <span className="text-[9px] font-medium truncate">{item.name}</span>
+                {/* Active indicator bar */}
+                {isActiveItem && (
+                  <motion.div
+                    layoutId="bottomNavActive"
+                    className="absolute -top-1 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-primary rounded-full"
+                    initial={false}
+                    transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                  />
+                )}
+                <item.icon className={cn("w-5 h-5", isActiveItem && "scale-105")} />
+                <span className={cn(
+                  "text-[9px] font-medium truncate",
+                  isActiveItem && "font-semibold"
+                )}>
+                  {item.name}
+                </span>
                 {item.badge && (
                   <Badge 
                     variant="default" 
