@@ -114,8 +114,8 @@ export const StorefrontFooter = ({
           <nav aria-label="Company navigation">
             <h4 className="font-semibold mb-4">{t('storefront.footer.company')}</h4>
             <ul className={`space-y-2 text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-              <li><Link to="/support" aria-label="About us" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>{t('storefront.footer.aboutUs')}</Link></li>
-              <li><Link to="/support" aria-label="Contact us" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>{t('storefront.footer.contact')}</Link></li>
+              <li><Link to="/about" aria-label="About us" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>{t('storefront.footer.aboutUs')}</Link></li>
+              <li><Link to="/contact" aria-label="Contact us" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>{t('storefront.footer.contact')}</Link></li>
               <li><Link to="/blog" aria-label="Blog" className={`hover:${isDark ? 'text-white' : 'text-slate-900'} transition-colors`}>{t('storefront.nav.blog')}</Link></li>
             </ul>
           </nav>
@@ -133,7 +133,7 @@ export const StorefrontFooter = ({
         
         <div className={`border-t ${isDark ? 'border-slate-800' : 'border-slate-200'} pt-8 text-center`}>
           <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-            {footerText || `© ${currentYear} ${panelName}. ${t('storefront.footer.allRights')}.`}
+            {footerText || `© ${currentYear} ${panelName || 'SMM Panel'}. ${t('storefront.footer.allRights')}.`}
           </p>
         </div>
       </div>

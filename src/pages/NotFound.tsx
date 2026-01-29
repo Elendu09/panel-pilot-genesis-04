@@ -161,9 +161,9 @@ const NotFound = () => {
             size="lg"
             className="gap-2 px-8 border-border/50 hover:border-primary/50 transition-all duration-300 hover:scale-105"
           >
-            <Link to="/support">
+            <Link to="/contact">
               <HelpCircle className="w-4 h-4" />
-              Get Support
+              Contact Us
             </Link>
           </Button>
 
