@@ -17,6 +17,7 @@ import PaymentAnalyticsChart from "@/components/payment/PaymentAnalyticsChart";
 import { usePanel } from "@/hooks/usePanel";
 import { supabase } from "@/integrations/supabase/client";
 import { useAvailablePaymentGateways } from "@/hooks/useAvailablePaymentGateways";
+import { PanelTransactionManager } from "@/components/billing/PanelTransactionManager";
 
 // Worldwide payment gateways
 const paymentGateways = {
@@ -603,6 +604,10 @@ const PaymentMethods = () => {
           {enabledCount} Active
         </Badge>
       </motion.div>
+
+      {/* Pending Transfer Approvals Section - Panel Owner can approve/reject manual transfers */}
+      {panel?.id && <PanelTransactionManager panelId={panel.id} />}
+
       {/* Manual Payment Methods Section */}
       <Card className="bg-gradient-to-br from-emerald-500/10 via-card to-teal-500/10 border-emerald-500/30">
         <CardHeader className="pb-2">

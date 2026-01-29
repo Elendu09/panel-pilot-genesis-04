@@ -160,19 +160,34 @@ const BuyerProfile = () => {
   };
 
   const handleGenerateApiKey = async () => {
-    if (!buyer?.id) return;
+    if (!buyer?.id || !buyer.panel_id) return;
     
     setGeneratingKey(true);
     try {
-      // Generate a secure random API key
-      const key = `sk_${crypto.randomUUID().replace(/-/g, '')}`;
+      // Generate cryptographically secure key with panel prefix for uniqueness
+      const panelPrefix = buyer.panel_id.substring(0, 8);
+      const randomPart = crypto.randomUUID().replace(/-/g, '');
+      const key = `sk_${panelPrefix}_${randomPart}`;
       
+      // Attempt to save - unique constraint will prevent duplicates
       const { error } = await supabase
         .from('client_users')
         .update({ api_key: key } as any)
         .eq('id', buyer.id);
       
-      if (error) throw error;
+      if (error) {
+        // Handle unique constraint violation (extremely rare - retry once)
+        if (error.code === '23505') {
+          const retryKey = `sk_${panelPrefix}_${crypto.randomUUID().replace(/-/g, '')}`;
+          const { error: retryError } = await supabase
+            .from('client_users')
+            .update({ api_key: retryKey } as any)
+            .eq('id', buyer.id);
+          if (retryError) throw retryError;
+        } else {
+          throw error;
+        }
+      }
       
       await refreshBuyer();
       toast({ title: "API Key Generated", description: "Your new API key is ready to use" });

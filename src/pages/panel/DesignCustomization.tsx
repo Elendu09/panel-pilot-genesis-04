@@ -182,7 +182,7 @@ const defaultCustomization = {
   heroSubtitle: 'Get real followers, likes, and views at the lowest prices. Trusted by over 50,000+ customers worldwide.',
   heroBadgeText: '#1 SMM Panel',
   heroCTAText: 'Get Started',
-  heroSecondaryCTAText: 'View Services',
+  heroSecondaryCTAText: 'Fast Order',
   heroAnimatedTexts: ['Instagram Growth', 'TikTok Viral', 'YouTube Success', 'Telegram Boost'],
   heroAnimatedTextStyle: 'gradient-wave' as 'plain' | 'glow-box' | 'underline' | 'highlight' | 'typewriter' | 'gradient-wave' | 'text-reveal' | 'bounce',
   heroAnimatedTextPosition: 'last' as 'first' | 'middle' | 'last',
