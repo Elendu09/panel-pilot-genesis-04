@@ -37,6 +37,7 @@ const ThemeThree = lazy(() => import("./components/themes/ThemeThree").then(m =>
 const UserHome = lazy(() => import("./pages/UserHome"));
 const Terms = lazy(() => import("./pages/Terms"));
 const Privacy = lazy(() => import("./pages/Privacy"));
+const About = lazy(() => import("./pages/About"));
 const Tutorial = lazy(() => import("./pages/Tutorial"));
 const Blog = lazy(() => import("./pages/Blog"));
 const BlogPost = lazy(() => import("./pages/BlogPost"));
@@ -121,6 +122,7 @@ const App = () => (
                   } />
                   <Route path="/terms" element={<Terms />} />
                   <Route path="/privacy" element={<Privacy />} />
+                  <Route path="/about" element={<About />} />
                   <Route path="/tutorial" element={<Tutorial />} />
                   <Route path="/blog" element={<Blog />} />
                   <Route path="/blog/:slug" element={<BlogPost />} />

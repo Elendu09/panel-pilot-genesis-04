@@ -131,8 +131,8 @@ export const Footer = () => {
                 </Link>
               </li>
               <li>
-                <Link to="/support" aria-label="Support" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">
-                  {t('footer.support')}
+                <Link to="/contact" aria-label="Contact Us" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">
+                  {t('footer.contact')}
                 </Link>
               </li>
             </ul>

@@ -113,6 +113,7 @@ const Sitemap = lazy(() => import('./Sitemap'));
 const RobotsTxt = lazy(() => import('./RobotsTxt'));
 const TeamAuth = lazy(() => import('./buyer/TeamAuth'));
 const TeamDashboard = lazy(() => import('./panel/TeamDashboard'));
+const BuyerAbout = lazy(() => import('./buyer/BuyerAbout'));
 
 // Minimal loader for lazy routes - optimized for performance
 const PageLoader = memo(() => (
@@ -353,6 +354,9 @@ const TenantContent = () => {
                             {/* Blog routes */}
                             <Route path="/blog" element={<BuyerBlog />} />
                             <Route path="/blog/:slug" element={<BuyerBlogPost />} />
+                            
+                            {/* About page */}
+                            <Route path="/about" element={<BuyerAbout />} />
 
                             {/* Sitemap and robots.txt routes */}
                             <Route path="/sitemap.xml" element={<Sitemap />} />
