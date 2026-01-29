@@ -1,10 +1,11 @@
-import { useCallback } from 'react';
+import { useCallback, useContext } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Sparkles, Zap, Shield, Users, Star, ArrowRight, CheckCircle, X,
   Instagram, Youtube, Twitter, Music, Video
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { BuyerAuthContext } from '@/contexts/BuyerAuthContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { ThemeCustomization } from '@/types/theme-customization';
@@ -41,6 +42,10 @@ export const AliPanelHomepage = ({
 }: AliPanelHomepageProps) => {
   const navigate = useNavigate();
   const { t, isRTL } = useLanguage();
+  
+  // Check if buyer is logged in for login-aware CTA
+  const buyerAuthContext = useContext(BuyerAuthContext);
+  const buyer = buyerAuthContext?.buyer || null;
   
   // Theme mode - reactive to customization prop (no local state)
   const themeMode = customization.themeMode || 'dark';
@@ -272,9 +277,10 @@ export const AliPanelHomepage = ({
                   ))}
                 </div>
 
-                {/* Dynamic CTA based on enableFastOrder */}
+                {/* Dynamic CTA based on enableFastOrder - Default: Get Started + Fast Order */}
                 <div className="flex flex-col sm:flex-row gap-4">
                   {enableFastOrder ? (
+                    // When enableFastOrder is ON: Fast Order primary + View Services secondary
                     <>
                       <Button 
                         size="lg" 
@@ -290,14 +296,25 @@ export const AliPanelHomepage = ({
                       </Button>
                     </>
                   ) : (
+                    // Default (enableFastOrder OFF): Get Started (login-aware) + Fast Order
                     <>
-                      <Button size="lg" asChild className="text-white font-semibold text-lg px-8 shadow-xl hover:opacity-90" style={primaryButtonStyle}>
-                        <Link to="/auth?tab=signup" className="flex items-center gap-2">
-                          {heroCTA} <ArrowRight className="w-5 h-5" />
-                        </Link>
+                      <Button 
+                        size="lg" 
+                        onClick={() => buyer ? navigate('/dashboard') : navigate('/auth?tab=signup')}
+                        className="text-white font-semibold text-lg px-8 shadow-xl hover:opacity-90" 
+                        style={primaryButtonStyle}
+                      >
+                        {buyer ? (t('buyer.nav.dashboard') || 'Dashboard') : (heroCTA || t('buyer.hero.cta') || 'Get Started')} <ArrowRight className="w-5 h-5 ml-2" />
                       </Button>
-                      <Button size="lg" variant="outline" asChild className="font-semibold hover:bg-white/5" style={outlineButtonStyle}>
-                        <Link to="/services">{heroSecondaryCTA}</Link>
+                      <Button 
+                        size="lg" 
+                        variant="outline" 
+                        onClick={() => navigate('/fast-order')}
+                        className="font-semibold hover:bg-white/5" 
+                        style={outlineButtonStyle}
+                      >
+                        <Zap className="w-5 h-5 mr-2" />
+                        {t('buyer.fastOrder.title') || 'Fast Order'}
                       </Button>
                     </>
                   )}

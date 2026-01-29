@@ -1,9 +1,10 @@
-import { useCallback } from 'react';
+import { useCallback, useContext } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Flame, Zap, Shield, Users, Star, ArrowRight,
   Instagram, Youtube, Twitter, MessageCircle
 } from 'lucide-react';
+import { BuyerAuthContext } from '@/contexts/BuyerAuthContext';
 import { Button } from '@/components/ui/button';
 import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
@@ -40,6 +41,10 @@ export const SMMStayHomepage = ({
 }: SMMStayHomepageProps) => {
   const navigate = useNavigate();
   const { t } = useLanguage();
+  
+  // Check if buyer is logged in for login-aware CTA
+  const buyerAuthContext = useContext(BuyerAuthContext);
+  const buyer = buyerAuthContext?.buyer || null;
   
   // Theme mode - reactive to customization prop (no local state)
   const themeMode = customization.themeMode || 'dark';
@@ -231,8 +236,9 @@ export const SMMStayHomepage = ({
             </h1>
             <p className="text-xl mb-8 max-w-2xl mx-auto uppercase tracking-wide" style={{ color: mutedColor }}>{heroSubtitle}</p>
             
-            {/* Dynamic CTA based on enableFastOrder */}
+            {/* Dynamic CTA based on enableFastOrder - Default: Get Started + Fast Order */}
             {enableFastOrder ? (
+              // When enableFastOrder is ON: Fast Order primary + View Services secondary
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                 <Button 
                   size="lg" 
@@ -248,9 +254,27 @@ export const SMMStayHomepage = ({
                 </Button>
               </div>
             ) : (
-              <Button size="lg" asChild className="font-black uppercase text-lg px-10 text-white shadow-xl hover:opacity-90" style={primaryButtonStyle}>
-                <Link to="/services">{heroCTA} <ArrowRight className="w-5 h-5 ml-2" /></Link>
-              </Button>
+              // Default (enableFastOrder OFF): Get Started (login-aware) + Fast Order
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                <Button 
+                  size="lg" 
+                  onClick={() => buyer ? navigate('/dashboard') : navigate('/auth?tab=signup')}
+                  className="font-black uppercase text-lg px-10 text-white shadow-xl hover:opacity-90" 
+                  style={primaryButtonStyle}
+                >
+                  {buyer ? (t('buyer.nav.dashboard') || 'Dashboard') : (heroCTA || 'Get Started')} <ArrowRight className="w-5 h-5 ml-2" />
+                </Button>
+                <Button 
+                  size="lg" 
+                  variant="outline" 
+                  onClick={() => navigate('/fast-order')}
+                  className="font-black uppercase" 
+                  style={{ borderColor: `${secondary}80`, color: secondary }}
+                >
+                  <Zap className="w-5 h-5 mr-2" />
+                  {t('buyer.fastOrder.title') || 'Fast Order'}
+                </Button>
+              </div>
             )}
           </motion.div>
         </section>

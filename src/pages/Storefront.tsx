@@ -160,6 +160,11 @@ const Storefront = () => {
 
   const canonicalUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
+  // Extract panel_settings - it comes as an array from the query, so get the first item
+  const panelSettingsData = Array.isArray((panel as any)?.panel_settings) 
+    ? (panel as any)?.panel_settings[0] 
+    : (panel as any)?.panel_settings;
+
   // Full customization object with all design settings - include setThemeMode for toggle
   const fullCustomization = {
     ...design,
@@ -170,8 +175,8 @@ const Storefront = () => {
     secondaryColor: customBranding?.secondaryColor || panel?.secondary_color || '#8B5CF6',
     themeMode, // Pass current theme mode
     setThemeMode, // Pass setter so components can toggle
-    // Pass blog menu visibility from panel settings (from panel_settings table or custom_branding)
-    showBlogInMenu: customBranding?.showBlogInMenu ?? (panel as any)?.panel_settings?.blog_enabled ?? (panel?.settings as any)?.blog_enabled ?? false,
+    // Pass blog menu visibility from panel_settings.blog_enabled (priority) or custom_branding
+    showBlogInMenu: panelSettingsData?.blog_enabled ?? customBranding?.showBlogInMenu ?? (panel?.settings as any)?.blog_enabled ?? false,
   };
 
   const themeProps = {

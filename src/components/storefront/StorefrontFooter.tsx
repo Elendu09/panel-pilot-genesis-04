@@ -62,6 +62,11 @@ export const StorefrontFooter = ({
   const enabledPlatforms = socialPlatforms.filter(p => p.enabled !== false);
   const isDark = variant === 'dark';
   const currentYear = new Date().getFullYear();
+  
+  // Interpolate {companyName} placeholder in footerText with actual panel name
+  const interpolatedFooterText = footerText
+    ? footerText.replace(/\{companyName\}/g, panelName || 'SMM Panel')
+    : `© ${currentYear} ${panelName || 'SMM Panel'}. ${t('storefront.footer.allRights')}.`;
 
   return (
     <footer className={`py-12 px-4 ${isDark ? 'bg-slate-900 text-white' : 'bg-white text-slate-900 border-t'}`}>
@@ -133,7 +138,7 @@ export const StorefrontFooter = ({
         
         <div className={`border-t ${isDark ? 'border-slate-800' : 'border-slate-200'} pt-8 text-center`}>
           <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-            {footerText || `© ${currentYear} ${panelName || 'SMM Panel'}. ${t('storefront.footer.allRights')}.`}
+            {interpolatedFooterText}
           </p>
         </div>
       </div>

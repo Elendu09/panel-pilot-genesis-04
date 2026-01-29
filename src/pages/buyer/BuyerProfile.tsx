@@ -153,8 +153,8 @@ const BuyerProfile = () => {
   };
 
   const copyApiKey = () => {
-    if ((buyer as any)?.api_key) {
-      navigator.clipboard.writeText((buyer as any).api_key);
+    if (buyer?.api_key) {
+      navigator.clipboard.writeText(buyer.api_key);
       toast({ title: "Copied!", description: "API key copied to clipboard" });
     }
   };
@@ -436,10 +436,10 @@ const BuyerProfile = () => {
                 Use your API key to integrate with external systems and automate orders.
               </p>
               
-              {(buyer as any)?.api_key ? (
+              {buyer?.api_key ? (
                 <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-lg">
                   <code className="flex-1 font-mono text-sm truncate">
-                    {showApiKey ? (buyer as any).api_key : '••••••••••••••••••••••••••••••••'}
+                    {showApiKey ? buyer.api_key : '••••••••••••••••••••••••••••••••'}
                   </code>
                   <Button size="icon" variant="ghost" onClick={() => setShowApiKey(!showApiKey)}>
                     {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -466,10 +466,10 @@ const BuyerProfile = () => {
                 ) : (
                   <RefreshCw className="w-4 h-4 mr-2" />
                 )}
-                {(buyer as any)?.api_key ? 'Regenerate API Key' : 'Generate API Key'}
+                {buyer?.api_key ? 'Regenerate API Key' : 'Generate API Key'}
               </Button>
               
-              {(buyer as any)?.api_key && (
+              {buyer?.api_key && (
                 <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
                   <AlertCircle className="w-3 h-3" />
                   Regenerating will invalidate your current key
