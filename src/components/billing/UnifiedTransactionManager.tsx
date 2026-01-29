@@ -306,6 +306,43 @@ export const UnifiedTransactionManager = ({ panelId }: UnifiedTransactionManager
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Analytics Summary Cards */}
+          {(() => {
+            const totalDeposits = transactions
+              .filter(t => t.status === 'completed')
+              .reduce((sum, t) => sum + t.amount, 0);
+            
+            const pendingCount = transactions.filter(t => 
+              t.status === 'pending' || t.status === 'pending_verification'
+            ).length;
+            
+            const manualPending = transactions.filter(t => 
+              (t.status === 'pending' || t.status === 'pending_verification') && 
+              t.is_manual
+            ).length;
+            
+            return (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                <div className="bg-emerald-500/10 rounded-lg p-3 border border-emerald-500/20">
+                  <p className="text-xs text-muted-foreground">Total Deposits</p>
+                  <p className="text-lg font-bold text-emerald-500">${totalDeposits.toFixed(2)}</p>
+                </div>
+                <div className="bg-amber-500/10 rounded-lg p-3 border border-amber-500/20">
+                  <p className="text-xs text-muted-foreground">Pending</p>
+                  <p className="text-lg font-bold text-amber-500">{pendingCount}</p>
+                </div>
+                <div className="bg-orange-500/10 rounded-lg p-3 border border-orange-500/20">
+                  <p className="text-xs text-muted-foreground">Manual Awaiting</p>
+                  <p className="text-lg font-bold text-orange-500">{manualPending}</p>
+                </div>
+                <div className="bg-primary/10 rounded-lg p-3 border border-primary/20">
+                  <p className="text-xs text-muted-foreground">Total Transactions</p>
+                  <p className="text-lg font-bold">{transactions.length}</p>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Search Bar */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />

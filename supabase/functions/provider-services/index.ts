@@ -329,6 +329,9 @@ serve(async (req) => {
     const timeout = setTimeout(() => controller.abort(), 30000);
 
     let response: Response;
+    let lastError: any = null;
+
+    // Try GET first
     try {
       response = await fetch(url.toString(), {
         method: 'GET',
@@ -339,20 +342,41 @@ serve(async (req) => {
         },
         signal: controller.signal
       });
-      clearTimeout(timeout);
-    } catch (fetchError: any) {
-      clearTimeout(timeout);
-      if (fetchError.name === 'AbortError') {
+    } catch (getError: any) {
+      lastError = getError;
+      console.log('GET request failed, trying POST fallback...');
+      
+      // Try POST as fallback - many providers require POST
+      try {
+        const postBody = new URLSearchParams();
+        postBody.set('key', apiKey);
+        postBody.set('action', action);
+        
+        response = await fetch(apiEndpoint, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'User-Agent': 'SMM-Panel/2.0',
+            'Accept': 'application/json'
+          },
+          body: postBody,
+          signal: controller.signal
+        });
+      } catch (postError: any) {
+        clearTimeout(timeout);
+        if (lastError.name === 'AbortError' || postError.name === 'AbortError') {
+          return new Response(
+            JSON.stringify({ error: 'Provider API timed out after 30 seconds' }),
+            { status: 504, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
         return new Response(
-          JSON.stringify({ error: 'Provider API timed out after 30 seconds' }),
-          { status: 504, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ error: 'Network error connecting to provider', details: lastError.message || postError.message }),
+          { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      return new Response(
-        JSON.stringify({ error: 'Network error connecting to provider', details: fetchError.message }),
-        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
     }
+    clearTimeout(timeout);
 
     if (!response.ok) {
       const errorText = await response.text().catch(() => 'Unknown error');
@@ -363,7 +387,29 @@ serve(async (req) => {
       );
     }
 
-    const data = await response.json();
+    // Enhanced JSON parsing with fallback for malformed responses
+    let data;
+    const responseText = await response.text();
+    try {
+      data = JSON.parse(responseText);
+    } catch {
+      // Some providers return malformed JSON - try to clean it
+      const cleaned = responseText
+        .trim()
+        .replace(/^\uFEFF/, '') // Remove BOM
+        .replace(/[\x00-\x1F\x7F]/g, '') // Remove control characters
+        .replace(/,\s*}/g, '}') // Fix trailing commas in objects
+        .replace(/,\s*]/g, ']'); // Fix trailing commas in arrays
+      try {
+        data = JSON.parse(cleaned);
+      } catch {
+        console.error('Failed to parse provider response:', responseText.slice(0, 200));
+        return new Response(
+          JSON.stringify({ error: 'Invalid JSON response from provider', details: responseText.slice(0, 200) }),
+          { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
 
     // Handle different response formats
     let services: ProviderService[] = [];

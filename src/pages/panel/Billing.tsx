@@ -25,7 +25,7 @@ import { TransactionHistory } from '@/components/billing/TransactionHistory';
 import { CommissionTracker } from '@/components/billing/CommissionTracker';
 import { QuickDeposit } from '@/components/billing/QuickDeposit';
 import { usePanel } from '@/hooks/usePanel';
-import { useAvailablePaymentGateways } from '@/hooks/useAvailablePaymentGateways';
+import { useAdminPaymentGateways } from '@/hooks/useAdminPaymentGateways';
 
 interface Subscription {
   id: string;
@@ -114,10 +114,8 @@ const Billing = () => {
     paidCommission: 0,
   });
 
-  const { gateways: availableGateways, loading: gatewaysLoading } = useAvailablePaymentGateways({
-    panelId: panel?.id,
-    panelSettings: (panel?.settings as any) || null,
-  });
+  // Use admin-controlled payment gateways for panel owner billing (not panel-configured buyer gateways)
+  const { gateways: availableGateways, loading: gatewaysLoading } = useAdminPaymentGateways();
 
   const defaultGateway = availableGateways[0]?.id;
 

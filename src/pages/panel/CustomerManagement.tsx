@@ -138,14 +138,37 @@ const CustomerManagement = () => {
   const [selectedCustomers, setSelectedCustomers] = useState<string[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   
-  // Customer overview toggle - default to hidden
-  const [showOverview, setShowOverview] = useState(() => {
-    return localStorage.getItem('customer_overview_visible') === 'true';
-  });
+  // Customer overview toggle - default to hidden, persisted in Supabase
+  const [showOverview, setShowOverview] = useState(false);
   
-  const handleToggleOverview = (value: boolean) => {
+  // Sync overview toggle state from panel settings
+  useEffect(() => {
+    const settings = panel?.settings as any;
+    setShowOverview(settings?.ui?.customerOverviewVisible === true);
+  }, [panel?.settings]);
+  
+  const handleToggleOverview = async (value: boolean) => {
     setShowOverview(value);
-    localStorage.setItem('customer_overview_visible', String(value));
+    
+    if (!panel?.id) return;
+    
+    try {
+      const currentSettings = (panel.settings as any) || {};
+      const updatedSettings = {
+        ...currentSettings,
+        ui: {
+          ...(currentSettings.ui || {}),
+          customerOverviewVisible: value
+        }
+      };
+      
+      await supabase
+        .from('panels')
+        .update({ settings: updatedSettings })
+        .eq('id', panel.id);
+    } catch (error) {
+      console.error('Error saving overview preference:', error);
+    }
   };
   const [statsChanges, setStatsChanges] = useState<{
     total: { value: string; trend: 'up' | 'down' | 'neutral' };
@@ -518,12 +541,14 @@ const CustomerManagement = () => {
 
       if (error) throw error;
 
-      // Log the transaction
+      // Log the transaction with panel_id and buyer_id for proper RLS and real-time updates
       await supabase.from('transactions').insert({
+        panel_id: panel?.id,
+        buyer_id: selectedCustomer.id,
         user_id: selectedCustomer.id,
         amount: balanceAction === 'add' ? amount : -amount,
         type: balanceAction === 'add' ? 'deposit' : 'withdrawal',
-        description: balanceReason || `Balance ${balanceAction}`,
+        description: balanceReason || `Balance ${balanceAction} by panel owner`,
         status: 'completed'
       });
 
