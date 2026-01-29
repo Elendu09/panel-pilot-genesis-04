@@ -95,7 +95,7 @@ export const LanguageSelector = () => {
   }, [buyer, panelId, setLanguage]);
 
   return (
-    <DropdownMenu>
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className="relative h-8 w-8 sm:h-9 sm:w-9 shrink-0 flex-shrink-0" title="Change language">
           {currentLanguage ? (
@@ -105,7 +105,7 @@ export const LanguageSelector = () => {
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" side="bottom" sideOffset={8} className="w-56 max-h-80 overflow-y-auto bg-popover border border-border shadow-lg z-[100]">
+      <DropdownMenuContent align="end" side="bottom" sideOffset={8} collisionPadding={16} className="w-56 max-w-[calc(100vw-2rem)] max-h-80 overflow-y-auto bg-popover border border-border shadow-lg z-[100]">
         <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
           Select Language
         </div>

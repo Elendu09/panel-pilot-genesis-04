@@ -102,10 +102,10 @@ export const ThemeNavigation = ({
     : { backgroundColor: surfaceColor };
 
   return (
-    <header>
+    <header className="overflow-visible">
       <nav 
         className={cn(
-          "relative z-50",
+          "relative z-50 overflow-visible",
           navStyle === 'floating' ? 'shadow-sm' : '',
           navStyle === 'terminal' ? 'backdrop-blur-xl' : ''
         )}

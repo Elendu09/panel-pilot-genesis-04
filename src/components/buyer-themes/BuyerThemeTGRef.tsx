@@ -13,7 +13,7 @@ export const BuyerThemeTGRef = ({ children, className, themeMode = 'dark' }: Buy
     <div className={themeMode === 'light' ? 'light' : 'dark'}>
       <div 
         className={cn(
-          "buyer-theme-tgref buyer-theme-wrapper min-h-screen",
+          "buyer-theme-tgref buyer-theme-wrapper min-h-screen overflow-x-hidden",
           className
         )}
       >
