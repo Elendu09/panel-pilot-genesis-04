@@ -67,6 +67,21 @@ const BuyerDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showVerifyBanner, setShowVerifyBanner] = useState(false);
+  
+  // Cache panel name to prevent flicker
+  const [cachedPanelName, setCachedPanelName] = useState<string | null>(() => {
+    // Try to get from localStorage on initial render
+    const cached = localStorage.getItem('tenant_panel_name');
+    return cached || null;
+  });
+
+  // Update cached panel name when panel loads
+  useEffect(() => {
+    if (panel?.name) {
+      setCachedPanelName(panel.name);
+      localStorage.setItem('tenant_panel_name', panel.name);
+    }
+  }, [panel?.name]);
 
   useEffect(() => {
     if (buyer?.id && panel?.id) {
