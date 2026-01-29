@@ -329,6 +329,9 @@ serve(async (req) => {
     const timeout = setTimeout(() => controller.abort(), 30000);
 
     let response: Response;
+    let lastError: any = null;
+    
+    // Try GET first
     try {
       response = await fetch(url.toString(), {
         method: 'GET',
@@ -340,18 +343,51 @@ serve(async (req) => {
         signal: controller.signal
       });
       clearTimeout(timeout);
-    } catch (fetchError: any) {
+    } catch (getError: any) {
       clearTimeout(timeout);
-      if (fetchError.name === 'AbortError') {
+      
+      if (getError.name === 'AbortError') {
         return new Response(
           JSON.stringify({ error: 'Provider API timed out after 30 seconds' }),
           { status: 504, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      return new Response(
-        JSON.stringify({ error: 'Network error connecting to provider', details: fetchError.message }),
-        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      
+      lastError = getError;
+      
+      // Try POST as fallback (some providers require POST)
+      const postController = new AbortController();
+      const postTimeout = setTimeout(() => postController.abort(), 30000);
+      
+      try {
+        const postBody = new URLSearchParams();
+        postBody.set('key', apiKey);
+        postBody.set('action', action);
+        
+        response = await fetch(apiEndpoint, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'User-Agent': 'SMM-Panel/2.0',
+            'Accept': 'application/json'
+          },
+          body: postBody,
+          signal: postController.signal
+        });
+        clearTimeout(postTimeout);
+      } catch (postError: any) {
+        clearTimeout(postTimeout);
+        if (postError.name === 'AbortError') {
+          return new Response(
+            JSON.stringify({ error: 'Provider API timed out after 30 seconds (POST fallback)' }),
+            { status: 504, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        return new Response(
+          JSON.stringify({ error: 'Network error connecting to provider', details: lastError.message }),
+          { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     if (!response.ok) {
@@ -363,7 +399,26 @@ serve(async (req) => {
       );
     }
 
-    const data = await response.json();
+    // Enhanced JSON parsing with fallback
+    const responseText = await response.text();
+    let data;
+    
+    try {
+      data = JSON.parse(responseText);
+    } catch {
+      // Some providers return malformed JSON, try to clean it
+      const cleaned = responseText.trim();
+      try {
+        // Try parsing after removing potential BOM or extra characters
+        data = JSON.parse(cleaned.replace(/^\uFEFF/, ''));
+      } catch {
+        console.error('Failed to parse provider response:', responseText.slice(0, 200));
+        return new Response(
+          JSON.stringify({ error: 'Invalid JSON response from provider', details: responseText.slice(0, 200) }),
+          { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
 
     // Handle different response formats
     let services: ProviderService[] = [];

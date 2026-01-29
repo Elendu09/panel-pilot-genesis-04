@@ -357,6 +357,9 @@ serve(async (req) => {
         const timeout = setTimeout(() => controller.abort(), 30000);
 
         let response: Response;
+        let lastError: any = null;
+        
+        // Try GET first
         try {
           response = await fetch(url.toString(), {
             method: 'GET',
@@ -367,15 +370,47 @@ serve(async (req) => {
             signal: controller.signal
           });
           clearTimeout(timeout);
-        } catch (fetchError: any) {
+        } catch (getError: any) {
           clearTimeout(timeout);
-          if (fetchError.name === 'AbortError') {
+          
+          if (getError.name === 'AbortError') {
             result.errors.push(`Provider API timed out after 30 seconds`);
-          } else {
-            result.errors.push(`Network error: ${fetchError.message || 'Failed to connect to provider'}`);
+            results.push(result);
+            continue;
           }
-          results.push(result);
-          continue;
+          
+          lastError = getError;
+          
+          // Try POST as fallback (some providers require POST)
+          const postController = new AbortController();
+          const postTimeout = setTimeout(() => postController.abort(), 30000);
+          
+          try {
+            const postBody = new URLSearchParams();
+            postBody.set('key', provider.api_key);
+            postBody.set('action', 'services');
+            
+            response = await fetch(provider.api_endpoint, {
+              method: 'POST',
+              headers: { 
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'User-Agent': 'SMM-Panel/2.0',
+                'Accept': 'application/json'
+              },
+              body: postBody,
+              signal: postController.signal
+            });
+            clearTimeout(postTimeout);
+          } catch (postError: any) {
+            clearTimeout(postTimeout);
+            if (postError.name === 'AbortError') {
+              result.errors.push(`Provider API timed out after 30 seconds (POST fallback)`);
+            } else {
+              result.errors.push(`Network error: ${lastError.message || 'Failed to connect to provider'}`);
+            }
+            results.push(result);
+            continue;
+          }
         }
 
         if (!response.ok) {
@@ -385,7 +420,23 @@ serve(async (req) => {
           continue;
         }
 
-        const data = await response.json();
+        // Enhanced JSON parsing with fallback
+        const responseText = await response.text();
+        let data;
+        
+        try {
+          data = JSON.parse(responseText);
+        } catch {
+          // Some providers return malformed JSON, try to clean it
+          const cleaned = responseText.trim().replace(/^\uFEFF/, '');
+          try {
+            data = JSON.parse(cleaned);
+          } catch {
+            result.errors.push(`Invalid JSON response: ${responseText.slice(0, 100)}`);
+            results.push(result);
+            continue;
+          }
+        }
         
         // Handle different response formats from various providers
         let providerServices: ProviderService[] = [];
