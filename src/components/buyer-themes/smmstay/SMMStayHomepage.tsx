@@ -495,8 +495,8 @@ export const SMMStayHomepage = ({
               <div>
                 <h4 className="font-bold mb-4 uppercase">{t('buyer.footer.company') || 'Company'}</h4>
                 <ul className="space-y-2 text-sm" style={{ color: mutedColor }}>
-                  <li><Link to="/support" className="hover:opacity-80 transition-opacity">{t('buyer.footer.aboutUs') || 'About Us'}</Link></li>
-                  <li><Link to="/support" className="hover:opacity-80 transition-opacity">{t('buyer.footer.contact') || 'Contact'}</Link></li>
+                  <li><Link to="/about" className="hover:opacity-80 transition-opacity">{t('buyer.footer.aboutUs') || 'About Us'}</Link></li>
+                  <li><Link to="/contact" className="hover:opacity-80 transition-opacity">{t('buyer.footer.contact') || 'Contact'}</Link></li>
                   {showBlogInMenu && <li><Link to="/blog" className="hover:opacity-80 transition-opacity">{t('buyer.footer.blog') || 'Blog'}</Link></li>}
                 </ul>
               </div>

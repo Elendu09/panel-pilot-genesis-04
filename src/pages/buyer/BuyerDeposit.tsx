@@ -541,6 +541,12 @@ const BuyerDeposit = () => {
           title: methodName
         });
         setManualDialogOpen(true);
+        
+        // Wait briefly for DB propagation, then fetch transactions
+        setTimeout(() => {
+          fetchTransactions();
+        }, 800);
+        
         // Clear form
         setAmount("");
         setSelectedMethod(null);

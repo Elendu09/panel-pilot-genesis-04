@@ -571,10 +571,10 @@ export const TGRefHomepage = ({
               
               {/* Company Column */}
               <div>
-                <h4 className="font-semibold mb-4">./company</h4>
+              <h4 className="font-semibold mb-4">./company</h4>
                 <ul className="space-y-2 text-sm" style={{ color: mutedColor }}>
-                  <li><Link to="/support" className="hover:opacity-80 transition-opacity">{t('buyer.footer.about') || 'About'}</Link></li>
-                  <li><Link to="/support" className="hover:opacity-80 transition-opacity">{t('buyer.footer.contact') || 'Contact'}</Link></li>
+                  <li><Link to="/about" className="hover:opacity-80 transition-opacity">{t('buyer.footer.aboutUs') || 'About Us'}</Link></li>
+                  <li><Link to="/contact" className="hover:opacity-80 transition-opacity">{t('buyer.footer.contact') || 'Contact'}</Link></li>
                   {showBlogInMenu && <li><Link to="/blog" className="hover:opacity-80 transition-opacity">{t('buyer.footer.blog') || 'Blog'}</Link></li>}
                 </ul>
               </div>
