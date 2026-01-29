@@ -702,8 +702,8 @@ export const SMMVisitHomepage = ({
               <div>
                 <h4 className="font-semibold mb-4" style={{ color: textCol }}>{t('buyer.footer.company') || 'Company'}</h4>
                 <ul className="space-y-2 text-sm">
-                  <li><Link to="/support" className="hover:opacity-80 transition-opacity" style={{ color: mutedColor }}>{t('buyer.footer.aboutUs') || 'About Us'}</Link></li>
-                  <li><Link to="/support" className="hover:opacity-80 transition-opacity" style={{ color: mutedColor }}>{t('buyer.footer.contact') || 'Contact'}</Link></li>
+                  <li><Link to="/about" className="hover:opacity-80 transition-opacity" style={{ color: mutedColor }}>{t('buyer.footer.aboutUs') || 'About Us'}</Link></li>
+                  <li><Link to="/contact" className="hover:opacity-80 transition-opacity" style={{ color: mutedColor }}>{t('buyer.footer.contact') || 'Contact'}</Link></li>
                   {showBlogInMenu && <li><Link to="/blog" className="hover:opacity-80 transition-opacity" style={{ color: mutedColor }}>{t('buyer.footer.blog') || 'Blog'}</Link></li>}
                 </ul>
               </div>

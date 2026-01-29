@@ -1070,6 +1070,14 @@ serve(async (req) => {
       default: {
         // Manual transfer or unsupported gateway - return the transaction ID for manual handling
         if (gateway.startsWith('manual_') || gateway === 'manual_transfer') {
+          // Update status to pending_verification for manual transfers (so it shows in buyer's history)
+          await supabase
+            .from('transactions')
+            .update({ status: 'pending_verification' })
+            .eq('id', transactionIdToUse);
+          
+          console.log(`[process-payment] Manual transfer ${transactionIdToUse} status set to pending_verification`);
+          
           return new Response(
             JSON.stringify({ 
               success: true,
