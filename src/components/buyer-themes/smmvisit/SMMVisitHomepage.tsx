@@ -721,7 +721,9 @@ export const SMMVisitHomepage = ({
             
             {/* Copyright */}
             <div className="pt-8 text-center text-sm" style={{ borderTop: isLightMode ? '1px solid #E5E7EB' : `1px solid ${primary}1a`, color: mutedColor }}>
-              {customization.footerText || `© ${new Date().getFullYear()} ${companyName}. ${t('buyer.footer.rights') || 'All rights reserved.'}`}
+              {customization.footerText 
+                ? customization.footerText.replace(/\{companyName\}/g, companyName)
+                : `© ${new Date().getFullYear()} ${companyName}. ${t('buyer.footer.rights') || 'All rights reserved.'}`}
             </div>
           </div>
         </footer>

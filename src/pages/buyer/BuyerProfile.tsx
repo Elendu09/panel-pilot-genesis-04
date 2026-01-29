@@ -34,8 +34,9 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import BuyerLayout from "./BuyerLayout";
-import { useBuyerAuth } from "@/contexts/BuyerAuthContext";
+import { useBuyerAuth, BuyerAuthContext } from "@/contexts/BuyerAuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useContext } from "react";
 import { ChangePasswordDialog } from "@/components/buyer/ChangePasswordDialog";
 
 // OAuth provider icons for profile display
@@ -67,7 +68,7 @@ const OAuthProviderIcons: Record<string, React.ReactNode> = {
 
 const BuyerProfile = () => {
   const navigate = useNavigate();
-  const { buyer, loading: authLoading, refreshBuyer } = useBuyerAuth();
+  const { buyer, loading: authLoading, refreshBuyer, getToken } = useBuyerAuth();
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
   const handleStartTour = () => {
@@ -177,42 +178,39 @@ const BuyerProfile = () => {
     
     setGeneratingKey(true);
     try {
-      // Generate cryptographically secure key with panel prefix for uniqueness
-      const panelPrefix = buyer.panel_id.substring(0, 8);
-      const randomPart = crypto.randomUUID().replace(/-/g, '');
-      const key = `sk_${panelPrefix}_${randomPart}`;
+      const token = getToken();
       
-      // Attempt to save - unique constraint will prevent duplicates
-      const { error } = await supabase
-        .from('client_users')
-        .update({ api_key: key } as any)
-        .eq('id', buyer.id);
+      // Call edge function to generate API key (bypasses RLS)
+      const { data, error } = await supabase.functions.invoke('buyer-auth', {
+        body: { 
+          panelId: buyer.panel_id,
+          buyerId: buyer.id,
+          token,
+          action: 'generate-api-key'
+        }
+      });
       
       if (error) {
-        // Handle unique constraint violation (extremely rare - retry once)
-        if (error.code === '23505') {
-          const retryKey = `sk_${panelPrefix}_${crypto.randomUUID().replace(/-/g, '')}`;
-          const { error: retryError } = await supabase
-            .from('client_users')
-            .update({ api_key: retryKey } as any)
-            .eq('id', buyer.id);
-          if (retryError) throw retryError;
-          // Update local state immediately with retry key
-          setLocalApiKey(retryKey);
-        } else {
-          throw error;
-        }
-      } else {
-        // Update local state immediately for instant display
-        setLocalApiKey(key);
+        console.error('Edge function error:', error);
+        throw new Error('Failed to generate API key');
       }
       
-      // Also refresh buyer context in background
-      refreshBuyer();
-      toast({ title: "API Key Generated", description: "Your new API key is ready to use" });
-    } catch (error) {
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+      
+      if (data?.api_key) {
+        // Update local state immediately for instant display
+        setLocalApiKey(data.api_key);
+        // Also refresh buyer context in background
+        refreshBuyer();
+        toast({ title: "API Key Generated", description: "Your new API key is ready to use" });
+      } else {
+        throw new Error('No API key returned');
+      }
+    } catch (error: any) {
       console.error('Error generating API key:', error);
-      toast({ variant: "destructive", title: "Error", description: "Failed to generate API key" });
+      toast({ variant: "destructive", title: "Error", description: error.message || "Failed to generate API key" });
     } finally {
       setGeneratingKey(false);
     }
