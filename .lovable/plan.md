@@ -1,388 +1,353 @@
 
-# Comprehensive Enhancement Plan: Supabase Persistence, Payment Separation, Provider API & More
+# Comprehensive Fix Plan: Routing, Deposits, Payment Management, Translations & More
 
 ---
 
 ## Overview
 
-This plan addresses all requested improvements:
+This plan addresses all the remaining issues from the previous implementation:
 
-1. **Customer Overview Toggle - Supabase Persistence** (not localStorage)
-2. **Provider API Errors - POST fallback & Better JSON parsing**
-3. **Customer Balance Updates - Add panel_id & buyer_id for RLS**
-4. **Payment System Separation** - Admin gateways for panel billing vs Panel-configured gateways for buyers
-5. **Payment Management Enhancement** - Analytics summary cards
-6. **Transaction Manager Analytics** - Add summary stats at top
+1. **About Us Routing** - Footer links incorrectly redirect to `/support` instead of `/about`
+2. **Manual Deposit Not Showing in Recent Deposits** - Transaction creation flow issue
+3. **Payment Management Page Enhancements** - Unified view and analytics
+4. **TGRef + SMMVisit Language Errors** - Footer labels showing translation keys
+5. **Customer Overview Toggle** - Verify Supabase persistence (already implemented)
+6. **Payment System Separation** - Verify admin vs panel-owner gateways (already implemented)
+7. **Customer Balance Updates** - Verify panel_id/buyer_id in transactions (already implemented)
 
 ---
 
-## Issue 1: Customer Overview Toggle - Supabase Persistence
+## Issue 1: About Us Routing - Footer Links Redirect to /support Instead of /about
 
-**Current Problem:**
-Lines 142-148 in `CustomerManagement.tsx` store the toggle in `localStorage`, which doesn't sync across devices.
+**Root Cause:**
+All buyer theme footers (TGRef, SMMVisit, AliPanel, FlySMM, SMMStay) have their "About Us" link pointing to `/support` instead of `/about`.
 
-**Solution:**
-Store in `panels.settings.ui.customerOverviewVisible` and read from panel settings.
-
-**Implementation:**
-
+**Current Code (5 theme files):**
 ```tsx
-// Replace localStorage approach (lines 142-149)
-const [showOverview, setShowOverview] = useState(false);
-
-// Sync with panel settings when loaded
-useEffect(() => {
-  const settings = panel?.settings as any;
-  setShowOverview(settings?.ui?.customerOverviewVisible === true);
-}, [panel?.settings]);
-
-// Update toggle handler to save to Supabase
-const handleToggleOverview = async (value: boolean) => {
-  setShowOverview(value);
-  
-  if (!panel?.id) return;
-  
-  try {
-    const currentSettings = (panel.settings as any) || {};
-    const updatedSettings = {
-      ...currentSettings,
-      ui: {
-        ...(currentSettings.ui || {}),
-        customerOverviewVisible: value
-      }
-    };
-    
-    await supabase
-      .from('panels')
-      .update({ settings: updatedSettings })
-      .eq('id', panel.id);
-  } catch (error) {
-    console.error('Error saving overview preference:', error);
-  }
-};
+<li><Link to="/support">{t('buyer.footer.aboutUs') || 'About Us'}</Link></li>
+<li><Link to="/support">{t('buyer.footer.contact') || 'Contact'}</Link></li>
 ```
 
+**Fix:**
+Update footer links to use correct routes:
+- "About Us" → `/about`
+- "Contact" → `/contact`
+
 **Files to Modify:**
-- `src/pages/panel/CustomerManagement.tsx`
+| File | Change |
+|------|--------|
+| `src/components/buyer-themes/tgref/TGRefHomepage.tsx` | Line 576-577: Change `/support` to `/about` and `/contact` |
+| `src/components/buyer-themes/smmvisit/SMMVisitHomepage.tsx` | Line 705-706: Same change |
+| `src/components/buyer-themes/alipanel/AliPanelHomepage.tsx` | Line 577-578: Same change |
+| `src/components/buyer-themes/flysmm/FlySMMHomepage.tsx` | Line 536-537: Same change |
+| `src/components/buyer-themes/smmstay/SMMStayHomepage.tsx` | Line 498-499: Same change |
 
 ---
 
-## Issue 2: Provider API Errors - Enhanced Handling
+## Issue 2: Manual Deposit Not Showing in Recent Deposits
 
-**Current Problem:**
-Some external SMM providers reject GET requests or return non-standard JSON. The edge function only tries GET.
+**Root Cause Analysis:**
+Looking at the `process-payment` edge function (lines 108-141), when a manual transfer is initiated:
+
+1. The edge function creates a transaction with `status: 'pending'` (line 123)
+2. The manual transfer response returns `requiresManualTransfer: true` but does NOT change the transaction status to `pending_verification`
+3. The `BuyerDeposit.tsx` filters by `type: 'deposit'` and fetches transactions, but the newly created transaction should appear
+
+**The Real Problem:**
+Looking at line 122-123 in `process-payment/index.ts`:
+```typescript
+status: 'pending',
+description: txDescription,
+```
+
+The transaction is created with `status: 'pending'`, which is correct. But the issue is that the edge function returns BEFORE refreshing/confirming the insert succeeded in some edge cases.
+
+**Actual Fix Needed:**
+The issue is in `BuyerDeposit.tsx` - after `handleDeposit()` calls the edge function and it returns `requiresManualTransfer`, the code does call `fetchTransactions()` (line 522). However, there may be a race condition where the insert hasn't fully propagated.
 
 **Solution:**
-Add POST method fallback and advanced JSON cleaning for non-standard responses.
+1. Add a small delay before the first fetch after manual transfer creation
+2. Ensure the transaction status is explicitly set for manual transfers
+3. Add explicit logging to debug
 
-**Implementation for provider-services/index.ts:**
+**Files to Modify:**
+| File | Change |
+|------|--------|
+| `src/pages/buyer/BuyerDeposit.tsx` | Add 500ms delay before fetchTransactions() for manual transfers |
+| `supabase/functions/process-payment/index.ts` | Add explicit status update for manual transfers |
 
+**Implementation for BuyerDeposit.tsx (lines 534-546):**
 ```typescript
-// After line 340, add POST fallback
-let response: Response;
-let lastError: any = null;
-
-// Try GET first (lines 332-341)
-try {
-  response = await fetch(url.toString(), {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      'User-Agent': 'SMM-Panel/2.0',
-      'Accept': 'application/json',
-    },
-    signal: controller.signal
+} else if (result.requiresManualTransfer || selectedPaymentMethod?.isManual) {
+  // Manual payment - show dialog with bank details and instructions
+  setManualPaymentDetails({
+    transactionId: result.transactionId,
+    amount: depositAmount,
+    bankDetails: result.config?.bankDetails || selectedPaymentMethod?.bankDetails || '',
+    instructions: result.config?.instructions || selectedPaymentMethod?.instructions || 'Please complete the transfer and your balance will be credited once confirmed.',
+    title: methodName
   });
-} catch (getError: any) {
-  lastError = getError;
+  setManualDialogOpen(true);
   
-  // Try POST as fallback - many providers require POST
-  try {
-    const postBody = new URLSearchParams();
-    postBody.set('key', apiKey);
-    postBody.set('action', action);
+  // Wait briefly for DB propagation, then fetch
+  setTimeout(() => {
+    fetchTransactions();
+  }, 800);
+  
+  // Clear form
+  setAmount("");
+  setSelectedMethod(null);
+}
+```
+
+**Implementation for process-payment/index.ts (line 1069-1086):**
+```typescript
+case 'manual_transfer':
+default: {
+  if (gateway.startsWith('manual_') || gateway === 'manual_transfer') {
+    // Explicitly update status to pending_verification for manual transfers
+    await supabase
+      .from('transactions')
+      .update({ status: 'pending_verification' })
+      .eq('id', transactionIdToUse);
     
-    response = await fetch(apiEndpoint, {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': 'SMM-Panel/2.0',
-        'Accept': 'application/json'
-      },
-      body: postBody,
-      signal: controller.signal
-    });
-  } catch (postError) {
-    clearTimeout(timeout);
-    if (lastError.name === 'AbortError') {
-      return new Response(
-        JSON.stringify({ error: 'Provider API timed out after 30 seconds' }),
-        { status: 504, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
     return new Response(
-      JSON.stringify({ error: 'Network error connecting to provider', details: lastError.message }),
-      { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ 
+        success: true,
+        gateway: gateway,
+        requiresManualTransfer: true,
+        transactionId: transactionIdToUse,
+        amount,
+        currency: currency.toUpperCase(),
+        config: gatewayConfig,
+        message: 'Please complete the transfer manually.',
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
-}
-clearTimeout(timeout);
-
-// Enhanced JSON parsing (replace line 366)
-let data;
-const responseText = await response.text();
-try {
-  data = JSON.parse(responseText);
-} catch {
-  // Some providers return malformed JSON - try to clean it
-  const cleaned = responseText
-    .trim()
-    .replace(/^\uFEFF/, '') // Remove BOM
-    .replace(/[\x00-\x1F\x7F]/g, '') // Remove control characters
-    .replace(/,\s*}/g, '}') // Fix trailing commas
-    .replace(/,\s*]/g, ']');
-  try {
-    data = JSON.parse(cleaned);
-  } catch {
-    throw new Error(`Invalid JSON response from provider: ${responseText.slice(0, 200)}`);
-  }
+  // ...
 }
 ```
 
+---
+
+## Issue 3: TGRef + SMMVisit Language Translation Errors
+
+**Root Cause:**
+Footer labels showing raw translation keys like `buyer.footer.about` instead of translated text. This happens when the translation key doesn't exist in `platform-translations.ts`.
+
+**Analysis:**
+Looking at TGRefHomepage.tsx line 576:
+```tsx
+{t('buyer.footer.about') || 'About'}
+```
+
+And SMMVisitHomepage.tsx line 705:
+```tsx
+{t('buyer.footer.aboutUs') || 'About Us'}
+```
+
+The translations file has both `buyer.footer.about` and `buyer.footer.aboutUs` defined, so this may be a context issue where `t()` returns the key instead of the value.
+
+**Potential Causes:**
+1. LanguageContext not properly wrapping the component
+2. Translation lookup failing silently
+
+**Fix:**
+Ensure all theme files use the same consistent translation keys that exist in `platform-translations.ts`:
+- Use `buyer.footer.aboutUs` (not `buyer.footer.about`)
+- Add missing fallback values
+
 **Files to Modify:**
-- `supabase/functions/provider-services/index.ts`
-- `supabase/functions/sync-provider-services/index.ts`
+| File | Change |
+|------|--------|
+| `src/components/buyer-themes/tgref/TGRefHomepage.tsx` | Line 576: Use `buyer.footer.aboutUs` consistently |
+| `src/lib/platform-translations.ts` | Verify all keys exist for all 10 languages |
 
 ---
 
-## Issue 3: Customer Balance Updates - Add panel_id & buyer_id
-
-**Current Problem:**
-Lines 522-528 in `CustomerManagement.tsx` insert a transaction without `panel_id` or `buyer_id`, which may fail RLS policies and not trigger proper real-time updates.
-
-**Solution:**
-Add `panel_id` and `buyer_id` to the transaction insert.
-
-**Implementation:**
-
-```typescript
-// Update lines 522-528
-await supabase.from('transactions').insert({
-  panel_id: panel.id,           // ADD: Required for RLS
-  buyer_id: selectedCustomer.id, // ADD: Required for buyer association
-  user_id: selectedCustomer.id,
-  amount: balanceAction === 'add' ? amount : -amount,
-  type: balanceAction === 'add' ? 'deposit' : 'withdrawal',
-  description: balanceReason || `Balance ${balanceAction} by panel owner`,
-  status: 'completed'
-});
-```
-
-**Files to Modify:**
-- `src/pages/panel/CustomerManagement.tsx`
-
----
-
-## Issue 4: Separate Payment Systems - CRITICAL FIX
-
-**The Problem:**
-The panel owner's Billing page (`Billing.tsx`) uses `useAvailablePaymentGateways` which fetches payment methods configured by the panel owner for their BUYERS. This is incorrect.
-
-**Correct Architecture:**
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                     ADMIN (Platform Owner)                       │
-│  platform_payment_providers table                                │
-│  - Controls which gateways panel owners can use for BILLING      │
-│  - Used for: Panel owner subscriptions & panel owner deposits    │
-└───────────────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────────────┐
-│                     PANEL OWNER                                  │
-│  panels.settings.payments (configured by panel owner)           │
-│  - Controls which gateways THEIR BUYERS can use                  │
-│  - Used for: Buyer/tenant deposits on storefront                 │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-**Solution:**
-Create a new hook `useAdminPaymentGateways` that ONLY fetches from `platform_payment_providers` table. Use this hook in `Billing.tsx` and `QuickDeposit.tsx` for panel owner billing.
-
-**New Hook Implementation:**
-
-```typescript
-// src/hooks/useAdminPaymentGateways.tsx
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-
-export type AdminGateway = {
-  id: string;
-  displayName: string;
-  category?: string | null;
-  feePercentage?: number | null;
-  fixedFee?: number | null;
-};
-
-export const useAdminPaymentGateways = () => {
-  const [loading, setLoading] = useState(true);
-  const [gateways, setGateways] = useState<AdminGateway[]>([]);
-
-  const refresh = async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from("platform_payment_providers")
-        .select("*")
-        .eq("is_enabled", true);
-
-      if (error) throw error;
-
-      const mapped: AdminGateway[] = (data || []).map((p) => ({
-        id: p.provider_name,
-        displayName: p.display_name,
-        category: p.category,
-        feePercentage: p.fee_percentage,
-        fixedFee: p.fixed_fee,
-      }));
-
-      mapped.sort((a, b) => a.displayName.localeCompare(b.displayName));
-      setGateways(mapped);
-    } catch (error) {
-      console.error("Error fetching admin payment gateways:", error);
-      setGateways([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    refresh();
-  }, []);
-
-  return { gateways, loading, refresh };
-};
-```
-
-**Update Billing.tsx:**
-
-```typescript
-// Replace import (line 19)
-// FROM: import { useAvailablePaymentGateways } from '@/hooks/useAvailablePaymentGateways';
-// TO:
-import { useAdminPaymentGateways } from '@/hooks/useAdminPaymentGateways';
-
-// Replace usage (around line 80)
-// FROM: const { gateways: availableGateways, loading: gatewaysLoading } = useAvailablePaymentGateways({...});
-// TO:
-const { gateways: availableGateways, loading: gatewaysLoading } = useAdminPaymentGateways();
-```
-
-**Update QuickDeposit.tsx:**
-
-```typescript
-// Replace import (line 14)
-// FROM: import { useAvailablePaymentGateways } from '@/hooks/useAvailablePaymentGateways';
-// TO:
-import { useAdminPaymentGateways } from '@/hooks/useAdminPaymentGateways';
-
-// Replace usage (lines 24-28)
-// FROM: const { gateways, loading: gatewaysLoading } = useAvailablePaymentGateways({...});
-// TO:
-const { gateways, loading: gatewaysLoading } = useAdminPaymentGateways();
-```
-
-**Files to Create/Modify:**
-- `src/hooks/useAdminPaymentGateways.tsx` (NEW)
-- `src/pages/panel/Billing.tsx`
-- `src/components/billing/QuickDeposit.tsx`
-
----
-
-## Issue 5: Payment Management Enhancement - Analytics Summary
+## Issue 4: Payment Management Page Enhancements (Already Partially Done)
 
 **Current State:**
-`UnifiedTransactionManager.tsx` has search and tabs but no summary analytics.
+- "All" category tab added ✓
+- Search bar in UnifiedTransactionManager added ✓
+- Analytics summary cards added ✓
 
-**Solution:**
-Add analytics cards at the top showing Total Deposits, Pending Count, Manual Awaiting, and Total Transactions.
+**Remaining Enhancement:**
+The analytics cards are inside `UnifiedTransactionManager.tsx` but may not be visible enough. We should verify they display correctly.
 
-**Implementation:**
-
-```tsx
-// Add after search bar (around line 318)
-// Calculate analytics
-const totalDeposits = transactions
-  .filter(t => t.status === 'completed')
-  .reduce((sum, t) => sum + t.amount, 0);
-
-const pendingCount = transactions.filter(t => 
-  t.status === 'pending' || t.status === 'pending_verification'
-).length;
-
-const manualPending = transactions.filter(t => 
-  (t.status === 'pending' || t.status === 'pending_verification') && 
-  t.is_manual
-).length;
-
-// Render analytics cards
-<div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-  <div className="bg-emerald-500/10 rounded-lg p-3 border border-emerald-500/20">
-    <p className="text-xs text-muted-foreground">Total Deposits</p>
-    <p className="text-lg font-bold text-emerald-500">${totalDeposits.toFixed(2)}</p>
-  </div>
-  <div className="bg-amber-500/10 rounded-lg p-3 border border-amber-500/20">
-    <p className="text-xs text-muted-foreground">Pending</p>
-    <p className="text-lg font-bold text-amber-500">{pendingCount}</p>
-  </div>
-  <div className="bg-orange-500/10 rounded-lg p-3 border border-orange-500/20">
-    <p className="text-xs text-muted-foreground">Manual Awaiting</p>
-    <p className="text-lg font-bold text-orange-500">{manualPending}</p>
-  </div>
-  <div className="bg-primary/10 rounded-lg p-3 border border-primary/20">
-    <p className="text-xs text-muted-foreground">Total Transactions</p>
-    <p className="text-lg font-bold">{transactions.length}</p>
-  </div>
-</div>
-```
-
-**Files to Modify:**
-- `src/components/billing/UnifiedTransactionManager.tsx`
+**Verification Required:**
+The implementation from the previous plan should already include:
+1. Total Deposits, Pending, Manual Awaiting, and Total Transactions summary cards
+2. Search bar for filtering transactions
 
 ---
 
-## Files Summary
+## Issue 5: Customer Overview Toggle Supabase Persistence (Already Implemented)
+
+**Status:** Previously implemented - persists to `panels.settings.ui.customerOverviewVisible`
+
+**Verification:**
+The toggle in `CustomerManagement.tsx` (lines 141-172) now:
+1. Reads from `panel.settings.ui.customerOverviewVisible`
+2. Updates Supabase on toggle change
+3. Syncs when panel settings load
+
+---
+
+## Issue 6: Payment System Separation (Already Implemented)
+
+**Status:** Previously implemented via `useAdminPaymentGateways` hook
+
+**Architecture:**
+- Panel owner billing (`Billing.tsx`, `QuickDeposit.tsx`) uses `useAdminPaymentGateways` → fetches from `platform_payment_providers`
+- Buyer deposits (`BuyerDeposit.tsx`) uses `useAvailablePaymentGateways` → fetches from panel settings AND platform providers intersection
+
+---
+
+## Files to Modify Summary
 
 | File | Action | Changes |
 |------|--------|---------|
-| `src/pages/panel/CustomerManagement.tsx` | Modify | Supabase persistence for overview toggle, add panel_id/buyer_id to balance transaction |
-| `src/hooks/useAdminPaymentGateways.tsx` | **CREATE** | New hook for admin-controlled payment gateways |
-| `src/pages/panel/Billing.tsx` | Modify | Use `useAdminPaymentGateways` instead of `useAvailablePaymentGateways` |
-| `src/components/billing/QuickDeposit.tsx` | Modify | Use `useAdminPaymentGateways` |
-| `src/components/billing/UnifiedTransactionManager.tsx` | Modify | Add analytics summary cards |
-| `supabase/functions/provider-services/index.ts` | Modify | Add POST fallback, better JSON parsing |
-| `supabase/functions/sync-provider-services/index.ts` | Modify | Add POST fallback, better JSON parsing |
+| `src/components/buyer-themes/tgref/TGRefHomepage.tsx` | Modify | Fix footer links: `/support` → `/about` and `/contact`, fix translation key |
+| `src/components/buyer-themes/smmvisit/SMMVisitHomepage.tsx` | Modify | Fix footer links: `/support` → `/about` and `/contact` |
+| `src/components/buyer-themes/alipanel/AliPanelHomepage.tsx` | Modify | Fix footer links: `/support` → `/about` and `/contact` |
+| `src/components/buyer-themes/flysmm/FlySMMHomepage.tsx` | Modify | Fix footer links: `/support` → `/about` and `/contact` |
+| `src/components/buyer-themes/smmstay/SMMStayHomepage.tsx` | Modify | Fix footer links: `/support` → `/about` and `/contact` |
+| `src/pages/buyer/BuyerDeposit.tsx` | Modify | Add delay before fetchTransactions() for manual transfers |
+| `supabase/functions/process-payment/index.ts` | Modify | Set status to `pending_verification` for manual transfers |
 
 ---
 
-## Technical Summary
+## Implementation Details
 
-1. **Customer Overview**: Persist to `panels.settings.ui.customerOverviewVisible` in Supabase
-2. **Provider API**: Add POST method fallback + advanced JSON cleaning for non-standard responses
-3. **Balance Updates**: Include `panel_id` and `buyer_id` in transaction inserts for RLS compliance
-4. **Payment Separation**: New `useAdminPaymentGateways` hook fetches from `platform_payment_providers` for panel owner billing
-5. **Analytics**: Add summary cards to `UnifiedTransactionManager` showing deposit stats
+### Footer Link Fixes (All 5 Theme Files)
+
+**Before:**
+```tsx
+<li><Link to="/support" ...>{t('buyer.footer.aboutUs') || 'About Us'}</Link></li>
+<li><Link to="/support" ...>{t('buyer.footer.contact') || 'Contact'}</Link></li>
+```
+
+**After:**
+```tsx
+<li><Link to="/about" ...>{t('buyer.footer.aboutUs') || 'About Us'}</Link></li>
+<li><Link to="/contact" ...>{t('buyer.footer.contact') || 'Contact'}</Link></li>
+```
+
+### TGRef Translation Key Fix
+
+**Before (line 576):**
+```tsx
+<li><Link to="/support" ...>{t('buyer.footer.about') || 'About'}</Link></li>
+```
+
+**After:**
+```tsx
+<li><Link to="/about" ...>{t('buyer.footer.aboutUs') || 'About Us'}</Link></li>
+```
+
+### Manual Deposit Fix - BuyerDeposit.tsx
+
+Add delay after manual transfer dialog opens to ensure DB propagation:
+
+```tsx
+// After line 543 (setManualDialogOpen(true))
+// Add a brief delay before fetching to allow DB write to complete
+setTimeout(() => {
+  fetchTransactions();
+}, 800);
+```
+
+### Manual Deposit Fix - process-payment Edge Function
+
+Update the manual transfer case to explicitly set `pending_verification` status:
+
+```typescript
+// In case 'manual_transfer' section
+if (gateway.startsWith('manual_') || gateway === 'manual_transfer') {
+  // Update status to pending_verification for manual transfers
+  await supabase
+    .from('transactions')
+    .update({ status: 'pending_verification' })
+    .eq('id', transactionIdToUse);
+    
+  return new Response(
+    JSON.stringify({ 
+      success: true,
+      gateway: gateway,
+      requiresManualTransfer: true,
+      transactionId: transactionIdToUse,
+      amount,
+      currency: currency.toUpperCase(),
+      config: gatewayConfig,
+      message: 'Please complete the transfer manually.',
+    }),
+    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  );
+}
+```
+
+---
+
+## Manual Deposit Flow Diagram
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│                     BUYER INITIATES DEPOSIT                      │
+└─────────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  BuyerDeposit.tsx: handleDeposit()                              │
+│  - Calls process-payment edge function                          │
+└─────────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  process-payment Edge Function                                   │
+│  1. Creates transaction with status: 'pending'                   │
+│  2. Detects manual gateway                                       │
+│  3. *** FIX: Update status to 'pending_verification' ***         │
+│  4. Returns { requiresManualTransfer: true, transactionId }      │
+└─────────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  BuyerDeposit.tsx: Receives response                             │
+│  1. Shows ManualPaymentDetails dialog                            │
+│  2. *** FIX: Wait 800ms for DB propagation ***                   │
+│  3. Calls fetchTransactions()                                    │
+└─────────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  Recent Deposits List                                            │
+│  - Shows transaction with status: 'pending_verification'         │
+│  - Badge: "Pending Verification"                                 │
+│  - Polling active for status updates                             │
+└─────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
 ## Testing Checklist
 
 After implementation:
-- [ ] Customer Overview toggle persists after page refresh (saved to Supabase)
-- [ ] Toggle syncs across different browser sessions/devices
-- [ ] Provider import works with providers requiring POST method
-- [ ] Provider import handles non-standard JSON responses
-- [ ] Adding balance to customer creates proper transaction with panel_id
-- [ ] Panel Owner Billing page shows admin-configured gateways (from platform_payment_providers)
-- [ ] Panel Owner Payment Methods page shows panel's own configured gateways
-- [ ] Buyer Deposit page shows panel-configured gateways (unchanged)
-- [ ] Payment analytics show correct totals in UnifiedTransactionManager
+- [ ] Click "About Us" in TGRef theme footer → goes to `/about` page (not `/support`)
+- [ ] Click "About Us" in SMMVisit theme footer → goes to `/about` page
+- [ ] Click "Contact" in all theme footers → goes to `/contact` page
+- [ ] Make a manual transfer deposit → appears in Recent Deposits immediately with "Pending Verification" badge
+- [ ] Translation labels show proper text (e.g., "About Us" not "buyer.footer.aboutUs")
+- [ ] Customer Overview toggle persists after page refresh (Supabase)
+- [ ] Panel owner billing shows admin-configured gateways
+- [ ] Buyer deposit shows panel-configured gateways
+
+---
+
+## Priority Order
+
+1. **Footer Links Fix** - Quick fix, affects all theme users
+2. **Manual Deposit Flow** - Critical for payment tracking
+3. **Translation Key Fix** - UI polish for TGRef theme
+4. **Verify Previous Implementations** - Confirm Supabase persistence and payment separation work correctly
