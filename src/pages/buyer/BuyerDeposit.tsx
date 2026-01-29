@@ -367,10 +367,12 @@ const BuyerDeposit = () => {
   useEffect(() => {
     if (!buyer?.id) return;
     
-    // Poll every 10 seconds for any pending transactions
+    // Poll every 10 seconds for any pending transactions (including pending_verification for manual transfers)
     const pollInterval = setInterval(() => {
-      // Only poll if there are pending transactions
-      const hasPending = transactions.some(t => t.status === 'pending');
+      // Only poll if there are pending or pending_verification transactions
+      const hasPending = transactions.some(t => 
+        t.status === 'pending' || t.status === 'pending_verification'
+      );
       if (hasPending) {
         console.log('Polling for transaction updates...');
         fetchTransactions();

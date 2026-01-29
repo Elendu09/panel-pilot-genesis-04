@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { 
   Sheet, 
   SheetContent, 
@@ -136,6 +137,16 @@ const CustomerManagement = () => {
   const [statusFilter, setStatusFilter] = useState<"all" | "online" | "banned" | "active" | "suspended" | "vip">("all");
   const [selectedCustomers, setSelectedCustomers] = useState<string[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
+  
+  // Customer overview toggle - default to hidden
+  const [showOverview, setShowOverview] = useState(() => {
+    return localStorage.getItem('customer_overview_visible') === 'true';
+  });
+  
+  const handleToggleOverview = (value: boolean) => {
+    setShowOverview(value);
+    localStorage.setItem('customer_overview_visible', String(value));
+  };
   const [statsChanges, setStatsChanges] = useState<{
     total: { value: string; trend: 'up' | 'down' | 'neutral' };
     online: { value: string; trend: 'up' | 'down' | 'neutral' };
@@ -815,11 +826,27 @@ const CustomerManagement = () => {
 
       {/* Status Tabs removed - now using clickable stat cards above */}
 
-      {/* Customer Overview */}
-      <CustomerOverview 
-        customers={customers} 
-        onSelectCustomer={setSelectedCustomer}
-      />
+      {/* Customer Overview Toggle */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Switch 
+            checked={showOverview} 
+            onCheckedChange={handleToggleOverview} 
+            id="show-overview"
+          />
+          <Label htmlFor="show-overview" className="text-sm cursor-pointer">
+            Show Customer Overview
+          </Label>
+        </div>
+      </div>
+
+      {/* Customer Overview - conditionally rendered */}
+      {showOverview && (
+        <CustomerOverview 
+          customers={customers} 
+          onSelectCustomer={setSelectedCustomer}
+        />
+      )}
 
       {/* Search & Table View */}
       <Card className="bg-card/60 backdrop-blur-xl border-border/50">
@@ -890,8 +917,16 @@ const CustomerManagement = () => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredCustomers.map((customer) => (
-                    <TableRow key={customer.id} className="hover:bg-muted/30">
+                  filteredCustomers.map((customer, index) => (
+                    <TableRow 
+                      key={customer.id} 
+                      className={cn(
+                        "group transition-all duration-200 cursor-pointer",
+                        "hover:bg-gradient-to-r hover:from-primary/5 hover:to-transparent",
+                        "hover:shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.2)]",
+                        index % 2 === 0 ? "bg-muted/20" : "bg-transparent"
+                      )}
+                    >
                       <TableCell>
                         <Checkbox
                           checked={selectedCustomers.includes(customer.id)}
