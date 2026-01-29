@@ -1,43 +1,42 @@
 
-# Comprehensive Enhancement Plan: Customer Management, Provider API, Payment Separation & More
+# Comprehensive Enhancement Plan: Supabase Persistence, Payment Separation, Provider API & More
 
 ---
 
 ## Overview
 
-This plan addresses the following improvements:
+This plan addresses all requested improvements:
 
-1. **Customer Overview Toggle - Persist in Supabase** - Store preference in panel settings instead of localStorage
-2. **Provider API Errors - Enhanced Debugging & Fix** - Improve error handling and ensure all services are returned
-3. **Payment Management Page Enhancement** - Separate payment methods view, add analytics, and improve approve/reject flow
-4. **Customer Balance Updates** - Verify and fix balance update functionality
-5. **Separate Payment Systems** - Panel Owner Billing vs Tenant Payment Methods (critical fix)
+1. **Customer Overview Toggle - Supabase Persistence** (not localStorage)
+2. **Provider API Errors - POST fallback & Better JSON parsing**
+3. **Customer Balance Updates - Add panel_id & buyer_id for RLS**
+4. **Payment System Separation** - Admin gateways for panel billing vs Panel-configured gateways for buyers
+5. **Payment Management Enhancement** - Analytics summary cards
+6. **Transaction Manager Analytics** - Add summary stats at top
 
 ---
 
 ## Issue 1: Customer Overview Toggle - Supabase Persistence
 
-**Current State:**
-The toggle saves to `localStorage` (line 142-148 in `CustomerManagement.tsx`). This doesn't sync across devices or sessions.
+**Current Problem:**
+Lines 142-148 in `CustomerManagement.tsx` store the toggle in `localStorage`, which doesn't sync across devices.
 
 **Solution:**
-Store the preference in `panels.settings.ui.customerOverviewVisible` JSONB field.
-
-**Files to Modify:**
-| File | Change |
-|------|--------|
-| `src/pages/panel/CustomerManagement.tsx` | Replace localStorage with Supabase panel settings persistence |
+Store in `panels.settings.ui.customerOverviewVisible` and read from panel settings.
 
 **Implementation:**
-```tsx
-// Remove localStorage approach
-// Add state that reads from panel.settings.ui.customerOverviewVisible
-const [showOverview, setShowOverview] = useState(() => {
-  const settings = panel?.settings as any;
-  return settings?.ui?.customerOverviewVisible === true;
-});
 
-// Update Supabase on toggle change
+```tsx
+// Replace localStorage approach (lines 142-149)
+const [showOverview, setShowOverview] = useState(false);
+
+// Sync with panel settings when loaded
+useEffect(() => {
+  const settings = panel?.settings as any;
+  setShowOverview(settings?.ui?.customerOverviewVisible === true);
+}, [panel?.settings]);
+
+// Update toggle handler to save to Supabase
 const handleToggleOverview = async (value: boolean) => {
   setShowOverview(value);
   
@@ -57,63 +56,47 @@ const handleToggleOverview = async (value: boolean) => {
       .from('panels')
       .update({ settings: updatedSettings })
       .eq('id', panel.id);
-      
-    refreshPanel();
   } catch (error) {
     console.error('Error saving overview preference:', error);
   }
 };
-
-// Sync state when panel loads
-useEffect(() => {
-  const settings = panel?.settings as any;
-  setShowOverview(settings?.ui?.customerOverviewVisible === true);
-}, [panel?.settings]);
 ```
+
+**Files to Modify:**
+- `src/pages/panel/CustomerManagement.tsx`
 
 ---
 
-## Issue 2: Provider API Errors - Enhanced Debugging & Fix
+## Issue 2: Provider API Errors - Enhanced Handling
 
-**Current State:**
-Edge functions `provider-services` and `sync-provider-services` have 30-second timeout implemented, but users report errors when testing provider connections.
-
-**Analysis:**
-Looking at the `provider-services/index.ts` code (lines 327-362), the timeout and error handling is already in place. The issue may be:
-1. Invalid URL formats from users
-2. Providers requiring POST instead of GET
-3. Response parsing issues for non-standard API responses
+**Current Problem:**
+Some external SMM providers reject GET requests or return non-standard JSON. The edge function only tries GET.
 
 **Solution:**
-Enhance error handling with more detailed logging and support both GET/POST methods. Also add better JSON parsing with fallback.
+Add POST method fallback and advanced JSON cleaning for non-standard responses.
 
-**Files to Modify:**
-| File | Change |
-|------|--------|
-| `supabase/functions/provider-services/index.ts` | Add POST method fallback, better JSON parsing, detailed error messages |
-| `supabase/functions/sync-provider-services/index.ts` | Same enhancements |
+**Implementation for provider-services/index.ts:**
 
-**Implementation:**
 ```typescript
-// Enhanced fetch with GET/POST fallback
+// After line 340, add POST fallback
 let response: Response;
 let lastError: any = null;
 
-// Try GET first
+// Try GET first (lines 332-341)
 try {
-  const getUrl = new URL(apiEndpoint);
-  getUrl.searchParams.set('key', apiKey);
-  getUrl.searchParams.set('action', action);
-  
-  response = await fetch(getUrl.toString(), {
+  response = await fetch(url.toString(), {
     method: 'GET',
-    headers: { 'User-Agent': 'SMM-Panel/2.0', 'Accept': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'User-Agent': 'SMM-Panel/2.0',
+      'Accept': 'application/json',
+    },
     signal: controller.signal
   });
 } catch (getError: any) {
   lastError = getError;
   
-  // Try POST as fallback (some providers require POST)
+  // Try POST as fallback - many providers require POST
   try {
     const postBody = new URLSearchParams();
     postBody.set('key', apiKey);
@@ -123,71 +106,71 @@ try {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': 'SMM-Panel/2.0'
+        'User-Agent': 'SMM-Panel/2.0',
+        'Accept': 'application/json'
       },
       body: postBody,
       signal: controller.signal
     });
   } catch (postError) {
-    throw lastError; // Throw original GET error
+    clearTimeout(timeout);
+    if (lastError.name === 'AbortError') {
+      return new Response(
+        JSON.stringify({ error: 'Provider API timed out after 30 seconds' }),
+        { status: 504, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    return new Response(
+      JSON.stringify({ error: 'Network error connecting to provider', details: lastError.message }),
+      { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   }
 }
+clearTimeout(timeout);
 
-// Enhanced JSON parsing with fallback
+// Enhanced JSON parsing (replace line 366)
 let data;
 const responseText = await response.text();
 try {
   data = JSON.parse(responseText);
 } catch {
-  // Some providers return array wrapped in extra characters
-  const cleaned = responseText.trim().replace(/^\[|\]$/g, '');
+  // Some providers return malformed JSON - try to clean it
+  const cleaned = responseText
+    .trim()
+    .replace(/^\uFEFF/, '') // Remove BOM
+    .replace(/[\x00-\x1F\x7F]/g, '') // Remove control characters
+    .replace(/,\s*}/g, '}') // Fix trailing commas
+    .replace(/,\s*]/g, ']');
   try {
-    data = JSON.parse(`[${cleaned}]`);
+    data = JSON.parse(cleaned);
   } catch {
     throw new Error(`Invalid JSON response from provider: ${responseText.slice(0, 200)}`);
   }
 }
-
-// Handle error responses from provider
-if (data?.error) {
-  throw new Error(`Provider error: ${data.error}`);
-}
 ```
+
+**Files to Modify:**
+- `supabase/functions/provider-services/index.ts`
+- `supabase/functions/sync-provider-services/index.ts`
 
 ---
 
-## Issue 3: Customer Balance Updates - Verification
+## Issue 3: Customer Balance Updates - Add panel_id & buyer_id
 
-**Current State:**
-Looking at `CustomerManagement.tsx` lines 505-542, the `handleBalanceAdjust` function:
-1. Updates `client_users.balance` in Supabase ✓
-2. Creates a transaction record ✓
-3. Updates local state ✓
-
-**Analysis:**
-The code is correct. The issue may be that the real-time subscription at lines 169-228 listens for changes but may not trigger an immediate refresh.
-
-**Verification:**
-The real-time subscription (line 202-217) handles `UPDATE` events and properly updates the balance from the new payload. This should work correctly.
-
-**Potential Issue:**
-The transaction insert at line 522-528 may fail due to RLS if the user_id doesn't match properly. The transaction is logged with the customer's ID but may need panel_id for proper RLS.
+**Current Problem:**
+Lines 522-528 in `CustomerManagement.tsx` insert a transaction without `panel_id` or `buyer_id`, which may fail RLS policies and not trigger proper real-time updates.
 
 **Solution:**
-Add `panel_id` to the transaction insert for proper RLS handling.
-
-**Files to Modify:**
-| File | Change |
-|------|--------|
-| `src/pages/panel/CustomerManagement.tsx` | Add panel_id to transaction insert |
+Add `panel_id` and `buyer_id` to the transaction insert.
 
 **Implementation:**
+
 ```typescript
-// Line 522-528 - Add panel_id
+// Update lines 522-528
 await supabase.from('transactions').insert({
-  panel_id: panel.id, // Add this
+  panel_id: panel.id,           // ADD: Required for RLS
+  buyer_id: selectedCustomer.id, // ADD: Required for buyer association
   user_id: selectedCustomer.id,
-  buyer_id: selectedCustomer.id, // Also add buyer_id for proper association
   amount: balanceAction === 'add' ? amount : -amount,
   type: balanceAction === 'add' ? 'deposit' : 'withdrawal',
   description: balanceReason || `Balance ${balanceAction} by panel owner`,
@@ -195,40 +178,41 @@ await supabase.from('transactions').insert({
 });
 ```
 
+**Files to Modify:**
+- `src/pages/panel/CustomerManagement.tsx`
+
 ---
 
 ## Issue 4: Separate Payment Systems - CRITICAL FIX
 
-**Root Cause Analysis:**
-The user reports that their panel owner billing page shows the SAME payment methods as their tenant/buyer deposit page. This is incorrect because:
-
-1. **Admin Payment Providers (`platform_payment_providers`)** - Used for platform-level billing (panel owner subscriptions, panel owner deposits)
-2. **Panel Payment Settings (`panels.settings.payments`)** - Used for buyer/tenant deposits
-
 **The Problem:**
-Looking at `Billing.tsx` (lines 117-122) and `QuickDeposit.tsx` (lines 25-28), both use `useAvailablePaymentGateways` which:
-1. Fetches from `platform_payment_providers` (admin-controlled)
-2. Fetches from `panels.settings.payments` (panel owner configured)
-3. Returns the **intersection** of both
+The panel owner's Billing page (`Billing.tsx`) uses `useAvailablePaymentGateways` which fetches payment methods configured by the panel owner for their BUYERS. This is incorrect.
 
-This is WRONG for panel owner billing. Panel owners should see admin-configured payment providers for their own subscription/billing payments - NOT their panel's configured buyer payment methods.
+**Correct Architecture:**
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     ADMIN (Platform Owner)                       │
+│  platform_payment_providers table                                │
+│  - Controls which gateways panel owners can use for BILLING      │
+│  - Used for: Panel owner subscriptions & panel owner deposits    │
+└───────────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────────┐
+│                     PANEL OWNER                                  │
+│  panels.settings.payments (configured by panel owner)           │
+│  - Controls which gateways THEIR BUYERS can use                  │
+│  - Used for: Buyer/tenant deposits on storefront                 │
+└─────────────────────────────────────────────────────────────────┘
+```
 
 **Solution:**
-Create separate hooks:
-1. `useAdminPaymentGateways` - For panel owner billing (fetches only from `platform_payment_providers`)
-2. Keep `useAvailablePaymentGateways` - For buyer/tenant deposits (current logic is correct for buyers)
-
-**Files to Modify:**
-| File | Change |
-|------|--------|
-| `src/hooks/useAdminPaymentGateways.tsx` | NEW - Hook for admin-controlled gateways only |
-| `src/pages/panel/Billing.tsx` | Use `useAdminPaymentGateways` instead of `useAvailablePaymentGateways` |
-| `src/components/billing/QuickDeposit.tsx` | Use `useAdminPaymentGateways` |
+Create a new hook `useAdminPaymentGateways` that ONLY fetches from `platform_payment_providers` table. Use this hook in `Billing.tsx` and `QuickDeposit.tsx` for panel owner billing.
 
 **New Hook Implementation:**
+
 ```typescript
 // src/hooks/useAdminPaymentGateways.tsx
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export type AdminGateway = {
@@ -237,7 +221,6 @@ export type AdminGateway = {
   category?: string | null;
   feePercentage?: number | null;
   fixedFee?: number | null;
-  config?: Record<string, any>;
 };
 
 export const useAdminPaymentGateways = () => {
@@ -260,10 +243,8 @@ export const useAdminPaymentGateways = () => {
         category: p.category,
         feePercentage: p.fee_percentage,
         fixedFee: p.fixed_fee,
-        config: p.config || {}
       }));
 
-      // Sort alphabetically
       mapped.sort((a, b) => a.displayName.localeCompare(b.displayName));
       setGateways(mapped);
     } catch (error) {
@@ -283,54 +264,53 @@ export const useAdminPaymentGateways = () => {
 ```
 
 **Update Billing.tsx:**
-```typescript
-// Replace this:
-import { useAvailablePaymentGateways } from '@/hooks/useAvailablePaymentGateways';
 
-// With:
+```typescript
+// Replace import (line 19)
+// FROM: import { useAvailablePaymentGateways } from '@/hooks/useAvailablePaymentGateways';
+// TO:
 import { useAdminPaymentGateways } from '@/hooks/useAdminPaymentGateways';
 
-// And update usage:
+// Replace usage (around line 80)
+// FROM: const { gateways: availableGateways, loading: gatewaysLoading } = useAvailablePaymentGateways({...});
+// TO:
 const { gateways: availableGateways, loading: gatewaysLoading } = useAdminPaymentGateways();
 ```
 
 **Update QuickDeposit.tsx:**
+
 ```typescript
-// Same replacement - use admin gateways for panel owner deposits
+// Replace import (line 14)
+// FROM: import { useAvailablePaymentGateways } from '@/hooks/useAvailablePaymentGateways';
+// TO:
 import { useAdminPaymentGateways } from '@/hooks/useAdminPaymentGateways';
 
-export const QuickDeposit = ({ onDeposit, loading }: QuickDepositProps) => {
-  const { gateways, loading: gatewaysLoading } = useAdminPaymentGateways();
-  // ... rest of component
-};
+// Replace usage (lines 24-28)
+// FROM: const { gateways, loading: gatewaysLoading } = useAvailablePaymentGateways({...});
+// TO:
+const { gateways, loading: gatewaysLoading } = useAdminPaymentGateways();
 ```
+
+**Files to Create/Modify:**
+- `src/hooks/useAdminPaymentGateways.tsx` (NEW)
+- `src/pages/panel/Billing.tsx`
+- `src/components/billing/QuickDeposit.tsx`
 
 ---
 
-## Issue 5: Payment Management Page Enhancement
+## Issue 5: Payment Management Enhancement - Analytics Summary
 
 **Current State:**
-The `PaymentMethods.tsx` page has:
-- Categories: all, cards, regional, ewallets, bank, crypto (added "all" in previous update)
-- `UnifiedTransactionManager` component with search bar
-
-**Enhancements Needed:**
-1. Differentiate payment method configuration from transaction analytics
-2. Add dedicated analytics section with charts
-3. Improve approve/reject flow with better UI
+`UnifiedTransactionManager.tsx` has search and tabs but no summary analytics.
 
 **Solution:**
-Restructure the page with clearer sections and add payment analytics chart.
+Add analytics cards at the top showing Total Deposits, Pending Count, Manual Awaiting, and Total Transactions.
 
-**Files to Modify:**
-| File | Change |
-|------|--------|
-| `src/pages/panel/PaymentMethods.tsx` | Add analytics section, improve layout |
-| `src/components/billing/UnifiedTransactionManager.tsx` | Add analytics cards at top |
+**Implementation:**
 
-**Implementation for UnifiedTransactionManager:**
 ```tsx
-// Add analytics summary at top
+// Add after search bar (around line 318)
+// Calculate analytics
 const totalDeposits = transactions
   .filter(t => t.status === 'completed')
   .reduce((sum, t) => sum + t.amount, 0);
@@ -341,95 +321,68 @@ const pendingCount = transactions.filter(t =>
 
 const manualPending = transactions.filter(t => 
   (t.status === 'pending' || t.status === 'pending_verification') && 
-  t.payment_method?.includes('manual')
+  t.is_manual
 ).length;
 
 // Render analytics cards
-<div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-  <Card className="bg-card/60">
-    <CardContent className="p-4">
-      <p className="text-sm text-muted-foreground">Total Deposits</p>
-      <p className="text-2xl font-bold text-emerald-500">${totalDeposits.toFixed(2)}</p>
-    </CardContent>
-  </Card>
-  <Card className="bg-card/60">
-    <CardContent className="p-4">
-      <p className="text-sm text-muted-foreground">Pending</p>
-      <p className="text-2xl font-bold text-amber-500">{pendingCount}</p>
-    </CardContent>
-  </Card>
-  <Card className="bg-card/60">
-    <CardContent className="p-4">
-      <p className="text-sm text-muted-foreground">Manual Awaiting</p>
-      <p className="text-2xl font-bold text-orange-500">{manualPending}</p>
-    </CardContent>
-  </Card>
-  <Card className="bg-card/60">
-    <CardContent className="p-4">
-      <p className="text-sm text-muted-foreground">Total Transactions</p>
-      <p className="text-2xl font-bold">{transactions.length}</p>
-    </CardContent>
-  </Card>
+<div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+  <div className="bg-emerald-500/10 rounded-lg p-3 border border-emerald-500/20">
+    <p className="text-xs text-muted-foreground">Total Deposits</p>
+    <p className="text-lg font-bold text-emerald-500">${totalDeposits.toFixed(2)}</p>
+  </div>
+  <div className="bg-amber-500/10 rounded-lg p-3 border border-amber-500/20">
+    <p className="text-xs text-muted-foreground">Pending</p>
+    <p className="text-lg font-bold text-amber-500">{pendingCount}</p>
+  </div>
+  <div className="bg-orange-500/10 rounded-lg p-3 border border-orange-500/20">
+    <p className="text-xs text-muted-foreground">Manual Awaiting</p>
+    <p className="text-lg font-bold text-orange-500">{manualPending}</p>
+  </div>
+  <div className="bg-primary/10 rounded-lg p-3 border border-primary/20">
+    <p className="text-xs text-muted-foreground">Total Transactions</p>
+    <p className="text-lg font-bold">{transactions.length}</p>
+  </div>
 </div>
 ```
 
----
-
-## Files to Modify Summary
-
-| File | Changes |
-|------|---------|
-| `src/pages/panel/CustomerManagement.tsx` | Supabase persistence for overview toggle, add panel_id to transaction |
-| `src/hooks/useAdminPaymentGateways.tsx` | **NEW** - Hook for admin-controlled payment gateways |
-| `src/pages/panel/Billing.tsx` | Use `useAdminPaymentGateways` instead of `useAvailablePaymentGateways` |
-| `src/components/billing/QuickDeposit.tsx` | Use `useAdminPaymentGateways` |
-| `supabase/functions/provider-services/index.ts` | Add POST fallback, better JSON parsing |
-| `supabase/functions/sync-provider-services/index.ts` | Same enhancements |
-| `src/components/billing/UnifiedTransactionManager.tsx` | Add analytics cards at top |
+**Files to Modify:**
+- `src/components/billing/UnifiedTransactionManager.tsx`
 
 ---
 
-## Technical Architecture Clarification
+## Files Summary
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                     ADMIN (Platform Owner)                       │
-│  platform_payment_providers table                                │
-│  - Manages which gateways are available platform-wide            │
-│  - Configures Stripe/PayPal/etc with ADMIN credentials           │
-│  - Used for: Panel owner subscriptions & panel owner deposits    │
-└───────────────────────────┬─────────────────────────────────────┘
-                            │
-                            ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                     PANEL OWNER                                  │
-│  panels.settings.payments                                        │
-│  - Configures THEIR OWN Stripe/PayPal/etc credentials            │
-│  - Controls which gateways THEIR BUYERS can use                  │
-│  - Used for: Buyer/tenant deposits on their storefront           │
-└───────────────────────────┬─────────────────────────────────────┘
-                            │
-                            ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                     BUYER (Tenant Customer)                      │
-│  Sees only panel-configured gateways (from panel.settings)       │
-│  Intersection with platform-enabled providers for validation     │
-│  - Deposits go to panel owner's gateway credentials              │
-└─────────────────────────────────────────────────────────────────┘
-```
+| File | Action | Changes |
+|------|--------|---------|
+| `src/pages/panel/CustomerManagement.tsx` | Modify | Supabase persistence for overview toggle, add panel_id/buyer_id to balance transaction |
+| `src/hooks/useAdminPaymentGateways.tsx` | **CREATE** | New hook for admin-controlled payment gateways |
+| `src/pages/panel/Billing.tsx` | Modify | Use `useAdminPaymentGateways` instead of `useAvailablePaymentGateways` |
+| `src/components/billing/QuickDeposit.tsx` | Modify | Use `useAdminPaymentGateways` |
+| `src/components/billing/UnifiedTransactionManager.tsx` | Modify | Add analytics summary cards |
+| `supabase/functions/provider-services/index.ts` | Modify | Add POST fallback, better JSON parsing |
+| `supabase/functions/sync-provider-services/index.ts` | Modify | Add POST fallback, better JSON parsing |
+
+---
+
+## Technical Summary
+
+1. **Customer Overview**: Persist to `panels.settings.ui.customerOverviewVisible` in Supabase
+2. **Provider API**: Add POST method fallback + advanced JSON cleaning for non-standard responses
+3. **Balance Updates**: Include `panel_id` and `buyer_id` in transaction inserts for RLS compliance
+4. **Payment Separation**: New `useAdminPaymentGateways` hook fetches from `platform_payment_providers` for panel owner billing
+5. **Analytics**: Add summary cards to `UnifiedTransactionManager` showing deposit stats
 
 ---
 
 ## Testing Checklist
 
 After implementation:
-- [ ] Customer Overview toggle persists across page refreshes (saved to Supabase)
-- [ ] Customer Overview toggle syncs across different browser sessions
-- [ ] Provider API test shows all services from valid providers
-- [ ] Provider API shows clear error messages for invalid URLs/credentials
-- [ ] Adding balance to customer in Customer Management updates their balance in real-time
-- [ ] Panel Owner Billing page shows admin-configured payment gateways (platform_payment_providers)
-- [ ] Panel Owner Payment Methods page shows panel's configured gateways for buyers
-- [ ] Buyer/Tenant Deposit page shows panel-configured payment gateways
-- [ ] Payment analytics show correct totals and pending counts
-- [ ] Manual transactions are prioritized at top of approval queue
+- [ ] Customer Overview toggle persists after page refresh (saved to Supabase)
+- [ ] Toggle syncs across different browser sessions/devices
+- [ ] Provider import works with providers requiring POST method
+- [ ] Provider import handles non-standard JSON responses
+- [ ] Adding balance to customer creates proper transaction with panel_id
+- [ ] Panel Owner Billing page shows admin-configured gateways (from platform_payment_providers)
+- [ ] Panel Owner Payment Methods page shows panel's own configured gateways
+- [ ] Buyer Deposit page shows panel-configured gateways (unchanged)
+- [ ] Payment analytics show correct totals in UnifiedTransactionManager
