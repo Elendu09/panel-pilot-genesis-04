@@ -75,48 +75,51 @@ export const UnifiedTransactionManager = ({ panelId }: UnifiedTransactionManager
 
   const fetchTransactions = async () => {
     try {
-      // Fetch all deposit transactions
+      // First, get all buyers for THIS panel only
+      const { data: panelBuyers, error: buyerError } = await supabase
+        .from('client_users')
+        .select('id, full_name, email')
+        .eq('panel_id', panelId);
+
+      if (buyerError) throw buyerError;
+
+      // Create a lookup map of panel buyers
+      const buyerMap: Record<string, { full_name: string; email: string }> = {};
+      const panelBuyerIds = (panelBuyers || []).map(b => {
+        buyerMap[b.id] = { full_name: b.full_name || '', email: b.email };
+        return b.id;
+      });
+
+      // If no buyers for this panel, return empty
+      if (panelBuyerIds.length === 0) {
+        setTransactions([]);
+        setLoading(false);
+        setRefreshing(false);
+        return;
+      }
+
+      // Fetch transactions only for this panel's buyers
       const { data: txData, error: txError } = await supabase
         .from('transactions')
         .select('*')
         .eq('type', 'deposit')
+        .or(`buyer_id.in.(${panelBuyerIds.join(',')}),user_id.in.(${panelBuyerIds.join(',')})`)
         .order('created_at', { ascending: false })
         .limit(100);
 
       if (txError) throw txError;
 
-      // Get all unique buyer/user IDs
-      const buyerIds = [...new Set((txData || []).map(tx => tx.buyer_id || tx.user_id).filter(Boolean))];
-      
-      let buyerMap: Record<string, { full_name: string; email: string }> = {};
-      if (buyerIds.length > 0) {
-        const { data: buyers } = await supabase
-          .from('client_users')
-          .select('id, full_name, email')
-          .eq('panel_id', panelId)
-          .in('id', buyerIds);
-        
-        (buyers || []).forEach(b => {
-          buyerMap[b.id] = { full_name: b.full_name || '', email: b.email };
-        });
-      }
+      // Enrich transactions with user data
+      const panelTransactions = (txData || []).map(tx => ({
+        ...tx,
+        buyer_name: buyerMap[tx.buyer_id || tx.user_id || '']?.full_name,
+        buyer_email: buyerMap[tx.buyer_id || tx.user_id || '']?.email,
+        is_manual: tx.payment_method?.toLowerCase().includes('manual') || 
+                   tx.payment_method?.toLowerCase().includes('bank') ||
+                   tx.payment_method?.toLowerCase().includes('transfer')
+      }));
 
-      // Filter transactions for this panel's buyers and enrich with user data
-      const panelTransactions = (txData || [])
-        .filter(tx => {
-          const buyerId = tx.buyer_id || tx.user_id;
-          return buyerId && buyerMap[buyerId];
-        })
-        .map(tx => ({
-          ...tx,
-          buyer_name: buyerMap[tx.buyer_id || tx.user_id || '']?.full_name,
-          buyer_email: buyerMap[tx.buyer_id || tx.user_id || '']?.email,
-          is_manual: tx.payment_method?.toLowerCase().includes('manual') || 
-                     tx.payment_method?.toLowerCase().includes('bank') ||
-                     tx.payment_method?.toLowerCase().includes('transfer')
-        }));
-
-      // Sort: manual/pending first, then by date
+      // Sort: pending first, then manual methods, then by date
       panelTransactions.sort((a, b) => {
         // Pending always first
         if (a.status === 'pending' && b.status !== 'pending') return -1;

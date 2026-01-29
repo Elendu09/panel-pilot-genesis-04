@@ -247,7 +247,7 @@ const BuyerAbout = () => {
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Button size="lg" asChild style={{ backgroundColor: primaryColor }}>
-                <Link to="/auth">{t('buyer.about.getStarted') || 'Get Started'}</Link>
+                <Link to="/services">{t('buyer.about.browseServices') || 'Browse Services'}</Link>
               </Button>
               <Button size="lg" variant="outline" asChild>
                 <Link to="/contact">{t('buyer.about.contactUs') || 'Contact Us'}</Link>
