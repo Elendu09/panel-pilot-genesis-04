@@ -6,6 +6,7 @@ interface AnnouncementBarProps {
   text?: string;
   linkText?: string;
   linkUrl?: string;
+  link?: string; // Legacy field support
   backgroundColor?: string;
   textColor?: string;
   enabled?: boolean;
@@ -15,6 +16,7 @@ export const AnnouncementBar = ({
   text,
   linkText,
   linkUrl,
+  link, // Legacy support
   backgroundColor = '#6366F1',
   textColor = '#FFFFFF',
   enabled = true,
@@ -32,26 +34,29 @@ export const AnnouncementBar = ({
     setDismissed(true);
   };
 
+  // Use linkUrl or fallback to legacy link field
+  const finalLinkUrl = linkUrl || link;
+
   if (!enabled || dismissed || !text) {
     return null;
   }
 
   return (
     <div 
-      className="relative py-2 px-4 text-center text-sm font-medium"
+      className="relative py-2.5 px-4 text-center text-sm font-medium shadow-sm"
       style={{ backgroundColor, color: textColor }}
     >
       <div className="container mx-auto flex items-center justify-center gap-2 flex-wrap">
         <Megaphone className="w-4 h-4 shrink-0" />
         <span>{text}</span>
-        {linkUrl && linkText && (
+        {finalLinkUrl && (
           <a 
-            href={linkUrl}
+            href={finalLinkUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="underline underline-offset-2 hover:no-underline inline-flex items-center gap-1 font-semibold"
           >
-            {linkText}
+            {linkText || 'Learn More'}
             <ExternalLink className="w-3 h-3" />
           </a>
         )}
