@@ -160,6 +160,13 @@ export const platformTranslations = {
     'buyer.cta.dominate': 'Dominate',
     'buyer.cta.fastOrder': 'Fast Order Now',
     'buyer.cta.getStarted': 'Get Started Now',
+    'buyer.cta.execute': 'Execute',
+    
+    // Testimonials - additional
+    'buyer.testimonials.userReviews': 'User Reviews',
+    
+    // Home - scroll indicator
+    'buyer.home.scrollMore': 'Scroll to see more',
     
     // Navigation - additional
     'buyer.nav.joinNow': 'Join Now',
@@ -447,6 +454,13 @@ export const platformTranslations = {
     'buyer.cta.dominate': 'Dominar',
     'buyer.cta.fastOrder': 'Pedido Rápido Ahora',
     'buyer.cta.getStarted': 'Empezar Ahora',
+    'buyer.cta.execute': 'Ejecutar',
+    
+    // Testimonials - additional
+    'buyer.testimonials.userReviews': 'Reseñas de Usuarios',
+    
+    // Home - scroll indicator
+    'buyer.home.scrollMore': 'Desplázate para ver más',
     
     // Navigation - additional
     'buyer.nav.joinNow': 'Únete Ahora',
@@ -722,6 +736,13 @@ export const platformTranslations = {
     'buyer.cta.dominate': 'Dominar',
     'buyer.cta.fastOrder': 'Pedido Rápido Agora',
     'buyer.cta.getStarted': 'Começar Agora',
+    'buyer.cta.execute': 'Executar',
+    
+    // Testimonials - additional
+    'buyer.testimonials.userReviews': 'Avaliações de Usuários',
+    
+    // Home - scroll indicator
+    'buyer.home.scrollMore': 'Role para ver mais',
     
     // Navigation - additional
     'buyer.nav.joinNow': 'Junte-se Agora',
@@ -997,6 +1018,13 @@ export const platformTranslations = {
     'buyer.cta.dominate': 'للسيطرة',
     'buyer.cta.fastOrder': 'طلب سريع الآن',
     'buyer.cta.getStarted': 'ابدأ الآن',
+    'buyer.cta.execute': 'تنفيذ',
+    
+    // Testimonials - additional
+    'buyer.testimonials.userReviews': 'تقييمات المستخدمين',
+    
+    // Home - scroll indicator
+    'buyer.home.scrollMore': 'مرر للمزيد',
     
     // Navigation - additional
     'buyer.nav.joinNow': 'انضم الآن',
@@ -1272,6 +1300,13 @@ export const platformTranslations = {
     'buyer.cta.dominate': 'Hükmetmeye',
     'buyer.cta.fastOrder': 'Hızlı Sipariş Ver',
     'buyer.cta.getStarted': 'Şimdi Başla',
+    'buyer.cta.execute': 'Çalıştır',
+    
+    // Testimonials - additional
+    'buyer.testimonials.userReviews': 'Kullanıcı Yorumları',
+    
+    // Home - scroll indicator
+    'buyer.home.scrollMore': 'Daha fazlası için kaydırın',
     
     // Navigation - additional
     'buyer.nav.joinNow': 'Şimdi Katıl',
@@ -1539,6 +1574,13 @@ export const platformTranslations = {
     'buyer.cta.dominate': 'Доминировать',
     'buyer.cta.fastOrder': 'Быстрый Заказ Сейчас',
     'buyer.cta.getStarted': 'Начать Сейчас',
+    'buyer.cta.execute': 'Выполнить',
+    
+    // Testimonials - additional
+    'buyer.testimonials.userReviews': 'Отзывы Пользователей',
+    
+    // Home - scroll indicator
+    'buyer.home.scrollMore': 'Прокрутите для большего',
     
     // Navigation - additional
     'buyer.nav.joinNow': 'Присоединиться',
@@ -1806,6 +1848,13 @@ export const platformTranslations = {
     'buyer.cta.dominate': 'Dominer',
     'buyer.cta.fastOrder': 'Commande Rapide Maintenant',
     'buyer.cta.getStarted': 'Commencer Maintenant',
+    'buyer.cta.execute': 'Exécuter',
+    
+    // Testimonials - additional
+    'buyer.testimonials.userReviews': 'Avis des Utilisateurs',
+    
+    // Home - scroll indicator
+    'buyer.home.scrollMore': 'Faites défiler pour en voir plus',
     
     // Navigation - additional
     'buyer.nav.joinNow': 'Rejoindre',
@@ -2073,6 +2122,13 @@ export const platformTranslations = {
     'buyer.cta.dominate': 'Dominieren',
     'buyer.cta.fastOrder': 'Schnellbestellung Jetzt',
     'buyer.cta.getStarted': 'Jetzt Starten',
+    'buyer.cta.execute': 'Ausführen',
+    
+    // Testimonials - additional
+    'buyer.testimonials.userReviews': 'Nutzerbewertungen',
+    
+    // Home - scroll indicator
+    'buyer.home.scrollMore': 'Scrollen Sie für mehr',
     
     // Navigation - additional
     'buyer.nav.joinNow': 'Jetzt Beitreten',
@@ -2340,6 +2396,13 @@ export const platformTranslations = {
     'buyer.cta.dominate': '主导',
     'buyer.cta.fastOrder': '立即快速下单',
     'buyer.cta.getStarted': '立即开始',
+    'buyer.cta.execute': '执行',
+    
+    // Testimonials - additional
+    'buyer.testimonials.userReviews': '用户评价',
+    
+    // Home - scroll indicator
+    'buyer.home.scrollMore': '滚动查看更多',
     
     // Navigation - additional
     'buyer.nav.joinNow': '立即加入',
@@ -2607,6 +2670,13 @@ export const platformTranslations = {
     'buyer.cta.dominate': 'हावी होने',
     'buyer.cta.fastOrder': 'अभी तेज़ ऑर्डर करें',
     'buyer.cta.getStarted': 'अभी शुरू करें',
+    'buyer.cta.execute': 'निष्पादित करें',
+    
+    // Testimonials - additional
+    'buyer.testimonials.userReviews': 'उपयोगकर्ता समीक्षाएं',
+    
+    // Home - scroll indicator
+    'buyer.home.scrollMore': 'अधिक देखने के लिए स्क्रॉल करें',
     
     // Navigation - additional
     'buyer.nav.joinNow': 'अभी जुड़ें',

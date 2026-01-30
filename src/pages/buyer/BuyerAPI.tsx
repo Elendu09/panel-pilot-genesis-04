@@ -44,12 +44,12 @@ const BuyerAPI = () => {
 
   const platformDomain = getPlatformDomain();
 
-  // Buyer API uses tenant's domain (custom domain or subdomain)
+  // Buyer API uses tenant's domain (custom domain or subdomain) + /buyer-api endpoint
   const apiBaseUrl = panel?.custom_domain 
-    ? `https://${panel.custom_domain}/api/v2`
+    ? `https://${panel.custom_domain}/api/v2/buyer-api`
     : panel?.subdomain 
-      ? `https://${panel.subdomain}.${platformDomain}/api/v2`
-      : `https://yourpanel.${platformDomain}/api/v2`;
+      ? `https://${panel.subdomain}.${platformDomain}/api/v2/buyer-api`
+      : `https://yourpanel.${platformDomain}/api/v2/buyer-api`;
 
   const copyToClipboard = async (text: string, id: string) => {
     try {
