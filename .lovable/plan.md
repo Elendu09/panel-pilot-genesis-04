@@ -1,259 +1,355 @@
 
-# Comprehensive Fix Plan: Announcements, About Us, Light Mode, Desktop Controls, Recent Deposits
+
+# Comprehensive Fix Plan: Light Mode, Announcements, and Services Improvements
+
+## Executive Summary
+
+This plan addresses three major areas:
+1. **Design Customization Light Mode** - Fix for mobile/tablet preview backgrounds, cards, and text visibility
+2. **Announcements Integration** - Enhanced configuration with visual diagram of how it renders
+3. **Services Management & Tenant Display** - Fix categorization issues and ensure all 70+ categories render correctly
 
 ---
 
-## Issues Identified from Analysis
+## Issue 1: Design Customization Light Mode Not Working on Mobile/Tablet
 
-### Issue 1: Announcement Bar Not Showing on Tenant Homepage
-**Root Cause:** The `AnnouncementBar` component is rendered in `Storefront.tsx` and reads from `panel_settings.integrations.announcements`. The config structure expected is:
-```typescript
-{
-  enabled: true,
-  text: "Welcome message",
-  linkText: "Learn More",
-  linkUrl: "https://...",
-  backgroundColor: "#...",
-  textColor: "#..."
-}
-```
+### Current Problem
+When light mode is toggled in Design Customization:
+- On mobile/tablet view (via MobileDesignSlider), the preview background stays dark
+- Card backgrounds remain dark
+- Text contrast is poor in light mode
+- Only a few elements change color
 
-However, looking at `Integrations.tsx` (lines 381-391), the "Announcements" service only saves:
-- `text` (Announcement Text)
-- `link` (Link URL - optional)
+### Root Cause Analysis
+1. **MobileDesignSlider.tsx (line 128, 275-288)**: Uses hardcoded `bg-slate-950`, `bg-slate-900`, `bg-slate-800` classes regardless of `previewThemeMode`
+2. **Preview container** (line 276-278): Only adds a ring/shadow style based on theme mode but doesn't change the actual background color class sufficiently
+3. **Controls area** (line 320, 331, 353): All use hardcoded dark backgrounds (`bg-slate-900`, `bg-slate-800`)
 
-**Missing:** The integration doesn't save `enabled`, `linkText`, `backgroundColor`, or `textColor`. The AnnouncementBar checks `if (!enabled || dismissed || !text)` at line 35.
+### Solution
 
-**Fix:**
-1. Update `Integrations.tsx` to save proper announcement fields including `enabled: true`
-2. Add proper fields for `linkText`, `backgroundColor`, `textColor` in the integration dialog
-3. Ensure the save function properly sets `enabled: true` when content is provided
-
----
-
-### Issue 2: Rewrite Tenant About Us Page
-**Current State:** The `BuyerAbout.tsx` page has some content with 3 feature bullets and a contact CTA, but user wants it even simpler.
-
-**Fix:** Simplify to a basic page with:
-- Panel name + description from `custom_branding.footerAbout`
-- No feature bullets
-- Single contact CTA
-- Consistent with other informational tenant pages (Terms, Privacy)
-
----
-
-### Issue 3: Design Customization Light Mode Background Still Dark
-**Root Cause from Images:** When "Light" mode is toggled in Design Customization, the controls panel and preview area still have dark backgrounds. User expects the editor itself to show a white/light background to clearly differentiate light mode.
-
-Looking at the code:
-- Line 3443-3448 in `DesignCustomization.tsx`: Preview container changes background based on `previewThemeMode === 'light'` to `bg-gray-100`
-- But the **left controls panel** (line 2422) always uses `bg-card/30` regardless of preview mode
-
-**Fix:**
-1. When light mode is selected, the **preview area** should use a clearly white/light-gray background
-2. The controls should remain dark (dashboard theme) but the preview iframe/container should be clearly light
-
-The current code does set `bg-gray-100` for light mode, but this may not be visible enough. Need to set a more obvious white background like `bg-white` or `bg-slate-50`.
-
----
-
-### Issue 4: Design Customization Menu Shrinking (Not Desktop Responsive)
-**Root Cause from Images:** The left sidebar with "Design Presets" section appears shrunk/narrow on wider screens.
-
-Looking at line 2422: `w-[420px]` is a fixed width.
-
-The issue from the uploaded image shows the sidebar is properly sized, but the **Design Presets cards** are using a 2-column grid (`grid grid-cols-2 gap-3`) which may look cramped.
-
-**Fix:**
-1. Ensure the left panel has `min-w-[420px]` and `flex-shrink-0` to prevent shrinking
-2. Improve the design presets grid layout for better visual appearance
-
----
-
-### Issue 5: Recent Deposits Not Showing Manual Transfer
-**Root Cause:** This is **the critical bug**!
-
-Looking at `BuyerDeposit.tsx` lines 816-818:
-```typescript
-const isCompleted = tx.status === 'completed';
-const isPending = tx.status === 'pending';  // ← BUG: Only checks 'pending', not 'pending_verification'
-const isFailed = tx.status === 'failed' || tx.status === 'cancelled';
-```
-
-When a manual transfer is initiated, the `process-payment` edge function sets `status: 'pending_verification'` (line 1076). But the UI only recognizes `'pending'` as a pending status.
-
-This means:
-1. Manual transfer creates transaction with `status: 'pending_verification'`
-2. UI checks `isPending = tx.status === 'pending'` → `false`
-3. Neither `isCompleted` nor `isPending` is true, so it falls through to `isFailed` styling (red/failed)
-4. OR the transaction doesn't appear at all if there's a query timing issue
-
-**Fix:**
-Update the status logic to include `pending_verification`:
-```typescript
-const isPending = tx.status === 'pending' || tx.status === 'pending_verification' || tx.status === 'processing';
-```
-
----
-
-## Files to Modify
-
-| File | Issue | Changes |
-|------|-------|---------|
-| `src/pages/panel/Integrations.tsx` | #1 | Add proper announcement fields (enabled, linkText, backgroundColor, textColor) |
-| `src/pages/buyer/BuyerAbout.tsx` | #2 | Simplify to minimal about page |
-| `src/pages/panel/DesignCustomization.tsx` | #3, #4 | Fix light mode preview background, fix sidebar shrinking |
-| `src/pages/buyer/BuyerDeposit.tsx` | #5 | Fix pending status check to include `pending_verification` |
-
----
-
-## Implementation Details
-
-### 1. Announcement Integration Fix (`Integrations.tsx`)
-
-Update the announcements service definition (line 381-391):
-```typescript
-{
-  id: 'announcements',
-  name: 'Announcements',
-  description: 'Show announcements bar on storefront',
-  icon: <AnnouncementsIcon className="w-5 h-5" />,
-  color: 'bg-[#F59E0B]',
-  category: 'other',
-  fields: [
-    { type: 'input', name: 'text', label: 'Announcement Text', placeholder: 'Welcome to our panel! Check out our new services.' },
-    { type: 'input', name: 'linkText', label: 'Link Text (optional)', placeholder: 'Learn More' },
-    { type: 'input', name: 'linkUrl', label: 'Link URL (optional)', placeholder: 'https://...' },
-    { type: 'input', name: 'backgroundColor', label: 'Background Color', placeholder: '#6366F1' },
-    { type: 'input', name: 'textColor', label: 'Text Color', placeholder: '#FFFFFF' }
-  ]
-}
-```
-
-Also ensure `saveServiceConfig` sets `enabled: true` properly.
-
----
-
-### 2. Simplified About Us Page (`BuyerAbout.tsx`)
-
-Replace with minimal content:
-```tsx
-const BuyerAbout = () => {
-  const { panel, loading } = useTenant();
-  const { t } = useLanguage();
-
-  const companyName = panel?.name || 'SMM Panel';
-  const customBranding = panel?.custom_branding as any;
-  const description = customBranding?.footerAbout || customBranding?.description || 
-    'Professional social media marketing services.';
-  const primaryColor = customBranding?.primaryColor || panel?.primary_color || '#3B82F6';
-
-  return (
-    <BuyerLayout>
-      <Helmet>
-        <title>About Us - {companyName}</title>
-        <meta name="description" content={description} />
-      </Helmet>
-
-      <div className="max-w-2xl mx-auto py-16 px-4 text-center">
-        <h1 className="text-3xl md:text-4xl font-bold mb-6">
-          About <span style={{ color: primaryColor }}>{companyName}</span>
-        </h1>
-        <p className="text-muted-foreground text-lg leading-relaxed mb-8">
-          {description}
-        </p>
-        <Button asChild style={{ backgroundColor: primaryColor }}>
-          <Link to="/contact">Contact Us</Link>
-        </Button>
-      </div>
-    </BuyerLayout>
-  );
-};
-```
-
----
-
-### 3. Light Mode Preview Background (`DesignCustomization.tsx`)
-
-Change line 3443-3448 to use more obvious white background:
-```tsx
-<div className={cn(
-  "flex-1 flex flex-col min-h-[50vh] lg:min-h-0 transition-colors duration-300",
-  previewThemeMode === 'light' 
-    ? "bg-white"  // Changed from bg-gray-100 to bg-white for clearer contrast
-    : "bg-[#0a0a12]"
-)}>
-```
-
-Also fix the left panel (line 2422) to prevent shrinking:
-```tsx
-<div className="w-[420px] min-w-[420px] flex-shrink-0 border-r border-border/50 overflow-y-auto bg-card/30 p-4 space-y-2">
-```
-
----
-
-### 4. Recent Deposits Status Fix (`BuyerDeposit.tsx`)
-
-Change lines 816-818:
-```typescript
-const isCompleted = tx.status === 'completed';
-const isPending = tx.status === 'pending' || tx.status === 'pending_verification' || tx.status === 'processing';
-const isFailed = tx.status === 'failed' || tx.status === 'cancelled';
-```
-
-Also update the badge display to show user-friendly text for `pending_verification`:
-```typescript
-<Badge ...>
-  {tx.status === 'pending_verification' ? 'Pending Verification' : (tx.status || 'pending')}
-</Badge>
-```
-
----
-
-## Transaction Status Flow Diagram
+Update `src/components/design/MobileDesignSlider.tsx` to conditionally apply light or dark styling:
 
 ```text
-┌──────────────────────────────────────────────────────────────────┐
-│                     MANUAL TRANSFER FLOW                          │
-└──────────────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌──────────────────────────────────────────────────────────────────┐
-│  1. Buyer clicks "Deposit" with manual payment method            │
-│     → BuyerDeposit.tsx calls process-payment edge function       │
-└──────────────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌──────────────────────────────────────────────────────────────────┐
-│  2. Edge function creates transaction                             │
-│     → Initial status: 'pending'                                   │
-│     → Detects manual gateway (gateway.startsWith('manual_'))      │
-│     → Updates status to 'pending_verification'                    │
-│     → Returns { requiresManualTransfer: true, transactionId }     │
-└──────────────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌──────────────────────────────────────────────────────────────────┐
-│  3. BuyerDeposit.tsx receives response                            │
-│     → Shows ManualPaymentDetails dialog with bank details         │
-│     → Waits 800ms then calls fetchTransactions()                  │
-└──────────────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌──────────────────────────────────────────────────────────────────┐
-│  4. Recent Deposits List (BEFORE FIX - BUG)                       │
-│     → Fetches transactions with type='deposit'                    │
-│     → Checks: isPending = status === 'pending' → FALSE!           │
-│     → Transaction with 'pending_verification' shows as FAILED     │
-└──────────────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌──────────────────────────────────────────────────────────────────┐
-│  5. Recent Deposits List (AFTER FIX)                              │
-│     → isPending includes 'pending_verification'                   │
-│     → Transaction shows with yellow "Pending Verification" badge  │
-│     → Real-time polling checks for status updates                 │
-└──────────────────────────────────────────────────────────────────┘
+Lines to change:
+- Line 128: Container background
+- Lines 130-155: Top bar and toggle buttons
+- Lines 204-211: Section info bar
+- Lines 275-292: Preview container
+- Lines 310-393: Controls mode section (navigation, dots, content area)
+```
+
+Key changes:
+- Add `previewThemeMode` condition checks throughout the component
+- Change backgrounds to `bg-white` or `bg-slate-50` when light mode
+- Change text colors from `text-slate-*` to `text-slate-700` (dark on light) when light mode
+- Change borders from `border-slate-700` to `border-slate-200` when light mode
+
+### Files to Modify
+| File | Changes |
+|------|---------|
+| `src/components/design/MobileDesignSlider.tsx` | Add comprehensive light/dark mode conditional styling throughout the component |
+
+---
+
+## Issue 2: Announcements Integration Enhancement
+
+### Current State
+The announcements integration in `Integrations.tsx` has these fields:
+- text (Announcement Text)
+- linkText (Link Text)
+- linkUrl (Link URL)
+- backgroundColor
+- textColor
+
+But it's missing a clear `enabled` flag being saved, and there's no visual title field.
+
+### Announcement Rendering Flow Diagram
+
+```text
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│                        ANNOUNCEMENT BAR RENDERING FLOW                                │
+└─────────────────────────────────────────────────────────────────────────────────────┘
+
+Panel Owner Dashboard                    Database                     Tenant Storefront
+─────────────────────                    ────────                     ─────────────────
+
+┌────────────────────┐
+│  Integrations.tsx  │
+│  ─────────────────  │
+│  Panel owner fills │
+│  announcement form │
+│  fields:           │
+│  • Title           │◄─────────NEW
+│  • Description     │◄─────────NEW  
+│  • Link Text       │
+│  • Link URL        │
+│  • Background Color│
+│  • Text Color      │
+│  • Icon selection  │◄─────────NEW
+└────────┬───────────┘
+         │
+         │ saveServiceConfig()
+         │ Sets enabled: true when saved
+         │
+         ▼
+┌────────────────────┐
+│   panel_settings   │
+│   ───────────────  │
+│   {                │
+│     integrations: {│
+│       announcements│
+│       : {          │
+│         enabled,   │
+│         title,     │◄───NEW
+│         text,      │
+│         linkText,  │
+│         linkUrl,   │
+│         bgColor,   │
+│         textColor, │
+│         icon       │◄───NEW
+│       }            │
+│     }              │
+│   }                │
+└────────┬───────────┘
+         │
+         │ Supabase query
+         │
+         ▼
+┌────────────────────┐
+│   Storefront.tsx   │
+│   ──────────────── │
+│   Lines 164-171:   │
+│   Extracts config  │
+│   from panel_      │
+│   settings.        │
+│   integrations.    │
+│   announcements    │
+└────────┬───────────┘
+         │
+         │ Pass props
+         │
+         ▼
+┌─────────────────────────────────────┐
+│        AnnouncementBar.tsx          │
+│        ────────────────────         │
+│ Props received:                      │
+│   • enabled (boolean)               │
+│   • title (NEW)                     │
+│   • text (description)              │
+│   • linkText                        │
+│   • linkUrl                         │
+│   • backgroundColor                 │
+│   • textColor                       │
+│   • icon (NEW)                      │
+│                                      │
+│ Render logic:                        │
+│   1. Check enabled && text exists   │
+│   2. Check sessionStorage dismiss   │
+│   3. If both pass → render bar      │
+│                                      │
+│ ┌─────────────────────────────────┐ │
+│ │  [Icon] TITLE: Description      │ │
+│ │        [Link Text] →    [X]     │ │
+│ └─────────────────────────────────┘ │
+└─────────────────────────────────────┘
+```
+
+### Enhancement Details
+
+**New Fields to Add in Integrations.tsx:**
+1. `title` - Short headline (e.g., "New Feature")
+2. `description` (rename from `text`) - Longer description text
+3. `icon` - Icon selector (megaphone, star, gift, bell, info, etc.)
+4. Keep existing: linkText, linkUrl, backgroundColor, textColor
+
+**Update AnnouncementBar.tsx:**
+1. Accept new `title` and `icon` props
+2. Render icon + title prominently
+3. Render description text
+4. Add visual polish (gradient backgrounds, icon styling)
+
+### Files to Modify
+| File | Changes |
+|------|---------|
+| `src/pages/panel/Integrations.tsx` | Add title, icon fields to announcements definition; update save logic |
+| `src/components/storefront/AnnouncementBar.tsx` | Accept title/icon props, improve visual design |
+| `src/pages/Storefront.tsx` | Pass new props to AnnouncementBar |
+
+---
+
+## Issue 3: Services Management & Tenant Display - Category Issues
+
+### Current Problems Identified
+
+1. **Services not showing all categories on tenant storefront**
+   - `BuyerServices.tsx` uses `useUnifiedServices` hook which fetches from `service_categories` table
+   - If categories aren't created in that table, they won't show
+   - Fallback (line 244-267 in useUnifiedServices.tsx) builds categories from services but may not work correctly
+
+2. **Auto-fix operations slow or buggy**
+   - `autoAssignIconsAndCategories` function processes services one-by-one
+   - Large batches (1000+ services) can timeout or freeze
+
+3. **New Order page may show different categories than Services page**
+   - Different category extraction logic in different components
+
+### Root Cause Analysis
+
+**Category Display Flow:**
+1. Services are imported with `category` field (string like "instagram", "facebook")
+2. `useUnifiedServices` first tries to fetch from `service_categories` table
+3. If empty, it falls back to building categories from services
+4. The fallback logic (lines 244-267) doesn't always populate correctly
+
+**The Issue:**
+- `service_categories` table may be empty for a panel
+- Fallback relies on services having correct `category` field
+- Icon detection may mismatch the category string
+
+### Solution: Multi-Part Fix
+
+**Part A: Improve Category Sync**
+
+Update `useUnifiedServices.tsx` to:
+1. Always build categories from services when `service_categories` table is empty
+2. Auto-sync categories to database when first loaded
+3. Ensure all 70+ platforms in `SOCIAL_ICONS_MAP` can be matched
+
+**Part B: Fix Services Management Auto-Fix**
+
+Update `src/pages/panel/ServicesManagement.tsx`:
+1. Add batch processing with progress for large service lists
+2. Fix the auto-categorization to handle edge cases
+3. Add proper error handling and retry logic
+
+**Part C: Sync Buyer Services Display**
+
+Ensure `BuyerServices.tsx` and `BuyerNewOrder.tsx` both use:
+1. Same category source (useUnifiedServices)
+2. Same icon detection logic
+3. Same sorting/grouping approach
+
+**Part D: Add "Sync Categories" Button**
+
+Add a visible button in Services Management to manually trigger category sync:
+- Calls `syncCategoriesFromServices()` from the hook
+- Shows progress indicator
+- Creates missing categories in `service_categories` table
+
+### Implementation Details
+
+**useUnifiedServices.tsx Changes:**
+```typescript
+// Enhanced categoriesWithServices that ALWAYS works
+const categoriesWithServices = useMemo(() => {
+  // Build from services directly (reliable)
+  const catMap = new Map<string, ServiceCategory & { services: UnifiedService[] }>();
+  
+  // First, add all services to their categories
+  services.forEach(svc => {
+    const slug = (svc.category || 'other').toLowerCase();
+    const iconData = SOCIAL_ICONS_MAP[slug] || SOCIAL_ICONS_MAP.other;
+    
+    if (!catMap.has(slug)) {
+      catMap.set(slug, {
+        id: slug,
+        panelId: panelId || '',
+        name: iconData.label || slug.charAt(0).toUpperCase() + slug.slice(1),
+        slug,
+        iconKey: slug,
+        color: iconData.color || '#6B7280',
+        position: catMap.size,
+        isActive: true,
+        serviceCount: 0,
+        services: [],
+      });
+    }
+    catMap.get(slug)!.services.push(svc);
+    catMap.get(slug)!.serviceCount++;
+  });
+
+  // Sort by service count (most popular first)
+  return Array.from(catMap.values()).sort((a, b) => b.serviceCount - a.serviceCount);
+}, [services, panelId]);
+```
+
+**ServicesManagement.tsx - Add Sync Button:**
+```typescript
+// In the toolbar area
+<Button 
+  variant="outline" 
+  size="sm"
+  onClick={handleSyncCategories}
+  disabled={isSyncingCategories}
+>
+  {isSyncingCategories ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+  Sync Categories
+</Button>
+```
+
+### Files to Modify
+| File | Changes |
+|------|---------|
+| `src/hooks/useUnifiedServices.tsx` | Improve category building from services, always-reliable fallback |
+| `src/pages/panel/ServicesManagement.tsx` | Add sync categories button, improve auto-fix reliability |
+| `src/pages/buyer/BuyerServices.tsx` | Ensure consistent category display |
+| `src/pages/buyer/BuyerNewOrder.tsx` | Sync category logic with BuyerServices |
+
+---
+
+## Summary of All Files to Change
+
+| Priority | File | Changes |
+|----------|------|---------|
+| HIGH | `src/components/design/MobileDesignSlider.tsx` | Full light mode support for mobile/tablet preview |
+| HIGH | `src/hooks/useUnifiedServices.tsx` | Reliable category building from services |
+| MEDIUM | `src/pages/panel/Integrations.tsx` | Enhanced announcement fields (title, icon) |
+| MEDIUM | `src/components/storefront/AnnouncementBar.tsx` | Support title/icon, improved visuals |
+| MEDIUM | `src/pages/Storefront.tsx` | Pass new announcement props |
+| MEDIUM | `src/pages/panel/ServicesManagement.tsx` | Add sync categories button, improve auto-fix |
+| LOW | `src/pages/buyer/BuyerServices.tsx` | Consistent category display |
+| LOW | `src/pages/buyer/BuyerNewOrder.tsx` | Sync category logic |
+
+---
+
+## Technical Implementation Notes
+
+### Light Mode Color Mapping
+
+| Dark Mode | Light Mode |
+|-----------|------------|
+| `bg-slate-950` | `bg-white` |
+| `bg-slate-900` | `bg-slate-50` |
+| `bg-slate-800` | `bg-slate-100` |
+| `bg-slate-700` | `bg-slate-200` |
+| `text-slate-200` | `text-slate-800` |
+| `text-slate-400` | `text-slate-600` |
+| `border-slate-700` | `border-slate-200` |
+| `ring-white/10` | `ring-black/10` |
+
+### Category Sync Database Function
+
+The `sync_panel_categories` RPC function creates missing categories. If it doesn't exist, we'll create categories via direct inserts:
+
+```typescript
+const syncCategoriesFromServices = async () => {
+  // Get unique categories from services
+  const uniqueCats = [...new Set(services.map(s => s.category))];
+  
+  for (const cat of uniqueCats) {
+    const iconData = SOCIAL_ICONS_MAP[cat] || SOCIAL_ICONS_MAP.other;
+    
+    // Upsert category
+    await supabase.from('service_categories').upsert({
+      panel_id: panelId,
+      name: iconData.label,
+      slug: cat,
+      icon_key: cat,
+      color: iconData.color,
+      is_active: true,
+    }, { onConflict: 'panel_id,slug' });
+  }
+};
 ```
 
 ---
@@ -261,18 +357,10 @@ Also update the badge display to show user-friendly text for `pending_verificati
 ## Testing Checklist
 
 After implementation:
-- [ ] Enable Announcements in Integrations → verify banner appears on tenant storefront
-- [ ] Visit tenant `/about` page → verify simplified layout
-- [ ] Toggle Light mode in Design Customization → verify preview background is clearly white
-- [ ] Check Design Customization sidebar on wide screens → no shrinking
-- [ ] Make a manual deposit → verify it appears in Recent Deposits with "Pending Verification" badge
+- [ ] Mobile Design Customization: Toggle light mode → all backgrounds, cards, text should be light
+- [ ] Tablet Design Customization: Same as mobile
+- [ ] Integrations: Configure announcement with title → verify it shows on tenant storefront
+- [ ] Services Management: Click "Sync Categories" → verify all categories appear
+- [ ] Tenant /services: Verify all 70+ categories show with correct icons
+- [ ] Tenant New Order: Verify same categories as /services page
 
----
-
-## Priority Order
-
-1. **Recent Deposits bug** (#5) - Critical: Users can't see their pending transactions
-2. **Light mode background** (#3) - High: Design preview is confusing
-3. **Announcement integration** (#1) - Medium: Feature doesn't work
-4. **About Us page** (#2) - Low: Content update
-5. **Sidebar shrinking** (#4) - Low: Minor layout issue
