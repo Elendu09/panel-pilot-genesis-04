@@ -1,103 +1,203 @@
 
-# Analytics Dashboard Enhancement Plan
 
-## Reference Design Analysis
+# Analytics Dashboard Enhancement: Zentra + Kanban Hybrid UI
 
-Based on the uploaded images, I need to implement:
+## Issues Identified
 
-**Image 1 (Header Section):**
-- Personalized greeting: "Hello, [name] 👋" with subtitle "Here's what's happening with your panel today"
-- Time period tabs: **7 Days** | **30 Days** (selected) | **90 Days** | **1 Year** | **📅 Custom**
-- Sub-tabs: **Overview** | **Payments** | **Customers**
-- 4 stat cards with colored background gradients:
-  - Total Revenue (with $ icon, gradient blue bg)
-  - Total Orders (with cart icon, gradient pink bg)
-  - Active Users (with users icon, gradient green bg)
-  - Conversion Rate (with chart icon, gradient coral bg)
+Based on the current implementation and the uploaded mobile screenshot:
 
-**Image 2 (Zentra Dashboard):**
-- Full payments funnel visualization
-- Gross Volume card
-- Retention chart
-- Transactions/Customers compact cards
-- Insights card
+### 1. Mobile Text Display Problem (Critical)
+The `PaymentsFunnelCard` stage headers are running together on mobile:
+- **Current**: "ProcessingSuccessful Attention Completed" all merged
+- **Cause**: Using `grid-cols-5` with no minimum width, causing text to overlap
+- **Solution**: Implement responsive layout - horizontal scroll on mobile or vertical kanban-style cards
+
+### 2. Tab/Time Period Functionality
+- Time period pills (7D, 30D, 90D, 1Y, Custom) **do work** - they update `dateRange` state which triggers data fetch
+- Custom date picker **works** - opens popover with dual calendars
+- Section tabs (Overview/Payments/Customers) **are implemented but unused** - `activeTab` state exists but doesn't filter content
+
+### 3. Visual Enhancement Needed
+- Combine Zentra analytics style with Kanban visual elements
+- Add glassmorphic effects per project memory
+- Improve card hierarchy and visual appeal
 
 ---
 
 ## Implementation Plan
 
-### Phase 1: Header & Top Stats Enhancement
+### Phase 1: Fix Mobile Layout + Kanban-Style Funnel
 
-**Add personalized greeting header:**
+**Transform PaymentsFunnelCard into a Kanban-hybrid layout:**
+
+```text
+Desktop (5-column grid):
+┌─────────┬─────────┬─────────┬─────────┬─────────┐
+│Initiated│Authorized│Successful│Attention│Completed│
+│  65.2K  │  54.8K   │  48.6K   │  38.3K  │  32.9K  │
+│ ███████ │ ██████   │ █████    │ ████    │ ███     │
+└─────────┴─────────┴─────────┴─────────┴─────────┘
+
+Mobile (Kanban cards - horizontally scrollable):
+┌──────────┐  ┌──────────┐  ┌──────────┐
+│ Initiated│  │Authorized│  │Successful│ →
+│   65.2K  │  │  54.8K   │  │  48.6K   │
+│  Orders  │  │  -16%    │  │   -11%   │
+│ ████████ │  │ ███████  │  │ ██████   │
+└──────────┘  └──────────┘  └──────────┘
 ```
-Hello, [firstName] 👋
-Here's what's happening with your panel today
+
+**Key changes to PaymentsFunnelCard.tsx:**
+1. Mobile: Horizontal scroll with individual Kanban cards
+2. Add proper spacing and min-width for each stage
+3. Visual connectors between stages (arrow indicators)
+4. Status badges with color coding
+
+### Phase 2: Activate Section Tabs
+
+**Make Overview/Payments/Customers tabs actually filter content:**
+
+| Tab | Content Shown |
+|-----|--------------|
+| **Overview** | All cards (current default view) |
+| **Payments** | Funnel, Gross Volume, Transactions, Insights |
+| **Customers** | Customers card, Customer Growth chart, Retention |
+
+**Changes to Analytics.tsx:**
+- Wrap content sections in conditional rendering based on `activeTab`
+- Hide irrelevant cards when tab changes
+
+### Phase 3: Enhanced Visual Styling
+
+**Apply glassmorphic + Kanban hybrid design:**
+
+1. **Stat cards** - Add subtle glass effects and hover animations
+2. **Funnel stages** - Kanban column styling with:
+   - Frosted glass backgrounds
+   - Colored status badges
+   - Drop-off indicators between columns
+   - Gradient borders
+3. **Charts** - Add glass overlays and improved tooltips
+
+**Color scheme for Kanban stages:**
+| Stage | Color | Icon |
+|-------|-------|------|
+| Initiated | Blue-500 | FileText |
+| Authorized | Indigo-500 | CheckCircle |
+| Successful | Emerald-500 | CircleCheck |
+| Attention | Amber-500 | AlertCircle |
+| Completed | Green-600 | CheckCheck |
+
+### Phase 4: Mobile Optimization
+
+**Responsive improvements:**
+1. Time period pills: Horizontal scroll on mobile
+2. TopStatCards: 2x2 grid on mobile (already done)
+3. Funnel: Kanban-style horizontal scroll
+4. Charts: Full-width with collapsible sections
+
+---
+
+## Technical Implementation
+
+### 1. PaymentsFunnelCard.tsx - Kanban Hybrid
+
+```typescript
+// Mobile: Horizontal scroll with individual Kanban cards
+// Desktop: Enhanced grid with visual connectors
+
+<div className="overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0">
+  <div className="flex md:grid md:grid-cols-5 gap-3 min-w-[600px] md:min-w-0">
+    {stages.map((stage, i) => (
+      <div 
+        key={stage.name}
+        className={cn(
+          "flex-shrink-0 w-28 md:w-auto rounded-xl p-3 md:p-4",
+          "bg-gradient-to-b from-card/80 to-card",
+          "border border-border/40 backdrop-blur-sm",
+          "hover:shadow-lg transition-all duration-300"
+        )}
+      >
+        {/* Stage header with color badge */}
+        <div className="flex items-center gap-2 mb-2">
+          <div className={cn("w-2 h-2 rounded-full", stageColors[i])} />
+          <p className="text-xs font-semibold text-foreground truncate">
+            {stage.name}
+          </p>
+        </div>
+        
+        {/* Count */}
+        <p className="text-lg md:text-xl font-bold text-foreground">
+          {formatCompactNumber(stage.count)}
+        </p>
+        <p className="text-[10px] text-muted-foreground">Orders</p>
+        
+        {/* Drop-off indicator */}
+        {i < stages.length - 1 && stage.dropOff > 0 && (
+          <Badge variant="destructive" className="mt-2 text-[10px]">
+            -{stage.dropOff.toFixed(0)}%
+          </Badge>
+        )}
+        
+        {/* Mini bar */}
+        <div className="mt-2 h-1.5 rounded-full bg-muted overflow-hidden">
+          <div 
+            className={cn("h-full rounded-full", barColors[i])}
+            style={{ width: `${stage.percentage}%` }}
+          />
+        </div>
+      </div>
+    ))}
+  </div>
+</div>
+
+{/* Arrow connectors on desktop */}
+<div className="hidden md:flex justify-between px-8 -mt-4 mb-4">
+  {[0, 1, 2, 3].map(i => (
+    <ArrowRight key={i} className="w-4 h-4 text-muted-foreground" />
+  ))}
+</div>
 ```
 
-**Add 4 enhanced stat cards at the top** (matching Image 1):
-| Card | Icon | Color | Value |
-|------|------|-------|-------|
-| Total Revenue | $ | Blue gradient | Sum of completed orders |
-| Total Orders | Cart | Pink gradient | Count of orders |
-| Active Users | Users | Green gradient | Active customers count |
-| Conversion Rate | Chart | Coral gradient | Completed/Total % |
+### 2. Analytics.tsx - Tab Content Filtering
 
-Each card shows:
-- Title with (i) info icon
-- Large value
-- Trend indicator (% change with arrow)
-- Colored icon background (soft gradient)
+```typescript
+{/* Show based on activeTab */}
+{(activeTab === 'overview' || activeTab === 'payments') && (
+  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <PaymentsFunnelCard ... />
+    <GrossVolumeCard ... />
+  </div>
+)}
 
-**Replace current time picker** with pill-style buttons:
-- 7 Days | **30 Days** | 90 Days | 1 Year | 📅 Custom
+{(activeTab === 'overview' || activeTab === 'customers') && (
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <RetentionCard ... />
+    ...
+  </div>
+)}
+```
 
-**Add Overview/Payments/Customers tabs** below the time selector
+### 3. Enhanced Glassmorphic Styling
 
----
+Add to cards:
+```css
+.kanban-stage {
+  background: linear-gradient(
+    to bottom,
+    hsl(var(--card) / 0.8),
+    hsl(var(--card))
+  );
+  backdrop-filter: blur(8px);
+  border: 1px solid hsl(var(--border) / 0.4);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
 
-### Phase 2: Payments Funnel Card Enhancement
-
-Current funnel is good but needs:
-- Better visual hierarchy
-- Stacked bar chart visualization (like Zentra)
-- Cleaner drop-off indicators
-
----
-
-### Phase 3: Gross Volume & Compact Stat Cards
-
-**Gross Volume improvements:**
-- Larger value display
-- Clearer breakdown labels (Order Payments, Deposits, Refunds)
-- Prominent Net Revenue display
-
-**Transactions Card:**
-- Keep sparkline
-- Add "Peak: Wed" indicator
-- Show "+XX vs last period" comparison
-
-**Customers Card:**
-- Similar format to Transactions
-- "Highest: Thu" indicator
-
----
-
-### Phase 4: Insights Card Enhancement
-
-Improve the auto-generated insights:
-- Circular metric display (75% ring)
-- Contextual title + description
-- Projected impact text
-- Green gradient glow for positive insights
-
----
-
-### Phase 5: Mobile Optimization
-
-- Stack cards vertically on mobile
-- Swipeable time period pills
-- Collapsible charts
-- Touch-friendly date pickers
+.kanban-stage:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+```
 
 ---
 
@@ -105,189 +205,45 @@ Improve the auto-generated insights:
 
 | File | Changes |
 |------|---------|
-| `src/pages/panel/Analytics.tsx` | Add greeting header, 4 top stat cards, tabs, reorganize layout |
-| `src/components/analytics/CompactStatCard.tsx` | Enhanced styling with gradient backgrounds |
-| `src/components/analytics/PaymentsFunnelCard.tsx` | Improved funnel visualization |
-| `src/components/analytics/GrossVolumeCard.tsx` | Larger typography, cleaner breakdown |
-| `src/components/analytics/InsightsCard.tsx` | Circular metric display enhancement |
-
-### New Components to Create
-
-| Component | Purpose |
-|-----------|---------|
-| `src/components/analytics/TopStatCard.tsx` | New gradient stat cards (Revenue, Orders, Users, Conversion) |
-| `src/components/analytics/AnalyticsTabs.tsx` | Overview/Payments/Customers tab switcher |
+| `src/components/analytics/PaymentsFunnelCard.tsx` | Complete redesign with Kanban hybrid layout, mobile-responsive horizontal scroll, improved stage cards |
+| `src/pages/panel/Analytics.tsx` | Implement tab content filtering, improve header styling, add glass effects |
+| `src/components/analytics/AnalyticsTabs.tsx` | Enhance styling to match Kanban theme |
+| `src/components/analytics/TopStatCard.tsx` | Add glass effects and improved hover states |
+| `src/components/analytics/GrossVolumeCard.tsx` | Enhanced visual hierarchy |
+| `src/components/analytics/CompactStatCard.tsx` | Mobile text size improvements |
+| `src/components/analytics/InsightsCard.tsx` | Kanban-style card border and glow |
 
 ---
 
-## Detailed Implementation
+## Mobile-Specific Fixes
 
-### 1. Analytics Page Header (New)
+### Text Display Fix (PaymentsFunnelCard)
+**Problem**: `grid-cols-5` causes text overlap on small screens
+**Solution**:
+1. Use `flex` with `overflow-x-auto` on mobile
+2. Each stage card has `min-w-28` (112px) 
+3. Add horizontal scroll indicator
+4. Proper word wrapping with `text-xs` and `truncate`
 
-Add before the date picker:
-
-```tsx
-{/* Greeting Header */}
-<div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
-  <div>
-    <h1 className="text-2xl md:text-3xl font-bold text-foreground flex items-center gap-2">
-      Hello, {firstName} <span className="wave">👋</span>
-    </h1>
-    <p className="text-muted-foreground mt-1">
-      Here's what's happening with your panel today
-    </p>
-  </div>
-  
-  {/* Time Period Tabs */}
-  <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1">
-    {["7 Days", "30 Days", "90 Days", "1 Year"].map((period) => (
-      <Button
-        key={period}
-        variant={selected ? "default" : "ghost"}
-        size="sm"
-        className={selected ? "bg-primary text-primary-foreground" : ""}
-      >
-        {period}
-      </Button>
-    ))}
-    <Button variant="ghost" size="sm">
-      <CalendarIcon /> Custom
-    </Button>
-  </div>
-</div>
-```
-
-### 2. Top Stats Section (New)
-
-Create new `TopStatCard` component with gradient backgrounds:
-
-```tsx
-<div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-  <TopStatCard
-    title="Total Revenue"
-    value={formatCurrency(stats.totalRevenue)}
-    change={changes.revenue}
-    icon={<DollarSign />}
-    iconBg="bg-gradient-to-br from-blue-100 to-blue-200"
-    iconColor="text-blue-600"
-  />
-  <TopStatCard
-    title="Total Orders"
-    value={stats.totalOrders}
-    change={changes.orders}
-    icon={<ShoppingCart />}
-    iconBg="bg-gradient-to-br from-pink-100 to-pink-200"
-    iconColor="text-pink-600"
-  />
-  <TopStatCard
-    title="Active Users"
-    value={stats.activeUsers}
-    change={changes.users}
-    icon={<Users />}
-    iconBg="bg-gradient-to-br from-green-100 to-green-200"
-    iconColor="text-green-600"
-  />
-  <TopStatCard
-    title="Conversion Rate"
-    value={`${stats.conversionRate.toFixed(0)}%`}
-    change={{ value: '+0%', trend: 'neutral' }}
-    icon={<TrendingUp />}
-    iconBg="bg-gradient-to-br from-orange-100 to-orange-200"
-    iconColor="text-orange-600"
-  />
-</div>
-```
-
-### 3. Sub-Tabs (Overview/Payments/Customers)
-
-```tsx
-<Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-  <TabsList className="bg-muted/50">
-    <TabsTrigger value="overview" className="flex items-center gap-2">
-      <Grid className="w-4 h-4" />
-      Overview
-    </TabsTrigger>
-    <TabsTrigger value="payments" className="flex items-center gap-2">
-      <CreditCard className="w-4 h-4" />
-      Payments
-    </TabsTrigger>
-    <TabsTrigger value="customers" className="flex items-center gap-2">
-      <Users className="w-4 h-4" />
-      Customers
-    </TabsTrigger>
-  </TabsList>
-</Tabs>
-```
-
-### 4. Improved Card Styling
-
-Update existing cards with:
-- Subtle shadows and hover effects
-- Consistent border-radius
-- Better spacing and typography
-- Dark mode compatibility
-
----
-
-## Layout Structure (Final)
-
-```
-┌────────────────────────────────────────────────────────────────────┐
-│  Hello, [name] 👋                        7D | 30D | 90D | 1Y | 📅  │
-│  Here's what's happening with your panel today                     │
-├────────────────────────────────────────────────────────────────────┤
-│  [Overview] [Payments] [Customers]                                 │
-├──────────────┬──────────────┬──────────────┬──────────────────────┤
-│ Total Revenue│ Total Orders │ Active Users │ Conversion Rate      │
-│    $0        │      0       │      7       │       0%             │
-│   ↘ 0%       │    ↘ 0%      │   ↗ +40.0%   │     → 0%             │
-├──────────────┴──────────────┴──────────────┴──────────────────────┤
-│                                                                    │
-│         Payments Funnel Card (spans 2 cols)    │  Gross Volume     │
-│                                                │                   │
-├─────────────┬───────────────┬──────────────────┴──────────────────┤
-│  Retention  │ Transactions  │  Customers    │     Insights        │
-│    42%      │    106k       │    1,284      │       75%           │
-├─────────────┴───────────────┴───────────────┴─────────────────────┤
-│              Order Trends Chart    │    Revenue Chart             │
-├────────────────────────────────────┴──────────────────────────────┤
-│                        Customer Growth Chart                       │
-└────────────────────────────────────────────────────────────────────┘
+### Time Pills Scrolling
+Already has `overflow-x-auto` but add scroll snap:
+```css
+scroll-snap-type: x mandatory;
+scroll-snap-align: start;
 ```
 
 ---
 
-## Mobile Responsive Design
+## Summary of Improvements
 
-On mobile (< 768px):
-- Greeting header stacks vertically
-- Time period tabs become horizontally scrollable
-- Stat cards show 2x2 grid
-- All dashboard cards stack in single column
-- Sparklines remain visible but smaller
-- Charts take full width
+| Feature | Current | Enhanced |
+|---------|---------|----------|
+| Funnel Display | Grid overlapping on mobile | Kanban cards with horizontal scroll |
+| Tab Filtering | Tabs exist but don't filter | Each tab shows relevant content |
+| Visual Style | Basic cards | Glassmorphic + Kanban hybrid |
+| Mobile Text | Overlapping/unreadable | Proper sizing with truncation |
+| Stage Indicators | Simple bars | Color-coded badges + progress bars |
+| Interactivity | Static | Hover animations + transitions |
 
----
+This enhancement combines the data-focused Zentra style with Kanban-style visual organization, creating a high-impact analytics dashboard that works seamlessly on both desktop and mobile devices.
 
-## Technical Notes
-
-1. **TopStatCard Component**: New component with gradient icon backgrounds
-2. **Tab State Management**: Add `activeTab` state to control Overview/Payments/Customers views
-3. **Date Picker Enhancement**: Improve styling to match pill-button design
-4. **Responsive Breakpoints**: Use `lg:` for desktop 4-column layouts, `md:` for 2-column, default for stacked
-
----
-
-## Summary of Changes
-
-| Component | Status | Change Type |
-|-----------|--------|-------------|
-| Analytics.tsx | MODIFY | Major layout restructure |
-| TopStatCard.tsx | CREATE | New gradient stat cards |
-| PaymentsFunnelCard.tsx | MODIFY | Enhanced styling |
-| GrossVolumeCard.tsx | MODIFY | Improved typography |
-| InsightsCard.tsx | MODIFY | Circular metric display |
-| CompactStatCard.tsx | MODIFY | Better mobile sizing |
-| index.ts | MODIFY | Export new TopStatCard |
-
-This implementation will transform the Analytics page into a modern, decision-focused dashboard matching the Zentra reference design while maintaining all existing functionality.
