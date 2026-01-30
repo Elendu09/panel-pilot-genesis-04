@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Sparkles, TrendingUp, AlertTriangle, Info } from 'lucide-react';
+import { MoreHorizontal, Sparkles, TrendingUp, AlertTriangle, Info } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 interface InsightData {
@@ -16,133 +17,135 @@ interface InsightsCardProps {
 }
 
 export function InsightsCard({ insights }: InsightsCardProps) {
-  const primaryInsight = insights[0];
+  const topInsight = insights[0];
   
-  if (!primaryInsight) {
+  if (!topInsight) {
     return (
-      <Card className="bg-card border-border/50 row-span-2">
-        <CardHeader className="pb-2">
+      <Card className="bg-card border-border/50">
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-lg font-semibold flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-amber-400" />
+            <Sparkles className="w-5 h-5 text-primary" />
             Insights
           </CardTitle>
+          <Button variant="ghost" size="icon" className="h-8 w-8">
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
         </CardHeader>
-        <CardContent className="flex items-center justify-center h-[200px]">
-          <p className="text-sm text-muted-foreground">No insights available yet</p>
+        <CardContent>
+          <p className="text-muted-foreground text-sm">No insights available yet.</p>
         </CardContent>
       </Card>
     );
   }
-  
-  const getIconAndColor = (type: InsightData['type']) => {
-    switch (type) {
+
+  const getIcon = () => {
+    switch (topInsight.type) {
       case 'success':
-        return { 
-          icon: TrendingUp, 
-          bgColor: 'bg-emerald-500/10',
-          borderColor: 'border-emerald-500/30',
-          textColor: 'text-emerald-500',
-          ringColor: 'ring-emerald-500/20'
+        return <TrendingUp className="w-5 h-5" />;
+      case 'warning':
+        return <AlertTriangle className="w-5 h-5" />;
+      default:
+        return <Info className="w-5 h-5" />;
+    }
+  };
+
+  const getColors = () => {
+    switch (topInsight.type) {
+      case 'success':
+        return {
+          bg: 'bg-gradient-to-br from-emerald-500/10 to-emerald-600/5',
+          ring: 'text-emerald-500',
         };
       case 'warning':
-        return { 
-          icon: AlertTriangle, 
-          bgColor: 'bg-amber-500/10',
-          borderColor: 'border-amber-500/30',
-          textColor: 'text-amber-500',
-          ringColor: 'ring-amber-500/20'
+        return {
+          bg: 'bg-gradient-to-br from-amber-500/10 to-amber-600/5',
+          ring: 'text-amber-500',
         };
       default:
-        return { 
-          icon: Info, 
-          bgColor: 'bg-blue-500/10',
-          borderColor: 'border-blue-500/30',
-          textColor: 'text-blue-500',
-          ringColor: 'ring-blue-500/20'
+        return {
+          bg: 'bg-gradient-to-br from-blue-500/10 to-blue-600/5',
+          ring: 'text-blue-500',
         };
     }
   };
-  
-  const { icon: Icon, bgColor, borderColor, textColor, ringColor } = getIconAndColor(primaryInsight.type);
+
+  const colors = getColors();
+  const circumference = 2 * Math.PI * 40;
+  const strokeDashoffset = circumference - (topInsight.metric / 100) * circumference;
 
   return (
     <Card className={cn(
-      "bg-card border-border/50 row-span-2 relative overflow-hidden",
-      primaryInsight.type === 'success' && "border-l-2 border-l-emerald-500",
-      primaryInsight.type === 'warning' && "border-l-2 border-l-amber-500",
-      primaryInsight.type === 'info' && "border-l-2 border-l-blue-500"
+      "bg-card border-border/50 overflow-hidden",
+      colors.bg
     )}>
-      {/* Subtle gradient glow */}
-      <div className={cn(
-        "absolute inset-0 opacity-5",
-        primaryInsight.type === 'success' && "bg-gradient-to-br from-emerald-500 to-transparent",
-        primaryInsight.type === 'warning' && "bg-gradient-to-br from-amber-500 to-transparent",
-        primaryInsight.type === 'info' && "bg-gradient-to-br from-blue-500 to-transparent"
-      )} />
-      
-      <CardHeader className="pb-2 relative">
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-lg font-semibold flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-amber-400" />
+          <Sparkles className="w-5 h-5 text-primary" />
           Insights
         </CardTitle>
+        <Button variant="ghost" size="icon" className="h-8 w-8">
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
       </CardHeader>
-      <CardContent className="space-y-4 relative">
-        {/* Main Insight */}
-        <div className="flex items-start gap-4">
-          {/* Metric Circle */}
-          <div className={cn(
-            "flex-shrink-0 w-20 h-20 rounded-full flex flex-col items-center justify-center ring-4",
-            bgColor,
-            ringColor
-          )}>
-            <span className={cn("text-2xl font-bold", textColor)}>
-              {primaryInsight.metric.toFixed(0)}%
-            </span>
-            <span className="text-[10px] text-muted-foreground uppercase tracking-wide">
-              {primaryInsight.metricLabel}
-            </span>
+      <CardContent className="space-y-4">
+        <div className="flex items-center gap-4">
+          {/* Circular Metric Display */}
+          <div className="relative flex-shrink-0">
+            <svg className="w-24 h-24 transform -rotate-90">
+              <circle
+                cx="48"
+                cy="48"
+                r="40"
+                stroke="currentColor"
+                strokeWidth="6"
+                fill="none"
+                className="text-muted/30"
+              />
+              <circle
+                cx="48"
+                cy="48"
+                r="40"
+                stroke="currentColor"
+                strokeWidth="6"
+                fill="none"
+                strokeDasharray={circumference}
+                strokeDashoffset={strokeDashoffset}
+                strokeLinecap="round"
+                className={cn("transition-all duration-700", colors.ring)}
+              />
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className={cn("text-xl font-bold", colors.ring)}>
+                {topInsight.metric.toFixed(0)}%
+              </span>
+            </div>
           </div>
           
-          {/* Insight Text */}
-          <div className="flex-1 space-y-2">
-            <h4 className="font-semibold text-foreground flex items-center gap-2">
-              <Icon className={cn("w-4 h-4", textColor)} />
-              {primaryInsight.title}
-            </h4>
+          {/* Insight Content */}
+          <div className="flex-1 space-y-1">
+            <div className="flex items-center gap-2">
+              <span className={cn("p-1 rounded", colors.ring)}>
+                {getIcon()}
+              </span>
+              <h4 className="font-semibold text-foreground">{topInsight.title}</h4>
+            </div>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              {primaryInsight.description}
+              {topInsight.description}
             </p>
-            {primaryInsight.projectedImpact && (
-              <p className={cn("text-xs font-medium mt-2", textColor)}>
-                {primaryInsight.projectedImpact}
+            {topInsight.projectedImpact && (
+              <p className={cn("text-xs font-medium mt-2", colors.ring)}>
+                {topInsight.projectedImpact}
               </p>
             )}
           </div>
         </div>
         
-        {/* Secondary Insights */}
+        {/* Additional insights preview */}
         {insights.length > 1 && (
-          <div className="pt-4 border-t border-border/50 space-y-3">
-            {insights.slice(1, 3).map((insight, i) => {
-              const { textColor: secondaryColor } = getIconAndColor(insight.type);
-              return (
-                <div key={i} className="flex items-center gap-3 text-sm">
-                  <div className={cn(
-                    "w-8 h-8 rounded-full flex items-center justify-center",
-                    insight.type === 'success' && 'bg-emerald-500/10',
-                    insight.type === 'warning' && 'bg-amber-500/10',
-                    insight.type === 'info' && 'bg-blue-500/10'
-                  )}>
-                    <span className={cn("text-xs font-bold", secondaryColor)}>
-                      {insight.metric.toFixed(0)}%
-                    </span>
-                  </div>
-                  <span className="text-muted-foreground flex-1 truncate">
-                    {insight.title}
-                  </span>
-                </div>
-              );
-            })}
+          <div className="pt-3 border-t border-border/50">
+            <p className="text-xs text-muted-foreground">
+              +{insights.length - 1} more insight{insights.length > 2 ? 's' : ''} available
+            </p>
           </div>
         )}
       </CardContent>
