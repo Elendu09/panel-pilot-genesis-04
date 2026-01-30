@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { MoreHorizontal, Sparkles, TrendingUp, AlertTriangle, Info, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface InsightData {
   type: 'success' | 'warning' | 'info';
@@ -21,17 +22,30 @@ export function InsightsCard({ insights }: InsightsCardProps) {
   
   if (!topInsight) {
     return (
-      <Card className="bg-card/80 backdrop-blur-sm border-border/50 shadow-lg">
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-lg font-semibold flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-primary" />
+      <Card className="bg-card/80 backdrop-blur-xl border-border/50 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden relative group">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        <CardHeader className="relative flex flex-row items-center justify-between pb-2">
+          <CardTitle className="text-base md:text-lg font-semibold flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-primary/10">
+              <Sparkles className="w-4 h-4 text-primary" />
+            </div>
             Insights
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="w-3.5 h-3.5 text-muted-foreground/50 cursor-help hover:text-muted-foreground transition-colors" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs max-w-[200px]">AI-generated recommendations based on your performance trends.</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </CardTitle>
-          <Button variant="ghost" size="icon" className="h-8 w-8">
+          <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
             <MoreHorizontal className="h-4 w-4" />
           </Button>
         </CardHeader>
-        <CardContent>
+        <CardContent className="relative">
           <p className="text-muted-foreground text-sm">No insights available yet.</p>
         </CardContent>
       </Card>
@@ -95,11 +109,23 @@ export function InsightsCard({ insights }: InsightsCardProps) {
       )} />
       
       <CardHeader className="relative flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-lg font-semibold flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-primary" />
+        <CardTitle className="text-base md:text-lg font-semibold flex items-center gap-2">
+          <div className="p-1.5 rounded-lg bg-primary/10">
+            <Sparkles className="w-4 h-4 text-primary" />
+          </div>
           Insights
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Info className="w-3.5 h-3.5 text-muted-foreground/50 cursor-help hover:text-muted-foreground transition-colors" />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="text-xs max-w-[200px]">AI-generated recommendations based on your performance trends.</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </CardTitle>
-        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted">
+        <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-muted">
           <MoreHorizontal className="h-4 w-4" />
         </Button>
       </CardHeader>
