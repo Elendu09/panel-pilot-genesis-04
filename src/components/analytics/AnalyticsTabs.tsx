@@ -8,39 +8,33 @@ interface AnalyticsTabsProps {
 }
 
 export function AnalyticsTabs({ activeTab, onTabChange }: AnalyticsTabsProps) {
+  const tabs = [
+    { value: 'overview', label: 'Overview', icon: LayoutGrid },
+    { value: 'payments', label: 'Payments', icon: CreditCard },
+    { value: 'customers', label: 'Customers', icon: Users },
+  ];
+
   return (
     <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
-      <TabsList className="bg-muted/50 h-10 p-1 gap-1">
-        <TabsTrigger 
-          value="overview" 
-          className={cn(
-            "flex items-center gap-2 px-4 data-[state=active]:bg-background data-[state=active]:shadow-sm",
-            "transition-all duration-200"
-          )}
-        >
-          <LayoutGrid className="w-4 h-4" />
-          <span className="hidden sm:inline">Overview</span>
-        </TabsTrigger>
-        <TabsTrigger 
-          value="payments"
-          className={cn(
-            "flex items-center gap-2 px-4 data-[state=active]:bg-background data-[state=active]:shadow-sm",
-            "transition-all duration-200"
-          )}
-        >
-          <CreditCard className="w-4 h-4" />
-          <span className="hidden sm:inline">Payments</span>
-        </TabsTrigger>
-        <TabsTrigger 
-          value="customers"
-          className={cn(
-            "flex items-center gap-2 px-4 data-[state=active]:bg-background data-[state=active]:shadow-sm",
-            "transition-all duration-200"
-          )}
-        >
-          <Users className="w-4 h-4" />
-          <span className="hidden sm:inline">Customers</span>
-        </TabsTrigger>
+      <TabsList className="bg-muted/50 backdrop-blur-sm h-10 p-1 gap-1 w-full md:w-auto">
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          return (
+            <TabsTrigger 
+              key={tab.value}
+              value={tab.value}
+              className={cn(
+                "flex items-center gap-2 px-3 md:px-4 flex-1 md:flex-none",
+                "data-[state=active]:bg-background data-[state=active]:shadow-sm",
+                "data-[state=active]:text-foreground",
+                "transition-all duration-200"
+              )}
+            >
+              <Icon className="w-4 h-4" />
+              <span className="text-xs sm:text-sm">{tab.label}</span>
+            </TabsTrigger>
+          );
+        })}
       </TabsList>
     </Tabs>
   );

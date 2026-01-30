@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { MoreHorizontal, Sparkles, TrendingUp, AlertTriangle, Info } from 'lucide-react';
+import { MoreHorizontal, Sparkles, TrendingUp, AlertTriangle, Info, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -21,7 +21,7 @@ export function InsightsCard({ insights }: InsightsCardProps) {
   
   if (!topInsight) {
     return (
-      <Card className="bg-card border-border/50">
+      <Card className="bg-card/80 backdrop-blur-sm border-border/50 shadow-lg">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-lg font-semibold flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-primary" />
@@ -41,11 +41,11 @@ export function InsightsCard({ insights }: InsightsCardProps) {
   const getIcon = () => {
     switch (topInsight.type) {
       case 'success':
-        return <TrendingUp className="w-5 h-5" />;
+        return <TrendingUp className="w-4 h-4" />;
       case 'warning':
-        return <AlertTriangle className="w-5 h-5" />;
+        return <AlertTriangle className="w-4 h-4" />;
       default:
-        return <Info className="w-5 h-5" />;
+        return <Info className="w-4 h-4" />;
     }
   };
 
@@ -53,87 +53,109 @@ export function InsightsCard({ insights }: InsightsCardProps) {
     switch (topInsight.type) {
       case 'success':
         return {
-          bg: 'bg-gradient-to-br from-emerald-500/10 to-emerald-600/5',
+          bg: 'from-emerald-500/10 via-emerald-500/5 to-transparent',
           ring: 'text-emerald-500',
+          ringBg: 'stroke-emerald-500',
+          glow: 'shadow-emerald-500/20',
+          badge: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
         };
       case 'warning':
         return {
-          bg: 'bg-gradient-to-br from-amber-500/10 to-amber-600/5',
+          bg: 'from-amber-500/10 via-amber-500/5 to-transparent',
           ring: 'text-amber-500',
+          ringBg: 'stroke-amber-500',
+          glow: 'shadow-amber-500/20',
+          badge: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
         };
       default:
         return {
-          bg: 'bg-gradient-to-br from-blue-500/10 to-blue-600/5',
+          bg: 'from-blue-500/10 via-blue-500/5 to-transparent',
           ring: 'text-blue-500',
+          ringBg: 'stroke-blue-500',
+          glow: 'shadow-blue-500/20',
+          badge: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
         };
     }
   };
 
   const colors = getColors();
-  const circumference = 2 * Math.PI * 40;
+  const circumference = 2 * Math.PI * 36;
   const strokeDashoffset = circumference - (topInsight.metric / 100) * circumference;
 
   return (
     <Card className={cn(
-      "bg-card border-border/50 overflow-hidden",
-      colors.bg
+      "bg-card/80 backdrop-blur-sm border-border/50 overflow-hidden",
+      "shadow-lg hover:shadow-xl transition-all duration-300",
+      "relative group"
     )}>
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
+      {/* Gradient background */}
+      <div className={cn(
+        "absolute inset-0 bg-gradient-to-br opacity-50",
+        colors.bg
+      )} />
+      
+      <CardHeader className="relative flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-lg font-semibold flex items-center gap-2">
           <Sparkles className="w-5 h-5 text-primary" />
           Insights
         </CardTitle>
-        <Button variant="ghost" size="icon" className="h-8 w-8">
+        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted">
           <MoreHorizontal className="h-4 w-4" />
         </Button>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex items-center gap-4">
+      <CardContent className="relative space-y-4">
+        <div className="flex items-center gap-3 md:gap-4">
           {/* Circular Metric Display */}
-          <div className="relative flex-shrink-0">
-            <svg className="w-24 h-24 transform -rotate-90">
+          <div className={cn(
+            "relative flex-shrink-0",
+            "shadow-lg rounded-full",
+            colors.glow
+          )}>
+            <svg className="w-20 h-20 md:w-24 md:h-24 transform -rotate-90">
               <circle
-                cx="48"
-                cy="48"
-                r="40"
+                cx="40"
+                cy="40"
+                r="36"
                 stroke="currentColor"
-                strokeWidth="6"
+                strokeWidth="5"
                 fill="none"
                 className="text-muted/30"
               />
               <circle
-                cx="48"
-                cy="48"
-                r="40"
-                stroke="currentColor"
-                strokeWidth="6"
+                cx="40"
+                cy="40"
+                r="36"
+                strokeWidth="5"
                 fill="none"
                 strokeDasharray={circumference}
                 strokeDashoffset={strokeDashoffset}
                 strokeLinecap="round"
-                className={cn("transition-all duration-700", colors.ring)}
+                className={cn("transition-all duration-1000 ease-out", colors.ringBg)}
               />
             </svg>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className={cn("text-xl font-bold", colors.ring)}>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className={cn("text-lg md:text-xl font-bold", colors.ring)}>
                 {topInsight.metric.toFixed(0)}%
               </span>
             </div>
           </div>
           
           {/* Insight Content */}
-          <div className="flex-1 space-y-1">
-            <div className="flex items-center gap-2">
-              <span className={cn("p-1 rounded", colors.ring)}>
+          <div className="flex-1 min-w-0 space-y-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className={cn(
+                "p-1.5 rounded-lg border",
+                colors.badge
+              )}>
                 {getIcon()}
               </span>
-              <h4 className="font-semibold text-foreground">{topInsight.title}</h4>
+              <h4 className="font-semibold text-foreground text-sm md:text-base truncate">{topInsight.title}</h4>
             </div>
-            <p className="text-sm text-muted-foreground leading-relaxed">
+            <p className="text-xs md:text-sm text-muted-foreground leading-relaxed line-clamp-2">
               {topInsight.description}
             </p>
             {topInsight.projectedImpact && (
-              <p className={cn("text-xs font-medium mt-2", colors.ring)}>
+              <p className={cn("text-[10px] md:text-xs font-medium mt-1", colors.ring)}>
                 {topInsight.projectedImpact}
               </p>
             )}
@@ -142,10 +164,13 @@ export function InsightsCard({ insights }: InsightsCardProps) {
         
         {/* Additional insights preview */}
         {insights.length > 1 && (
-          <div className="pt-3 border-t border-border/50">
+          <div className="pt-3 border-t border-border/50 flex items-center justify-between">
             <p className="text-xs text-muted-foreground">
-              +{insights.length - 1} more insight{insights.length > 2 ? 's' : ''} available
+              +{insights.length - 1} more insight{insights.length > 2 ? 's' : ''}
             </p>
+            <Button variant="ghost" size="sm" className="h-7 text-xs hover:bg-muted">
+              View all <ChevronRight className="w-3 h-3 ml-1" />
+            </Button>
           </div>
         )}
       </CardContent>

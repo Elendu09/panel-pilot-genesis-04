@@ -587,85 +587,189 @@ const Analytics = () => {
         />
       </motion.div>
 
-      {/* Main Dashboard Grid - Zentra Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Payments Funnel - Spans 2 columns */}
-        <PaymentsFunnelCard
-          stages={funnelData.stages}
-          totalTransactions={funnelData.totalTransactions}
-          conversionRate={funnelData.conversionRate}
-          overallDropOff={funnelData.overallDropOff}
-        />
-        
-        {/* Gross Volume Card */}
-        <GrossVolumeCard
-          grossVolume={volumeData.grossVolume}
-          previousGrossVolume={volumeData.previousGrossVolume}
-          orderPayments={volumeData.orderPayments}
-          deposits={volumeData.deposits}
-          refunds={volumeData.refunds}
-          netRevenue={volumeData.netRevenue}
-        />
-      </div>
+      {/* Main Dashboard Grid - Tab Filtered Content */}
+      {(activeTab === 'overview' || activeTab === 'payments') && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="grid grid-cols-1 lg:grid-cols-3 gap-6"
+        >
+          {/* Payments Funnel - Spans 2 columns */}
+          <PaymentsFunnelCard
+            stages={funnelData.stages}
+            totalTransactions={funnelData.totalTransactions}
+            conversionRate={funnelData.conversionRate}
+            overallDropOff={funnelData.overallDropOff}
+          />
+          
+          {/* Gross Volume Card */}
+          <GrossVolumeCard
+            grossVolume={volumeData.grossVolume}
+            previousGrossVolume={volumeData.previousGrossVolume}
+            orderPayments={volumeData.orderPayments}
+            deposits={volumeData.deposits}
+            refunds={volumeData.refunds}
+            netRevenue={volumeData.netRevenue}
+          />
+        </motion.div>
+      )}
 
       {/* Second Row: Retention, Stats, Insights */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Retention Card */}
-        <RetentionCard
-          currentRate={retentionData.currentRate}
-          data={retentionData.monthlyData}
-        />
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+      >
+        {/* Retention Card - Show in Overview & Customers */}
+        {(activeTab === 'overview' || activeTab === 'customers') && (
+          <RetentionCard
+            currentRate={retentionData.currentRate}
+            data={retentionData.monthlyData}
+          />
+        )}
         
-        {/* Transactions Card */}
-        <CompactStatCard
-          title="Transactions"
-          value={transactionsData.total}
-          change={transactionsData.change}
-          sparklineData={transactionsData.sparkline}
-          peakLabel={transactionsData.peakDay}
-          sparklineColor="hsl(var(--primary))"
-        />
+        {/* Transactions Card - Show in Overview & Payments */}
+        {(activeTab === 'overview' || activeTab === 'payments') && (
+          <CompactStatCard
+            title="Transactions"
+            value={transactionsData.total}
+            change={transactionsData.change}
+            sparklineData={transactionsData.sparkline}
+            peakLabel={transactionsData.peakDay}
+            sparklineColor="hsl(var(--primary))"
+          />
+        )}
         
-        {/* Customers Card */}
-        <CompactStatCard
-          title="Customers"
-          value={customersData.total}
-          change={customersData.change}
-          sparklineData={customersData.sparkline}
-          peakLabel={customersData.peakDay}
-          sparklineColor="hsl(217, 91%, 60%)"
-        />
+        {/* Customers Card - Show in Overview & Customers */}
+        {(activeTab === 'overview' || activeTab === 'customers') && (
+          <CompactStatCard
+            title="Customers"
+            value={customersData.total}
+            change={customersData.change}
+            sparklineData={customersData.sparkline}
+            peakLabel={customersData.peakDay}
+            sparklineColor="hsl(217, 91%, 60%)"
+          />
+        )}
         
-        {/* Insights Card */}
-        <InsightsCard insights={insightsData} />
-      </div>
+        {/* Insights Card - Show in Overview & Payments */}
+        {(activeTab === 'overview' || activeTab === 'payments') && (
+          <InsightsCard insights={insightsData} />
+        )}
+      </motion.div>
 
-      {/* Third Row: Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Order Trends Chart */}
+      {/* Third Row: Charts - Tab Filtered */}
+      {(activeTab === 'overview' || activeTab === 'payments') && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Order Trends Chart */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.25 }}
+          >
+            <Card className="bg-card/80 backdrop-blur-sm border-border/50 shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <TrendingUp className="w-5 h-5 text-primary" />
+                  Order Trends
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={280}>
+                  <AreaChart data={orderTrends}>
+                    <defs>
+                      <linearGradient id="colorOrders" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: 'hsl(var(--card))', 
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px'
+                      }}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="orders" 
+                      stroke="hsl(var(--primary))" 
+                      fillOpacity={1} 
+                      fill="url(#colorOrders)" 
+                      strokeWidth={2}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Revenue Chart */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <Card className="bg-card/80 backdrop-blur-sm border-border/50 shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <DollarSign className="w-5 h-5 text-emerald-500" />
+                  Revenue
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={revenueData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: 'hsl(var(--card))', 
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px'
+                      }}
+                      formatter={(value: number) => [`$${value.toFixed(2)}`, 'Revenue']}
+                    />
+                    <Bar dataKey="revenue" fill="hsl(142, 76%, 36%)" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Fourth Row: Customer Growth - Show in Overview & Customers */}
+      {(activeTab === 'overview' || activeTab === 'customers') && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
+          transition={{ delay: 0.35 }}
         >
-          <Card className="bg-card border-border/50">
+          <Card className="bg-card/80 backdrop-blur-sm border-border/50 shadow-lg hover:shadow-xl transition-all duration-300">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
-                <TrendingUp className="w-5 h-5 text-primary" />
-                Order Trends
+                <Users className="w-5 h-5 text-blue-500" />
+                Customer Growth
               </CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={280}>
-                <AreaChart data={orderTrends}>
+                <AreaChart data={customerGrowth}>
                   <defs>
-                    <linearGradient id="colorOrders" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                    <linearGradient id="colorCustomers" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="hsl(217, 91%, 60%)" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="hsl(217, 91%, 60%)" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                  <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} />
                   <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
                   <Tooltip 
                     contentStyle={{ 
@@ -676,99 +780,19 @@ const Analytics = () => {
                   />
                   <Area 
                     type="monotone" 
-                    dataKey="orders" 
-                    stroke="hsl(var(--primary))" 
+                    dataKey="total" 
+                    stroke="hsl(217, 91%, 60%)" 
                     fillOpacity={1} 
-                    fill="url(#colorOrders)" 
+                    fill="url(#colorCustomers)" 
                     strokeWidth={2}
+                    name="Total Customers"
                   />
                 </AreaChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
         </motion.div>
-
-        {/* Revenue Chart */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <Card className="bg-card border-border/50">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <DollarSign className="w-5 h-5 text-emerald-500" />
-                Revenue
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={revenueData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'hsl(var(--card))', 
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px'
-                    }}
-                    formatter={(value: number) => [`$${value.toFixed(2)}`, 'Revenue']}
-                  />
-                  <Bar dataKey="revenue" fill="hsl(142, 76%, 36%)" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </div>
-
-      {/* Fourth Row: Customer Growth */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
-      >
-        <Card className="bg-card border-border/50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Users className="w-5 h-5 text-blue-500" />
-              Customer Growth
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={280}>
-              <AreaChart data={customerGrowth}>
-                <defs>
-                  <linearGradient id="colorCustomers" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(217, 91%, 60%)" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="hsl(217, 91%, 60%)" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'hsl(var(--card))', 
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '8px'
-                  }}
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="total" 
-                  stroke="hsl(217, 91%, 60%)" 
-                  fillOpacity={1} 
-                  fill="url(#colorCustomers)" 
-                  strokeWidth={2}
-                  name="Total Customers"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </motion.div>
+      )}
     </div>
   );
 };
