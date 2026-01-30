@@ -108,38 +108,62 @@ export function useBuyerServices(options: UseBuyerServicesOptions): UseBuyerServ
     setError(null);
 
     try {
-      let query = supabase
-        .from('services')
-        .select('*')
-        .eq('panel_id', panelId)
-        .eq('is_active', true)
-        .order('display_order', { ascending: true });
+      // Paginate through Supabase's 1000-row limit to fetch ALL services (up to 10,000)
+      const PAGE_SIZE = 1000;
+      const MAX_SERVICES = 10000;
+      let allData: any[] = [];
+      let from = 0;
+      let hasMore = true;
 
-      // Apply filters
-      if (platform && platform !== 'all') {
-        query = query.eq('category', platform as any);
+      // If a specific limit is requested, use that instead of paginating all
+      const effectiveMaxRows = limit || MAX_SERVICES;
+
+      console.log(`[useBuyerServices] Starting paginated fetch for panel: ${panelId}`);
+
+      while (hasMore && allData.length < effectiveMaxRows) {
+        let query = supabase
+          .from('services')
+          .select('*')
+          .eq('panel_id', panelId)
+          .eq('is_active', true)
+          .order('display_order', { ascending: true });
+
+        // Apply filters
+        if (platform && platform !== 'all') {
+          query = query.eq('category', platform as any);
+        }
+
+        if (serviceType && serviceType !== 'all') {
+          query = query.eq('service_type', serviceType);
+        }
+
+        if (search) {
+          query = query.ilike('name', `%${search}%`);
+        }
+
+        // Apply range for pagination
+        query = query.range(from, from + PAGE_SIZE - 1);
+
+        const { data, error: fetchError } = await query;
+
+        if (fetchError) {
+          throw new Error(fetchError.message);
+        }
+
+        if (data && data.length > 0) {
+          allData = [...allData, ...data];
+          console.log(`[useBuyerServices] Page ${Math.floor(from / PAGE_SIZE) + 1}: ${data.length} services (total: ${allData.length})`);
+          from += PAGE_SIZE;
+          hasMore = data.length === PAGE_SIZE;
+        } else {
+          hasMore = false;
+        }
       }
 
-      if (serviceType && serviceType !== 'all') {
-        query = query.eq('service_type', serviceType);
-      }
-
-      if (search) {
-        query = query.ilike('name', `%${search}%`);
-      }
-
-      if (limit) {
-        query = query.limit(limit);
-      }
-
-      const { data, error: fetchError } = await query;
-
-      if (fetchError) {
-        throw new Error(fetchError.message);
-      }
+      console.log(`[useBuyerServices] Complete: ${allData.length} total services`);
 
       // Transform to BuyerService format
-      const buyerServices: BuyerService[] = (data || []).map(svc => {
+      const buyerServices: BuyerService[] = allData.slice(0, effectiveMaxRows).map(svc => {
         const categoryStr = String(svc.category);
         return {
           id: svc.id,

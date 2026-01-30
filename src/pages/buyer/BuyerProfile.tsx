@@ -632,9 +632,31 @@ const BuyerProfile = () => {
                     onClick={async () => {
                       setResendingVerification(true);
                       try {
-                        toast({ title: "Verification email sent!", description: "Please check your inbox." });
-                      } catch (e) {
-                        toast({ title: "Failed to send", variant: "destructive" });
+                        // Call edge function to send verification email
+                        const { data, error } = await supabase.functions.invoke('buyer-auth', {
+                          body: { 
+                            panelId: buyer?.panel_id,
+                            buyerId: buyer?.id,
+                            email: buyer?.email,
+                            action: 'resend-verification'
+                          }
+                        });
+                        
+                        if (error || data?.error) {
+                          throw new Error(data?.error || 'Failed to send verification');
+                        }
+                        
+                        toast({ 
+                          title: "Verification email sent!", 
+                          description: "Please check your inbox and spam folder." 
+                        });
+                      } catch (e: any) {
+                        console.error('Verification error:', e);
+                        toast({ 
+                          title: "Failed to send", 
+                          description: e.message || "Please try again later.",
+                          variant: "destructive" 
+                        });
                       } finally {
                         setResendingVerification(false);
                       }

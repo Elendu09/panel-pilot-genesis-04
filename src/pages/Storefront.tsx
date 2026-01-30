@@ -23,6 +23,7 @@ import {
 } from '@/components/buyer-themes';
 import { FloatingChatWidget } from '@/components/storefront/FloatingChatWidget';
 import { AnnouncementBar } from '@/components/storefront/AnnouncementBar';
+import { AnnouncementPopup } from '@/components/storefront/AnnouncementPopup';
 import { FreeTierBanner } from '@/components/storefront/FreeTierBanner';
 import { BuyerHomepageSchemas, FAQPageSchema } from '@/components/seo/JsonLdSchema';
 import { supabase } from '@/integrations/supabase/client';
@@ -326,21 +327,44 @@ const Storefront = () => {
       <TenantHead />
       {/* Inject design preset colors as CSS variables */}
       {storefrontColorStyles && <style>{storefrontColorStyles}</style>}
-      {/* Announcement Bars - reads from panel_settings.integrations.announcements */}
-      {announcementItems.map((item: any, idx: number) => (
-        <AnnouncementBar 
-          key={`announcement-${idx}`}
-          id={`announcement-${idx}`}
-          enabled={item.enabled !== false && (item.text || item.title)}
-          title={item.title}
-          text={item.text}
-          linkText={item.linkText}
-          linkUrl={item.linkUrl}
-          icon={item.icon}
-          backgroundColor={item.backgroundColor || customBranding?.primaryColor || '#6366F1'}
-          textColor={item.textColor || '#FFFFFF'}
-        />
-      ))}
+      {/* Announcements - renders as header bar or popup based on displayMode */}
+      {announcementItems.map((item: any, idx: number) => {
+        const displayMode = item.displayMode || 'header';
+        const isEnabled = item.enabled !== false && (item.text || item.title);
+        
+        if (displayMode === 'popup') {
+          return (
+            <AnnouncementPopup
+              key={`announcement-popup-${idx}`}
+              id={`announcement-${idx}`}
+              enabled={isEnabled}
+              title={item.title}
+              text={item.text}
+              linkText={item.linkText}
+              linkUrl={item.linkUrl}
+              icon={item.icon}
+              backgroundColor={item.backgroundColor || customBranding?.primaryColor || '#6366F1'}
+              textColor={item.textColor || '#FFFFFF'}
+            />
+          );
+        }
+        
+        // Default: header bar
+        return (
+          <AnnouncementBar 
+            key={`announcement-bar-${idx}`}
+            id={`announcement-${idx}`}
+            enabled={isEnabled}
+            title={item.title}
+            text={item.text}
+            linkText={item.linkText}
+            linkUrl={item.linkUrl}
+            icon={item.icon}
+            backgroundColor={item.backgroundColor || customBranding?.primaryColor || '#6366F1'}
+            textColor={item.textColor || '#FFFFFF'}
+          />
+        );
+      })}
       {/* Theme mode wrapper - uses BuyerTheme* wrapper for buyer themes (enables CSS light/dark selectors) */}
       {ThemeWrapper ? (
         <ThemeWrapper themeMode={themeMode}>

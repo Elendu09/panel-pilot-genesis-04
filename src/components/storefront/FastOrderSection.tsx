@@ -1583,7 +1583,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
 
       {/* Guest Signup Modal */}
       <Dialog open={showGuestModal} onOpenChange={handleModalClose}>
-        <DialogContent className="max-w-[92vw] sm:max-w-md w-full overflow-hidden p-3 sm:p-6 mx-2 sm:mx-auto">
+        <DialogContent className="max-w-[95vw] sm:max-w-md w-full overflow-hidden p-2 xs:p-3 sm:p-6 mx-1 sm:mx-auto max-h-[90vh] overflow-y-auto">
           {/* Modal Progress Indicator - Compact on mobile */}
           <div className="flex items-center justify-center gap-1.5 sm:gap-2 mb-2">
             <div className={cn(

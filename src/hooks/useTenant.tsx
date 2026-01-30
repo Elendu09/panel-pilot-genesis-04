@@ -637,19 +637,42 @@ export function useTenantServices(panelId?: string) {
   useEffect(() => {
     if (!panelId) return;
 
-    const fetchServices = async () => {
+    const fetchAllServices = async () => {
       setLoading(true);
       try {
-        const { data, error } = await supabase
-          .from('services')
-          .select('*')
-          .eq('panel_id', panelId)
-          .eq('is_active', true)
-          .order('display_order', { ascending: true })
-          .order('name');
+        // Paginate through Supabase's 1000-row limit to fetch ALL services (up to 10,000)
+        const PAGE_SIZE = 1000;
+        const MAX_SERVICES = 10000;
+        let allData: any[] = [];
+        let from = 0;
+        let hasMore = true;
 
-        if (error) throw error;
-        setServices(data || []);
+        console.log(`[useTenantServices] Starting paginated fetch for panel: ${panelId}`);
+
+        while (hasMore && allData.length < MAX_SERVICES) {
+          const { data, error } = await supabase
+            .from('services')
+            .select('*')
+            .eq('panel_id', panelId)
+            .eq('is_active', true)
+            .order('display_order', { ascending: true })
+            .order('name')
+            .range(from, from + PAGE_SIZE - 1);
+
+          if (error) throw error;
+
+          if (data && data.length > 0) {
+            allData = [...allData, ...data];
+            console.log(`[useTenantServices] Page ${Math.floor(from / PAGE_SIZE) + 1}: ${data.length} services (total: ${allData.length})`);
+            from += PAGE_SIZE;
+            hasMore = data.length === PAGE_SIZE;
+          } else {
+            hasMore = false;
+          }
+        }
+
+        console.log(`[useTenantServices] Complete: ${allData.length} total services`);
+        setServices(allData.slice(0, MAX_SERVICES));
       } catch (error) {
         console.error('Error fetching services:', error);
       } finally {
@@ -657,7 +680,7 @@ export function useTenantServices(panelId?: string) {
       }
     };
 
-    fetchServices();
+    fetchAllServices();
   }, [panelId]);
 
   return { services, loading };
