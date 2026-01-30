@@ -381,7 +381,7 @@ const serviceIntegrations: ServiceIntegration[] = [
   {
     id: 'announcements',
     name: 'Announcements',
-    description: 'Show announcements bar on storefront',
+    description: 'Show announcements bar or popup on storefront',
     icon: <AnnouncementsIcon className="w-5 h-5" />,
     color: 'bg-[#F59E0B]', // Amber/orange
     category: 'other',
@@ -389,6 +389,7 @@ const serviceIntegrations: ServiceIntegration[] = [
       { type: 'input', name: 'title', label: 'Title', placeholder: '🎉 New Feature', helper: 'Short headline displayed prominently' },
       { type: 'input', name: 'text', label: 'Description', placeholder: 'Welcome to our panel! Check out our new services.', helper: 'Main announcement text' },
       { type: 'input', name: 'icon', label: 'Icon', placeholder: 'megaphone', helper: 'Options: megaphone, sparkles, gift, bell, info, star, zap, alert' },
+      { type: 'input', name: 'displayMode', label: 'Display Mode', placeholder: 'header', helper: 'Options: header (top bar) or popup (modal dialog)' },
       { type: 'input', name: 'linkText', label: 'Link Text (optional)', placeholder: 'Learn More' },
       { type: 'input', name: 'linkUrl', label: 'Link URL (optional)', placeholder: 'https://example.com/promo' },
       { type: 'input', name: 'backgroundColor', label: 'Background Color', placeholder: '#6366F1', helper: 'Use hex color like #6366F1' },

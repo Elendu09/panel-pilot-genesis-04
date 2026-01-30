@@ -125,7 +125,7 @@ export function useUnifiedServices({ panelId, enabled = true }: UseUnifiedServic
     }
   }, [panelId, enabled]);
 
-  // Fetch services
+  // Fetch services with pagination to bypass 1000-row limit
   const fetchServices = useCallback(async () => {
     if (!panelId || !enabled) {
       setServices([]);
@@ -137,16 +137,39 @@ export function useUnifiedServices({ panelId, enabled = true }: UseUnifiedServic
     setServicesError(null);
 
     try {
-      const { data, error } = await supabase
-        .from('services')
-        .select('*')
-        .eq('panel_id', panelId)
-        .eq('is_active', true)
-        .order('display_order', { ascending: true });
+      // Paginate through Supabase's 1000-row limit to fetch ALL services (up to 10,000)
+      const PAGE_SIZE = 1000;
+      const MAX_SERVICES = 10000;
+      let allData: any[] = [];
+      let from = 0;
+      let hasMore = true;
 
-      if (error) throw error;
+      console.log(`[useUnifiedServices] Starting paginated fetch for panel: ${panelId}`);
 
-      const svcList: UnifiedService[] = (data || []).map(svc => ({
+      while (hasMore && allData.length < MAX_SERVICES) {
+        const { data, error } = await supabase
+          .from('services')
+          .select('*')
+          .eq('panel_id', panelId)
+          .eq('is_active', true)
+          .order('display_order', { ascending: true })
+          .range(from, from + PAGE_SIZE - 1);
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          allData = [...allData, ...data];
+          console.log(`[useUnifiedServices] Page ${Math.floor(from / PAGE_SIZE) + 1}: ${data.length} services (total: ${allData.length})`);
+          from += PAGE_SIZE;
+          hasMore = data.length === PAGE_SIZE;
+        } else {
+          hasMore = false;
+        }
+      }
+
+      console.log(`[useUnifiedServices] Complete: ${allData.length} total services`);
+
+      const svcList: UnifiedService[] = allData.slice(0, MAX_SERVICES).map(svc => ({
         id: svc.id,
         name: svc.name,
         category: String(svc.category),
