@@ -610,10 +610,6 @@ const Analytics = () => {
             <Users className="w-4 h-4 mr-2" />
             Customers
           </TabsTrigger>
-          <TabsTrigger value="orders" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-            <Package className="w-4 h-4 mr-2" />
-            Live Orders
-          </TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}

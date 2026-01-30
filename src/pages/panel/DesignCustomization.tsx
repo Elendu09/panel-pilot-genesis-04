@@ -3440,7 +3440,12 @@ export default function DesignCustomization() {
           </div>
 
           {/* Right Panel - Live Preview */}
-          <div className="flex-1 flex flex-col bg-[#0a0a12] min-h-[50vh] lg:min-h-0">
+          <div className={cn(
+            "flex-1 flex flex-col min-h-[50vh] lg:min-h-0 transition-colors duration-300",
+            previewThemeMode === 'light' 
+              ? "bg-gray-100" 
+              : "bg-[#0a0a12]"
+          )}>
             {/* Preview Header */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-2 sm:p-3 border-b border-border/30 bg-card/30">
               <div className="flex items-center gap-2 sm:gap-3">

@@ -22,6 +22,7 @@ import {
   BuyerThemeSMMVisit,
 } from '@/components/buyer-themes';
 import { FloatingChatWidget } from '@/components/storefront/FloatingChatWidget';
+import { AnnouncementBar } from '@/components/storefront/AnnouncementBar';
 import { FreeTierBanner } from '@/components/storefront/FreeTierBanner';
 import { BuyerHomepageSchemas, FAQPageSchema } from '@/components/seo/JsonLdSchema';
 import { supabase } from '@/integrations/supabase/client';
@@ -164,6 +165,10 @@ const Storefront = () => {
   const panelSettingsData = Array.isArray((panel as any)?.panel_settings) 
     ? (panel as any)?.panel_settings[0] 
     : (panel as any)?.panel_settings;
+
+  // Get announcements config from panel_settings.integrations
+  const integrations = panelSettingsData?.integrations || (panel?.settings as any)?.integrations || {};
+  const announcementConfig = integrations?.announcements || {};
 
   // Full customization object with all design settings - include setThemeMode for toggle
   const fullCustomization = {
@@ -316,6 +321,15 @@ const Storefront = () => {
       <TenantHead />
       {/* Inject design preset colors as CSS variables */}
       {storefrontColorStyles && <style>{storefrontColorStyles}</style>}
+      {/* Announcement Bar - reads from panel_settings.integrations.announcements */}
+      <AnnouncementBar 
+        enabled={announcementConfig.enabled}
+        text={announcementConfig.text}
+        linkText={announcementConfig.linkText}
+        linkUrl={announcementConfig.linkUrl}
+        backgroundColor={announcementConfig.backgroundColor || customBranding?.primaryColor || '#6366F1'}
+        textColor={announcementConfig.textColor || '#FFFFFF'}
+      />
       {/* Theme mode wrapper - uses BuyerTheme* wrapper for buyer themes (enables CSS light/dark selectors) */}
       {ThemeWrapper ? (
         <ThemeWrapper themeMode={themeMode}>
