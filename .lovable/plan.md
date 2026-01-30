@@ -1,270 +1,456 @@
 
-## Objectives (what will be fixed)
-1) Design Customization (mobile/tablet): preview + controls must switch cleanly between Dark and Light without “removing” either mode.
-2) Announcement: must actually render on tenant storefront when enabled; also support a “second” announcement + richer fields (title/description/style).
-3) Tenant Services (/services): must show the same full category breadth (70+ where applicable) as New Order/Fast Order, using the unified services logic.
-4) Tenant About Us: improve content per-panel and improve translations so it doesn’t show raw keys / missing strings.
-5) Payment Management clarity: clearly separate “Buyer Payment Methods” vs “Panel Owner Billing/Subscription”, and explain where subscription lives.
-6) Fast Order payment methods: manual payments enabled in Payment Methods must appear in Fast Order (manual_transfer/manual_*), not just deposits page.
+# Comprehensive Fix Plan: Services Limit, OAuth Profile, Email Verification, Announcement Modes, and Fast Order Mobile
+
+## Executive Summary
+
+This plan addresses five key issues:
+1. **Services 1000 Limit Bug** - Supabase default limit preventing 2000+ services from showing
+2. **OAuth Profile Settings** - Show connected OAuth providers when enabled in Integrations
+3. **Email Verification** - Make verification actually functional in profile settings
+4. **Announcement Modes** - Allow header (bar) or body (popup) placement
+5. **Fast Order Mobile** - Fix login/signup widget sizing on mobile
 
 ---
 
-## Key findings (root causes)
-### A) Announcement not rendering
-- `Storefront.tsx` tries to read `integrations` from `panel_settings` via `panel.panel_settings[0]`.
-- But `useTenant.tsx` currently selects `panel_settings (seo_title, seo_description, ... blog_enabled)` and **does not include `integrations`**, so `panelSettingsData.integrations` is always undefined.
-- Fallback `(panel?.settings as any)?.integrations` also won’t work because Integrations page saves to the **panel_settings table**, not `panels.settings`.
-Result: `announcementConfig` becomes `{}` → `enabled` is falsy → bar never shows.
+## Issue 1: Services Limited to 1000 Rows (CRITICAL)
 
-### B) Mobile/tablet “light mode not affecting controls”
-- `MobileDesignSlider.tsx` changes its own container colors, but the sections rendered via `renderSection()` are mostly built with shadcn tokens (`bg-card`, `text-foreground`, `glass-card`, etc.).
-- Those tokens only switch properly if the subtree is wrapped with `.light` / `.dark` class (your `src/index.css` defines these).
-- Currently, only the **preview iframe area** gets `.dark`/`.light`, but the **controls content area** does not consistently apply the theme wrapper class → many cards and texts remain in dark styling even when previewThemeMode is “light”.
+### Root Cause Analysis
 
-### C) Tenant “Services page” mismatch
-- TenantRouter route `/services` points to `BuyerPublicServices` (guest catalog).
-- `BuyerPublicServices.tsx` **does not use `useUnifiedServices`** and builds categories directly from raw services query, which can show fewer categories and inconsistent grouping vs New Order.
-- Meanwhile, New Order + BuyerServices are already unified.
+**Supabase has a default row limit of 1000 rows on SELECT queries** to prevent abuse and network overload. This affects:
 
-### D) Fast Order payment methods missing manual transfer
-- `FastOrderSection.tsx` loads payment methods only from `panel.settings.payments.enabledMethods` and doesn’t merge in `payments.manualPayments`.
-- BuyerDeposit has special manual logic; FastOrder does not.
-- Best fix is to reuse the existing `useAvailablePaymentGateways` hook (already merges enabledMethods + manualPayments and applies “configured enough” filtering).
+1. **`useTenantServices`** (lines 633-664 in `useTenant.tsx`):
+   - No pagination or `.range()` - hits 1000 limit
+   ```typescript
+   const { data, error } = await supabase
+     .from('services')
+     .select('*')
+     .eq('panel_id', panelId)
+     .eq('is_active', true)
+     .order('display_order', { ascending: true })
+     .order('name');
+   // No .range() = DEFAULT LIMIT 1000
+   ```
 
-### E) Design Customization preview CSS isn’t mode-aware
-- In `DesignCustomization.tsx`, `previewCSS = generateBuyerThemeCSS({ backgroundColor: customization.backgroundColor, ... })` always uses the “base” colors, not `lightModeColors`/`darkModeColors` based on `previewThemeMode`.
-- So toggling preview mode may not flip the actual theme variables the preview uses.
+2. **`useUnifiedServices`** (lines 140-145 in `useUnifiedServices.tsx`):
+   - Also no pagination - same 1000 limit
+   ```typescript
+   const { data, error } = await supabase
+     .from('services')
+     .select('*')
+     .eq('panel_id', panelId)
+     .eq('is_active', true)
+     .order('display_order', { ascending: true });
+   // No .range() = DEFAULT LIMIT 1000
+   ```
 
----
+3. **`useBuyerServices`** (lines 110-116 in `useBuyerServices.tsx`):
+   - Same issue - no explicit limit bypass
+   ```typescript
+   let query = supabase
+     .from('services')
+     .select('*')
+     .eq('panel_id', panelId)
+     .eq('is_active', true)
+     .order('display_order', { ascending: true });
+   // Only adds .limit() if options.limit is provided
+   ```
 
-## Implementation plan (what will be changed)
+### Solution: Fetch All Services with Pagination Loop
 
-### 1) Design Customization: restore true Dark+Light behavior on mobile/tablet and make controls fully respond
-**Goal:** Dark stays dark; Light becomes fully light, including controls cards, backgrounds, and text readability.
+Create a utility function that fetches all services by paginating through the 1000-row limit:
 
-**Changes**
-1. `src/pages/panel/DesignCustomization.tsx`
-   - Make `previewCSS` mode-aware:
-     - When `previewThemeMode === 'light'`, feed `generateBuyerThemeCSS` with `customization.lightModeColors` (background/surface/card/text/muted/border) merged with primary/secondary/accent.
-     - When `previewThemeMode === 'dark'`, feed it with `customization.darkModeColors`.
-   - Ensure `LivePreviewRenderer` receives `customization={{ ...customization, themeMode: previewThemeMode }}` (already done) AND that the color fields used by preview components come from the chosen mode set during preview (so backgrounds don’t remain dark in light mode).
+```typescript
+const PAGINATION_SIZE = 1000;
 
-2. `src/components/design/MobileDesignSlider.tsx`
-   - Keep the existing `isLight` styling (already present).
-   - Add a **theme scope wrapper** so the controls rendering uses the same token system:
-     - Wrap the entire slider (or at least the controls subtree + section content) with `className={cn(isLight ? 'light' : 'dark')}`.
-     - Ensure the controls “section content” (`renderSection(...)`) is inside that `.light`/`.dark` wrapper so shadcn cards/text/background swap fully.
+async function fetchAllServices(panelId: string): Promise<any[]> {
+  let allData: any[] = [];
+  let from = 0;
+  let hasMore = true;
 
-**Acceptance checks**
-- Mobile/tablet Design Customization:
-  - Toggle to Light: background becomes light, all cards become white/light, text turns dark and readable, borders become light.
-  - Toggle back to Dark: everything returns to the original dark design.
-- Desktop preview should continue to work (no regression).
+  while (hasMore) {
+    const { data, error } = await supabase
+      .from('services')
+      .select('*')
+      .eq('panel_id', panelId)
+      .eq('is_active', true)
+      .order('display_order', { ascending: true })
+      .range(from, from + PAGINATION_SIZE - 1);
 
----
+    if (error) throw error;
+    
+    if (data && data.length > 0) {
+      allData = [...allData, ...data];
+      from += PAGINATION_SIZE;
+      // If we got fewer than PAGINATION_SIZE, we've reached the end
+      hasMore = data.length === PAGINATION_SIZE;
+    } else {
+      hasMore = false;
+    }
+  }
 
-### 2) Announcement: ensure it loads from DB and renders; add “second announcement” + richer editing
-**Goal:** When enabled in Integrations, storefront shows the announcement reliably. Also support a second announcement + title/description and styling.
-
-**Changes**
-1. `src/hooks/useTenant.tsx`
-   - Update the `panelFields` selection so `panel_settings` includes `integrations` (and any other needed columns).
-   - This makes Storefront reliably receive the stored announcements config.
-
-2. `src/pages/Storefront.tsx`
-   - Keep current rendering but adjust it to support either:
-     - `integrations.announcements` as a single object (backward compatible), OR
-     - `integrations.announcements.items` as an array (new).
-   - Render behavior:
-     - If multiple items exist and are enabled, show up to 2 stacked bars (or a single bar with rotation if we choose that approach).
-     - Ensure a per-item dismiss key in sessionStorage (so dismissing bar #1 doesn’t hide bar #2).
-
-3. `src/pages/panel/Integrations.tsx`
-   - Enhance the Announcements integration fields:
-     - Announcement 1: title, text/description, icon, linkText, linkUrl, backgroundColor, textColor, enabled
-     - Announcement 2: same fields + enabled toggle
-   - Save schema to DB under:
-     - `integrations.announcements = { enabled: true, items: [ ... ] }`
-   - Preserve backward compatibility:
-     - If existing config uses `text`/`link`, migrate it into `items[0]` on save (in-memory normalization).
-
-4. `src/components/storefront/AnnouncementBar.tsx`
-   - Extend props to support:
-     - `id` (unique for sessionStorage dismiss key)
-     - `title`, `text`, `icon`, `linkText`, `linkUrl`, colors
-   - Add a slightly richer layout (title over description, optional icon pill, improved spacing) while staying lightweight.
-
-**Diagram (how it will work after fix)**
-
-```text
-Panel Owner (Dashboard)
-┌──────────────────────────┐
-│ /panel/integrations      │
-│  - Announcements form    │
-│  - Save                 ─┼──────────────┐
-└──────────────────────────┘              │
-                                           ▼
-Database (Supabase)
-┌──────────────────────────┐
-│ panel_settings            │
-│ integrations:             │
-│  announcements:           │
-│   { items:[{...},{...}] } │
-└──────────────────────────┘
-                                           │
-                                           ▼
-Tenant Storefront (Public)
-┌──────────────────────────┐
-│ useTenant() fetch panel   │
-│ includes panel_settings   │
-│ (integrations included)   │
-└──────────────┬───────────┘
-               │
-               ▼
-┌──────────────────────────┐
-│ Storefront.tsx            │
-│ extracts integrations     │
-│ renders AnnouncementBar(s)│
-└──────────────┬───────────┘
-               │
-               ▼
-┌──────────────────────────┐
-│ AnnouncementBar.tsx       │
-│ - checks enabled          │
-│ - checks dismiss key      │
-│ - renders if allowed      │
-└──────────────────────────┘
+  return allData;
+}
 ```
 
-**Acceptance checks**
-- After saving an announcement in Integrations, storefront `/` shows the bar immediately.
-- Second announcement (if enabled) also appears (stacked or rotated).
-- Dismiss works per announcement item.
+### Files to Modify
+
+| File | Change |
+|------|--------|
+| `src/hooks/useTenant.tsx` | Update `useTenantServices` to paginate through all services |
+| `src/hooks/useUnifiedServices.tsx` | Update `fetchServices` to use pagination loop up to 10,000 |
+| `src/hooks/useBuyerServices.tsx` | Update fetch to bypass 1000 limit for full category display |
 
 ---
 
-### 3) Tenant Services (/services): make it use unified logic and show all categories consistently
-**Goal:** Public services listing matches category breadth and arrangement logic from unified hook so buyers see “all platforms”.
+## Issue 2: OAuth Provider Display in Profile Settings
 
-**Changes**
-1. `src/pages/buyer/BuyerPublicServices.tsx`
-   - Replace raw `services` query usage with `useUnifiedServices({ panelId })`.
-   - Build categories from `categoriesWithServices` (already computed reliably from services).
-   - Keep guest UX (prompt to sign up), but categories/grouping must match unified logic.
-   - Optional improvement: render sub-groups (followers/likes/views) using `detectServiceType` for better structure.
+### Current State
 
-2. `src/pages/TenantRouter.tsx`
-   - Keep the route mapping as-is, but now `/services` will be powered by unified services logic via the updated BuyerPublicServices.
+`BuyerProfile.tsx` already shows the connected OAuth provider (lines 519-536):
+- Displays Google, Telegram, VK, Discord icons
+- Shows "Connected via {provider}" message
+- Badge shows "Connected" status
 
-**Acceptance checks**
-- Tenant `/services` displays categories close to New Order / Fast Order.
-- If services contain many platforms, they appear (not capped to ~10).
+**What's Missing:**
+- No way to connect additional OAuth providers from profile
+- No indication of which OAuth providers are enabled by the panel
 
----
+### Enhancement
 
-### 4) About Us page: enhance content per panel + add missing translations
-**Goal:** About Us should feel professional, per-tenant branded, and not show untranslated keys.
+Add a section showing available OAuth providers configured by the panel owner:
 
-**Changes**
-1. `src/pages/buyer/BuyerAbout.tsx`
-   - Expand content slightly (still simple) using panel branding:
-     - Title: “About {panel.name}”
-     - 2–3 paragraphs:
-       - Mission/what we do
-       - What buyers can expect (delivery/support/security)
-     - A small “Why choose us” bullet list (3 bullets)
-     - CTA button to Contact
-   - Use `panel.custom_branding.footerAbout` / `description` as source-of-truth; if missing, use translation defaults.
+```typescript
+// In BuyerProfile.tsx - Security section
+{/* Available OAuth Providers */}
+{!buyer?.oauth_provider && panelOAuthProviders.length > 0 && (
+  <div className="p-4 rounded-xl bg-muted/30 space-y-3">
+    <p className="text-sm font-medium">Connect Social Account</p>
+    <div className="flex gap-2 flex-wrap">
+      {panelOAuthProviders.map(provider => (
+        <Button 
+          key={provider.id}
+          variant="outline" 
+          size="sm"
+          onClick={() => handleOAuthConnect(provider.id)}
+        >
+          {OAuthProviderIcons[provider.id]}
+          <span className="ml-2 capitalize">{provider.id}</span>
+        </Button>
+      ))}
+    </div>
+  </div>
+)}
+```
 
-2. `src/lib/platform-translations.ts`
-   - Add keys for About page in all supported languages (at least the same 10 currently present):
-     - `buyer.about.title`
-     - `buyer.about.subtitle`
-     - `buyer.about.missionTitle`
-     - `buyer.about.missionBody`
-     - `buyer.about.whyTitle`
-     - `buyer.about.bullet1/2/3`
-     - `buyer.about.contactCta`
-     - Keep existing `buyer.about.defaultDescription` but ensure consistency.
+### Files to Modify
 
-**Acceptance checks**
-- `/about` shows good English text by default.
-- Switching languages does not show raw keys.
-
----
-
-### 5) Payment Management clarification + upgrade/subscription separation
-**Goal:** “Payment management” should not be confused with “subscription billing”, and the UI should direct users correctly.
-
-**Changes**
-1. `src/pages/panel/PaymentMethods.tsx`
-   - Enhance the Billing & Deposits tab with explicit sections:
-     - “Buyer Deposits & Approvals” (UnifiedTransactionManager)
-     - “Subscription & Plan” (read current plan from `panel_subscriptions` and link to `/panel/billing` for upgrades)
-     - “Platform Billing Gateways” (admin-controlled)
-   - Update the explanatory alert text to clearly differentiate:
-     - Buyer payment methods = what your customers use on tenant
-     - Billing/subscription = what you (panel owner) use to pay the platform; managed in `/panel/billing`
-
-2. (Optional) Keep `src/pages/panel/Billing.tsx` as the canonical subscription management page; PaymentMethods will link there rather than duplicating flows.
-
-**Acceptance checks**
-- PaymentMethods page clearly explains subscription vs buyer payment configuration and includes a link to subscription management.
+| File | Change |
+|------|--------|
+| `src/pages/buyer/BuyerProfile.tsx` | Fetch panel OAuth settings and show connect buttons |
+| `src/hooks/useTenant.tsx` | Include OAuth provider configuration in tenant data |
 
 ---
 
-### 6) Fast Order: show manual payments (and any enabled buyer methods) exactly like Deposit does
-**Goal:** If you enable manual transfer/manual methods, they appear in Fast Order payment selection.
+## Issue 3: Email Verification Functionality
 
-**Changes**
-1. `src/components/storefront/FastOrderSection.tsx`
-   - Replace its custom “enabledMethods parsing” with `useAvailablePaymentGateways` (or reuse the same filtering logic) so it merges:
-     - `payments.enabledMethods` AND `payments.manualPayments`
-   - Map returned `gateways` into the payment UI’s `PaymentMethod` cards.
-   - For manual methods:
-     - If multiple manual methods exist, show a “Bank Transfer” card that triggers a selector (same behavior as BuyerDeposit’s `manual_selector` pattern).
-     - If single manual method, show it directly.
-   - Ensure the selected gateway id passed to `process-payment` matches the manual id (e.g., `manual_xxx`) or `manual_transfer`.
+### Current State
 
-**Acceptance checks**
-- Enable manual method in panel Payment Methods → it appears in tenant Fast Order.
-- Multiple manual methods → selector behavior works.
-- Non-manual configured gateways still appear only when configured enough.
+`BuyerProfile.tsx` (lines 627-652) shows email verification status but the "Resend" button only shows a toast - it doesn't actually send anything.
+
+### Solution
+
+Implement actual email verification via the `buyer-auth` edge function:
+
+```typescript
+// In BuyerProfile.tsx
+const handleResendVerification = async () => {
+  setResendingVerification(true);
+  try {
+    const { data, error } = await supabase.functions.invoke('buyer-auth', {
+      body: { 
+        panelId: buyer.panel_id,
+        buyerId: buyer.id,
+        token: getToken(),
+        action: 'resend-verification'
+      }
+    });
+    
+    if (error || data?.error) {
+      throw new Error(data?.error || 'Failed to send verification');
+    }
+    
+    toast({ 
+      title: "Verification email sent!", 
+      description: "Please check your inbox and spam folder." 
+    });
+  } catch (e) {
+    toast({ 
+      title: "Failed to send", 
+      description: "Please try again later.",
+      variant: "destructive" 
+    });
+  } finally {
+    setResendingVerification(false);
+  }
+};
+```
+
+### Files to Modify
+
+| File | Change |
+|------|--------|
+| `src/pages/buyer/BuyerProfile.tsx` | Call edge function for email verification |
+| `supabase/functions/buyer-auth/index.ts` | Add `resend-verification` action handler |
 
 ---
 
-## Scope note (what I will not start in this pass)
-- Deep refactors of service import provider workflows beyond improving tenant category display and fixing the unified logic usage in the public services page.
-- Any new “provider marketplace/ads” feature (out of scope for the listed issues).
+## Issue 4: Announcement Display Mode (Header vs Popup)
+
+### Current State
+
+Announcements only display as a top bar in the header via `AnnouncementBar.tsx`. User wants option to show as popup in body.
+
+### Enhancement
+
+Add a `displayMode` field to announcement configuration:
+
+**Integrations.tsx - Add display mode field:**
+```typescript
+{
+  id: 'announcements',
+  name: 'Announcements',
+  fields: [
+    { type: 'input', name: 'title', label: 'Title', ... },
+    { type: 'input', name: 'text', label: 'Description', ... },
+    { 
+      type: 'select', 
+      name: 'displayMode', 
+      label: 'Display Mode',
+      options: [
+        { value: 'header', label: 'Header Bar (top of page)' },
+        { value: 'popup', label: 'Popup Dialog (center modal)' }
+      ],
+      default: 'header'
+    },
+    // ... other fields
+  ]
+}
+```
+
+**Create AnnouncementPopup component:**
+```typescript
+// src/components/storefront/AnnouncementPopup.tsx
+const AnnouncementPopup = ({ id, title, text, linkText, linkUrl, ... }) => {
+  const [dismissed, setDismissed] = useState(false);
+  const storageKey = `announcementPopup_${id}_dismissed`;
+
+  useEffect(() => {
+    setDismissed(sessionStorage.getItem(storageKey) === 'true');
+  }, []);
+
+  if (!text || dismissed) return null;
+
+  return (
+    <Dialog open={!dismissed} onOpenChange={(open) => !open && handleDismiss()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <IconComponent className="w-5 h-5" />
+            {title}
+          </DialogTitle>
+        </DialogHeader>
+        <p className="text-muted-foreground">{text}</p>
+        {linkUrl && (
+          <Button asChild>
+            <a href={linkUrl} target="_blank">{linkText || 'Learn More'}</a>
+          </Button>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+};
+```
+
+**Storefront.tsx - Conditional rendering:**
+```typescript
+{announcementConfig.displayMode === 'popup' ? (
+  <AnnouncementPopup {...announcementConfig} />
+) : (
+  <AnnouncementBar {...announcementConfig} />
+)}
+```
+
+### Files to Modify
+
+| File | Change |
+|------|--------|
+| `src/pages/panel/Integrations.tsx` | Add `displayMode` select field to announcements |
+| `src/components/storefront/AnnouncementPopup.tsx` | NEW: Create popup dialog component |
+| `src/pages/Storefront.tsx` | Conditionally render bar or popup based on mode |
 
 ---
 
-## Testing plan (must be done end-to-end)
-1) Design Customization:
-   - Mobile + Tablet views: toggle Dark/Light and confirm background + cards + text flip fully.
-2) Announcements:
-   - Save Announcement 1 in Integrations → confirm on storefront `/`.
-   - Add Announcement 2 → confirm it also renders (stacked or rotated).
-   - Dismiss one → ensure the other is still visible.
-3) Services:
-   - Compare categories count between `/new-order`, `/fast-order`, `/services` (guest) for the same tenant.
-4) Payments:
-   - Enable a manual payment method in panel Payment Methods.
-   - Visit tenant Fast Order payment step → confirm manual method appears.
-5) About:
-   - Visit `/about` in multiple languages, confirm no raw translation keys.
+## Issue 5: Fast Order Mobile Login Widget Sizing
+
+### Current State
+
+The guest signup modal in `FastOrderSection.tsx` (line 1586) uses:
+```typescript
+<DialogContent className="max-w-[92vw] sm:max-w-md w-full overflow-hidden p-3 sm:p-6 mx-2 sm:mx-auto">
+```
+
+This should be responsive, but the internal content may overflow or appear cramped on small screens.
+
+### Issues Identified
+
+1. Modal step indicators are small but OK (lines 1588-1627)
+2. Credential display boxes use `break-all` which is good
+3. Some buttons use fixed heights that may not work on very small screens
+4. Input fields have proper responsive sizing
+
+### Enhancements
+
+1. Add `max-h-[90vh] overflow-y-auto` to ensure modal doesn't overflow viewport
+2. Reduce padding on extra-small screens
+3. Ensure all buttons are properly sized for touch targets
+
+```typescript
+<DialogContent className="max-w-[95vw] sm:max-w-md w-full overflow-hidden p-2 xs:p-3 sm:p-6 mx-1 sm:mx-auto max-h-[90vh] overflow-y-auto">
+```
+
+### Files to Modify
+
+| File | Change |
+|------|--------|
+| `src/components/storefront/FastOrderSection.tsx` | Improve modal sizing and add vertical scroll |
 
 ---
 
-## Files expected to change
-- `src/hooks/useTenant.tsx` (include `integrations` in panel_settings select)
-- `src/pages/Storefront.tsx` (read new announcements schema, render multiple)
-- `src/components/storefront/AnnouncementBar.tsx` (support item ids + richer layout)
-- `src/pages/panel/Integrations.tsx` (announcement editor: title/desc/icon + second announcement + schema)
-- `src/pages/buyer/BuyerPublicServices.tsx` (useUnifiedServices + categoriesWithServices)
-- `src/pages/buyer/BuyerAbout.tsx` (enhanced content)
-- `src/lib/platform-translations.ts` (buyer.about.* keys for all supported languages)
-- `src/pages/panel/DesignCustomization.tsx` (mode-aware previewCSS using lightModeColors/darkModeColors)
-- `src/components/design/MobileDesignSlider.tsx` (add `.light/.dark` wrapper so controls also fully switch)
-- `src/components/storefront/FastOrderSection.tsx` (useAvailablePaymentGateways / include manualPayments)
+## Implementation Priority
 
+| Priority | Issue | Impact |
+|----------|-------|--------|
+| **CRITICAL** | Services 1000 limit | All tenant storefronts affected |
+| HIGH | Announcement modes | User requested feature |
+| MEDIUM | Fast Order mobile sizing | UX improvement |
+| MEDIUM | Email verification | Complete existing feature |
+| LOW | OAuth profile display | Enhancement |
+
+---
+
+## Technical Implementation Details
+
+### Pagination Helper Function
+
+Add to `src/lib/supabase-utils.ts`:
+
+```typescript
+const SUPABASE_PAGE_SIZE = 1000;
+const MAX_SERVICES = 10000;
+
+export async function fetchAllPaginated<T>(
+  queryBuilder: () => any,
+  maxRows = MAX_SERVICES
+): Promise<T[]> {
+  let allData: T[] = [];
+  let from = 0;
+  let hasMore = true;
+
+  while (hasMore && allData.length < maxRows) {
+    const { data, error } = await queryBuilder()
+      .range(from, from + SUPABASE_PAGE_SIZE - 1);
+
+    if (error) throw error;
+    
+    if (data && data.length > 0) {
+      allData = [...allData, ...data];
+      from += SUPABASE_PAGE_SIZE;
+      hasMore = data.length === SUPABASE_PAGE_SIZE;
+    } else {
+      hasMore = false;
+    }
+  }
+
+  // Enforce maximum service limit
+  return allData.slice(0, maxRows);
+}
+```
+
+### Service Count Flow After Fix
+
+```text
+┌──────────────────────────────────────────────────────────────────┐
+│                    SERVICES FETCH FLOW (AFTER FIX)                │
+└──────────────────────────────────────────────────────────────────┘
+
+Panel has 2,500 services in database
+                │
+                ▼
+┌──────────────────────────────────────────────────────────────────┐
+│  useUnifiedServices / useTenantServices                          │
+│  Calls fetchAllPaginated() helper                                 │
+└──────────────────────────────────────────────────────────────────┘
+                │
+                ▼
+┌──────────────────────────────────────────────────────────────────┐
+│  Page 1: .range(0, 999)                                          │
+│  → Returns 1,000 services                                        │
+│  → allData = 1,000                                               │
+│  → hasMore = true (got 1000 = PAGE_SIZE)                         │
+└──────────────────────────────────────────────────────────────────┘
+                │
+                ▼
+┌──────────────────────────────────────────────────────────────────┐
+│  Page 2: .range(1000, 1999)                                      │
+│  → Returns 1,000 services                                        │
+│  → allData = 2,000                                               │
+│  → hasMore = true                                                │
+└──────────────────────────────────────────────────────────────────┘
+                │
+                ▼
+┌──────────────────────────────────────────────────────────────────┐
+│  Page 3: .range(2000, 2999)                                      │
+│  → Returns 500 services (only 2,500 total)                       │
+│  → allData = 2,500                                               │
+│  → hasMore = false (got 500 < 1000)                              │
+└──────────────────────────────────────────────────────────────────┘
+                │
+                ▼
+┌──────────────────────────────────────────────────────────────────┐
+│  Result: All 2,500 services returned                             │
+│  → categoriesWithServices built correctly                        │
+│  → All platforms shown in tenant storefront                      │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Files to Create/Modify Summary
+
+| File | Action | Purpose |
+|------|--------|---------|
+| `src/lib/supabase-utils.ts` | CREATE | Pagination helper for large datasets |
+| `src/hooks/useUnifiedServices.tsx` | MODIFY | Use pagination to fetch all services |
+| `src/hooks/useTenant.tsx` | MODIFY | Update useTenantServices with pagination |
+| `src/hooks/useBuyerServices.tsx` | MODIFY | Add pagination support |
+| `src/pages/panel/Integrations.tsx` | MODIFY | Add displayMode to announcements |
+| `src/components/storefront/AnnouncementPopup.tsx` | CREATE | New popup component for announcements |
+| `src/pages/Storefront.tsx` | MODIFY | Render bar or popup based on mode |
+| `src/pages/buyer/BuyerProfile.tsx` | MODIFY | Real email verification, OAuth display |
+| `src/components/storefront/FastOrderSection.tsx` | MODIFY | Improve mobile modal sizing |
+| `supabase/functions/buyer-auth/index.ts` | MODIFY | Add resend-verification action |
+
+---
+
+## Testing Checklist
+
+After implementation:
+- [ ] Panel with 2,000+ services shows all services in tenant /services
+- [ ] Fast Order shows all platforms/categories
+- [ ] New Order shows all platforms/categories
+- [ ] Announcement set to "popup" shows as modal dialog
+- [ ] Announcement set to "header" shows as top bar
+- [ ] Email verification "Resend" button sends actual email
+- [ ] OAuth providers display in profile when enabled
+- [ ] Fast Order login modal works on small mobile screens (320px width)
+- [ ] Maximum 10,000 service limit is enforced
