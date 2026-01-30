@@ -1,366 +1,270 @@
 
-
-# Comprehensive Fix Plan: Light Mode, Announcements, and Services Improvements
-
-## Executive Summary
-
-This plan addresses three major areas:
-1. **Design Customization Light Mode** - Fix for mobile/tablet preview backgrounds, cards, and text visibility
-2. **Announcements Integration** - Enhanced configuration with visual diagram of how it renders
-3. **Services Management & Tenant Display** - Fix categorization issues and ensure all 70+ categories render correctly
+## Objectives (what will be fixed)
+1) Design Customization (mobile/tablet): preview + controls must switch cleanly between Dark and Light without “removing” either mode.
+2) Announcement: must actually render on tenant storefront when enabled; also support a “second” announcement + richer fields (title/description/style).
+3) Tenant Services (/services): must show the same full category breadth (70+ where applicable) as New Order/Fast Order, using the unified services logic.
+4) Tenant About Us: improve content per-panel and improve translations so it doesn’t show raw keys / missing strings.
+5) Payment Management clarity: clearly separate “Buyer Payment Methods” vs “Panel Owner Billing/Subscription”, and explain where subscription lives.
+6) Fast Order payment methods: manual payments enabled in Payment Methods must appear in Fast Order (manual_transfer/manual_*), not just deposits page.
 
 ---
 
-## Issue 1: Design Customization Light Mode Not Working on Mobile/Tablet
+## Key findings (root causes)
+### A) Announcement not rendering
+- `Storefront.tsx` tries to read `integrations` from `panel_settings` via `panel.panel_settings[0]`.
+- But `useTenant.tsx` currently selects `panel_settings (seo_title, seo_description, ... blog_enabled)` and **does not include `integrations`**, so `panelSettingsData.integrations` is always undefined.
+- Fallback `(panel?.settings as any)?.integrations` also won’t work because Integrations page saves to the **panel_settings table**, not `panels.settings`.
+Result: `announcementConfig` becomes `{}` → `enabled` is falsy → bar never shows.
 
-### Current Problem
-When light mode is toggled in Design Customization:
-- On mobile/tablet view (via MobileDesignSlider), the preview background stays dark
-- Card backgrounds remain dark
-- Text contrast is poor in light mode
-- Only a few elements change color
+### B) Mobile/tablet “light mode not affecting controls”
+- `MobileDesignSlider.tsx` changes its own container colors, but the sections rendered via `renderSection()` are mostly built with shadcn tokens (`bg-card`, `text-foreground`, `glass-card`, etc.).
+- Those tokens only switch properly if the subtree is wrapped with `.light` / `.dark` class (your `src/index.css` defines these).
+- Currently, only the **preview iframe area** gets `.dark`/`.light`, but the **controls content area** does not consistently apply the theme wrapper class → many cards and texts remain in dark styling even when previewThemeMode is “light”.
 
-### Root Cause Analysis
-1. **MobileDesignSlider.tsx (line 128, 275-288)**: Uses hardcoded `bg-slate-950`, `bg-slate-900`, `bg-slate-800` classes regardless of `previewThemeMode`
-2. **Preview container** (line 276-278): Only adds a ring/shadow style based on theme mode but doesn't change the actual background color class sufficiently
-3. **Controls area** (line 320, 331, 353): All use hardcoded dark backgrounds (`bg-slate-900`, `bg-slate-800`)
+### C) Tenant “Services page” mismatch
+- TenantRouter route `/services` points to `BuyerPublicServices` (guest catalog).
+- `BuyerPublicServices.tsx` **does not use `useUnifiedServices`** and builds categories directly from raw services query, which can show fewer categories and inconsistent grouping vs New Order.
+- Meanwhile, New Order + BuyerServices are already unified.
 
-### Solution
+### D) Fast Order payment methods missing manual transfer
+- `FastOrderSection.tsx` loads payment methods only from `panel.settings.payments.enabledMethods` and doesn’t merge in `payments.manualPayments`.
+- BuyerDeposit has special manual logic; FastOrder does not.
+- Best fix is to reuse the existing `useAvailablePaymentGateways` hook (already merges enabledMethods + manualPayments and applies “configured enough” filtering).
 
-Update `src/components/design/MobileDesignSlider.tsx` to conditionally apply light or dark styling:
+### E) Design Customization preview CSS isn’t mode-aware
+- In `DesignCustomization.tsx`, `previewCSS = generateBuyerThemeCSS({ backgroundColor: customization.backgroundColor, ... })` always uses the “base” colors, not `lightModeColors`/`darkModeColors` based on `previewThemeMode`.
+- So toggling preview mode may not flip the actual theme variables the preview uses.
+
+---
+
+## Implementation plan (what will be changed)
+
+### 1) Design Customization: restore true Dark+Light behavior on mobile/tablet and make controls fully respond
+**Goal:** Dark stays dark; Light becomes fully light, including controls cards, backgrounds, and text readability.
+
+**Changes**
+1. `src/pages/panel/DesignCustomization.tsx`
+   - Make `previewCSS` mode-aware:
+     - When `previewThemeMode === 'light'`, feed `generateBuyerThemeCSS` with `customization.lightModeColors` (background/surface/card/text/muted/border) merged with primary/secondary/accent.
+     - When `previewThemeMode === 'dark'`, feed it with `customization.darkModeColors`.
+   - Ensure `LivePreviewRenderer` receives `customization={{ ...customization, themeMode: previewThemeMode }}` (already done) AND that the color fields used by preview components come from the chosen mode set during preview (so backgrounds don’t remain dark in light mode).
+
+2. `src/components/design/MobileDesignSlider.tsx`
+   - Keep the existing `isLight` styling (already present).
+   - Add a **theme scope wrapper** so the controls rendering uses the same token system:
+     - Wrap the entire slider (or at least the controls subtree + section content) with `className={cn(isLight ? 'light' : 'dark')}`.
+     - Ensure the controls “section content” (`renderSection(...)`) is inside that `.light`/`.dark` wrapper so shadcn cards/text/background swap fully.
+
+**Acceptance checks**
+- Mobile/tablet Design Customization:
+  - Toggle to Light: background becomes light, all cards become white/light, text turns dark and readable, borders become light.
+  - Toggle back to Dark: everything returns to the original dark design.
+- Desktop preview should continue to work (no regression).
+
+---
+
+### 2) Announcement: ensure it loads from DB and renders; add “second announcement” + richer editing
+**Goal:** When enabled in Integrations, storefront shows the announcement reliably. Also support a second announcement + title/description and styling.
+
+**Changes**
+1. `src/hooks/useTenant.tsx`
+   - Update the `panelFields` selection so `panel_settings` includes `integrations` (and any other needed columns).
+   - This makes Storefront reliably receive the stored announcements config.
+
+2. `src/pages/Storefront.tsx`
+   - Keep current rendering but adjust it to support either:
+     - `integrations.announcements` as a single object (backward compatible), OR
+     - `integrations.announcements.items` as an array (new).
+   - Render behavior:
+     - If multiple items exist and are enabled, show up to 2 stacked bars (or a single bar with rotation if we choose that approach).
+     - Ensure a per-item dismiss key in sessionStorage (so dismissing bar #1 doesn’t hide bar #2).
+
+3. `src/pages/panel/Integrations.tsx`
+   - Enhance the Announcements integration fields:
+     - Announcement 1: title, text/description, icon, linkText, linkUrl, backgroundColor, textColor, enabled
+     - Announcement 2: same fields + enabled toggle
+   - Save schema to DB under:
+     - `integrations.announcements = { enabled: true, items: [ ... ] }`
+   - Preserve backward compatibility:
+     - If existing config uses `text`/`link`, migrate it into `items[0]` on save (in-memory normalization).
+
+4. `src/components/storefront/AnnouncementBar.tsx`
+   - Extend props to support:
+     - `id` (unique for sessionStorage dismiss key)
+     - `title`, `text`, `icon`, `linkText`, `linkUrl`, colors
+   - Add a slightly richer layout (title over description, optional icon pill, improved spacing) while staying lightweight.
+
+**Diagram (how it will work after fix)**
 
 ```text
-Lines to change:
-- Line 128: Container background
-- Lines 130-155: Top bar and toggle buttons
-- Lines 204-211: Section info bar
-- Lines 275-292: Preview container
-- Lines 310-393: Controls mode section (navigation, dots, content area)
+Panel Owner (Dashboard)
+┌──────────────────────────┐
+│ /panel/integrations      │
+│  - Announcements form    │
+│  - Save                 ─┼──────────────┐
+└──────────────────────────┘              │
+                                           ▼
+Database (Supabase)
+┌──────────────────────────┐
+│ panel_settings            │
+│ integrations:             │
+│  announcements:           │
+│   { items:[{...},{...}] } │
+└──────────────────────────┘
+                                           │
+                                           ▼
+Tenant Storefront (Public)
+┌──────────────────────────┐
+│ useTenant() fetch panel   │
+│ includes panel_settings   │
+│ (integrations included)   │
+└──────────────┬───────────┘
+               │
+               ▼
+┌──────────────────────────┐
+│ Storefront.tsx            │
+│ extracts integrations     │
+│ renders AnnouncementBar(s)│
+└──────────────┬───────────┘
+               │
+               ▼
+┌──────────────────────────┐
+│ AnnouncementBar.tsx       │
+│ - checks enabled          │
+│ - checks dismiss key      │
+│ - renders if allowed      │
+└──────────────────────────┘
 ```
 
-Key changes:
-- Add `previewThemeMode` condition checks throughout the component
-- Change backgrounds to `bg-white` or `bg-slate-50` when light mode
-- Change text colors from `text-slate-*` to `text-slate-700` (dark on light) when light mode
-- Change borders from `border-slate-700` to `border-slate-200` when light mode
-
-### Files to Modify
-| File | Changes |
-|------|---------|
-| `src/components/design/MobileDesignSlider.tsx` | Add comprehensive light/dark mode conditional styling throughout the component |
+**Acceptance checks**
+- After saving an announcement in Integrations, storefront `/` shows the bar immediately.
+- Second announcement (if enabled) also appears (stacked or rotated).
+- Dismiss works per announcement item.
 
 ---
 
-## Issue 2: Announcements Integration Enhancement
+### 3) Tenant Services (/services): make it use unified logic and show all categories consistently
+**Goal:** Public services listing matches category breadth and arrangement logic from unified hook so buyers see “all platforms”.
 
-### Current State
-The announcements integration in `Integrations.tsx` has these fields:
-- text (Announcement Text)
-- linkText (Link Text)
-- linkUrl (Link URL)
-- backgroundColor
-- textColor
+**Changes**
+1. `src/pages/buyer/BuyerPublicServices.tsx`
+   - Replace raw `services` query usage with `useUnifiedServices({ panelId })`.
+   - Build categories from `categoriesWithServices` (already computed reliably from services).
+   - Keep guest UX (prompt to sign up), but categories/grouping must match unified logic.
+   - Optional improvement: render sub-groups (followers/likes/views) using `detectServiceType` for better structure.
 
-But it's missing a clear `enabled` flag being saved, and there's no visual title field.
+2. `src/pages/TenantRouter.tsx`
+   - Keep the route mapping as-is, but now `/services` will be powered by unified services logic via the updated BuyerPublicServices.
 
-### Announcement Rendering Flow Diagram
-
-```text
-┌─────────────────────────────────────────────────────────────────────────────────────┐
-│                        ANNOUNCEMENT BAR RENDERING FLOW                                │
-└─────────────────────────────────────────────────────────────────────────────────────┘
-
-Panel Owner Dashboard                    Database                     Tenant Storefront
-─────────────────────                    ────────                     ─────────────────
-
-┌────────────────────┐
-│  Integrations.tsx  │
-│  ─────────────────  │
-│  Panel owner fills │
-│  announcement form │
-│  fields:           │
-│  • Title           │◄─────────NEW
-│  • Description     │◄─────────NEW  
-│  • Link Text       │
-│  • Link URL        │
-│  • Background Color│
-│  • Text Color      │
-│  • Icon selection  │◄─────────NEW
-└────────┬───────────┘
-         │
-         │ saveServiceConfig()
-         │ Sets enabled: true when saved
-         │
-         ▼
-┌────────────────────┐
-│   panel_settings   │
-│   ───────────────  │
-│   {                │
-│     integrations: {│
-│       announcements│
-│       : {          │
-│         enabled,   │
-│         title,     │◄───NEW
-│         text,      │
-│         linkText,  │
-│         linkUrl,   │
-│         bgColor,   │
-│         textColor, │
-│         icon       │◄───NEW
-│       }            │
-│     }              │
-│   }                │
-└────────┬───────────┘
-         │
-         │ Supabase query
-         │
-         ▼
-┌────────────────────┐
-│   Storefront.tsx   │
-│   ──────────────── │
-│   Lines 164-171:   │
-│   Extracts config  │
-│   from panel_      │
-│   settings.        │
-│   integrations.    │
-│   announcements    │
-└────────┬───────────┘
-         │
-         │ Pass props
-         │
-         ▼
-┌─────────────────────────────────────┐
-│        AnnouncementBar.tsx          │
-│        ────────────────────         │
-│ Props received:                      │
-│   • enabled (boolean)               │
-│   • title (NEW)                     │
-│   • text (description)              │
-│   • linkText                        │
-│   • linkUrl                         │
-│   • backgroundColor                 │
-│   • textColor                       │
-│   • icon (NEW)                      │
-│                                      │
-│ Render logic:                        │
-│   1. Check enabled && text exists   │
-│   2. Check sessionStorage dismiss   │
-│   3. If both pass → render bar      │
-│                                      │
-│ ┌─────────────────────────────────┐ │
-│ │  [Icon] TITLE: Description      │ │
-│ │        [Link Text] →    [X]     │ │
-│ └─────────────────────────────────┘ │
-└─────────────────────────────────────┘
-```
-
-### Enhancement Details
-
-**New Fields to Add in Integrations.tsx:**
-1. `title` - Short headline (e.g., "New Feature")
-2. `description` (rename from `text`) - Longer description text
-3. `icon` - Icon selector (megaphone, star, gift, bell, info, etc.)
-4. Keep existing: linkText, linkUrl, backgroundColor, textColor
-
-**Update AnnouncementBar.tsx:**
-1. Accept new `title` and `icon` props
-2. Render icon + title prominently
-3. Render description text
-4. Add visual polish (gradient backgrounds, icon styling)
-
-### Files to Modify
-| File | Changes |
-|------|---------|
-| `src/pages/panel/Integrations.tsx` | Add title, icon fields to announcements definition; update save logic |
-| `src/components/storefront/AnnouncementBar.tsx` | Accept title/icon props, improve visual design |
-| `src/pages/Storefront.tsx` | Pass new props to AnnouncementBar |
+**Acceptance checks**
+- Tenant `/services` displays categories close to New Order / Fast Order.
+- If services contain many platforms, they appear (not capped to ~10).
 
 ---
 
-## Issue 3: Services Management & Tenant Display - Category Issues
+### 4) About Us page: enhance content per panel + add missing translations
+**Goal:** About Us should feel professional, per-tenant branded, and not show untranslated keys.
 
-### Current Problems Identified
+**Changes**
+1. `src/pages/buyer/BuyerAbout.tsx`
+   - Expand content slightly (still simple) using panel branding:
+     - Title: “About {panel.name}”
+     - 2–3 paragraphs:
+       - Mission/what we do
+       - What buyers can expect (delivery/support/security)
+     - A small “Why choose us” bullet list (3 bullets)
+     - CTA button to Contact
+   - Use `panel.custom_branding.footerAbout` / `description` as source-of-truth; if missing, use translation defaults.
 
-1. **Services not showing all categories on tenant storefront**
-   - `BuyerServices.tsx` uses `useUnifiedServices` hook which fetches from `service_categories` table
-   - If categories aren't created in that table, they won't show
-   - Fallback (line 244-267 in useUnifiedServices.tsx) builds categories from services but may not work correctly
+2. `src/lib/platform-translations.ts`
+   - Add keys for About page in all supported languages (at least the same 10 currently present):
+     - `buyer.about.title`
+     - `buyer.about.subtitle`
+     - `buyer.about.missionTitle`
+     - `buyer.about.missionBody`
+     - `buyer.about.whyTitle`
+     - `buyer.about.bullet1/2/3`
+     - `buyer.about.contactCta`
+     - Keep existing `buyer.about.defaultDescription` but ensure consistency.
 
-2. **Auto-fix operations slow or buggy**
-   - `autoAssignIconsAndCategories` function processes services one-by-one
-   - Large batches (1000+ services) can timeout or freeze
-
-3. **New Order page may show different categories than Services page**
-   - Different category extraction logic in different components
-
-### Root Cause Analysis
-
-**Category Display Flow:**
-1. Services are imported with `category` field (string like "instagram", "facebook")
-2. `useUnifiedServices` first tries to fetch from `service_categories` table
-3. If empty, it falls back to building categories from services
-4. The fallback logic (lines 244-267) doesn't always populate correctly
-
-**The Issue:**
-- `service_categories` table may be empty for a panel
-- Fallback relies on services having correct `category` field
-- Icon detection may mismatch the category string
-
-### Solution: Multi-Part Fix
-
-**Part A: Improve Category Sync**
-
-Update `useUnifiedServices.tsx` to:
-1. Always build categories from services when `service_categories` table is empty
-2. Auto-sync categories to database when first loaded
-3. Ensure all 70+ platforms in `SOCIAL_ICONS_MAP` can be matched
-
-**Part B: Fix Services Management Auto-Fix**
-
-Update `src/pages/panel/ServicesManagement.tsx`:
-1. Add batch processing with progress for large service lists
-2. Fix the auto-categorization to handle edge cases
-3. Add proper error handling and retry logic
-
-**Part C: Sync Buyer Services Display**
-
-Ensure `BuyerServices.tsx` and `BuyerNewOrder.tsx` both use:
-1. Same category source (useUnifiedServices)
-2. Same icon detection logic
-3. Same sorting/grouping approach
-
-**Part D: Add "Sync Categories" Button**
-
-Add a visible button in Services Management to manually trigger category sync:
-- Calls `syncCategoriesFromServices()` from the hook
-- Shows progress indicator
-- Creates missing categories in `service_categories` table
-
-### Implementation Details
-
-**useUnifiedServices.tsx Changes:**
-```typescript
-// Enhanced categoriesWithServices that ALWAYS works
-const categoriesWithServices = useMemo(() => {
-  // Build from services directly (reliable)
-  const catMap = new Map<string, ServiceCategory & { services: UnifiedService[] }>();
-  
-  // First, add all services to their categories
-  services.forEach(svc => {
-    const slug = (svc.category || 'other').toLowerCase();
-    const iconData = SOCIAL_ICONS_MAP[slug] || SOCIAL_ICONS_MAP.other;
-    
-    if (!catMap.has(slug)) {
-      catMap.set(slug, {
-        id: slug,
-        panelId: panelId || '',
-        name: iconData.label || slug.charAt(0).toUpperCase() + slug.slice(1),
-        slug,
-        iconKey: slug,
-        color: iconData.color || '#6B7280',
-        position: catMap.size,
-        isActive: true,
-        serviceCount: 0,
-        services: [],
-      });
-    }
-    catMap.get(slug)!.services.push(svc);
-    catMap.get(slug)!.serviceCount++;
-  });
-
-  // Sort by service count (most popular first)
-  return Array.from(catMap.values()).sort((a, b) => b.serviceCount - a.serviceCount);
-}, [services, panelId]);
-```
-
-**ServicesManagement.tsx - Add Sync Button:**
-```typescript
-// In the toolbar area
-<Button 
-  variant="outline" 
-  size="sm"
-  onClick={handleSyncCategories}
-  disabled={isSyncingCategories}
->
-  {isSyncingCategories ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <RefreshCw className="w-4 h-4 mr-2" />}
-  Sync Categories
-</Button>
-```
-
-### Files to Modify
-| File | Changes |
-|------|---------|
-| `src/hooks/useUnifiedServices.tsx` | Improve category building from services, always-reliable fallback |
-| `src/pages/panel/ServicesManagement.tsx` | Add sync categories button, improve auto-fix reliability |
-| `src/pages/buyer/BuyerServices.tsx` | Ensure consistent category display |
-| `src/pages/buyer/BuyerNewOrder.tsx` | Sync category logic with BuyerServices |
+**Acceptance checks**
+- `/about` shows good English text by default.
+- Switching languages does not show raw keys.
 
 ---
 
-## Summary of All Files to Change
+### 5) Payment Management clarification + upgrade/subscription separation
+**Goal:** “Payment management” should not be confused with “subscription billing”, and the UI should direct users correctly.
 
-| Priority | File | Changes |
-|----------|------|---------|
-| HIGH | `src/components/design/MobileDesignSlider.tsx` | Full light mode support for mobile/tablet preview |
-| HIGH | `src/hooks/useUnifiedServices.tsx` | Reliable category building from services |
-| MEDIUM | `src/pages/panel/Integrations.tsx` | Enhanced announcement fields (title, icon) |
-| MEDIUM | `src/components/storefront/AnnouncementBar.tsx` | Support title/icon, improved visuals |
-| MEDIUM | `src/pages/Storefront.tsx` | Pass new announcement props |
-| MEDIUM | `src/pages/panel/ServicesManagement.tsx` | Add sync categories button, improve auto-fix |
-| LOW | `src/pages/buyer/BuyerServices.tsx` | Consistent category display |
-| LOW | `src/pages/buyer/BuyerNewOrder.tsx` | Sync category logic |
+**Changes**
+1. `src/pages/panel/PaymentMethods.tsx`
+   - Enhance the Billing & Deposits tab with explicit sections:
+     - “Buyer Deposits & Approvals” (UnifiedTransactionManager)
+     - “Subscription & Plan” (read current plan from `panel_subscriptions` and link to `/panel/billing` for upgrades)
+     - “Platform Billing Gateways” (admin-controlled)
+   - Update the explanatory alert text to clearly differentiate:
+     - Buyer payment methods = what your customers use on tenant
+     - Billing/subscription = what you (panel owner) use to pay the platform; managed in `/panel/billing`
 
----
+2. (Optional) Keep `src/pages/panel/Billing.tsx` as the canonical subscription management page; PaymentMethods will link there rather than duplicating flows.
 
-## Technical Implementation Notes
-
-### Light Mode Color Mapping
-
-| Dark Mode | Light Mode |
-|-----------|------------|
-| `bg-slate-950` | `bg-white` |
-| `bg-slate-900` | `bg-slate-50` |
-| `bg-slate-800` | `bg-slate-100` |
-| `bg-slate-700` | `bg-slate-200` |
-| `text-slate-200` | `text-slate-800` |
-| `text-slate-400` | `text-slate-600` |
-| `border-slate-700` | `border-slate-200` |
-| `ring-white/10` | `ring-black/10` |
-
-### Category Sync Database Function
-
-The `sync_panel_categories` RPC function creates missing categories. If it doesn't exist, we'll create categories via direct inserts:
-
-```typescript
-const syncCategoriesFromServices = async () => {
-  // Get unique categories from services
-  const uniqueCats = [...new Set(services.map(s => s.category))];
-  
-  for (const cat of uniqueCats) {
-    const iconData = SOCIAL_ICONS_MAP[cat] || SOCIAL_ICONS_MAP.other;
-    
-    // Upsert category
-    await supabase.from('service_categories').upsert({
-      panel_id: panelId,
-      name: iconData.label,
-      slug: cat,
-      icon_key: cat,
-      color: iconData.color,
-      is_active: true,
-    }, { onConflict: 'panel_id,slug' });
-  }
-};
-```
+**Acceptance checks**
+- PaymentMethods page clearly explains subscription vs buyer payment configuration and includes a link to subscription management.
 
 ---
 
-## Testing Checklist
+### 6) Fast Order: show manual payments (and any enabled buyer methods) exactly like Deposit does
+**Goal:** If you enable manual transfer/manual methods, they appear in Fast Order payment selection.
 
-After implementation:
-- [ ] Mobile Design Customization: Toggle light mode → all backgrounds, cards, text should be light
-- [ ] Tablet Design Customization: Same as mobile
-- [ ] Integrations: Configure announcement with title → verify it shows on tenant storefront
-- [ ] Services Management: Click "Sync Categories" → verify all categories appear
-- [ ] Tenant /services: Verify all 70+ categories show with correct icons
-- [ ] Tenant New Order: Verify same categories as /services page
+**Changes**
+1. `src/components/storefront/FastOrderSection.tsx`
+   - Replace its custom “enabledMethods parsing” with `useAvailablePaymentGateways` (or reuse the same filtering logic) so it merges:
+     - `payments.enabledMethods` AND `payments.manualPayments`
+   - Map returned `gateways` into the payment UI’s `PaymentMethod` cards.
+   - For manual methods:
+     - If multiple manual methods exist, show a “Bank Transfer” card that triggers a selector (same behavior as BuyerDeposit’s `manual_selector` pattern).
+     - If single manual method, show it directly.
+   - Ensure the selected gateway id passed to `process-payment` matches the manual id (e.g., `manual_xxx`) or `manual_transfer`.
+
+**Acceptance checks**
+- Enable manual method in panel Payment Methods → it appears in tenant Fast Order.
+- Multiple manual methods → selector behavior works.
+- Non-manual configured gateways still appear only when configured enough.
+
+---
+
+## Scope note (what I will not start in this pass)
+- Deep refactors of service import provider workflows beyond improving tenant category display and fixing the unified logic usage in the public services page.
+- Any new “provider marketplace/ads” feature (out of scope for the listed issues).
+
+---
+
+## Testing plan (must be done end-to-end)
+1) Design Customization:
+   - Mobile + Tablet views: toggle Dark/Light and confirm background + cards + text flip fully.
+2) Announcements:
+   - Save Announcement 1 in Integrations → confirm on storefront `/`.
+   - Add Announcement 2 → confirm it also renders (stacked or rotated).
+   - Dismiss one → ensure the other is still visible.
+3) Services:
+   - Compare categories count between `/new-order`, `/fast-order`, `/services` (guest) for the same tenant.
+4) Payments:
+   - Enable a manual payment method in panel Payment Methods.
+   - Visit tenant Fast Order payment step → confirm manual method appears.
+5) About:
+   - Visit `/about` in multiple languages, confirm no raw translation keys.
+
+---
+
+## Files expected to change
+- `src/hooks/useTenant.tsx` (include `integrations` in panel_settings select)
+- `src/pages/Storefront.tsx` (read new announcements schema, render multiple)
+- `src/components/storefront/AnnouncementBar.tsx` (support item ids + richer layout)
+- `src/pages/panel/Integrations.tsx` (announcement editor: title/desc/icon + second announcement + schema)
+- `src/pages/buyer/BuyerPublicServices.tsx` (useUnifiedServices + categoriesWithServices)
+- `src/pages/buyer/BuyerAbout.tsx` (enhanced content)
+- `src/lib/platform-translations.ts` (buyer.about.* keys for all supported languages)
+- `src/pages/panel/DesignCustomization.tsx` (mode-aware previewCSS using lightModeColors/darkModeColors)
+- `src/components/design/MobileDesignSlider.tsx` (add `.light/.dark` wrapper so controls also fully switch)
+- `src/components/storefront/FastOrderSection.tsx` (useAvailablePaymentGateways / include manualPayments)
 
