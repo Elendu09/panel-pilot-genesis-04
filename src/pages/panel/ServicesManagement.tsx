@@ -326,6 +326,9 @@ const ServicesManagement = () => {
   const [isSavingOrder, setIsSavingOrder] = useState(false);
   const [pendingOrderUpdates, setPendingOrderUpdates] = useState<Array<{ id: string; display_order: number }> | null>(null);
   
+  // Category sync state
+  const [isSyncingCategories, setIsSyncingCategories] = useState(false);
+  
   // View mode: list or kanban
   const [viewMode, setViewMode] = useState<"list" | "kanban">(() => {
     return (localStorage.getItem('services-view-mode') as "list" | "kanban") || "list";
@@ -1512,6 +1515,69 @@ const ServicesManagement = () => {
     }
   };
 
+  // Sync categories from services to service_categories table
+  // This ensures all 70+ categories are properly stored with icons and positions
+  const handleSyncCategories = async () => {
+    if (!panel?.id) return;
+    
+    setIsSyncingCategories(true);
+    try {
+      // Build unique categories from services
+      const categoryMap = new Map<string, number>();
+      services.forEach(svc => {
+        const cat = (svc.category || 'other').toLowerCase();
+        categoryMap.set(cat, (categoryMap.get(cat) || 0) + 1);
+      });
+      
+      // Get existing categories for position preservation
+      const { data: existingCats } = await supabase
+        .from('service_categories')
+        .select('slug, position')
+        .eq('panel_id', panel.id);
+      
+      const existingPositions = new Map(existingCats?.map(c => [c.slug, c.position]) || []);
+      let nextPosition = Math.max(0, ...Array.from(existingPositions.values())) + 1;
+      
+      // Upsert categories
+      const categoriesToUpsert = Array.from(categoryMap.entries()).map(([slug, count]) => {
+        const iconData = SOCIAL_ICONS_MAP[slug] || SOCIAL_ICONS_MAP.other;
+        return {
+          panel_id: panel.id,
+          slug,
+          name: iconData.label || slug.charAt(0).toUpperCase() + slug.slice(1),
+          icon_key: slug,
+          color: iconData.color || '#6B7280',
+          position: existingPositions.get(slug) ?? nextPosition++,
+          is_active: true,
+          service_count: count,
+        };
+      });
+      
+      // Batch upsert
+      const { error } = await supabase
+        .from('service_categories')
+        .upsert(categoriesToUpsert, { onConflict: 'panel_id,slug' });
+      
+      if (error) throw error;
+      
+      toast({ 
+        title: `${categoriesToUpsert.length} categories synced`,
+        description: 'Category order will now persist on tenant storefront.'
+      });
+      
+      // Refresh data
+      fetchCategoryCounts();
+    } catch (error) {
+      console.error('Error syncing categories:', error);
+      toast({ 
+        title: 'Failed to sync categories', 
+        variant: 'destructive' 
+      });
+    } finally {
+      setIsSyncingCategories(false);
+    }
+  };
+
   // Import handler - stores to provider_services, normalized_services, and services tables
   // Following the professional 3-tier architecture: raw → normalized → buyer-visible
   const handleImport = async (importedServices: any[], markups: Record<number, number>, providerId?: string, providerName?: string) => {
@@ -1792,6 +1858,22 @@ const ServicesManagement = () => {
           >
             <RefreshCw className="w-4 h-4 mr-2" />
             <span className="hidden sm:inline">Re-sync</span>
+          </Button>
+          
+          {/* Sync Categories Button - Creates/updates service_categories table */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="glass-card border-border/50"
+            onClick={handleSyncCategories}
+            disabled={isSyncingCategories || services.length === 0}
+          >
+            {isSyncingCategories ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Layers className="w-4 h-4 mr-2" />
+            )}
+            <span className="hidden sm:inline">Sync Categories</span>
           </Button>
 
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>

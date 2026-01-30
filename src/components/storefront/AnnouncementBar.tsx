@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { X, Megaphone, ExternalLink } from 'lucide-react';
+import { X, Megaphone, ExternalLink, Sparkles, Gift, Bell, Info, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface AnnouncementBarProps {
+  title?: string;
   text?: string;
   linkText?: string;
   linkUrl?: string;
@@ -10,9 +11,20 @@ interface AnnouncementBarProps {
   backgroundColor?: string;
   textColor?: string;
   enabled?: boolean;
+  icon?: 'megaphone' | 'sparkles' | 'gift' | 'bell' | 'info' | 'star';
 }
 
+const ICON_MAP = {
+  megaphone: Megaphone,
+  sparkles: Sparkles,
+  gift: Gift,
+  bell: Bell,
+  info: Info,
+  star: Star,
+};
+
 export const AnnouncementBar = ({
+  title,
   text,
   linkText,
   linkUrl,
@@ -20,6 +32,7 @@ export const AnnouncementBar = ({
   backgroundColor = '#6366F1',
   textColor = '#FFFFFF',
   enabled = true,
+  icon = 'megaphone',
 }: AnnouncementBarProps) => {
   const [dismissed, setDismissed] = useState(false);
 
@@ -37,9 +50,12 @@ export const AnnouncementBar = ({
   // Use linkUrl or fallback to legacy link field
   const finalLinkUrl = linkUrl || link;
 
-  if (!enabled || dismissed || !text) {
+  // Must have enabled true AND either title or text to render
+  if (!enabled || dismissed || (!text && !title)) {
     return null;
   }
+
+  const IconComponent = ICON_MAP[icon] || Megaphone;
 
   return (
     <div 
@@ -47,8 +63,12 @@ export const AnnouncementBar = ({
       style={{ backgroundColor, color: textColor }}
     >
       <div className="container mx-auto flex items-center justify-center gap-2 flex-wrap">
-        <Megaphone className="w-4 h-4 shrink-0" />
-        <span>{text}</span>
+        <IconComponent className="w-4 h-4 shrink-0" />
+        {title && (
+          <span className="font-bold">{title}</span>
+        )}
+        {title && text && <span className="opacity-80">—</span>}
+        {text && <span>{text}</span>}
         {finalLinkUrl && (
           <a 
             href={finalLinkUrl}

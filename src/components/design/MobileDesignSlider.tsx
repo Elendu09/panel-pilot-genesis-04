@@ -88,6 +88,9 @@ export function MobileDesignSlider({
   const lastSwipeTime = useRef(0);
   const SWIPE_DEBOUNCE_MS = 250;
 
+  // Light mode styling helpers
+  const isLight = previewThemeMode === 'light';
+
   const devices = deviceMode === 'mobileOnly'
     ? ([{ key: 'mobile' as const, icon: Smartphone, label: 'Mobile' }] as const)
     : ([
@@ -125,18 +128,33 @@ export function MobileDesignSlider({
   const currentSection = sections[currentSectionIndex];
 
   return (
-    <div className="flex flex-col h-screen bg-slate-950 overflow-hidden">
-      {/* Top Bar - Enhanced styling with cleaner contrast */}
-      <div className="flex items-center justify-between px-3 py-2.5 bg-slate-900 border-b border-slate-700/50">
+    <div className={cn(
+      "flex flex-col h-screen overflow-hidden transition-colors duration-300",
+      isLight ? "bg-white" : "bg-slate-950"
+    )}>
+      {/* Top Bar - Enhanced styling with light/dark mode support */}
+      <div className={cn(
+        "flex items-center justify-between px-3 py-2.5 border-b transition-colors duration-300",
+        isLight 
+          ? "bg-slate-50 border-slate-200" 
+          : "bg-slate-900 border-slate-700/50"
+      )}>
         {/* View Mode Toggle - Pill with stronger contrast */}
-        <div className="flex items-center gap-0.5 p-0.5 bg-slate-800 rounded-full border border-slate-700/50">
+        <div className={cn(
+          "flex items-center gap-0.5 p-0.5 rounded-full border transition-colors duration-300",
+          isLight
+            ? "bg-slate-100 border-slate-200"
+            : "bg-slate-800 border-slate-700/50"
+        )}>
           <button
             onClick={() => setViewMode('preview')}
             className={cn(
               "px-3.5 py-1.5 rounded-full text-xs font-medium transition-all duration-200",
               viewMode === 'preview' 
                 ? "bg-primary text-primary-foreground shadow-md" 
-                : "text-slate-400 hover:text-slate-200"
+                : isLight
+                  ? "text-slate-600 hover:text-slate-800"
+                  : "text-slate-400 hover:text-slate-200"
             )}
           >
             Preview
@@ -147,7 +165,9 @@ export function MobileDesignSlider({
               "px-3.5 py-1.5 rounded-full text-xs font-medium transition-all duration-200",
               viewMode === 'controls' 
                 ? "bg-primary text-primary-foreground shadow-md" 
-                : "text-slate-400 hover:text-slate-200"
+                : isLight
+                  ? "text-slate-600 hover:text-slate-800"
+                  : "text-slate-400 hover:text-slate-200"
             )}
           >
             Controls
@@ -180,7 +200,9 @@ export function MobileDesignSlider({
                       "p-1 rounded-lg transition-all",
                       currentPreviewIndex === idx
                         ? "bg-primary/20 text-primary"
-                        : "text-white/40 hover:text-white/60"
+                        : isLight
+                          ? "text-slate-400 hover:text-slate-600"
+                          : "text-white/40 hover:text-white/60"
                     )}
                   >
                     <Icon className="w-3.5 h-3.5" />
@@ -202,11 +224,21 @@ export function MobileDesignSlider({
 
         {/* Section info - Only show in controls mode with Presets badge styling */}
         {viewMode === 'controls' && (
-          <div className="flex items-center gap-2 px-2 py-1 bg-slate-800/60 rounded-lg border border-slate-700/30">
+          <div className={cn(
+            "flex items-center gap-2 px-2 py-1 rounded-lg border transition-colors duration-300",
+            isLight
+              ? "bg-slate-100/60 border-slate-200/30"
+              : "bg-slate-800/60 border-slate-700/30"
+          )}>
             <div className={cn("p-1 rounded-lg bg-gradient-to-br", currentSection.color)}>
               <currentSection.icon className="w-3 h-3 text-white" />
             </div>
-            <span className="text-xs font-medium text-slate-200">{currentSection.title}</span>
+            <span className={cn(
+              "text-xs font-medium transition-colors duration-300",
+              isLight ? "text-slate-700" : "text-slate-200"
+            )}>
+              {currentSection.title}
+            </span>
           </div>
         )}
 
@@ -253,7 +285,10 @@ export function MobileDesignSlider({
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.2 }}
-            className="flex-1 overflow-hidden relative"
+            className={cn(
+              "flex-1 overflow-hidden relative transition-colors duration-300",
+              isLight ? "bg-slate-100" : "bg-slate-950"
+            )}
             drag={deviceMode === 'mobileOnly' ? false : 'x'}
             dragConstraints={{ left: 0, right: 0 }}
             dragElastic={0.1}
@@ -274,8 +309,10 @@ export function MobileDesignSlider({
               >
                 <div 
                   className={cn(
-                    "rounded-xl overflow-hidden shadow-2xl ring-1 ring-white/10 transition-all",
-                    previewThemeMode === 'dark' ? 'bg-slate-900' : 'bg-white',
+                    "rounded-xl overflow-hidden shadow-2xl ring-1 transition-all",
+                    isLight 
+                      ? 'bg-white ring-slate-200' 
+                      : 'bg-slate-900 ring-white/10',
                     previewDevice === 'mobile' && "w-full max-w-[320px]",
                     previewDevice === 'tablet' && "w-full max-w-[480px]",
                     previewDevice === 'desktop' && "w-full max-w-[900px]"
@@ -300,7 +337,9 @@ export function MobileDesignSlider({
                     key={idx}
                     className={cn(
                       "w-1.5 h-1.5 rounded-full transition-all",
-                      currentPreviewIndex === idx ? "bg-primary w-3" : "bg-white/30"
+                      currentPreviewIndex === idx 
+                        ? "bg-primary w-3" 
+                        : isLight ? "bg-slate-300" : "bg-white/30"
                     )}
                   />
                 ))}
@@ -314,26 +353,57 @@ export function MobileDesignSlider({
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 20 }}
             transition={{ duration: 0.2 }}
-            className="flex-1 flex flex-col overflow-hidden"
+            className={cn(
+              "flex-1 flex flex-col overflow-hidden transition-colors duration-300",
+              isLight ? "bg-white" : "bg-slate-950"
+            )}
           >
-            {/* Section Navigation - Enhanced with cleaner background */}
-            <div className="flex items-center justify-between px-3 py-2.5 bg-slate-900 border-b border-slate-700/50">
+            {/* Section Navigation - Enhanced with light/dark mode */}
+            <div className={cn(
+              "flex items-center justify-between px-3 py-2.5 border-b transition-colors duration-300",
+              isLight
+                ? "bg-slate-50 border-slate-200"
+                : "bg-slate-900 border-slate-700/50"
+            )}>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+                className={cn(
+                  "h-8 w-8 transition-colors",
+                  isLight
+                    ? "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+                    : "text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+                )}
                 onClick={() => handleSectionSwipe('right')}
                 disabled={currentSectionIndex === 0}
               >
                 <ChevronLeft className="w-4 h-4" />
               </Button>
               
-              <div className="flex items-center gap-2.5 px-3 py-1.5 bg-slate-800 rounded-full border border-slate-700/50">
+              <div className={cn(
+                "flex items-center gap-2.5 px-3 py-1.5 rounded-full border transition-colors duration-300",
+                isLight
+                  ? "bg-slate-100 border-slate-200"
+                  : "bg-slate-800 border-slate-700/50"
+              )}>
                 <div className={cn("p-1.5 rounded-lg bg-gradient-to-br", currentSection.color)}>
                   <currentSection.icon className="w-4 h-4 text-white" />
                 </div>
-                <span className="text-sm font-medium text-slate-200">{currentSection.title}</span>
-                <Badge variant="secondary" className="text-[10px] px-2 py-0.5 bg-slate-700 text-slate-300 border border-slate-600">
+                <span className={cn(
+                  "text-sm font-medium transition-colors duration-300",
+                  isLight ? "text-slate-700" : "text-slate-200"
+                )}>
+                  {currentSection.title}
+                </span>
+                <Badge 
+                  variant="secondary" 
+                  className={cn(
+                    "text-[10px] px-2 py-0.5 border transition-colors duration-300",
+                    isLight
+                      ? "bg-slate-200 text-slate-600 border-slate-300"
+                      : "bg-slate-700 text-slate-300 border-slate-600"
+                  )}
+                >
                   {currentSectionIndex + 1}/{sections.length}
                 </Badge>
               </div>
@@ -341,7 +411,12 @@ export function MobileDesignSlider({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+                className={cn(
+                  "h-8 w-8 transition-colors",
+                  isLight
+                    ? "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+                    : "text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+                )}
                 onClick={() => handleSectionSwipe('left')}
                 disabled={currentSectionIndex === sections.length - 1}
               >
@@ -350,21 +425,31 @@ export function MobileDesignSlider({
             </div>
 
             {/* Section dots */}
-            <div className="flex justify-center gap-1 py-2 px-3 overflow-x-auto bg-slate-900/30">
+            <div className={cn(
+              "flex justify-center gap-1 py-2 px-3 overflow-x-auto transition-colors duration-300",
+              isLight ? "bg-slate-50/50" : "bg-slate-900/30"
+            )}>
               {sections.map((section, idx) => (
                 <button
                   key={section.id}
                   onClick={() => setCurrentSectionIndex(idx)}
                   className={cn(
                     "w-2 h-2 rounded-full transition-all flex-shrink-0",
-                    currentSectionIndex === idx ? "bg-primary w-4" : "bg-white/20 hover:bg-white/40"
+                    currentSectionIndex === idx 
+                      ? "bg-primary w-4" 
+                      : isLight 
+                        ? "bg-slate-300 hover:bg-slate-400" 
+                        : "bg-white/20 hover:bg-white/40"
                   )}
                 />
               ))}
             </div>
 
             {/* Section Content - Full Height */}
-            <ScrollArea className="flex-1">
+            <ScrollArea className={cn(
+              "flex-1 transition-colors duration-300",
+              isLight ? "bg-slate-50" : "bg-slate-950"
+            )}>
               <motion.div
                 drag="x"
                 dragConstraints={{ left: 0, right: 0 }}
@@ -381,7 +466,10 @@ export function MobileDesignSlider({
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -20 }}
                     transition={{ duration: 0.1 }}
-                    className="p-4"
+                    className={cn(
+                      "p-4 transition-colors duration-300",
+                      isLight ? "text-slate-800" : "text-slate-200"
+                    )}
                     style={{ willChange: 'transform, opacity' }}
                   >
                     {renderSection(currentSection.id)}
@@ -395,9 +483,19 @@ export function MobileDesignSlider({
 
       {/* Unsaved changes indicator - Always visible at bottom */}
       {hasUnsavedChanges && (
-        <div className="flex items-center justify-center gap-2 py-2 bg-amber-500/10 border-t border-amber-500/20">
+        <div className={cn(
+          "flex items-center justify-center gap-2 py-2 border-t transition-colors duration-300",
+          isLight
+            ? "bg-amber-50 border-amber-200"
+            : "bg-amber-500/10 border-amber-500/20"
+        )}>
           <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-          <span className="text-xs text-amber-400">Unsaved changes</span>
+          <span className={cn(
+            "text-xs transition-colors duration-300",
+            isLight ? "text-amber-700" : "text-amber-400"
+          )}>
+            Unsaved changes
+          </span>
         </div>
       )}
     </div>

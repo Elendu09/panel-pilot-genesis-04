@@ -231,31 +231,29 @@ export function useUnifiedServices({ panelId, enabled = true }: UseUnifiedServic
   }, [services]);
 
   // Categories with their services attached (ordered by position)
+  // ALWAYS builds from services first to ensure 70+ categories are displayed
   const categoriesWithServices = useMemo(() => {
-    // First, use database categories if available
-    if (categories.length > 0) {
-      return categories.map(cat => ({
-        ...cat,
-        services: servicesByCategory[cat.slug] || [],
-      }));
-    }
-
-    // Fallback: build categories from services
+    // Build category map from services directly (reliable method)
     const catMap = new Map<string, ServiceCategory & { services: UnifiedService[] }>();
     
     services.forEach(svc => {
-      const slug = svc.category || 'other';
+      // Normalize category slug to lowercase for consistent matching
+      const slug = (svc.category || 'other').toLowerCase();
+      const iconData = SOCIAL_ICONS_MAP[slug] || SOCIAL_ICONS_MAP.other;
+      
       if (!catMap.has(slug)) {
-        const iconData = SOCIAL_ICONS_MAP[slug] || SOCIAL_ICONS_MAP.other;
+        // Check if we have DB category for ordering
+        const dbCat = categories.find(c => c.slug.toLowerCase() === slug);
+        
         catMap.set(slug, {
-          id: slug,
+          id: dbCat?.id || slug,
           panelId: panelId || '',
-          name: iconData.label || slug.charAt(0).toUpperCase() + slug.slice(1),
+          name: dbCat?.name || iconData.label || slug.charAt(0).toUpperCase() + slug.slice(1),
           slug,
-          iconKey: slug,
-          color: iconData.color || '#6B7280',
-          position: catMap.size,
-          isActive: true,
+          iconKey: dbCat?.iconKey || slug,
+          color: dbCat?.color || iconData.color || '#6B7280',
+          position: dbCat?.position ?? catMap.size,
+          isActive: dbCat?.isActive ?? true,
           serviceCount: 0,
           services: [],
         });
@@ -264,8 +262,22 @@ export function useUnifiedServices({ panelId, enabled = true }: UseUnifiedServic
       catMap.get(slug)!.serviceCount++;
     });
 
-    return Array.from(catMap.values()).sort((a, b) => b.serviceCount - a.serviceCount);
-  }, [categories, services, servicesByCategory, panelId]);
+    // Sort by: DB position first (if available), then by service count
+    return Array.from(catMap.values()).sort((a, b) => {
+      // Categories with DB position come first, sorted by position
+      const aHasPos = categories.some(c => c.slug.toLowerCase() === a.slug.toLowerCase());
+      const bHasPos = categories.some(c => c.slug.toLowerCase() === b.slug.toLowerCase());
+      
+      if (aHasPos && bHasPos) {
+        return a.position - b.position;
+      }
+      if (aHasPos) return -1;
+      if (bHasPos) return 1;
+      
+      // Fallback to service count for categories without DB position
+      return b.serviceCount - a.serviceCount;
+    });
+  }, [categories, services, panelId]);
 
   // Update a single category's position
   const updateCategoryOrder = useCallback(async (categoryId: string, newPosition: number) => {
