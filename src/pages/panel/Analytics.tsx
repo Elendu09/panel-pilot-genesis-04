@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { TabsContent } from "@/components/ui/tabs";
 import { 
   BarChart, 
   Bar, 
@@ -23,8 +24,7 @@ import {
   ShoppingCart, 
   Loader2,
   CalendarIcon,
-  Pencil,
-  ArrowRight
+  Percent
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
@@ -51,12 +51,15 @@ import {
   RetentionCard,
   InsightsCard,
   CompactStatCard,
+  TopStatCard,
+  AnalyticsTabs,
 } from "@/components/analytics";
 
 const Analytics = () => {
   const { profile } = useAuth();
   const { panel } = usePanel();
   const [dateRange, setDateRange] = useState("30d");
+  const [activeTab, setActiveTab] = useState("overview");
   const [loading, setLoading] = useState(true);
   
   // Custom date range state
@@ -416,10 +419,10 @@ const Analytics = () => {
   };
 
   const dateRanges = [
-    { value: "7d", label: "7D" },
-    { value: "30d", label: "30D" },
-    { value: "90d", label: "90D" },
-    { value: "1y", label: "1Y" },
+    { value: "7d", label: "7 Days" },
+    { value: "30d", label: "30 Days" },
+    { value: "90d", label: "90 Days" },
+    { value: "1y", label: "1 Year" },
     { value: "custom", label: "Custom" },
   ];
   
@@ -442,24 +445,24 @@ const Analytics = () => {
 
   return (
     <div className="space-y-6 overflow-x-hidden">
-      {/* Header Section - Zentra Style */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <motion.h1 
+      {/* Personalized Greeting Header */}
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-2xl font-bold text-foreground"
+            className="space-y-1"
           >
-            Overview
-          </motion.h1>
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <Pencil className="h-4 w-4 text-muted-foreground" />
-          </Button>
-        </div>
-        
-        {/* Date Range Selector - Zentra Style */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-          <div className="flex items-center gap-1 bg-background/60 backdrop-blur-sm border border-border/50 rounded-lg p-1">
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground flex items-center gap-2">
+              Hello, {firstName} <span className="animate-pulse">👋</span>
+            </h1>
+            <p className="text-muted-foreground text-sm md:text-base">
+              Here's what's happening with your panel today
+            </p>
+          </motion.div>
+          
+          {/* Time Period Selector - Pill Style */}
+          <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1 overflow-x-auto">
             {dateRanges.map((range) => (
               range.value === "custom" ? (
                 <Popover key={range.value} open={showCustomPicker} onOpenChange={setShowCustomPicker}>
@@ -467,7 +470,10 @@ const Analytics = () => {
                     <Button
                       variant={dateRange === "custom" ? "default" : "ghost"}
                       size="sm"
-                      className={cn("h-8", dateRange === "custom" ? "bg-primary shadow-sm" : "")}
+                      className={cn(
+                        "h-8 whitespace-nowrap flex-shrink-0",
+                        dateRange === "custom" ? "bg-primary shadow-sm" : ""
+                      )}
                     >
                       <CalendarIcon className="w-4 h-4 mr-1" />
                       {dateRange === "custom" && customStartDate && customEndDate
@@ -520,7 +526,10 @@ const Analytics = () => {
                   variant={dateRange === range.value ? "default" : "ghost"}
                   size="sm"
                   onClick={() => setDateRange(range.value)}
-                  className={cn("h-8", dateRange === range.value ? "bg-primary shadow-sm" : "")}
+                  className={cn(
+                    "h-8 whitespace-nowrap flex-shrink-0",
+                    dateRange === range.value ? "bg-primary shadow-sm" : ""
+                  )}
                 >
                   {range.label}
                 </Button>
@@ -528,7 +537,55 @@ const Analytics = () => {
             ))}
           </div>
         </div>
+        
+        {/* Sub-Tabs: Overview / Payments / Customers */}
+        <AnalyticsTabs activeTab={activeTab} onTabChange={setActiveTab} />
       </div>
+
+      {/* Top Stat Cards Row - 4 gradient cards */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="grid grid-cols-2 lg:grid-cols-4 gap-4"
+      >
+        <TopStatCard
+          title="Total Revenue"
+          value={formatCurrency(stats.totalRevenue)}
+          change={changes.revenue}
+          icon={<DollarSign className="w-6 h-6" />}
+          iconBg="bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/50 dark:to-blue-800/30"
+          iconColor="text-blue-600 dark:text-blue-400"
+          tooltip="Total revenue from completed orders"
+        />
+        <TopStatCard
+          title="Total Orders"
+          value={formatCompactNumber(stats.totalOrders)}
+          change={changes.orders}
+          icon={<ShoppingCart className="w-6 h-6" />}
+          iconBg="bg-gradient-to-br from-pink-100 to-pink-200 dark:from-pink-900/50 dark:to-pink-800/30"
+          iconColor="text-pink-600 dark:text-pink-400"
+          tooltip="Total orders placed in this period"
+        />
+        <TopStatCard
+          title="Active Users"
+          value={formatCompactNumber(stats.activeUsers)}
+          change={changes.users}
+          icon={<Users className="w-6 h-6" />}
+          iconBg="bg-gradient-to-br from-emerald-100 to-emerald-200 dark:from-emerald-900/50 dark:to-emerald-800/30"
+          iconColor="text-emerald-600 dark:text-emerald-400"
+          tooltip="Number of active customers"
+        />
+        <TopStatCard
+          title="Conversion Rate"
+          value={`${stats.conversionRate.toFixed(0)}%`}
+          change={{ value: '+0%', trend: 'neutral' }}
+          icon={<Percent className="w-6 h-6" />}
+          iconBg="bg-gradient-to-br from-orange-100 to-orange-200 dark:from-orange-900/50 dark:to-orange-800/30"
+          iconColor="text-orange-600 dark:text-orange-400"
+          tooltip="Percentage of completed orders"
+        />
+      </motion.div>
 
       {/* Main Dashboard Grid - Zentra Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -579,7 +636,7 @@ const Analytics = () => {
           sparklineColor="hsl(217, 91%, 60%)"
         />
         
-        {/* Insights Card - Spans 1 column on md, rows on lg */}
+        {/* Insights Card */}
         <InsightsCard insights={insightsData} />
       </div>
 

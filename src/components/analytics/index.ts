@@ -5,3 +5,5 @@ export { InsightsCard } from './InsightsCard';
 export { CompactStatCard } from './CompactStatCard';
 export { MiniSparkline } from './MiniSparkline';
 export { ComparisonDatePicker } from './ComparisonDatePicker';
+export { TopStatCard } from './TopStatCard';
+export { AnalyticsTabs } from './AnalyticsTabs';
