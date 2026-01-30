@@ -1,249 +1,363 @@
 
 
-# Analytics Dashboard Enhancement: Zentra + Kanban Hybrid UI
+# Analytics & Payment Management Enhancement Plan
 
-## Issues Identified
+## Overview
 
-Based on the current implementation and the uploaded mobile screenshot:
-
-### 1. Mobile Text Display Problem (Critical)
-The `PaymentsFunnelCard` stage headers are running together on mobile:
-- **Current**: "ProcessingSuccessful Attention Completed" all merged
-- **Cause**: Using `grid-cols-5` with no minimum width, causing text to overlap
-- **Solution**: Implement responsive layout - horizontal scroll on mobile or vertical kanban-style cards
-
-### 2. Tab/Time Period Functionality
-- Time period pills (7D, 30D, 90D, 1Y, Custom) **do work** - they update `dateRange` state which triggers data fetch
-- Custom date picker **works** - opens popover with dual calendars
-- Section tabs (Overview/Payments/Customers) **are implemented but unused** - `activeTab` state exists but doesn't filter content
-
-### 3. Visual Enhancement Needed
-- Combine Zentra analytics style with Kanban visual elements
-- Add glassmorphic effects per project memory
-- Improve card hierarchy and visual appeal
+This plan addresses three major enhancement areas:
+1. **Analytics Page**: Add enhanced shimmer loading states, glassmorphic top cards, real retention data, FAQ tooltips, Fast Order analytics (replacing authentication drop-off), and comprehensive tenant-level analytics
+2. **Payment Management Page**: Restructure into two clear tabs (Payment Methods + Transactions/Analytics) with payment analytics overview
+3. **Overall Styling**: Improve text, padding, graph alignment, and mobile responsiveness across all analytics cards
 
 ---
 
-## Implementation Plan
+## Part 1: Analytics Page Enhancements
 
-### Phase 1: Fix Mobile Layout + Kanban-Style Funnel
+### Issue 1: Loading State Shows Basic Spinner
 
-**Transform PaymentsFunnelCard into a Kanban-hybrid layout:**
+**Current**: Simple `<Loader2>` spinner during data fetch
+**Target**: Enhanced shimmer skeleton view matching card layouts
+
+**Create new component: `src/components/analytics/AnalyticsSkeleton.tsx`**
+
+A comprehensive skeleton loader that:
+- Mirrors the actual dashboard layout (4 top stat cards, funnel, volume card, etc.)
+- Uses themed shimmer effect (`bg-primary/15` with pulse animation)
+- Maintains glassmorphic card styling during load
+- Includes animated shimmer overlay for visual polish
 
 ```text
-Desktop (5-column grid):
-┌─────────┬─────────┬─────────┬─────────┬─────────┐
-│Initiated│Authorized│Successful│Attention│Completed│
-│  65.2K  │  54.8K   │  48.6K   │  38.3K  │  32.9K  │
-│ ███████ │ ██████   │ █████    │ ████    │ ███     │
-└─────────┴─────────┴─────────┴─────────┴─────────┘
-
-Mobile (Kanban cards - horizontally scrollable):
-┌──────────┐  ┌──────────┐  ┌──────────┐
-│ Initiated│  │Authorized│  │Successful│ →
-│   65.2K  │  │  54.8K   │  │  48.6K   │
-│  Orders  │  │  -16%    │  │   -11%   │
-│ ████████ │  │ ███████  │  │ ██████   │
-└──────────┘  └──────────┘  └──────────┘
+Layout during loading:
+┌────────┬────────┬────────┬────────┐
+│ Skel.  │ Skel.  │ Skel.  │ Skel.  │  ← TopStatCard skeletons
+├────────┴────────┴────────┼────────┤
+│     Funnel Skeleton      │ Volume │
+│  ███ ███ ███ ███ ███    │ Skel.  │
+├────────┬────────┬────────┼────────┤
+│Retention│Transact│Customers│Insights│
+│ Skel.  │ Skel.  │ Skel.  │ Skel.  │
+└────────┴────────┴────────┴────────┘
 ```
 
-**Key changes to PaymentsFunnelCard.tsx:**
-1. Mobile: Horizontal scroll with individual Kanban cards
-2. Add proper spacing and min-width for each stage
-3. Visual connectors between stages (arrow indicators)
-4. Status badges with color coding
+### Issue 2: TopStatCard Needs More Glassmorphic Vibes
 
-### Phase 2: Activate Section Tabs
+**Current**: Basic gradient icon backgrounds
+**Target**: Full glassmorphic effect with frosted glass, neon glows, and enhanced hover states
 
-**Make Overview/Payments/Customers tabs actually filter content:**
+**Enhance `src/components/analytics/TopStatCard.tsx`**:
+- Add `backdrop-blur-xl` for frosted glass effect
+- Add subtle gradient border using `ring-1 ring-primary/10`
+- Add animated gradient glow on hover
+- Improve icon container with inner shadow and glow
+- Add subtle mesh gradient background overlay
 
-| Tab | Content Shown |
-|-----|--------------|
-| **Overview** | All cards (current default view) |
-| **Payments** | Funnel, Gross Volume, Transactions, Insights |
-| **Customers** | Customers card, Customer Growth chart, Retention |
+### Issue 3: Retention Graph Uses Fake Data
 
-**Changes to Analytics.tsx:**
-- Wrap content sections in conditional rendering based on `activeTab`
-- Hide irrelevant cards when tab changes
+**Current** (Lines 277-290 in Analytics.tsx):
+```typescript
+// Simulate retention data based on current rate with some variance
+monthlyRetention.push({
+  month,
+  rate: Math.max(0, Math.min(100, retentionRate + (Math.random() - 0.5) * 20))
+});
+```
 
-### Phase 3: Enhanced Visual Styling
+**Target**: Real monthly retention calculated from orders data
 
-**Apply glassmorphic + Kanban hybrid design:**
+**Update retention calculation in `Analytics.tsx`**:
+1. Group orders by month
+2. Calculate unique buyers with repeat orders each month
+3. Derive actual retention rate: `(repeat_buyers / total_buyers) * 100`
 
-1. **Stat cards** - Add subtle glass effects and hover animations
-2. **Funnel stages** - Kanban column styling with:
-   - Frosted glass backgrounds
-   - Colored status badges
-   - Drop-off indicators between columns
-   - Gradient borders
-3. **Charts** - Add glass overlays and improved tooltips
+```typescript
+// Calculate REAL monthly retention from orders
+const monthlyOrderMap = new Map<string, Set<string>>();
+(orders || []).forEach(order => {
+  const monthKey = format(new Date(order.created_at), 'MMM');
+  if (!monthlyOrderMap.has(monthKey)) {
+    monthlyOrderMap.set(monthKey, new Set());
+  }
+  if (order.buyer_id) {
+    monthlyOrderMap.get(monthKey)!.add(order.buyer_id);
+  }
+});
 
-**Color scheme for Kanban stages:**
-| Stage | Color | Icon |
-|-------|-------|------|
-| Initiated | Blue-500 | FileText |
-| Authorized | Indigo-500 | CheckCircle |
-| Successful | Emerald-500 | CircleCheck |
-| Attention | Amber-500 | AlertCircle |
-| Completed | Green-600 | CheckCheck |
+// Calculate retention as repeat buyers / total buyers per month
+const monthlyRetention: { month: string; rate: number }[] = [];
+let prevBuyerSet = new Set<string>();
+monthlyOrderMap.forEach((buyerSet, month) => {
+  const repeatBuyers = [...buyerSet].filter(b => prevBuyerSet.has(b)).length;
+  const rate = prevBuyerSet.size > 0 ? (repeatBuyers / prevBuyerSet.size) * 100 : 0;
+  monthlyRetention.push({ month, rate });
+  prevBuyerSet = buyerSet;
+});
+```
 
-### Phase 4: Mobile Optimization
+### Issue 4: Add FAQ/Info Tooltips to Statistics
 
-**Responsive improvements:**
-1. Time period pills: Horizontal scroll on mobile
-2. TopStatCards: 2x2 grid on mobile (already done)
-3. Funnel: Kanban-style horizontal scroll
-4. Charts: Full-width with collapsible sections
+**Target**: Add contextual help tooltips explaining what each metric means
+
+**Update components with FAQ tooltips**:
+
+| Component | Tooltip Content |
+|-----------|----------------|
+| `PaymentsFunnelCard` | "Shows the journey of orders from initiation to completion. Drop-off indicates orders that didn't progress." |
+| `GrossVolumeCard` | "Total revenue before deductions. Net Revenue = Order Payments + Deposits - Refunds." |
+| `RetentionCard` | "Percentage of customers who made repeat orders within the selected period." |
+| `InsightsCard` | "AI-generated recommendations based on your performance trends." |
+| `CompactStatCard` (Transactions) | "Total number of financial transactions including deposits and order payments." |
+| `CompactStatCard` (Customers) | "Total registered customers on your panel." |
+
+**Implementation**: Add info icon with Tooltip component to each card header.
+
+### Issue 5: Replace Authentication Drop-off with Fast Order Analytics
+
+**Current**: PaymentsFunnelCard shows order status flow
+**Target**: Add dedicated Fast Order Analytics section
+
+**Create new component: `src/components/analytics/FastOrderAnalyticsCard.tsx`**
+
+Track Fast Order usage:
+1. **Visitor Engagement**: How many visitors start the fast order flow
+2. **Step Completion**: Network → Category → Service → Details → Payment completion rates
+3. **Conversion Rate**: Started vs completed fast orders
+4. **Payment Success**: Fast order payment completion rate
+5. **Growth Trend**: Is fast order usage increasing?
+
+**Data sources**:
+- Orders with `source = 'fast_order'` (add tracking field if not exists)
+- Calculate funnel: Visitors → Selections → Payment attempts → Completions
+
+**Visual design**:
+- Kanban-style step cards (similar to existing funnel)
+- Conversion percentage between steps
+- Growth indicator (↑ vs last period)
+- Mini trend sparkline
+
+### Issue 6: Comprehensive Tenant Analytics
+
+**Add additional tenant-level analytics sections**:
+
+| Metric | Description | Data Source |
+|--------|-------------|-------------|
+| **Service Performance** | Top 5 services by order count | `orders` grouped by `service_id` |
+| **Category Distribution** | Orders by category (pie chart) | `services.category` via orders |
+| **Peak Activity Hours** | Heatmap of order times | `orders.created_at` hour extraction |
+| **Customer Lifetime Value** | Average spend per customer | Sum of orders by buyer |
+| **Refund Rate** | Refunded/total orders | `orders.status = 'refunded'` |
+| **Average Order Value** | Revenue / order count | Calculated |
+| **Provider Performance** | Success rate by provider | `orders.provider_id` |
+
+**New component: `src/components/analytics/TenantMetricsGrid.tsx`**
+- Grid of compact metric cards
+- Collapsible on mobile
+- Export functionality
 
 ---
 
-## Technical Implementation
+## Part 2: Payment Management Restructure
 
-### 1. PaymentsFunnelCard.tsx - Kanban Hybrid
+### Current Structure (Complex 2-Tab with Many Sub-sections)
+- Tab A: Buyer Payment Methods (manual payments, gateway cards, search, categories)
+- Tab B: Billing & Deposits (UnifiedTransactionManager, analytics duplicated)
 
-```typescript
-// Mobile: Horizontal scroll with individual Kanban cards
-// Desktop: Enhanced grid with visual connectors
+### Target Structure (Clean 2-Tab)
 
-<div className="overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0">
-  <div className="flex md:grid md:grid-cols-5 gap-3 min-w-[600px] md:min-w-0">
-    {stages.map((stage, i) => (
-      <div 
-        key={stage.name}
-        className={cn(
-          "flex-shrink-0 w-28 md:w-auto rounded-xl p-3 md:p-4",
-          "bg-gradient-to-b from-card/80 to-card",
-          "border border-border/40 backdrop-blur-sm",
-          "hover:shadow-lg transition-all duration-300"
-        )}
-      >
-        {/* Stage header with color badge */}
-        <div className="flex items-center gap-2 mb-2">
-          <div className={cn("w-2 h-2 rounded-full", stageColors[i])} />
-          <p className="text-xs font-semibold text-foreground truncate">
-            {stage.name}
-          </p>
-        </div>
-        
-        {/* Count */}
-        <p className="text-lg md:text-xl font-bold text-foreground">
-          {formatCompactNumber(stage.count)}
-        </p>
-        <p className="text-[10px] text-muted-foreground">Orders</p>
-        
-        {/* Drop-off indicator */}
-        {i < stages.length - 1 && stage.dropOff > 0 && (
-          <Badge variant="destructive" className="mt-2 text-[10px]">
-            -{stage.dropOff.toFixed(0)}%
-          </Badge>
-        )}
-        
-        {/* Mini bar */}
-        <div className="mt-2 h-1.5 rounded-full bg-muted overflow-hidden">
-          <div 
-            className={cn("h-full rounded-full", barColors[i])}
-            style={{ width: `${stage.percentage}%` }}
-          />
-        </div>
-      </div>
-    ))}
-  </div>
-</div>
-
-{/* Arrow connectors on desktop */}
-<div className="hidden md:flex justify-between px-8 -mt-4 mb-4">
-  {[0, 1, 2, 3].map(i => (
-    <ArrowRight key={i} className="w-4 h-4 text-muted-foreground" />
-  ))}
-</div>
+```text
+┌──────────────────────────────────────────────────────────────┐
+│           PAYMENT ANALYTICS OVERVIEW (Top Banner)            │
+│  ┌─────────┬─────────┬─────────┬─────────┐                   │
+│  │ Revenue │Deposits │ Pending │ Methods │                   │
+│  └─────────┴─────────┴─────────┴─────────┘                   │
+├──────────────────────────────────────────────────────────────┤
+│  [Payment Methods]  [Transactions & History]                 │
+├──────────────────────────────────────────────────────────────┤
+│                                                              │
+│  TAB CONTENT                                                 │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
 ```
 
-### 2. Analytics.tsx - Tab Content Filtering
+### Tab 1: Payment Methods (Simplified)
 
-```typescript
-{/* Show based on activeTab */}
-{(activeTab === 'overview' || activeTab === 'payments') && (
-  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <PaymentsFunnelCard ... />
-    <GrossVolumeCard ... />
-  </div>
-)}
+**Purpose**: Enable/disable payment gateways for buyer deposits
 
-{(activeTab === 'overview' || activeTab === 'customers') && (
-  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-    <RetentionCard ... />
-    ...
-  </div>
-)}
-```
+**Content**:
+- Manual payment methods (bank transfers, etc.) - enable/disable only
+- Automated gateways grid - enable/disable with visual indicators
+- Simple toggle-focused UI (no configuration in main view)
+- "Configure" opens modal for API key entry
 
-### 3. Enhanced Glassmorphic Styling
+**Remove from this tab**:
+- Statistics by user
+- Recent transactions
+- Top depositors
 
-Add to cards:
-```css
-.kanban-stage {
-  background: linear-gradient(
-    to bottom,
-    hsl(var(--card) / 0.8),
-    hsl(var(--card))
-  );
-  backdrop-filter: blur(8px);
-  border: 1px solid hsl(var(--border) / 0.4);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-}
+### Tab 2: Transactions & Analytics
 
-.kanban-stage:hover {
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-  transform: translateY(-2px);
-}
-```
+**Purpose**: Full transaction management and analytics
+
+**Content**:
+1. **Top Stats Row** (4 cards):
+   - Total Deposits (all time)
+   - This Period Deposits
+   - Pending Approvals (count)
+   - Average Deposit Value
+
+2. **UnifiedTransactionManager** (enhanced):
+   - All transactions with filters
+   - Status badges (pending/completed/failed)
+   - Quick actions: Mark as Completed, Mark as Failed
+   - Link to Customer Management for balance adjustment
+   - Transaction details modal
+
+3. **Deposit Analytics**:
+   - Deposit trends chart (area chart)
+   - Payment method distribution (pie chart)
+   - Top depositors leaderboard
+   - Recent activity feed
+
+### Payment Analytics Overview Banner
+
+**New component: `src/components/analytics/PaymentOverviewBanner.tsx`**
+
+Always visible at top of Payment Management page:
+- 4 compact stat cards in a row
+- Real-time data from transactions table
+- Glassmorphic styling matching Analytics page
 
 ---
+
+## Part 3: Overall Styling Improvements
+
+### Text & Padding Adjustments
+
+**TopStatCard**:
+- Value: `text-2xl md:text-3xl lg:text-4xl` (responsive scaling)
+- Add `truncate` for long values
+- Reduce padding on mobile: `p-3 md:p-4`
+
+**CompactStatCard**:
+- Title: `text-xs md:text-sm` with `line-clamp-1`
+- Value: `text-lg md:text-xl` with automatic number formatting
+- Peak label: `text-[10px] md:text-xs`
+
+**PaymentsFunnelCard**:
+- Stage names: `text-[10px] md:text-xs` with `truncate`
+- Count values: `text-lg md:text-xl lg:text-2xl`
+- Badge text: `text-[9px] md:text-[10px]`
+
+### Graph/Chart Alignment in Cards
+
+**Ensure all charts have consistent container heights**:
+- Sparklines: `h-10 md:h-12`
+- Area charts: `h-[180px] md:h-[220px] lg:h-[280px]`
+- Bar charts: Same responsive heights
+- Add `aspect-ratio` where appropriate
+
+**Chart container standardization**:
+```typescript
+const chartContainerClass = "w-full min-h-[180px] md:min-h-[220px]";
+```
+
+### Mobile Responsiveness Enhancements
+
+**Grid adjustments**:
+```typescript
+// TopStatCards
+"grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4"
+
+// Main dashboard grid
+"grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-6"
+
+// Secondary metrics
+"grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4"
+```
+
+**Value formatting for mobile**:
+- Use `formatCompactNumber()` consistently
+- Large numbers: Show "1.2K" instead of "1,234" on mobile
+- Currency: Show "$1.2K" for values > $1000
+
+**Touch-friendly elements**:
+- Minimum tap target: `min-h-[44px]`
+- Tab buttons: `py-2.5 px-4` for comfortable touch
+- Card hover states only on non-touch devices: `@media (hover: hover)`
+
+---
+
+## Files to Create
+
+| File | Purpose |
+|------|---------|
+| `src/components/analytics/AnalyticsSkeleton.tsx` | Enhanced shimmer loading state |
+| `src/components/analytics/FastOrderAnalyticsCard.tsx` | Fast Order funnel analytics |
+| `src/components/analytics/TenantMetricsGrid.tsx` | Additional tenant metrics |
+| `src/components/analytics/PaymentOverviewBanner.tsx` | Payment page top stats |
 
 ## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/components/analytics/PaymentsFunnelCard.tsx` | Complete redesign with Kanban hybrid layout, mobile-responsive horizontal scroll, improved stage cards |
-| `src/pages/panel/Analytics.tsx` | Implement tab content filtering, improve header styling, add glass effects |
-| `src/components/analytics/AnalyticsTabs.tsx` | Enhance styling to match Kanban theme |
-| `src/components/analytics/TopStatCard.tsx` | Add glass effects and improved hover states |
-| `src/components/analytics/GrossVolumeCard.tsx` | Enhanced visual hierarchy |
-| `src/components/analytics/CompactStatCard.tsx` | Mobile text size improvements |
-| `src/components/analytics/InsightsCard.tsx` | Kanban-style card border and glow |
+| `src/pages/panel/Analytics.tsx` | Add skeleton loader, real retention data, FAQ tooltips, Fast Order analytics section |
+| `src/components/analytics/TopStatCard.tsx` | Enhanced glassmorphic styling |
+| `src/components/analytics/PaymentsFunnelCard.tsx` | Add FAQ tooltip, improve mobile text |
+| `src/components/analytics/GrossVolumeCard.tsx` | Add FAQ tooltip, responsive text |
+| `src/components/analytics/RetentionCard.tsx` | Add FAQ tooltip |
+| `src/components/analytics/InsightsCard.tsx` | Add FAQ tooltip |
+| `src/components/analytics/CompactStatCard.tsx` | Responsive text sizing |
+| `src/pages/panel/PaymentMethods.tsx` | Restructure to 2 tabs, add overview banner |
+| `src/components/billing/UnifiedTransactionManager.tsx` | Add quick actions, balance link |
+| `src/lib/analytics-utils.ts` | Add Fast Order funnel calculation helpers |
 
 ---
 
-## Mobile-Specific Fixes
+## Implementation Priority
 
-### Text Display Fix (PaymentsFunnelCard)
-**Problem**: `grid-cols-5` causes text overlap on small screens
-**Solution**:
-1. Use `flex` with `overflow-x-auto` on mobile
-2. Each stage card has `min-w-28` (112px) 
-3. Add horizontal scroll indicator
-4. Proper word wrapping with `text-xs` and `truncate`
+1. **Phase 1: Loading & Visual Polish**
+   - Create AnalyticsSkeleton component
+   - Enhance TopStatCard glassmorphic styling
+   - Add FAQ tooltips to all cards
 
-### Time Pills Scrolling
-Already has `overflow-x-auto` but add scroll snap:
-```css
-scroll-snap-type: x mandatory;
-scroll-snap-align: start;
+2. **Phase 2: Real Data & Fast Order**
+   - Fix retention calculation with real data
+   - Create FastOrderAnalyticsCard
+   - Add order tracking field for fast order source
+
+3. **Phase 3: Payment Management Restructure**
+   - Create PaymentOverviewBanner
+   - Restructure PaymentMethods to 2 clean tabs
+   - Enhance UnifiedTransactionManager
+
+4. **Phase 4: Mobile & Responsive**
+   - Apply responsive text classes throughout
+   - Test and fix chart alignment
+   - Optimize touch targets
+
+---
+
+## Technical Notes
+
+### Database Considerations
+
+**For Fast Order Analytics** - May need to add tracking:
+```sql
+-- If not already tracked, add source column to orders
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS order_source VARCHAR(50) DEFAULT 'standard';
+-- Values: 'standard', 'fast_order', 'api', 'bulk'
 ```
 
----
+### Real-time Updates
 
-## Summary of Improvements
+Existing Supabase subscriptions will auto-refresh analytics when:
+- New orders are placed
+- Transactions status changes
+- Customer balances update
 
-| Feature | Current | Enhanced |
-|---------|---------|----------|
-| Funnel Display | Grid overlapping on mobile | Kanban cards with horizontal scroll |
-| Tab Filtering | Tabs exist but don't filter | Each tab shows relevant content |
-| Visual Style | Basic cards | Glassmorphic + Kanban hybrid |
-| Mobile Text | Overlapping/unreadable | Proper sizing with truncation |
-| Stage Indicators | Simple bars | Color-coded badges + progress bars |
-| Interactivity | Static | Hover animations + transitions |
+### Performance
 
-This enhancement combines the data-focused Zentra style with Kanban-style visual organization, creating a high-impact analytics dashboard that works seamlessly on both desktop and mobile devices.
+- Use `useMemo` for expensive calculations
+- Debounce date range changes
+- Lazy load charts below the fold
+- Skeleton shows immediately (no loading delay perception)
 
