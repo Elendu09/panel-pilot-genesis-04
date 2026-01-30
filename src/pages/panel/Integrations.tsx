@@ -386,11 +386,12 @@ const serviceIntegrations: ServiceIntegration[] = [
     color: 'bg-[#F59E0B]', // Amber/orange
     category: 'other',
     fields: [
-      { type: 'input', name: 'text', label: 'Announcement Text', placeholder: 'Welcome to our panel! Check out our new services.' },
+      { type: 'input', name: 'title', label: 'Title (optional)', placeholder: '🎉 New Feature', helper: 'Short headline displayed prominently' },
+      { type: 'input', name: 'text', label: 'Description', placeholder: 'Welcome to our panel! Check out our new services.' },
       { type: 'input', name: 'linkText', label: 'Link Text (optional)', placeholder: 'Learn More' },
       { type: 'input', name: 'linkUrl', label: 'Link URL (optional)', placeholder: 'https://example.com/promo' },
-      { type: 'input', name: 'backgroundColor', label: 'Background Color', placeholder: '#6366F1' },
-      { type: 'input', name: 'textColor', label: 'Text Color', placeholder: '#FFFFFF' }
+      { type: 'input', name: 'backgroundColor', label: 'Background Color', placeholder: '#6366F1', helper: 'Use hex color like #6366F1' },
+      { type: 'input', name: 'textColor', label: 'Text Color', placeholder: '#FFFFFF', helper: 'Use hex color like #FFFFFF' }
     ]
   },
   {

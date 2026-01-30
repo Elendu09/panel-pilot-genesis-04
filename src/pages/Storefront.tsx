@@ -324,6 +324,7 @@ const Storefront = () => {
       {/* Announcement Bar - reads from panel_settings.integrations.announcements */}
       <AnnouncementBar 
         enabled={announcementConfig.enabled}
+        title={announcementConfig.title}
         text={announcementConfig.text}
         linkText={announcementConfig.linkText}
         linkUrl={announcementConfig.linkUrl}
