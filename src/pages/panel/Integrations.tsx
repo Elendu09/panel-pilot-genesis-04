@@ -381,13 +381,16 @@ const serviceIntegrations: ServiceIntegration[] = [
   {
     id: 'announcements',
     name: 'Announcements',
-    description: 'Show announcements bar',
+    description: 'Show announcements bar on storefront',
     icon: <AnnouncementsIcon className="w-5 h-5" />,
     color: 'bg-[#F59E0B]', // Amber/orange
     category: 'other',
     fields: [
-      { type: 'input', name: 'text', label: 'Announcement Text', placeholder: 'Welcome to our panel!' },
-      { type: 'input', name: 'link', label: 'Link (optional)', placeholder: 'https://...' }
+      { type: 'input', name: 'text', label: 'Announcement Text', placeholder: 'Welcome to our panel! Check out our new services.' },
+      { type: 'input', name: 'linkText', label: 'Link Text (optional)', placeholder: 'Learn More' },
+      { type: 'input', name: 'linkUrl', label: 'Link URL (optional)', placeholder: 'https://example.com/promo' },
+      { type: 'input', name: 'backgroundColor', label: 'Background Color', placeholder: '#6366F1' },
+      { type: 'input', name: 'textColor', label: 'Text Color', placeholder: '#FFFFFF' }
     ]
   },
   {

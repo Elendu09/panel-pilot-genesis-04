@@ -2419,7 +2419,7 @@ export default function DesignCustomization() {
 
         <div className="flex h-[calc(100vh-73px)]">
           {/* Left Panel - Settings */}
-          <div className="w-[420px] border-r border-border/50 overflow-y-auto bg-card/30 p-4 space-y-2">
+          <div className="w-[420px] min-w-[420px] flex-shrink-0 border-r border-border/50 overflow-y-auto bg-card/30 p-4 space-y-2">
             {sections.map((section) => (
               <Collapsible 
                 key={section.id} 
@@ -3443,7 +3443,7 @@ export default function DesignCustomization() {
           <div className={cn(
             "flex-1 flex flex-col min-h-[50vh] lg:min-h-0 transition-colors duration-300",
             previewThemeMode === 'light' 
-              ? "bg-gray-100" 
+              ? "bg-white border-l border-slate-200" 
               : "bg-[#0a0a12]"
           )}>
             {/* Preview Header */}

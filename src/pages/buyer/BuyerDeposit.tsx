@@ -814,7 +814,7 @@ const BuyerDeposit = () => {
                   <div className="divide-y divide-border/50">
                     {transactions.map((tx) => {
                       const isCompleted = tx.status === 'completed';
-                      const isPending = tx.status === 'pending';
+                      const isPending = tx.status === 'pending' || tx.status === 'pending_verification' || tx.status === 'processing';
                       const isFailed = tx.status === 'failed' || tx.status === 'cancelled';
                       
                       return (
@@ -861,7 +861,7 @@ const BuyerDeposit = () => {
                               isFailed && "bg-red-500/10 text-red-500 border-red-500/20"
                             )}
                           >
-                            {tx.status || 'pending'}
+                            {tx.status === 'pending_verification' ? 'Pending Verification' : (tx.status || 'pending')}
                           </Badge>
                         </div>
                       );
