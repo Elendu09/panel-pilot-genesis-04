@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { cn } from '@/lib/utils';
 
 interface MiniSparklineProps {
   data: number[];
@@ -6,6 +7,7 @@ interface MiniSparklineProps {
   height?: number;
   width?: number;
   showArea?: boolean;
+  className?: string;
 }
 
 export function MiniSparkline({ 
@@ -13,7 +15,8 @@ export function MiniSparkline({
   color = 'hsl(var(--primary))', 
   height = 40, 
   width = 80,
-  showArea = false 
+  showArea = false,
+  className
 }: MiniSparklineProps) {
   const { pathD, areaD, viewBox } = useMemo(() => {
     if (data.length === 0) return { pathD: '', areaD: '', viewBox: '0 0 100 40' };
@@ -51,7 +54,7 @@ export function MiniSparkline({
       width={width} 
       height={height} 
       viewBox="0 0 100 40" 
-      className="overflow-visible"
+      className={cn("overflow-visible", className)}
       preserveAspectRatio="none"
     >
       {showArea && (
