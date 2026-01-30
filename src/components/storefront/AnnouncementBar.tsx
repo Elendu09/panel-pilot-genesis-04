@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { X, Megaphone, ExternalLink, Sparkles, Gift, Bell, Info, Star } from 'lucide-react';
+import { X, Megaphone, ExternalLink, Sparkles, Gift, Bell, Info, Star, Zap, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface AnnouncementBarProps {
+  id?: string; // Unique ID for session storage dismiss key
   title?: string;
   text?: string;
   linkText?: string;
@@ -11,7 +12,7 @@ interface AnnouncementBarProps {
   backgroundColor?: string;
   textColor?: string;
   enabled?: boolean;
-  icon?: 'megaphone' | 'sparkles' | 'gift' | 'bell' | 'info' | 'star';
+  icon?: 'megaphone' | 'sparkles' | 'gift' | 'bell' | 'info' | 'star' | 'zap' | 'alert';
 }
 
 const ICON_MAP = {
@@ -21,9 +22,12 @@ const ICON_MAP = {
   bell: Bell,
   info: Info,
   star: Star,
+  zap: Zap,
+  alert: AlertTriangle,
 };
 
 export const AnnouncementBar = ({
+  id = 'default',
   title,
   text,
   linkText,
@@ -35,15 +39,16 @@ export const AnnouncementBar = ({
   icon = 'megaphone',
 }: AnnouncementBarProps) => {
   const [dismissed, setDismissed] = useState(false);
+  const storageKey = `announcementBar_${id}_dismissed`;
 
-  // Check sessionStorage on mount
+  // Check sessionStorage on mount with unique key per announcement
   useEffect(() => {
-    const isDismissed = sessionStorage.getItem('announcementBarDismissed') === 'true';
+    const isDismissed = sessionStorage.getItem(storageKey) === 'true';
     setDismissed(isDismissed);
-  }, []);
+  }, [storageKey]);
 
   const handleDismiss = () => {
-    sessionStorage.setItem('announcementBarDismissed', 'true');
+    sessionStorage.setItem(storageKey, 'true');
     setDismissed(true);
   };
 
@@ -63,18 +68,20 @@ export const AnnouncementBar = ({
       style={{ backgroundColor, color: textColor }}
     >
       <div className="container mx-auto flex items-center justify-center gap-2 flex-wrap">
-        <IconComponent className="w-4 h-4 shrink-0" />
+        <div className="p-1 rounded-full bg-white/20 shrink-0">
+          <IconComponent className="w-3.5 h-3.5" />
+        </div>
         {title && (
           <span className="font-bold">{title}</span>
         )}
-        {title && text && <span className="opacity-80">—</span>}
-        {text && <span>{text}</span>}
+        {title && text && <span className="opacity-60">—</span>}
+        {text && <span className="opacity-90">{text}</span>}
         {finalLinkUrl && (
           <a 
             href={finalLinkUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="underline underline-offset-2 hover:no-underline inline-flex items-center gap-1 font-semibold"
+            className="underline underline-offset-2 hover:no-underline inline-flex items-center gap-1 font-semibold ml-1"
           >
             {linkText || 'Learn More'}
             <ExternalLink className="w-3 h-3" />
@@ -83,10 +90,10 @@ export const AnnouncementBar = ({
       </div>
       <button
         onClick={handleDismiss}
-        className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-white/20 transition-colors"
+        className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-full hover:bg-white/20 transition-colors"
         aria-label="Dismiss announcement"
       >
-        <X className="w-4 h-4" />
+        <X className="w-3.5 h-3.5" />
       </button>
     </div>
   );

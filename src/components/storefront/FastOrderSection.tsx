@@ -39,6 +39,7 @@ import { Confetti } from '@/components/effects/Confetti';
 import { useCategoryFilters } from '@/hooks/useCategoryFilters';
 import { SpeedGauge } from '@/components/buyer/SpeedGauge';
 import { detectServiceType } from '@/lib/service-icon-detection';
+import { useAvailablePaymentGateways, AvailableGateway } from '@/hooks/useAvailablePaymentGateways';
 
 interface Service {
   id: string;
@@ -197,12 +198,9 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
   const [quantity, setQuantity] = useState(1000);
   const [isOrdering, setIsOrdering] = useState(false);
   
-  // Payment state
+  // Payment state - use available payment gateways hook for consistent behavior with deposits
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('stripe');
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
-  const [loadingPaymentMethods, setLoadingPaymentMethods] = useState(true);
-  const [noPaymentGateway, setNoPaymentGateway] = useState(false);
   
   // Order tracking state
   const [placedOrderId, setPlacedOrderId] = useState<string | null>(null);
@@ -227,76 +225,38 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
   // Track credential copy status - user must copy both to proceed
   const [credentialsCopied, setCredentialsCopied] = useState({ username: false, password: false });
 
-  // Fetch real payment methods from panel settings
-  useEffect(() => {
-    const fetchPaymentMethods = async () => {
-      if (!panelId) {
-        setLoadingPaymentMethods(false);
-        setNoPaymentGateway(true);
-        return;
-      }
-      
-      try {
-        const { data: panelData } = await supabase
-          .from('panels')
-          .select('settings')
-          .eq('id', panelId)
-          .single();
-        
-        const panelSettings = panelData?.settings as Record<string, any> || {};
-        const paymentSettings = panelSettings.payments || {};
-        const enabledMethods = paymentSettings.enabledMethods || [];
-        
-        if (enabledMethods.length > 0) {
-          // Dynamically map enabled methods to their display info
-          // Only include gateways that have actual configuration (API keys)
-          const mappedMethods = enabledMethods
-            .filter((em: any) => {
-              if (typeof em === 'string') {
-                // String entries are legacy - only include if they're manual or known to work
-                return em.startsWith('manual_') || em === 'manual_transfer';
-              }
-              // Object entries - must have enabled flag and either be manual or have credentials
-              return em.enabled !== false && (em.isManual || em.apiKey || em.secretKey || em.id?.startsWith('manual_'));
-            })
-            .map((em: any) => {
-              const id = typeof em === 'string' ? em : em.id;
-              const gatewayInfo = allPaymentGateways[id];
-              if (!gatewayInfo) {
-                // Create a generic entry for unknown gateways
-                return {
-                  id,
-                  name: id.charAt(0).toUpperCase() + id.slice(1).replace(/([A-Z])/g, ' $1').trim(),
-                  icon: CreditCard,
-                  color: "bg-gradient-to-br from-gray-500 to-gray-600",
-                  badge: "Instant"
-                };
-              }
-              return { id, ...gatewayInfo };
-            });
-          
-          if (mappedMethods.length > 0) {
-            setPaymentMethods(mappedMethods);
-            setNoPaymentGateway(false);
-            setSelectedPaymentMethod(mappedMethods[0].id);
-          } else {
-            setPaymentMethods([]);
-            setNoPaymentGateway(true);
-          }
-        } else {
-          setPaymentMethods([]);
-          setNoPaymentGateway(true);
-        }
-      } catch (error) {
-        console.error('Error fetching payment methods:', error);
-        setNoPaymentGateway(true);
-      } finally {
-        setLoadingPaymentMethods(false);
-      }
-    };
+  // Use unified payment gateways hook - includes manual payments and applies proper filtering
+  const { gateways: availableGateways, loading: loadingPaymentMethods } = useAvailablePaymentGateways({
+    panelId,
+  });
 
-    fetchPaymentMethods();
-  }, [panelId]);
+  // Map available gateways to payment method format for UI
+  const paymentMethods: PaymentMethod[] = useMemo(() => {
+    return availableGateways.map((gw: AvailableGateway) => {
+      const gatewayInfo = allPaymentGateways[gw.id];
+      if (gatewayInfo) {
+        return { id: gw.id, ...gatewayInfo };
+      }
+      // For manual methods or unknown gateways
+      const isManual = gw.id.startsWith('manual_') || gw.category === 'manual';
+      return {
+        id: gw.id,
+        name: gw.displayName || gw.id.charAt(0).toUpperCase() + gw.id.slice(1).replace(/([A-Z])/g, ' $1').trim(),
+        icon: isManual ? Wallet : CreditCard,
+        color: isManual ? 'bg-gradient-to-br from-emerald-500 to-teal-500' : 'bg-gradient-to-br from-gray-500 to-gray-600',
+        badge: isManual ? 'Manual' : 'Instant',
+      };
+    });
+  }, [availableGateways]);
+
+  const noPaymentGateway = !loadingPaymentMethods && paymentMethods.length === 0;
+
+  // Set default payment method when available
+  useEffect(() => {
+    if (paymentMethods.length > 0 && !paymentMethods.find(m => m.id === selectedPaymentMethod)) {
+      setSelectedPaymentMethod(paymentMethods[0].id);
+    }
+  }, [paymentMethods, selectedPaymentMethod]);
 
   // Use unified services for consistent category ordering across all pages
   const { 

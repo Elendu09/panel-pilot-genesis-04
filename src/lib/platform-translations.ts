@@ -176,6 +176,24 @@ export const platformTranslations = {
     'buyer.footer.aboutUs': 'About Us',
     'buyer.footer.faq': 'FAQ',
     
+    // About Us Page
+    'buyer.about.pageTitle': 'About Us',
+    'buyer.about.title': 'About',
+    'buyer.about.subtitle': 'Your trusted partner for social media growth',
+    'buyer.about.missionTitle': 'Our Mission',
+    'buyer.about.missionBody': 'We believe everyone deserves a strong online presence. That\'s why we provide reliable, affordable services backed by real support. Whether you\'re a small business, influencer, or agency, we\'re here to help you achieve your social media goals.',
+    'buyer.about.whyTitle': 'Why Choose Us?',
+    'buyer.about.bullet1': 'Instant Delivery',
+    'buyer.about.bullet1Desc': 'Orders start processing within minutes',
+    'buyer.about.bullet2': 'Secure & Safe',
+    'buyer.about.bullet2Desc': 'Your data and payments are protected',
+    'buyer.about.bullet3': '24/7 Support',
+    'buyer.about.bullet3Desc': 'Our team is always ready to help',
+    'buyer.about.ctaTitle': 'Ready to Get Started?',
+    'buyer.about.ctaSubtitle': 'Join thousands of satisfied customers today',
+    'buyer.about.signUpCta': 'Create Account',
+    'buyer.about.contactCta': 'Contact Us',
+    
     // Hero - trusted badge
     'buyer.hero.trustedBy': 'Trusted by 10,000+ customers',
     
