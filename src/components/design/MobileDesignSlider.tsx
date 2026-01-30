@@ -445,7 +445,7 @@ export function MobileDesignSlider({
               ))}
             </div>
 
-            {/* Section Content - Full Height */}
+            {/* Section Content - Full Height with proper theme class wrapper */}
             <ScrollArea className={cn(
               "flex-1 transition-colors duration-300",
               isLight ? "bg-slate-50" : "bg-slate-950"
@@ -460,6 +460,7 @@ export function MobileDesignSlider({
                 }}
               >
                 <AnimatePresence mode="wait">
+                  {/* Wrap section content in light/dark class for proper shadcn token switching */}
                   <motion.div
                     key={currentSection.id}
                     initial={{ opacity: 0, x: 20 }}
@@ -468,7 +469,9 @@ export function MobileDesignSlider({
                     transition={{ duration: 0.1 }}
                     className={cn(
                       "p-4 transition-colors duration-300",
-                      isLight ? "text-slate-800" : "text-slate-200"
+                      isLight ? "light text-slate-800" : "dark text-slate-200",
+                      // Apply explicit background for nested cards
+                      isLight ? "[&_.glass-card]:bg-white [&_.glass-card]:border-slate-200 [&_.bg-card]:bg-white [&_.bg-muted]:bg-slate-100" : ""
                     )}
                     style={{ willChange: 'transform, opacity' }}
                   >

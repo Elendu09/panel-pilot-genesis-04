@@ -305,11 +305,11 @@ export function useTenant(): TenantDetectionResult {
           }
         }
         
-        // Panel query selection - includes blog_enabled for navigation
+        // Panel query selection - includes blog_enabled and integrations for navigation and announcements
         const panelFields = `
           id, name, subdomain, custom_domain, theme_type, primary_color,
           secondary_color, logo_url, status, custom_branding, settings,
-          panel_settings (seo_title, seo_description, seo_keywords, maintenance_mode, maintenance_message, contact_info, social_links, blog_enabled)
+          panel_settings (seo_title, seo_description, seo_keywords, maintenance_mode, maintenance_message, contact_info, social_links, blog_enabled, integrations)
         `;
 
         // PRIORITY 0: Try full hostname as custom_domain first (for any custom domain)
@@ -322,7 +322,7 @@ export function useTenant(): TenantDetectionResult {
             .select(`
               id, name, subdomain, custom_domain, theme_type, primary_color,
               secondary_color, logo_url, status, custom_branding, settings,
-              panel_settings (seo_title, seo_description, seo_keywords, maintenance_mode, maintenance_message, contact_info, social_links, blog_enabled)
+              panel_settings (seo_title, seo_description, seo_keywords, maintenance_mode, maintenance_message, contact_info, social_links, blog_enabled, integrations)
             `)
             .eq('custom_domain', hostname)
             .in('status', ['active', 'pending'])
@@ -387,7 +387,8 @@ export function useTenant(): TenantDetectionResult {
                 maintenance_message,
                 contact_info,
                 social_links,
-                blog_enabled
+                blog_enabled,
+                integrations
               )
             `)
             .or(`custom_domain.eq.${hostname}`)
@@ -445,7 +446,8 @@ export function useTenant(): TenantDetectionResult {
                   maintenance_message,
                   contact_info,
                   social_links,
-                  blog_enabled
+                  blog_enabled,
+                  integrations
                 )
               `)
               .eq('id', domainData.panel_id)
@@ -485,7 +487,8 @@ export function useTenant(): TenantDetectionResult {
                 maintenance_message,
                 contact_info,
                 social_links,
-                blog_enabled
+                blog_enabled,
+                integrations
               )
             `)
             .eq('subdomain', subdomain)
@@ -529,7 +532,8 @@ export function useTenant(): TenantDetectionResult {
                   maintenance_message,
                   contact_info,
                   social_links,
-                  blog_enabled
+                  blog_enabled,
+                  integrations
                 )
               `)
               .eq('subdomain', extractedSubdomain)

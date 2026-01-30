@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { SOCIAL_ICONS_MAP } from "@/components/icons/SocialIcons";
+import { useUnifiedServices } from "@/hooks/useUnifiedServices";
 
 const BuyerPublicServices = () => {
   const { panelId, buyer } = useBuyerAuth();
@@ -57,33 +58,20 @@ const BuyerPublicServices = () => {
     setMounted(true);
   }, []);
 
-  // Fetch services for this panel
-  const { data: services = [], isLoading } = useQuery({
-    queryKey: ['public-services', panelId],
-    queryFn: async () => {
-      if (!panelId) return [];
-      
-      const { data, error } = await supabase
-        .from('services')
-        .select('*')
-        .eq('panel_id', panelId)
-        .eq('is_active', true)
-        .order('category')
-        .order('display_order');
+  // Use unified services hook for consistent category display across all pages
+  const { 
+    services = [], 
+    categoriesWithServices,
+    loading: isLoading 
+  } = useUnifiedServices({ panelId, enabled: !!panelId });
 
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!panelId,
-  });
-
-  // Auto-expand all categories on load
+  // Auto-expand first 3 categories on load
   useEffect(() => {
-    if (services.length > 0) {
-      const cats = [...new Set(services.map((s: any) => s.category))];
-      setExpandedCategories(new Set(cats.slice(0, 3))); // Expand first 3
+    if (categoriesWithServices.length > 0) {
+      const cats = categoriesWithServices.slice(0, 3).map(c => c.slug);
+      setExpandedCategories(new Set(cats));
     }
-  }, [services]);
+  }, [categoriesWithServices]);
 
   // Handle Fast Order URL parameters
   useEffect(() => {
@@ -111,16 +99,17 @@ const BuyerPublicServices = () => {
     }
   }, [services, searchParams, setSearchParams, t]);
 
-  // Get unique categories with counts and icons from SOCIAL_ICONS_MAP
+  // Get categories from unified hook - maintains consistency with New Order/Fast Order
   const categories = useMemo(() => {
-    const cats = [...new Set(services.map((s: any) => s.category).filter(Boolean))];
-    return cats.sort().map(cat => ({
-      id: cat,
-      name: cat,
-      count: services.filter((s: any) => s.category === cat).length,
-      ...SOCIAL_ICONS_MAP[cat.toLowerCase()] || SOCIAL_ICONS_MAP.other
+    return categoriesWithServices.map(cat => ({
+      id: cat.slug,
+      name: cat.name,
+      count: cat.serviceCount,
+      icon: SOCIAL_ICONS_MAP[cat.slug.toLowerCase()]?.icon || SOCIAL_ICONS_MAP.other.icon,
+      bgColor: SOCIAL_ICONS_MAP[cat.slug.toLowerCase()]?.bgColor || SOCIAL_ICONS_MAP.other.bgColor,
+      color: cat.color,
     }));
-  }, [services]);
+  }, [categoriesWithServices]);
 
   // Filter services
   const filteredServices = useMemo(() => {
