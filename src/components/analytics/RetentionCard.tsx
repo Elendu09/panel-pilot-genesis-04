@@ -1,7 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { MoreHorizontal } from 'lucide-react';
+import { MoreHorizontal, Info, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ResponsiveContainer, AreaChart, Area, XAxis, Tooltip } from 'recharts';
+import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface RetentionDataPoint {
   month: string;
@@ -15,18 +16,38 @@ interface RetentionCardProps {
 
 export function RetentionCard({ currentRate, data }: RetentionCardProps) {
   return (
-    <Card className="bg-card border-border/50">
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-lg font-semibold">Retention</CardTitle>
+    <Card className="bg-card/80 backdrop-blur-xl border-border/50 hover:shadow-lg transition-all duration-300 overflow-hidden relative group">
+      {/* Subtle gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-br from-pink-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+      
+      <CardHeader className="relative flex flex-row items-center justify-between pb-2">
         <div className="flex items-center gap-2">
-          <span className="text-2xl font-bold text-foreground">{currentRate.toFixed(0)}%</span>
-          <Button variant="ghost" size="icon" className="h-8 w-8">
+          <div className="p-1.5 rounded-lg bg-pink-500/10">
+            <Users className="w-4 h-4 text-pink-500" />
+          </div>
+          <CardTitle className="text-base md:text-lg font-semibold flex items-center gap-1.5">
+            Retention
+            <TooltipProvider>
+              <UITooltip>
+                <TooltipTrigger asChild>
+                  <Info className="w-3.5 h-3.5 text-muted-foreground/50 cursor-help hover:text-muted-foreground transition-colors" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs max-w-[200px]">Percentage of customers who made repeat orders within the selected period.</p>
+                </TooltipContent>
+              </UITooltip>
+            </TooltipProvider>
+          </CardTitle>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xl md:text-2xl font-bold text-foreground tabular-nums">{currentRate.toFixed(0)}%</span>
+          <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
             <MoreHorizontal className="h-4 w-4" />
           </Button>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="h-[120px] w-full">
+      <CardContent className="relative">
+        <div className="h-[100px] md:h-[120px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={data} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
               <defs>

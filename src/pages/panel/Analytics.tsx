@@ -53,6 +53,9 @@ import {
   CompactStatCard,
   TopStatCard,
   AnalyticsTabs,
+  AnalyticsSkeleton,
+  FastOrderAnalyticsCard,
+  TenantMetricsGrid,
 } from "@/components/analytics";
 
 const Analytics = () => {
@@ -436,11 +439,7 @@ const Analytics = () => {
   const firstName = profile?.full_name?.split(' ')[0] || 'there';
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
+    return <AnalyticsSkeleton />;
   }
 
   return (
