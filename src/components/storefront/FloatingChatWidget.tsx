@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, X, Send, Loader2, RotateCcw, Trash2 } from "lucide-react";
+import { MessageCircle, X, Send, Loader2, RotateCcw, Trash2, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/hooks/use-toast";
 
 interface FloatingChatWidgetProps {
   panelId?: string;
@@ -23,6 +24,13 @@ interface FloatingChatWidgetProps {
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
+}
+
+interface LiveChatMessage {
+  id: string;
+  content: string;
+  sender_type: 'visitor' | 'owner';
+  created_at: string;
 }
 
 // FormattedMessage component to render markdown-like formatting
@@ -147,6 +155,16 @@ const DiscordIcon = () => (
   </svg>
 );
 
+// Generate a unique visitor ID
+const getVisitorId = () => {
+  let visitorId = localStorage.getItem('chat_visitor_id');
+  if (!visitorId) {
+    visitorId = `visitor_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+    localStorage.setItem('chat_visitor_id', visitorId);
+  }
+  return visitorId;
+};
+
 export const FloatingChatWidget = ({
   panelId,
   panelName,
@@ -163,11 +181,16 @@ export const FloatingChatWidget = ({
 }: FloatingChatWidgetProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [showAIChat, setShowAIChat] = useState(false);
+  const [showLiveChat, setShowLiveChat] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [liveChatMessages, setLiveChatMessages] = useState<LiveChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [hasPreviousSession, setHasPreviousSession] = useState(false);
   const [sessionChecked, setSessionChecked] = useState(false);
+  const [liveChatSessionId, setLiveChatSessionId] = useState<string | null>(null);
+  const [liveChatConnecting, setLiveChatConnecting] = useState(false);
+  const [visitorId] = useState(getVisitorId);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [settings, setSettings] = useState({
     enabled: false,
@@ -184,6 +207,7 @@ export const FloatingChatWidget = ({
   // Storage key for chat history - use global key for cross-page persistence
   const storageKey = `chat_history_${panelId || 'default'}`;
   const sessionTimestampKey = `chat_session_time_${panelId || 'default'}`;
+  const liveChatSessionKey = `live_chat_session_${panelId || 'default'}`;
 
   // Check for previous session on mount - BEFORE rendering options
   useEffect(() => {
@@ -207,11 +231,17 @@ export const FloatingChatWidget = ({
           }
         }
       }
+      
+      // Check for existing live chat session
+      const savedLiveChatSession = localStorage.getItem(liveChatSessionKey);
+      if (savedLiveChatSession) {
+        setLiveChatSessionId(savedLiveChatSession);
+      }
     } catch {
       // Ignore parse errors
     }
     setSessionChecked(true);
-  }, [storageKey, sessionTimestampKey]);
+  }, [storageKey, sessionTimestampKey, liveChatSessionKey]);
 
   // Save messages to localStorage when they change
   useEffect(() => {
@@ -250,10 +280,56 @@ export const FloatingChatWidget = ({
       // Immediate AI greeting
       setMessages([{
         role: 'assistant',
-        content: `Hi! 👋 Welcome to **${panelName || 'our panel'}**!\n\nHow can I help you today? I can assist with:\n\n1. **Orders** - placing new orders or checking status\n2. **Services** - finding the right service for your needs\n3. **Pricing** - understanding our competitive rates\n4. **Account** - deposits, balance, and settings`
+        content: `Hi! 👋 Welcome to **${panelName || 'our panel'}**!\n\nHow can I help you today? I can assist with:\n\n1. **Orders** - placing new orders or checking status\n2. **Services** - finding the right service for your needs\n3. **Pricing** - understanding our competitive rates\n4. **Account** - deposits, balance, and settings\n\n💬 Need to talk to a human? Just click "Talk to Human" below!`
       }]);
     }
   }, [showAIChat, messages.length, hasPreviousSession, panelName]);
+
+  // Subscribe to live chat messages
+  useEffect(() => {
+    if (!liveChatSessionId) return;
+
+    const fetchMessages = async () => {
+      const { data } = await supabase
+        .from('chat_messages')
+        .select('*')
+        .eq('session_id', liveChatSessionId)
+        .order('created_at', { ascending: true });
+      
+      if (data) {
+        setLiveChatMessages(data.map(m => ({
+          ...m,
+          sender_type: m.sender_type as 'visitor' | 'owner'
+        })));
+      }
+    };
+
+    fetchMessages();
+
+    const channel = supabase
+      .channel(`live-chat-visitor-${liveChatSessionId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'chat_messages',
+          filter: `session_id=eq.${liveChatSessionId}`
+        },
+        (payload) => {
+          const newMsg = payload.new as LiveChatMessage;
+          setLiveChatMessages(prev => {
+            if (prev.some(m => m.id === newMsg.id)) return prev;
+            return [...prev, { ...newMsg, sender_type: newMsg.sender_type as 'visitor' | 'owner' }];
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [liveChatSessionId]);
 
   // Continue previous session
   const continuePreviousSession = () => {
@@ -282,7 +358,7 @@ export const FloatingChatWidget = ({
     localStorage.removeItem(sessionTimestampKey);
     setMessages([{
       role: 'assistant',
-      content: `Hi! 👋 Welcome to **${panelName || 'our panel'}**!\n\nHow can I help you today? I can assist with:\n\n1. **Orders** - placing new orders or checking status\n2. **Services** - finding the right service for your needs\n3. **Pricing** - understanding our competitive rates\n4. **Account** - deposits, balance, and settings`
+      content: `Hi! 👋 Welcome to **${panelName || 'our panel'}**!\n\nHow can I help you today? I can assist with:\n\n1. **Orders** - placing new orders or checking status\n2. **Services** - finding the right service for your needs\n3. **Pricing** - understanding our competitive rates\n4. **Account** - deposits, balance, and settings\n\n💬 Need to talk to a human? Just click "Talk to Human" below!`
     }]);
     setHasPreviousSession(false);
     setShowAIChat(true);
@@ -296,6 +372,94 @@ export const FloatingChatWidget = ({
       role: 'assistant',
       content: `Chat cleared! How can I help you today?`
     }]);
+  };
+
+  // Start live chat with human
+  const startLiveChat = async () => {
+    if (!panelId) {
+      toast({ variant: 'destructive', title: 'Unable to connect to support' });
+      return;
+    }
+
+    setLiveChatConnecting(true);
+    try {
+      // Check for existing active session
+      const { data: existingSession } = await supabase
+        .from('chat_sessions')
+        .select('id')
+        .eq('panel_id', panelId)
+        .eq('visitor_id', visitorId)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (existingSession) {
+        setLiveChatSessionId(existingSession.id);
+        localStorage.setItem(liveChatSessionKey, existingSession.id);
+      } else {
+        // Create new session
+        const { data: newSession, error } = await supabase
+          .from('chat_sessions')
+          .insert({
+            panel_id: panelId,
+            visitor_id: visitorId,
+            visitor_name: 'Website Visitor',
+            status: 'active'
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        
+        setLiveChatSessionId(newSession.id);
+        localStorage.setItem(liveChatSessionKey, newSession.id);
+
+        // Send initial message
+        await supabase
+          .from('chat_messages')
+          .insert({
+            session_id: newSession.id,
+            sender_type: 'visitor',
+            content: 'Hi! I need help from a support agent.'
+          });
+      }
+
+      setShowAIChat(false);
+      setShowLiveChat(true);
+    } catch (error) {
+      console.error('Error starting live chat:', error);
+      toast({ variant: 'destructive', title: 'Failed to connect to support' });
+    } finally {
+      setLiveChatConnecting(false);
+    }
+  };
+
+  // Send live chat message
+  const sendLiveChatMessage = async () => {
+    if (!inputValue.trim() || !liveChatSessionId) return;
+
+    const messageContent = inputValue.trim();
+    setInputValue('');
+
+    try {
+      await supabase
+        .from('chat_messages')
+        .insert({
+          session_id: liveChatSessionId,
+          sender_type: 'visitor',
+          content: messageContent
+        });
+
+      // Update session last_message_at
+      await supabase
+        .from('chat_sessions')
+        .update({ last_message_at: new Date().toISOString() })
+        .eq('id', liveChatSessionId);
+    } catch (error) {
+      console.error('Error sending message:', error);
+      toast({ variant: 'destructive', title: 'Failed to send message' });
+    }
   };
 
   // Fetch settings from database if panelId is provided
@@ -372,7 +536,7 @@ export const FloatingChatWidget = ({
       clearTimeout(timer2);
       clearTimeout(timer3);
     };
-  }, [messages, scrollToBottom, isLoading]);
+  }, [messages, liveChatMessages, scrollToBottom, isLoading]);
 
   // Show widget if AI is enabled OR any social platform is configured
   const hasAnyChatOption = settings.whatsapp || settings.telegram || settings.messenger || settings.discord || settings.customUrl || enableAI;
@@ -436,7 +600,7 @@ export const FloatingChatWidget = ({
       console.error('AI chat error:', error);
       setMessages(prev => [...prev, { 
         role: 'assistant', 
-        content: "Sorry, I'm having trouble responding right now. Please try again or use one of our other contact options." 
+        content: "Sorry, I'm having trouble responding right now. Please try again or click 'Talk to Human' for live support." 
       }]);
       setTimeout(scrollToBottom, 100);
     } finally {
@@ -514,11 +678,13 @@ export const FloatingChatWidget = ({
             <div className="bg-gradient-to-r from-primary to-primary/80 p-4 text-white">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <MessageCircle className="w-5 h-5" />
-                  <span className="font-semibold">{showAIChat ? 'AI Assistant' : 'Chat with us'}</span>
+                  {showLiveChat ? <User className="w-5 h-5" /> : <MessageCircle className="w-5 h-5" />}
+                  <span className="font-semibold">
+                    {showLiveChat ? 'Live Support' : showAIChat ? 'AI Assistant' : 'Chat with us'}
+                  </span>
                 </div>
                 <div className="flex items-center gap-1">
-                  {showAIChat && messages.length > 1 && (
+                  {showAIChat && messages.length > 1 && !showLiveChat && (
                     <button 
                       onClick={clearHistory}
                       className="p-1 hover:bg-white/20 rounded-full transition-colors"
@@ -528,7 +694,7 @@ export const FloatingChatWidget = ({
                     </button>
                   )}
                   <button 
-                    onClick={() => { setIsOpen(false); setShowAIChat(false); }}
+                    onClick={() => { setIsOpen(false); setShowAIChat(false); setShowLiveChat(false); }}
                     className="p-1 hover:bg-white/20 rounded-full transition-colors"
                   >
                     <X className="w-4 h-4" />
@@ -536,11 +702,75 @@ export const FloatingChatWidget = ({
                 </div>
               </div>
               <p className="text-sm text-white/80 mt-1">
-                {showAIChat && hasPreviousSession ? 'Continuing previous conversation' : settings.message}
+                {showLiveChat 
+                  ? 'Connected to support agent' 
+                  : showAIChat && hasPreviousSession 
+                  ? 'Continuing previous conversation' 
+                  : settings.message}
               </p>
             </div>
 
-            {showAIChat ? (
+            {showLiveChat ? (
+              /* Live Chat Interface */
+              <div className="flex flex-col h-80">
+                <div
+                  ref={scrollRef}
+                  className="flex-1 overflow-y-auto p-3 scroll-smooth"
+                >
+                  <div className="space-y-3">
+                    {liveChatMessages.length === 0 ? (
+                      <div className="text-center py-4 text-muted-foreground text-sm">
+                        <User className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                        <p>Waiting for support agent...</p>
+                        <p className="text-xs mt-1">They'll respond shortly</p>
+                      </div>
+                    ) : (
+                      liveChatMessages.map((msg) => (
+                        <div
+                          key={msg.id}
+                          className={`flex ${msg.sender_type === 'visitor' ? 'justify-end' : 'justify-start'}`}
+                        >
+                          <div
+                            className={`max-w-[85%] px-3 py-2 rounded-xl ${
+                              msg.sender_type === 'visitor'
+                                ? 'bg-primary text-white rounded-br-sm'
+                                : 'bg-muted text-foreground rounded-bl-sm'
+                            }`}
+                          >
+                            <p className="text-sm">{msg.content}</p>
+                            <p className={`text-[10px] mt-1 ${msg.sender_type === 'visitor' ? 'text-white/60' : 'text-muted-foreground'}`}>
+                              {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+                <div className="p-3 border-t border-border">
+                  <form
+                    onSubmit={(e) => { e.preventDefault(); sendLiveChatMessage(); }}
+                    className="flex gap-2"
+                  >
+                    <Input
+                      value={inputValue}
+                      onChange={(e) => setInputValue(e.target.value)}
+                      placeholder="Type a message..."
+                      className="flex-1 h-9"
+                    />
+                    <Button type="submit" size="sm" disabled={!inputValue.trim()}>
+                      <Send className="w-4 h-4" />
+                    </Button>
+                  </form>
+                  <button
+                    onClick={() => { setShowLiveChat(false); setShowAIChat(true); }}
+                    className="w-full mt-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    ← Back to AI Assistant
+                  </button>
+                </div>
+              </div>
+            ) : showAIChat ? (
               /* AI Chat Interface */
               <div className="flex flex-col h-80">
                 <div
@@ -593,6 +823,25 @@ export const FloatingChatWidget = ({
                       <Send className="w-4 h-4" />
                     </Button>
                   </form>
+                  
+                  {/* Talk to Human button */}
+                  {panelId && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={startLiveChat}
+                      disabled={liveChatConnecting}
+                      className="w-full mt-2 gap-2"
+                    >
+                      {liveChatConnecting ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <User className="w-4 h-4" />
+                      )}
+                      Talk to Human
+                    </Button>
+                  )}
+                  
                   <button
                     onClick={() => setShowAIChat(false)}
                     className="w-full mt-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
@@ -645,6 +894,27 @@ export const FloatingChatWidget = ({
                     <div className="text-left">
                       <p className="font-semibold">AI Assistant</p>
                       <p className="text-xs text-white/80">Get instant answers</p>
+                    </div>
+                  </motion.button>
+                )}
+
+                {/* Talk to Human button in options */}
+                {panelId && (
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={startLiveChat}
+                    disabled={liveChatConnecting}
+                    className="w-full flex items-center gap-3 p-3 bg-gradient-to-r from-violet-500 to-violet-600 text-white rounded-xl transition-colors disabled:opacity-50"
+                  >
+                    {liveChatConnecting ? (
+                      <Loader2 className="w-6 h-6 animate-spin" />
+                    ) : (
+                      <User className="w-6 h-6" />
+                    )}
+                    <div className="text-left">
+                      <p className="font-semibold">Talk to Human</p>
+                      <p className="text-xs text-white/80">Chat with support agent</p>
                     </div>
                   </motion.button>
                 )}

@@ -11,7 +11,8 @@ import {
   Zap,
   Plus,
   Settings,
-  Trash2
+  Trash2,
+  ArrowLeft
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,12 +23,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import {
   Dialog,
@@ -46,6 +47,7 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface ChatSession {
   id: string;
@@ -86,6 +88,7 @@ interface ChatInboxProps {
 
 const ChatInbox = ({ embedded = false }: ChatInboxProps) => {
   const { profile } = useAuth();
+  const isMobile = useIsMobile();
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [selectedSession, setSelectedSession] = useState<ChatSession | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -100,6 +103,7 @@ const ChatInbox = ({ embedded = false }: ChatInboxProps) => {
   const [editingCanned, setEditingCanned] = useState<CannedResponse | null>(null);
   const [cannedForm, setCannedForm] = useState({ title: '', content: '', shortcut: '', category: 'general' });
   const [visitorTyping, setVisitorTyping] = useState(false);
+  const [chatSheetOpen, setChatSheetOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -427,6 +431,7 @@ const ChatInbox = ({ embedded = false }: ChatInboxProps) => {
 
       if (selectedSession?.id === session.id) {
         setSelectedSession(null);
+        setChatSheetOpen(false);
       }
       
       toast({ title: 'Chat archived' });
@@ -457,6 +462,13 @@ const ChatInbox = ({ embedded = false }: ChatInboxProps) => {
     }
   };
 
+  const handleSessionSelect = (session: ChatSession) => {
+    setSelectedSession(session);
+    if (isMobile) {
+      setChatSheetOpen(true);
+    }
+  };
+
   const filteredSessions = sessions.filter(s => 
     (s.visitor_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
      s.visitor_email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -474,10 +486,430 @@ const ChatInbox = ({ embedded = false }: ChatInboxProps) => {
     return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
   };
 
+  // Session Card Component for mobile
+  const SessionCard = ({ session }: { session: ChatSession }) => (
+    <div
+      onClick={() => handleSessionSelect(session)}
+      className={cn(
+        "p-4 bg-card border border-border rounded-xl active:bg-accent transition-colors cursor-pointer",
+        selectedSession?.id === session.id && "border-primary"
+      )}
+    >
+      <div className="flex items-start gap-3">
+        <Avatar className="w-10 h-10 shrink-0">
+          <AvatarFallback className="bg-primary/10 text-primary">
+            {session.visitor_name?.[0] || 'V'}
+          </AvatarFallback>
+        </Avatar>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between mb-1">
+            <span className="font-medium truncate">
+              {session.visitor_name || 'Visitor'}
+            </span>
+            <span className="text-xs text-muted-foreground shrink-0 ml-2">
+              {formatTime(session.last_message_at)}
+            </span>
+          </div>
+          <p className="text-sm text-muted-foreground truncate">
+            {session.last_message}
+          </p>
+        </div>
+        {(session.unread_count || 0) > 0 && (
+          <Badge className="shrink-0">{session.unread_count}</Badge>
+        )}
+      </div>
+    </div>
+  );
+
+  // Chat Messages Component (reusable)
+  const ChatMessages = () => (
+    <ScrollArea className="flex-1 p-4">
+      <div className="space-y-4">
+        {messages.map((msg) => (
+          <div
+            key={msg.id}
+            className={cn(
+              "flex gap-2",
+              msg.sender_type === 'owner' ? "flex-row-reverse" : ""
+            )}
+          >
+            <Avatar className="w-8 h-8 shrink-0">
+              <AvatarFallback className={cn(
+                msg.sender_type === 'owner' 
+                  ? "bg-primary text-primary-foreground" 
+                  : "bg-muted"
+              )}>
+                {msg.sender_type === 'owner' ? 'Y' : (selectedSession?.visitor_name?.[0] || 'V')}
+              </AvatarFallback>
+            </Avatar>
+            <div className={cn(
+              "max-w-[75%] rounded-2xl px-4 py-2",
+              msg.sender_type === 'owner'
+                ? "bg-primary text-primary-foreground rounded-br-sm"
+                : "bg-muted rounded-bl-sm"
+            )}>
+              <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+              <div className={cn(
+                "flex items-center gap-1 mt-1",
+                msg.sender_type === 'owner' ? "justify-end" : ""
+              )}>
+                <span className={cn(
+                  "text-[10px]",
+                  msg.sender_type === 'owner' ? "text-white/60" : "text-muted-foreground"
+                )}>
+                  {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
+                {msg.sender_type === 'owner' && (
+                  <CheckCheck className={cn(
+                    "w-3 h-3",
+                    msg.is_read ? "text-white/80" : "text-white/40"
+                  )} />
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+        
+        {/* Typing indicator */}
+        {visitorTyping && (
+          <div className="flex items-center gap-2">
+            <Avatar className="w-8 h-8">
+              <AvatarFallback className="bg-muted">
+                {selectedSession?.visitor_name?.[0] || 'V'}
+              </AvatarFallback>
+            </Avatar>
+            <div className="bg-muted rounded-2xl rounded-bl-sm px-4 py-3">
+              <div className="flex gap-1">
+                <span className="w-2 h-2 rounded-full bg-muted-foreground/50 animate-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="w-2 h-2 rounded-full bg-muted-foreground/50 animate-bounce" style={{ animationDelay: '150ms' }} />
+                <span className="w-2 h-2 rounded-full bg-muted-foreground/50 animate-bounce" style={{ animationDelay: '300ms' }} />
+              </div>
+            </div>
+          </div>
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+    </ScrollArea>
+  );
+
+  // Chat Input Component (reusable)
+  const ChatInput = () => (
+    <div className="p-4 border-t pb-safe">
+      {/* Quick Replies - show fewer on mobile */}
+      {cannedResponses.length > 0 && (
+        <div className="mb-3 flex flex-wrap gap-2">
+          {cannedResponses.slice(0, isMobile ? 3 : 5).map((response) => (
+            <Button
+              key={response.id}
+              variant="outline"
+              size="sm"
+              onClick={() => useCannedResponse(response)}
+              className="text-xs"
+            >
+              <Zap className="w-3 h-3 mr-1" />
+              {response.title}
+            </Button>
+          ))}
+          {cannedResponses.length > (isMobile ? 3 : 5) && (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="text-xs">
+                  +{cannedResponses.length - (isMobile ? 3 : 5)} more
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-64 p-2">
+                <ScrollArea className="max-h-48">
+                  <div className="space-y-1">
+                    {cannedResponses.slice(isMobile ? 3 : 5).map((response) => (
+                      <Button
+                        key={response.id}
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => useCannedResponse(response)}
+                        className="w-full justify-start text-xs"
+                      >
+                        <Zap className="w-3 h-3 mr-2" />
+                        {response.title}
+                      </Button>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </PopoverContent>
+            </Popover>
+          )}
+        </div>
+      )}
+      
+      <div className="flex items-end gap-2">
+        <Textarea
+          ref={inputRef}
+          value={newMessage}
+          onChange={handleInputChange}
+          onKeyDown={handleKeyPress}
+          placeholder="Type a reply... (/ for shortcuts)"
+          className="flex-1 min-h-[44px] max-h-32 resize-none"
+          disabled={sending}
+          rows={1}
+        />
+        <Button
+          onClick={() => sendMessage()}
+          disabled={!newMessage.trim() || sending}
+          className="shrink-0"
+        >
+          {sending ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <>
+              <Send className="w-4 h-4" />
+              <span className="hidden sm:inline ml-2">Send</span>
+            </>
+          )}
+        </Button>
+      </div>
+    </div>
+  );
+
+  // Mobile Layout
+  if (isMobile) {
+    return (
+      <div className="space-y-4 pb-20">
+        {/* Header and Search */}
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <MessageCircle className="w-5 h-5" />
+            Live Chat
+          </h2>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => {
+              setCannedDialogOpen(true);
+              setEditingCanned(null);
+              setCannedForm({ title: '', content: '', shortcut: '', category: 'general' });
+            }}
+            title="Manage Quick Replies"
+          >
+            <Settings className="w-4 h-4" />
+          </Button>
+        </div>
+
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Search conversations..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+
+        <Tabs value={filter} onValueChange={(v) => setFilter(v as 'active' | 'archived')}>
+          <TabsList className="w-full">
+            <TabsTrigger value="active" className="flex-1">Active</TabsTrigger>
+            <TabsTrigger value="archived" className="flex-1">Archived</TabsTrigger>
+          </TabsList>
+        </Tabs>
+
+        {/* Sessions List */}
+        {loading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : filteredSessions.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-50" />
+            <p>No conversations yet</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {filteredSessions.map((session) => (
+              <SessionCard key={session.id} session={session} />
+            ))}
+          </div>
+        )}
+
+        {/* Mobile Chat Sheet */}
+        <Sheet open={chatSheetOpen} onOpenChange={setChatSheetOpen}>
+          <SheetContent side="bottom" className="h-[90vh] rounded-t-2xl p-0 flex flex-col">
+            <SheetHeader className="p-4 border-b shrink-0">
+              <div className="flex items-center gap-3">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => setChatSheetOpen(false)}
+                  className="shrink-0"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </Button>
+                <Avatar className="w-10 h-10 shrink-0">
+                  <AvatarFallback className="bg-primary/10 text-primary">
+                    {selectedSession?.visitor_name?.[0] || 'V'}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <SheetTitle className="text-left text-base">
+                    {selectedSession?.visitor_name || 'Visitor'}
+                  </SheetTitle>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Clock className="w-3 h-3" />
+                    {selectedSession && formatTime(selectedSession.created_at)}
+                  </div>
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                      <MoreVertical className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => selectedSession && archiveSession(selectedSession)}>
+                      <Archive className="w-4 h-4 mr-2" />
+                      Archive Chat
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </SheetHeader>
+            
+            {selectedSession && (
+              <>
+                <ChatMessages />
+                <ChatInput />
+              </>
+            )}
+          </SheetContent>
+        </Sheet>
+
+        {/* Canned Responses Dialog */}
+        <Dialog open={cannedDialogOpen} onOpenChange={setCannedDialogOpen}>
+          <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                {editingCanned ? 'Edit Quick Reply' : 'Quick Replies'}
+              </DialogTitle>
+              <DialogDescription>
+                Create and manage quick reply templates.
+              </DialogDescription>
+            </DialogHeader>
+
+            {editingCanned || cannedResponses.length === 0 ? (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Title</Label>
+                  <Input
+                    value={cannedForm.title}
+                    onChange={(e) => setCannedForm(prev => ({ ...prev, title: e.target.value }))}
+                    placeholder="e.g., Greeting"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Shortcut (optional)</Label>
+                  <Input
+                    value={cannedForm.shortcut}
+                    onChange={(e) => setCannedForm(prev => ({ ...prev, shortcut: e.target.value }))}
+                    placeholder="e.g., greet"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Content</Label>
+                  <Textarea
+                    value={cannedForm.content}
+                    onChange={(e) => setCannedForm(prev => ({ ...prev, content: e.target.value }))}
+                    placeholder="Enter your quick reply..."
+                    rows={4}
+                  />
+                </div>
+                <DialogFooter className="flex-col sm:flex-row gap-2">
+                  {editingCanned && (
+                    <Button
+                      variant="ghost"
+                      onClick={() => {
+                        setEditingCanned(null);
+                        setCannedForm({ title: '', content: '', shortcut: '', category: 'general' });
+                      }}
+                      className="w-full sm:w-auto"
+                    >
+                      Cancel
+                    </Button>
+                  )}
+                  <Button onClick={saveCannedResponse} className="w-full sm:w-auto">
+                    {editingCanned ? 'Update' : 'Create'}
+                  </Button>
+                </DialogFooter>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <Button
+                  onClick={() => {
+                    setEditingCanned({} as CannedResponse);
+                    setCannedForm({ title: '', content: '', shortcut: '', category: 'general' });
+                  }}
+                  className="w-full"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  New Quick Reply
+                </Button>
+                <ScrollArea className="max-h-64">
+                  <div className="space-y-2">
+                    {cannedResponses.map((response) => (
+                      <div
+                        key={response.id}
+                        className="flex items-center justify-between p-3 border rounded-lg"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-sm">{response.title}</span>
+                            {response.shortcut && (
+                              <Badge variant="outline" className="text-xs">
+                                /{response.shortcut}
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {response.content}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1 ml-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setEditingCanned(response);
+                              setCannedForm({
+                                title: response.title,
+                                content: response.content,
+                                shortcut: response.shortcut || '',
+                                category: response.category
+                              });
+                            }}
+                          >
+                            <Settings className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => deleteCannedResponse(response.id)}
+                          >
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+      </div>
+    );
+  }
+
+  // Desktop Layout
   return (
-    <div className="flex h-[calc(100vh-120px)] gap-4">
+    <div className={cn("flex gap-4", embedded ? "h-[calc(100vh-200px)]" : "h-[calc(100vh-120px)]")}>
       {/* Sessions List */}
-      <Card className="w-96 flex flex-col">
+      <Card className="w-96 flex flex-col shrink-0">
         <div className="p-4 border-b">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-semibold flex items-center gap-2">
@@ -570,7 +1002,7 @@ const ChatInbox = ({ embedded = false }: ChatInboxProps) => {
         {selectedSession ? (
           <>
             {/* Chat Header */}
-            <div className="p-4 border-b flex items-center justify-between">
+            <div className="p-4 border-b flex items-center justify-between shrink-0">
               <div className="flex items-center gap-3">
                 <Avatar>
                   <AvatarFallback className="bg-primary/10 text-primary">
@@ -608,148 +1040,8 @@ const ChatInbox = ({ embedded = false }: ChatInboxProps) => {
               </DropdownMenu>
             </div>
 
-            {/* Messages */}
-            <ScrollArea className="flex-1 p-4">
-              <div className="space-y-4">
-                {messages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={cn(
-                      "flex gap-2",
-                      msg.sender_type === 'owner' ? "flex-row-reverse" : ""
-                    )}
-                  >
-                    <Avatar className="w-8 h-8 shrink-0">
-                      <AvatarFallback className={cn(
-                        msg.sender_type === 'owner' 
-                          ? "bg-primary text-primary-foreground" 
-                          : "bg-muted"
-                      )}>
-                        {msg.sender_type === 'owner' ? 'Y' : (selectedSession.visitor_name?.[0] || 'V')}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className={cn(
-                      "max-w-[70%] rounded-2xl px-4 py-2",
-                      msg.sender_type === 'owner'
-                        ? "bg-primary text-primary-foreground rounded-br-sm"
-                        : "bg-muted rounded-bl-sm"
-                    )}>
-                      <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                      <div className={cn(
-                        "flex items-center gap-1 mt-1",
-                        msg.sender_type === 'owner' ? "justify-end" : ""
-                      )}>
-                        <span className={cn(
-                          "text-[10px]",
-                          msg.sender_type === 'owner' ? "text-white/60" : "text-muted-foreground"
-                        )}>
-                          {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                        {msg.sender_type === 'owner' && (
-                          <CheckCheck className={cn(
-                            "w-3 h-3",
-                            msg.is_read ? "text-white/80" : "text-white/40"
-                          )} />
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                
-                {/* Typing indicator */}
-                {visitorTyping && (
-                  <div className="flex items-center gap-2">
-                    <Avatar className="w-8 h-8">
-                      <AvatarFallback className="bg-muted">
-                        {selectedSession.visitor_name?.[0] || 'V'}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="bg-muted rounded-2xl rounded-bl-sm px-4 py-3">
-                      <div className="flex gap-1">
-                        <span className="w-2 h-2 rounded-full bg-muted-foreground/50 animate-bounce" style={{ animationDelay: '0ms' }} />
-                        <span className="w-2 h-2 rounded-full bg-muted-foreground/50 animate-bounce" style={{ animationDelay: '150ms' }} />
-                        <span className="w-2 h-2 rounded-full bg-muted-foreground/50 animate-bounce" style={{ animationDelay: '300ms' }} />
-                      </div>
-                    </div>
-                  </div>
-                )}
-                <div ref={messagesEndRef} />
-              </div>
-            </ScrollArea>
-
-            {/* Input */}
-            <div className="p-4 border-t">
-              {/* Quick Replies */}
-              {cannedResponses.length > 0 && (
-                <div className="mb-3 flex flex-wrap gap-2">
-                  {cannedResponses.slice(0, 5).map((response) => (
-                    <Button
-                      key={response.id}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => useCannedResponse(response)}
-                      className="text-xs"
-                    >
-                      <Zap className="w-3 h-3 mr-1" />
-                      {response.title}
-                    </Button>
-                  ))}
-                  {cannedResponses.length > 5 && (
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" size="sm" className="text-xs">
-                          +{cannedResponses.length - 5} more
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-64 p-2">
-                        <ScrollArea className="max-h-48">
-                          <div className="space-y-1">
-                            {cannedResponses.slice(5).map((response) => (
-                              <Button
-                                key={response.id}
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => useCannedResponse(response)}
-                                className="w-full justify-start text-xs"
-                              >
-                                <Zap className="w-3 h-3 mr-2" />
-                                {response.title}
-                              </Button>
-                            ))}
-                          </div>
-                        </ScrollArea>
-                      </PopoverContent>
-                    </Popover>
-                  )}
-                </div>
-              )}
-              
-              <div className="flex items-end gap-2">
-                <Textarea
-                  ref={inputRef}
-                  value={newMessage}
-                  onChange={handleInputChange}
-                  onKeyDown={handleKeyPress}
-                  placeholder="Type a reply... (/ for shortcuts)"
-                  className="flex-1 min-h-[44px] max-h-32 resize-none"
-                  disabled={sending}
-                  rows={1}
-                />
-                <Button
-                  onClick={() => sendMessage()}
-                  disabled={!newMessage.trim() || sending}
-                >
-                  {sending ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <>
-                      <Send className="w-4 h-4 mr-2" />
-                      Send
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
+            <ChatMessages />
+            <ChatInput />
           </>
         ) : (
           <CardContent className="flex-1 flex items-center justify-center">

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { LucideIcon, Plus, X, Package, ShoppingCart, Users, BarChart3 } from 'lucide-react';
+import { LucideIcon, Plus, X, Package, ShoppingCart, Users, BarChart3, HeadphonesIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface BottomNavItem {
@@ -25,9 +25,10 @@ interface BottomNavProps {
   showFab?: boolean;
   fabItems?: FabMenuItem[];
   centerIndex?: number;
+  supportFabAction?: () => void;
 }
 
-export const BottomNav = ({ items, className, showFab = false, fabItems, centerIndex }: BottomNavProps) => {
+export const BottomNav = ({ items, className, showFab = false, fabItems, centerIndex, supportFabAction }: BottomNavProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [fabOpen, setFabOpen] = useState(false);
@@ -61,8 +62,27 @@ export const BottomNav = ({ items, className, showFab = false, fabItems, centerI
         )}
       </AnimatePresence>
 
+      {/* Support FAB - Single button that navigates directly to Support page */}
+      {supportFabAction && (
+        <div className="fixed bottom-[5.5rem] right-4 z-50 md:hidden">
+          <motion.button
+            onClick={supportFabAction}
+            className={cn(
+              "w-12 h-12 rounded-full flex items-center justify-center text-white shadow-lg",
+              "bg-gradient-to-br from-indigo-500 to-indigo-600",
+              "transition-all duration-200 hover:shadow-xl"
+            )}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            aria-label="Support Center"
+          >
+            <HeadphonesIcon className="w-5 h-5" />
+          </motion.button>
+        </div>
+      )}
+
       {/* Enhanced FAB with Menu - positioned inside safe area */}
-      {showFab && (
+      {showFab && !supportFabAction && (
         <div className="fixed bottom-[5.5rem] right-4 z-50 md:hidden">
           {/* FAB Menu Items */}
           <AnimatePresence>
