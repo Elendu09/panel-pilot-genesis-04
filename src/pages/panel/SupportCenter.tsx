@@ -9,6 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   MessageSquare, 
   Search, 
@@ -21,13 +23,15 @@ import {
   HeadphonesIcon,
   Inbox,
   Book,
-  MessagesSquare
+  MessagesSquare,
+  ArrowLeft
 } from "lucide-react";
 import { KnowledgeBase } from "@/components/support/KnowledgeBase";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTenant } from "@/hooks/useTenant";
+import { useIsMobile } from "@/hooks/use-mobile";
 import ChatInbox from "./ChatInbox";
 
 interface TicketMessage {
@@ -57,12 +61,14 @@ const SupportCenter = () => {
   const { toast } = useToast();
   const { profile } = useAuth();
   const { panel } = useTenant();
+  const isMobile = useIsMobile();
   
   const [activeTab, setActiveTab] = useState("knowledge");
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [newMessage, setNewMessage] = useState("");
+  const [ticketSheetOpen, setTicketSheetOpen] = useState(false);
   
   // Customer tickets (user_to_panel)
   const [customerTickets, setCustomerTickets] = useState<Ticket[]>([]);
@@ -218,6 +224,12 @@ const SupportCenter = () => {
       } else {
         fetchCustomerTickets();
       }
+      
+      // Update selected ticket messages in state
+      setSelectedTicket(prev => prev ? {
+        ...prev,
+        messages: [...currentMessages, newMessageObj]
+      } : null);
     } catch (error) {
       console.error('Error sending reply:', error);
       toast({
@@ -259,9 +271,162 @@ const SupportCenter = () => {
            new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
+  const handleTicketSelect = (ticket: Ticket) => {
+    setSelectedTicket(ticket);
+    if (isMobile) {
+      setTicketSheetOpen(true);
+    }
+  };
+
+  // Mobile Ticket Card Component
+  const TicketCard = ({ ticket, onClick }: { ticket: Ticket; onClick: () => void }) => (
+    <div
+      onClick={onClick}
+      className="p-4 bg-card border border-border rounded-xl active:bg-accent transition-colors cursor-pointer"
+    >
+      <div className="flex items-start justify-between mb-2">
+        <h3 className="font-medium text-sm line-clamp-2 flex-1 pr-2">{ticket.subject}</h3>
+        <Badge variant={getStatusColor(ticket.status)} className="text-xs shrink-0">
+          {ticket.status}
+        </Badge>
+      </div>
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <span>{formatDate(ticket.created_at)}</span>
+        <div className="flex items-center gap-2">
+          <AlertCircle className={`w-3 h-3 ${getPriorityColor(ticket.priority)}`} />
+          <span className={getPriorityColor(ticket.priority)}>{ticket.priority}</span>
+          <MessageSquare className="w-3 h-3 ml-2" />
+          <span>{ticket.messages?.length || 0}</span>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Ticket Details Content (used in both sheet and desktop view)
+  const TicketDetailsContent = ({ ticket, isPlatformTicket }: { ticket: Ticket; isPlatformTicket: boolean }) => (
+    <div className="flex flex-col h-full">
+      <div className="flex-1 overflow-y-auto space-y-4 mb-4 px-1">
+        {ticket.messages?.length === 0 ? (
+          <div className="text-center text-muted-foreground py-8">
+            No messages yet
+          </div>
+        ) : (
+          ticket.messages?.map((message) => (
+            <div
+              key={message.id}
+              className={`flex ${message.sender_type === 'panel_owner' ? 'justify-end' : 'justify-start'}`}
+            >
+              <div
+                className={`max-w-[85%] px-4 py-2 rounded-2xl ${
+                  message.sender_type === 'panel_owner'
+                    ? 'bg-primary text-primary-foreground rounded-br-sm'
+                    : message.sender_type === 'admin'
+                    ? 'bg-violet-500/20 text-violet-400 rounded-bl-sm'
+                    : 'bg-muted rounded-bl-sm'
+                }`}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-sm font-medium">{message.sender}</span>
+                  <span className="text-xs opacity-70">
+                    {formatDate(message.created_at)}
+                  </span>
+                </div>
+                <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+      
+      <div className="border-t border-border pt-4 pb-safe">
+        <div className="flex gap-2">
+          <Textarea
+            placeholder="Type your reply..."
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            className="flex-1 min-h-[80px]"
+            rows={3}
+          />
+        </div>
+        <div className="flex gap-2 mt-2">
+          <Button
+            onClick={() => handleSendReply(ticket, isPlatformTicket)}
+            disabled={!newMessage.trim()}
+            className="flex-1 sm:flex-none"
+          >
+            <Send className="w-4 h-4 mr-2" />
+            Send
+          </Button>
+          {!isPlatformTicket && (
+            <Button variant="outline" size="sm" className="hidden sm:flex">
+              <CheckCircle className="w-4 h-4 mr-1" />
+              Resolve
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
   const renderTicketList = (tickets: Ticket[], loading: boolean, isPlatformTicket: boolean) => {
     const filteredList = filterTickets(tickets);
 
+    // Mobile view - full width card list
+    if (isMobile) {
+      return (
+        <div className="space-y-4">
+          {/* Search and filters */}
+          <div className="space-y-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+              <Input
+                placeholder="Search tickets..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <ScrollArea className="w-full">
+              <div className="flex gap-2 pb-2">
+                {["all", "open", "in_progress", "resolved"].map((status) => (
+                  <Button
+                    key={status}
+                    variant={filterStatus === status ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setFilterStatus(status)}
+                    className="shrink-0"
+                  >
+                    {status === "all" ? "All" : status === "in_progress" ? "In Progress" : status.charAt(0).toUpperCase() + status.slice(1)}
+                  </Button>
+                ))}
+              </div>
+            </ScrollArea>
+          </div>
+
+          {/* Ticket list */}
+          {loading ? (
+            <div className="p-8 text-center text-muted-foreground">Loading tickets...</div>
+          ) : filteredList.length === 0 ? (
+            <div className="p-8 text-center text-muted-foreground">
+              <Inbox className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <p>No tickets found</p>
+            </div>
+          ) : (
+            <div className="space-y-3 pb-20">
+              {filteredList.map((ticket) => (
+                <TicketCard 
+                  key={ticket.id} 
+                  ticket={ticket} 
+                  onClick={() => handleTicketSelect(ticket)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Desktop view - original card design
     return (
       <Card className="bg-gradient-card border-border shadow-card">
         <CardHeader>
@@ -339,6 +504,11 @@ const SupportCenter = () => {
   };
 
   const renderTicketDetails = (isPlatformTicket: boolean) => {
+    // On mobile, details are shown in a sheet
+    if (isMobile) {
+      return null;
+    }
+
     if (!selectedTicket) {
       return (
         <Card className="bg-gradient-card border-border shadow-card h-96">
@@ -373,141 +543,135 @@ const SupportCenter = () => {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="flex flex-col h-full">
-          <div className="flex-1 space-y-4 mb-4 max-h-96 overflow-y-auto">
-            {selectedTicket.messages?.length === 0 ? (
-              <div className="text-center text-muted-foreground py-8">
-                No messages yet
-              </div>
-            ) : (
-              selectedTicket.messages?.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex ${message.sender_type === 'panel_owner' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div
-                    className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                      message.sender_type === 'panel_owner'
-                        ? 'bg-primary text-primary-foreground'
-                        : message.sender_type === 'admin'
-                        ? 'bg-violet-500/20 text-violet-400'
-                        : 'bg-muted'
-                    }`}
-                  >
-                    <div className="flex items-center space-x-2 mb-1">
-                      <span className="text-sm font-medium">{message.sender}</span>
-                      <span className="text-xs opacity-70">
-                        {formatDate(message.created_at)}
-                      </span>
-                    </div>
-                    <p className="text-sm">{message.content}</p>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-          
-          <div className="border-t border-border pt-4">
-            <div className="flex space-x-2">
-              <Textarea
-                placeholder="Type your reply..."
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                className="flex-1"
-                rows={3}
-              />
-              <div className="flex flex-col space-y-2">
-                <Button
-                  onClick={() => handleSendReply(selectedTicket, isPlatformTicket)}
-                  disabled={!newMessage.trim()}
-                  className="bg-gradient-primary hover:shadow-glow"
-                >
-                  <Send className="w-4 h-4 mr-1" />
-                  Send
-                </Button>
-                {!isPlatformTicket && (
-                  <Button variant="outline" size="sm">
-                    <CheckCircle className="w-4 h-4 mr-1" />
-                    Resolve
-                  </Button>
-                )}
-              </div>
-            </div>
-          </div>
+        <CardContent className="h-[calc(100%-120px)]">
+          <TicketDetailsContent ticket={selectedTicket} isPlatformTicket={isPlatformTicket} />
         </CardContent>
       </Card>
     );
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-4 sm:space-y-6 pb-20 md:pb-0">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
         <div>
-          <h1 className="text-3xl font-bold">Support Center</h1>
-          <p className="text-muted-foreground">Manage customer tickets, live chat, and platform support</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Support Center</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">Manage customer tickets, live chat, and platform support</p>
         </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={(val) => { setActiveTab(val); setSelectedTicket(null); }}>
-        <TabsList className="grid w-full max-w-2xl grid-cols-4">
-          <TabsTrigger value="knowledge" className="gap-2 text-xs sm:text-sm">
-            <Book className="w-4 h-4 hidden sm:block" />
-            Knowledge Base
-          </TabsTrigger>
-          <TabsTrigger value="livechat" className="gap-2 text-xs sm:text-sm">
-            <MessagesSquare className="w-4 h-4 hidden sm:block" />
-            Live Chat
-          </TabsTrigger>
-          <TabsTrigger value="customer" className="gap-2 text-xs sm:text-sm">
-            <Users className="w-4 h-4 hidden sm:block" />
-            Customer Tickets
-          </TabsTrigger>
-          <TabsTrigger value="platform" className="gap-2 text-xs sm:text-sm">
-            <HeadphonesIcon className="w-4 h-4 hidden sm:block" />
-            Platform Support
-          </TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+          <TabsList className="inline-flex w-auto min-w-full sm:w-full sm:max-w-2xl sm:grid sm:grid-cols-4">
+            <TabsTrigger value="knowledge" className="gap-1.5 text-xs sm:text-sm whitespace-nowrap px-3 sm:px-4">
+              <Book className="w-4 h-4 hidden sm:block" />
+              Knowledge
+            </TabsTrigger>
+            <TabsTrigger value="livechat" className="gap-1.5 text-xs sm:text-sm whitespace-nowrap px-3 sm:px-4">
+              <MessagesSquare className="w-4 h-4 hidden sm:block" />
+              Live Chat
+            </TabsTrigger>
+            <TabsTrigger value="customer" className="gap-1.5 text-xs sm:text-sm whitespace-nowrap px-3 sm:px-4">
+              <Users className="w-4 h-4 hidden sm:block" />
+              Customers
+            </TabsTrigger>
+            <TabsTrigger value="platform" className="gap-1.5 text-xs sm:text-sm whitespace-nowrap px-3 sm:px-4">
+              <HeadphonesIcon className="w-4 h-4 hidden sm:block" />
+              Platform
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
-        <TabsContent value="knowledge" className="mt-6">
+        <TabsContent value="knowledge" className="mt-4 sm:mt-6">
           <KnowledgeBase />
         </TabsContent>
 
-        <TabsContent value="livechat" className="mt-6">
+        <TabsContent value="livechat" className="mt-4 sm:mt-6">
           <ChatInbox embedded />
         </TabsContent>
 
-        <TabsContent value="customer" className="mt-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-1">
-              {renderTicketList(customerTickets, loadingCustomerTickets, false)}
+        <TabsContent value="customer" className="mt-4 sm:mt-6">
+          {isMobile ? (
+            renderTicketList(customerTickets, loadingCustomerTickets, false)
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-1">
+                {renderTicketList(customerTickets, loadingCustomerTickets, false)}
+              </div>
+              <div className="lg:col-span-2">
+                {renderTicketDetails(false)}
+              </div>
             </div>
-            <div className="lg:col-span-2">
-              {renderTicketDetails(false)}
-            </div>
-          </div>
+          )}
         </TabsContent>
 
-        <TabsContent value="platform" className="mt-6">
+        <TabsContent value="platform" className="mt-4 sm:mt-6">
           <div className="mb-4">
             <Button onClick={() => setNewTicketDialogOpen(true)} className="gap-2">
               <Plus className="w-4 h-4" />
               New Platform Ticket
             </Button>
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-1">
-              {renderTicketList(platformTickets, loadingPlatformTickets, true)}
+          {isMobile ? (
+            renderTicketList(platformTickets, loadingPlatformTickets, true)
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-1">
+                {renderTicketList(platformTickets, loadingPlatformTickets, true)}
+              </div>
+              <div className="lg:col-span-2">
+                {renderTicketDetails(true)}
+              </div>
             </div>
-            <div className="lg:col-span-2">
-              {renderTicketDetails(true)}
-            </div>
-          </div>
+          )}
         </TabsContent>
       </Tabs>
 
+      {/* Mobile Ticket Details Sheet */}
+      <Sheet open={ticketSheetOpen} onOpenChange={setTicketSheetOpen}>
+        <SheetContent side="bottom" className="h-[90vh] rounded-t-2xl">
+          <SheetHeader className="pb-4 border-b">
+            <div className="flex items-center gap-3">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => setTicketSheetOpen(false)}
+                className="shrink-0"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+              <div className="flex-1 min-w-0">
+                <SheetTitle className="text-left text-base line-clamp-1">
+                  {selectedTicket?.subject}
+                </SheetTitle>
+                <div className="flex items-center gap-2 mt-1">
+                  {selectedTicket && (
+                    <>
+                      <Badge variant={getStatusColor(selectedTicket.status)} className="text-xs">
+                        {selectedTicket.status}
+                      </Badge>
+                      <span className={`text-xs ${getPriorityColor(selectedTicket.priority)}`}>
+                        {selectedTicket.priority}
+                      </span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          </SheetHeader>
+          <div className="flex-1 overflow-hidden pt-4 h-[calc(100%-80px)]">
+            {selectedTicket && (
+              <TicketDetailsContent 
+                ticket={selectedTicket} 
+                isPlatformTicket={activeTab === 'platform'} 
+              />
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
+
       {/* New Platform Ticket Dialog */}
       <Dialog open={newTicketDialogOpen} onOpenChange={setNewTicketDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Contact Platform Support</DialogTitle>
           </DialogHeader>
@@ -560,13 +724,14 @@ const SupportCenter = () => {
               />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setNewTicketDialogOpen(false)}>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setNewTicketDialogOpen(false)} className="w-full sm:w-auto">
               Cancel
             </Button>
             <Button 
               onClick={handleCreatePlatformTicket}
               disabled={submittingTicket || !newTicketSubject.trim() || !newTicketMessage.trim()}
+              className="w-full sm:w-auto"
             >
               {submittingTicket ? "Submitting..." : "Submit Ticket"}
             </Button>

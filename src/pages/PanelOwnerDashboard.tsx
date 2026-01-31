@@ -144,11 +144,10 @@ const PanelOwnerDashboard = () => {
     { name: 'More', href: '/panel/more', icon: Settings, tourId: 'mobile-more' },
   ];
 
-  const panelFabItems = [
-    { name: 'Add Provider', icon: Plug, action: () => window.location.href = '/panel/providers', color: 'bg-purple-500' },
-    { name: 'Add Customer', icon: Users, action: () => window.location.href = '/panel/customers', color: 'bg-green-500' },
-    { name: 'Analytics', icon: BarChart3, action: () => window.location.href = '/panel/analytics', color: 'bg-orange-500' },
-  ];
+  // Single Support FAB action for mobile - direct navigation to support
+  const supportFabAction = () => {
+    window.location.href = '/panel/support';
+  };
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -464,7 +463,7 @@ const PanelOwnerDashboard = () => {
       </main>
 
       {/* Mobile Bottom Navigation */}
-      <BottomNav items={bottomNavItems} showFab fabItems={panelFabItems} centerIndex={2} />
+      <BottomNav items={bottomNavItems} showFab={false} centerIndex={2} supportFabAction={supportFabAction} />
 
       {/* Onboarding Tour */}
       <OnboardingTour isOpen={tourOpen} onComplete={completeTour} />
