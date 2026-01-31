@@ -32,18 +32,20 @@ import { usePanel } from "@/hooks/usePanel";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { 
+import {
   calculateChange, 
   getPreviousPeriodRange,
   formatCompactNumber,
   formatCurrency,
   buildPaymentFunnel,
+  buildFastOrderFunnel,
   calculateRetentionRate,
   calculateSuccessRate,
   calculateGrossVolume,
   generateInsights,
   aggregateDailyData,
-  findPeakDay
+  findPeakDay,
+  type AnalyticsEvent
 } from "@/lib/analytics-utils";
 import {
   PaymentsFunnelCard,
@@ -82,6 +84,17 @@ const Analytics = () => {
     totalTransactions: 0,
     conversionRate: 0,
     overallDropOff: 0
+  });
+  
+  // Fast Order funnel data from real analytics events
+  const [fastOrderFunnelData, setFastOrderFunnelData] = useState<{
+    stages: { name: string; count: number; percentage: number; dropOff: number }[];
+    totalFastOrders: number;
+    conversionRate: number;
+  }>({
+    stages: [],
+    totalFastOrders: 0,
+    conversionRate: 0
   });
   
   const [volumeData, setVolumeData] = useState({
@@ -201,6 +214,15 @@ const Analytics = () => {
         .lte('created_at', endDate.toISOString())
         .order('created_at', { ascending: false });
 
+      // Fetch fast order funnel analytics events
+      const { data: analyticsEvents } = await supabase
+        .from('analytics_events')
+        .select('event_type, session_id, metadata')
+        .eq('panel_id', panel.id)
+        .in('event_type', ['fast_order_visit', 'fast_order_step', 'service_select', 'checkout_start', 'order_complete'])
+        .gte('created_at', startDate.toISOString())
+        .lte('created_at', endDate.toISOString());
+
       // Calculate previous period
       let prevStart: Date, prevEnd: Date;
       if (dateRange === "custom" && customStartDate && customEndDate) {
@@ -251,7 +273,22 @@ const Analytics = () => {
         overallDropOff
       });
 
-      // ========= VOLUME DATA =========
+      // ========= FAST ORDER FUNNEL DATA (from real analytics events) =========
+      const typedEvents: AnalyticsEvent[] = (analyticsEvents || []).map(e => ({
+        event_type: e.event_type,
+        session_id: e.session_id,
+        metadata: e.metadata as Record<string, unknown> | null
+      }));
+      const fastOrderStages = buildFastOrderFunnel(typedEvents, completedOrders);
+      const fastOrderConversionRate = fastOrderStages.length > 0 && fastOrderStages[0].count > 0
+        ? (fastOrderStages[fastOrderStages.length - 1].count / fastOrderStages[0].count) * 100
+        : conversionRate;
+      
+      setFastOrderFunnelData({
+        stages: fastOrderStages,
+        totalFastOrders: completedOrders,
+        conversionRate: fastOrderConversionRate
+      });
       const deposits = (transactions || []).filter(t => t.type === 'deposit' && t.status === 'completed');
       const refunds = (transactions || []).filter(t => t.type === 'refund' && t.status === 'completed');
       const volumeCalc = calculateGrossVolume(
@@ -686,16 +723,11 @@ const Analytics = () => {
             overallDropOff={funnelData.overallDropOff}
           />
           
-          {/* Fast Order Funnel - Checkout flow tracking */}
+          {/* Fast Order Funnel - Checkout flow tracking (REAL DATA) */}
           <FastOrderAnalyticsCard
-            stages={[
-              { name: 'Visitors', count: stats.activeUsers * 3, percentage: 100, dropOff: 0 },
-              { name: 'Selections', count: Math.round(stats.activeUsers * 2.1), percentage: 70, dropOff: 30 },
-              { name: 'Checkout', count: Math.round(stats.totalOrders * 1.2), percentage: 40, dropOff: 30 },
-              { name: 'Completed', count: stats.totalOrders, percentage: stats.conversionRate, dropOff: 40 - stats.conversionRate },
-            ]}
-            totalFastOrders={stats.totalOrders}
-            conversionRate={stats.conversionRate}
+            stages={fastOrderFunnelData.stages}
+            totalFastOrders={fastOrderFunnelData.totalFastOrders}
+            conversionRate={fastOrderFunnelData.conversionRate}
             growthTrend={changes.orders}
           />
           

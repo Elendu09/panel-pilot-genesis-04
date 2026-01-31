@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useTheme } from '@/hooks/use-theme';
 import { BuyerThemeWrapper } from '@/components/buyer-themes';
+import { useAnalyticsTracking } from '@/hooks/use-analytics-tracking';
 
 interface Panel {
   id: string;
@@ -355,6 +356,24 @@ const FastOrderContent = () => {
     searchParams.get('panel') || 
     buyerContext?.panelId || 
     localStorage.getItem('current_panel_id');
+
+  // Analytics tracking for Fast Order funnel
+  const { trackPageVisit, trackFastOrderStep } = useAnalyticsTracking(resolvedPanelId || undefined);
+
+  // Track page visit on mount
+  useEffect(() => {
+    if (resolvedPanelId) {
+      trackPageVisit('fast_order');
+    }
+  }, [resolvedPanelId, trackPageVisit]);
+
+  // Track step changes
+  useEffect(() => {
+    if (resolvedPanelId && currentStep > 1) {
+      const stepNames = ['network', 'category', 'service', 'order', 'payment', 'complete'];
+      trackFastOrderStep(currentStep, stepNames[currentStep - 1] || 'unknown');
+    }
+  }, [currentStep, resolvedPanelId, trackFastOrderStep]);
 
   useEffect(() => {
     // Store resolved panelId for future use

@@ -15,12 +15,124 @@ const failedAttempts = new Map<string, { count: number; lastAttempt: number }>()
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
 
+// Panel-specific rate limiting
+const panelRateLimits = new Map<string, { count: number; lastReset: number }>();
+
 // Helper to return JSON response - ALWAYS use 200 status to avoid "service unavailable" errors
 function jsonResponse(data: any, status = 200) {
   return new Response(
     JSON.stringify(data),
     { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
   );
+}
+
+// ========= SECURITY ENFORCEMENT FUNCTIONS =========
+
+// Load panel security settings for enforcement
+async function loadSecuritySettings(supabase: any, panelId: string): Promise<Record<string, any>> {
+  try {
+    const { data: panel } = await supabase
+      .from('panels')
+      .select('settings')
+      .eq('id', panelId)
+      .single();
+    
+    return panel?.settings?.security || {};
+  } catch {
+    return {};
+  }
+}
+
+// Check if IP is blocked/allowed based on panel security settings
+function isIpBlocked(clientIp: string, settings: Record<string, any>): { blocked: boolean; reason?: string } {
+  const ipAllowlist = (settings.ipAllowlist || '').split(',').map((ip: string) => ip.trim()).filter(Boolean);
+  const ipBlocklist = (settings.ipBlocklist || '').split(',').map((ip: string) => ip.trim()).filter(Boolean);
+  
+  // If allowlist exists and IP not in it, block
+  if (ipAllowlist.length > 0 && !ipAllowlist.includes(clientIp)) {
+    return { blocked: true, reason: 'IP not in allowlist' };
+  }
+  
+  // If IP in blocklist, block
+  if (ipBlocklist.includes(clientIp)) {
+    return { blocked: true, reason: 'IP is blocked' };
+  }
+  
+  return { blocked: false };
+}
+
+// Check panel-specific rate limit (requests per minute)
+function checkPanelRateLimit(
+  identifier: string,
+  panelId: string,
+  settings: Record<string, any>
+): { allowed: boolean; remainingTime?: number } {
+  const maxRequests = parseInt(settings.rateLimit || '60');
+  const windowMs = 60 * 1000; // 1 minute window
+  const lockoutMinutes = parseInt(settings.lockoutDuration || '15');
+  const lockoutMs = lockoutMinutes * 60 * 1000;
+  
+  const key = `${panelId}:${identifier}`;
+  const now = Date.now();
+  const record = panelRateLimits.get(key);
+  
+  // Reset window if expired
+  if (!record || now - record.lastReset > windowMs) {
+    panelRateLimits.set(key, { count: 1, lastReset: now });
+    return { allowed: true };
+  }
+  
+  // Check if exceeded
+  if (record.count >= maxRequests) {
+    const remainingTime = Math.ceil((windowMs - (now - record.lastReset)) / 1000);
+    return { allowed: false, remainingTime };
+  }
+  
+  // Increment count
+  record.count++;
+  panelRateLimits.set(key, record);
+  return { allowed: true };
+}
+
+// Check if CAPTCHA is required based on failed attempts
+function isCaptchaRequired(
+  identifier: string,
+  settings: Record<string, any>
+): { required: boolean; threshold: number } {
+  if (!settings.captchaEnabled) {
+    return { required: false, threshold: 0 };
+  }
+  
+  const threshold = parseInt(settings.captchaThreshold || '3');
+  const key = identifier.toLowerCase();
+  const record = failedAttempts.get(key);
+  
+  if (!record) {
+    return { required: false, threshold };
+  }
+  
+  return { required: record.count >= threshold, threshold };
+}
+
+// Log security event for audit
+async function logSecurityEvent(
+  supabase: any,
+  panelId: string,
+  action: string,
+  details: Record<string, any>,
+  clientIp: string
+): Promise<void> {
+  try {
+    await supabase.from('audit_logs').insert({
+      panel_id: panelId,
+      action: action,
+      resource_type: 'security',
+      details: details,
+      ip_address: clientIp,
+    });
+  } catch (err) {
+    console.error('Failed to log security event:', err);
+  }
 }
 
 // Base64URL encoding for JWT
@@ -320,7 +432,7 @@ serve(async (req) => {
 
 // Handle login action
 async function handleLogin(supabaseAdmin: any, body: any, req: Request) {
-  const { panelId, identifier, password } = body;
+  const { panelId, identifier, password, captchaToken } = body;
   
   console.log(`Login attempt: identifier=${identifier}`);
 
@@ -332,7 +444,53 @@ async function handleLogin(supabaseAdmin: any, body: any, req: Request) {
   const clientIP = req.headers.get('x-forwarded-for') || 'unknown';
   const rateLimitKey = `${clientIP}:${identifier}`;
 
-  // Check rate limit
+  // ========= SECURITY ENFORCEMENT =========
+  // Load panel security settings
+  const securitySettings = await loadSecuritySettings(supabaseAdmin, panelId);
+  
+  // 1. Check IP allowlist/blocklist
+  const ipCheck = isIpBlocked(clientIP, securitySettings);
+  if (ipCheck.blocked) {
+    console.log(`IP blocked for panel ${panelId}: ${clientIP} - ${ipCheck.reason}`);
+    await logSecurityEvent(supabaseAdmin, panelId, 'ip_blocked', { 
+      ip: clientIP, 
+      reason: ipCheck.reason,
+      identifier 
+    }, clientIP);
+    return jsonResponse({ 
+      error: 'Access denied. Your IP address is not allowed.',
+      blocked: true
+    });
+  }
+  
+  // 2. Check panel-specific rate limit (requests per minute)
+  const panelRateLimit = checkPanelRateLimit(identifier, panelId, securitySettings);
+  if (!panelRateLimit.allowed) {
+    console.log(`Panel rate limit exceeded: ${panelId}:${identifier}`);
+    await logSecurityEvent(supabaseAdmin, panelId, 'rate_limit_exceeded', { 
+      identifier,
+      remainingTime: panelRateLimit.remainingTime 
+    }, clientIP);
+    return jsonResponse({ 
+      error: `Too many requests. Please try again in ${panelRateLimit.remainingTime} seconds.`,
+      rateLimited: true,
+      retryAfter: panelRateLimit.remainingTime
+    });
+  }
+  
+  // 3. Check if CAPTCHA is required
+  const captchaCheck = isCaptchaRequired(identifier, securitySettings);
+  if (captchaCheck.required && !captchaToken) {
+    console.log(`CAPTCHA required for: ${identifier}`);
+    return jsonResponse({ 
+      error: 'CAPTCHA verification required due to multiple failed attempts.',
+      captchaRequired: true,
+      threshold: captchaCheck.threshold
+    });
+  }
+  // ========= END SECURITY ENFORCEMENT =========
+
+  // Check standard rate limit (failed attempts)
   const rateLimit = checkRateLimit(rateLimitKey);
   if (!rateLimit.allowed) {
     console.log(`Rate limited: ${rateLimitKey}`);
