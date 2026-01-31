@@ -24,6 +24,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from "@/lib/utils";
 import { DomainRegistrarLinks } from './DomainRegistrarLinks';
 import { OnboardingCurrencySelector } from './OnboardingCurrencySelector';
+import { PRIMARY_PLATFORM_DOMAIN, VERCEL_IP, VERCEL_CNAME } from '@/lib/hosting-config';
 
 interface OnboardingDomainStepProps {
   selectedPlan: 'free' | 'basic' | 'pro';
@@ -95,8 +96,8 @@ export const OnboardingDomainStep = ({
   const [searchDomain, setSearchDomain] = useState('');
   const [selectedTld, setSelectedTld] = useState('.com');
   const [dnsRecords, setDnsRecords] = useState<DnsRecord[]>([
-    { type: 'A', name: '@', value: '76.76.21.21', ttl: 3600, description: 'Root domain' },
-    { type: 'CNAME', name: 'www', value: 'cname.vercel-dns.com', ttl: 3600, description: 'WWW subdomain' }
+    { type: 'A', name: '@', value: VERCEL_IP, ttl: 3600, description: 'Root domain' },
+    { type: 'CNAME', name: 'www', value: VERCEL_CNAME, ttl: 3600, description: 'WWW subdomain' }
   ]);
   const [verificationToken, setVerificationToken] = useState<string | null>(null);
   const [addingDomain, setAddingDomain] = useState(false);
@@ -208,7 +209,7 @@ export const OnboardingDomainStep = ({
                   />
                 </div>
                 <div className="px-4 h-12 flex items-center bg-muted/50 rounded-lg border border-border">
-                  <span className="text-muted-foreground font-medium">.homeofsmm.com</span>
+                  <span className="text-muted-foreground font-medium">.{PRIMARY_PLATFORM_DOMAIN}</span>
                 </div>
               </div>
               
@@ -249,7 +250,7 @@ export const OnboardingDomainStep = ({
               <div>
                 <p className="text-sm text-muted-foreground mb-1">Your panel will be available at:</p>
                 <p className="text-lg font-semibold text-primary">
-                  https://{subdomain || 'yourname'}.homeofsmm.com
+                  https://{subdomain || 'yourname'}.{PRIMARY_PLATFORM_DOMAIN}
                 </p>
               </div>
             </div>

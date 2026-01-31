@@ -124,6 +124,13 @@ const Analytics = () => {
   
   const [insightsData, setInsightsData] = useState<any[]>([]);
   
+  // Real deposit breakdown state - replaces simulated percentages
+  const [depositBreakdown, setDepositBreakdown] = useState({
+    completed: 0,
+    pending: 0,
+    failed: 0
+  });
+  
   const [stats, setStats] = useState({
     totalRevenue: 0,
     totalOrders: 0,
@@ -270,6 +277,25 @@ const Analytics = () => {
         deposits: volumeCalc.deposits,
         refunds: volumeCalc.refunds,
         netRevenue: volumeCalc.netRevenue
+      });
+      
+      // ========= REAL DEPOSIT BREAKDOWN =========
+      // Calculate actual deposit breakdown from transactions (replaces simulated percentages)
+      const allDeposits = (transactions || []).filter(t => t.type === 'deposit');
+      const completedDepositsAmount = allDeposits
+        .filter(t => t.status === 'completed')
+        .reduce((sum, t) => sum + (t.amount || 0), 0);
+      const pendingDepositsAmount = allDeposits
+        .filter(t => t.status === 'pending')
+        .reduce((sum, t) => sum + (t.amount || 0), 0);
+      const failedDepositsAmount = allDeposits
+        .filter(t => t.status === 'refunded')
+        .reduce((sum, t) => sum + (t.amount || 0), 0);
+      
+      setDepositBreakdown({
+        completed: completedDepositsAmount,
+        pending: pendingDepositsAmount,
+        failed: failedDepositsAmount
       });
 
       // ========= RETENTION DATA (REAL CALCULATION) =========
@@ -652,7 +678,15 @@ const Analytics = () => {
           transition={{ delay: 0.15 }}
           className="grid grid-cols-1 lg:grid-cols-3 gap-6"
         >
-          {/* Fast Order Funnel - Spans 2 columns */}
+          {/* Payment Deposit Funnel - Overall deposit analytics */}
+          <PaymentsFunnelCard
+            stages={funnelData.stages}
+            totalTransactions={funnelData.totalTransactions}
+            conversionRate={funnelData.conversionRate}
+            overallDropOff={funnelData.overallDropOff}
+          />
+          
+          {/* Fast Order Funnel - Checkout flow tracking */}
           <FastOrderAnalyticsCard
             stages={[
               { name: 'Visitors', count: stats.activeUsers * 3, percentage: 100, dropOff: 0 },
@@ -665,12 +699,12 @@ const Analytics = () => {
             growthTrend={changes.orders}
           />
           
-          {/* Deposit Analytics Card - Replaces GrossVolumeCard billing breakdown */}
+          {/* Deposit Analytics Card - Real data breakdown */}
           <DepositAnalyticsCard
             totalDeposits={volumeData.deposits}
-            completedDeposits={volumeData.deposits * 0.85}
-            pendingDeposits={volumeData.deposits * 0.1}
-            failedDeposits={volumeData.deposits * 0.05}
+            completedDeposits={depositBreakdown.completed}
+            pendingDeposits={depositBreakdown.pending}
+            failedDeposits={depositBreakdown.failed}
             previousTotalDeposits={volumeData.previousGrossVolume * 0.3}
           />
         </motion.div>
