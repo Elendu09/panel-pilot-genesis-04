@@ -1,336 +1,326 @@
 
+# Analytics & Payment Management Enhancement Plan
 
-# Comprehensive Fix Plan: Analytics Real Data, Retention Navigation, Payment Management, & Customer Segmentation
+## Summary of User Requests
 
-## Issues Identified
+Based on the user's message and uploaded images, there are 3 main issues to address:
 
-### 1. Payment Management Page - Not Restructured Per Plan
-**Current State**: Still has complex structure with buyer payment methods AND billing in same page with duplicated stats sections
-**Target**: Clean 2-tab structure with:
-- Payment Overview Banner at top
-- Tab 1: Payment Methods (enable/disable only)
-- Tab 2: Transactions & History (with quick actions + link to Customer Management)
+### 1. Remove Billing Analytics Duplication
+**Current Issue**: Analytics page and Payment Management page both show billing-related analytics (GrossVolumeCard shows deposits/refunds). This creates confusion.
 
-### 2. Retention Graph - Missing Month Navigation
-**Current**: Shows hardcoded 7 months (Jan-Jul) with no navigation
-**Target**: Show 6 months at a time with `<` `>` arrows to navigate between Jan-Jun and Jul-Dec halves
+**What User Wants**:
+- **Analytics Page**: Show only **tenant deposit analytics overview** (not billing breakdown)
+- **Payment Management Page**: Show **deposit analytics for completed/failed/pending** transactions (real-time sync)
 
-### 3. Analytics Data Uses Fake Random Values
-**Current Issues Found (Lines 281-287 in Analytics.tsx)**:
-```typescript
-// Simulate retention data based on current rate with some variance
-monthlyRetention.push({
-  month,
-  rate: Math.max(0, Math.min(100, retentionRate + (Math.random() - 0.5) * 20))
-});
-```
-This `Math.random()` causes values to change on every page load!
+### 2. Replace Authentication Drop-Off with Fast Order Flow
+**Current Issue** (see uploaded image-265.png): The `PaymentsFunnelCard` shows "Analyze drop-off from `Authorized → Successful`" which is about authentication drop-off.
 
-**Other Fake Data**:
-- Line 344: `retention: retentionRate * 0.9` - simulated previous retention
-- Gross Volume previous period calculations may be using simulated data
+**What User Wants**: Replace this with **Fast Order funnel enhancement** - tracking how visitors use fast order (Visitors → Selections → Checkout → Completed).
 
-### 4. Customer Management - Segment Logic is Wrong
-**Current Logic (Lines 272-273)**:
-```typescript
-segment: (c.total_spent || 0) >= 1000 ? 'vip' : (c.total_spent || 0) >= 100 ? 'regular' : 'new'
-```
-This only looks at total_spent, not time-based rules.
+### 3. Simplified Payment Methods List Layout
+**Current Issue** (see uploaded image-264.png reference): The payment methods are shown in complex cards with lots of details.
 
-**Required Logic**:
-- **New**: Users joined within last 3 days
-- **Regular**: Users who log in frequently (active users)
-- **VIP**: Users with high spending OR referral activity
-- **Active**: All users unless banned/suspended (default)
+**What User Wants**: A simple list layout like the reference image:
+- Search bar at top
+- Simple rows with: Icon → Name → Chevron (>)
+- Click to expand/configure
+- Manual at top, then other gateways in alphabetical order
 
 ---
 
 ## Implementation Plan
 
-### Part 1: Fix Analytics Real Data (No Fake Data)
+### Part 1: Analytics Page - Remove Billing, Add Deposit Overview + Fast Order
 
-#### 1.1 Fix Retention Monthly Data Calculation
+#### 1.1 Replace PaymentsFunnelCard with FastOrderAnalyticsCard
 **File**: `src/pages/panel/Analytics.tsx`
 
-**Change**: Replace simulated random variance with REAL monthly retention calculation
+**Change**: Replace `PaymentsFunnelCard` (which shows authentication drop-off) with `FastOrderAnalyticsCard` (which shows fast order flow):
 
 ```typescript
-// REAL monthly retention from orders data
-const ordersByMonth = new Map<string, { buyers: Set<string>; dates: Date[] }>();
+// REMOVE
+<PaymentsFunnelCard
+  stages={funnelData.stages}
+  totalTransactions={funnelData.totalTransactions}
+  ...
+/>
 
-// Group orders by month
-(orders || []).forEach(order => {
-  if (!order.buyer_id || !order.created_at) return;
-  const date = new Date(order.created_at);
-  const monthKey = format(date, 'yyyy-MM'); // e.g., "2025-01"
-  
-  if (!ordersByMonth.has(monthKey)) {
-    ordersByMonth.set(monthKey, { buyers: new Set(), dates: [] });
-  }
-  ordersByMonth.get(monthKey)!.buyers.add(order.buyer_id);
-  ordersByMonth.get(monthKey)!.dates.push(date);
-});
-
-// Calculate retention: % of buyers who ordered in previous month AND this month
-const sortedMonths = Array.from(ordersByMonth.keys()).sort();
-const monthlyRetention: { month: string; rate: number }[] = [];
-let previousBuyers = new Set<string>();
-
-sortedMonths.forEach(monthKey => {
-  const monthData = ordersByMonth.get(monthKey)!;
-  const currentBuyers = monthData.buyers;
-  
-  // Retention = buyers who were in previous month AND are in this month
-  const retainedBuyers = [...currentBuyers].filter(b => previousBuyers.has(b));
-  const retentionRate = previousBuyers.size > 0 
-    ? (retainedBuyers.length / previousBuyers.size) * 100 
-    : 0;
-  
-  monthlyRetention.push({
-    month: format(new Date(monthKey + '-01'), 'MMM'), // "Jan", "Feb", etc.
-    rate: retentionRate
-  });
-  
-  previousBuyers = currentBuyers;
-});
-
-// Take last 12 months (or whatever is available)
-const finalRetentionData = monthlyRetention.slice(-12);
-```
-
-#### 1.2 Fix Previous Period Stats (No Simulation)
-**Remove**: `retention: retentionRate * 0.9` simulation
-
-**Replace with**: Calculate REAL previous period retention using the same method on `prevOrders`
-
-#### 1.3 Add Stable Seeding for Any Remaining Randomness
-If absolutely needed for visualization when data is sparse, use a deterministic seed based on date:
-```typescript
-// Stable pseudo-random based on panel ID + month (won't change on refresh)
-const stableVariance = (panelId.charCodeAt(0) % 10) / 10;
-```
-
----
-
-### Part 2: Retention Card with Month Navigation
-
-#### 2.1 Update RetentionCard Component
-**File**: `src/components/analytics/RetentionCard.tsx`
-
-**Add**:
-1. State for current half: `'H1'` (Jan-Jun) or `'H2'` (Jul-Dec)
-2. Navigation buttons `<` and `>`
-3. Filter data based on selected half
-
-```typescript
-interface RetentionCardProps {
-  currentRate: number;
-  data: RetentionDataPoint[]; // Full 12 months
-}
-
-export function RetentionCard({ currentRate, data }: RetentionCardProps) {
-  const [halfYear, setHalfYear] = useState<'H1' | 'H2'>('H1');
-  
-  // Split data into two halves
-  const h1Months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-  const h2Months = ['Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  
-  const displayData = data.filter(d => 
-    halfYear === 'H1' 
-      ? h1Months.includes(d.month)
-      : h2Months.includes(d.month)
-  );
-  
-  return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle>Retention</CardTitle>
-          <div className="flex items-center gap-2">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-7 w-7"
-              onClick={() => setHalfYear('H1')}
-              disabled={halfYear === 'H1'}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <span className="text-xs font-medium w-12 text-center">
-              {halfYear === 'H1' ? 'Jan-Jun' : 'Jul-Dec'}
-            </span>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-7 w-7"
-              onClick={() => setHalfYear('H2')}
-              disabled={halfYear === 'H2'}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      </CardHeader>
-      {/* Chart uses displayData */}
-    </Card>
-  );
-}
-```
-
----
-
-### Part 3: Customer Management Segment Logic
-
-#### 3.1 Update Segment Calculation
-**File**: `src/pages/panel/CustomerManagement.tsx`
-
-**New Logic**:
-```typescript
-const calculateSegment = (customer: any): "vip" | "regular" | "new" => {
-  const joinedDate = new Date(customer.created_at);
-  const now = new Date();
-  const daysSinceJoined = Math.floor((now.getTime() - joinedDate.getTime()) / (1000 * 60 * 60 * 24));
-  
-  // Users joined within 3 days are "new"
-  if (daysSinceJoined <= 3) {
-    return 'new';
-  }
-  
-  // VIP: High spenders (>= $500) OR high referral count (>= 5)
-  if ((customer.total_spent || 0) >= 500 || (customer.referral_count || 0) >= 5) {
-    return 'vip';
-  }
-  
-  // Regular: Users who have logged in multiple times OR have placed orders
-  // Indicated by having last_login_at different from created_at, or having spent money
-  const hasActivity = customer.total_spent > 0 || 
-                      (customer.last_login_at && customer.last_login_at !== customer.created_at);
-  if (hasActivity) {
-    return 'regular';
-  }
-  
-  // Default to regular (since they're past 3 days)
-  return 'regular';
-};
-
-// In fetchCustomers:
-segment: calculateSegment(c),
-```
-
-#### 3.2 Update Status Logic
-**Current**: Status based on `is_active`
-**Enhanced**:
-```typescript
-// All users are "active" by default, unless banned or suspended
-status: c.is_banned ? 'suspended' : 'active',
-```
-
----
-
-### Part 4: Payment Management Page Restructure
-
-#### 4.1 Add Payment Overview Banner
-**Create**: Use existing `PaymentOverviewBanner` component at top of page
-
-```typescript
-<PaymentOverviewBanner 
-  panelId={panel?.id || ''} 
-  totalRevenue={volumeData.grossVolume}
-  totalDeposits={volumeData.deposits}
-  pendingCount={pendingCount}
-  activeMethodsCount={enabledCount}
+// REPLACE WITH
+<FastOrderAnalyticsCard
+  stages={fastOrderStages}
+  totalFastOrders={fastOrderCount}
+  conversionRate={fastOrderConversionRate}
+  growthTrend={fastOrderGrowth}
 />
 ```
 
-#### 4.2 Simplify Tab 1: Payment Methods
-**Remove from Tab 1**:
-- Payment Statistics by User section
-- All the stats cards (move to Tab 2)
+#### 1.2 Add Fast Order Data Calculation
+**File**: `src/pages/panel/Analytics.tsx`
 
-**Keep in Tab 1**:
-- Manual Payment Methods (add/edit/enable/disable)
-- Gateway cards (enable/disable only, configure opens modal)
-
-#### 4.3 Enhance Tab 2: Transactions & History
-**Add**:
-- PaymentOverviewBanner at section top
-- Enhanced UnifiedTransactionManager with quick actions
-- Link to Customer Management for balance adjustments
-
-#### 4.4 Add Quick Actions to UnifiedTransactionManager
-**File**: `src/components/billing/UnifiedTransactionManager.tsx`
-
-**Add for completed/failed transactions**:
+Add new state and calculation for fast order funnel:
 ```typescript
-{tx.status !== 'pending' && (
-  <div className="flex items-center gap-2 pt-2 border-t border-border/50">
-    <Button
-      variant="outline"
-      size="sm"
-      className="flex-1"
-      onClick={() => handleQuickStatusChange(tx.id, 'completed')}
-    >
-      <CheckCircle className="w-4 h-4 mr-1" />
-      Mark Completed
-    </Button>
-    <Button
-      variant="outline"
-      size="sm"
-      className="flex-1"
-      onClick={() => handleQuickStatusChange(tx.id, 'failed')}
-    >
-      <XCircle className="w-4 h-4 mr-1" />
-      Mark Failed
-    </Button>
-    <Button
-      variant="ghost"
-      size="sm"
-      onClick={() => navigateToCustomer(tx.buyer_id)}
-    >
-      <ExternalLink className="w-4 h-4" />
-    </Button>
-  </div>
-)}
+const [fastOrderData, setFastOrderData] = useState({
+  stages: [],
+  totalFastOrders: 0,
+  conversionRate: 0,
+  growthTrend: { value: '0%', trend: 'neutral' }
+});
+
+// Calculate from orders with order_source = 'fast_order' or track fast order flow
+```
+
+#### 1.3 Create Deposit Analytics Overview Card
+**File**: Create `src/components/analytics/DepositAnalyticsCard.tsx`
+
+A simple card showing tenant deposit overview:
+- Total Deposits (all time)
+- Deposits This Period
+- Completed vs Pending ratio
+- Mini trend sparkline
+
+This replaces the billing-focused `GrossVolumeCard` with deposit-focused analytics.
+
+#### 1.4 Update GrossVolumeCard to Focus on Orders Only
+**File**: `src/components/analytics/GrossVolumeCard.tsx`
+
+**Change**: Remove "Deposits" and "Refunds" breakdown. Focus only on Order Revenue:
+- Order Payments (total from completed orders)
+- Net Revenue = Order Payments only
+- Remove deposit-related metrics
+
+---
+
+### Part 2: Payment Management - Enhanced Deposit Analytics with Status Sync
+
+#### 2.1 Create DepositStatusBanner Component
+**File**: Create `src/components/analytics/DepositStatusBanner.tsx`
+
+A banner showing real-time deposit status breakdown:
+```text
+┌──────────────────────────────────────────────────────────────┐
+│          DEPOSIT ANALYTICS (Real-time Sync)                  │
+│  ┌─────────┬─────────┬─────────┬─────────┐                   │
+│  │Completed│ Failed  │ Pending │ Total   │                   │
+│  │   $XXX  │   $XXX  │   $XXX  │  $XXX   │                   │
+│  │   XX%   │   XX%   │   XX%   │         │                   │
+│  └─────────┴─────────┴─────────┴─────────┘                   │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**Features**:
+- Shows Completed, Failed, Pending deposit counts and amounts
+- Real-time sync via Supabase subscription
+- Color-coded cards (green/red/amber)
+
+#### 2.2 Update PaymentMethods.tsx Tab 2 (Transactions & History)
+**File**: `src/pages/panel/PaymentMethods.tsx`
+
+**Replace** `PaymentOverviewBanner` (generic) with `DepositStatusBanner` (status-focused):
+```typescript
+// REMOVE
+<PaymentOverviewBanner 
+  totalDeposits={...}
+  periodDeposits={...}
+  ...
+/>
+
+// REPLACE WITH
+<DepositStatusBanner 
+  completedDeposits={completedCount}
+  completedAmount={completedAmount}
+  failedDeposits={failedCount}
+  failedAmount={failedAmount}
+  pendingDeposits={pendingCount}
+  pendingAmount={pendingAmount}
+/>
 ```
 
 ---
+
+### Part 3: Payment Methods - Simplified List Layout
+
+#### 3.1 Redesign Tab 1 Payment Methods UI
+**File**: `src/pages/panel/PaymentMethods.tsx`
+
+**Current**: Complex card grid with icons, regions, fees, badges, buttons
+**Target**: Simple list like uploaded image (image-264.png):
+
+```text
+┌─────────────────────────────────────────────────┐
+│ Add new payment system                          │
+│ Try choosing suitable payment system...         │
+├─────────────────────────────────────────────────┤
+│ Q Search by name                                │
+├─────────────────────────────────────────────────┤
+│ 🔘 Manual                                     > │
+│ 💳 Stripe                                     > │
+│ 💰 PayPal                                     > │
+│ ₿ Coinbase Commerce                           > │
+│ ...                                             │
+└─────────────────────────────────────────────────┘
+```
+
+**Key Changes**:
+1. Remove card grid → Use simple list rows
+2. Each row: Icon + Name + Chevron (>)
+3. Click row to open configuration dialog/sheet
+4. Show enabled/disabled status with subtle indicator (green dot)
+5. Manual methods at top
+6. Alphabetical sort for gateways
+7. Remove category tabs (all in one list, searchable)
+
+**New Component Structure**:
+```typescript
+<div className="space-y-1">
+  {/* Manual Methods Section */}
+  <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider py-2">
+    Manual Methods
+  </div>
+  {manualPayments.map(method => (
+    <PaymentMethodRow 
+      icon={<Banknote />}
+      name={method.title}
+      enabled={method.enabled}
+      onClick={() => openManualDialog(method)}
+    />
+  ))}
+  
+  {/* All Gateways */}
+  <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider py-2 mt-4">
+    Payment Gateways
+  </div>
+  {allGateways
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .filter(g => g.name.toLowerCase().includes(searchQuery))
+    .map(gateway => (
+      <PaymentMethodRow
+        icon={<gateway.Icon />}
+        name={gateway.name}
+        enabled={configuredGateways[gateway.id]?.enabled}
+        onClick={() => openConfigDialog(gateway)}
+      />
+    ))
+  }
+</div>
+```
+
+#### 3.2 Create PaymentMethodRow Component
+**File**: Create `src/components/billing/PaymentMethodRow.tsx`
+
+A simple, minimal row component:
+```typescript
+interface PaymentMethodRowProps {
+  icon: React.ReactNode;
+  name: string;
+  enabled?: boolean;
+  onClick: () => void;
+}
+
+export function PaymentMethodRow({ icon, name, enabled, onClick }: PaymentMethodRowProps) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "w-full flex items-center gap-3 px-4 py-3 rounded-lg",
+        "hover:bg-muted/50 transition-colors text-left",
+        "border-b border-border/30 last:border-b-0"
+      )}
+    >
+      <div className="w-8 h-8 flex items-center justify-center rounded-lg bg-muted/50">
+        {icon}
+      </div>
+      <span className="flex-1 font-medium text-foreground">{name}</span>
+      {enabled && (
+        <div className="w-2 h-2 rounded-full bg-emerald-500" />
+      )}
+      <ChevronRight className="w-5 h-5 text-muted-foreground" />
+    </button>
+  );
+}
+```
+
+---
+
+## Files to Create
+
+| File | Purpose |
+|------|---------|
+| `src/components/analytics/DepositAnalyticsCard.tsx` | Tenant deposit overview for Analytics page |
+| `src/components/analytics/DepositStatusBanner.tsx` | Completed/Failed/Pending deposit status for Payment Management |
+| `src/components/billing/PaymentMethodRow.tsx` | Simple row component for payment method list |
 
 ## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/pages/panel/Analytics.tsx` | Fix retention calculation (real data), remove random variance, fix previous period stats |
-| `src/components/analytics/RetentionCard.tsx` | Add `<` `>` navigation for H1/H2 months |
-| `src/pages/panel/CustomerManagement.tsx` | Update segment logic (3-day new, activity-based regular, spending VIP) |
-| `src/pages/panel/PaymentMethods.tsx` | Add PaymentOverviewBanner, simplify Tab 1, enhance Tab 2 |
-| `src/components/billing/UnifiedTransactionManager.tsx` | Add quick status change actions, link to Customer Management |
+| `src/pages/panel/Analytics.tsx` | Replace PaymentsFunnelCard with FastOrderAnalyticsCard, add DepositAnalyticsCard, add fast order data calculation |
+| `src/components/analytics/GrossVolumeCard.tsx` | Remove deposits/refunds, focus on order revenue only |
+| `src/pages/panel/PaymentMethods.tsx` | Restructure Tab 1 to simple list, replace Tab 2 overview with DepositStatusBanner |
+| `src/components/analytics/index.ts` | Export new components |
 
 ---
 
-## Summary of Changes
+## Visual Summary
 
-| Issue | Fix |
-|-------|-----|
-| Analytics uses `Math.random()` | Replace with deterministic real data calculation |
-| Retention shows 7 months statically | Show 6 months with H1/H2 navigation arrows |
-| Customer "new" based on spending | New = joined within 3 days |
-| Customer "regular" not defined | Regular = has activity (logins/orders) |
-| Payment Management not restructured | Add overview banner, simplify Tab 1, enhance Tab 2 |
-| No quick actions on transactions | Add Mark Completed/Failed buttons + Customer link |
+### Analytics Page (After Changes)
+```text
+┌─────────────────────────────────────────────────────────────┐
+│ TopStatCards (Revenue, Orders, Users, Conversion)           │
+├───────────────────────────────────────┬─────────────────────┤
+│ FastOrderAnalyticsCard (Visitors →    │ DepositAnalyticsCard│
+│ Selections → Checkout → Completed)    │ (Deposit Overview)  │
+├───────────────────────────────────────┴─────────────────────┤
+│ Retention | Transactions | Customers | Insights             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Payment Management Page (After Changes)
+```text
+┌─────────────────────────────────────────────────────────────┐
+│ DEPOSIT STATUS BANNER (Completed|Failed|Pending|Total)       │
+├─────────────────────────────────────────────────────────────┤
+│ [Payment Methods]  [Transactions & History]                  │
+├─────────────────────────────────────────────────────────────┤
+│ Tab 1: Simple list of all payment methods                    │
+│ Q Search                                                     │
+│ ─────────────────────────────                                │
+│ 🔘 Manual                                               >    │
+│ 💳 Stripe                                               >    │
+│ 💰 PayPal                                               >    │
+│ ...                                                          │
+│                                                              │
+│ Tab 2: UnifiedTransactionManager with quick actions          │
+└─────────────────────────────────────────────────────────────┘
+```
 
 ---
 
 ## Technical Notes
 
-### Retention Calculation Formula
-```
-Retention Rate = (Customers who ordered in Month N AND Month N-1) / (Customers who ordered in Month N-1) × 100
+### Fast Order Tracking
+To properly track fast order analytics, orders need an `order_source` field:
+- `'standard'` - Regular orders through main flow
+- `'fast_order'` - Orders via fast order widget
+- `'api'` - API-created orders
+
+If this column doesn't exist, the FastOrderAnalyticsCard will show 0 data and prompt to enable tracking.
+
+### Real-time Sync for Deposit Status
+The `DepositStatusBanner` will use Supabase real-time subscription:
+```typescript
+useEffect(() => {
+  const channel = supabase
+    .channel('deposit-status')
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'transactions',
+      filter: `type=eq.deposit`
+    }, () => refetchStats())
+    .subscribe();
+  
+  return () => supabase.removeChannel(channel);
+}, []);
 ```
 
-### Customer Segment Priority
-1. **Banned/Suspended** → status = 'suspended'
-2. **Joined ≤ 3 days** → segment = 'new'
-3. **Spent ≥ $500 OR Referrals ≥ 5** → segment = 'vip'
-4. **Has activity** → segment = 'regular'
-5. **Default** → segment = 'regular', status = 'active'
-
+This ensures completed, failed, and pending counts update in real-time.
