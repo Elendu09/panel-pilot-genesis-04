@@ -164,7 +164,8 @@ const SecuritySettings = () => {
             return {
               id: client.id,
               email: client.email,
-              ip: `192.168.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`,
+              // Use masked IP for privacy - real IPs would require session tracking infrastructure
+              ip: 'IP masked',
               device: ['Chrome on Windows', 'Safari on macOS', 'Firefox on Linux', 'Chrome on Android'][index % 4],
               lastActive: timeStr,
               current: index === 0

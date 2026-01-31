@@ -29,7 +29,9 @@ import { motion } from "framer-motion";
 import { DomainDiagnostics } from "@/components/domain/DomainDiagnostics";
 import { DomainPurchaseLinks } from "@/components/domain/DomainPurchaseLinks";
 import { DomainTroubleshootingGuide } from "@/components/domain/DomainTroubleshootingGuide";
-import { VERCEL_IP, VERCEL_CNAME, getDnsRecordsForDomain } from "@/lib/hosting-config";
+import { DNSVerificationProgress } from "@/components/domain/DNSVerificationProgress";
+import { UpgradePrompt } from "@/components/billing/UpgradePrompt";
+import { VERCEL_IP, VERCEL_CNAME, getDnsRecordsForDomain, isValidCustomDomain, isPlatformSubdomain, PRIMARY_PLATFORM_DOMAIN } from "@/lib/hosting-config";
 
 interface PanelDomain {
   id: string;
@@ -173,6 +175,24 @@ const DomainSettings = () => {
       return;
     }
     
+    // Validate domain - check for platform subdomains
+    const validation = isValidCustomDomain(newDomain.trim());
+    if (!validation.valid) {
+      toast({ variant: "destructive", title: "Invalid Domain", description: validation.error });
+      return;
+    }
+    
+    // Check subscription tier - custom domains require paid plan
+    const subscriptionTier = panel?.subscription_tier || 'free';
+    if (subscriptionTier === 'free') {
+      toast({ 
+        variant: "destructive", 
+        title: "Upgrade Required", 
+        description: "Custom domains require a Basic or Pro plan." 
+      });
+      return;
+    }
+    
     setAdding(true);
     try {
       const verificationToken = crypto.randomUUID().substring(0, 16);
@@ -280,10 +300,10 @@ const DomainSettings = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-col gap-4">
-              <div className="flex-1">
+            <div className="flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <code className="text-sm md:text-lg font-mono bg-muted px-2 md:px-3 py-1 md:py-2 rounded-lg">
-                    {panel?.subdomain}.smmpilot.online
+                    {panel?.subdomain}.{PRIMARY_PLATFORM_DOMAIN}
                   </code>
                   <Badge className="bg-green-500/10 text-green-500 border-green-500/20">
                     <CheckCircle className="w-3 h-3 mr-1" /> Live
@@ -294,11 +314,11 @@ const DomainSettings = () => {
                 </p>
               </div>
               <div className="flex gap-2 flex-wrap">
-                <Button variant="outline" size="sm" onClick={() => copyToClipboard(`https://${panel?.subdomain}.smmpilot.online`)}>
+                <Button variant="outline" size="sm" onClick={() => copyToClipboard(`https://${panel?.subdomain}.${PRIMARY_PLATFORM_DOMAIN}`)}>
                   <Copy className="w-4 h-4 mr-2" /> Copy URL
                 </Button>
                 <Button variant="outline" size="sm" asChild>
-                  <a href={`https://${panel?.subdomain}.smmpilot.online`} target="_blank" rel="noopener noreferrer">
+                  <a href={`https://${panel?.subdomain}.${PRIMARY_PLATFORM_DOMAIN}`} target="_blank" rel="noopener noreferrer">
                     <ExternalLink className="w-4 h-4 mr-2" /> Visit
                   </a>
                 </Button>
@@ -319,7 +339,16 @@ const DomainSettings = () => {
 
         {/* Custom Domain Tab */}
         <TabsContent value="domains" className="space-y-6">
-          {domains.length === 0 ? (
+          {/* Upgrade prompt for free users */}
+          {panel?.subscription_tier === 'free' && (
+            <UpgradePrompt
+              feature="Custom Domain"
+              currentPlan="free"
+              requiredPlan="basic"
+            />
+          )}
+          
+          {panel?.subscription_tier !== 'free' && domains.length === 0 && (
             <Card className="glass-card">
               <CardContent className="py-12 text-center">
                 <Globe className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
@@ -332,77 +361,92 @@ const DomainSettings = () => {
                 </Button>
               </CardContent>
             </Card>
-          ) : (
-            <Card className="glass-card">
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Globe className="w-5 h-5" />
-                    {currentDomain.domain}
-                  </div>
-                  {getStatusBadge(currentDomain.verification_status)}
-                </CardTitle>
-                <CardDescription>
-                  {currentDomain.verification_status === 'verified' 
-                    ? 'Your custom domain is active and serving your panel'
-                    : 'Configure the DNS records below to activate your domain'}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {currentDomain.verification_status !== 'verified' && (
-                  <>
-                    <Alert className="border-amber-500/20 bg-amber-500/5">
-                      <Info className="w-4 h-4 text-amber-500" />
-                      <AlertDescription>
-                        Add the following DNS records at your domain registrar to verify ownership.
-                      </AlertDescription>
-                    </Alert>
-                    
-                    <div className="space-y-3">
-                      {dnsRecords.map((record, idx) => (
-                        <div key={idx} className="p-3 rounded-lg bg-muted/50 border border-border/50">
-                          <div className="flex items-center justify-between mb-2">
-                            <Badge variant="outline">{record.type}</Badge>
-                            <Button variant="ghost" size="sm" onClick={() => copyToClipboard(record.value)}>
-                              <Copy className="w-3 h-3" />
-                            </Button>
-                          </div>
-                          <div className="grid grid-cols-2 gap-2 text-sm">
-                            <div>
-                              <span className="text-muted-foreground">Host:</span>
-                              <code className="ml-2 bg-background px-1 rounded">{record.host}</code>
-                            </div>
-                            <div>
-                              <span className="text-muted-foreground">Value:</span>
-                              <code className="ml-2 bg-background px-1 rounded text-xs break-all">{record.value}</code>
-                            </div>
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-2">{record.description}</p>
-                        </div>
-                      ))}
+          )}
+          
+          {panel?.subscription_tier !== 'free' && domains.length > 0 && currentDomain && (
+            <>
+              {/* DNS Verification Progress Component */}
+              {currentDomain.verification_status !== 'verified' && (
+                <DNSVerificationProgress
+                  domain={currentDomain.domain}
+                  verificationToken={currentDomain.verification_token}
+                  onVerified={() => fetchData()}
+                  autoCheck={true}
+                  checkIntervalMs={30000}
+                />
+              )}
+              
+              <Card className="glass-card">
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Globe className="w-5 h-5" />
+                      {currentDomain.domain}
                     </div>
-                  </>
-                )}
+                    {getStatusBadge(currentDomain.verification_status)}
+                  </CardTitle>
+                  <CardDescription>
+                    {currentDomain.verification_status === 'verified' 
+                      ? 'Your custom domain is active and serving your panel'
+                      : 'Configure the DNS records below to activate your domain'}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {currentDomain.verification_status !== 'verified' && (
+                    <>
+                      <Alert className="border-amber-500/20 bg-amber-500/5">
+                        <Info className="w-4 h-4 text-amber-500" />
+                        <AlertDescription>
+                          Add the following DNS records at your domain registrar to verify ownership.
+                        </AlertDescription>
+                      </Alert>
+                      
+                      <div className="space-y-3">
+                        {dnsRecords.map((record, idx) => (
+                          <div key={idx} className="p-3 rounded-lg bg-muted/50 border border-border/50">
+                            <div className="flex items-center justify-between mb-2">
+                              <Badge variant="outline">{record.type}</Badge>
+                              <Button variant="ghost" size="sm" onClick={() => copyToClipboard(record.value)}>
+                                <Copy className="w-3 h-3" />
+                              </Button>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 text-sm">
+                              <div>
+                                <span className="text-muted-foreground">Host:</span>
+                                <code className="ml-2 bg-background px-1 rounded">{record.host}</code>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">Value:</span>
+                                <code className="ml-2 bg-background px-1 rounded text-xs break-all">{record.value}</code>
+                              </div>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-2">{record.description}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
 
-                <div className="flex gap-2">
-                  <Button 
-                    onClick={() => verifyDomain(currentDomain.id, currentDomain.domain)} 
-                    disabled={verifyingDomains.has(currentDomain.id)}
-                  >
-                    {verifyingDomains.has(currentDomain.id) ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <RefreshCw className="w-4 h-4 mr-2" />
-                    )}
-                    Verify Now
-                  </Button>
-                  <Button variant="outline" onClick={() => deleteDomain(currentDomain.id)}>
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Remove
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+                  <div className="flex gap-2">
+                    <Button 
+                      onClick={() => verifyDomain(currentDomain.id, currentDomain.domain)} 
+                      disabled={verifyingDomains.has(currentDomain.id)}
+                    >
+                      {verifyingDomains.has(currentDomain.id) ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                      )}
+                      Verify Now
+                    </Button>
+                    <Button variant="outline" onClick={() => deleteDomain(currentDomain.id)}>
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Remove
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </>
           )}
         </TabsContent>
 
