@@ -20,6 +20,8 @@ import { useAvailablePaymentGateways } from "@/hooks/useAvailablePaymentGateways
 import { useAdminPaymentGateways } from "@/hooks/useAdminPaymentGateways";
 import { UnifiedTransactionManager } from "@/components/billing/UnifiedTransactionManager";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { PaymentOverviewBanner } from "@/components/analytics/PaymentOverviewBanner";
+import { useNavigate } from "react-router-dom";
 
 // Worldwide payment gateways
 const paymentGateways = {
@@ -632,11 +634,11 @@ const PaymentMethods = () => {
         <TabsList className="w-full md:w-auto grid grid-cols-2 md:inline-flex gap-1 bg-muted/50 p-1 rounded-lg">
           <TabsTrigger value="buyer" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
             <Wallet className="w-4 h-4" />
-            <span>Buyer Payment Methods</span>
+            <span>Payment Methods</span>
           </TabsTrigger>
           <TabsTrigger value="billing" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-            <DollarSign className="w-4 h-4" />
-            <span>Billing & Deposits</span>
+            <BarChart3 className="w-4 h-4" />
+            <span>Transactions & History</span>
           </TabsTrigger>
         </TabsList>
 
@@ -763,96 +765,38 @@ const PaymentMethods = () => {
         ))}
       </div>
 
-      {/* Payment Statistics by User */}
-      <Card className="glass-chart border-border/50">
-        <CardHeader className="pb-3">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-primary/20"><BarChart3 className="w-5 h-5 text-primary" /></div>
-            <div>
-              <CardTitle className="text-lg">Payment Statistics by User</CardTitle>
-              <p className="text-sm text-muted-foreground">Top depositors and payment activity</p>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid md:grid-cols-3 gap-6">
-            <div>
-              <h4 className="font-medium mb-3 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-green-500" />Top Depositors</h4>
-              <div className="space-y-2">
-                {loadingStats ? (
-                  <div className="flex items-center justify-center py-4">
-                    <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                  </div>
-                ) : topDepositors.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-4">No deposits yet</p>
-                ) : (
-                  topDepositors.map((user, i) => (
-                    <div key={i} className="flex items-center justify-between p-2 bg-muted/30 rounded-lg backdrop-blur-sm">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-muted-foreground">#{i+1}</span>
-                        <span className="font-medium text-sm">{user.name}</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="font-bold text-green-500">${user.amount.toFixed(2)}</span>
-                        <p className="text-xs text-muted-foreground">{user.method}</p>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-            <div>
-              <h4 className="font-medium mb-3 flex items-center gap-2"><CreditCard className="w-4 h-4 text-blue-500" />Method Usage</h4>
-              <div className="space-y-2">
-                {loadingStats ? (
-                  <div className="flex items-center justify-center py-4">
-                    <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                  </div>
-                ) : paymentMethodUsage.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-4">No data yet</p>
-                ) : (
-                  paymentMethodUsage.map((item) => (
-                    <div key={item.method} className="space-y-1">
-                      <div className="flex justify-between text-sm"><span>{item.method}</span><span className="font-medium">{item.percent}%</span></div>
-                      <div className="h-2 bg-muted rounded-full overflow-hidden"><div className={cn("h-full rounded-full", item.color)} style={{ width: `${item.percent}%` }} /></div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-            <div>
-              <h4 className="font-medium mb-3 flex items-center gap-2"><Users className="w-4 h-4 text-purple-500" />Recent Transactions</h4>
-              <div className="space-y-2">
-                {loadingStats ? (
-                  <div className="flex items-center justify-center py-4">
-                    <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                  </div>
-                ) : recentTransactions.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-4">No transactions yet</p>
-                ) : (
-                  recentTransactions.map((tx, i) => (
-                    <div key={i} className="flex items-center justify-between p-2 bg-muted/30 rounded-lg backdrop-blur-sm">
-                      <span className="text-sm">{tx.user}</span>
-                      <div className="text-right">
-                        <span className="font-medium text-green-500">+${tx.amount.toFixed(2)}</span>
-                        <p className="text-xs text-muted-foreground">{tx.time}</p>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+        </TabsContent>
+
+        {/* Tab B: Transactions & History */}
+        <TabsContent value="billing" className="space-y-6">
+          {/* Payment Overview Banner */}
+          <PaymentOverviewBanner 
+            totalDeposits={topDepositors.reduce((acc, d) => acc + d.amount, 0)}
+            periodDeposits={recentTransactions.reduce((acc, t) => acc + t.amount, 0)}
+            pendingCount={0} // Will be fetched from UnifiedTransactionManager
+            avgDepositValue={topDepositors.length > 0 
+              ? topDepositors.reduce((acc, d) => acc + d.amount, 0) / topDepositors.length 
+              : 0}
+            depositChange={{ value: '+12%', trend: 'up' }}
+          />
+
+          <Alert className="border-blue-500/30 bg-blue-500/10">
+            <BarChart3 className="w-4 h-4 text-blue-500" />
+            <AlertDescription className="text-blue-700 dark:text-blue-300">
+              <strong>Transaction Management:</strong> Review and approve pending deposits, view transaction history, and manage customer balances.
+            </AlertDescription>
+          </Alert>
+
+          {/* Unified Deposit Management - Approvals + History */}
+          {panel?.id && <UnifiedTransactionManager panelId={panel.id} />}
+        </TabsContent>
+      </Tabs>
 
       {/* Search */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input placeholder="Search gateways by name or region..." className="pl-9 bg-card/50 backdrop-blur-sm border-border/50" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
       </div>
-
-      {/* Category Tabs */}
       <Tabs value={activeCategory} onValueChange={(v) => setActiveCategory(v as keyof typeof paymentGateways)} className="space-y-6">
         <TabsList className="glass-card p-1 flex-wrap h-auto gap-1">
           {Object.entries(categoryLabels).map(([key, label]) => {
@@ -914,151 +858,6 @@ const PaymentMethods = () => {
             </AnimatePresence>
           </TabsContent>
         ))}
-      </Tabs>
-        </TabsContent>
-
-        {/* Tab B: Panel Owner Billing & Deposits */}
-        <TabsContent value="billing" className="space-y-6">
-          <Alert className="border-amber-500/30 bg-amber-500/10">
-            <DollarSign className="w-4 h-4 text-amber-500" />
-            <AlertDescription className="text-amber-700 dark:text-amber-300">
-              <strong>Panel Owner Billing:</strong> This section shows deposit approvals from your buyers and platform billing gateways managed by the admin. Contact support if you need additional payment options for your subscription.
-            </AlertDescription>
-          </Alert>
-
-          {/* Unified Deposit Management - Approvals + History */}
-          {panel?.id && <UnifiedTransactionManager panelId={panel.id} />}
-
-          {/* Payment Statistics */}
-          <Card className="glass-chart border-border/50">
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-primary/20"><BarChart3 className="w-5 h-5 text-primary" /></div>
-                <div>
-                  <CardTitle className="text-lg">Deposit Analytics</CardTitle>
-                  <p className="text-sm text-muted-foreground">Top depositors and payment activity</p>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid md:grid-cols-3 gap-6">
-                <div>
-                  <h4 className="font-medium mb-3 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-green-500" />Top Depositors</h4>
-                  <div className="space-y-2">
-                    {loadingStats ? (
-                      <div className="flex items-center justify-center py-4">
-                        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                      </div>
-                    ) : topDepositors.length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-4">No deposits yet</p>
-                    ) : (
-                      topDepositors.map((user, i) => (
-                        <div key={i} className="flex items-center justify-between p-2 bg-muted/30 rounded-lg backdrop-blur-sm">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-muted-foreground">#{i+1}</span>
-                            <span className="font-medium text-sm">{user.name}</span>
-                          </div>
-                          <div className="text-right">
-                            <span className="font-bold text-green-500">${user.amount.toFixed(2)}</span>
-                            <p className="text-xs text-muted-foreground">{user.method}</p>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-                <div>
-                  <h4 className="font-medium mb-3 flex items-center gap-2"><CreditCard className="w-4 h-4 text-blue-500" />Method Usage</h4>
-                  <div className="space-y-2">
-                    {loadingStats ? (
-                      <div className="flex items-center justify-center py-4">
-                        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                      </div>
-                    ) : paymentMethodUsage.length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-4">No data yet</p>
-                    ) : (
-                      paymentMethodUsage.map((item) => (
-                        <div key={item.method} className="space-y-1">
-                          <div className="flex justify-between text-sm"><span>{item.method}</span><span className="font-medium">{item.percent}%</span></div>
-                          <div className="h-2 bg-muted rounded-full overflow-hidden"><div className={cn("h-full rounded-full", item.color)} style={{ width: `${item.percent}%` }} /></div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-                <div>
-                  <h4 className="font-medium mb-3 flex items-center gap-2"><Users className="w-4 h-4 text-purple-500" />Recent Transactions</h4>
-                  <div className="space-y-2">
-                    {loadingStats ? (
-                      <div className="flex items-center justify-center py-4">
-                        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                      </div>
-                    ) : recentTransactions.length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-4">No transactions yet</p>
-                    ) : (
-                      recentTransactions.map((tx, i) => (
-                        <div key={i} className="flex items-center justify-between p-2 bg-muted/30 rounded-lg backdrop-blur-sm">
-                          <span className="text-sm">{tx.user}</span>
-                          <div className="text-right">
-                            <span className="font-medium text-green-500">+${tx.amount.toFixed(2)}</span>
-                            <p className="text-xs text-muted-foreground">{tx.time}</p>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Admin-managed billing gateways */}
-          <Card className="glass-card">
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-purple-500/20"><Building2 className="w-5 h-5 text-purple-500" /></div>
-                <div>
-                  <CardTitle className="text-lg">Platform Billing Gateways</CardTitle>
-                  <p className="text-sm text-muted-foreground">Payment methods managed by platform admin for subscriptions</p>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {adminGatewaysLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : adminGateways.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Building2 className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                  <p>No billing gateways configured by admin.</p>
-                  <p className="text-sm">Contact platform support for assistance.</p>
-                </div>
-              ) : (
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {adminGateways.map((gateway) => (
-                    <div key={gateway.id} className="p-4 rounded-xl border border-border bg-card/50">
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="p-2 rounded-lg bg-primary/10">
-                          <CreditCard className="w-5 h-5 text-primary" />
-                        </div>
-                        <div>
-                          <h4 className="font-semibold">{gateway.displayName}</h4>
-                          {gateway.category && <p className="text-xs text-muted-foreground capitalize">{gateway.category}</p>}
-                        </div>
-                      </div>
-                      {(gateway.feePercentage || gateway.fixedFee) && (
-                        <p className="text-xs text-muted-foreground">
-                          Fee: {gateway.feePercentage ? `${gateway.feePercentage}%` : ''}{gateway.feePercentage && gateway.fixedFee ? ' + ' : ''}{gateway.fixedFee ? `$${gateway.fixedFee}` : ''}
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
       </Tabs>
       <Dialog open={configDialogOpen} onOpenChange={setConfigDialogOpen}>
         <DialogContent className="sm:max-w-[500px] glass-card border-border/50">

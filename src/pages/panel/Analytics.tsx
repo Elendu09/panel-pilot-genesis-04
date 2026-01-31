@@ -207,10 +207,10 @@ const Analytics = () => {
         prevEnd = prev.endDate;
       }
 
-      // Fetch previous period data
+      // Fetch previous period data (include buyer_id and created_at for retention calculation)
       const { data: prevOrders } = await supabase
         .from('orders')
-        .select('price, status')
+        .select('price, status, buyer_id, created_at')
         .eq('panel_id', panel.id)
         .gte('created_at', prevStart.toISOString())
         .lt('created_at', prevEnd.toISOString());
@@ -271,25 +271,58 @@ const Analytics = () => {
         netRevenue: volumeCalc.netRevenue
       });
 
-      // ========= RETENTION DATA =========
+      // ========= RETENTION DATA (REAL CALCULATION) =========
       const retentionRate = calculateRetentionRate(
         (orders || []).map(o => ({ buyer_id: o.buyer_id }))
       );
       
-      // Calculate monthly retention (simplified)
-      const monthlyRetention: { month: string; rate: number }[] = [];
-      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'];
-      months.forEach((month, i) => {
-        // Simulate retention data based on current rate with some variance
-        monthlyRetention.push({
-          month,
-          rate: Math.max(0, Math.min(100, retentionRate + (Math.random() - 0.5) * 20))
-        });
+      // Calculate REAL monthly retention from orders data
+      const ordersByMonth = new Map<string, Set<string>>();
+      const allMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      
+      // Group orders by month
+      (orders || []).forEach(order => {
+        if (!order.buyer_id || !order.created_at) return;
+        const date = new Date(order.created_at);
+        const monthKey = format(date, 'yyyy-MM');
+        
+        if (!ordersByMonth.has(monthKey)) {
+          ordersByMonth.set(monthKey, new Set());
+        }
+        ordersByMonth.get(monthKey)!.add(order.buyer_id);
       });
+      
+      // Calculate retention: % of buyers who ordered in previous month AND this month
+      const sortedMonths = Array.from(ordersByMonth.keys()).sort();
+      const monthlyRetention: { month: string; rate: number }[] = [];
+      let previousBuyers = new Set<string>();
+      
+      // Build retention data for all months with real data
+      sortedMonths.forEach(monthKey => {
+        const currentBuyers = ordersByMonth.get(monthKey)!;
+        
+        // Retention = buyers who were in previous month AND are in this month
+        const retainedBuyers = [...currentBuyers].filter(b => previousBuyers.has(b));
+        const rate = previousBuyers.size > 0 
+          ? (retainedBuyers.length / previousBuyers.size) * 100 
+          : 0;
+        
+        monthlyRetention.push({
+          month: format(new Date(monthKey + '-01'), 'MMM'),
+          rate: Math.round(rate * 10) / 10
+        });
+        
+        previousBuyers = currentBuyers;
+      });
+      
+      // If no real data, show all 12 months with 0% (no fake data)
+      const finalRetention = monthlyRetention.length > 0 
+        ? monthlyRetention.slice(-12) 
+        : allMonths.map(month => ({ month, rate: 0 }));
       
       setRetentionData({
         currentRate: retentionRate,
-        monthlyData: monthlyRetention
+        monthlyData: finalRetention
       });
 
       // ========= TRANSACTIONS SUMMARY =========
@@ -328,6 +361,30 @@ const Analytics = () => {
       const successRate = calculateSuccessRate((orders || []).map(o => ({ status: o.status })));
       const prevSuccessRate = calculateSuccessRate((prevOrders || []).map(o => ({ status: o.status })));
       
+      // Calculate REAL previous retention from previous period orders
+      const prevOrdersByMonth = new Map<string, Set<string>>();
+      (prevOrders || []).forEach(order => {
+        if (!order.buyer_id || !order.created_at) return;
+        const monthKey = format(new Date(order.created_at), 'yyyy-MM');
+        if (!prevOrdersByMonth.has(monthKey)) {
+          prevOrdersByMonth.set(monthKey, new Set());
+        }
+        prevOrdersByMonth.get(monthKey)!.add(order.buyer_id);
+      });
+      
+      const prevSortedMonths = Array.from(prevOrdersByMonth.keys()).sort();
+      let prevPreviousBuyers = new Set<string>();
+      let prevRetentionRate = 0;
+      
+      prevSortedMonths.forEach(monthKey => {
+        const buyers = prevOrdersByMonth.get(monthKey)!;
+        const retained = [...buyers].filter(b => prevPreviousBuyers.has(b));
+        if (prevPreviousBuyers.size > 0) {
+          prevRetentionRate = (retained.length / prevPreviousBuyers.size) * 100;
+        }
+        prevPreviousBuyers = buyers;
+      });
+      
       const currentStats = {
         revenue: volumeCalc.orderPayments,
         orders: totalOrders,
@@ -341,7 +398,7 @@ const Analytics = () => {
         orders: prevOrders?.length || 0,
         successRate: prevSuccessRate,
         customers: prevCustomers?.length || 0,
-        retention: retentionRate * 0.9 // Simulated previous retention
+        retention: prevRetentionRate // REAL previous retention, not simulated
       };
       
       const insights = generateInsights(currentStats, previousStats);
