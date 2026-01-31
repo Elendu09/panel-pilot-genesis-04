@@ -1078,6 +1078,73 @@ serve(async (req) => {
           
           console.log(`[process-payment] Manual transfer ${transactionIdToUse} status set to pending_verification`);
           
+          // ========= NOTIFY PANEL OWNER ABOUT PENDING DEPOSIT =========
+          try {
+            // Get panel owner
+            const { data: panelOwnerData } = await supabase
+              .from('panels')
+              .select('owner_id, name')
+              .eq('id', panelId)
+              .single();
+            
+            if (panelOwnerData?.owner_id) {
+              // Get buyer info for notification
+              const { data: buyerData } = await supabase
+                .from('client_users')
+                .select('email, full_name')
+                .eq('id', buyerId)
+                .single();
+              
+              const buyerName = buyerData?.full_name || buyerData?.email || 'A customer';
+              const gatewayDisplayName = gateway.replace('manual_', '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+              
+              // Create in-app notification for panel owner
+              await supabase.from('panel_notifications').insert({
+                panel_id: panelId,
+                user_id: panelOwnerData.owner_id,
+                type: 'warning',
+                title: 'New Deposit Pending Verification',
+                message: `${buyerName} submitted a manual deposit of $${amount.toFixed(2)} via ${gatewayDisplayName}. Please verify and approve in Transactions.`,
+                is_read: false,
+              });
+              
+              console.log(`[process-payment] Panel owner notification created for pending deposit ${transactionIdToUse}`);
+              
+              // Get owner email for email notification
+              const { data: ownerProfile } = await supabase
+                .from('profiles')
+                .select('email')
+                .eq('id', panelOwnerData.owner_id)
+                .single();
+              
+              if (ownerProfile?.email) {
+                // Call send-notification for email
+                await supabase.functions.invoke('send-notification', {
+                  body: {
+                    panelId,
+                    userId: panelOwnerData.owner_id,
+                    type: 'pending_deposit',
+                    title: 'New Deposit Pending Verification',
+                    message: `${buyerName} submitted a manual deposit of $${amount.toFixed(2)} via ${gatewayDisplayName}. Log in to approve.`,
+                    sendEmail: true,
+                    emailTo: ownerProfile.email,
+                    metadata: {
+                      transactionId: transactionIdToUse,
+                      amount,
+                      gateway,
+                      buyerEmail: buyerData?.email
+                    }
+                  }
+                });
+                console.log(`[process-payment] Email notification sent to panel owner: ${ownerProfile.email}`);
+              }
+            }
+          } catch (notifyError) {
+            // Don't fail the payment if notification fails
+            console.error(`[process-payment] Failed to notify panel owner:`, notifyError);
+          }
+          // ========= END NOTIFICATION =========
+          
           return new Response(
             JSON.stringify({ 
               success: true,

@@ -6,7 +6,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-type NotificationType = 'low_balance' | 'failed_transaction' | 'sync_error' | 'service_update' | 'info' | 'warning' | 'error';
+type NotificationType = 'low_balance' | 'failed_transaction' | 'sync_error' | 'service_update' | 'info' | 'warning' | 'error' | 'pending_deposit';
 
 interface NotificationPayload {
   panelId: string;
@@ -116,6 +116,7 @@ function mapNotificationType(type: NotificationType): string {
   switch (type) {
     case 'low_balance':
     case 'warning':
+    case 'pending_deposit':
       return 'warning';
     case 'failed_transaction':
     case 'sync_error':

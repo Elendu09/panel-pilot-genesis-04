@@ -59,6 +59,51 @@ export type Database = {
         }
         Relationships: []
       }
+      analytics_events: {
+        Row: {
+          buyer_id: string | null
+          created_at: string | null
+          event_type: string
+          id: string
+          metadata: Json | null
+          panel_id: string | null
+          session_id: string | null
+        }
+        Insert: {
+          buyer_id?: string | null
+          created_at?: string | null
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          panel_id?: string | null
+          session_id?: string | null
+        }
+        Update: {
+          buyer_id?: string | null
+          created_at?: string | null
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          panel_id?: string | null
+          session_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analytics_events_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "client_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "analytics_events_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       announcements: {
         Row: {
           content: string

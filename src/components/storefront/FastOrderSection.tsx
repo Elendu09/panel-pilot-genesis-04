@@ -40,6 +40,7 @@ import { useCategoryFilters } from '@/hooks/useCategoryFilters';
 import { SpeedGauge } from '@/components/buyer/SpeedGauge';
 import { detectServiceType } from '@/lib/service-icon-detection';
 import { useAvailablePaymentGateways, AvailableGateway } from '@/hooks/useAvailablePaymentGateways';
+import { useAnalyticsTracking } from '@/hooks/use-analytics-tracking';
 
 interface Service {
   id: string;
@@ -157,6 +158,9 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
   const login = buyerAuthContext?.login ?? (async () => false);
   
   const navigate = useNavigate();
+  
+  // Analytics tracking for Fast Order funnel
+  const { trackServiceSelect, trackCheckoutStart, trackOrderComplete } = useAnalyticsTracking(panelId);
   
   // Use actual theme from context instead of customization
   const { theme } = useTheme();
@@ -372,6 +376,10 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
     if (service?.min_quantity) {
       setQuantity(service.min_quantity);
     }
+    // Track service selection for analytics
+    if (service) {
+      trackServiceSelect(serviceId, service.name, service.category);
+    }
     setCurrentStep(4);
   };
 
@@ -380,6 +388,10 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
     if (!targetUrl.trim()) {
       toast({ title: "Please enter a link", variant: "destructive" });
       return;
+    }
+    // Track checkout start for analytics
+    if (selectedService) {
+      trackCheckoutStart(selectedService.id, totalPrice);
     }
     setCurrentStep(5); // Go directly to payment (no review step)
   };
