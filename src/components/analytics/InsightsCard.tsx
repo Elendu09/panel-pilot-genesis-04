@@ -30,13 +30,13 @@ export function InsightsCard({ insights }: InsightsCardProps) {
               <Sparkles className="w-4 h-4 text-primary" />
             </div>
             Insights
-            <TooltipProvider>
+            <TooltipProvider delayDuration={0}>
               <Tooltip>
-                <TooltipTrigger asChild>
-                  <Info className="w-3.5 h-3.5 text-muted-foreground/50 cursor-help hover:text-muted-foreground transition-colors" />
+                <TooltipTrigger>
+                  <Info className="w-4 h-4 text-muted-foreground/60 cursor-help hover:text-muted-foreground transition-colors" />
                 </TooltipTrigger>
-                <TooltipContent>
-                  <p className="text-xs max-w-[200px]">AI-generated recommendations based on your performance trends.</p>
+                <TooltipContent side="top" sideOffset={4}>
+                  <p className="text-xs max-w-[220px]">AI-generated recommendations based on your performance trends.</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -114,13 +114,13 @@ export function InsightsCard({ insights }: InsightsCardProps) {
             <Sparkles className="w-4 h-4 text-primary" />
           </div>
           Insights
-          <TooltipProvider>
+          <TooltipProvider delayDuration={0}>
             <Tooltip>
-              <TooltipTrigger asChild>
-                <Info className="w-3.5 h-3.5 text-muted-foreground/50 cursor-help hover:text-muted-foreground transition-colors" />
+              <TooltipTrigger>
+                <Info className="w-4 h-4 text-muted-foreground/60 cursor-help hover:text-muted-foreground transition-colors" />
               </TooltipTrigger>
-              <TooltipContent>
-                <p className="text-xs max-w-[200px]">AI-generated recommendations based on your performance trends.</p>
+              <TooltipContent side="top" sideOffset={4}>
+                <p className="text-xs max-w-[220px]">AI-generated recommendations based on your performance trends.</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>

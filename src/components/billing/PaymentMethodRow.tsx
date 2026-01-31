@@ -14,31 +14,38 @@ export function PaymentMethodRow({ icon, name, subtitle, enabled, onClick }: Pay
     <button
       onClick={onClick}
       className={cn(
-        "w-full flex items-center gap-3 px-4 py-3 rounded-xl",
-        "hover:bg-muted/50 transition-all duration-200 text-left",
-        "border border-transparent hover:border-border/50",
-        "group"
+        "w-full flex items-center gap-4 p-4 rounded-xl",
+        "bg-card/50 backdrop-blur-sm border border-border/30",
+        "hover:bg-card/80 hover:shadow-lg hover:-translate-y-0.5",
+        "transition-all duration-300 text-left group"
       )}
     >
-      <div className="w-10 h-10 flex items-center justify-center rounded-xl bg-muted/50 group-hover:bg-muted transition-colors shrink-0">
+      <div className={cn(
+        "w-12 h-12 flex items-center justify-center rounded-xl",
+        "bg-gradient-to-br from-muted/80 to-muted/40",
+        "group-hover:scale-110 transition-transform duration-300 shadow-sm",
+        "ring-1 ring-border/30"
+      )}>
         {icon}
       </div>
       <div className="flex-1 min-w-0">
-        <span className="font-medium text-foreground block truncate">{name}</span>
+        <span className="font-semibold text-foreground block truncate">{name}</span>
         {subtitle && (
-          <span className="text-xs text-muted-foreground truncate block">{subtitle}</span>
+          <span className="text-xs text-muted-foreground truncate block mt-0.5">{subtitle}</span>
         )}
       </div>
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="flex items-center gap-3 shrink-0">
         {enabled !== undefined && (
           <div 
             className={cn(
-              "w-2.5 h-2.5 rounded-full transition-colors",
-              enabled ? "bg-emerald-500" : "bg-muted-foreground/30"
+              "w-3 h-3 rounded-full transition-all shadow-sm",
+              enabled 
+                ? "bg-emerald-500 ring-4 ring-emerald-500/20" 
+                : "bg-muted-foreground/30"
             )} 
           />
         )}
-        <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+        <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:translate-x-1 group-hover:text-foreground transition-all" />
       </div>
     </button>
   );

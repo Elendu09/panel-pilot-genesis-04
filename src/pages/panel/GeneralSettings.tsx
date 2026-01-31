@@ -40,6 +40,7 @@ import {
   Eye,
   Globe,
   Check,
+  Megaphone,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -84,26 +85,28 @@ const GeneralSettings = () => {
     termsOfService: "",
     privacyPolicy: "",
     
-    // SEO & Meta Tags (NEW)
+    // SEO & Meta Tags
     seoTitle: "",
     seoDescription: "",
     seoKeywords: "",
     canonicalUrl: "",
     
-    // Verification Meta Tags (NEW)
+    // Verification Meta Tags
     googleVerification: "",
     bingVerification: "",
     yandexVerification: "",
     pinterestVerification: "",
     facebookVerification: "",
     
-    // Branding Images (NEW)
+    // Branding Images
     faviconUrl: "",
     appleTouchIconUrl: "",
     ogImageUrl: "",
     logoUrl: "",
     heroImageUrl: "",
     
+    // Advertising
+    showFreeTierBanner: true,
   });
 
   const [customMetaTags, setCustomMetaTags] = useState<CustomMetaTag[]>([]);
@@ -167,6 +170,8 @@ const GeneralSettings = () => {
         const contactInfo = panelSettings?.contact_info as Record<string, any> || {};
         const customBranding = panel.custom_branding as Record<string, any> || {};
 
+        const advertisingSettings = panelSettingsData.advertising || {};
+
         setSettings({
           panelName: panel.name || "",
           description: panel.description || "",
@@ -201,6 +206,8 @@ const GeneralSettings = () => {
           logoUrl: panel.logo_url || customBranding.logoUrl || "",
           heroImageUrl: customBranding.heroImageUrl || "",
           
+          // Advertising
+          showFreeTierBanner: advertisingSettings.showFreeTierBanner ?? true,
         });
 
         // Load custom meta tags
@@ -284,6 +291,10 @@ const GeneralSettings = () => {
                 content: tag.content,
                 placement: tag.placement,
               })),
+            },
+            advertising: {
+              showFreeTierBanner: settings.showFreeTierBanner,
+              updatedAt: new Date().toISOString(),
             },
           },
         })
@@ -369,25 +380,28 @@ const GeneralSettings = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* Enhanced Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 bg-gradient-to-r from-card via-card/95 to-card rounded-xl border border-border/50 shadow-lg">
         <div>
-          <h1 className="text-3xl font-bold">General Settings</h1>
-          <p className="text-muted-foreground">
-            Configure your panel's settings, SEO, branding, and ads
+          <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
+            General Settings
+          </h1>
+          <p className="text-muted-foreground text-sm md:text-base mt-1">
+            Configure your panel's settings, SEO, branding, and advertising
           </p>
         </div>
         <Button
           onClick={handleSave}
           disabled={saving}
-          className="bg-gradient-primary hover:shadow-glow"
+          size="lg"
+          className="bg-gradient-to-r from-primary to-primary/80 hover:shadow-lg hover:shadow-primary/25 transition-all gap-2"
         >
           {saving ? (
-            <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+            <RefreshCw className="w-4 h-4 animate-spin" />
           ) : (
-            <Save className="w-4 h-4 mr-2" />
+            <Save className="w-4 h-4" />
           )}
-          Save All Settings
+          {saving ? 'Saving...' : 'Save All Settings'}
         </Button>
       </div>
 
@@ -1039,6 +1053,54 @@ const GeneralSettings = () => {
           </AccordionContent>
         </AccordionItem>
 
+        {/* Advertising Settings */}
+        <AccordionItem
+          value="advertising"
+          className="border border-border rounded-xl bg-gradient-card overflow-hidden"
+        >
+          <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-accent/30">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                <Megaphone className="w-5 h-5 text-amber-500" />
+              </div>
+              <div className="text-left">
+                <h3 className="font-semibold">Advertising</h3>
+                <p className="text-sm text-muted-foreground">
+                  Control promotional banners on your storefront
+                </p>
+              </div>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent className="px-6 pb-6">
+            <div className="space-y-4 pt-2">
+              <div className="flex items-center justify-between p-4 bg-accent/20 rounded-lg">
+                <div className="space-y-0.5">
+                  <Label className="flex items-center gap-2">
+                    Free Tier Banner
+                    <Badge variant="outline" className="text-xs">Platform</Badge>
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Show promotional banner to buyers on subdomain storefronts
+                  </p>
+                </div>
+                <Switch
+                  checked={settings.showFreeTierBanner}
+                  onCheckedChange={(checked) =>
+                    setSettings({ ...settings, showFreeTierBanner: checked })
+                  }
+                />
+              </div>
+              
+              <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                <p className="text-sm text-amber-600 dark:text-amber-400">
+                  <strong>Note:</strong> The Free Tier Banner is controlled by the platform and 
+                  displays on subdomain storefronts. Custom domains do not show this banner.
+                  Custom HTML ads are not supported for security reasons.
+                </p>
+              </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
 
         {/* Legal Pages */}
         <AccordionItem
