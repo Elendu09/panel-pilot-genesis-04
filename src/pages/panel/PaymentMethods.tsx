@@ -20,7 +20,8 @@ import { useAvailablePaymentGateways } from "@/hooks/useAvailablePaymentGateways
 import { useAdminPaymentGateways } from "@/hooks/useAdminPaymentGateways";
 import { UnifiedTransactionManager } from "@/components/billing/UnifiedTransactionManager";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { PaymentOverviewBanner } from "@/components/analytics/PaymentOverviewBanner";
+import { DepositStatusBanner } from "@/components/analytics/DepositStatusBanner";
+import { PaymentMethodRow } from "@/components/billing/PaymentMethodRow";
 import { useNavigate } from "react-router-dom";
 
 // Worldwide payment gateways
@@ -642,7 +643,7 @@ const PaymentMethods = () => {
           </TabsTrigger>
         </TabsList>
 
-        {/* Tab A: Buyer Payment Methods */}
+        {/* Tab A: Buyer Payment Methods - Simplified List Layout */}
         <TabsContent value="buyer" className="space-y-6">
           <Alert className="border-blue-500/30 bg-blue-500/10">
             <Globe className="w-4 h-4 text-blue-500" />
@@ -651,134 +652,82 @@ const PaymentMethods = () => {
             </AlertDescription>
           </Alert>
 
-      {/* Manual Payment Methods Section */}
-      <Card className="bg-gradient-to-br from-emerald-500/10 via-card to-teal-500/10 border-emerald-500/30">
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-emerald-500/20">
-                <Banknote className="w-5 h-5 text-emerald-500" />
-              </div>
-              <div>
-                <CardTitle className="text-lg">Manual Payment Methods</CardTitle>
-                <p className="text-sm text-muted-foreground">Add bank transfer details, mobile money, or custom payment instructions</p>
-              </div>
-            </div>
-            <Button onClick={() => openManualDialog()} className="gap-2 bg-emerald-600 hover:bg-emerald-700">
-              <Plus className="w-4 h-4" />
-              Add Manual Payment
-            </Button>
+          {/* Search Input */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input 
+              placeholder="Search by name..." 
+              className="pl-9 bg-card/50 backdrop-blur-sm border-border/50" 
+              value={searchQuery} 
+              onChange={(e) => setSearchQuery(e.target.value)} 
+            />
           </div>
-        </CardHeader>
-        <CardContent>
-          {manualPayments.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Banknote className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p>No manual payment methods configured yet.</p>
-              <p className="text-sm">Click "Add Manual Payment" to create one.</p>
-            </div>
-          ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {manualPayments.map((method) => (
-                <motion.div
-                  key={method.id}
-                  whileHover={{ scale: 1.02 }}
-                  className={cn(
-                    "p-4 rounded-xl border-2 transition-all",
-                    method.enabled 
-                      ? "border-emerald-500/50 bg-emerald-500/5" 
-                      : "border-border/50 bg-muted/20"
-                  )}
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-emerald-500/20">
-                        <Banknote className="w-5 h-5 text-emerald-500" />
-                      </div>
-                      <div>
-                        <h4 className="font-semibold">{method.title}</h4>
-                        <p className="text-xs text-muted-foreground">
-                          <Clock className="w-3 h-3 inline mr-1" />
-                          {method.processingTime}
-                        </p>
-                      </div>
-                    </div>
-                    <Switch 
-                      checked={method.enabled} 
-                      onCheckedChange={() => toggleManualPayment(method.id)} 
-                    />
-                  </div>
-                  
-                  {method.bankDetails && (
-                    <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
-                      {method.bankDetails}
-                    </p>
-                  )}
-                  
-                  <div className="flex gap-2 mt-3">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="flex-1 gap-1"
-                      onClick={() => openManualDialog(method)}
-                    >
-                      <Pencil className="w-3 h-3" />
-                      Edit
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="text-destructive hover:bg-destructive/10"
-                      onClick={() => deleteManualPayment(method.id)}
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </Button>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { label: "Total Gateways", value: Object.values(paymentGateways).flat().length, icon: CreditCard, color: "text-primary" },
-          { label: "Configured", value: Object.keys(configuredGateways).length, icon: Settings, color: "text-blue-500" },
-          { label: "Active", value: enabledCount, icon: CheckCircle, color: "text-green-500" },
-          { label: "Categories", value: Object.keys(paymentGateways).length, icon: Globe, color: "text-yellow-500" },
-        ].map((stat, index) => (
-          <motion.div key={stat.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1 }}>
-            <div className="glass-stat-card p-4">
-              <div className="flex items-center gap-3 relative z-10">
-                <div className={cn("p-2.5 rounded-xl", stat.color === "text-primary" ? "bg-primary/20" : stat.color === "text-blue-500" ? "bg-blue-500/20" : stat.color === "text-green-500" ? "bg-green-500/20" : "bg-yellow-500/20")}>
-                  <stat.icon className={cn("w-5 h-5", stat.color)} />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">{stat.label}</p>
-                  <p className="text-2xl font-bold">{stat.value}</p>
-                </div>
+          {/* Simple List Layout */}
+          <Card className="bg-card/80 backdrop-blur-xl border-border/50">
+            <CardContent className="p-2">
+              {/* Manual Methods Section */}
+              <div className="px-4 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider border-b border-border/30">
+                Manual Methods
               </div>
-            </div>
-          </motion.div>
-        ))}
-      </div>
+              
+              {manualPayments.length === 0 ? (
+                <div className="p-4 text-center text-muted-foreground text-sm">
+                  <p>No manual payment methods yet.</p>
+                </div>
+              ) : (
+                manualPayments
+                  .filter(m => m.title.toLowerCase().includes(searchQuery.toLowerCase()))
+                  .map((method) => (
+                    <PaymentMethodRow
+                      key={method.id}
+                      icon={<Banknote className="w-5 h-5 text-emerald-500" />}
+                      name={method.title}
+                      subtitle={method.processingTime}
+                      enabled={method.enabled}
+                      onClick={() => openManualDialog(method)}
+                    />
+                  ))
+              )}
+              
+              <button
+                onClick={() => openManualDialog()}
+                className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-muted/50 transition-colors text-primary text-sm"
+              >
+                <Plus className="w-4 h-4" />
+                Add Manual Payment
+              </button>
 
+              {/* Payment Gateways Section */}
+              <div className="px-4 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider border-t border-b border-border/30 mt-2">
+                Payment Gateways
+              </div>
+              
+              {filteredGateways
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map((gateway) => {
+                  const isConfigured = !!configuredGateways[gateway.id];
+                  const isEnabled = configuredGateways[gateway.id]?.enabled;
+                  
+                  return (
+                    <PaymentMethodRow
+                      key={gateway.id}
+                      icon={<gateway.Icon className="w-5 h-5" />}
+                      name={gateway.name}
+                      subtitle={`Fee: ${gateway.fee}`}
+                      enabled={isConfigured ? isEnabled : undefined}
+                      onClick={() => openConfigDialog(gateway)}
+                    />
+                  );
+                })}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Tab B: Transactions & History */}
         <TabsContent value="billing" className="space-y-6">
-          {/* Payment Overview Banner */}
-          <PaymentOverviewBanner 
-            totalDeposits={topDepositors.reduce((acc, d) => acc + d.amount, 0)}
-            periodDeposits={recentTransactions.reduce((acc, t) => acc + t.amount, 0)}
-            pendingCount={0} // Will be fetched from UnifiedTransactionManager
-            avgDepositValue={topDepositors.length > 0 
-              ? topDepositors.reduce((acc, d) => acc + d.amount, 0) / topDepositors.length 
-              : 0}
-            depositChange={{ value: '+12%', trend: 'up' }}
-          />
+          {/* Deposit Status Banner with real-time sync */}
+          {panel?.id && <DepositStatusBanner panelId={panel.id} />}
 
           <Alert className="border-blue-500/30 bg-blue-500/10">
             <BarChart3 className="w-4 h-4 text-blue-500" />
@@ -792,73 +741,7 @@ const PaymentMethods = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input placeholder="Search gateways by name or region..." className="pl-9 bg-card/50 backdrop-blur-sm border-border/50" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
-      </div>
-      <Tabs value={activeCategory} onValueChange={(v) => setActiveCategory(v as keyof typeof paymentGateways)} className="space-y-6">
-        <TabsList className="glass-card p-1 flex-wrap h-auto gap-1">
-          {Object.entries(categoryLabels).map(([key, label]) => {
-            const Icon = categoryIcons[key as keyof typeof categoryIcons];
-            return (
-              <TabsTrigger key={key} value={key} className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                <Icon className="w-4 h-4" />
-                <span className="hidden md:inline">{label}</span>
-              </TabsTrigger>
-            );
-          })}
-        </TabsList>
-
-        {Object.entries(paymentGateways).map(([category, gateways]) => (
-          <TabsContent key={category} value={category} className="space-y-4">
-            <AnimatePresence mode="popLayout">
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredGateways.map((gateway, index) => {
-                  const isConfigured = !!configuredGateways[gateway.id];
-                  const isEnabled = configuredGateways[gateway.id]?.enabled;
-
-                  return (
-                    <motion.div key={gateway.id} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ delay: index * 0.03 }}>
-                      <Card className={cn("glass-card-hover h-full transition-all", isEnabled && "border-green-500/30 bg-green-500/5")}>
-                        <CardContent className="p-4 space-y-4">
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-center gap-3">
-                              <gateway.Icon className="w-8 h-8" />
-                              <div>
-                                <h3 className="font-semibold">{gateway.name}</h3>
-                                <p className="text-xs text-muted-foreground">{gateway.regions.join(", ")}</p>
-                              </div>
-                            </div>
-                            {isConfigured && (
-                              <Switch checked={isEnabled} onCheckedChange={() => toggleGateway(gateway.id)} />
-                            )}
-                          </div>
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground">Fee: {gateway.fee}</span>
-                            {isConfigured ? (
-                              <Badge variant="outline" className={isEnabled ? "bg-green-500/10 text-green-500 border-green-500/20" : "bg-muted"}>
-                                {isEnabled ? <CheckCircle className="w-3 h-3 mr-1" /> : <AlertCircle className="w-3 h-3 mr-1" />}
-                                {isEnabled ? "Active" : "Inactive"}
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline" className="text-muted-foreground">Not configured</Badge>
-                            )}
-                          </div>
-                          <Button variant={isConfigured ? "outline" : "default"} className="w-full gap-2" onClick={() => openConfigDialog(gateway)}>
-                            {isConfigured ? <Settings className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-                            {isConfigured ? "Configure" : "Add Gateway"}
-                          </Button>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            </AnimatePresence>
-          </TabsContent>
-        ))}
-      </Tabs>
+      {/* Gateway Configuration Dialog */}
       <Dialog open={configDialogOpen} onOpenChange={setConfigDialogOpen}>
         <DialogContent className="sm:max-w-[500px] glass-card border-border/50">
           <DialogHeader>
