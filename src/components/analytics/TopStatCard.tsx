@@ -42,13 +42,13 @@ export function TopStatCard({
           <div className="flex items-center gap-1.5">
             <span className="text-xs md:text-sm font-medium text-muted-foreground truncate">{title}</span>
             {tooltip && (
-              <TooltipProvider>
+              <TooltipProvider delayDuration={0}>
                 <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="w-3 h-3 md:w-3.5 md:h-3.5 text-muted-foreground/50 cursor-help hover:text-muted-foreground transition-colors shrink-0" />
+                  <TooltipTrigger>
+                    <Info className="w-3.5 h-3.5 md:w-4 md:h-4 text-muted-foreground/60 cursor-help hover:text-muted-foreground transition-colors shrink-0" />
                   </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="text-xs max-w-[200px]">{tooltip}</p>
+                  <TooltipContent side="top" sideOffset={4}>
+                    <p className="text-xs max-w-[220px]">{tooltip}</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>

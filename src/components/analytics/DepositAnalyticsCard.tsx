@@ -66,13 +66,13 @@ export function DepositAnalyticsCard({
             <ArrowDownRight className="w-4 h-4 md:w-5 md:h-5 text-blue-500" />
           </div>
           Deposit Overview
-          <TooltipProvider>
+          <TooltipProvider delayDuration={0}>
             <Tooltip>
-              <TooltipTrigger asChild>
-                <Info className="w-3.5 h-3.5 text-muted-foreground/50 cursor-help hover:text-muted-foreground transition-colors" />
+              <TooltipTrigger>
+                <Info className="w-4 h-4 text-muted-foreground/60 cursor-help hover:text-muted-foreground transition-colors" />
               </TooltipTrigger>
-              <TooltipContent>
-                <p className="text-xs max-w-[200px]">Summary of buyer deposits by status for this period.</p>
+              <TooltipContent side="top" sideOffset={4}>
+                <p className="text-xs max-w-[220px]">Summary of buyer deposits by status for this period.</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>

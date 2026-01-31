@@ -663,63 +663,79 @@ const PaymentMethods = () => {
             />
           </div>
 
-          {/* Simple List Layout */}
-          <Card className="bg-card/80 backdrop-blur-xl border-border/50">
-            <CardContent className="p-2">
-              {/* Manual Methods Section */}
-              <div className="px-4 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider border-b border-border/30">
-                Manual Methods
-              </div>
-              
-              {manualPayments.length === 0 ? (
-                <div className="p-4 text-center text-muted-foreground text-sm">
-                  <p>No manual payment methods yet.</p>
+          {/* Enhanced Kanban Listview Layout */}
+          <Card className="bg-card/80 backdrop-blur-xl border-border/50 overflow-hidden">
+            <CardContent className="p-0">
+              {/* Manual Methods Section Header */}
+              <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-emerald-500/10 to-transparent border-b border-border/30">
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+                  <Banknote className="w-4 h-4 text-emerald-500" />
                 </div>
-              ) : (
-                manualPayments
-                  .filter(m => m.title.toLowerCase().includes(searchQuery.toLowerCase()))
-                  .map((method) => (
-                    <PaymentMethodRow
-                      key={method.id}
-                      icon={<Banknote className="w-5 h-5 text-emerald-500" />}
-                      name={method.title}
-                      subtitle={method.processingTime}
-                      enabled={method.enabled}
-                      onClick={() => openManualDialog(method)}
-                    />
-                  ))
-              )}
-              
-              <button
-                onClick={() => openManualDialog()}
-                className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-muted/50 transition-colors text-primary text-sm"
-              >
-                <Plus className="w-4 h-4" />
-                Add Manual Payment
-              </button>
-
-              {/* Payment Gateways Section */}
-              <div className="px-4 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider border-t border-b border-border/30 mt-2">
-                Payment Gateways
+                <span className="text-sm font-semibold text-foreground">Manual Methods</span>
+                <Badge variant="outline" className="ml-auto bg-emerald-500/10 text-emerald-500 border-emerald-500/20">
+                  {manualPayments.length}
+                </Badge>
               </div>
               
-              {filteredGateways
-                .sort((a, b) => a.name.localeCompare(b.name))
-                .map((gateway) => {
-                  const isConfigured = !!configuredGateways[gateway.id];
-                  const isEnabled = configuredGateways[gateway.id]?.enabled;
-                  
-                  return (
-                    <PaymentMethodRow
-                      key={gateway.id}
-                      icon={<gateway.Icon className="w-5 h-5" />}
-                      name={gateway.name}
-                      subtitle={`Fee: ${gateway.fee}`}
-                      enabled={isConfigured ? isEnabled : undefined}
-                      onClick={() => openConfigDialog(gateway)}
-                    />
-                  );
-                })}
+              <div className="p-2 space-y-2">
+                {manualPayments.length === 0 ? (
+                  <div className="p-4 text-center text-muted-foreground text-sm">
+                    <p>No manual payment methods yet.</p>
+                  </div>
+                ) : (
+                  manualPayments
+                    .filter(m => m.title.toLowerCase().includes(searchQuery.toLowerCase()))
+                    .map((method) => (
+                      <PaymentMethodRow
+                        key={method.id}
+                        icon={<Banknote className="w-5 h-5 text-emerald-500" />}
+                        name={method.title}
+                        subtitle={method.processingTime}
+                        enabled={method.enabled}
+                        onClick={() => openManualDialog(method)}
+                      />
+                    ))
+                )}
+                
+                <button
+                  onClick={() => openManualDialog()}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left hover:bg-muted/50 transition-colors text-primary text-sm border border-dashed border-border/50 hover:border-primary/50"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Manual Payment
+                </button>
+              </div>
+
+              {/* Payment Gateways Section Header */}
+              <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-primary/10 to-transparent border-t border-b border-border/30 mt-2">
+                <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+                  <CreditCard className="w-4 h-4 text-primary" />
+                </div>
+                <span className="text-sm font-semibold text-foreground">Payment Gateways</span>
+                <Badge variant="outline" className="ml-auto bg-primary/10 text-primary border-primary/20">
+                  {filteredGateways.length}
+                </Badge>
+              </div>
+              
+              <div className="p-2 space-y-2">
+                {filteredGateways
+                  .sort((a, b) => a.name.localeCompare(b.name))
+                  .map((gateway) => {
+                    const isConfigured = !!configuredGateways[gateway.id];
+                    const isEnabled = configuredGateways[gateway.id]?.enabled;
+                    
+                    return (
+                      <PaymentMethodRow
+                        key={gateway.id}
+                        icon={<gateway.Icon className="w-5 h-5" />}
+                        name={gateway.name}
+                        subtitle={`Fee: ${gateway.fee}`}
+                        enabled={isConfigured ? isEnabled : undefined}
+                        onClick={() => openConfigDialog(gateway)}
+                      />
+                    );
+                  })}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

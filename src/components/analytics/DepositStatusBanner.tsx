@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle, Clock, XCircle, Wallet, RefreshCw } from 'lucide-react';
@@ -36,14 +36,43 @@ export function DepositStatusBanner({ panelId }: DepositStatusBannerProps) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     if (!panelId) return;
     
     try {
+      // First get buyers for this panel (tenant-specific filtering)
+      const { data: panelBuyers, error: buyersError } = await supabase
+        .from('client_users')
+        .select('id')
+        .eq('panel_id', panelId);
+
+      if (buyersError) throw buyersError;
+
+      const buyerIds = panelBuyers?.map(b => b.id) || [];
+      
+      if (buyerIds.length === 0) {
+        // No buyers = no deposits for this panel
+        setStats({
+          completedCount: 0,
+          completedAmount: 0,
+          pendingCount: 0,
+          pendingAmount: 0,
+          failedCount: 0,
+          failedAmount: 0,
+          totalCount: 0,
+          totalAmount: 0,
+        });
+        setLoading(false);
+        setRefreshing(false);
+        return;
+      }
+
+      // Fetch deposits only for this panel's buyers (tenant-specific)
       const { data: transactions, error } = await supabase
         .from('transactions')
-        .select('amount, status, type')
-        .eq('type', 'deposit');
+        .select('amount, status, type, buyer_id')
+        .eq('type', 'deposit')
+        .in('buyer_id', buyerIds);
 
       if (error) throw error;
 
@@ -68,7 +97,7 @@ export function DepositStatusBanner({ panelId }: DepositStatusBannerProps) {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [panelId]);
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -78,7 +107,7 @@ export function DepositStatusBanner({ panelId }: DepositStatusBannerProps) {
   useEffect(() => {
     fetchStats();
 
-    // Real-time subscription for deposit updates
+    // Real-time subscription for deposit updates AND balance changes
     const channel = supabase
       .channel('deposit-status-banner')
       .on('postgres_changes', {
@@ -88,12 +117,20 @@ export function DepositStatusBanner({ panelId }: DepositStatusBannerProps) {
       }, () => {
         fetchStats();
       })
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'client_users',
+      }, () => {
+        // Refetch when customer balances are updated (e.g., via Customer Management)
+        fetchStats();
+      })
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [panelId]);
+  }, [panelId, fetchStats]);
 
   const statusCards = [
     {
@@ -157,7 +194,7 @@ export function DepositStatusBanner({ panelId }: DepositStatusBannerProps) {
             </div>
             <div>
               <h3 className="font-semibold text-foreground">Deposit Analytics</h3>
-              <p className="text-xs text-muted-foreground">Real-time status tracking</p>
+              <p className="text-xs text-muted-foreground">Real-time tenant deposit tracking</p>
             </div>
           </div>
           <Button
@@ -183,7 +220,7 @@ export function DepositStatusBanner({ panelId }: DepositStatusBannerProps) {
               <div
                 key={card.label}
                 className={cn(
-                  "rounded-xl border p-3 transition-all hover:shadow-md",
+                  "rounded-xl border p-3 transition-all hover:shadow-md hover:-translate-y-0.5",
                   card.bgColor,
                   card.borderColor
                 )}

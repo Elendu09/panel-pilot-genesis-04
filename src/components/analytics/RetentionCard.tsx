@@ -44,13 +44,13 @@ export function RetentionCard({ currentRate, data }: RetentionCardProps) {
           </div>
           <CardTitle className="text-base md:text-lg font-semibold flex items-center gap-1.5">
             Retention
-            <TooltipProvider>
+            <TooltipProvider delayDuration={0}>
               <UITooltip>
-                <TooltipTrigger asChild>
-                  <Info className="w-3.5 h-3.5 text-muted-foreground/50 cursor-help hover:text-muted-foreground transition-colors" />
+                <TooltipTrigger>
+                  <Info className="w-4 h-4 text-muted-foreground/60 cursor-help hover:text-muted-foreground transition-colors" />
                 </TooltipTrigger>
-                <TooltipContent>
-                  <p className="text-xs max-w-[200px]">Percentage of customers who made repeat orders within the selected period.</p>
+                <TooltipContent side="top" sideOffset={4}>
+                  <p className="text-xs max-w-[220px]">Percentage of customers who made repeat orders within the selected period.</p>
                 </TooltipContent>
               </UITooltip>
             </TooltipProvider>
