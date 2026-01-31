@@ -20,10 +20,13 @@ import {
   Filter,
   RefreshCw,
   Copy,
-  Search
+  Search,
+  ExternalLink,
+  Edit
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { useNavigate } from 'react-router-dom';
 
 interface Transaction {
   id: string;
@@ -44,13 +47,14 @@ interface UnifiedTransactionManagerProps {
 }
 
 export const UnifiedTransactionManager = ({ panelId }: UnifiedTransactionManagerProps) => {
+  const navigate = useNavigate();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [processing, setProcessing] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'pending' | 'all'>('pending');
   const [searchQuery, setSearchQuery] = useState("");
-  const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; tx: Transaction | null; action: 'approve' | 'reject' }>({
+  const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; tx: Transaction | null; action: 'approve' | 'reject' | 'mark_completed' | 'mark_failed' }>({
     open: false,
     tx: null,
     action: 'approve'
@@ -148,7 +152,7 @@ export const UnifiedTransactionManager = ({ panelId }: UnifiedTransactionManager
     fetchTransactions();
   };
 
-  const handleAction = async (action: 'approve' | 'reject') => {
+  const handleAction = async (action: 'approve' | 'reject' | 'mark_completed' | 'mark_failed') => {
     const tx = confirmDialog.tx;
     if (!tx) return;
 
@@ -156,7 +160,7 @@ export const UnifiedTransactionManager = ({ panelId }: UnifiedTransactionManager
     setConfirmDialog({ open: false, tx: null, action: 'approve' });
 
     try {
-      const newStatus = action === 'approve' ? 'completed' : 'failed';
+      const newStatus = (action === 'approve' || action === 'mark_completed') ? 'completed' : 'failed';
       
       // Update transaction status
       const { error: updateError } = await supabase
@@ -166,8 +170,8 @@ export const UnifiedTransactionManager = ({ panelId }: UnifiedTransactionManager
 
       if (updateError) throw updateError;
 
-      // If approved, update buyer balance
-      if (action === 'approve' && (tx.buyer_id || tx.user_id)) {
+      // If approved/marked completed, update buyer balance
+      if ((action === 'approve' || action === 'mark_completed') && (tx.buyer_id || tx.user_id)) {
         const buyerId = tx.buyer_id || tx.user_id;
         
         // Get current balance
@@ -190,9 +194,16 @@ export const UnifiedTransactionManager = ({ panelId }: UnifiedTransactionManager
         if (balanceError) throw balanceError;
       }
 
+      const actionLabels = {
+        approve: 'Payment Approved',
+        reject: 'Payment Rejected',
+        mark_completed: 'Marked as Completed',
+        mark_failed: 'Marked as Failed'
+      };
+
       toast({
-        title: action === 'approve' ? 'Payment Approved' : 'Payment Rejected',
-        description: action === 'approve' 
+        title: actionLabels[action],
+        description: (action === 'approve' || action === 'mark_completed')
           ? `$${tx.amount.toFixed(2)} has been credited to ${tx.buyer_name || tx.buyer_email}'s account.`
           : 'The transaction has been marked as failed.'
       });
@@ -208,6 +219,11 @@ export const UnifiedTransactionManager = ({ panelId }: UnifiedTransactionManager
     } finally {
       setProcessing(null);
     }
+  };
+
+  const navigateToCustomer = (buyerId: string | null) => {
+    if (!buyerId) return;
+    navigate(`/panel/customers?search=${buyerId}`);
   };
 
   const copyToClipboard = (text: string) => {
@@ -459,6 +475,41 @@ export const UnifiedTransactionManager = ({ panelId }: UnifiedTransactionManager
                             </Button>
                           </div>
                         )}
+
+                        {/* Quick Actions for Completed/Failed Transactions */}
+                        {tx.status !== 'pending' && (
+                          <div className="flex items-center gap-2 pt-2 border-t border-border/50">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex-1 text-green-600 hover:text-green-700 hover:bg-green-50"
+                              disabled={processing === tx.id || tx.status === 'completed'}
+                              onClick={() => setConfirmDialog({ open: true, tx, action: 'mark_completed' })}
+                            >
+                              <CheckCircle className="w-4 h-4 mr-1" />
+                              Mark Completed
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex-1 text-red-500 hover:text-red-600 hover:bg-red-50"
+                              disabled={processing === tx.id || tx.status === 'failed'}
+                              onClick={() => setConfirmDialog({ open: true, tx, action: 'mark_failed' })}
+                            >
+                              <XCircle className="w-4 h-4 mr-1" />
+                              Mark Failed
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="px-2"
+                              onClick={() => navigateToCustomer(tx.buyer_id || tx.user_id)}
+                              title="Go to Customer"
+                            >
+                            <ExternalLink className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -474,15 +525,18 @@ export const UnifiedTransactionManager = ({ panelId }: UnifiedTransactionManager
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              {confirmDialog.action === 'approve' ? (
+              {(confirmDialog.action === 'approve' || confirmDialog.action === 'mark_completed') ? (
                 <CheckCircle className="w-5 h-5 text-green-500" />
               ) : (
                 <AlertTriangle className="w-5 h-5 text-red-500" />
               )}
-              {confirmDialog.action === 'approve' ? 'Approve Payment' : 'Reject Payment'}
+              {confirmDialog.action === 'approve' && 'Approve Payment'}
+              {confirmDialog.action === 'reject' && 'Reject Payment'}
+              {confirmDialog.action === 'mark_completed' && 'Mark as Completed'}
+              {confirmDialog.action === 'mark_failed' && 'Mark as Failed'}
             </DialogTitle>
             <DialogDescription className="space-y-2">
-              {confirmDialog.action === 'approve' ? (
+              {(confirmDialog.action === 'approve' || confirmDialog.action === 'mark_completed') ? (
                 <>
                   <p>This will credit <strong>${confirmDialog.tx?.amount.toFixed(2)}</strong> to <strong>{confirmDialog.tx?.buyer_name || confirmDialog.tx?.buyer_email}</strong>'s balance.</p>
                   <p className="text-amber-600">This action cannot be undone.</p>
@@ -490,7 +544,7 @@ export const UnifiedTransactionManager = ({ panelId }: UnifiedTransactionManager
               ) : (
                 <>
                   <p>This will mark the transaction as failed. The buyer will not be credited.</p>
-                  <p className="text-red-600">Are you sure you want to reject this payment?</p>
+                  <p className="text-red-600">Are you sure you want to proceed?</p>
                 </>
               )}
             </DialogDescription>
@@ -500,10 +554,13 @@ export const UnifiedTransactionManager = ({ panelId }: UnifiedTransactionManager
               Cancel
             </Button>
             <Button 
-              variant={confirmDialog.action === 'approve' ? 'default' : 'destructive'}
+              variant={(confirmDialog.action === 'approve' || confirmDialog.action === 'mark_completed') ? 'default' : 'destructive'}
               onClick={() => handleAction(confirmDialog.action)}
             >
-              {confirmDialog.action === 'approve' ? 'Approve Payment' : 'Reject Payment'}
+              {confirmDialog.action === 'approve' && 'Approve Payment'}
+              {confirmDialog.action === 'reject' && 'Reject Payment'}
+              {confirmDialog.action === 'mark_completed' && 'Mark Completed'}
+              {confirmDialog.action === 'mark_failed' && 'Mark Failed'}
             </Button>
           </DialogFooter>
         </DialogContent>

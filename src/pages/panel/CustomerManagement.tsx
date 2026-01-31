@@ -203,6 +203,15 @@ const CustomerManagement = () => {
           filter: `panel_id=eq.${panel.id}`
         },
         (payload) => {
+          // Helper for realtime segment calculation
+          const getRealtimeSegment = (c: any): "vip" | "regular" | "new" => {
+            const daysSinceJoined = Math.floor((Date.now() - new Date(c.created_at).getTime()) / (1000 * 60 * 60 * 24));
+            if (daysSinceJoined <= 3) return 'new';
+            if ((c.total_spent || 0) >= 500 || (c.referral_count || 0) >= 5) return 'vip';
+            if ((c.total_spent || 0) > 0 || (c.last_login_at && c.last_login_at !== c.created_at)) return 'regular';
+            return 'regular';
+          };
+
           if (payload.eventType === 'INSERT') {
             const newCustomer = payload.new as any;
             setCustomers(prev => [{
@@ -210,8 +219,8 @@ const CustomerManagement = () => {
               name: newCustomer.full_name || newCustomer.email.split('@')[0],
               email: newCustomer.email,
               username: newCustomer.username,
-              status: newCustomer.is_active ? 'active' : 'suspended',
-              segment: (newCustomer.total_spent || 0) >= 1000 ? 'vip' : (newCustomer.total_spent || 0) >= 100 ? 'regular' : 'new',
+              status: newCustomer.is_banned ? 'suspended' : 'active',
+              segment: getRealtimeSegment(newCustomer),
               balance: newCustomer.balance || 0,
               totalSpent: newCustomer.total_spent || 0,
               totalOrders: 0,
@@ -229,8 +238,8 @@ const CustomerManagement = () => {
                 ...c,
                 name: updated.full_name || updated.email.split('@')[0],
                 email: updated.email,
-                status: updated.is_active ? 'active' : 'suspended',
-                segment: (updated.total_spent || 0) >= 1000 ? 'vip' : (updated.total_spent || 0) >= 100 ? 'regular' : 'new',
+                status: updated.is_banned ? 'suspended' : 'active',
+                segment: getRealtimeSegment(updated),
                 balance: updated.balance || 0,
                 totalSpent: updated.total_spent || 0,
                 lastActive: updated.last_login_at || updated.created_at,
@@ -263,13 +272,42 @@ const CustomerManagement = () => {
 
       if (error) throw error;
 
+      // Helper function to calculate customer segment based on real rules
+      const calculateSegment = (customer: any): "vip" | "regular" | "new" => {
+        const joinedDate = new Date(customer.created_at);
+        const now = new Date();
+        const daysSinceJoined = Math.floor((now.getTime() - joinedDate.getTime()) / (1000 * 60 * 60 * 24));
+        
+        // Users joined within 3 days are "new"
+        if (daysSinceJoined <= 3) {
+          return 'new';
+        }
+        
+        // VIP: High spenders (>= $500) OR high referral count (>= 5)
+        if ((customer.total_spent || 0) >= 500 || (customer.referral_count || 0) >= 5) {
+          return 'vip';
+        }
+        
+        // Regular: Users who have logged in multiple times OR have placed orders
+        const hasActivity = (customer.total_spent || 0) > 0 || 
+                            (customer.last_login_at && customer.last_login_at !== customer.created_at);
+        if (hasActivity) {
+          return 'regular';
+        }
+        
+        // Default to regular (since they're past 3 days)
+        return 'regular';
+      };
+
       const formattedCustomers: Customer[] = (data || []).map(c => ({
         id: c.id,
         name: c.full_name || c.email.split('@')[0],
         email: c.email,
         username: c.username || undefined,
-        status: c.is_banned ? 'suspended' : (c.is_active ? 'active' : 'suspended'),
-        segment: (c.total_spent || 0) >= 1000 ? 'vip' : (c.total_spent || 0) >= 100 ? 'regular' : 'new',
+        // All users are "active" by default, unless banned
+        status: c.is_banned ? 'suspended' : 'active',
+        // Use real segment calculation
+        segment: calculateSegment(c),
         balance: c.balance || 0,
         totalSpent: c.total_spent || 0,
         totalOrders: 0, // Would need to join with orders table
