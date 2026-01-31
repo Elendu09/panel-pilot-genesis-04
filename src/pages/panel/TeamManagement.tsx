@@ -373,15 +373,20 @@ export default function TeamManagement() {
               </div>
             </div>
             
-            {/* Footer */}
-            <div className="px-6 py-4 border-t bg-muted/30">
+            {/* Coming Soon Notice */}
+            <div className="px-6 py-4 border-t bg-muted/30 space-y-3">
+              <div className="p-4 rounded-lg bg-muted/50 border border-border text-center">
+                <p className="text-sm text-muted-foreground">
+                  Team management is coming soon. You'll be able to add 
+                  team members with different roles to help manage your panel.
+                </p>
+              </div>
               <Button 
-                onClick={handleInvite} 
-                disabled={!inviteEmail || isInviting}
-                className="w-full h-11"
+                disabled={true}
+                className="w-full h-11 cursor-not-allowed"
               >
-                {isInviting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                Add Team Member
+                <Clock className="w-4 h-4 mr-2" />
+                Coming Soon!
               </Button>
             </div>
           </DialogContent>

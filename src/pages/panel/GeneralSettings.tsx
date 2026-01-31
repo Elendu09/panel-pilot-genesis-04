@@ -1091,11 +1091,11 @@ const GeneralSettings = () => {
                 />
               </div>
               
-              <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                <p className="text-sm text-amber-600 dark:text-amber-400">
-                  <strong>Note:</strong> The Free Tier Banner is controlled by the platform and 
-                  displays on subdomain storefronts. Custom domains do not show this banner.
-                  Custom HTML ads are not supported for security reasons.
+              <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
+                <p className="text-sm text-muted-foreground">
+                  When enabled, a promotional banner will be displayed on your 
+                  storefront for buyers using subdomain URLs. Custom domain 
+                  storefronts do not display this banner.
                 </p>
               </div>
             </div>
