@@ -26,6 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
 import { DomainDiagnostics } from "@/components/domain/DomainDiagnostics";
 import { DomainPurchaseLinks } from "@/components/domain/DomainPurchaseLinks";
 import { DomainTroubleshootingGuide } from "@/components/domain/DomainTroubleshootingGuide";
@@ -465,11 +466,14 @@ const DomainSettings = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Add Domain Dialog */}
+      {/* Add Domain Dialog - Enhanced with validation */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Connect Custom Domain</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Globe className="w-5 h-5 text-primary" />
+              Connect Custom Domain
+            </DialogTitle>
             <DialogDescription>
               Enter your domain name to connect it to your panel.
             </DialogDescription>
@@ -481,26 +485,66 @@ const DomainSettings = () => {
                 id="domain"
                 placeholder="example.com"
                 value={newDomain}
-                onChange={(e) => setNewDomain(e.target.value)}
+                onChange={(e) => setNewDomain(e.target.value.toLowerCase().replace(/^(https?:\/\/)?/, '').replace(/^www\./, '').trim())}
+                className={cn(
+                  newDomain && !isValidCustomDomain(newDomain).valid && "border-destructive focus-visible:ring-destructive"
+                )}
               />
+              {newDomain && (
+                <div className="text-xs">
+                  {isValidCustomDomain(newDomain).valid ? (
+                    <span className="text-emerald-500 flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" /> Valid domain format
+                    </span>
+                  ) : (
+                    <span className="text-destructive flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" /> {isValidCustomDomain(newDomain).error}
+                    </span>
+                  )}
+                </div>
+              )}
               <p className="text-xs text-muted-foreground">
                 Enter your domain without "www" or "https://"
               </p>
             </div>
+            
+            {/* DNS Preview */}
+            {newDomain && isValidCustomDomain(newDomain).valid && (
+              <div className="p-4 rounded-lg bg-muted/50 border border-border/50 space-y-3">
+                <h4 className="text-sm font-medium flex items-center gap-2">
+                  <Network className="w-4 h-4" />
+                  Required DNS Records
+                </h4>
+                <div className="space-y-2 text-xs">
+                  <div className="flex items-center gap-2 p-2 bg-background rounded">
+                    <Badge variant="outline" className="text-[10px]">A</Badge>
+                    <code className="text-muted-foreground">@ → {VERCEL_IP}</code>
+                  </div>
+                  <div className="flex items-center gap-2 p-2 bg-background rounded">
+                    <Badge variant="outline" className="text-[10px]">CNAME</Badge>
+                    <code className="text-muted-foreground">www → {VERCEL_CNAME}</code>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  ⏱️ DNS propagation typically takes 10-30 minutes
+                </p>
+              </div>
+            )}
+            
             <Alert>
               <Info className="w-4 h-4" />
               <AlertDescription className="text-sm">
-                After adding, you'll need to configure DNS records at your domain registrar:
-                <ul className="mt-2 space-y-1 list-disc list-inside">
-                  <li>A record pointing to <code className="bg-muted px-1 rounded">{VERCEL_IP}</code></li>
-                  <li>CNAME for www pointing to <code className="bg-muted px-1 rounded">{VERCEL_CNAME}</code></li>
-                </ul>
+                After adding, you'll need to configure DNS records at your domain registrar.
+                We'll automatically verify and enable SSL once DNS is configured.
               </AlertDescription>
             </Alert>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAddDialog(false)}>Cancel</Button>
-            <Button onClick={handleAddDomain} disabled={adding || !newDomain.trim()}>
+            <Button 
+              onClick={handleAddDomain} 
+              disabled={adding || !newDomain.trim() || (newDomain && !isValidCustomDomain(newDomain).valid)}
+            >
               {adding ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
               Add Domain
             </Button>

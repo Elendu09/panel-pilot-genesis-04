@@ -93,24 +93,39 @@ const BuyerServices = () => {
     categoriesWithServices 
   } = useUnifiedServices({ panelId: panel?.id || null });
 
-  // Build filter pills from unified categories
+  // Build filter pills from unified categories - with fallback to build from services directly
   const filterPills = useMemo(() => {
     const pills: Array<{ id: string; name: string; icon: any; bgColor: string }> = [
       { id: 'all', name: 'All', icon: Package, bgColor: 'bg-primary' }
     ];
     
-    categoriesWithServices.forEach(cat => {
-      const catData = SOCIAL_ICONS_MAP[cat.slug.toLowerCase()] || SOCIAL_ICONS_MAP.other;
-      pills.push({
-        id: cat.slug,
-        name: cat.name,
-        icon: catData.icon,
-        bgColor: catData.bgColor,
+    // If unified categories are available, use them
+    if (categoriesWithServices.length > 0) {
+      categoriesWithServices.forEach(cat => {
+        const catData = SOCIAL_ICONS_MAP[cat.slug.toLowerCase()] || SOCIAL_ICONS_MAP.other;
+        pills.push({
+          id: cat.slug,
+          name: cat.name,
+          icon: catData.icon,
+          bgColor: catData.bgColor,
+        });
       });
-    });
+    } else if (services.length > 0) {
+      // Fallback: build categories directly from services (same as NewOrder page)
+      const uniqueCategories = [...new Set(services.map((s: any) => s.category || 'other'))];
+      uniqueCategories.forEach(cat => {
+        const catData = SOCIAL_ICONS_MAP[cat.toLowerCase()] || SOCIAL_ICONS_MAP.other;
+        pills.push({
+          id: cat,
+          name: catData.label || cat.charAt(0).toUpperCase() + cat.slice(1),
+          icon: catData.icon,
+          bgColor: catData.bgColor,
+        });
+      });
+    }
     
     return pills;
-  }, [categoriesWithServices]);
+  }, [categoriesWithServices, services]);
   const getHookCategoryData = useCallback((category: string) => {
     const catData = SOCIAL_ICONS_MAP[category.toLowerCase()] || SOCIAL_ICONS_MAP.other;
     return {
