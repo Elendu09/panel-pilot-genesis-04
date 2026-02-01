@@ -135,17 +135,20 @@ const BuyerSupport = () => {
       return;
     }
 
-    if (!buyer?.id || !panel?.id) return;
+    if (!buyer?.id || !panel?.id) {
+      toast({ variant: "destructive", title: "Error", description: "Session expired. Please refresh and try again." });
+      return;
+    }
 
     setSubmitting(true);
     try {
-      const initialMessage: Message = {
-        sender: 'buyer',
+      const initialMessage = {
+        sender: 'buyer' as const,
         content: newTicket.message,
         timestamp: new Date().toISOString()
       };
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('support_tickets')
         .insert([{
           panel_id: panel.id,
@@ -154,18 +157,50 @@ const BuyerSupport = () => {
           priority: newTicket.priority,
           ticket_type: 'user_to_panel',
           status: 'open',
-          messages: [initialMessage] as any
-        }]);
+          messages: [initialMessage] as unknown as any
+        }])
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Ticket creation error:', error);
+        throw new Error(error.message || 'Failed to create ticket');
+      }
+
+      // Notify panel owner about new ticket
+      try {
+        // Get panel owner_id
+        const { data: panelData } = await supabase
+          .from('panels')
+          .select('owner_id')
+          .eq('id', panel.id)
+          .single();
+        
+        if (panelData?.owner_id) {
+          await supabase.from('panel_notifications').insert({
+            user_id: panelData.owner_id,
+            title: 'New Support Ticket',
+            message: `${buyer.full_name || buyer.email} submitted a ticket: "${newTicket.subject}"`,
+            type: 'system',
+            is_read: false
+          });
+        }
+      } catch (notifError) {
+        console.error('Failed to send notification:', notifError);
+        // Don't fail ticket creation if notification fails
+      }
 
       toast({ title: "Ticket Created", description: "We'll respond as soon as possible" });
       setIsNewTicketOpen(false);
       setNewTicket({ subject: "", priority: "medium", message: "" });
       fetchTickets();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating ticket:', error);
-      toast({ variant: "destructive", title: "Error", description: "Failed to create ticket" });
+      toast({ 
+        variant: "destructive", 
+        title: "Error", 
+        description: error.message || "Failed to create ticket. Please try again." 
+      });
     } finally {
       setSubmitting(false);
     }
