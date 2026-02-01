@@ -29,8 +29,22 @@ const mapDbTypeToNotificationType = (dbType: string | null): NotificationType =>
 const getActionUrlFromType = (type: string | null, title: string): string | undefined => {
   const lowTitle = title.toLowerCase();
   
+  // Orders
   if (type === 'order' || lowTitle.includes('order')) return '/panel/orders';
-  if (type === 'payment' || lowTitle.includes('payment') || lowTitle.includes('deposit')) return '/panel/billing';
+  
+  // Deposit from tenants -> Payment Methods (Transactions tab)
+  if (lowTitle.includes('deposit') || lowTitle.includes('pending verification') || lowTitle.includes('manual transfer') || lowTitle.includes('buyer payment')) {
+    return '/panel/payment-methods?tab=transactions';
+  }
+  
+  // Subscription/balance/commission -> Billing  
+  if (lowTitle.includes('subscription') || lowTitle.includes('commission') || lowTitle.includes('plan') || lowTitle.includes('balance')) {
+    return '/panel/billing';
+  }
+  
+  // Generic payment type -> Payment Methods
+  if (type === 'payment') return '/panel/payment-methods?tab=transactions';
+  
   if (type === 'provider' || lowTitle.includes('provider') || lowTitle.includes('sync')) return '/panel/providers';
   if (lowTitle.includes('domain') || lowTitle.includes('dns') || lowTitle.includes('ssl')) return '/panel/domain';
   if (lowTitle.includes('service')) return '/panel/services';

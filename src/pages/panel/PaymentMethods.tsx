@@ -18,9 +18,8 @@ import { usePanel } from "@/hooks/usePanel";
 import { supabase } from "@/integrations/supabase/client";
 import { useAvailablePaymentGateways } from "@/hooks/useAvailablePaymentGateways";
 import { useAdminPaymentGateways } from "@/hooks/useAdminPaymentGateways";
-import { UnifiedTransactionManager } from "@/components/billing/UnifiedTransactionManager";
+import { TransactionKanban } from "@/components/billing/TransactionKanban";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { DepositStatusBanner } from "@/components/analytics/DepositStatusBanner";
 import { PaymentMethodRow } from "@/components/billing/PaymentMethodRow";
 import { useNavigate } from "react-router-dom";
 
@@ -742,18 +741,15 @@ const PaymentMethods = () => {
 
         {/* Tab B: Transactions & History */}
         <TabsContent value="billing" className="space-y-6">
-          {/* Deposit Status Banner with real-time sync */}
-          {panel?.id && <DepositStatusBanner panelId={panel.id} />}
-
-          <Alert className="border-blue-500/30 bg-blue-500/10">
-            <BarChart3 className="w-4 h-4 text-blue-500" />
-            <AlertDescription className="text-blue-700 dark:text-blue-300">
-              <strong>Transaction Management:</strong> Review and approve pending deposits, view transaction history, and manage customer balances.
+          <Alert className="border-primary/30 bg-primary/5">
+            <BarChart3 className="w-4 h-4 text-primary" />
+            <AlertDescription>
+              <strong>Transaction Management:</strong> Review and approve pending deposits, view transaction history, and manage customer balances from buyers/tenants.
             </AlertDescription>
           </Alert>
 
-          {/* Unified Deposit Management - Approvals + History */}
-          {panel?.id && <UnifiedTransactionManager panelId={panel.id} />}
+          {/* Kanban-style Transaction Management */}
+          {panel?.id && <TransactionKanban panelId={panel.id} />}
         </TabsContent>
       </Tabs>
 

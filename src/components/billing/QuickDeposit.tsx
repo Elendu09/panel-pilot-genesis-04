@@ -6,8 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
   DollarSign,
-  Zap,
-  Loader2
+  Wallet,
+  Loader2,
+  AlertTriangle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 // usePanel removed - not needed since we use admin gateways now
@@ -51,8 +52,8 @@ export const QuickDeposit = ({ onDeposit, loading }: QuickDepositProps) => {
     <Card className="bg-card/60 backdrop-blur-xl border-border/50">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2">
-          <Zap className="w-5 h-5 text-primary" />
-          Quick Deposit
+          <Wallet className="w-5 h-5 text-primary" />
+          Add Funds
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -104,8 +105,9 @@ export const QuickDeposit = ({ onDeposit, loading }: QuickDepositProps) => {
               Loading payment methods...
             </div>
           ) : gateways.length === 0 ? (
-            <div className="mt-2 rounded-lg border border-border/50 p-4 text-sm text-muted-foreground">
-              No valid payment gateways configured. Go to <span className="font-medium">Payment Methods</span> to add one.
+            <div className="mt-2 rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-amber-600 dark:text-amber-400 flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              <span>Payment gateways have not been configured by the platform administrator yet. Please check back later or contact support.</span>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-2 mt-2">

@@ -228,8 +228,8 @@ const Billing = () => {
     if (!defaultGateway) {
       toast({
         variant: 'destructive',
-        title: 'No payment gateway configured',
-        description: 'Go to Payment Methods and add a valid gateway first.'
+        title: 'Payment Methods Unavailable',
+        description: 'Platform payment methods are not configured yet. Please contact the administrator.'
       });
       return;
     }
@@ -341,8 +341,8 @@ const Billing = () => {
     if (!defaultGateway) {
       toast({
         variant: 'destructive',
-        title: 'No payment gateway configured',
-        description: 'Go to Payment Methods and add a valid gateway first.'
+        title: 'Payment Methods Unavailable',
+        description: 'Platform payment methods are not configured yet. Please contact the administrator.'
       });
       return;
     }
