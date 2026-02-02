@@ -23,6 +23,7 @@ import {
 } from '@/components/buyer-themes';
 import { FloatingChatWidget } from '@/components/storefront/FloatingChatWidget';
 import { AnnouncementBar } from '@/components/storefront/AnnouncementBar';
+import { useBuyerAuth } from '@/contexts/BuyerAuthContext';
 import { AnnouncementPopup } from '@/components/storefront/AnnouncementPopup';
 import { FreeTierBanner } from '@/components/storefront/FreeTierBanner';
 import { BuyerHomepageSchemas, FAQPageSchema } from '@/components/seo/JsonLdSchema';
@@ -61,6 +62,10 @@ const Storefront = () => {
   const { panel, loading: tenantLoading, error: tenantError } = useTenant();
   const { services } = useTenantServices(panel?.id);
   const [renderError, setRenderError] = useState<string | null>(null);
+  
+  // Get buyer authentication status
+  const { buyer, loading: buyerLoading } = useBuyerAuth();
+  const isAuthenticated = !!buyer;
   
   // Free tier banner state - persists for session
   const [bannerDismissed, setBannerDismissed] = useState(() => {
@@ -369,7 +374,7 @@ const Storefront = () => {
       {ThemeWrapper ? (
         <ThemeWrapper themeMode={themeMode}>
           {themeContent}
-          <FloatingChatWidget panelId={panel?.id} panelName={panel?.name} />
+          <FloatingChatWidget panelId={panel?.id} panelName={panel?.name} isAuthenticated={isAuthenticated} />
           {showFreeBanner && (
             <FreeTierBanner 
               onDismiss={() => {
@@ -381,8 +386,8 @@ const Storefront = () => {
         </ThemeWrapper>
       ) : (
         <div className={`buyer-theme-wrapper ${themeMode}`}>
-          {themeContent}
-          <FloatingChatWidget panelId={panel?.id} panelName={panel?.name} />
+        {themeContent}
+          <FloatingChatWidget panelId={panel?.id} panelName={panel?.name} isAuthenticated={isAuthenticated} />
           {showFreeBanner && (
             <FreeTierBanner 
               onDismiss={() => {

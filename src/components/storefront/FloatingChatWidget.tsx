@@ -19,6 +19,7 @@ interface FloatingChatWidgetProps {
   message?: string;
   enableAI?: boolean;
   pageContext?: string;
+  isAuthenticated?: boolean;
 }
 
 interface ChatMessage {
@@ -177,7 +178,8 @@ export const FloatingChatWidget = ({
   position = 'bottom-right',
   message = 'Need help? Chat with us!',
   enableAI = true,
-  pageContext = 'Homepage'
+  pageContext = 'Homepage',
+  isAuthenticated = false
 }: FloatingChatWidgetProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [showAIChat, setShowAIChat] = useState(false);
@@ -277,13 +279,17 @@ export const FloatingChatWidget = ({
   // Add AI greeting when opening chat (only for new sessions)
   useEffect(() => {
     if (showAIChat && messages.length === 0 && !hasPreviousSession) {
-      // Immediate AI greeting
+      // Different greeting based on authentication status
+      const greeting = isAuthenticated 
+        ? `Hi! 👋 Welcome back to **${panelName || 'our panel'}**!\n\nHow can I help you today? I can assist with:\n\n1. **Orders** - placing new orders or checking status\n2. **Services** - finding the right service for your needs\n3. **Pricing** - understanding our competitive rates\n4. **Account** - deposits, balance, and settings\n\n💬 Need to talk to a human? Just click "Talk to Human" below!`
+        : `Hi! 👋 Welcome to **${panelName || 'our panel'}**!\n\nHow can I help you today? I can assist with:\n\n1. **Services** - finding the right service for your needs\n2. **Pricing** - understanding our competitive rates\n3. **FAQs** - answering common questions\n\n🔐 **Need personalized help?** Log in to your account to access live human support, order history, and more!`;
+      
       setMessages([{
         role: 'assistant',
-        content: `Hi! 👋 Welcome to **${panelName || 'our panel'}**!\n\nHow can I help you today? I can assist with:\n\n1. **Orders** - placing new orders or checking status\n2. **Services** - finding the right service for your needs\n3. **Pricing** - understanding our competitive rates\n4. **Account** - deposits, balance, and settings\n\n💬 Need to talk to a human? Just click "Talk to Human" below!`
+        content: greeting
       }]);
     }
-  }, [showAIChat, messages.length, hasPreviousSession, panelName]);
+  }, [showAIChat, messages.length, hasPreviousSession, panelName, isAuthenticated]);
 
   // Subscribe to live chat messages
   useEffect(() => {
@@ -824,8 +830,8 @@ export const FloatingChatWidget = ({
                     </Button>
                   </form>
                   
-                  {/* Talk to Human button */}
-                  {panelId && (
+                  {/* Talk to Human button - only show for authenticated users */}
+                  {panelId && isAuthenticated && (
                     <Button
                       variant="outline"
                       size="sm"
@@ -840,6 +846,25 @@ export const FloatingChatWidget = ({
                       )}
                       Talk to Human
                     </Button>
+                  )}
+                  
+                  {/* Show login prompt for non-authenticated users */}
+                  {panelId && !isAuthenticated && (
+                    <div className="mt-2 p-2 bg-muted/50 rounded-lg text-center">
+                      <p className="text-xs text-muted-foreground mb-1">
+                        Need more personalized support?
+                      </p>
+                      <Button 
+                        variant="link" 
+                        size="sm" 
+                        className="h-auto p-0 text-xs"
+                        onClick={() => {
+                          window.location.href = '/auth?redirect=' + encodeURIComponent(window.location.pathname);
+                        }}
+                      >
+                        Log in to chat with a human
+                      </Button>
+                    </div>
                   )}
                   
                   <button
@@ -898,8 +923,8 @@ export const FloatingChatWidget = ({
                   </motion.button>
                 )}
 
-                {/* Talk to Human button in options */}
-                {panelId && (
+                {/* Talk to Human button in options - only for authenticated users */}
+                {panelId && isAuthenticated && (
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
@@ -917,6 +942,26 @@ export const FloatingChatWidget = ({
                       <p className="text-xs text-white/80">Chat with support agent</p>
                     </div>
                   </motion.button>
+                )}
+                
+                {/* Login prompt for non-authenticated users who want human support */}
+                {panelId && !isAuthenticated && (
+                  <div className="p-3 bg-muted/30 rounded-xl border border-dashed border-border">
+                    <p className="text-sm text-center text-muted-foreground mb-2">
+                      🔐 Log in to access live human support
+                    </p>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full"
+                      onClick={() => {
+                        window.location.href = '/auth?redirect=' + encodeURIComponent(window.location.pathname);
+                      }}
+                    >
+                      <User className="w-4 h-4 mr-2" />
+                      Sign In / Sign Up
+                    </Button>
+                  </div>
                 )}
 
                 {settings.whatsapp && (

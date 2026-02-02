@@ -200,10 +200,12 @@ serve(async (req) => {
             throw connError;
           }
 
-          // Create provider record
-          const apiEndpoint = targetPanel.custom_domain
-            ? `https://${targetPanel.custom_domain}/api/v2/buyer-api`
-            : `https://${targetPanel.subdomain}.homeofsmm.com/api/v2/buyer-api`;
+    // Create provider record
+            // Get platform domain from environment or use default
+            const platformDomainExisting = Deno.env.get('PRIMARY_PLATFORM_DOMAIN') || 'smmpilot.online';
+            const apiEndpoint = targetPanel.custom_domain
+              ? `https://${targetPanel.custom_domain}/api/v2`
+              : `https://${targetPanel.subdomain}.${platformDomainExisting}/api/v2`;
 
           await supabase.from("providers").insert({
             panel_id: sourcePanelId,
@@ -259,9 +261,11 @@ serve(async (req) => {
     }
 
     // Create provider record in source panel
+    // Get platform domain from environment or use default
+    const platformDomain = Deno.env.get('PRIMARY_PLATFORM_DOMAIN') || 'smmpilot.online';
     const apiEndpoint = targetPanel.custom_domain
-      ? `https://${targetPanel.custom_domain}/api/v2/buyer-api`
-      : `https://${targetPanel.subdomain}.homeofsmm.com/api/v2/buyer-api`;
+      ? `https://${targetPanel.custom_domain}/api/v2`
+      : `https://${targetPanel.subdomain}.${platformDomain}/api/v2`;
 
     const { data: provider, error: providerError } = await supabase
       .from("providers")

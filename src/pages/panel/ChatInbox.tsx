@@ -12,7 +12,12 @@ import {
   Plus,
   Settings,
   Trash2,
-  ArrowLeft
+  ArrowLeft,
+  DollarSign,
+  ShoppingCart,
+  Tag,
+  CheckCircle,
+  History
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,6 +33,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
@@ -440,6 +446,41 @@ const ChatInbox = ({ embedded = false }: ChatInboxProps) => {
     }
   };
 
+  const handleMarkAsSolved = async (session: ChatSession | null) => {
+    if (!session) return;
+    await archiveSession(session);
+    toast({ title: 'Marked as Solved', description: 'Chat has been archived.' });
+  };
+
+  const handleManageBalance = (session: ChatSession | null) => {
+    if (!session) return;
+    // Navigate to customer management with filter
+    toast({ 
+      title: 'Opening Customer Management', 
+      description: `Managing balance for ${session.visitor_name || session.visitor_email || 'visitor'}` 
+    });
+    window.location.href = `/panel/customers?search=${encodeURIComponent(session.visitor_email || session.visitor_id)}`;
+  };
+
+  const handleViewUserOrders = (session: ChatSession | null) => {
+    if (!session) return;
+    toast({ 
+      title: 'Opening Orders', 
+      description: `Viewing orders for ${session.visitor_name || 'visitor'}` 
+    });
+    // For now, navigate to orders (can filter by buyer later)
+    window.location.href = `/panel/orders`;
+  };
+
+  const handleViewPaymentHistory = (session: ChatSession | null) => {
+    if (!session) return;
+    toast({ 
+      title: 'Opening Transactions', 
+      description: `Viewing payment history` 
+    });
+    window.location.href = `/panel/transactions`;
+  };
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -761,7 +802,24 @@ const ChatInbox = ({ embedded = false }: ChatInboxProps) => {
                       <MoreVertical className="w-4 h-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuItem onClick={() => handleManageBalance(selectedSession)}>
+                      <DollarSign className="w-4 h-4 mr-2" />
+                      Manage balance
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleViewPaymentHistory(selectedSession)}>
+                      <History className="w-4 h-4 mr-2" />
+                      Payment history
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleViewUserOrders(selectedSession)}>
+                      <ShoppingCart className="w-4 h-4 mr-2" />
+                      User orders
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => handleMarkAsSolved(selectedSession)}>
+                      <CheckCircle className="w-4 h-4 mr-2 text-green-500" />
+                      Mark as solved
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => selectedSession && archiveSession(selectedSession)}>
                       <Archive className="w-4 h-4 mr-2" />
                       Archive Chat
