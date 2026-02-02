@@ -17,8 +17,11 @@ import {
   Check,
   AlertCircle,
   TrendingUp,
-  Wallet
+  Wallet,
+  ArrowLeft
 } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { usePanel } from "@/hooks/usePanel";
@@ -106,6 +109,8 @@ const ProviderAds = () => {
   const [pricing, setPricing] = useState<AdPricing[]>([]);
   const [myAds, setMyAds] = useState<MyAd[]>([]);
   const [selectedDuration, setSelectedDuration] = useState<Record<string, string>>({});
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewAdType, setPreviewAdType] = useState<string | null>(null);
 
   useEffect(() => {
     if (panel?.id) {
@@ -391,25 +396,41 @@ const ProviderAds = () => {
                             <p className="text-xs text-green-500">Save {discount}%</p>
                           )}
                         </div>
-                        <Button
-                          onClick={() => handlePurchase(tier)}
-                          disabled={purchasing === tier.ad_type || isActive || (panel?.balance || 0) < price}
-                          className={cn("gap-2", `bg-gradient-to-r ${config?.gradient}`)}
-                        >
-                          {purchasing === tier.ad_type ? (
-                            <>
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                              Processing...
-                            </>
-                          ) : isActive ? (
-                            <>Already Active</>
-                          ) : (
-                            <>
-                              <DollarSign className="w-4 h-4" />
-                              Purchase
-                            </>
-                          )}
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          {/* Example Preview Button */}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setPreviewAdType(tier.ad_type);
+                              setPreviewOpen(true);
+                            }}
+                            className="gap-1"
+                          >
+                            <Eye className="w-4 h-4" />
+                            Example
+                          </Button>
+                          {/* Purchase Button */}
+                          <Button
+                            onClick={() => handlePurchase(tier)}
+                            disabled={purchasing === tier.ad_type || isActive || (panel?.balance || 0) < price}
+                            className={cn("gap-2", `bg-gradient-to-r ${config?.gradient}`)}
+                          >
+                            {purchasing === tier.ad_type ? (
+                              <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Processing...
+                              </>
+                            ) : isActive ? (
+                              <>Already Active</>
+                            ) : (
+                              <>
+                                <DollarSign className="w-4 h-4" />
+                                Get Now
+                              </>
+                            )}
+                          </Button>
+                        </div>
                       </div>
 
                       {(panel?.balance || 0) < price && !isActive && (
@@ -495,6 +516,93 @@ const ProviderAds = () => {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Ad Preview Dialog */}
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Ad Preview</DialogTitle>
+            <DialogDescription>
+              How your panel will appear in the marketplace
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {/* Mock Ranking Display */}
+            <div className="border rounded-xl p-4 bg-gradient-to-r from-amber-500/10 to-amber-500/5 relative">
+              {/* "You will be here" tooltip */}
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-card border rounded-lg px-3 py-1.5 shadow-lg z-10">
+                <p className="text-sm font-medium text-center">You will be here</p>
+                <Button 
+                  variant="link" 
+                  size="sm" 
+                  className="text-primary p-0 h-auto w-full text-xs"
+                  onClick={() => setPreviewOpen(false)}
+                >
+                  <ArrowLeft className="w-3 h-3 mr-1" />
+                  Back to ads
+                </Button>
+              </div>
+              
+              {/* Ranking #1 with Crown */}
+              <div className="flex items-center gap-3 mt-6">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl font-bold">1</span>
+                  <Crown className="w-5 h-5 text-amber-500" />
+                </div>
+                <Avatar className="w-10 h-10 border-2 border-amber-500">
+                  <AvatarImage src={panel?.logo_url || undefined} />
+                  <AvatarFallback className="bg-primary/10 text-primary">
+                    {panel?.name?.substring(0, 2).toUpperCase() || 'MY'}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold truncate">{panel?.name || 'My Panel'}</p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {panel?.custom_domain || `${panel?.subdomain}.smmpilot.online`}
+                  </p>
+                </div>
+                <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/30 shrink-0">
+                  {previewAdType?.charAt(0).toUpperCase()}{previewAdType?.slice(1)}
+                </Badge>
+              </div>
+              
+              {/* Sample service badges */}
+              <div className="flex flex-wrap gap-2 mt-3 pl-12">
+                <Badge variant="secondary" className="gap-1">
+                  <Sparkles className="w-3 h-3" /> Premium
+                </Badge>
+                <Badge variant="secondary">Top Quality</Badge>
+              </div>
+            </div>
+            
+            {/* Lower rankings preview (faded) */}
+            <div className="space-y-3 opacity-60">
+              <div className="flex items-center gap-3 p-3 border rounded-lg">
+                <span className="font-bold w-6">2</span>
+                <Crown className="w-4 h-4 text-muted-foreground" />
+                <Avatar className="w-8 h-8"><AvatarFallback>FS</AvatarFallback></Avatar>
+                <span className="text-sm flex-1">flysmm.com</span>
+                <Badge variant="outline" className="text-xs">USD</Badge>
+              </div>
+              <div className="flex items-center gap-3 p-3 border rounded-lg">
+                <span className="font-bold w-6">3</span>
+                <Crown className="w-4 h-4 text-muted-foreground" />
+                <Avatar className="w-8 h-8"><AvatarFallback>TG</AvatarFallback></Avatar>
+                <span className="text-sm flex-1">teateagram.com</span>
+                <Badge variant="outline" className="text-xs">USD</Badge>
+              </div>
+              <div className="flex items-center gap-3 p-3 border rounded-lg">
+                <span className="font-bold w-6">4</span>
+                <Crown className="w-4 h-4 text-muted-foreground" />
+                <Avatar className="w-8 h-8"><AvatarFallback>SM</AvatarFallback></Avatar>
+                <span className="text-sm flex-1">smmpanel.io</span>
+                <Badge variant="outline" className="text-xs">USD</Badge>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
