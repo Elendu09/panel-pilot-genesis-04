@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -62,6 +63,12 @@ interface Panel {
     email: string;
     full_name: string;
   };
+  subscription?: {
+    plan_type: 'free' | 'basic' | 'pro';
+    status: string;
+  } | null;
+  _serviceCount?: number;
+  _providerCount?: number;
 }
 
 interface Transaction {
@@ -133,11 +140,39 @@ const PanelManagement = () => {
         .from('panels')
         .select(`
           *,
-          owner:profiles!panels_owner_id_fkey(email, full_name)
+          owner:profiles!panels_owner_id_fkey(email, full_name),
+          subscription:panel_subscriptions(plan_type, status)
         `)
         .order('created_at', { ascending: false });
 
-      setPanels(panelsData || []);
+      if (panelsData) {
+        // Fetch service counts and provider counts for all panels
+        const panelIds = panelsData.map(p => p.id);
+        
+        const [servicesRes, providersRes] = await Promise.all([
+          supabase.from('services').select('panel_id').in('panel_id', panelIds),
+          supabase.from('providers').select('panel_id').in('panel_id', panelIds)
+        ]);
+
+        const serviceCounts = (servicesRes.data || []).reduce((acc, s) => {
+          acc[s.panel_id] = (acc[s.panel_id] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+
+        const providerCounts = (providersRes.data || []).reduce((acc, p) => {
+          acc[p.panel_id] = (acc[p.panel_id] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+
+        const enrichedPanels = panelsData.map(p => ({
+          ...p,
+          subscription: Array.isArray(p.subscription) ? p.subscription[0] : p.subscription,
+          _serviceCount: serviceCounts[p.id] || 0,
+          _providerCount: providerCounts[p.id] || 0
+        }));
+
+        setPanels(enrichedPanels);
+      }
     } catch (error) {
       console.error('Error fetching panels:', error);
       toast({
@@ -396,71 +431,86 @@ const PanelManagement = () => {
     visible: { opacity: 1, y: 0 }
   };
 
-  const renderPanelCard = (panel: Panel) => (
-    <KanbanCard 
-      key={panel.id}
-      variant={panel.status === 'active' ? 'success' : panel.status === 'pending' ? 'warning' : 'danger'}
-      onClick={() => openDetailsDialog(panel)}
-    >
-      <div className="space-y-3">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0 flex-1">
-            <h4 className="font-semibold truncate">{panel.name}</h4>
-            <p className="text-xs text-muted-foreground truncate">{panel.owner?.email}</p>
+  const renderPanelCard = (panel: Panel) => {
+    const planType = panel.subscription?.plan_type || 'free';
+    const PlanIcon = getPlanIcon(planType);
+    
+    return (
+      <KanbanCard 
+        key={panel.id}
+        variant={panel.status === 'active' ? 'success' : panel.status === 'pending' ? 'warning' : 'danger'}
+        onClick={() => openDetailsDialog(panel)}
+      >
+        <div className="space-y-3">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <h4 className="font-semibold truncate">{panel.name}</h4>
+                <Badge className={cn("text-[10px] px-1.5 py-0", getPlanColor(planType))}>
+                  <PlanIcon className="w-3 h-3 mr-0.5" />
+                  {planType.toUpperCase()}
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground truncate">{panel.owner?.email}</p>
+            </div>
+            <Badge className={getStatusColor(panel.status)}>
+              {getStatusIcon(panel.status)}
+              <span className="ml-1 capitalize">{panel.status}</span>
+            </Badge>
           </div>
-          <Badge className={getStatusColor(panel.status)}>
-            {getStatusIcon(panel.status)}
-            <span className="ml-1 capitalize">{panel.status}</span>
-          </Badge>
-        </div>
-        
-        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-          <Globe className="w-3 h-3" />
-          <span className="font-mono truncate">{panel.custom_domain || `${panel.subdomain}.smmpilot.online`}</span>
-        </div>
-
-        <div className="grid grid-cols-3 gap-2 text-center">
-          <div className="p-2 bg-accent/50 rounded-lg">
-            <p className="text-xs text-muted-foreground">Commission</p>
-            <p className="font-semibold text-sm">{panel.commission_rate || 5}%</p>
-          </div>
-          <div className="p-2 bg-accent/50 rounded-lg">
-            <p className="text-xs text-muted-foreground">Balance</p>
-            <p className="font-semibold text-sm">${panel.balance?.toFixed(0) || '0'}</p>
-          </div>
-          <div className="p-2 bg-accent/50 rounded-lg">
-            <p className="text-xs text-muted-foreground">Orders</p>
-            <p className="font-semibold text-sm">{panel.total_orders || 0}</p>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between pt-2 border-t border-border">
+          
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <Calendar className="w-3 h-3" />
-            {new Date(panel.created_at).toLocaleDateString()}
+            <Globe className="w-3 h-3" />
+            <span className="font-mono truncate">{panel.custom_domain || `${panel.subdomain}.smmpilot.online`}</span>
           </div>
-          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <Button onClick={(e) => { e.stopPropagation(); openAddFundsDialog(panel); }} variant="ghost" size="sm" className="h-7 w-7 p-0 text-emerald-500" title="Add Funds">
-              <Wallet className="w-3 h-3" />
-            </Button>
-            <Button onClick={(e) => { e.stopPropagation(); openEditDialog(panel); }} variant="ghost" size="sm" className="h-7 w-7 p-0">
-              <Edit className="w-3 h-3" />
-            </Button>
-            {panel.status === 'pending' && (
-              <Button onClick={(e) => { e.stopPropagation(); updatePanelStatus(panel.id, 'active'); }} variant="ghost" size="sm" className="h-7 w-7 p-0 text-emerald-500">
-                <CheckCircle className="w-3 h-3" />
+
+          <div className="grid grid-cols-4 gap-1.5 text-center">
+            <div className="p-1.5 bg-accent/50 rounded-lg">
+              <p className="text-[10px] text-muted-foreground">Services</p>
+              <p className="font-semibold text-xs">{panel._serviceCount || 0}</p>
+            </div>
+            <div className="p-1.5 bg-accent/50 rounded-lg">
+              <p className="text-[10px] text-muted-foreground">Providers</p>
+              <p className="font-semibold text-xs">{panel._providerCount || 0}</p>
+            </div>
+            <div className="p-1.5 bg-accent/50 rounded-lg">
+              <p className="text-[10px] text-muted-foreground">Balance</p>
+              <p className="font-semibold text-xs">${panel.balance?.toFixed(0) || '0'}</p>
+            </div>
+            <div className="p-1.5 bg-accent/50 rounded-lg">
+              <p className="text-[10px] text-muted-foreground">Orders</p>
+              <p className="font-semibold text-xs">{panel.total_orders || 0}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between pt-2 border-t border-border">
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Calendar className="w-3 h-3" />
+              {new Date(panel.created_at).toLocaleDateString()}
+            </div>
+            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <Button onClick={(e) => { e.stopPropagation(); openAddFundsDialog(panel); }} variant="ghost" size="sm" className="h-7 w-7 p-0 text-emerald-500" title="Add Funds">
+                <Wallet className="w-3 h-3" />
               </Button>
-            )}
-            {panel.status === 'active' && (
-              <Button onClick={(e) => { e.stopPropagation(); updatePanelStatus(panel.id, 'suspended'); }} variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-500">
-                <Ban className="w-3 h-3" />
+              <Button onClick={(e) => { e.stopPropagation(); openEditDialog(panel); }} variant="ghost" size="sm" className="h-7 w-7 p-0">
+                <Edit className="w-3 h-3" />
               </Button>
-            )}
+              {panel.status === 'pending' && (
+                <Button onClick={(e) => { e.stopPropagation(); updatePanelStatus(panel.id, 'active'); }} variant="ghost" size="sm" className="h-7 w-7 p-0 text-emerald-500">
+                  <CheckCircle className="w-3 h-3" />
+                </Button>
+              )}
+              {panel.status === 'active' && (
+                <Button onClick={(e) => { e.stopPropagation(); updatePanelStatus(panel.id, 'suspended'); }} variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-500">
+                  <Ban className="w-3 h-3" />
+                </Button>
+              )}
+            </div>
           </div>
         </div>
-      </div>
-    </KanbanCard>
-  );
+      </KanbanCard>
+    );
+  };
 
   return (
     <motion.div 

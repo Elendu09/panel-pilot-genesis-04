@@ -59,6 +59,7 @@ import {
   FastOrderAnalyticsCard,
   TenantMetricsGrid,
   DepositAnalyticsCard,
+  AdsFunnelCard,
 } from "@/components/analytics";
 
 const Analytics = () => {
@@ -731,7 +732,21 @@ const Analytics = () => {
             growthTrend={changes.orders}
           />
           
-          {/* Deposit Analytics Card - Real data breakdown */}
+          {/* Ads Performance Funnel - Real ads data with "No Ads" overlay */}
+          {panel?.id && (
+            <AdsFunnelCard panelId={panel.id} />
+          )}
+        </motion.div>
+      )}
+
+      {/* Deposit Analytics Row - Real data breakdown */}
+      {(activeTab === 'overview' || activeTab === 'payments') && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.17 }}
+          className="grid grid-cols-1 lg:grid-cols-3 gap-6"
+        >
           <DepositAnalyticsCard
             totalDeposits={volumeData.deposits}
             completedDeposits={depositBreakdown.completed}
