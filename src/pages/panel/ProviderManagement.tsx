@@ -852,11 +852,11 @@ const ProviderManagement = () => {
                 </div>
               )}
 
-              {/* All Direct Providers */}
+              {/* All Direct Providers - renamed to Top Providers */}
               <div>
                 <div className="flex items-center gap-2 mb-4">
                   <Home className="w-5 h-5 text-primary" />
-                  <h3 className="font-semibold">All HomeOfSMM Panels</h3>
+                  <h3 className="font-semibold">Top Providers</h3>
                   <Badge variant="outline">{filteredDirect.length}</Badge>
                 </div>
                 {loadingDirect ? (

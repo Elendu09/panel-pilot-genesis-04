@@ -199,6 +199,7 @@ const ProviderAds = () => {
 
       // Create ad
       const expiresAt = getExpiryDate(duration);
+      const now = new Date();
       const { error: adError } = await supabase
         .from('provider_ads')
         .insert({
@@ -206,8 +207,12 @@ const ProviderAds = () => {
           ad_type: tier.ad_type,
           daily_fee: tier.daily_rate,
           total_spent: price,
+          starts_at: now.toISOString(),
           expires_at: expiresAt.toISOString(),
-          is_active: true
+          is_active: true,
+          position: 0,
+          impressions: 0,
+          clicks: 0
         });
 
       if (adError) throw adError;

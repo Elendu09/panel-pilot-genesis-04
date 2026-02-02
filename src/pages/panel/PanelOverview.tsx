@@ -57,6 +57,7 @@ const PanelOverview = () => {
   const { profile } = useAuth();
   const [panelData, setPanelData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [subscription, setSubscription] = useState<{ plan_type: string } | null>(null);
   const [stats, setStats] = useState({
     totalOrders: 0,
     totalRevenue: 0,
@@ -101,6 +102,14 @@ const PanelOverview = () => {
         setPanelData(panel);
 
         if (panel) {
+          // Fetch subscription
+          const { data: sub } = await supabase
+            .from('panel_subscriptions')
+            .select('plan_type')
+            .eq('panel_id', panel.id)
+            .eq('status', 'active')
+            .single();
+          setSubscription(sub);
           const { data: orders } = await supabase
             .from('orders')
             .select('*')
@@ -563,14 +572,22 @@ const PanelOverview = () => {
             
             {/* Right side - Action Buttons */}
             <div className="flex flex-wrap items-center gap-2 sm:gap-3 self-start lg:self-center">
+              {/* Plan Badge */}
+              <Badge 
+                variant="outline" 
+                className="gap-1.5 px-3 py-1 bg-gradient-to-r from-amber-500/10 to-amber-500/5 border-amber-500/30"
+              >
+                <Crown className="w-3.5 h-3.5 text-amber-500" />
+                <span className="text-xs font-medium capitalize">{subscription?.plan_type || 'Free'} Plan</span>
+              </Badge>
               <Button 
                 variant="outline" 
                 size="sm"
-                onClick={() => navigate('/panel/billing')}
+                onClick={() => navigate('/panel/payment-methods')}
                 className="gap-1.5 bg-background/50 backdrop-blur-sm hover:bg-primary/10 border-primary/30"
               >
                 <Wallet className="w-4 h-4" />
-                <span className="hidden md:inline">Add Funds</span>
+                <span className="hidden md:inline">Payments</span>
               </Button>
               <Button 
                 variant="outline" 
@@ -579,7 +596,7 @@ const PanelOverview = () => {
                 className="gap-1.5 bg-background/50 backdrop-blur-sm hover:bg-amber-500/10 border-amber-500/30"
               >
                 <Crown className="w-4 h-4 text-amber-500" />
-                <span className="hidden md:inline">Upgrade</span>
+                <span className="hidden md:inline">Billing</span>
               </Button>
               <Button 
                 variant="outline" 
