@@ -19,7 +19,11 @@ serve(async (req) => {
     // Get auth user
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      throw new Error("No authorization header");
+      console.error("No authorization header provided");
+      return new Response(
+        JSON.stringify({ success: false, error: "Authorization required" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
+      );
     }
 
     const { data: { user }, error: authError } = await supabase.auth.getUser(
@@ -27,14 +31,36 @@ serve(async (req) => {
     );
 
     if (authError || !user) {
-      throw new Error("Unauthorized");
+      console.error("Auth error:", authError?.message);
+      return new Response(
+        JSON.stringify({ success: false, error: "Unauthorized" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
+      );
     }
 
+    console.log("Authenticated user:", user.id);
+
     const { sourcePanelId, targetPanelId } = await req.json();
+    console.log("Request params:", { sourcePanelId, targetPanelId });
 
     if (!sourcePanelId || !targetPanelId) {
       throw new Error("Missing sourcePanelId or targetPanelId");
     }
+
+    // CRITICAL FIX: Get the profile for the authenticated user
+    // profiles.user_id = auth.users.id, NOT profiles.id = auth.users.id
+    const { data: userProfile, error: profileError } = await supabase
+      .from("profiles")
+      .select("id, email, full_name")
+      .eq("user_id", user.id)
+      .single();
+
+    if (profileError || !userProfile) {
+      console.error("Profile error:", profileError?.message);
+      throw new Error("Could not get user profile");
+    }
+
+    console.log("User profile:", userProfile.id);
 
     // Verify source panel ownership
     const { data: sourcePanel, error: sourcePanelError } = await supabase
@@ -44,22 +70,17 @@ serve(async (req) => {
       .single();
 
     if (sourcePanelError || !sourcePanel) {
+      console.error("Source panel error:", sourcePanelError?.message);
       throw new Error("Source panel not found");
     }
 
-    if (sourcePanel.owner_id !== user.id) {
+    // CRITICAL FIX: panels.owner_id references profiles.id, NOT auth.users.id
+    if (sourcePanel.owner_id !== userProfile.id) {
+      console.error("Ownership mismatch:", { 
+        panelOwnerId: sourcePanel.owner_id, 
+        userProfileId: userProfile.id 
+      });
       throw new Error("You don't own this panel");
-    }
-
-    // Get owner's email for creating buyer account
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("email, full_name")
-      .eq("id", user.id)
-      .single();
-
-    if (profileError || !profile?.email) {
-      throw new Error("Could not get user profile");
     }
 
     // Get target panel info
@@ -70,6 +91,7 @@ serve(async (req) => {
       .single();
 
     if (targetPanelError || !targetPanel) {
+      console.error("Target panel error:", targetPanelError?.message);
       throw new Error("Target panel not found");
     }
 
@@ -112,12 +134,11 @@ serve(async (req) => {
       throw new Error(`Provider limit reached (${maxProviders} for ${plan} plan). Upgrade to add more.`);
     }
 
-    // Create buyer account on target panel
-    // Generate a unique username and password
+    // Create buyer account on target panel using userProfile data
     const username = `panel_${sourcePanelId.substring(0, 8)}`;
     const tempPassword = crypto.randomUUID().substring(0, 12);
     
-    // Simple hash for password (in production, use bcrypt)
+    // Simple hash for password
     const encoder = new TextEncoder();
     const data = encoder.encode(tempPassword);
     const hashBuffer = await crypto.subtle.digest("SHA-256", data);
@@ -129,11 +150,11 @@ serve(async (req) => {
       .from("client_users")
       .insert({
         panel_id: targetPanelId,
-        email: profile.email,
+        email: userProfile.email,
         username: username,
-        full_name: profile.full_name || sourcePanel.name,
+        full_name: userProfile.full_name || sourcePanel.name,
         password_hash: passwordHash,
-        password_temp: tempPassword, // Stored temporarily for API key generation
+        password_temp: tempPassword,
         is_active: true,
         balance: 0,
       })
@@ -143,15 +164,15 @@ serve(async (req) => {
     if (clientError) {
       // If email already exists, try to find existing user
       if (clientError.code === "23505") {
+        console.log("Client user already exists, finding existing user...");
         const { data: existingUser } = await supabase
           .from("client_users")
           .select("*")
           .eq("panel_id", targetPanelId)
-          .eq("email", profile.email)
+          .eq("email", userProfile.email)
           .single();
 
         if (existingUser) {
-          // Use existing user
           const apiKey = existingUser.api_key || crypto.randomUUID();
           
           if (!existingUser.api_key) {
@@ -174,7 +195,10 @@ serve(async (req) => {
             .select()
             .single();
 
-          if (connError) throw connError;
+          if (connError) {
+            console.error("Connection error:", connError);
+            throw connError;
+          }
 
           // Create provider record
           const apiEndpoint = targetPanel.custom_domain
@@ -192,6 +216,8 @@ serve(async (req) => {
             direct_connection_id: connection.id,
           });
 
+          console.log("Successfully connected using existing account");
+
           return new Response(
             JSON.stringify({
               success: true,
@@ -203,6 +229,7 @@ serve(async (req) => {
           );
         }
       }
+      console.error("Client error:", clientError);
       throw clientError;
     }
 
@@ -226,7 +253,10 @@ serve(async (req) => {
       .select()
       .single();
 
-    if (connError) throw connError;
+    if (connError) {
+      console.error("Connection error:", connError);
+      throw connError;
+    }
 
     // Create provider record in source panel
     const apiEndpoint = targetPanel.custom_domain
@@ -248,7 +278,12 @@ serve(async (req) => {
       .select()
       .single();
 
-    if (providerError) throw providerError;
+    if (providerError) {
+      console.error("Provider error:", providerError);
+      throw providerError;
+    }
+
+    console.log("Successfully enabled direct provider:", provider.id);
 
     return new Response(
       JSON.stringify({
