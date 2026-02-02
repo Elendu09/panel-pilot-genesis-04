@@ -957,6 +957,64 @@ export type Database = {
         }
         Relationships: []
       }
+      direct_provider_connections: {
+        Row: {
+          api_key: string | null
+          balance_transferred: number
+          client_user_id: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          source_panel_id: string
+          target_panel_id: string
+          updated_at: string
+        }
+        Insert: {
+          api_key?: string | null
+          balance_transferred?: number
+          client_user_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          source_panel_id: string
+          target_panel_id: string
+          updated_at?: string
+        }
+        Update: {
+          api_key?: string | null
+          balance_transferred?: number
+          client_user_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          source_panel_id?: string
+          target_panel_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "direct_provider_connections_client_user_id_fkey"
+            columns: ["client_user_id"]
+            isOneToOne: false
+            referencedRelation: "client_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "direct_provider_connections_source_panel_id_fkey"
+            columns: ["source_panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "direct_provider_connections_target_panel_id_fkey"
+            columns: ["target_panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       domain_verifications: {
         Row: {
           created_at: string
@@ -2614,6 +2672,101 @@ export type Database = {
           },
         ]
       }
+      provider_ad_pricing: {
+        Row: {
+          ad_type: string
+          created_at: string
+          daily_rate: number
+          description: string | null
+          id: string
+          is_active: boolean
+          max_slots: number
+          monthly_rate: number
+          updated_at: string
+          weekly_rate: number
+        }
+        Insert: {
+          ad_type: string
+          created_at?: string
+          daily_rate?: number
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          max_slots?: number
+          monthly_rate?: number
+          updated_at?: string
+          weekly_rate?: number
+        }
+        Update: {
+          ad_type?: string
+          created_at?: string
+          daily_rate?: number
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          max_slots?: number
+          monthly_rate?: number
+          updated_at?: string
+          weekly_rate?: number
+        }
+        Relationships: []
+      }
+      provider_ads: {
+        Row: {
+          ad_type: string
+          clicks: number
+          created_at: string
+          daily_fee: number
+          expires_at: string
+          id: string
+          impressions: number
+          is_active: boolean
+          panel_id: string
+          position: number | null
+          starts_at: string
+          total_spent: number
+          updated_at: string
+        }
+        Insert: {
+          ad_type: string
+          clicks?: number
+          created_at?: string
+          daily_fee?: number
+          expires_at: string
+          id?: string
+          impressions?: number
+          is_active?: boolean
+          panel_id: string
+          position?: number | null
+          starts_at?: string
+          total_spent?: number
+          updated_at?: string
+        }
+        Update: {
+          ad_type?: string
+          clicks?: number
+          created_at?: string
+          daily_fee?: number
+          expires_at?: string
+          id?: string
+          impressions?: number
+          is_active?: boolean
+          panel_id?: string
+          position?: number | null
+          starts_at?: string
+          total_spent?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_ads_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       provider_integrations: {
         Row: {
           api_endpoint: string
@@ -2832,10 +2985,13 @@ export type Database = {
           currency: string | null
           currency_last_updated: string | null
           currency_rate_to_usd: number | null
+          direct_connection_id: string | null
           id: string
           is_active: boolean | null
+          is_direct: boolean | null
           name: string
           panel_id: string | null
+          source_panel_id: string | null
           updated_at: string
         }
         Insert: {
@@ -2846,10 +3002,13 @@ export type Database = {
           currency?: string | null
           currency_last_updated?: string | null
           currency_rate_to_usd?: number | null
+          direct_connection_id?: string | null
           id?: string
           is_active?: boolean | null
+          is_direct?: boolean | null
           name: string
           panel_id?: string | null
+          source_panel_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -2860,16 +3019,33 @@ export type Database = {
           currency?: string | null
           currency_last_updated?: string | null
           currency_rate_to_usd?: number | null
+          direct_connection_id?: string | null
           id?: string
           is_active?: boolean | null
+          is_direct?: boolean | null
           name?: string
           panel_id?: string | null
+          source_panel_id?: string | null
           updated_at?: string
         }
         Relationships: [
           {
+            foreignKeyName: "providers_direct_connection_id_fkey"
+            columns: ["direct_connection_id"]
+            isOneToOne: false
+            referencedRelation: "direct_provider_connections"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "providers_panel_id_fkey"
             columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "providers_source_panel_id_fkey"
+            columns: ["source_panel_id"]
             isOneToOne: false
             referencedRelation: "panels"
             referencedColumns: ["id"]

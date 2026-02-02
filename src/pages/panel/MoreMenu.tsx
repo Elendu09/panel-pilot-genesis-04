@@ -35,8 +35,8 @@ import { BarChart3 } from "lucide-react";
 // Quick access tiles for top of More menu
 const quickAccessTiles = [
   { name: "Analytics", href: "/panel/analytics", icon: BarChart3, gradient: "from-primary to-primary/80" },
-  { name: "Providers", href: "/panel/providers", icon: Plug, gradient: "from-purple-500 to-purple-600" },
-  { name: "Payments", href: "/panel/payments", icon: CreditCard, gradient: "from-green-500 to-green-600" },
+  { name: "Providers", href: "/panel/providers", icon: Plug, gradient: "from-violet-500 to-violet-600" },
+  { name: "Promote", href: "/panel/promote", icon: Sparkles, gradient: "from-amber-500 to-orange-500" },
 ];
 
 // Kanban-style grouped menu items

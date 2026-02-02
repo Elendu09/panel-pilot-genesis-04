@@ -36,10 +36,15 @@ import {
   XCircle,
   Package,
   Loader2,
-  AlertTriangle
+  AlertTriangle,
+  Home,
+  Crown,
+  Sparkles
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ImportProgressStepper, ImportStep } from "@/components/panel/ImportProgressStepper";
+import { ProviderLimitBanner } from "@/components/providers/ProviderLimitBanner";
+import { DirectProviderCard } from "@/components/providers/DirectProviderCard";
 
 interface Provider {
   id: string;
@@ -51,6 +56,19 @@ interface Provider {
   created_at: string;
   currency?: string;
   currency_rate_to_usd?: number;
+  is_direct?: boolean;
+  source_panel_id?: string;
+}
+
+interface DirectPanel {
+  id: string;
+  name: string;
+  subdomain: string | null;
+  custom_domain: string | null;
+  logo_url: string | null;
+  service_count?: number;
+  ad_type?: 'sponsored' | 'top' | 'best' | 'featured' | null;
+  is_connected?: boolean;
 }
 
 // Common currencies for SMM providers
@@ -76,8 +94,8 @@ const CURRENCY_OPTIONS = [
 ];
 
 interface BalanceState {
-  balance: number | null;       // USD equivalent
-  originalBalance: number | null; // Original provider currency
+  balance: number | null;
+  originalBalance: number | null;
   currency: string;
   rateToUsd: number;
   loading: boolean;
@@ -85,7 +103,6 @@ interface BalanceState {
   lastUpdated: Date | null;
 }
 
-// Helper to get currency symbol
 const getCurrencySymbol = (code: string): string => {
   const currency = CURRENCY_OPTIONS.find(c => c.code === code);
   return currency?.symbol || code;
@@ -102,9 +119,15 @@ const popularProviders = [
 
 const LOW_BALANCE_THRESHOLD = 50;
 
+const planLimits: Record<string, number> = {
+  free: 1,
+  basic: 5,
+  pro: Infinity
+};
+
 const ProviderManagement = () => {
   const { profile } = useAuth();
-  const { panel } = usePanel();
+  const { panel, refreshPanel } = usePanel();
   const { toast } = useToast();
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
@@ -131,10 +154,19 @@ const ProviderManagement = () => {
   
   const [balances, setBalances] = useState<Record<string, BalanceState>>({});
   const [refreshingAll, setRefreshingAll] = useState(false);
+  
+  // Subscription & limits
+  const [subscription, setSubscription] = useState<{ plan_type: string } | null>(null);
+  const [marketplaceTab, setMarketplaceTab] = useState<"direct" | "other">("direct");
+  const [directProviders, setDirectProviders] = useState<DirectPanel[]>([]);
+  const [loadingDirect, setLoadingDirect] = useState(true);
+  const [enablingProvider, setEnablingProvider] = useState<string | null>(null);
 
   useEffect(() => {
     if (panel?.id) {
       fetchProviders();
+      fetchSubscription();
+      fetchDirectProviders();
     }
   }, [panel?.id]);
 
@@ -147,6 +179,70 @@ const ProviderManagement = () => {
       });
     }
   }, [providers]);
+
+  const fetchSubscription = async () => {
+    if (!panel?.id) return;
+    const { data } = await supabase
+      .from('panel_subscriptions')
+      .select('plan_type')
+      .eq('panel_id', panel.id)
+      .eq('status', 'active')
+      .single();
+    setSubscription(data);
+  };
+
+  const fetchDirectProviders = async () => {
+    if (!panel?.id) return;
+    setLoadingDirect(true);
+    
+    try {
+      // Get all active panels except own panel
+      const { data: panels } = await supabase
+        .from('panels')
+        .select('id, name, subdomain, custom_domain, logo_url')
+        .eq('status', 'active')
+        .neq('id', panel.id)
+        .not('subdomain', 'is', null);
+
+      // Get active ads for these panels
+      const { data: ads } = await supabase
+        .from('provider_ads')
+        .select('panel_id, ad_type')
+        .eq('is_active', true)
+        .gt('expires_at', new Date().toISOString());
+
+      // Get existing connections
+      const { data: connections } = await supabase
+        .from('direct_provider_connections')
+        .select('target_panel_id')
+        .eq('source_panel_id', panel.id)
+        .eq('is_active', true);
+
+      const connectedIds = new Set(connections?.map(c => c.target_panel_id) || []);
+      const adMap = new Map(ads?.map(a => [a.panel_id, a.ad_type]) || []);
+
+      const directPanels: DirectPanel[] = (panels || []).map(p => ({
+        ...p,
+        ad_type: adMap.get(p.id) as any || null,
+        is_connected: connectedIds.has(p.id),
+        service_count: 0 // Could query service count later
+      }));
+
+      // Sort: sponsored first, then top, then best, then others
+      const adPriority: Record<string, number> = { sponsored: 0, top: 1, best: 2, featured: 3 };
+      directPanels.sort((a, b) => {
+        const aPriority = a.ad_type ? adPriority[a.ad_type] ?? 99 : 99;
+        const bPriority = b.ad_type ? adPriority[b.ad_type] ?? 99 : 99;
+        return aPriority - bPriority;
+      });
+
+      setDirectProviders(directPanels);
+    } catch (error) {
+      console.error('Error fetching direct providers:', error);
+    } finally {
+      setLoadingDirect(false);
+    }
+  };
 
   const fetchProviders = async () => {
     if (!panel?.id) return;
@@ -173,7 +269,6 @@ const ProviderManagement = () => {
     }));
 
     try {
-      // Use providerId - edge function fetches credentials securely from database
       const { data, error } = await supabase.functions.invoke('provider-balance', {
         body: { providerId: provider.id }
       });
@@ -184,8 +279,8 @@ const ProviderManagement = () => {
         setBalances(prev => ({
           ...prev,
           [provider.id]: {
-            balance: data.balance,               // USD equivalent
-            originalBalance: data.originalBalance, // Original provider currency
+            balance: data.balance,
+            originalBalance: data.originalBalance,
             currency: data.currency || 'USD',
             rateToUsd: data.rateToUsd || 1.0,
             loading: false,
@@ -222,9 +317,23 @@ const ProviderManagement = () => {
     toast({ title: "All balances refreshed" });
   };
 
+  // Check if can add more providers
+  const plan = subscription?.plan_type || 'free';
+  const maxProviders = planLimits[plan] || 1;
+  const canAddProvider = providers.length < maxProviders;
+
   const handleSaveProvider = async () => {
     if (!formData.name || !formData.api_endpoint || !formData.api_key || !panel?.id) {
       toast({ variant: "destructive", title: "Missing Fields" });
+      return;
+    }
+
+    if (!editingProvider && !canAddProvider) {
+      toast({ 
+        variant: "destructive", 
+        title: "Provider Limit Reached", 
+        description: `Upgrade to add more providers. ${plan} plan allows ${maxProviders} provider(s).`
+      });
       return;
     }
 
@@ -267,6 +376,46 @@ const ProviderManagement = () => {
       fetchProviders();
     } catch (error) {
       toast({ variant: "destructive", title: "Error", description: "Failed to save provider" });
+    }
+  };
+
+  const handleEnableDirectProvider = async (directPanel: DirectPanel) => {
+    if (!panel?.id) return;
+
+    if (!canAddProvider) {
+      toast({ 
+        variant: "destructive", 
+        title: "Provider Limit Reached", 
+        description: `Upgrade to add more providers. ${plan} plan allows ${maxProviders} provider(s).`
+      });
+      return;
+    }
+
+    setEnablingProvider(directPanel.id);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('enable-direct-provider', {
+        body: {
+          sourcePanelId: panel.id,
+          targetPanelId: directPanel.id
+        }
+      });
+
+      if (error) throw new Error(error.message);
+      if (!data.success) throw new Error(data.error);
+
+      toast({ 
+        title: "Provider Enabled!", 
+        description: `Connected to ${directPanel.name}. API key generated automatically.`
+      });
+
+      fetchProviders();
+      fetchDirectProviders();
+      refreshPanel();
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Failed to Enable", description: error.message });
+    } finally {
+      setEnablingProvider(null);
     }
   };
 
@@ -314,7 +463,6 @@ const ProviderManagement = () => {
     }
   };
 
-  // Real service import with kanban stepper
   const handleImportServices = async () => {
     if (!selectedProvider || !panel?.id) return;
     
@@ -326,11 +474,9 @@ const ProviderManagement = () => {
     setImportedCount(0);
     
     try {
-      // Step 1: Connecting
       setImportProgress(15);
       await new Promise(r => setTimeout(r, 500));
       
-      // Step 2: Fetching
       setImportStep("fetching");
       setImportProgress(30);
       
@@ -345,7 +491,6 @@ const ProviderManagement = () => {
 
       if (error) throw new Error(error.message);
 
-      // Step 3: Processing
       setImportStep("processing");
       setImportProgress(70);
       
@@ -354,7 +499,6 @@ const ProviderManagement = () => {
       
       await new Promise(r => setTimeout(r, 500));
       
-      // Step 4: Complete
       setImportStep("complete");
       setImportProgress(100);
       setImportResult(data);
@@ -402,12 +546,28 @@ const ProviderManagement = () => {
   };
 
   const openAddDialog = () => {
+    if (!canAddProvider) {
+      toast({ 
+        variant: "destructive", 
+        title: "Provider Limit Reached", 
+        description: `Upgrade your plan to add more providers.`
+      });
+      return;
+    }
     setEditingProvider(null);
     setFormData({ name: "", api_endpoint: "", api_key: "", currency: "USD", currency_rate_to_usd: "1.0" });
     setDialogOpen(true);
   };
 
   const openAddFromMarketplace = (providerInfo: typeof popularProviders[0]) => {
+    if (!canAddProvider) {
+      toast({ 
+        variant: "destructive", 
+        title: "Provider Limit Reached", 
+        description: `Upgrade your plan to add more providers.`
+      });
+      return;
+    }
     setFormData({
       name: providerInfo.name,
       api_endpoint: providerInfo.endpoint,
@@ -422,6 +582,9 @@ const ProviderManagement = () => {
   const totalBalance = Object.values(balances).reduce((sum, b) => sum + (b.balance || 0), 0);
   const activeProviders = providers.filter(p => p.is_active).length;
   const filteredMarketplace = popularProviders.filter(p => 
+    p.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+  const filteredDirect = directProviders.filter(p => 
     p.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -444,27 +607,38 @@ const ProviderManagement = () => {
             <RefreshCw className={cn("w-4 h-4", refreshingAll && "animate-spin")} />
             Refresh All
           </Button>
-          <Button onClick={openAddDialog} className="gap-2 bg-gradient-to-r from-primary to-primary/80 shadow-lg shadow-primary/20">
+          <Button 
+            onClick={openAddDialog} 
+            disabled={!canAddProvider}
+            className="gap-2 bg-gradient-to-r from-primary to-primary/80 shadow-lg shadow-primary/20"
+          >
             <Plus className="w-4 h-4" />
             Add Provider
           </Button>
         </div>
       </motion.div>
 
+      {/* Provider Limit Banner */}
+      <ProviderLimitBanner
+        currentCount={providers.length}
+        maxAllowed={maxProviders}
+        plan={plan}
+      />
+
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: "Total Providers", value: providers.length, icon: Server, color: "primary" },
-          { label: "Active Providers", value: activeProviders, icon: Activity, color: "green-500" },
-          { label: "Total Balance", value: `$${totalBalance.toFixed(2)}`, icon: DollarSign, color: "blue-500" },
-          { label: "Low Balance", value: Object.values(balances).filter(b => b.balance !== null && b.balance < LOW_BALANCE_THRESHOLD).length, icon: AlertTriangle, color: "yellow-500" },
+          { label: "Total Providers", value: providers.length, icon: Server, color: "text-primary" },
+          { label: "Active Providers", value: activeProviders, icon: Activity, color: "text-green-500" },
+          { label: "Total Balance", value: `$${totalBalance.toFixed(2)}`, icon: DollarSign, color: "text-blue-500" },
+          { label: "Low Balance", value: Object.values(balances).filter(b => b.balance !== null && b.balance < LOW_BALANCE_THRESHOLD).length, icon: AlertTriangle, color: "text-amber-500" },
         ].map((stat, index) => (
           <motion.div key={stat.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1 }}>
             <Card className="glass-card-hover">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className={cn("p-2.5 rounded-xl", `bg-${stat.color}/10`)}>
-                    <stat.icon className={cn("w-5 h-5", stat.color === "primary" ? "text-primary" : `text-${stat.color}`)} />
+                  <div className="p-2.5 rounded-xl bg-muted">
+                    <stat.icon className={cn("w-5 h-5", stat.color)} />
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">{stat.label}</p>
@@ -511,14 +685,16 @@ const ProviderManagement = () => {
                 
                 return (
                   <motion.div key={provider.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}>
-                    <Card className={cn("glass-card-hover transition-all", !provider.is_active && "opacity-60", isLowBalance && "border-yellow-500/50")}>
+                    <Card className={cn("glass-card-hover transition-all", !provider.is_active && "opacity-60", isLowBalance && "border-amber-500/50")}>
                       <CardContent className="p-4">
-                        {/* Mobile-first responsive layout */}
                         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                          {/* Provider Info */}
                           <div className="flex items-center gap-3 min-w-0">
                             <div className={cn("p-2.5 md:p-3 rounded-xl shrink-0", provider.is_active ? "bg-primary/10" : "bg-muted")}>
-                              <Server className={cn("w-5 h-5 md:w-6 md:h-6", provider.is_active ? "text-primary" : "text-muted-foreground")} />
+                              {provider.is_direct ? (
+                                <Home className={cn("w-5 h-5 md:w-6 md:h-6", provider.is_active ? "text-primary" : "text-muted-foreground")} />
+                              ) : (
+                                <Server className={cn("w-5 h-5 md:w-6 md:h-6", provider.is_active ? "text-primary" : "text-muted-foreground")} />
+                              )}
                             </div>
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-2 flex-wrap">
@@ -526,13 +702,18 @@ const ProviderManagement = () => {
                                 <Badge variant={provider.is_active ? "default" : "secondary"} className="shrink-0">
                                   {provider.is_active ? "Active" : "Inactive"}
                                 </Badge>
+                                {provider.is_direct && (
+                                  <Badge variant="outline" className="shrink-0 text-primary border-primary/50">
+                                    <Home className="w-3 h-3 mr-1" /> Direct
+                                  </Badge>
+                                )}
                                 {provider.currency && provider.currency !== 'USD' && (
                                   <Badge variant="outline" className="shrink-0 text-blue-500 border-blue-500/50">
                                     {provider.currency}
                                   </Badge>
                                 )}
                                 {isLowBalance && (
-                                  <Badge variant="outline" className="text-yellow-500 border-yellow-500/50 shrink-0">
+                                  <Badge variant="outline" className="text-amber-500 border-amber-500/50 shrink-0">
                                     <AlertTriangle className="w-3 h-3 mr-1" /> Low
                                   </Badge>
                                 )}
@@ -541,9 +722,7 @@ const ProviderManagement = () => {
                             </div>
                           </div>
                           
-                          {/* Balance & Actions - stacks on mobile */}
                           <div className="flex items-center justify-between gap-3 md:gap-4 border-t md:border-t-0 pt-3 md:pt-0">
-                            {/* Balance Display */}
                             <div className="text-left md:text-right min-w-[80px]">
                               {balanceState.loading ? (
                                 <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
@@ -554,7 +733,7 @@ const ProviderManagement = () => {
                                 </div>
                               ) : (
                                 <>
-                                  <p className={cn("text-lg md:text-xl font-bold", isLowBalance ? "text-yellow-500" : "text-green-500")}>
+                                  <p className={cn("text-lg md:text-xl font-bold", isLowBalance ? "text-amber-500" : "text-green-500")}>
                                     ${balanceState.balance?.toFixed(2) || '0.00'}
                                   </p>
                                   {balanceState.currency && balanceState.currency !== 'USD' && balanceState.originalBalance !== null && (
@@ -571,7 +750,6 @@ const ProviderManagement = () => {
 
                             <Switch checked={provider.is_active} onCheckedChange={() => toggleProviderStatus(provider)} />
                             
-                            {/* Action buttons - horizontal scroll on very small screens */}
                             <div className="flex gap-1 overflow-x-auto">
                               <Button size="icon" variant="ghost" className="shrink-0 h-8 w-8 md:h-9 md:w-9" onClick={() => fetchProviderBalance(provider)} disabled={balanceState.loading}>
                                 <RefreshCw className={cn("w-4 h-4", balanceState.loading && "animate-spin")} />
@@ -598,42 +776,147 @@ const ProviderManagement = () => {
         </TabsContent>
 
         <TabsContent value="marketplace" className="space-y-4">
-          <div className="relative mb-4">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input 
-              placeholder="Search providers..." 
-              className="pl-9"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+          {/* Marketplace Sub-tabs */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex gap-2">
+              <Button 
+                variant={marketplaceTab === "direct" ? "default" : "outline"} 
+                onClick={() => setMarketplaceTab("direct")}
+                className="gap-2"
+              >
+                <Home className="w-4 h-4" />
+                Direct Providers
+              </Button>
+              <Button 
+                variant={marketplaceTab === "other" ? "default" : "outline"} 
+                onClick={() => setMarketplaceTab("other")}
+                className="gap-2"
+              >
+                <Globe className="w-4 h-4" />
+                Other Providers
+              </Button>
+            </div>
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input 
+                placeholder="Search providers..." 
+                className="pl-9"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
           </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredMarketplace.map((provider, index) => (
-              <motion.div key={provider.name} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}>
-                <Card className="glass-card-hover">
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="p-2 rounded-xl bg-primary/10">
-                        <Globe className="w-5 h-5 text-primary" />
+
+          {/* Direct Providers Section */}
+          {marketplaceTab === "direct" && (
+            <div className="space-y-6">
+              {/* Sponsored Section */}
+              {filteredDirect.filter(p => p.ad_type === 'sponsored').length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <Crown className="w-5 h-5 text-amber-500" />
+                    <h3 className="font-semibold">Sponsored Providers</h3>
+                  </div>
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {filteredDirect.filter(p => p.ad_type === 'sponsored').map((provider) => (
+                      <DirectProviderCard
+                        key={provider.id}
+                        provider={provider}
+                        onEnable={handleEnableDirectProvider}
+                        isEnabled={provider.is_connected}
+                        isLoading={enablingProvider === provider.id}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Top Providers */}
+              {filteredDirect.filter(p => p.ad_type === 'top' || p.ad_type === 'best').length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <Sparkles className="w-5 h-5 text-blue-500" />
+                    <h3 className="font-semibold">Top Providers</h3>
+                  </div>
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {filteredDirect.filter(p => p.ad_type === 'top' || p.ad_type === 'best').map((provider) => (
+                      <DirectProviderCard
+                        key={provider.id}
+                        provider={provider}
+                        onEnable={handleEnableDirectProvider}
+                        isEnabled={provider.is_connected}
+                        isLoading={enablingProvider === provider.id}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* All Direct Providers */}
+              <div>
+                <div className="flex items-center gap-2 mb-4">
+                  <Home className="w-5 h-5 text-primary" />
+                  <h3 className="font-semibold">All HomeOfSMM Panels</h3>
+                  <Badge variant="outline">{filteredDirect.length}</Badge>
+                </div>
+                {loadingDirect ? (
+                  <div className="text-center py-12">
+                    <Loader2 className="w-8 h-8 animate-spin mx-auto text-muted-foreground" />
+                  </div>
+                ) : filteredDirect.length === 0 ? (
+                  <Card className="glass-card">
+                    <CardContent className="py-12 text-center">
+                      <Home className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                      <p className="text-muted-foreground">No direct providers available yet</p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {filteredDirect.filter(p => !p.ad_type).map((provider) => (
+                      <DirectProviderCard
+                        key={provider.id}
+                        provider={provider}
+                        onEnable={handleEnableDirectProvider}
+                        isEnabled={provider.is_connected}
+                        isLoading={enablingProvider === provider.id}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Other Providers Section */}
+          {marketplaceTab === "other" && (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredMarketplace.map((provider, index) => (
+                <motion.div key={provider.name} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}>
+                  <Card className="glass-card-hover">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="p-2 rounded-xl bg-primary/10">
+                          <Globe className="w-5 h-5 text-primary" />
+                        </div>
+                        <Badge variant="outline">{provider.category}</Badge>
                       </div>
-                      <Badge variant="outline">{provider.category}</Badge>
-                    </div>
-                    <h3 className="font-semibold mb-1">{provider.name}</h3>
-                    <p className="text-xs text-muted-foreground mb-3">{provider.endpoint}</p>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1">
-                        <span className="text-yellow-500">★</span>
-                        <span className="text-sm font-medium">{provider.rating}</span>
+                      <h3 className="font-semibold mb-1">{provider.name}</h3>
+                      <p className="text-xs text-muted-foreground mb-3">{provider.endpoint}</p>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1">
+                          <span className="text-amber-500">★</span>
+                          <span className="text-sm font-medium">{provider.rating}</span>
+                        </div>
+                        <Button size="sm" onClick={() => openAddFromMarketplace(provider)} disabled={!canAddProvider}>
+                          <Plus className="w-4 h-4 mr-1" /> Add
+                        </Button>
                       </div>
-                      <Button size="sm" onClick={() => openAddFromMarketplace(provider)}>
-                        <Plus className="w-4 h-4 mr-1" /> Add
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
-          </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+          )}
         </TabsContent>
       </Tabs>
 
@@ -658,7 +941,6 @@ const ProviderManagement = () => {
               <Input type="password" value={formData.api_key} onChange={(e) => setFormData({...formData, api_key: e.target.value})} placeholder="Your API key" />
             </div>
             
-            {/* Currency Configuration */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Provider Currency</Label>
@@ -692,7 +974,6 @@ const ProviderManagement = () => {
               </p>
             )}
             
-            {/* Currency FAQ */}
             <Accordion type="single" collapsible className="mt-2">
               <AccordionItem value="currency-faq" className="border-border/50">
                 <AccordionTrigger className="text-sm py-2 hover:no-underline">
@@ -702,15 +983,9 @@ const ProviderManagement = () => {
                 </AccordionTrigger>
                 <AccordionContent>
                   <div className="space-y-2 text-xs text-muted-foreground bg-muted/30 p-3 rounded-lg">
-                    <p><strong className="text-foreground">Provider Currency:</strong> Select the currency your provider uses (e.g., NGN for Nigerian Naira, INR for Indian Rupee).</p>
-                    <p><strong className="text-foreground">Rate to USD:</strong> Enter how many USD equals 1 unit of the provider's currency. For example:</p>
-                    <ul className="list-disc list-inside ml-2 space-y-1">
-                      <li>If 1 USD = 1550 NGN, enter <code className="bg-muted px-1 rounded">0.000645</code> (1/1550)</li>
-                      <li>If 1 USD = 83 INR, enter <code className="bg-muted px-1 rounded">0.012</code> (1/83)</li>
-                    </ul>
-                    <p><strong className="text-foreground">Balance Display:</strong> Your provider balance will show the USD equivalent with the original currency amount below.</p>
-                    <p><strong className="text-foreground">Service Import:</strong> When importing services, prices are automatically converted to USD using this rate for consistent pricing.</p>
-                    <p className="text-yellow-500 mt-2">💡 Tip: Update the exchange rate periodically to reflect current market rates for accurate pricing.</p>
+                    <p><strong className="text-foreground">Provider Currency:</strong> Select the currency your provider uses.</p>
+                    <p><strong className="text-foreground">Rate to USD:</strong> Enter how many USD equals 1 unit of the provider's currency.</p>
+                    <p className="text-primary mt-2">💡 Tip: Update the exchange rate periodically for accurate pricing.</p>
                   </div>
                 </AccordionContent>
               </AccordionItem>
@@ -723,7 +998,7 @@ const ProviderManagement = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Import Services Dialog with Kanban Stepper */}
+      {/* Import Services Dialog */}
       <Dialog open={importDialogOpen} onOpenChange={(open) => {
         if (!importingServices) {
           setImportDialogOpen(open);
@@ -759,19 +1034,17 @@ const ProviderManagement = () => {
                 </div>
                 <p className="text-xs text-muted-foreground">Your services will be priced {markupPercent}% higher than the provider's prices</p>
                 
-                {/* Info card */}
                 <Card className="bg-muted/30 border-border/50">
                   <CardContent className="p-3 flex items-start gap-2">
                     <AlertCircle className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                     <p className="text-xs text-muted-foreground">
-                      This will import <strong>ALL</strong> services from the provider. For selective import, use the Services page → Import button.
+                      This will import <strong>ALL</strong> services from the provider.
                     </p>
                   </CardContent>
                 </Card>
               </div>
             )}
 
-            {/* Kanban Progress Stepper */}
             {(importingServices || importResult) && (
               <ImportProgressStepper
                 currentStep={importStep}

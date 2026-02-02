@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import { Routes, Route, Link, useLocation, useNavigate } from "react-router-dom";
 import { 
   LayoutDashboard, 
@@ -22,7 +22,8 @@ import {
   Globe,
   Activity,
   BookOpen,
-  Receipt
+  Receipt,
+  Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
@@ -52,6 +53,15 @@ import BlogManagement from "./admin/BlogManagement";
 import DocsManagement from "./admin/DocsManagement";
 import { Helmet } from "react-helmet-async";
 
+// Lazy load AdsManagement
+const AdsManagement = lazy(() => import("./admin/AdsManagement"));
+
+const PageLoader = () => (
+  <div className="flex items-center justify-center h-64">
+    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+  </div>
+);
+
 const SuperAdminDashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const location = useLocation();
@@ -72,6 +82,7 @@ const SuperAdminDashboard = () => {
       label: 'Management',
       items: [
         { name: 'Panels', href: '/admin/panels', icon: BarChart3 },
+        { name: 'Ads', href: '/admin/ads', icon: Megaphone },
         { name: 'Users', href: '/admin/users', icon: Users },
         { name: 'Domains', href: '/admin/domains', icon: Globe },
         { name: 'Platform Providers', href: '/admin/platform-providers', icon: Server },
@@ -218,29 +229,32 @@ const SuperAdminDashboard = () => {
 
       {/* Main Content */}
       <div className="flex-1 p-4 md:p-8 pb-20 md:pb-8">
-        <Routes>
-          <Route index element={<AdminOverview />} />
-          <Route path="panels" element={<PanelManagement />} />
-          <Route path="users" element={<UserManagement />} />
-          <Route path="domains" element={<DomainManagement />} />
-          <Route path="subscriptions" element={<SubscriptionManagement />} />
-          <Route path="revenue" element={<RevenueAnalytics />} />
-          <Route path="tickets" element={<SupportTickets />} />
-          <Route path="webhooks" element={<WebhookManagement />} />
-          <Route path="system" element={<SystemHealth />} />
-          <Route path="platform-providers" element={<PlatformProviderManagement />} />
-          <Route path="announcements" element={<AnnouncementsManagement />} />
-          <Route path="reports" element={<ReportsExport />} />
-          <Route path="backups" element={<BackupManagement />} />
-          <Route path="logs" element={<AuditLogs />} />
-          <Route path="settings" element={<PlatformSettings />} />
-          <Route path="security" element={<SecuritySettings />} />
-          <Route path="payments" element={<PaymentManagement />} />
-          <Route path="receipts" element={<ReceiptManagement />} />
-          <Route path="blog" element={<BlogManagement />} />
-          <Route path="docs" element={<DocsManagement />} />
-          <Route path="more" element={<AdminMoreMenu />} />
-        </Routes>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route index element={<AdminOverview />} />
+            <Route path="panels" element={<PanelManagement />} />
+            <Route path="users" element={<UserManagement />} />
+            <Route path="domains" element={<DomainManagement />} />
+            <Route path="subscriptions" element={<SubscriptionManagement />} />
+            <Route path="revenue" element={<RevenueAnalytics />} />
+            <Route path="tickets" element={<SupportTickets />} />
+            <Route path="webhooks" element={<WebhookManagement />} />
+            <Route path="system" element={<SystemHealth />} />
+            <Route path="platform-providers" element={<PlatformProviderManagement />} />
+            <Route path="announcements" element={<AnnouncementsManagement />} />
+            <Route path="reports" element={<ReportsExport />} />
+            <Route path="backups" element={<BackupManagement />} />
+            <Route path="logs" element={<AuditLogs />} />
+            <Route path="settings" element={<PlatformSettings />} />
+            <Route path="security" element={<SecuritySettings />} />
+            <Route path="payments" element={<PaymentManagement />} />
+            <Route path="receipts" element={<ReceiptManagement />} />
+            <Route path="blog" element={<BlogManagement />} />
+            <Route path="docs" element={<DocsManagement />} />
+            <Route path="ads" element={<AdsManagement />} />
+            <Route path="more" element={<AdminMoreMenu />} />
+          </Routes>
+        </Suspense>
       </div>
 
       {/* Mobile Bottom Navigation */}
