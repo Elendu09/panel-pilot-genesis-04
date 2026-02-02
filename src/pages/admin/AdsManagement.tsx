@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,14 +23,30 @@ import {
   Save,
   Loader2,
   TrendingUp,
-  Calendar
+  Calendar,
+  BarChart3,
+  PieChart,
+  Target,
+  Clock
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { format, differenceInDays } from "date-fns";
+import { format, differenceInDays, subDays } from "date-fns";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Helmet } from "react-helmet-async";
+import { 
+  AreaChart, 
+  Area, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  PieChart as RechartsPieChart,
+  Pie,
+  Cell
+} from "recharts";
 
 interface AdPricing {
   id: string;
@@ -209,14 +225,18 @@ const AdsManagement = () => {
       </div>
 
       <Tabs defaultValue="pricing" className="space-y-6">
-        <TabsList>
+        <TabsList className="flex-wrap h-auto gap-1">
           <TabsTrigger value="pricing" className="gap-2">
             <Settings className="w-4 h-4" />
-            Pricing Configuration
+            <span className="hidden sm:inline">Pricing</span>
           </TabsTrigger>
           <TabsTrigger value="active" className="gap-2">
             <TrendingUp className="w-4 h-4" />
-            Active Advertisements
+            <span className="hidden sm:inline">Active Ads</span>
+          </TabsTrigger>
+          <TabsTrigger value="performance" className="gap-2">
+            <BarChart3 className="w-4 h-4" />
+            <span className="hidden sm:inline">Performance</span>
           </TabsTrigger>
         </TabsList>
 
@@ -373,6 +393,252 @@ const AdsManagement = () => {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Performance Tab */}
+        <TabsContent value="performance">
+          <div className="space-y-6">
+            {/* Performance Stats Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {(() => {
+                const ctr = totalImpressions > 0 ? ((totalClicks / totalImpressions) * 100) : 0;
+                const avgSpent = ads.length > 0 ? (totalRevenue / ads.length) : 0;
+                const expiringSoon = ads.filter(a => {
+                  const daysLeft = differenceInDays(new Date(a.expires_at), new Date());
+                  return a.is_active && daysLeft >= 0 && daysLeft <= 7;
+                }).length;
+
+                return [
+                  { label: "Click-Through Rate", value: `${ctr.toFixed(2)}%`, icon: Target, color: "text-purple-500" },
+                  { label: "Avg. Spend/Ad", value: `$${avgSpent.toFixed(2)}`, icon: DollarSign, color: "text-green-500" },
+                  { label: "Active Ads", value: activeAds.length, icon: Play, color: "text-blue-500" },
+                  { label: "Expiring Soon", value: expiringSoon, icon: Clock, color: "text-amber-500" },
+                ].map((stat, index) => (
+                  <motion.div
+                    key={stat.label}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                  >
+                    <Card className="glass-card">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-muted">
+                            <stat.icon className={cn("w-5 h-5", stat.color)} />
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">{stat.label}</p>
+                            <p className="text-xl font-bold">{stat.value}</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ));
+              })()}
+            </div>
+
+            {/* Charts Row */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Revenue Over Time */}
+              <Card className="glass-card">
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-primary" />
+                    Revenue Over Time
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {(() => {
+                    // Aggregate revenue by date
+                    const revenueByDate = ads.reduce((acc, ad) => {
+                      const date = format(new Date(ad.starts_at), 'MMM dd');
+                      acc[date] = (acc[date] || 0) + (ad.total_spent || 0);
+                      return acc;
+                    }, {} as Record<string, number>);
+
+                    const chartData = Object.entries(revenueByDate).map(([date, revenue]) => ({
+                      date,
+                      revenue
+                    })).slice(-14);
+
+                    if (chartData.length === 0) {
+                      return (
+                        <div className="h-48 flex items-center justify-center text-muted-foreground">
+                          No revenue data yet
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="h-48">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart data={chartData}>
+                            <defs>
+                              <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
+                                <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                            <XAxis dataKey="date" className="text-xs" tick={{ fontSize: 10 }} />
+                            <YAxis className="text-xs" tick={{ fontSize: 10 }} tickFormatter={(v) => `$${v}`} />
+                            <Tooltip 
+                              contentStyle={{ 
+                                backgroundColor: 'hsl(var(--card))', 
+                                border: '1px solid hsl(var(--border))',
+                                borderRadius: '8px'
+                              }}
+                              formatter={(value: number) => [`$${value.toFixed(2)}`, 'Revenue']}
+                            />
+                            <Area 
+                              type="monotone" 
+                              dataKey="revenue" 
+                              stroke="hsl(var(--primary))" 
+                              fill="url(#revenueGradient)" 
+                              strokeWidth={2}
+                            />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      </div>
+                    );
+                  })()}
+                </CardContent>
+              </Card>
+
+              {/* Ad Type Distribution */}
+              <Card className="glass-card">
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <PieChart className="w-5 h-5 text-primary" />
+                    Ad Type Distribution
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {(() => {
+                    const typeDistribution = ads.reduce((acc, ad) => {
+                      acc[ad.ad_type] = (acc[ad.ad_type] || 0) + 1;
+                      return acc;
+                    }, {} as Record<string, number>);
+
+                    const pieData = Object.entries(typeDistribution).map(([name, value]) => ({
+                      name: name.charAt(0).toUpperCase() + name.slice(1),
+                      value
+                    }));
+
+                    const COLORS = ['hsl(38, 92%, 50%)', 'hsl(217, 91%, 60%)', 'hsl(271, 91%, 65%)', 'hsl(142, 76%, 36%)'];
+
+                    if (pieData.length === 0) {
+                      return (
+                        <div className="h-48 flex items-center justify-center text-muted-foreground">
+                          No ad data yet
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="h-48 flex items-center">
+                        <ResponsiveContainer width="50%" height="100%">
+                          <RechartsPieChart>
+                            <Pie
+                              data={pieData}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={40}
+                              outerRadius={60}
+                              paddingAngle={5}
+                              dataKey="value"
+                            >
+                              {pieData.map((_, index) => (
+                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                              ))}
+                            </Pie>
+                            <Tooltip />
+                          </RechartsPieChart>
+                        </ResponsiveContainer>
+                        <div className="flex-1 space-y-2">
+                          {pieData.map((item, index) => (
+                            <div key={item.name} className="flex items-center gap-2">
+                              <div 
+                                className="w-3 h-3 rounded-full" 
+                                style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                              />
+                              <span className="text-sm">{item.name}</span>
+                              <span className="text-sm text-muted-foreground ml-auto">{item.value}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Top Performing Ads Table */}
+            <Card className="glass-card">
+              <CardHeader>
+                <CardTitle className="text-base">Top Performing Ads</CardTitle>
+                <CardDescription>Ranked by click-through rate</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {ads.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <BarChart3 className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>No ads data available</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Panel</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead className="text-right">Impressions</TableHead>
+                        <TableHead className="text-right">Clicks</TableHead>
+                        <TableHead className="text-right">CTR</TableHead>
+                        <TableHead className="text-right">Spent</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {[...ads]
+                        .map(ad => ({
+                          ...ad,
+                          ctr: ad.impressions > 0 ? (ad.clicks / ad.impressions) * 100 : 0
+                        }))
+                        .sort((a, b) => b.ctr - a.ctr)
+                        .slice(0, 10)
+                        .map((ad) => {
+                          const config = adTypeConfig[ad.ad_type as keyof typeof adTypeConfig];
+                          const Icon = config?.icon || Crown;
+                          
+                          return (
+                            <TableRow key={ad.id}>
+                              <TableCell className="font-medium">
+                                {ad.panels?.name || 'Unknown'}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <Icon className={cn("w-4 h-4", config?.color)} />
+                                  <span className="capitalize">{ad.ad_type}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-right">{ad.impressions.toLocaleString()}</TableCell>
+                              <TableCell className="text-right">{ad.clicks.toLocaleString()}</TableCell>
+                              <TableCell className="text-right">
+                                <Badge variant={ad.ctr > 2 ? "default" : "secondary"}>
+                                  {ad.ctr.toFixed(2)}%
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right">${ad.total_spent.toFixed(2)}</TableCell>
+                            </TableRow>
+                          );
+                        })}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
 

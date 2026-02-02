@@ -6,7 +6,6 @@ import {
   Star, 
   Trophy, 
   Sparkles, 
-  Package, 
   Loader2,
   ExternalLink,
   Check,
@@ -129,18 +128,14 @@ export function ProviderListItem({
       </div>
 
       {/* Stats */}
-      <div className="hidden sm:flex items-center gap-4 text-sm text-muted-foreground px-4">
-        <div className="flex items-center gap-1">
-          <Package className="w-4 h-4" />
-          <span>{serviceCount}</span>
-        </div>
-        {rating && (
+      {rating && (
+        <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground px-4">
           <div className="flex items-center gap-1">
             <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
             <span>{rating}</span>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Action */}
       <div className="shrink-0">

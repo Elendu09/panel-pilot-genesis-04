@@ -13,3 +13,4 @@ export { TenantMetricsGrid } from './TenantMetricsGrid';
 export { PaymentOverviewBanner } from './PaymentOverviewBanner';
 export { DepositAnalyticsCard } from './DepositAnalyticsCard';
 export { DepositStatusBanner } from './DepositStatusBanner';
+export { AdsFunnelCard } from './AdsFunnelCard';
