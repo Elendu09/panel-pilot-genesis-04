@@ -45,6 +45,8 @@ import { cn } from "@/lib/utils";
 import { ImportProgressStepper, ImportStep } from "@/components/panel/ImportProgressStepper";
 import { ProviderLimitBanner } from "@/components/providers/ProviderLimitBanner";
 import { DirectProviderCard } from "@/components/providers/DirectProviderCard";
+import { ProviderListItem } from "@/components/providers/ProviderListItem";
+import { SponsoredProviderSlider } from "@/components/providers/SponsoredProviderSlider";
 
 interface Provider {
   id: string;
@@ -157,7 +159,6 @@ const ProviderManagement = () => {
   
   // Subscription & limits
   const [subscription, setSubscription] = useState<{ plan_type: string } | null>(null);
-  const [marketplaceTab, setMarketplaceTab] = useState<"direct" | "other">("direct");
   const [directProviders, setDirectProviders] = useState<DirectPanel[]>([]);
   const [loadingDirect, setLoadingDirect] = useState(true);
   const [enablingProvider, setEnablingProvider] = useState<string | null>(null);
@@ -221,11 +222,28 @@ const ProviderManagement = () => {
       const connectedIds = new Set(connections?.map(c => c.target_panel_id) || []);
       const adMap = new Map(ads?.map(a => [a.panel_id, a.ad_type]) || []);
 
+      // Fetch service counts for each panel
+      const panelIds = panels?.map(p => p.id) || [];
+      let serviceCounts: Record<string, number> = {};
+      
+      if (panelIds.length > 0) {
+        const { data: services } = await supabase
+          .from('services')
+          .select('panel_id')
+          .in('panel_id', panelIds)
+          .eq('is_active', true);
+        
+        serviceCounts = (services || []).reduce((acc, s) => {
+          acc[s.panel_id] = (acc[s.panel_id] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+      }
+
       const directPanels: DirectPanel[] = (panels || []).map(p => ({
         ...p,
         ad_type: adMap.get(p.id) as any || null,
         is_connected: connectedIds.has(p.id),
-        service_count: 0 // Could query service count later
+        service_count: serviceCounts[p.id] || 0
       }));
 
       // Sort: sponsored first, then top, then best, then others
@@ -775,148 +793,124 @@ const ProviderManagement = () => {
           )}
         </TabsContent>
 
-        <TabsContent value="marketplace" className="space-y-4">
-          {/* Marketplace Sub-tabs */}
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex gap-2">
-              <Button 
-                variant={marketplaceTab === "direct" ? "default" : "outline"} 
-                onClick={() => setMarketplaceTab("direct")}
-                className="gap-2"
-              >
-                <Home className="w-4 h-4" />
-                Direct Providers
-              </Button>
-              <Button 
-                variant={marketplaceTab === "other" ? "default" : "outline"} 
-                onClick={() => setMarketplaceTab("other")}
-                className="gap-2"
-              >
-                <Globe className="w-4 h-4" />
-                Other Providers
-              </Button>
-            </div>
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input 
-                placeholder="Search providers..." 
-                className="pl-9"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
+        <TabsContent value="marketplace" className="space-y-6">
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input 
+              placeholder="Search all providers..." 
+              className="pl-9"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
 
-          {/* Direct Providers Section */}
-          {marketplaceTab === "direct" && (
-            <div className="space-y-6">
-              {/* Sponsored Section */}
-              {filteredDirect.filter(p => p.ad_type === 'sponsored').length > 0 && (
-                <div>
-                  <div className="flex items-center gap-2 mb-4">
-                    <Crown className="w-5 h-5 text-amber-500" />
-                    <h3 className="font-semibold">Sponsored Providers</h3>
-                  </div>
-                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {filteredDirect.filter(p => p.ad_type === 'sponsored').map((provider) => (
-                      <DirectProviderCard
-                        key={provider.id}
-                        provider={provider}
-                        onEnable={handleEnableDirectProvider}
-                        isEnabled={provider.is_connected}
-                        isLoading={enablingProvider === provider.id}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
+          {/* Sponsored Providers Slider */}
+          {filteredDirect.filter(p => p.ad_type === 'sponsored').length > 0 && (
+            <SponsoredProviderSlider
+              providers={filteredDirect.filter(p => p.ad_type === 'sponsored')}
+              onEnable={handleEnableDirectProvider}
+              enablingId={enablingProvider}
+            />
+          )}
 
-              {/* Top Providers */}
-              {filteredDirect.filter(p => p.ad_type === 'top' || p.ad_type === 'best').length > 0 && (
-                <div>
-                  <div className="flex items-center gap-2 mb-4">
-                    <Sparkles className="w-5 h-5 text-blue-500" />
-                    <h3 className="font-semibold">Top Providers</h3>
-                  </div>
-                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {filteredDirect.filter(p => p.ad_type === 'top' || p.ad_type === 'best').map((provider) => (
-                      <DirectProviderCard
-                        key={provider.id}
-                        provider={provider}
-                        onEnable={handleEnableDirectProvider}
-                        isEnabled={provider.is_connected}
-                        isLoading={enablingProvider === provider.id}
-                      />
-                    ))}
-                  </div>
+          {/* Top Providers Section (HomeOfSMM Panels with ads) */}
+          {filteredDirect.filter(p => p.ad_type === 'top' || p.ad_type === 'best' || p.ad_type === 'featured').length > 0 && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500/20 to-cyan-500/10">
+                  <Sparkles className="w-5 h-5 text-blue-500" />
                 </div>
-              )}
-
-              {/* All Direct Providers - renamed to Top Providers */}
-              <div>
-                <div className="flex items-center gap-2 mb-4">
-                  <Home className="w-5 h-5 text-primary" />
-                  <h3 className="font-semibold">Top Providers</h3>
-                  <Badge variant="outline">{filteredDirect.length}</Badge>
-                </div>
-                {loadingDirect ? (
-                  <div className="text-center py-12">
-                    <Loader2 className="w-8 h-8 animate-spin mx-auto text-muted-foreground" />
-                  </div>
-                ) : filteredDirect.length === 0 ? (
-                  <Card className="glass-card">
-                    <CardContent className="py-12 text-center">
-                      <Home className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                      <p className="text-muted-foreground">No direct providers available yet</p>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {filteredDirect.filter(p => !p.ad_type).map((provider) => (
-                      <DirectProviderCard
-                        key={provider.id}
-                        provider={provider}
-                        onEnable={handleEnableDirectProvider}
-                        isEnabled={provider.is_connected}
-                        isLoading={enablingProvider === provider.id}
-                      />
-                    ))}
-                  </div>
-                )}
+                <h3 className="font-semibold text-lg">Top Providers</h3>
+                <Badge variant="outline">{filteredDirect.filter(p => p.ad_type === 'top' || p.ad_type === 'best' || p.ad_type === 'featured').length}</Badge>
+              </div>
+              <div className="space-y-2">
+                {filteredDirect.filter(p => p.ad_type === 'top' || p.ad_type === 'best' || p.ad_type === 'featured').map((provider) => (
+                  <ProviderListItem
+                    key={provider.id}
+                    id={provider.id}
+                    name={provider.name}
+                    domain={provider.custom_domain || `${provider.subdomain}.homeofsmm.com`}
+                    logoUrl={provider.logo_url}
+                    serviceCount={provider.service_count}
+                    adType={provider.ad_type}
+                    isConnected={provider.is_connected}
+                    onAction={() => handleEnableDirectProvider(provider)}
+                    isLoading={enablingProvider === provider.id}
+                    actionLabel="Enable"
+                  />
+                ))}
               </div>
             </div>
           )}
 
-          {/* Other Providers Section */}
-          {marketplaceTab === "other" && (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredMarketplace.map((provider, index) => (
-                <motion.div key={provider.name} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}>
-                  <Card className="glass-card-hover">
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="p-2 rounded-xl bg-primary/10">
-                          <Globe className="w-5 h-5 text-primary" />
-                        </div>
-                        <Badge variant="outline">{provider.category}</Badge>
-                      </div>
-                      <h3 className="font-semibold mb-1">{provider.name}</h3>
-                      <p className="text-xs text-muted-foreground mb-3">{provider.endpoint}</p>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1">
-                          <span className="text-amber-500">★</span>
-                          <span className="text-sm font-medium">{provider.rating}</span>
-                        </div>
-                        <Button size="sm" onClick={() => openAddFromMarketplace(provider)} disabled={!canAddProvider}>
-                          <Plus className="w-4 h-4 mr-1" /> Add
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
+          {/* All HomeOfSMM Providers (Kanban List Style) */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Home className="w-5 h-5 text-primary" />
+              </div>
+              <h3 className="font-semibold text-lg">HomeOfSMM Panels</h3>
+              <Badge variant="outline">{filteredDirect.filter(p => !p.ad_type).length}</Badge>
+            </div>
+            {loadingDirect ? (
+              <div className="text-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin mx-auto text-muted-foreground" />
+              </div>
+            ) : filteredDirect.filter(p => !p.ad_type).length === 0 ? (
+              <Card className="glass-card">
+                <CardContent className="py-12 text-center">
+                  <Home className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                  <p className="text-muted-foreground">No HomeOfSMM panels available yet</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-2">
+                {filteredDirect.filter(p => !p.ad_type).map((provider) => (
+                  <ProviderListItem
+                    key={provider.id}
+                    id={provider.id}
+                    name={provider.name}
+                    domain={provider.custom_domain || `${provider.subdomain}.homeofsmm.com`}
+                    logoUrl={provider.logo_url}
+                    serviceCount={provider.service_count}
+                    isConnected={provider.is_connected}
+                    onAction={() => handleEnableDirectProvider(provider)}
+                    isLoading={enablingProvider === provider.id}
+                    actionLabel="Enable"
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Other Providers Section (External SMM Panels) */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-lg bg-muted">
+                <Globe className="w-5 h-5 text-muted-foreground" />
+              </div>
+              <h3 className="font-semibold text-lg">Other Providers</h3>
+              <Badge variant="outline">{filteredMarketplace.length}</Badge>
+            </div>
+            <div className="space-y-2">
+              {filteredMarketplace.map((provider) => (
+                <ProviderListItem
+                  key={provider.name}
+                  id={provider.name}
+                  name={provider.name}
+                  domain={provider.endpoint.replace('https://', '').replace('/api/v2', '')}
+                  serviceCount={0}
+                  rating={provider.rating}
+                  category={provider.category}
+                  isExternal={true}
+                  onAction={() => openAddFromMarketplace(provider)}
+                  isLoading={false}
+                  actionLabel="Add"
+                />
               ))}
             </div>
-          )}
+          </div>
         </TabsContent>
       </Tabs>
 
