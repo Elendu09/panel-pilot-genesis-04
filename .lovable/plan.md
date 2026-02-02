@@ -1,312 +1,322 @@
 
-# Comprehensive Enhancement Plan: Billing, Ads, Provider Management, and Panel Overview
+# Complete Implementation Plan: Provider Management & Marketplace Enhancements
 
-## Current Issues Identified
+## Issues Identified from Previous Implementation
 
-Based on my analysis, here are the specific problems found:
+### Critical Bugs Found:
 
-### 1. Transaction History in Billing Page
-- **Current State**: The `TransactionHistory` component (`src/components/billing/TransactionHistory.tsx`) is functional and fetches real data from the `transactions` table
-- **Issue**: Only filters for `deposit`, `subscription`, `commission`, and `withdrawal` types. Missing `ads` and other transaction types
-- **Mobile Responsiveness**: Table layout is not fully mobile-optimized - needs card-based mobile view
+1. **Edge Function Bug (`enable-direct-provider`)**: 
+   - Line 50: `sourcePanel.owner_id !== user.id` - This comparison is WRONG
+   - `panels.owner_id` references `profiles.id`, but `user.id` comes from `auth.users`
+   - Fix: Query profiles to get the profile.id and compare against that
 
-### 2. Ads Management RLS Error ("new row violates row-level security policy")
-- **Root Cause**: The INSERT RLS policy requires `panel_id IN (SELECT id FROM panels WHERE owner_id = auth.uid())` but the insert is happening from a client session that may not have the proper auth context
-- **Fix Required**: The policy exists and is correct, but the `starts_at` column is missing from the insert (it defaults to `now()` but being explicit may help). More importantly, need to verify the user is authenticated when purchasing.
+2. **Edge Function Bug (Profile Query)**:
+   - Line 58: Queries `profiles` with `.eq("id", user.id)` - WRONG
+   - Should be `.eq("user_id", user.id)` since `user.id` is the auth user ID
 
-### 3. Panel Overview Card Updates
-- **Current State**: Has Wallet and Crown icons (lines 566-583), but:
-  - Wallet icon navigates to `/panel/billing` (should go to `/panel/payment-methods`)
-  - Crown icon also navigates to `/panel/billing` (this is correct)
-  - **Missing**: Current plan display is not shown in the overview header card
+3. **Transaction History**: Was implemented correctly - already mobile responsive with card view
 
-### 4. Provider Management Restructure
-- **Current State**: Has two separate tabs (Direct Providers / Other Providers) within Marketplace
-- **Issues**:
-  - Section titled "All HomeOfSMM Panels" should be renamed to "Top Providers"
-  - Direct and Other providers should be combined into one view with subsections
-  - Need Kanban listview style with sliders and visual effects for top providers
-  - Enable button edge function returning errors
+4. **Panel Overview**: Was partially implemented - Wallet and Crown icons route correctly, plan badge shows
 
-### 5. Ads Functionality Strategy (Where Ads Display)
-**Current Implementation**: Ads are purchased but only display in the Direct Providers section of Provider Management marketplace
-**Strategic Enhancement Needed**:
-- **Top Providers Page**: Sponsored panels at top position
-- **Providers List Page**: Panel shown with badge in control panel marketplace
-- **Top Services Page**: Services highlighted if panel is sponsored
-- **Direct Offers**: Special promotional section
-- **Homepage/Landing**: Featured providers in carousel (for "featured" ad type)
+5. **Provider Management Marketplace**: Still has separate tabs (Direct/Other) - needs combining into single view with subsections
+
+6. **Provider Ads RLS**: Was fixed in migration but need to verify the policy joins through profiles properly
 
 ---
 
-## Implementation Plan
+## Implementation Tasks
 
-### Part 1: Transaction History Enhancement
-
-**File: `src/components/billing/TransactionHistory.tsx`**
-
-**Changes:**
-1. Add `ads` and `debit` filter options to the tabs
-2. Update filter logic to handle all transaction types properly
-3. Create mobile-responsive card-based layout that switches from table on desktop
-4. Add more detailed transaction information (metadata display)
-
-```typescript
-// Enhanced filter options
-const filterOptions = [
-  { value: "all", label: "All" },
-  { value: "deposit", label: "Deposits" },
-  { value: "subscription", label: "Subscriptions" },
-  { value: "commission", label: "Commissions" },
-  { value: "debit", label: "Debits/Ads" }
-];
-
-// Mobile card view for each transaction
-<div className="block md:hidden space-y-3">
-  {paginatedTransactions.map((tx) => (
-    <Card key={tx.id} className="glass-card">
-      <CardContent className="p-3">
-        <div className="flex justify-between items-start">
-          <div>
-            <Badge>{getTypeLabel(tx.type)}</Badge>
-            <p className="text-sm mt-1">{tx.description || '-'}</p>
-            <p className="text-xs text-muted-foreground">
-              {new Date(tx.created_at).toLocaleString()}
-            </p>
-          </div>
-          <div className="text-right">
-            <p className={cn(tx.amount >= 0 ? "text-green-500" : "text-destructive")}>
-              {tx.amount >= 0 ? "+" : ""}${Math.abs(tx.amount).toFixed(2)}
-            </p>
-            <Badge variant="outline">{tx.status}</Badge>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  ))}
-</div>
-```
-
-### Part 2: Fix Ads Management RLS Error
-
-**Root Cause Analysis:**
-The RLS policy exists but may fail if:
-1. User session is not properly authenticated when insert happens
-2. The panel ownership query fails silently
-
-**Fix 1: Add `starts_at` explicitly to insert**
-
-**File: `src/pages/panel/ProviderAds.tsx`**
-
-Update the insert at line 202-211:
-```typescript
-const { error: adError } = await supabase
-  .from('provider_ads')
-  .insert({
-    panel_id: panel.id,
-    ad_type: tier.ad_type,
-    daily_fee: tier.daily_rate,
-    total_spent: price,
-    starts_at: new Date().toISOString(), // Explicit start time
-    expires_at: expiresAt.toISOString(),
-    is_active: true,
-    position: 0,
-    impressions: 0,
-    clicks: 0
-  });
-```
-
-**Fix 2: Create database migration to update RLS policy**
-
-Add a new migration to ensure the RLS policy uses proper auth context:
-```sql
--- Drop and recreate the INSERT policy with better handling
-DROP POLICY IF EXISTS "Panel owners can create ads for their panel" ON public.provider_ads;
-
-CREATE POLICY "Panel owners can create ads for their panel" ON public.provider_ads 
-FOR INSERT 
-TO authenticated
-WITH CHECK (
-  EXISTS (
-    SELECT 1 FROM panels 
-    WHERE panels.id = panel_id 
-    AND panels.owner_id = auth.uid()
-  )
-);
-```
-
-### Part 3: Panel Overview Card Updates
-
-**File: `src/pages/panel/PanelOverview.tsx`**
-
-**Changes:**
-1. Wallet icon → navigate to `/panel/payment-methods`
-2. Keep Crown icon → `/panel/billing` (correct)
-3. Add subscription plan display in the header card
-
-**Line 566-583 updates:**
-```typescript
-{/* Updated Action Buttons */}
-<Button 
-  variant="outline" 
-  size="sm"
-  onClick={() => navigate('/panel/payment-methods')}
-  className="gap-1.5 bg-background/50 backdrop-blur-sm hover:bg-primary/10 border-primary/30"
->
-  <Wallet className="w-4 h-4" />
-  <span className="hidden md:inline">Payments</span>
-</Button>
-<Button 
-  variant="outline" 
-  size="sm"
-  onClick={() => navigate('/panel/billing')}
-  className="gap-1.5 bg-background/50 backdrop-blur-sm hover:bg-amber-500/10 border-amber-500/30"
->
-  <Crown className="w-4 h-4 text-amber-500" />
-  <span className="hidden md:inline">Billing</span>
-</Button>
-```
-
-**Add subscription fetch and display in header:**
-```typescript
-// Fetch subscription data
-const [subscription, setSubscription] = useState<{ plan_type: string } | null>(null);
-
-// In fetchPanelData:
-const { data: sub } = await supabase
-  .from('panel_subscriptions')
-  .select('plan_type')
-  .eq('panel_id', panel.id)
-  .single();
-setSubscription(sub);
-
-// Display in status badges area:
-<Badge 
-  variant="outline" 
-  className="gap-1.5 px-3 py-1 bg-gradient-to-r from-amber-500/10 to-amber-500/5 border-amber-500/30"
->
-  <Crown className="w-3.5 h-3.5 text-amber-500" />
-  <span className="text-xs font-medium capitalize">{subscription?.plan_type || 'Free'} Plan</span>
-</Badge>
-```
-
-### Part 4: Provider Management Restructure
-
-**File: `src/pages/panel/ProviderManagement.tsx`**
-
-**Major Changes:**
-1. Combine Direct and Other providers into single Marketplace view with subsections
-2. Rename "All HomeOfSMM Panels" to "Top Providers"
-3. Add Kanban-style listview with horizontal slider for top providers
-4. Add visual effects (gradients, animations, hover effects)
-
-**New Marketplace Structure:**
-```
-Marketplace Tab (Single View)
-├── SPONSORED PROVIDERS (Slider/Carousel)
-│   └── Horizontal scroll with featured cards
-├── TOP PROVIDERS (Renamed from "All HomeOfSMM Panels")
-│   └── Kanban-style list with visual effects
-├── ALL DIRECT PROVIDERS (HomeOfSMM Panels)
-│   └── Grid of DirectProviderCard components
-└── OTHER PROVIDERS (External SMM Panels)
-    └── Kanban-style list with glassmorphic cards
-```
-
-**Key UI Enhancements:**
-- Horizontal carousel/slider for Sponsored providers using embla-carousel
-- Add glow effects and hover animations
-- Kanban listview style for all provider sections
-- Badge indicators for each provider type
-
-### Part 5: Edge Function Fix for Enable Direct Provider
+### Part 1: Fix Edge Function `enable-direct-provider` (CRITICAL)
 
 **File: `supabase/functions/enable-direct-provider/index.ts`**
 
-The edge function looks correct. The likely issue is that:
-1. User auth token might not be passed correctly
-2. Need to handle the case when client_user already exists better
+The core issue is identity resolution. Current flow:
+```
+auth.users.id (user.id) 
+  ↓ 
+profiles.user_id → profiles.id 
+  ↓ 
+panels.owner_id = profiles.id
+```
 
-**Add better error handling and logging:**
+**Fix the ownership check (lines 50-52)**:
 ```typescript
-console.log('Starting enable-direct-provider for:', { sourcePanelId, targetPanelId });
+// BEFORE (BROKEN):
+if (sourcePanel.owner_id !== user.id) {
+  throw new Error("You don't own this panel");
+}
 
-// Add check for auth before proceeding
-const authHeader = req.headers.get("Authorization");
-if (!authHeader) {
-  return new Response(
-    JSON.stringify({ success: false, error: "Authorization required" }),
-    { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
-  );
+// AFTER (FIXED):
+// First get the profile for the authenticated user
+const { data: userProfile, error: profileError } = await supabase
+  .from("profiles")
+  .select("id, email, full_name")
+  .eq("user_id", user.id)
+  .single();
+
+if (profileError || !userProfile) {
+  throw new Error("Could not get user profile");
+}
+
+if (sourcePanel.owner_id !== userProfile.id) {
+  throw new Error("You don't own this panel");
 }
 ```
 
-### Part 6: Ads Strategy - Where Ads Display
+Also fix line 54-63: Remove duplicate profile fetch and use `userProfile` from above.
 
-**New Implementation - Strategic Ad Placements:**
+### Part 2: Combine Marketplace into Single View with Subsections
 
-| Ad Type | Display Location | Visual Treatment |
-|---------|------------------|------------------|
-| **Sponsored** | Top of Direct Providers marketplace | Gold badge, glow effect, position 1 |
-| **Top** | "Top Providers" section heading | Blue badge, highlighted row |
-| **Best** | "Editor's Pick" badge on provider | Purple badge, star rating |
-| **Featured** | Homepage carousel (future) | Green badge, animated entrance |
+**File: `src/pages/panel/ProviderManagement.tsx`**
 
-**Files to Modify for Ad Display:**
-1. `src/pages/panel/ProviderManagement.tsx` - Already implemented, enhance visuals
-2. `src/pages/Storefront.tsx` - Add Featured providers section (future)
-3. `src/components/providers/DirectProviderCard.tsx` - Already has badges, enhance
+**Current Structure (lines 778-920):**
+- Two buttons: "Direct Providers" and "Other Providers" switching tabs
+- Separate sections rendered based on `marketplaceTab` state
 
-**Ad Visibility Enhancement:**
-- Track impressions: Increment when card is rendered
-- Track clicks: Increment when "Enable" or "View" is clicked
-- Add "Ads" badge to distinguish paid placements
+**New Structure:**
+Single scrollable view with these subsections:
+1. **Sponsored Providers** - Horizontal slider (if any)
+2. **Top Providers** - HomeOfSMM panels with visual Kanban style
+3. **Other Providers** - External SMM panels with Kanban style
+
+**Changes needed:**
+1. Remove `marketplaceTab` state and tab switching buttons
+2. Create horizontal slider for sponsored providers using embla-carousel
+3. Convert Direct Providers to Kanban listview style
+4. Convert Other Providers to Kanban listview style
+5. Add visual polish (gradients, glow effects for sponsored)
+
+**Kanban Listview Style Implementation:**
+```typescript
+// Each provider in a row with:
+// - Avatar/Logo on left
+// - Name + domain in middle
+// - Stats (services, rating) 
+// - Enable/Add button on right
+// - Hover effects and glassmorphic styling
+```
+
+### Part 3: Create Horizontal Slider for Sponsored Providers
+
+**New Component: `src/components/providers/SponsoredProviderSlider.tsx`**
+
+Using embla-carousel (already installed):
+```typescript
+import useEmblaCarousel from 'embla-carousel-react';
+
+// Horizontal scroll container
+// Auto-scroll option
+// Navigation arrows
+// Dots indicator
+// Gold glow effect on cards
+```
+
+### Part 4: Enhance DirectProviderCard with Kanban List Style
+
+**File: `src/components/providers/DirectProviderCard.tsx`**
+
+Add a `variant` prop to support both card and list layouts:
+- `variant="card"` - Current card layout for grid
+- `variant="list"` - New horizontal list item layout for Kanban
+
+**List variant features:**
+- Full-width row
+- Avatar on left
+- Provider info in middle
+- Stats inline
+- Action button on right
+- Hover slide animation
+
+### Part 5: Fix provider_ads RLS Policy (Verification)
+
+The current migration uses:
+```sql
+EXISTS (
+  SELECT 1 FROM panels 
+  JOIN profiles ON panels.owner_id = profiles.id
+  WHERE panels.id = panel_id 
+  AND profiles.user_id = auth.uid()
+)
+```
+
+This is CORRECT because:
+- `auth.uid()` returns the auth.users.id
+- We join panels → profiles on `panels.owner_id = profiles.id`
+- Then check `profiles.user_id = auth.uid()`
+
+This policy should work. The error may have been a timing issue or the migration hadn't run. Verify it's applied.
+
+### Part 6: Add Service Count to Direct Providers Query
+
+**File: `src/pages/panel/ProviderManagement.tsx`**
+
+Currently `service_count` is hardcoded to 0 (line 228). Fix:
+```typescript
+// Get service counts for each panel
+const panelIds = panels?.map(p => p.id) || [];
+const { data: serviceCounts } = await supabase
+  .from('services')
+  .select('panel_id')
+  .in('panel_id', panelIds)
+  .eq('is_active', true);
+
+// Count per panel
+const countMap = serviceCounts?.reduce((acc, s) => {
+  acc[s.panel_id] = (acc[s.panel_id] || 0) + 1;
+  return acc;
+}, {} as Record<string, number>) || {};
+
+// Map to directPanels with actual count
+```
 
 ---
 
-## Technical File Changes Summary
+## File Changes Summary
 
 | File | Changes |
 |------|---------|
-| `src/components/billing/TransactionHistory.tsx` | Add mobile card view, expand filter types, enhance detail display |
-| `src/pages/panel/ProviderAds.tsx` | Fix insert with explicit `starts_at` and all required fields |
-| `src/pages/panel/PanelOverview.tsx` | Fix Wallet→PaymentMethods routing, add subscription plan display |
-| `src/pages/panel/ProviderManagement.tsx` | Combine marketplace sections, rename to "Top Providers", add sliders |
-| `supabase/functions/enable-direct-provider/index.ts` | Add better error logging and auth validation |
-| New Migration | Fix RLS policy for provider_ads INSERT |
+| `supabase/functions/enable-direct-provider/index.ts` | Fix profile/panel ownership verification |
+| `src/pages/panel/ProviderManagement.tsx` | Combine marketplace, add Kanban style, horizontal slider |
+| `src/components/providers/DirectProviderCard.tsx` | Add list variant for Kanban style |
+| `src/components/providers/SponsoredProviderSlider.tsx` | NEW - Horizontal carousel for sponsored |
+| `src/components/providers/ProviderListItem.tsx` | NEW - Kanban list row component |
 
 ---
 
-## Mobile Responsiveness Considerations
+## Visual Design: Combined Marketplace Layout
 
-All components will be updated with:
-- Card-based layouts on mobile (< md breakpoint)
-- Horizontal scroll for sliders
-- Touch-friendly tap targets
-- Bottom padding for mobile navigation
-- Collapsible sections for long lists
-
----
-
-## Database Migration Required
-
-```sql
--- Fix provider_ads INSERT policy for authenticated users
-DROP POLICY IF EXISTS "Panel owners can create ads for their panel" ON public.provider_ads;
-
-CREATE POLICY "Panel owners can create ads for their panel" 
-ON public.provider_ads 
-FOR INSERT 
-TO authenticated
-WITH CHECK (
-  EXISTS (
-    SELECT 1 FROM panels 
-    WHERE panels.id = panel_id 
-    AND panels.owner_id = auth.uid()
-  )
-);
-
--- Also ensure transactions RLS allows panel-based inserts
--- Currently only checks user_id which may not be set for panel owner transactions
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ MARKETPLACE                                      [Search...]   │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│ ⭐ SPONSORED PROVIDERS                                          │
+│ ┌────────────────────────────────────────────────────────────┐ │
+│ │ ← [Card 1] [Card 2] [Card 3] →   (horizontal slider)       │ │
+│ │   Gold glow, Crown badge, Premium styling                  │ │
+│ └────────────────────────────────────────────────────────────┘ │
+│                                                                 │
+│ 🏆 TOP PROVIDERS (HomeOfSMM)                          [3]      │
+│ ┌───────────────────────────────────────────────────────────┐  │
+│ │ 🖼️ Panel Name        domain.homeofsmm.com   45 svcs [Enable]│ │
+│ ├───────────────────────────────────────────────────────────┤  │
+│ │ 🖼️ Panel Name 2      name2.homeofsmm.com    28 svcs [Enable]│ │
+│ ├───────────────────────────────────────────────────────────┤  │
+│ │ 🖼️ Panel Name 3      custom-domain.com      67 svcs [Enable]│ │
+│ └───────────────────────────────────────────────────────────┘  │
+│                                                                 │
+│ 🌐 OTHER PROVIDERS (External)                         [6]      │
+│ ┌───────────────────────────────────────────────────────────┐  │
+│ │ 🌐 SMMRush           smmrush.com        ★ 4.8   [Add]      │ │
+│ ├───────────────────────────────────────────────────────────┤  │
+│ │ 🌐 JustAnotherPanel  justanotherpanel.com ★ 4.7 [Add]      │ │
+│ └───────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
+---
+
+## Implementation Order
+
+1. **Phase 1**: Fix edge function `enable-direct-provider` (critical bug fix)
+2. **Phase 2**: Create `ProviderListItem` component for Kanban style
+3. **Phase 3**: Create `SponsoredProviderSlider` component  
+4. **Phase 4**: Update `ProviderManagement.tsx` to combine marketplace
+5. **Phase 5**: Update `DirectProviderCard` to support list variant
+6. **Phase 6**: Add service count query
+7. **Phase 7**: Deploy and test
+
+---
+
+## Technical Details
+
+### Edge Function Fix - Full Updated Code Section
+
+```typescript
+// Lines 39-63 replacement:
+
+// Verify source panel ownership
+const { data: sourcePanel, error: sourcePanelError } = await supabase
+  .from("panels")
+  .select("id, owner_id, name")
+  .eq("id", sourcePanelId)
+  .single();
+
+if (sourcePanelError || !sourcePanel) {
+  throw new Error("Source panel not found");
+}
+
+// Get profile for authenticated user (profiles.user_id = auth.users.id)
+const { data: userProfile, error: profileError } = await supabase
+  .from("profiles")
+  .select("id, email, full_name")
+  .eq("user_id", user.id)
+  .single();
+
+if (profileError || !userProfile) {
+  throw new Error("Could not get user profile");
+}
+
+// panels.owner_id references profiles.id, NOT auth.users.id
+if (sourcePanel.owner_id !== userProfile.id) {
+  throw new Error("You don't own this panel");
+}
+
+// Now userProfile contains email and full_name for creating buyer account
+```
+
+### Kanban List Item Styling
+
+```typescript
+// Glass morphic row with hover effects
+<motion.div
+  whileHover={{ x: 4, backgroundColor: 'rgba(var(--primary), 0.05)' }}
+  className="flex items-center justify-between p-4 rounded-lg border border-border/50 
+             bg-card/50 backdrop-blur-sm hover:border-primary/30 transition-all"
+>
+  {/* Avatar */}
+  <Avatar className="w-10 h-10 border-2 border-border">...</Avatar>
+  
+  {/* Info */}
+  <div className="flex-1 px-4">
+    <h4 className="font-semibold">{name}</h4>
+    <p className="text-xs text-muted-foreground">{domain}</p>
+  </div>
+  
+  {/* Stats */}
+  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+    <span>{serviceCount} services</span>
+    <span>★ {rating}</span>
+  </div>
+  
+  {/* Action */}
+  <Button size="sm">Enable</Button>
+</motion.div>
+```
+
+### Horizontal Slider Configuration
+
+```typescript
+const [emblaRef] = useEmblaCarousel({
+  loop: true,
+  align: 'start',
+  slidesToScroll: 1,
+  containScroll: 'trimSnaps'
+});
+
+// Wrapper with gradient fade edges
+<div className="relative">
+  <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-background to-transparent z-10" />
+  <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent z-10" />
+  
+  <div className="overflow-hidden" ref={emblaRef}>
+    <div className="flex gap-4">
+      {sponsoredProviders.map(p => (
+        <div key={p.id} className="flex-[0_0_300px]">
+          <DirectProviderCard provider={p} ... />
+        </div>
+      ))}
+    </div>
+  </div>
+</div>
+```
