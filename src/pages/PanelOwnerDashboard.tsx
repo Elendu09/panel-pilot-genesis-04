@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { Routes, Route, Link, useLocation } from "react-router-dom";
 import { 
   LayoutDashboard, 
@@ -20,7 +20,8 @@ import {
   HelpCircle,
   CreditCard,
   Shield,
-  Zap
+  Zap,
+  Loader2
 } from "lucide-react";
 import { usePendingOrders } from "@/hooks/use-pending-orders";
 import { Button } from "@/components/ui/button";
@@ -59,6 +60,15 @@ import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { usePanel } from "@/hooks/usePanel";
+
+// Lazy load ProviderAds
+const ProviderAds = lazy(() => import("./panel/ProviderAds"));
+
+const PageLoader = () => (
+  <div className="flex items-center justify-center h-64">
+    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+  </div>
+);
 
 const PanelOwnerDashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -438,27 +448,30 @@ const PanelOwnerDashboard = () => {
 
         {/* Page Content */}
         <div className="flex-1 p-4 md:p-6 lg:p-8 pb-24 md:pb-8 overflow-y-auto bg-mesh">
-          <Routes>
-            <Route index element={<PanelOverview />} />
-            <Route path="services" element={<ServicesManagement />} />
-            <Route path="orders" element={<OrdersManagement />} />
-            <Route path="customers" element={<CustomerManagement />} />
-            <Route path="analytics" element={<Analytics />} />
-            <Route path="providers" element={<ProviderManagement />} />
-            <Route path="domain" element={<DomainSettings />} />
-            <Route path="design" element={<DesignCustomization />} />
-            <Route path="settings" element={<GeneralSettings />} />
-            <Route path="support" element={<SupportCenter />} />
-            <Route path="api" element={<APIManagement />} />
-            <Route path="blog" element={<BlogManagement />} />
-            <Route path="payments" element={<PaymentMethods />} />
-            <Route path="security" element={<SecuritySettings />} />
-            <Route path="billing" element={<Billing />} />
-            <Route path="integrations" element={<Integrations />} />
-            <Route path="team" element={<TeamManagement />} />
-            <Route path="promotions" element={<PromoManagement />} />
-            <Route path="more" element={<MoreMenu />} />
-          </Routes>
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              <Route index element={<PanelOverview />} />
+              <Route path="services" element={<ServicesManagement />} />
+              <Route path="orders" element={<OrdersManagement />} />
+              <Route path="customers" element={<CustomerManagement />} />
+              <Route path="analytics" element={<Analytics />} />
+              <Route path="providers" element={<ProviderManagement />} />
+              <Route path="domain" element={<DomainSettings />} />
+              <Route path="design" element={<DesignCustomization />} />
+              <Route path="settings" element={<GeneralSettings />} />
+              <Route path="support" element={<SupportCenter />} />
+              <Route path="api" element={<APIManagement />} />
+              <Route path="blog" element={<BlogManagement />} />
+              <Route path="payments" element={<PaymentMethods />} />
+              <Route path="security" element={<SecuritySettings />} />
+              <Route path="billing" element={<Billing />} />
+              <Route path="integrations" element={<Integrations />} />
+              <Route path="team" element={<TeamManagement />} />
+              <Route path="promotions" element={<PromoManagement />} />
+              <Route path="promote" element={<ProviderAds />} />
+              <Route path="more" element={<MoreMenu />} />
+            </Routes>
+          </Suspense>
         </div>
       </main>
 
