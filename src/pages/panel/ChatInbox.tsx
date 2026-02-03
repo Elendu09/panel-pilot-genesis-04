@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   MessageCircle, 
   Send, 
@@ -452,14 +453,16 @@ const ChatInbox = ({ embedded = false }: ChatInboxProps) => {
     toast({ title: 'Marked as Solved', description: 'Chat has been archived.' });
   };
 
+  const navigate = useNavigate();
+
   const handleManageBalance = (session: ChatSession | null) => {
     if (!session) return;
-    // Navigate to customer management with filter
     toast({ 
       title: 'Opening Customer Management', 
       description: `Managing balance for ${session.visitor_name || session.visitor_email || 'visitor'}` 
     });
-    window.location.href = `/panel/customers?search=${encodeURIComponent(session.visitor_email || session.visitor_id)}`;
+    setChatSheetOpen(false);
+    navigate(`/panel/customers?search=${encodeURIComponent(session.visitor_email || session.visitor_id)}`);
   };
 
   const handleViewUserOrders = (session: ChatSession | null) => {
@@ -468,8 +471,8 @@ const ChatInbox = ({ embedded = false }: ChatInboxProps) => {
       title: 'Opening Orders', 
       description: `Viewing orders for ${session.visitor_name || 'visitor'}` 
     });
-    // For now, navigate to orders (can filter by buyer later)
-    window.location.href = `/panel/orders`;
+    setChatSheetOpen(false);
+    navigate('/panel/orders');
   };
 
   const handleViewPaymentHistory = (session: ChatSession | null) => {
@@ -478,7 +481,8 @@ const ChatInbox = ({ embedded = false }: ChatInboxProps) => {
       title: 'Opening Transactions', 
       description: `Viewing payment history` 
     });
-    window.location.href = `/panel/transactions`;
+    setChatSheetOpen(false);
+    navigate('/panel/transactions');
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -773,12 +777,12 @@ const ChatInbox = ({ embedded = false }: ChatInboxProps) => {
         <Sheet open={chatSheetOpen} onOpenChange={setChatSheetOpen}>
           <SheetContent side="bottom" className="h-[90vh] rounded-t-2xl p-0 flex flex-col">
             <SheetHeader className="p-4 border-b shrink-0">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-4">
                 <Button 
                   variant="ghost" 
                   size="icon" 
                   onClick={() => setChatSheetOpen(false)}
-                  className="shrink-0"
+                  className="shrink-0 -ml-1"
                 >
                   <ArrowLeft className="w-5 h-5" />
                 </Button>
@@ -796,36 +800,38 @@ const ChatInbox = ({ embedded = false }: ChatInboxProps) => {
                     {selectedSession && formatTime(selectedSession.created_at)}
                   </div>
                 </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <MoreVertical className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuItem onClick={() => handleManageBalance(selectedSession)}>
-                      <DollarSign className="w-4 h-4 mr-2" />
-                      Manage balance
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleViewPaymentHistory(selectedSession)}>
-                      <History className="w-4 h-4 mr-2" />
-                      Payment history
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleViewUserOrders(selectedSession)}>
-                      <ShoppingCart className="w-4 h-4 mr-2" />
-                      User orders
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => handleMarkAsSolved(selectedSession)}>
-                      <CheckCircle className="w-4 h-4 mr-2 text-green-500" />
-                      Mark as solved
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => selectedSession && archiveSession(selectedSession)}>
-                      <Archive className="w-4 h-4 mr-2" />
-                      Archive Chat
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <div className="pl-3">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="shrink-0">
+                        <MoreVertical className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      <DropdownMenuItem onClick={() => handleManageBalance(selectedSession)}>
+                        <DollarSign className="w-4 h-4 mr-2" />
+                        Manage balance
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleViewPaymentHistory(selectedSession)}>
+                        <History className="w-4 h-4 mr-2" />
+                        Payment history
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleViewUserOrders(selectedSession)}>
+                        <ShoppingCart className="w-4 h-4 mr-2" />
+                        User orders
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => handleMarkAsSolved(selectedSession)}>
+                        <CheckCircle className="w-4 h-4 mr-2 text-green-500" />
+                        Mark as solved
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => selectedSession && archiveSession(selectedSession)}>
+                        <Archive className="w-4 h-4 mr-2" />
+                        Archive Chat
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
             </SheetHeader>
             

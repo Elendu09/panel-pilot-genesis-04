@@ -154,9 +154,11 @@ const PanelOwnerDashboard = () => {
     { name: 'More', href: '/panel/more', icon: Settings, tourId: 'mobile-more' },
   ];
 
-  // Single Support FAB action for mobile - direct navigation to support
+  // Single Support FAB action for mobile - use React Router navigate
   const supportFabAction = () => {
-    window.location.href = '/panel/support';
+    // We use location.pathname check but navigate is used elsewhere
+    window.history.pushState({}, '', '/panel/support');
+    window.dispatchEvent(new PopStateEvent('popstate'));
   };
 
   const isActive = (path: string) => location.pathname === path;
