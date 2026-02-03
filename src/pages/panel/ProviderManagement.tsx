@@ -39,7 +39,9 @@ import {
   AlertTriangle,
   Home,
   Crown,
-  Sparkles
+  Sparkles,
+  Key,
+  TrendingUp
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ImportProgressStepper, ImportStep } from "@/components/panel/ImportProgressStepper";
@@ -162,6 +164,12 @@ const ProviderManagement = () => {
   const [directProviders, setDirectProviders] = useState<DirectPanel[]>([]);
   const [loadingDirect, setLoadingDirect] = useState(true);
   const [enablingProvider, setEnablingProvider] = useState<string | null>(null);
+  
+  // Manual connect dialog state
+  const [manualConnectOpen, setManualConnectOpen] = useState(false);
+  const [manualConnectPanel, setManualConnectPanel] = useState<DirectPanel | null>(null);
+  const [manualApiKey, setManualApiKey] = useState('');
+  const [manualConnecting, setManualConnecting] = useState(false);
 
   useEffect(() => {
     if (panel?.id) {
@@ -433,7 +441,62 @@ const ProviderManagement = () => {
     } catch (error: any) {
       toast({ variant: "destructive", title: "Failed to Enable", description: error.message });
     } finally {
-      setEnablingProvider(null);
+    setEnablingProvider(null);
+    }
+  };
+
+  const openManualConnect = (directPanel: DirectPanel) => {
+    setManualConnectPanel(directPanel);
+    setManualApiKey('');
+    setManualConnectOpen(true);
+  };
+
+  const handleManualConnect = async () => {
+    if (!manualConnectPanel || !manualApiKey || !panel?.id) return;
+
+    if (!canAddProvider) {
+      toast({ 
+        variant: "destructive", 
+        title: "Provider Limit Reached", 
+        description: `Upgrade to add more providers.`
+      });
+      return;
+    }
+
+    setManualConnecting(true);
+
+    try {
+      const platformDomain = 'smmpilot.online';
+      const apiEndpoint = manualConnectPanel.custom_domain
+        ? `https://${manualConnectPanel.custom_domain}/api/v2`
+        : `https://${manualConnectPanel.subdomain}.${platformDomain}/api/v2`;
+
+      const { error } = await supabase.from('providers').insert({
+        panel_id: panel.id,
+        name: manualConnectPanel.name,
+        api_endpoint: apiEndpoint,
+        api_key: manualApiKey,
+        is_active: true,
+        is_direct: true,
+        source_panel_id: manualConnectPanel.id,
+      });
+
+      if (error) throw error;
+
+      toast({ 
+        title: "Provider Connected!", 
+        description: `Manually connected to ${manualConnectPanel.name}.`
+      });
+
+      fetchProviders();
+      fetchDirectProviders();
+      setManualConnectOpen(false);
+      setManualApiKey('');
+      setManualConnectPanel(null);
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Failed to Connect", description: error.message });
+    } finally {
+      setManualConnecting(false);
     }
   };
 
@@ -825,19 +888,22 @@ const ProviderManagement = () => {
                 <Badge variant="outline">{filteredDirect.filter(p => p.ad_type === 'top' || p.ad_type === 'best' || p.ad_type === 'featured').length}</Badge>
               </div>
               <div className="space-y-2">
-                {filteredDirect.filter(p => p.ad_type === 'top' || p.ad_type === 'best' || p.ad_type === 'featured').map((provider) => (
+                {filteredDirect.filter(p => p.ad_type === 'top' || p.ad_type === 'best' || p.ad_type === 'featured').map((provider, index) => (
                   <ProviderListItem
                     key={provider.id}
                     id={provider.id}
                     name={provider.name}
-                    domain={provider.custom_domain || `${provider.subdomain}.homeofsmm.com`}
+                    domain={provider.custom_domain || `${provider.subdomain}.smmpilot.online`}
                     logoUrl={provider.logo_url}
                     serviceCount={provider.service_count}
                     adType={provider.ad_type}
                     isConnected={provider.is_connected}
                     onAction={() => handleEnableDirectProvider(provider)}
+                    onManualConnect={() => openManualConnect(provider)}
                     isLoading={enablingProvider === provider.id}
                     actionLabel="Enable"
+                    rank={index + 1}
+                    showRank={true}
                   />
                 ))}
               </div>
@@ -866,18 +932,21 @@ const ProviderManagement = () => {
               </Card>
             ) : (
               <div className="space-y-2">
-                {filteredDirect.filter(p => !p.ad_type).map((provider) => (
+                {filteredDirect.filter(p => !p.ad_type).map((provider, index) => (
                   <ProviderListItem
                     key={provider.id}
                     id={provider.id}
                     name={provider.name}
-                    domain={provider.custom_domain || `${provider.subdomain}.homeofsmm.com`}
+                    domain={provider.custom_domain || `${provider.subdomain}.smmpilot.online`}
                     logoUrl={provider.logo_url}
                     serviceCount={provider.service_count}
                     isConnected={provider.is_connected}
                     onAction={() => handleEnableDirectProvider(provider)}
+                    onManualConnect={() => openManualConnect(provider)}
                     isLoading={enablingProvider === provider.id}
                     actionLabel="Enable"
+                    rank={index + 1}
+                    showRank={true}
                   />
                 ))}
               </div>
@@ -1058,6 +1127,49 @@ const ProviderManagement = () => {
                 Import All Services
               </Button>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Manual Connect Dialog */}
+      <Dialog open={manualConnectOpen} onOpenChange={setManualConnectOpen}>
+        <DialogContent className="glass-card max-w-md">
+          <DialogHeader>
+            <DialogTitle>Connect with Existing Account</DialogTitle>
+            <DialogDescription>
+              Already have an account on {manualConnectPanel?.name}? Enter your API key to connect manually.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>API Key</Label>
+              <Input 
+                type="password"
+                value={manualApiKey}
+                onChange={(e) => setManualApiKey(e.target.value)}
+                placeholder="Enter your existing API key"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              You can find your API key in your account settings on {manualConnectPanel?.name}.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setManualConnectOpen(false)} disabled={manualConnecting}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleManualConnect} 
+              disabled={manualConnecting || !manualApiKey}
+              className="gap-2"
+            >
+              {manualConnecting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <CheckCircle className="w-4 h-4" />
+              )}
+              Connect
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -298,7 +298,7 @@ serve(async (req) => {
         apiKey: apiKey,
         targetPanel: {
           name: targetPanel.name,
-          domain: targetPanel.custom_domain || `${targetPanel.subdomain}.homeofsmm.com`,
+          domain: targetPanel.custom_domain || `${targetPanel.subdomain}.${platformDomain}`,
         },
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
