@@ -54,9 +54,12 @@ export function FastOrderAnalyticsCard({
             <div className="p-2 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/10">
               <Zap className="w-5 h-5 text-amber-500" />
             </div>
-            <div>
+          <div>
               <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                Fast Order Funnel
+                Sales Funnel
+                <Badge variant="outline" className="ml-1 text-[10px] font-normal bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20">
+                  Fast Order
+                </Badge>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>

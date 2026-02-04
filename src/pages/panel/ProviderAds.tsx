@@ -18,7 +18,10 @@ import {
   AlertCircle,
   TrendingUp,
   Wallet,
-  ArrowLeft
+  ArrowLeft,
+  Flame,
+  List,
+  MessageSquare
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -53,12 +56,14 @@ interface MyAd {
   total_spent: number;
 }
 
+// Configuration for ad types with icons and styling - matching reference design
 const adTypeConfig = {
   sponsored: { 
-    icon: Crown, 
-    color: "text-amber-500", 
-    bgColor: "bg-amber-500/10",
-    gradient: "from-amber-500 to-yellow-500",
+    icon: Flame, 
+    color: "text-orange-500", 
+    bgColor: "bg-orange-500/10",
+    gradient: "from-orange-500 to-amber-500",
+    title: "Top providers page",
     benefits: [
       "Top position in marketplace",
       "Gold 'Sponsored' badge",
@@ -67,10 +72,11 @@ const adTypeConfig = {
     ]
   },
   top: { 
-    icon: Trophy, 
+    icon: List, 
     color: "text-blue-500", 
     bgColor: "bg-blue-500/10",
     gradient: "from-blue-500 to-cyan-500",
+    title: "Providers list",
     benefits: [
       "Featured in 'Top Providers' section",
       "Blue highlight badge",
@@ -78,10 +84,11 @@ const adTypeConfig = {
     ]
   },
   best: { 
-    icon: Star, 
-    color: "text-purple-500", 
-    bgColor: "bg-purple-500/10",
-    gradient: "from-purple-500 to-pink-500",
+    icon: Check, 
+    color: "text-emerald-500", 
+    bgColor: "bg-emerald-500/10",
+    gradient: "from-emerald-500 to-green-500",
+    title: "Top services page",
     benefits: [
       "'Best Choice' badge",
       "Editor's pick highlight",
@@ -89,10 +96,11 @@ const adTypeConfig = {
     ]
   },
   featured: { 
-    icon: Sparkles, 
-    color: "text-green-500", 
-    bgColor: "bg-green-500/10",
-    gradient: "from-green-500 to-emerald-500",
+    icon: MessageSquare, 
+    color: "text-purple-500", 
+    bgColor: "bg-purple-500/10",
+    gradient: "from-purple-500 to-pink-500",
+    title: "Direct offers",
     benefits: [
       "Homepage carousel inclusion",
       "'Featured' badge",
@@ -127,9 +135,9 @@ const ProviderAds = () => {
 
       if (pricingRes.data) {
         setPricing(pricingRes.data);
-        // Initialize duration selection
+        // Initialize duration selection - default to monthly
         const durations: Record<string, string> = {};
-        pricingRes.data.forEach(p => { durations[p.ad_type] = 'daily'; });
+        pricingRes.data.forEach(p => { durations[p.ad_type] = 'monthly'; });
         setSelectedDuration(durations);
       }
       if (adsRes.data) setMyAds(adsRes.data);
@@ -157,28 +165,18 @@ const ProviderAds = () => {
     }
   };
 
-  const getDiscount = (tier: AdPricing, duration: string) => {
-    const dailyEquivalent = tier.daily_rate;
-    let daysCount = 1;
-    let actualRate = tier.daily_rate;
-
-    if (duration === 'weekly') {
-      daysCount = 7;
-      actualRate = tier.weekly_rate;
-    } else if (duration === 'monthly') {
-      daysCount = 30;
-      actualRate = tier.monthly_rate;
+  const getDurationDays = (duration: string) => {
+    switch (duration) {
+      case 'weekly': return 7;
+      case 'monthly': return 30;
+      default: return 1;
     }
-
-    const fullPrice = dailyEquivalent * daysCount;
-    const discount = Math.round(((fullPrice - actualRate) / fullPrice) * 100);
-    return discount > 0 ? discount : 0;
   };
 
   const handlePurchase = async (tier: AdPricing) => {
     if (!panel?.id) return;
     
-    const duration = selectedDuration[tier.ad_type] || 'daily';
+    const duration = selectedDuration[tier.ad_type] || 'monthly';
     const price = getPrice(tier, duration);
 
     // Check balance
@@ -264,38 +262,28 @@ const ProviderAds = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24">
       <Helmet>
-        <title>Promote My Panel</title>
+        <title>Advertising</title>
         <meta name="robots" content="noindex,nofollow" />
       </Helmet>
 
-      {/* Header */}
+      {/* Header - Clean minimal style */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col md:flex-row md:items-center justify-between gap-4"
+        className="flex items-center gap-3"
       >
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold">Promote My Panel</h1>
-          <p className="text-muted-foreground">Boost your visibility in the marketplace</p>
-        </div>
-        <Card className="glass-card px-4 py-3">
-          <div className="flex items-center gap-3">
-            <Wallet className="w-5 h-5 text-primary" />
-            <div>
-              <p className="text-xs text-muted-foreground">Available Balance</p>
-              <p className="text-lg font-bold">${(panel?.balance || 0).toFixed(2)}</p>
-            </div>
-            <Link to="/panel/billing">
-              <Button size="sm" variant="outline">Add Funds</Button>
-            </Link>
-          </div>
-        </Card>
+        <Link to="/panel/more">
+          <Button variant="ghost" size="icon" className="shrink-0">
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+        </Link>
+        <h1 className="text-xl md:text-2xl font-bold">Advertising</h1>
       </motion.div>
 
       <Tabs defaultValue="purchase" className="space-y-6">
-        <TabsList>
+        <TabsList className="w-full grid grid-cols-2">
           <TabsTrigger value="purchase" className="gap-2">
             <Crown className="w-4 h-4" />
             Purchase Ads
@@ -306,64 +294,45 @@ const ProviderAds = () => {
           </TabsTrigger>
         </TabsList>
 
-        {/* Purchase Ads */}
+        {/* Purchase Ads - Clean vertical list layout per reference design */}
         <TabsContent value="purchase">
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="space-y-1">
             {pricing.map((tier, index) => {
               const config = adTypeConfig[tier.ad_type as keyof typeof adTypeConfig];
               const Icon = config?.icon || Crown;
-              const duration = selectedDuration[tier.ad_type] || 'daily';
+              const duration = selectedDuration[tier.ad_type] || 'monthly';
               const price = getPrice(tier, duration);
-              const discount = getDiscount(tier, duration);
+              const days = getDurationDays(duration);
               const isActive = hasActiveAd(tier.ad_type);
 
               return (
                 <motion.div
                   key={tier.id}
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}
+                  className="py-5 border-b border-border/50 last:border-0"
                 >
-                  <Card className={cn(
-                    "glass-card-hover overflow-hidden",
-                    tier.ad_type === 'sponsored' && "ring-2 ring-amber-500/50"
-                  )}>
-                    {/* Gradient header */}
-                    <div className={cn("h-2 bg-gradient-to-r", config?.gradient)} />
+                  <div className="flex items-start gap-4">
+                    {/* Icon */}
+                    <div className={cn(
+                      "w-12 h-12 rounded-xl flex items-center justify-center shrink-0",
+                      config?.bgColor
+                    )}>
+                      <Icon className={cn("w-6 h-6", config?.color)} />
+                    </div>
                     
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className={cn("p-2 rounded-xl", config?.bgColor)}>
-                            <Icon className={cn("w-6 h-6", config?.color)} />
-                          </div>
-                          <div>
-                            <CardTitle className="capitalize">{tier.ad_type}</CardTitle>
-                            <CardDescription>{tier.description}</CardDescription>
-                          </div>
-                        </div>
-                        {isActive && (
-                          <Badge className="bg-green-500/10 text-green-500 border-green-500/30">
-                            <Check className="w-3 h-3 mr-1" />
-                            Active
-                          </Badge>
-                        )}
-                      </div>
-                    </CardHeader>
-                    
-                    <CardContent className="space-y-4">
-                      {/* Benefits */}
-                      <ul className="space-y-2">
-                        {config?.benefits.map((benefit, i) => (
-                          <li key={i} className="flex items-center gap-2 text-sm">
-                            <Check className="w-4 h-4 text-green-500 shrink-0" />
-                            <span>{benefit}</span>
-                          </li>
-                        ))}
-                      </ul>
-
-                      {/* Duration Select */}
-                      <div className="space-y-2">
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-base md:text-lg mb-1">
+                        {config?.title || tier.ad_type}
+                      </h3>
+                      <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                        {tier.description || "Boost your visibility in the marketplace"}
+                      </p>
+                      
+                      {/* Duration selector */}
+                      <div className="mb-3">
                         <Select 
                           value={duration}
                           onValueChange={(v) => setSelectedDuration({
@@ -371,80 +340,86 @@ const ProviderAds = () => {
                             [tier.ad_type]: v
                           })}
                         >
-                          <SelectTrigger>
+                          <SelectTrigger className="w-full max-w-[200px] h-9 text-sm">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="daily">
-                              1 Day - ${tier.daily_rate.toFixed(2)}
-                            </SelectItem>
-                            <SelectItem value="weekly">
-                              7 Days - ${tier.weekly_rate.toFixed(2)} ({getDiscount(tier, 'weekly')}% off)
-                            </SelectItem>
-                            <SelectItem value="monthly">
-                              30 Days - ${tier.monthly_rate.toFixed(2)} ({getDiscount(tier, 'monthly')}% off)
-                            </SelectItem>
+                            <SelectItem value="daily">1 Day</SelectItem>
+                            <SelectItem value="weekly">7 Days</SelectItem>
+                            <SelectItem value="monthly">30 Days</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
-
-                      {/* Price & Purchase */}
-                      <div className="flex items-center justify-between pt-2">
-                        <div>
-                          <p className="text-2xl font-bold">${price.toFixed(2)}</p>
-                          {discount > 0 && (
-                            <p className="text-xs text-green-500">Save {discount}%</p>
+                      
+                      {/* Price */}
+                      <p className="text-xl font-bold mb-4">
+                        ${price.toFixed(0)} <span className="text-sm font-normal text-muted-foreground">for {days} days</span>
+                      </p>
+                      
+                      {/* Action buttons - Matching reference design */}
+                      <div className="flex items-center gap-3">
+                        <Button
+                          onClick={() => handlePurchase(tier)}
+                          disabled={purchasing === tier.ad_type || isActive || (panel?.balance || 0) < price}
+                          className="bg-cyan-500 hover:bg-cyan-600 text-white px-6"
+                        >
+                          {purchasing === tier.ad_type ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                              Processing...
+                            </>
+                          ) : isActive ? (
+                            <>
+                              <Check className="w-4 h-4 mr-2" />
+                              Active
+                            </>
+                          ) : (
+                            'Get now'
                           )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {/* Example Preview Button */}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setPreviewAdType(tier.ad_type);
-                              setPreviewOpen(true);
-                            }}
-                            className="gap-1"
-                          >
-                            <Eye className="w-4 h-4" />
-                            Example
-                          </Button>
-                          {/* Purchase Button */}
-                          <Button
-                            onClick={() => handlePurchase(tier)}
-                            disabled={purchasing === tier.ad_type || isActive || (panel?.balance || 0) < price}
-                            className={cn("gap-2", `bg-gradient-to-r ${config?.gradient}`)}
-                          >
-                            {purchasing === tier.ad_type ? (
-                              <>
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                                Processing...
-                              </>
-                            ) : isActive ? (
-                              <>Already Active</>
-                            ) : (
-                              <>
-                                <DollarSign className="w-4 h-4" />
-                                Get Now
-                              </>
-                            )}
-                          </Button>
-                        </div>
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setPreviewAdType(tier.ad_type);
+                            setPreviewOpen(true);
+                          }}
+                          className="border-cyan-500 text-cyan-500 hover:bg-cyan-500/10"
+                        >
+                          Example
+                        </Button>
                       </div>
 
+                      {/* Insufficient balance warning */}
                       {(panel?.balance || 0) < price && !isActive && (
-                        <div className="flex items-center gap-2 text-xs text-amber-500 bg-amber-500/10 p-2 rounded-lg">
+                        <div className="flex items-center gap-2 text-xs text-amber-500 mt-3">
                           <AlertCircle className="w-4 h-4" />
-                          Insufficient balance. Add funds to purchase.
+                          Insufficient balance. <Link to="/panel/billing" className="underline">Add funds</Link>
                         </div>
                       )}
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 </motion.div>
               );
             })}
           </div>
+          
+          {/* Balance card at bottom */}
+          <Card className="glass-card mt-6">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Wallet className="w-5 h-5 text-primary" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Available Balance</p>
+                    <p className="text-lg font-bold">${(panel?.balance || 0).toFixed(2)}</p>
+                  </div>
+                </div>
+                <Link to="/panel/billing">
+                  <Button size="sm" variant="outline">Add Funds</Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* My Ads */}
@@ -474,37 +449,35 @@ const ProviderAds = () => {
                             <Icon className={cn("w-5 h-5", config?.color)} />
                           </div>
                           <div>
-                            <h3 className="font-semibold capitalize">{ad.ad_type} Ad</h3>
+                            <h3 className="font-semibold capitalize">{config?.title || ad.ad_type}</h3>
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
                               <Calendar className="w-3 h-3" />
                               {isExpired ? (
-                                <span className="text-destructive">Expired</span>
+                                <span className="text-red-500">Expired</span>
                               ) : (
-                                <span>Expires in {daysLeft} days</span>
+                                <span>{daysLeft} days left</span>
                               )}
                             </div>
                           </div>
                         </div>
-
-                        <div className="flex items-center gap-6">
+                        
+                        <div className="flex items-center gap-4 text-sm">
                           <div className="text-center">
-                            <p className="text-2xl font-bold">{ad.impressions}</p>
-                            <p className="text-xs text-muted-foreground flex items-center gap-1">
-                              <Eye className="w-3 h-3" /> Impressions
+                            <p className="font-bold">{ad.impressions.toLocaleString()}</p>
+                            <p className="text-xs text-muted-foreground">Views</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="font-bold">{ad.clicks.toLocaleString()}</p>
+                            <p className="text-xs text-muted-foreground">Clicks</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="font-bold">
+                              {ad.impressions > 0 ? ((ad.clicks / ad.impressions) * 100).toFixed(1) : '0'}%
                             </p>
+                            <p className="text-xs text-muted-foreground">CTR</p>
                           </div>
-                          <div className="text-center">
-                            <p className="text-2xl font-bold">{ad.clicks}</p>
-                            <p className="text-xs text-muted-foreground flex items-center gap-1">
-                              <MousePointer className="w-3 h-3" /> Clicks
-                            </p>
-                          </div>
-                          <div className="text-center">
-                            <p className="text-2xl font-bold">${ad.total_spent.toFixed(2)}</p>
-                            <p className="text-xs text-muted-foreground">Spent</p>
-                          </div>
-                          <Badge variant={ad.is_active && !isExpired ? "default" : "secondary"}>
-                            {isExpired ? "Expired" : ad.is_active ? "Active" : "Paused"}
+                          <Badge className={isExpired ? "bg-red-500/10 text-red-500" : "bg-green-500/10 text-green-500"}>
+                            {isExpired ? 'Expired' : 'Active'}
                           </Badge>
                         </div>
                       </div>
@@ -517,88 +490,82 @@ const ProviderAds = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Ad Preview Dialog */}
+      {/* Preview Dialog */}
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Ad Preview</DialogTitle>
+            <DialogTitle className="capitalize">{previewAdType} Ad Preview</DialogTitle>
             <DialogDescription>
-              How your panel will appear in the marketplace
+              See how your ad will appear in the marketplace
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4 py-4">
-            {/* Mock Ranking Display */}
-            <div className="border rounded-xl p-4 bg-gradient-to-r from-amber-500/10 to-amber-500/5 relative">
-              {/* "You will be here" tooltip */}
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-card border rounded-lg px-3 py-1.5 shadow-lg z-10">
-                <p className="text-sm font-medium text-center">You will be here</p>
-                <Button 
-                  variant="link" 
-                  size="sm" 
-                  className="text-primary p-0 h-auto w-full text-xs"
-                  onClick={() => setPreviewOpen(false)}
-                >
-                  <ArrowLeft className="w-3 h-3 mr-1" />
-                  Back to ads
-                </Button>
-              </div>
-              
-              {/* Ranking #1 with Crown */}
-              <div className="flex items-center gap-3 mt-6">
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl font-bold">1</span>
-                  <Crown className="w-5 h-5 text-amber-500" />
-                </div>
-                <Avatar className="w-10 h-10 border-2 border-amber-500">
-                  <AvatarImage src={panel?.logo_url || undefined} />
-                  <AvatarFallback className="bg-primary/10 text-primary">
-                    {panel?.name?.substring(0, 2).toUpperCase() || 'MY'}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold truncate">{panel?.name || 'My Panel'}</p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {panel?.custom_domain || `${panel?.subdomain}.smmpilot.online`}
-                  </p>
-                </div>
-                <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/30 shrink-0">
-                  {previewAdType?.charAt(0).toUpperCase()}{previewAdType?.slice(1)}
+            {/* Mock preview showing panel at top */}
+            <div className="relative">
+              <div className="absolute -top-2 left-1/2 -translate-x-1/2 z-10">
+                <Badge className="bg-amber-500 text-white text-xs">
+                  👆 You will be here
                 </Badge>
               </div>
               
-              {/* Sample service badges */}
-              <div className="flex flex-wrap gap-2 mt-3 pl-12">
-                <Badge variant="secondary" className="gap-1">
-                  <Sparkles className="w-3 h-3" /> Premium
-                </Badge>
-                <Badge variant="secondary">Top Quality</Badge>
-              </div>
-            </div>
-            
-            {/* Lower rankings preview (faded) */}
-            <div className="space-y-3 opacity-60">
-              <div className="flex items-center gap-3 p-3 border rounded-lg">
-                <span className="font-bold w-6">2</span>
-                <Crown className="w-4 h-4 text-muted-foreground" />
-                <Avatar className="w-8 h-8"><AvatarFallback>FS</AvatarFallback></Avatar>
-                <span className="text-sm flex-1">flysmm.com</span>
-                <Badge variant="outline" className="text-xs">USD</Badge>
-              </div>
-              <div className="flex items-center gap-3 p-3 border rounded-lg">
-                <span className="font-bold w-6">3</span>
-                <Crown className="w-4 h-4 text-muted-foreground" />
-                <Avatar className="w-8 h-8"><AvatarFallback>TG</AvatarFallback></Avatar>
-                <span className="text-sm flex-1">teateagram.com</span>
-                <Badge variant="outline" className="text-xs">USD</Badge>
-              </div>
-              <div className="flex items-center gap-3 p-3 border rounded-lg">
-                <span className="font-bold w-6">4</span>
-                <Crown className="w-4 h-4 text-muted-foreground" />
-                <Avatar className="w-8 h-8"><AvatarFallback>SM</AvatarFallback></Avatar>
-                <span className="text-sm flex-1">smmpanel.io</span>
-                <Badge variant="outline" className="text-xs">USD</Badge>
-              </div>
+              <Card className={cn(
+                "border-2",
+                previewAdType === 'sponsored' && "border-amber-500 ring-2 ring-amber-500/20",
+                previewAdType === 'top' && "border-blue-500 ring-2 ring-blue-500/20",
+                previewAdType === 'best' && "border-purple-500 ring-2 ring-purple-500/20",
+                previewAdType === 'featured' && "border-green-500 ring-2 ring-green-500/20"
+              )}>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl font-bold">1</span>
+                      <Crown className="w-5 h-5 text-amber-500" />
+                    </div>
+                    <Avatar className="w-10 h-10">
+                      <AvatarFallback className="bg-primary/10 text-primary font-bold">
+                        {panel?.name?.charAt(0) || 'P'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold">{panel?.name || 'Your Panel'}</span>
+                        {previewAdType === 'sponsored' && (
+                          <Badge className="bg-gradient-to-r from-amber-500 to-yellow-500 text-white text-xs">Sponsored</Badge>
+                        )}
+                        {previewAdType === 'top' && (
+                          <Badge className="bg-blue-500 text-white text-xs">Top</Badge>
+                        )}
+                        {previewAdType === 'best' && (
+                          <Badge className="bg-purple-500 text-white text-xs">Best</Badge>
+                        )}
+                        {previewAdType === 'featured' && (
+                          <Badge className="bg-green-500 text-white text-xs">Featured</Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {panel?.subdomain}.smmpilot.online
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Other providers below */}
+              {[2, 3, 4].map(rank => (
+                <Card key={rank} className="mt-2 opacity-50">
+                  <CardContent className="p-3">
+                    <div className="flex items-center gap-3">
+                      <span className="text-lg font-bold text-muted-foreground">{rank}</span>
+                      <div className="w-8 h-8 rounded-full bg-muted" />
+                      <div className="flex-1">
+                        <div className="h-3 w-24 bg-muted rounded" />
+                        <div className="h-2 w-16 bg-muted rounded mt-1" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           </div>
         </DialogContent>
