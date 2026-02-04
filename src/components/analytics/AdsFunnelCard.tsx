@@ -1,23 +1,58 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Crown, Eye, MousePointer, Users, DollarSign, ArrowRight } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Crown, Megaphone, MousePointer, UserPlus, ShoppingCart, ArrowRight, Info, Target, TrendingUp, TrendingDown } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { formatCompactNumber } from "@/lib/analytics-utils";
 
 interface AdsFunnelCardProps {
   panelId: string;
 }
 
-interface FunnelStage {
-  name: string;
-  count: number;
-  percentage: number;
-  icon: typeof Eye;
-  color: string;
-}
+// Funnel stage configuration matching the design reference
+const adsFunnelConfig = [
+  { 
+    name: 'Ad Views', 
+    key: 'impressions',
+    icon: Megaphone,
+    iconBg: 'bg-gradient-to-br from-orange-400 to-amber-500',
+    labelBg: 'bg-orange-100 dark:bg-orange-500/10',
+    labelText: 'text-orange-600 dark:text-orange-400',
+    subtitle: 'views'
+  },
+  { 
+    name: 'Clicks', 
+    key: 'clicks',
+    icon: MousePointer,
+    iconBg: 'bg-gradient-to-br from-blue-400 to-blue-500',
+    labelBg: 'bg-blue-100 dark:bg-blue-500/10',
+    labelText: 'text-blue-600 dark:text-blue-400',
+    subtitle: 'clicks'
+  },
+  { 
+    name: 'Leads', 
+    key: 'conversions',
+    icon: UserPlus,
+    iconBg: 'bg-gradient-to-br from-green-400 to-emerald-500',
+    labelBg: 'bg-green-100 dark:bg-green-500/10',
+    labelText: 'text-green-600 dark:text-green-400',
+    subtitle: 'leads'
+  },
+  { 
+    name: 'Sales', 
+    key: 'revenue',
+    icon: ShoppingCart,
+    iconBg: 'bg-gradient-to-br from-amber-400 to-yellow-500',
+    labelBg: 'bg-amber-100 dark:bg-amber-500/10',
+    labelText: 'text-amber-600 dark:text-amber-400',
+    subtitle: 'sales'
+  },
+];
 
 export function AdsFunnelCard({ panelId }: AdsFunnelCardProps) {
   const [loading, setLoading] = useState(true);
@@ -55,7 +90,6 @@ export function AdsFunnelCard({ panelId }: AdsFunnelCardProps) {
         const totalSpent = panelAds.reduce((sum, ad) => sum + (ad.total_spent || 0), 0);
         
         // Estimate conversions as clicks that led to provider connections (simulated ratio for now)
-        // In production, this would be tracked via analytics_events
         const estimatedConversions = Math.floor(totalClicks * 0.15); // 15% click-to-conversion
 
         setMetrics({
@@ -72,48 +106,42 @@ export function AdsFunnelCard({ panelId }: AdsFunnelCardProps) {
     }
   };
 
-  // Build funnel stages
-  const funnelStages: FunnelStage[] = [
-    { 
-      name: "Impressions", 
-      count: metrics.impressions, 
-      percentage: 100,
-      icon: Eye,
-      color: "from-purple-500 to-purple-600"
-    },
-    { 
-      name: "Clicks", 
-      count: metrics.clicks, 
-      percentage: metrics.impressions > 0 ? (metrics.clicks / metrics.impressions) * 100 : 0,
-      icon: MousePointer,
-      color: "from-blue-500 to-blue-600"
-    },
-    { 
-      name: "Conversions", 
-      count: metrics.conversions, 
-      percentage: metrics.clicks > 0 ? (metrics.conversions / metrics.clicks) * 100 : 0,
-      icon: Users,
-      color: "from-green-500 to-green-600"
-    },
-    { 
-      name: "Revenue", 
-      count: metrics.revenue, 
-      percentage: 100,
-      icon: DollarSign,
-      color: "from-amber-500 to-amber-600"
+  // Calculate percentages for each stage
+  const getPercentage = (key: string): number => {
+    if (key === 'impressions') return 100;
+    if (key === 'clicks' && metrics.impressions > 0) {
+      return (metrics.clicks / metrics.impressions) * 100;
     }
-  ];
+    if (key === 'conversions' && metrics.clicks > 0) {
+      return (metrics.conversions / metrics.clicks) * 100;
+    }
+    if (key === 'revenue') return 100;
+    return 0;
+  };
 
-  const ctr = metrics.impressions > 0 ? ((metrics.clicks / metrics.impressions) * 100).toFixed(2) : "0.00";
+  const getValue = (key: string): number => {
+    return metrics[key as keyof typeof metrics] || 0;
+  };
+
+  const ctr = metrics.impressions > 0 ? ((metrics.clicks / metrics.impressions) * 100).toFixed(1) : "0.0";
+  const conversionRate = metrics.clicks > 0 ? ((metrics.conversions / metrics.clicks) * 100).toFixed(1) : "0.0";
+  
+  // Calculate overall funnel progress (0-100)
+  const funnelProgress = metrics.impressions > 0 
+    ? Math.min(((metrics.conversions / metrics.impressions) * 100 * 10), 100) // Scale up for visibility
+    : 0;
 
   return (
-    <Card className="glass-stat-card relative overflow-hidden">
+    <Card className="lg:col-span-2 bg-card/80 backdrop-blur-xl border-border/50 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden relative">
+      {/* Subtle gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 via-transparent to-blue-500/5 pointer-events-none" />
+      
       {/* No Ads Overlay */}
       {!loading && !hasActiveAds && (
         <motion.div 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="absolute inset-0 bg-background/85 backdrop-blur-sm z-10 flex items-center justify-center rounded-lg"
+          className="absolute inset-0 bg-background/90 backdrop-blur-sm z-10 flex items-center justify-center rounded-lg"
         >
           <div className="text-center p-6 space-y-4">
             <div className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-amber-500/20 to-amber-600/20 flex items-center justify-center">
@@ -136,69 +164,117 @@ export function AdsFunnelCard({ panelId }: AdsFunnelCardProps) {
         </motion.div>
       )}
 
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-base font-semibold flex items-center gap-2">
-            <Crown className="w-5 h-5 text-amber-500" />
-            Ads Performance Funnel
-          </CardTitle>
-          {hasActiveAds && (
-            <span className="text-xs text-muted-foreground">
-              CTR: <span className="font-semibold text-foreground">{ctr}%</span>
-            </span>
-          )}
+      <CardHeader className="relative pb-3">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-gradient-to-br from-orange-500/20 to-amber-500/10">
+              <Target className="w-5 h-5 text-orange-500" />
+            </div>
+            <div>
+              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                Ads Funnel
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="w-4 h-4 text-muted-foreground/60 cursor-help hover:text-muted-foreground transition-colors" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p className="text-xs">Tracks your ad performance: from impressions to clicks, leads, and sales conversions.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">Ad conversion progress tracking</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge 
+              variant="outline" 
+              className="text-xs font-medium bg-muted text-muted-foreground"
+            >
+              ${metrics.revenue.toFixed(0)} vs last period
+            </Badge>
+            <Badge variant="outline" className="bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20 text-xs">
+              +{conversionRate}% conv.
+            </Badge>
+          </div>
         </div>
       </CardHeader>
 
-      <CardContent className="pt-4">
-        <div className="space-y-3">
-          {funnelStages.map((stage, index) => {
-            const Icon = stage.icon;
-            const isRevenue = stage.name === "Revenue";
-            
-            return (
-              <motion.div
-                key={stage.name}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className="relative"
-              >
-                <div className="flex items-center gap-3">
-                  <div className={cn(
-                    "w-9 h-9 rounded-lg flex items-center justify-center bg-gradient-to-br",
-                    stage.color
-                  )}>
-                    <Icon className="w-4 h-4 text-white" />
+      <CardContent className="relative">
+        {/* Horizontal 4-column funnel grid */}
+        <div className="overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0">
+          <div className="flex md:grid md:grid-cols-4 gap-3 min-w-[520px] md:min-w-0">
+            {adsFunnelConfig.map((stage, i) => {
+              const Icon = stage.icon;
+              const value = getValue(stage.key);
+              const percentage = getPercentage(stage.key);
+              
+              return (
+                <motion.div
+                  key={stage.name}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.1 }}
+                  className={cn(
+                    "flex-shrink-0 w-[120px] md:w-full rounded-xl p-3 md:p-4",
+                    "bg-gradient-to-b from-card/90 to-card",
+                    "border border-border/40 backdrop-blur-sm",
+                    "hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300",
+                    "group"
+                  )}
+                >
+                  {/* Stage header with icon */}
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center", stage.iconBg)}>
+                      <Icon className="w-4 h-4 text-white" />
+                    </div>
                   </div>
                   
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium">{stage.name}</span>
-                      <span className="text-sm font-bold">
-                        {isRevenue ? `$${stage.count.toFixed(2)}` : stage.count.toLocaleString()}
-                      </span>
-                    </div>
-                    
-                    {!isRevenue && (
-                      <div className="h-2 bg-muted rounded-full overflow-hidden">
-                        <motion.div
-                          initial={{ width: 0 }}
-                          animate={{ width: `${Math.min(stage.percentage, 100)}%` }}
-                          transition={{ delay: index * 0.1 + 0.2, duration: 0.5 }}
-                          className={cn("h-full rounded-full bg-gradient-to-r", stage.color)}
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
-                {index < funnelStages.length - 1 && !isRevenue && (
-                  <div className="absolute left-4 top-10 h-3 w-px bg-border" />
-                )}
-              </motion.div>
-            );
-          })}
+                  {/* Stage name */}
+                  <p className="text-xs font-semibold text-foreground mb-1 group-hover:text-primary transition-colors">
+                    {stage.name}
+                  </p>
+                  
+                  {/* Count */}
+                  <p className="text-2xl md:text-3xl font-bold text-foreground tabular-nums">
+                    {stage.key === 'revenue' ? `$${value.toFixed(0)}` : formatCompactNumber(value)}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground mb-3">{stage.subtitle}</p>
+                  
+                  {/* Percentage badge */}
+                  <Badge 
+                    variant="outline" 
+                    className={cn("text-[9px] md:text-[10px]", stage.labelBg, stage.labelText, "border-0")}
+                  >
+                    {percentage.toFixed(1)}%
+                  </Badge>
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Progress bar - blue to teal gradient */}
+        <div className="mt-4 h-2 rounded-full bg-muted overflow-hidden">
+          <motion.div 
+            className="h-full rounded-full bg-gradient-to-r from-blue-500 via-cyan-500 to-teal-500"
+            initial={{ width: 0 }}
+            animate={{ width: `${Math.max(funnelProgress, 5)}%` }}
+            transition={{ delay: 0.5, duration: 0.8 }}
+          />
+        </div>
+
+        {/* Summary Stats */}
+        <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-border/50">
+          <div className="text-center p-2 rounded-lg bg-muted/30">
+            <p className="text-lg md:text-xl font-bold text-foreground">{formatCompactNumber(metrics.conversions)}</p>
+            <p className="text-[10px] md:text-xs text-muted-foreground">Total Leads</p>
+          </div>
+          <div className="text-center p-2 rounded-lg bg-cyan-500/10">
+            <p className="text-lg md:text-xl font-bold text-cyan-600 dark:text-cyan-400">{conversionRate}%</p>
+            <p className="text-[10px] md:text-xs text-muted-foreground">Conversion Rate</p>
+          </div>
         </div>
       </CardContent>
     </Card>

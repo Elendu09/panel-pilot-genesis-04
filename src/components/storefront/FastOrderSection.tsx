@@ -1342,39 +1342,47 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                       </p>
                     </div>
 
-                    {/* Order Summary */}
+                    {/* Order Summary - Enhanced dark mode */}
                     <div className={cn(
                       "p-4 sm:p-5 rounded-2xl border",
                       themeMode === 'dark' 
-                        ? "bg-gradient-to-br from-green-500/10 to-emerald-500/10 border-green-500/20" 
+                        ? "bg-gray-900/80 border-gray-700/50" 
                         : "bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 shadow-lg shadow-green-500/10"
                     )}>
                       <div className="text-center mb-3">
-                        <p className="text-[10px] sm:text-xs uppercase tracking-wider font-semibold mb-1" style={{ color: textMuted }}>
-                          Order Total
+                        <p className={cn(
+                          "text-[10px] sm:text-xs uppercase tracking-widest font-semibold mb-1",
+                          themeMode === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                        )}>
+                          ORDER TOTAL
                         </p>
-                        <p className="text-3xl sm:text-4xl font-bold tabular-nums text-green-500">${formatPrice(totalPrice)}</p>
+                        <p className={cn(
+                          "text-3xl sm:text-4xl font-bold tabular-nums",
+                          themeMode === 'dark' ? 'text-teal-400' : 'text-green-500'
+                        )}>
+                          ${formatPrice(totalPrice)}
+                        </p>
                       </div>
                       
                       <div className={cn(
                         "pt-3 border-t space-y-2 text-xs sm:text-sm",
-                        themeMode === 'dark' ? 'border-green-500/20' : 'border-green-200'
+                        themeMode === 'dark' ? 'border-gray-700/50' : 'border-green-200'
                       )}>
                         <div className="flex justify-between">
-                          <span style={{ color: textMuted }}>Service</span>
-                          <span className="font-medium truncate max-w-[180px] sm:max-w-[220px]" style={{ color: textColor }}>
+                          <span className={themeMode === 'dark' ? 'text-gray-400' : 'text-gray-500'}>Service</span>
+                          <span className={cn("font-medium truncate max-w-[180px] sm:max-w-[220px]", themeMode === 'dark' ? 'text-foreground' : 'text-gray-900')}>
                             {selectedService?.name}
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span style={{ color: textMuted }}>Quantity</span>
-                          <span className="font-semibold tabular-nums" style={{ color: textColor }}>
+                          <span className={themeMode === 'dark' ? 'text-gray-400' : 'text-gray-500'}>Quantity</span>
+                          <span className={cn("font-semibold tabular-nums", themeMode === 'dark' ? 'text-foreground' : 'text-gray-900')}>
                             {quantity.toLocaleString()}
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span style={{ color: textMuted }}>Link</span>
-                          <span className="font-medium truncate max-w-[180px] sm:max-w-[220px] text-blue-500">
+                          <span className={themeMode === 'dark' ? 'text-gray-400' : 'text-gray-500'}>Link</span>
+                          <span className={cn("font-medium truncate max-w-[180px] sm:max-w-[220px]", themeMode === 'dark' ? 'text-teal-400' : 'text-blue-500')}>
                             {targetUrl}
                           </span>
                         </div>
@@ -1418,6 +1426,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                       ) : (
                         paymentMethods.map((method, index) => {
                           const MethodIcon = method.icon;
+                          const isManual = method.id.startsWith('manual_') || method.badge === 'Manual';
                           return (
                             <motion.button
                               key={method.id}
@@ -1431,22 +1440,38 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                                 "w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border transition-all",
                                 selectedPaymentMethod === method.id
                                   ? themeMode === 'dark'
-                                    ? "border-blue-500 bg-blue-500/10 ring-1 ring-blue-500/30"
+                                    ? "border-teal-500/50 bg-gray-800 ring-1 ring-teal-500/20"
                                     : "border-blue-500 bg-blue-50 ring-2 ring-blue-500/30 shadow-lg shadow-blue-500/10"
                                   : themeMode === 'dark'
-                                    ? "border-gray-700 bg-gray-800/60 hover:border-blue-500/40"
+                                    ? "border-gray-700 bg-gray-800/80 hover:border-gray-600"
                                     : "border-gray-200 bg-white hover:border-blue-400 hover:shadow-md"
                               )}
                             >
-                              <div className={cn("p-2 sm:p-2.5 rounded-lg sm:rounded-xl shadow-lg", method.color)}>
+                              <div className={cn(
+                                "p-2 sm:p-2.5 rounded-lg sm:rounded-xl shadow-lg",
+                                themeMode === 'dark' && isManual 
+                                  ? "bg-gradient-to-br from-teal-500 to-cyan-600" 
+                                  : method.color
+                              )}>
                                 <MethodIcon className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                               </div>
                               <div className="flex-1 text-left">
-                                <span className="font-semibold text-sm sm:text-base" style={{ color: textColor }}>
+                                <span className={cn(
+                                  "font-semibold text-sm sm:text-base",
+                                  themeMode === 'dark' ? 'text-foreground' : 'text-gray-900'
+                                )}>
                                   {method.name}
                                 </span>
                                 {method.badge && (
-                                  <Badge variant="secondary" className="ml-2 text-[9px] px-1 py-0 h-4">
+                                  <Badge 
+                                    variant="secondary" 
+                                    className={cn(
+                                      "ml-2 text-[9px] px-1.5 py-0 h-4",
+                                      themeMode === 'dark' && isManual 
+                                        ? "bg-teal-500/20 text-teal-400 border-teal-500/30" 
+                                        : ""
+                                    )}
+                                  >
                                     {method.badge}
                                   </Badge>
                                 )}
@@ -1455,7 +1480,10 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                                 <motion.div
                                   initial={{ scale: 0 }}
                                   animate={{ scale: 1 }}
-                                  className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center"
+                                  className={cn(
+                                    "w-5 h-5 rounded-full flex items-center justify-center",
+                                    themeMode === 'dark' ? "bg-teal-500" : "bg-blue-500"
+                                  )}
                                 >
                                   <Check className="w-3 h-3 text-white" />
                                 </motion.div>
@@ -1466,28 +1494,28 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                       )}
                     </div>
 
-                    {/* Balance Info */}
+                    {/* Balance Info - Enhanced dark mode */}
                     {buyer && (
                       <div className={cn(
                         "p-3 rounded-xl border",
-                        themeMode === 'dark' ? "bg-gray-800/50 border-gray-700" : "bg-gray-50 border-gray-200"
+                        themeMode === 'dark' ? "bg-gray-800/50 border-gray-700/50" : "bg-gray-50 border-gray-200"
                       )}>
                         <div className="flex justify-between text-xs sm:text-sm">
-                          <span style={{ color: textMuted }}>Your Balance:</span>
-                          <span className="font-semibold tabular-nums" style={{ color: textColor }}>
+                          <span className={themeMode === 'dark' ? 'text-gray-400' : 'text-gray-500'}>Your Balance:</span>
+                          <span className={cn("font-semibold tabular-nums", themeMode === 'dark' ? 'text-foreground' : 'text-gray-900')}>
                             ${(buyer.balance || 0).toFixed(2)}
                           </span>
                         </div>
                       </div>
                     )}
 
-                    {/* Pay Button with glow in light mode */}
+                    {/* Pay Button with glow - Enhanced dark mode with green underline */}
                     {!noPaymentGateway && (
                       <Button
                         className={cn(
                           "w-full h-12 sm:h-14 gap-2 text-base sm:text-lg rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 font-semibold text-white transition-all",
                           themeMode === 'dark' 
-                            ? "shadow-lg shadow-green-500/25"
+                            ? "shadow-lg shadow-green-500/25 border-b-2 border-green-400/40"
                             : "shadow-[0_0_24px_rgba(34,197,94,0.4)] hover:shadow-[0_0_32px_rgba(34,197,94,0.5)]"
                         )}
                         size="lg"
