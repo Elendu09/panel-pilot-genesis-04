@@ -1,378 +1,403 @@
 
-# Comprehensive Enhancement Plan: ChatInbox Spacing, Navigation Fixes, Provider Marketplace & Live Support
 
-## Issues Identified
-
-### Issue 1: ChatInbox Mobile Spacing (Three-dot menu too close to cancel button)
-**File:** `src/pages/panel/ChatInbox.tsx` (lines 777-828)
-- The three-dot menu button (`MoreVertical`) and the back button (`ArrowLeft`) are too close together in the mobile sheet header
-- Need to add more spacing between header elements
-
-### Issue 2: Support FAB & Menu Items Redirect to Homepage
-**Root Cause:** Using `window.location.href` instead of React Router's `navigate` function
-- In `ChatInbox.tsx` lines 455-482, handlers use `window.location.href`
-- When on tenant domains (e.g., `panelname.smmpilot.online`), this causes full page reload which triggers `TenantRouter` to redetect the domain type
-- The fix is to use React Router's `useNavigate()` for client-side navigation
-
-**Affected handlers:**
-- `handleManageBalance` (line 462)
-- `handleViewUserOrders` (line 472)
-- `handleViewPaymentHistory` (line 481)
-- `supportFabAction` in `PanelOwnerDashboard.tsx` (line 159)
-
-### Issue 3: Provider Marketplace UI Enhancement
-Based on the uploaded reference image, the marketplace should have:
-1. **Tabbed interface**: Providers | Services | Performers
-2. **Ranked list view** with:
-   - Rank number (1, 2, 3...) with crown icons
-   - Provider logo/avatar
-   - Domain name
-   - "Ads" badge for sponsored providers
-   - Currency badge (USD)
-   - Service tags/badges showing top services
-3. **Switch toggle** for enable/disable instead of just button styling
-
-### Issue 4: Edge Function Error for Direct Providers
-Looking at the edge function, I found one remaining issue:
-- Line 301 still has hardcoded `homeofsmm.com` in the response:
-  ```typescript
-  domain: targetPanel.custom_domain || `${targetPanel.subdomain}.homeofsmm.com`,
-  ```
-- Should use the platform domain constant
-
-### Issue 5: Add Manual Provider Option
-Need to add ability for users who already have accounts on target panels (registered with their panel email) to manually connect using their existing credentials rather than auto-creating new accounts.
+# Comprehensive Enhancement Plan: Fast Order Dark Mode, Ads Funnel Redesign, and Advertising UI
 
 ---
 
-## Implementation Plan
+## Overview
 
-### Part 1: Fix ChatInbox Mobile Spacing
+This plan addresses 4 key requirements based on the uploaded design references:
 
-**File:** `src/pages/panel/ChatInbox.tsx`
+1. **Fast Order Dark Mode Fixes** - Implement the dark UI design shown in the first uploaded image
+2. **Ads Funnel Redesign** - Redesign to match the horizontal 4-column card layout shown in the second image
+3. **Rename Fast Order Funnel** - Change to "Sales Funnel" with "(Fast Order)" subtitle
+4. **Advertising Page UI Restyle** - Match the clean list-based design from the third uploaded image
 
-Update the mobile sheet header layout (lines 775-830):
+---
+
+## Part 1: Fast Order Page Dark Mode Fixes
+
+**File: `src/components/storefront/FastOrderSection.tsx`**
+
+Based on the uploaded dark mode design image, the following fixes are needed:
+
+### Current Issues & Fixes:
+
+| Element | Current State | Fix Required |
+|---------|--------------|--------------|
+| Step indicator circles | May have contrast issues | Orange/green filled circles for completed steps, current step has number ring |
+| "Back to Order" button | Generic styling | Dark card-style button with left arrow, outlined border |
+| Order total card | Gradient style | Solid dark gray background (#1a1a2e style) with subtle border |
+| Price text | Blue/green gradient | Orange/teal accent color for ORDER TOTAL price ($0.8625) |
+| Payment method row | Current button style | Dark card with teal icon container, "Manual" badge, blue checkmark when selected |
+| "Pay Now" button | Green gradient | Solid gradient with subtle bottom glow line (green underline) |
+| Balance row | Basic styling | Subtle bordered dark card with muted text |
+
+### Specific Color Changes for Dark Mode:
+
 ```typescript
-<SheetHeader className="p-4 border-b shrink-0">
-  <div className="flex items-center gap-4"> {/* Increased gap from 3 to 4 */}
-    <Button 
-      variant="ghost" 
-      size="icon" 
-      onClick={() => setChatSheetOpen(false)}
-      className="shrink-0 -ml-1" // Negative margin to align with edge
-    >
-      <ArrowLeft className="w-5 h-5" />
-    </Button>
-    <Avatar className="w-10 h-10 shrink-0">
-      {/* ... */}
-    </Avatar>
-    <div className="flex-1 min-w-0">
-      {/* ... */}
-    </div>
-    
-    {/* Add spacing wrapper for three-dot menu */}
-    <div className="pl-2"> {/* Extra padding to separate from content */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="shrink-0">
-            <MoreVertical className="w-4 h-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        {/* ... */}
-      </DropdownMenu>
-    </div>
+// Update Step 5 payment section colors for dark mode:
+
+// Order Total card styling for dark mode:
+themeMode === 'dark' 
+  ? "bg-gray-900/80 border-gray-700/50" 
+  : "bg-gradient-to-br from-green-50 to-emerald-50 border-green-200"
+
+// Price color - use orange/teal accent in dark mode:
+themeMode === 'dark' ? "text-teal-400" : "text-green-500"
+
+// "ORDER TOTAL" label in dark mode:
+themeMode === 'dark' ? "text-gray-400 uppercase tracking-widest" : "text-gray-500"
+
+// Payment method card in dark mode:
+selectedPaymentMethod === method.id
+  ? themeMode === 'dark'
+    ? "border-blue-500/50 bg-gray-800 ring-1 ring-blue-500/20"
+    : "border-blue-500 bg-blue-50 ring-2 ring-blue-500/30"
+  : themeMode === 'dark'
+    ? "border-gray-700 bg-gray-800/80 hover:border-gray-600"
+    : "border-gray-200 bg-white hover:border-blue-400"
+
+// Balance row dark mode:
+themeMode === 'dark' 
+  ? "bg-gray-800/50 border-gray-700/50" 
+  : "bg-gray-50 border-gray-200"
+
+// "Pay Now" button - add green underline glow:
+themeMode === 'dark' 
+  ? "shadow-lg shadow-green-500/25 border-b-2 border-green-400/40"
+  : "shadow-[0_0_24px_rgba(34,197,94,0.4)]"
+```
+
+### Step Indicator Fixes (lines 880-930):
+
+Update the step circle rendering:
+- Completed steps: Orange/emerald filled circle with white checkmark
+- Current step: Outlined circle with step number
+- Future steps: Outlined circle with muted number
+
+```typescript
+// Completed step circle:
+"w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center",
+index < currentStep 
+  ? "bg-gradient-to-br from-orange-500 to-amber-500" // Orange for completed
+  : index === currentStep
+    ? themeMode === 'dark'
+      ? "border-2 border-primary bg-transparent"
+      : "border-2 border-primary bg-white"
+    : "border-2 border-gray-600 bg-transparent"
+```
+
+---
+
+## Part 2: Ads Funnel Redesign
+
+**File: `src/components/analytics/AdsFunnelCard.tsx`**
+
+Based on the uploaded Ads Funnel design image, completely redesign the component:
+
+### New Design Structure:
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  🎯 Ads Funnel  ⓘ                                                  │
+│  Ad conversion progress tracking                                    │
+│                                                                     │
+│  [$0 vs last period]  [+0.0% conv.]                                │
+│                                                                     │
+│  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐                   │
+│  │ 📢      │ │ 🖱️      │ │ 👥+     │ │ 🛒      │                   │
+│  │ Ad Views│ │ Clicks  │ │ Leads   │ │ Sales   │                   │
+│  │         │ │         │ │         │ │         │                   │
+│  │ 0       │ │ 0       │ │ 0       │ │ 0       │                   │
+│  │ views   │ │ clicks  │ │ leads   │ │ sales   │                   │
+│  │ ┌─────┐ │ │ ┌─────┐ │ │ ┌─────┐ │ │ ┌─────┐ │                   │
+│  │ │0.0% │ │ │ │0.0% │ │ │ │0.0% │ │ │ │0.0% │ │                   │
+│  │ └─────┘ │ │ └─────┘ │ │ └─────┘ │ │ └─────┘ │                   │
+│  └─────────┘ └─────────┘ └─────────┘ └─────────┘                   │
+│                                                                     │
+│  ═══════════════════════════════════════════════                   │
+│  (Progress bar: blue to teal gradient)                              │
+│                                                                     │
+│  ┌─────────────────────┐ ┌─────────────────────┐                   │
+│  │         0           │ │       0.0%          │                   │
+│  │    Total Leads      │ │   Conversion Rate   │                   │
+│  └─────────────────────┘ └─────────────────────┘                   │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Key Visual Elements:
+
+1. **Header**: Target/dart board icon (🎯) with "Ads Funnel" title and info tooltip
+2. **Subtitle**: "Ad conversion progress tracking"
+3. **Badges Row**: "$0 vs last period" (gray) + "+0.0% conv." (blue/teal)
+4. **4 Metric Cards** (horizontal grid):
+   - **Ad Views**: Orange megaphone icon, "views" subtitle, percentage badge
+   - **Clicks**: Blue cursor icon, "clicks" subtitle, percentage badge  
+   - **Leads**: Green user+ icon, "leads" subtitle, percentage badge
+   - **Sales**: Yellow/amber cart icon, "sales" subtitle, percentage badge
+5. **Progress Bar**: Gradient blue-to-teal, shows funnel progress
+6. **Summary Row**: "Total Leads" count + "Conversion Rate" percentage
+
+### Icon and Color Mapping:
+
+```typescript
+const adsFunnelConfig = [
+  { 
+    name: 'Ad Views', 
+    key: 'impressions',
+    icon: Megaphone, // lucide-react
+    iconBg: 'bg-gradient-to-br from-orange-400 to-amber-500',
+    labelBg: 'bg-orange-100 dark:bg-orange-500/10',
+    labelText: 'text-orange-600 dark:text-orange-400',
+    subtitle: 'views'
+  },
+  { 
+    name: 'Clicks', 
+    key: 'clicks',
+    icon: MousePointer,
+    iconBg: 'bg-gradient-to-br from-blue-400 to-blue-500',
+    labelBg: 'bg-blue-100 dark:bg-blue-500/10',
+    labelText: 'text-blue-600 dark:text-blue-400',
+    subtitle: 'clicks'
+  },
+  { 
+    name: 'Leads', 
+    key: 'conversions',
+    icon: UserPlus,
+    iconBg: 'bg-gradient-to-br from-green-400 to-emerald-500',
+    labelBg: 'bg-green-100 dark:bg-green-500/10',
+    labelText: 'text-green-600 dark:text-green-400',
+    subtitle: 'leads'
+  },
+  { 
+    name: 'Sales', 
+    key: 'revenue',
+    icon: ShoppingCart,
+    iconBg: 'bg-gradient-to-br from-amber-400 to-yellow-500',
+    labelBg: 'bg-amber-100 dark:bg-amber-500/10',
+    labelText: 'text-amber-600 dark:text-amber-400',
+    subtitle: 'sales'
+  },
+];
+```
+
+---
+
+## Part 3: Rename Fast Order Funnel
+
+**File: `src/components/analytics/FastOrderAnalyticsCard.tsx`**
+
+### Change Title (lines 58-71):
+
+```typescript
+// FROM:
+<CardTitle className="text-lg font-semibold flex items-center gap-2">
+  Fast Order Funnel
+  <TooltipProvider>...</TooltipProvider>
+</CardTitle>
+<p className="text-xs text-muted-foreground">Quick checkout conversion tracking</p>
+
+// TO:
+<CardTitle className="text-lg font-semibold flex items-center gap-2">
+  Sales Funnel
+  <Badge variant="outline" className="ml-1 text-[10px] font-normal bg-amber-500/10 text-amber-600 border-amber-500/20">
+    Fast Order
+  </Badge>
+  <TooltipProvider>...</TooltipProvider>
+</CardTitle>
+<p className="text-xs text-muted-foreground">Quick checkout conversion tracking</p>
+```
+
+---
+
+## Part 4: Fix Payment Link in More Menu
+
+**File: `src/pages/panel/MoreMenu.tsx`**
+
+### Check Current Link (line 50):
+
+The current implementation already has:
+```typescript
+{ name: "Payment", href: "/panel/payment-methods", icon: CreditCard, color: "text-green-500", bgColor: "bg-green-500/10" },
+```
+
+This is correct. However, if there's an issue with navigation, ensure the route is registered properly in the router configuration.
+
+---
+
+## Part 5: Restyle Advertising Page (ProviderAds)
+
+**File: `src/pages/panel/ProviderAds.tsx`**
+
+Based on the third uploaded image, restyle to a clean vertical list layout:
+
+### New Design Structure:
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  ← Advertising                                                      │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  🔥 Top providers page                                              │
+│     Get in top of the best providers list                          │
+│     $999 for 30 days                                                │
+│     [Get now] [Example]                                             │
+│  ─────────────────────────────────────────────────────────────────  │
+│                                                                     │
+│  📋 Providers list                                                  │
+│     Your panel will be shown in providers page of                   │
+│     control panel                                                   │
+│     $699 for 30 days                                                │
+│     [Get now] [Example]                                             │
+│  ─────────────────────────────────────────────────────────────────  │
+│                                                                     │
+│  ✅ Top services page                                               │
+│     Make your service stand out in the top services                 │
+│     page                                                            │
+│     $299 for 30 days                                                │
+│     [Get now] [Example]                                             │
+│  ─────────────────────────────────────────────────────────────────  │
+│                                                                     │
+│  💬 Direct offers                                                   │
+│     ...                                                             │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Key Changes:
+
+1. **Remove Card Grid**: Switch from 2-column grid to vertical list
+2. **Simpler Icons**: Use flame, list, checkmark, chat icons in colored circles
+3. **Clean Typography**: 
+   - Bold title (e.g., "Top providers page")
+   - Gray description text
+   - Price with "for X days" suffix
+4. **Action Buttons Row**: 
+   - "Get now" button (teal/cyan filled)
+   - "Example" button (teal/cyan outlined)
+5. **Separator Lines**: Between each ad type
+
+### Implementation:
+
+```typescript
+// Replace the grid layout (lines 311-447) with a vertical list:
+
+<TabsContent value="purchase">
+  <div className="space-y-1">
+    {pricing.map((tier, index) => {
+      const config = adTypeConfig[tier.ad_type as keyof typeof adTypeConfig];
+      const Icon = config?.icon || Crown;
+      const duration = selectedDuration[tier.ad_type] || 'monthly'; // Default to monthly
+      const price = getPrice(tier, duration);
+      const isActive = hasActiveAd(tier.ad_type);
+
+      return (
+        <div key={tier.id} className="py-6 border-b border-border/50 last:border-0">
+          <div className="flex items-start gap-4">
+            {/* Icon */}
+            <div className={cn(
+              "w-12 h-12 rounded-xl flex items-center justify-center shrink-0",
+              config?.bgColor
+            )}>
+              <Icon className={cn("w-6 h-6", config?.color)} />
+            </div>
+            
+            {/* Content */}
+            <div className="flex-1 min-w-0">
+              <h3 className="font-bold text-lg capitalize mb-1">
+                {tier.ad_type === 'sponsored' ? 'Top providers page' :
+                 tier.ad_type === 'top' ? 'Providers list' :
+                 tier.ad_type === 'best' ? 'Top services page' :
+                 'Direct offers'}
+              </h3>
+              <p className="text-sm text-muted-foreground mb-3">
+                {tier.description}
+              </p>
+              <p className="text-xl font-bold mb-4">
+                ${price.toFixed(0)} <span className="text-sm font-normal text-muted-foreground">for 30 days</span>
+              </p>
+              
+              {/* Action buttons */}
+              <div className="flex items-center gap-3">
+                <Button
+                  onClick={() => handlePurchase(tier)}
+                  disabled={purchasing === tier.ad_type || isActive || (panel?.balance || 0) < price}
+                  className="bg-cyan-500 hover:bg-cyan-600 text-white px-6"
+                >
+                  {purchasing === tier.ad_type ? (
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  ) : null}
+                  {isActive ? 'Active' : 'Get now'}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setPreviewAdType(tier.ad_type);
+                    setPreviewOpen(true);
+                  }}
+                  className="border-cyan-500 text-cyan-500 hover:bg-cyan-500/10"
+                >
+                  Example
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    })}
   </div>
-</SheetHeader>
-```
-
-### Part 2: Fix Navigation Redirects (Use React Router)
-
-**File:** `src/pages/panel/ChatInbox.tsx`
-
-Replace `window.location.href` with React Router navigation:
-
-```typescript
-// Add import at top
-import { useNavigate } from 'react-router-dom';
-
-// Inside component
-const navigate = useNavigate();
-
-// Update handlers:
-const handleManageBalance = (session: ChatSession | null) => {
-  if (!session) return;
-  toast({ 
-    title: 'Opening Customer Management', 
-    description: `Managing balance for ${session.visitor_name || session.visitor_email || 'visitor'}` 
-  });
-  setChatSheetOpen(false); // Close sheet first on mobile
-  navigate(`/panel/customers?search=${encodeURIComponent(session.visitor_email || session.visitor_id)}`);
-};
-
-const handleViewUserOrders = (session: ChatSession | null) => {
-  if (!session) return;
-  toast({ title: 'Opening Orders' });
-  setChatSheetOpen(false);
-  navigate('/panel/orders');
-};
-
-const handleViewPaymentHistory = (session: ChatSession | null) => {
-  if (!session) return;
-  toast({ title: 'Opening Transactions' });
-  setChatSheetOpen(false);
-  navigate('/panel/transactions');
-};
-```
-
-**File:** `src/pages/PanelOwnerDashboard.tsx`
-
-Fix supportFabAction to use navigate:
-```typescript
-// Already using useNavigate in the file
-const supportFabAction = () => {
-  navigate('/panel/support');
-};
-```
-
-### Part 3: Enhanced Provider Marketplace UI
-
-Based on the reference image, create a ranked list view with:
-
-**File:** `src/pages/panel/ProviderManagement.tsx`
-
-Add tabbed interface inside marketplace section:
-```typescript
-<Tabs defaultValue="providers" className="w-full">
-  <TabsList className="w-full grid grid-cols-3 mb-6">
-    <TabsTrigger value="providers">Providers</TabsTrigger>
-    <TabsTrigger value="services">Services</TabsTrigger>
-    <TabsTrigger value="performers">Performers</TabsTrigger>
-  </TabsList>
-  
-  <TabsContent value="providers">
-    {/* Ranked provider list */}
-  </TabsContent>
-  
-  <TabsContent value="services">
-    <div className="text-center py-12 text-muted-foreground">
-      <Package className="w-12 h-12 mx-auto mb-4 opacity-50" />
-      <p>Coming soon - Top services from featured providers</p>
-    </div>
-  </TabsContent>
-  
-  <TabsContent value="performers">
-    <div className="text-center py-12 text-muted-foreground">
-      <TrendingUp className="w-12 h-12 mx-auto mb-4 opacity-50" />
-      <p>Coming soon - Highest performing providers</p>
-    </div>
-  </TabsContent>
-</Tabs>
-```
-
-**File:** `src/components/providers/ProviderListItem.tsx`
-
-Add ranking display and Switch toggle:
-```typescript
-interface ProviderListItemProps {
-  rank?: number;  // NEW - for ranked display
-  showRank?: boolean;  // NEW
-  showSwitch?: boolean;  // NEW - for enable/disable toggle
-  isEnabled?: boolean;  // NEW
-  onToggle?: (enabled: boolean) => void;  // NEW
-  // ... existing props
-}
-
-// Inside component
-<div className="flex items-center gap-3">
-  {/* Rank with Crown */}
-  {showRank && rank && (
-    <div className="flex items-center gap-1 min-w-[40px]">
-      <span className="text-xl font-bold">{rank}</span>
-      {rank <= 3 && <Crown className="w-4 h-4 text-amber-500" />}
-    </div>
-  )}
-  
-  {/* Avatar */}
-  <Avatar>...</Avatar>
-  
-  {/* Info */}
-  <div>...</div>
-  
-  {/* Badges: Ads, USD */}
-  {adType && <Badge>Ads</Badge>}
-  <Badge variant="outline">USD</Badge>
-</div>
-
-{/* Switch instead of button for connected providers */}
-{showSwitch ? (
-  <Switch checked={isEnabled} onCheckedChange={onToggle} />
-) : (
-  <Button>Enable</Button>
-)}
-```
-
-### Part 4: Fix Edge Function Domain Reference
-
-**File:** `supabase/functions/enable-direct-provider/index.ts`
-
-Line 301-302 - Update to use platform domain:
-```typescript
-// BEFORE (line 301):
-domain: targetPanel.custom_domain || `${targetPanel.subdomain}.homeofsmm.com`,
-
-// AFTER:
-domain: targetPanel.custom_domain || `${targetPanel.subdomain}.${platformDomain}`,
-```
-
-### Part 5: Add Manual Provider Connection Option
-
-**File:** `src/pages/panel/ProviderManagement.tsx`
-
-Add a "Manual Connect" button next to "Enable" for direct providers:
-```typescript
-// In the marketplace section, add dialog for manual connection
-const [manualConnectOpen, setManualConnectOpen] = useState(false);
-const [manualConnectPanel, setManualConnectPanel] = useState<DirectPanel | null>(null);
-const [manualApiKey, setManualApiKey] = useState('');
-
-// Handler
-const handleManualConnect = async (panel: DirectPanel) => {
-  if (!manualApiKey || !panel.id) return;
-  
-  try {
-    // Create provider with user's existing API key
-    const platformDomain = 'smmpilot.online';
-    const apiEndpoint = panel.custom_domain
-      ? `https://${panel.custom_domain}/api/v2`
-      : `https://${panel.subdomain}.${platformDomain}/api/v2`;
-    
-    await supabase.from('providers').insert({
-      panel_id: panel?.id,
-      name: panel.name,
-      api_endpoint: apiEndpoint,
-      api_key: manualApiKey,
-      is_active: true,
-      is_direct: true,
-      source_panel_id: panel.id,
-    });
-    
-    toast({ title: 'Provider connected manually' });
-    fetchProviders();
-    setManualConnectOpen(false);
-  } catch (error) {
-    toast({ variant: 'destructive', title: 'Failed to connect' });
-  }
-};
-```
-
-Add button in ProviderListItem:
-```typescript
-<div className="flex items-center gap-2">
-  <Button variant="outline" size="sm" onClick={() => openManualConnect(provider)}>
-    Manual
-  </Button>
-  <Button size="sm" onClick={onAction}>
-    Enable
-  </Button>
-</div>
-```
-
-Dialog for manual connection:
-```typescript
-<Dialog open={manualConnectOpen} onOpenChange={setManualConnectOpen}>
-  <DialogContent>
-    <DialogHeader>
-      <DialogTitle>Connect with Existing Account</DialogTitle>
-      <DialogDescription>
-        Already have an account on {manualConnectPanel?.name}? Enter your API key to connect.
-      </DialogDescription>
-    </DialogHeader>
-    <div className="space-y-4 py-4">
-      <div className="space-y-2">
-        <Label>API Key</Label>
-        <Input 
-          type="password"
-          value={manualApiKey}
-          onChange={(e) => setManualApiKey(e.target.value)}
-          placeholder="Enter your existing API key"
-        />
-      </div>
-      <p className="text-xs text-muted-foreground">
-        You can find your API key in your account settings on {manualConnectPanel?.name}.
-      </p>
-    </div>
-    <DialogFooter>
-      <Button variant="outline" onClick={() => setManualConnectOpen(false)}>Cancel</Button>
-      <Button onClick={() => handleManualConnect(manualConnectPanel!)}>Connect</Button>
-    </DialogFooter>
-  </DialogContent>
-</Dialog>
+</TabsContent>
 ```
 
 ---
 
-## File Changes Summary
+## Part 6: Ads Management UI Improvements (List)
+
+Based on analysis of the admin `AdsManagement.tsx`, here are areas for potential improvement:
+
+| Area | Current State | Potential Improvement |
+|------|--------------|----------------------|
+| Pricing Configuration | Grid of cards | Could use simpler list rows |
+| Active Ads Table | Basic table | Add status badges, CTR column, quick actions |
+| Performance Tab | Charts + metrics | Add comparison periods, export functionality |
+| Mobile Responsiveness | Tabs work | Cards could stack better |
+| Empty States | Basic text | Add illustrations and CTAs |
+| Bulk Actions | None | Add select-all, bulk pause/unpause |
+
+---
+
+## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/pages/panel/ChatInbox.tsx` | Increase spacing, use `useNavigate()` instead of `window.location.href` |
-| `src/pages/PanelOwnerDashboard.tsx` | Update supportFabAction to use `navigate()` |
-| `src/pages/panel/ProviderManagement.tsx` | Add tabbed marketplace UI, manual connect dialog |
-| `src/components/providers/ProviderListItem.tsx` | Add rank display, Switch toggle, service badges |
-| `supabase/functions/enable-direct-provider/index.ts` | Fix hardcoded domain on line 301 |
+| `src/components/storefront/FastOrderSection.tsx` | Dark mode styling fixes for Step 5 payment section |
+| `src/components/analytics/AdsFunnelCard.tsx` | Complete redesign to horizontal 4-card layout |
+| `src/components/analytics/FastOrderAnalyticsCard.tsx` | Rename to "Sales Funnel (Fast Order)" |
+| `src/pages/panel/ProviderAds.tsx` | Restyle to vertical list layout per reference |
 
 ---
 
-## Visual Design: Enhanced Marketplace Layout
+## Technical Notes
 
-Based on the reference image:
+### Dark Mode Color Palette (from reference image):
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  [Providers]  [Services]  [Performers]                          │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  ┌───────────────────────────────────────────────────────────┐ │
-│  │ 1 👑 ⭐ telegramshop.org        [Ads] [USD]                │ │
-│  │      [📱 Telegram Members] [⭐ Telegram Premium...]        │ │
-│  └───────────────────────────────────────────────────────────┘ │
-│                                                                 │
-│  ┌───────────────────────────────────────────────────────────┐ │
-│  │ 2 👑 🛒 flysmm.com               [USD]                     │ │
-│  │      [📱⭐ Telegram Members [BEST]] [📱 Telegram...]       │ │
-│  └───────────────────────────────────────────────────────────┘ │
-│                                                                 │
-│  ┌───────────────────────────────────────────────────────────┐ │
-│  │ 3 👑 💎 teateagram.com           [USD]    [Manual][Enable] │ │
-│  │      [⭐ Premium subscribers Telegram] [⭐ Premium...]     │ │
-│  └───────────────────────────────────────────────────────────┘ │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+- Background: `#0a0a12` / `rgb(10, 10, 18)`
+- Card Background: `#1a1a2e` / `rgb(26, 26, 46)` 
+- Border: `#2d2d3d` / `rgb(45, 45, 61)`
+- Accent Orange: `#f59e0b` (amber-500)
+- Accent Teal/Cyan: `#14b8a6` (teal-500)
+- Text Primary: `#ffffff`
+- Text Muted: `#9ca3af` (gray-400)
+
+### New Icons Needed:
+
+```typescript
+import { 
+  Megaphone, // For Ad Views
+  UserPlus,  // For Leads
+  ShoppingCart, // For Sales
+  Target // For funnel header icon
+} from 'lucide-react';
 ```
 
-Key visual elements:
-- Rank numbers (1, 2, 3...) with crown icons for top positions
-- Provider logos/avatars
-- Domain names prominently displayed
-- "Ads" badge for sponsored providers (golden gradient)
-- "USD" badge for currency
-- Service tag badges showing sample services
-- Manual + Enable buttons
-- Connected providers show Switch toggle instead
-
----
-
-## Technical Implementation Notes
-
-### Navigation Fix Explanation
-When using `window.location.href`, the browser performs a full page reload. On tenant domains, this triggers `TenantRouter` to re-analyze the domain and potentially route incorrectly. Using React Router's `navigate()` performs client-side navigation, preserving the current routing context.
-
-### Manual Provider Connection Flow
-1. User clicks "Manual" on a direct provider
-2. Dialog opens asking for their existing API key
-3. User enters API key from their account on the target panel
-4. System creates provider record with that API key
-5. System verifies connection by calling balance endpoint
-6. If successful, provider is added to "My Providers"
-
-This bypasses the automated account creation flow for users who already have buyer accounts on target panels.
