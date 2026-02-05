@@ -187,7 +187,7 @@ const VerticalStepProgress = ({
                     className={cn(
                       "relative z-10 flex items-center justify-center w-6 h-6 rounded-full -ml-5 transition-all duration-300",
                       isCompleted 
-                        ? 'bg-primary text-primary-foreground' 
+                        ? 'bg-gradient-to-br from-orange-500 to-amber-500' 
                         : isActive 
                           ? 'border-2 border-primary bg-background'
                           : 'bg-muted border border-border'
@@ -199,7 +199,7 @@ const VerticalStepProgress = ({
                         animate={{ scale: 1 }}
                         transition={{ type: "spring", stiffness: 500 }}
                       >
-                        <Check className="w-3.5 h-3.5 text-primary-foreground" />
+                        <Check className="w-3.5 h-3.5 text-white" />
                       </motion.div>
                     ) : isActive ? (
                       <motion.div 
@@ -218,7 +218,7 @@ const VerticalStepProgress = ({
                       className={cn(
                         "text-sm font-semibold tracking-tight block transition-colors duration-300",
                         isCompleted 
-                          ? 'text-primary'
+                          ? 'text-orange-500'
                           : isActive 
                             ? 'text-foreground'
                             : 'text-muted-foreground'
@@ -291,7 +291,7 @@ const MobileStepProgress = ({ currentStep, themeMode }: { currentStep: number; t
                   className={cn(
                     "flex items-center justify-center w-7 h-7 rounded-full text-[10px] font-bold transition-all duration-300",
                     isCompleted 
-                      ? 'bg-primary text-primary-foreground' 
+                      ? 'bg-gradient-to-br from-orange-500 to-amber-500 text-white' 
                       : isActive 
                         ? 'border-2 border-primary text-primary bg-background'
                         : 'bg-muted text-muted-foreground border border-border'
@@ -304,7 +304,7 @@ const MobileStepProgress = ({ currentStep, themeMode }: { currentStep: number; t
                   isActive 
                     ? 'text-primary'
                     : isCompleted
-                      ? 'text-muted-foreground'
+                      ? 'text-orange-500'
                       : 'text-muted-foreground/70'
                 )}>
                   {step}
@@ -314,7 +314,7 @@ const MobileStepProgress = ({ currentStep, themeMode }: { currentStep: number; t
                 <div className={cn(
                   "w-4 sm:w-6 h-0.5 mx-0.5 rounded-full transition-all duration-500",
                   isCompleted 
-                    ? 'bg-primary' 
+                    ? 'bg-orange-500' 
                     : 'bg-muted'
                 )} />
               )}
@@ -335,6 +335,11 @@ const FastOrderContent = () => {
   const resolvedTheme = theme === 'system' 
     ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
     : theme;
+  
+  // Dark mode background color
+  const pageBgClass = resolvedTheme === 'dark' 
+    ? 'bg-[#0a0a12]' 
+    : 'bg-background';
   
   // Try to get buyer context - may be undefined if not wrapped
   let buyerContext: { buyer: any; panelId?: string } | null = null;
@@ -469,7 +474,7 @@ const FastOrderContent = () => {
 
       <div className={cn(
         "h-screen h-[100dvh] flex flex-col lg:flex-row overflow-hidden transition-colors duration-300 relative",
-        "bg-background"
+        pageBgClass
       )}>
         {/* Enhanced Grid Background Pattern */}
         <EnhancedGridPattern themeMode={themeMode} />

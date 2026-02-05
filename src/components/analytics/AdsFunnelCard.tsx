@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Crown, Megaphone, MousePointer, UserPlus, ShoppingCart, ArrowRight, Info, Target, TrendingUp, TrendingDown } from "lucide-react";
+import { Crown, Megaphone, MousePointer, UserPlus, DollarSign, ArrowRight, Info, Target, TrendingUp, TrendingDown } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
@@ -44,13 +44,13 @@ const adsFunnelConfig = [
     subtitle: 'leads'
   },
   { 
-    name: 'Sales', 
-    key: 'revenue',
-    icon: ShoppingCart,
+    name: 'Total Spent', 
+    key: 'totalSpent',
+    icon: DollarSign,
     iconBg: 'bg-gradient-to-br from-amber-400 to-yellow-500',
     labelBg: 'bg-amber-100 dark:bg-amber-500/10',
     labelText: 'text-amber-600 dark:text-amber-400',
-    subtitle: 'sales'
+    subtitle: 'spent'
   },
 ];
 
@@ -61,7 +61,7 @@ export function AdsFunnelCard({ panelId }: AdsFunnelCardProps) {
     impressions: 0,
     clicks: 0,
     conversions: 0,
-    revenue: 0
+    totalSpent: 0
   });
 
   useEffect(() => {
@@ -96,7 +96,7 @@ export function AdsFunnelCard({ panelId }: AdsFunnelCardProps) {
           impressions: totalImpressions,
           clicks: totalClicks,
           conversions: estimatedConversions,
-          revenue: totalSpent
+          totalSpent: totalSpent
         });
       }
     } catch (error) {
@@ -115,7 +115,7 @@ export function AdsFunnelCard({ panelId }: AdsFunnelCardProps) {
     if (key === 'conversions' && metrics.clicks > 0) {
       return (metrics.conversions / metrics.clicks) * 100;
     }
-    if (key === 'revenue') return 100;
+    if (key === 'totalSpent') return 100;
     return 0;
   };
 
@@ -192,7 +192,7 @@ export function AdsFunnelCard({ panelId }: AdsFunnelCardProps) {
               variant="outline" 
               className="text-xs font-medium bg-muted text-muted-foreground"
             >
-              ${metrics.revenue.toFixed(0)} vs last period
+              ${metrics.totalSpent.toFixed(0)} spent
             </Badge>
             <Badge variant="outline" className="bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20 text-xs">
               +{conversionRate}% conv.
@@ -238,7 +238,7 @@ export function AdsFunnelCard({ panelId }: AdsFunnelCardProps) {
                   
                   {/* Count */}
                   <p className="text-2xl md:text-3xl font-bold text-foreground tabular-nums">
-                    {stage.key === 'revenue' ? `$${value.toFixed(0)}` : formatCompactNumber(value)}
+                    {stage.key === 'totalSpent' ? `$${value.toFixed(0)}` : formatCompactNumber(value)}
                   </p>
                   <p className="text-[10px] text-muted-foreground mb-3">{stage.subtitle}</p>
                   
@@ -268,8 +268,8 @@ export function AdsFunnelCard({ panelId }: AdsFunnelCardProps) {
         {/* Summary Stats */}
         <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-border/50">
           <div className="text-center p-2 rounded-lg bg-muted/30">
-            <p className="text-lg md:text-xl font-bold text-foreground">{formatCompactNumber(metrics.conversions)}</p>
-            <p className="text-[10px] md:text-xs text-muted-foreground">Total Leads</p>
+            <p className="text-lg md:text-xl font-bold text-foreground">${formatCompactNumber(metrics.totalSpent)}</p>
+            <p className="text-[10px] md:text-xs text-muted-foreground">Total Spent</p>
           </div>
           <div className="text-center p-2 rounded-lg bg-cyan-500/10">
             <p className="text-lg md:text-xl font-bold text-cyan-600 dark:text-cyan-400">{conversionRate}%</p>

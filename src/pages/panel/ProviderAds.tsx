@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { 
   Crown, 
   Trophy, 
@@ -21,7 +22,9 @@ import {
   ArrowLeft,
   Flame,
   List,
-  MessageSquare
+  MessageSquare,
+  LayoutGrid,
+  ListOrdered
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -119,6 +122,7 @@ const ProviderAds = () => {
   const [selectedDuration, setSelectedDuration] = useState<Record<string, string>>({});
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewAdType, setPreviewAdType] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'cards' | 'list'>('cards');
 
   useEffect(() => {
     if (panel?.id) {
@@ -296,6 +300,155 @@ const ProviderAds = () => {
 
         {/* Purchase Ads - Clean vertical list layout per reference design */}
         <TabsContent value="purchase">
+          {/* View Mode Toggle */}
+          <div className="flex items-center justify-end mb-4">
+            <ToggleGroup type="single" value={viewMode} onValueChange={(v) => v && setViewMode(v as 'cards' | 'list')}>
+              <ToggleGroupItem value="cards" aria-label="Card view">
+                <LayoutGrid className="w-4 h-4" />
+              </ToggleGroupItem>
+              <ToggleGroupItem value="list" aria-label="List view">
+                <ListOrdered className="w-4 h-4" />
+              </ToggleGroupItem>
+            </ToggleGroup>
+          </div>
+
+          {/* Card Grid View */}
+          {viewMode === 'cards' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              {pricing.map((tier, index) => {
+                const config = adTypeConfig[tier.ad_type as keyof typeof adTypeConfig];
+                const Icon = config?.icon || Crown;
+                const duration = selectedDuration[tier.ad_type] || 'monthly';
+                const price = getPrice(tier, duration);
+                const days = getDurationDays(duration);
+                const isActive = hasActiveAd(tier.ad_type);
+
+                return (
+                  <motion.div
+                    key={tier.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                  >
+                    <Card className={cn(
+                      "glass-card overflow-hidden transition-all hover:shadow-xl",
+                      isActive && "ring-2 ring-green-500/50"
+                    )}>
+                      {/* Gradient Header */}
+                      <div className={cn(
+                        "h-2 bg-gradient-to-r",
+                        config?.gradient ? `from-${config.gradient.split(' ')[0].replace('from-', '')} to-${config.gradient.split(' ')[1]?.replace('to-', '') || 'primary'}` : 'from-primary to-primary/80'
+                      )} style={{
+                        background: `linear-gradient(to right, var(--${tier.ad_type === 'sponsored' ? 'tw-orange-500' : tier.ad_type === 'top' ? 'tw-blue-500' : tier.ad_type === 'best' ? 'tw-emerald-500' : 'tw-purple-500'}), var(--${tier.ad_type === 'sponsored' ? 'tw-amber-500' : tier.ad_type === 'top' ? 'tw-cyan-500' : tier.ad_type === 'best' ? 'tw-green-500' : 'tw-pink-500'}))`
+                      }} />
+                      
+                      <CardHeader className="pb-2">
+                        <div className="flex items-center gap-3">
+                          <div className={cn(
+                            "w-12 h-12 rounded-xl flex items-center justify-center",
+                            config?.bgColor
+                          )}>
+                            <Icon className={cn("w-6 h-6", config?.color)} />
+                          </div>
+                          <div>
+                            <CardTitle className="text-base">
+                              {config?.title || tier.ad_type}
+                            </CardTitle>
+                            {isActive && (
+                              <Badge className="bg-green-500/10 text-green-500 border-green-500/20 text-xs mt-1">
+                                Active
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </CardHeader>
+                      
+                      <CardContent className="space-y-4">
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {tier.description || "Boost your visibility in the marketplace"}
+                        </p>
+                        
+                        {/* Benefits list */}
+                        {config?.benefits && (
+                          <ul className="space-y-1.5">
+                            {config.benefits.slice(0, 3).map((benefit, i) => (
+                              <li key={i} className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <Check className="w-3 h-3 text-green-500" />
+                                {benefit}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                        
+                        {/* Duration & Price */}
+                        <div className="pt-3 border-t border-border/50">
+                          <Select 
+                            value={duration}
+                            onValueChange={(v) => setSelectedDuration({
+                              ...selectedDuration,
+                              [tier.ad_type]: v
+                            })}
+                          >
+                            <SelectTrigger className="w-full h-9 text-sm mb-3">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="daily">1 Day</SelectItem>
+                              <SelectItem value="weekly">7 Days</SelectItem>
+                              <SelectItem value="monthly">30 Days</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="text-2xl font-bold">${price.toFixed(0)}</span>
+                            <span className="text-xs text-muted-foreground">for {days} days</span>
+                          </div>
+                          
+                          <div className="flex gap-2">
+                            <Button
+                              onClick={() => handlePurchase(tier)}
+                              disabled={purchasing === tier.ad_type || isActive || (panel?.balance || 0) < price}
+                              className="flex-1 bg-cyan-500 hover:bg-cyan-600 text-white"
+                              size="sm"
+                            >
+                              {purchasing === tier.ad_type ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : isActive ? (
+                                'Active'
+                              ) : (
+                                'Get now'
+                              )}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setPreviewAdType(tier.ad_type);
+                                setPreviewOpen(true);
+                              }}
+                              className="border-cyan-500/50 text-cyan-500 hover:bg-cyan-500/10"
+                            >
+                              Preview
+                            </Button>
+                          </div>
+                          
+                          {(panel?.balance || 0) < price && !isActive && (
+                            <p className="flex items-center gap-1 text-xs text-amber-500 mt-2">
+                              <AlertCircle className="w-3 h-3" />
+                              Insufficient balance
+                            </p>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* List View */}
+          {viewMode === 'list' && (
           <div className="space-y-1">
             {pricing.map((tier, index) => {
               const config = adTypeConfig[tier.ad_type as keyof typeof adTypeConfig];
@@ -402,6 +555,7 @@ const ProviderAds = () => {
               );
             })}
           </div>
+          )}
           
           {/* Balance card at bottom */}
           <Card className="glass-card mt-6">
