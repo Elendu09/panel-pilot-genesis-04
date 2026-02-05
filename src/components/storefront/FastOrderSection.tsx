@@ -174,10 +174,10 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
   
   // True dark/light mode card styles
   const cardBg = themeMode === 'dark' 
-    ? 'bg-gray-900/80 backdrop-blur-xl border-gray-800 shadow-2xl shadow-black/30' 
+    ? 'bg-[#1a1a2e] backdrop-blur-xl border-[#2d2d3d] shadow-2xl shadow-black/30' 
     : 'bg-white backdrop-blur-xl shadow-xl shadow-gray-200/60 border-gray-200';
   const inputBg = themeMode === 'dark' 
-    ? 'bg-gray-800 border-gray-700 focus:border-blue-500/50 focus:ring-blue-500/20' 
+    ? 'bg-[#1a1a2e] border-[#2d2d3d] focus:border-teal-500/50 focus:ring-teal-500/20 text-white placeholder:text-gray-500' 
     : 'bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-500/20 shadow-sm';
   
   // Blue glow button style for light mode
@@ -928,7 +928,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                             className={cn(
                               "relative flex flex-col items-center gap-2 sm:gap-3 p-3 sm:p-4 rounded-xl sm:rounded-2xl border transition-all duration-300 group overflow-hidden",
                               themeMode === 'dark'
-                                ? "border-gray-700 bg-gray-800/60 hover:bg-gray-800 hover:border-blue-500/50"
+                                ? "border-[#2d2d3d] bg-[#1a1a2e]/60 hover:bg-[#1a1a2e] hover:border-teal-500/50"
                                 : "border-gray-200 bg-white hover:bg-blue-50/50 hover:border-blue-400 shadow-sm hover:shadow-lg hover:shadow-blue-500/10"
                             )}
                           >
@@ -1025,7 +1025,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                             className={cn(
                               "relative flex flex-col items-center gap-2 sm:gap-3 p-3 sm:p-4 rounded-xl sm:rounded-2xl border transition-all duration-300 group overflow-hidden",
                               themeMode === 'dark'
-                                ? "border-gray-700 bg-gray-800/60 hover:bg-gray-800 hover:border-blue-500/50"
+                                ? "border-[#2d2d3d] bg-[#1a1a2e]/60 hover:bg-[#1a1a2e] hover:border-teal-500/50"
                                 : "border-gray-200 bg-white hover:bg-blue-50/50 hover:border-blue-400 shadow-sm hover:shadow-lg hover:shadow-blue-500/10"
                             )}
                           >
@@ -1131,10 +1131,10 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                               "p-2 sm:p-2.5 rounded-lg border text-left transition-all",
                               selectedServiceId === service.id
                                 ? themeMode === 'dark'
-                                  ? "border-blue-500 bg-blue-500/10 ring-1 ring-blue-500/30"
+                                  ? "border-teal-500 bg-teal-500/10 ring-1 ring-teal-500/30"
                                   : "border-blue-500 bg-blue-50 ring-2 ring-blue-500/30"
                                 : themeMode === 'dark'
-                                  ? "border-gray-700 bg-gray-800/60 hover:border-blue-500/40"
+                                  ? "border-[#2d2d3d] bg-[#1a1a2e]/60 hover:border-teal-500/40"
                                   : "border-gray-200 bg-white hover:border-blue-400"
                             )}
                           >
