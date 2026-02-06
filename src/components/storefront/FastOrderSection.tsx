@@ -900,13 +900,13 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                       </Badge>
                       <h3 className={cn(
                         "text-xl sm:text-2xl font-bold mb-2 tracking-tight",
-                        themeMode === 'dark' ? 'text-foreground' : 'text-gray-900'
+                        themeMode === 'dark' ? 'text-white' : 'text-gray-900'
                       )}>
                         Select a Network
                       </h3>
                       <p className={cn(
                         "text-sm",
-                        themeMode === 'dark' ? 'text-muted-foreground' : 'text-gray-600'
+                        themeMode === 'dark' ? 'text-gray-400' : 'text-gray-600'
                       )}>
                         Choose the platform you want to boost
                       </p>
@@ -948,13 +948,13 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                             <div className="text-center relative">
                               <span className={cn(
                                 "text-xs sm:text-sm font-semibold capitalize block tracking-tight",
-                                themeMode === 'dark' ? 'text-foreground' : 'text-gray-900'
+                                themeMode === 'dark' ? 'text-white' : 'text-gray-900'
                               )}>
                                 {network.label}
                               </span>
                               <span className={cn(
                                 "text-[10px] sm:text-xs",
-                                themeMode === 'dark' ? 'text-muted-foreground' : 'text-gray-600'
+                                themeMode === 'dark' ? 'text-gray-400' : 'text-gray-600'
                               )}>
                                 {network.count} service{network.count !== 1 ? 's' : ''}
                               </span>
@@ -997,13 +997,13 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                       
                       <h3 className={cn(
                         "text-xl sm:text-2xl font-bold mb-2 tracking-tight",
-                        themeMode === 'dark' ? 'text-foreground' : 'text-gray-900'
+                        themeMode === 'dark' ? 'text-white' : 'text-gray-900'
                       )}>
                         Select a Category
                       </h3>
                       <p className={cn(
                         "text-sm",
-                        themeMode === 'dark' ? 'text-muted-foreground' : 'text-gray-600'
+                        themeMode === 'dark' ? 'text-gray-400' : 'text-gray-600'
                       )}>
                         Choose the type of service you need
                       </p>
@@ -1038,13 +1038,13 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                             <div className="text-center relative">
                               <span className={cn(
                                 "text-xs sm:text-sm font-semibold capitalize block tracking-tight",
-                                themeMode === 'dark' ? 'text-foreground' : 'text-gray-900'
+                                themeMode === 'dark' ? 'text-white' : 'text-gray-900'
                               )}>
                                 {category.name}
                               </span>
                               <span className={cn(
                                 "text-[10px] sm:text-xs",
-                                themeMode === 'dark' ? 'text-muted-foreground' : 'text-gray-600'
+                                themeMode === 'dark' ? 'text-gray-400' : 'text-gray-600'
                               )}>
                                 {category.count} service{category.count !== 1 ? 's' : ''}
                               </span>
@@ -1092,13 +1092,13 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                       
                       <h3 className={cn(
                         "text-xl sm:text-2xl font-bold mb-2 tracking-tight",
-                        themeMode === 'dark' ? 'text-foreground' : 'text-gray-900'
+                        themeMode === 'dark' ? 'text-white' : 'text-gray-900'
                       )}>
                         Choose a Service
                       </h3>
                       <p className={cn(
                         "text-sm",
-                        themeMode === 'dark' ? 'text-muted-foreground' : 'text-gray-600'
+                        themeMode === 'dark' ? 'text-gray-400' : 'text-gray-600'
                       )}>
                         {categoryServices.length} services available
                       </p>
@@ -1155,11 +1155,17 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                             <Badge variant="secondary" className="text-[7px] font-mono px-0.5 py-0 h-3 mb-0.5">
                               {service.provider_service_id || service.id?.slice(0, 6)}
                             </Badge>
-                            <p className="text-[10px] sm:text-xs line-clamp-1" style={{ color: textMuted }}>
+                            <p className={cn(
+                              "text-[10px] sm:text-xs line-clamp-1",
+                              themeMode === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                            )}>
                               {service.name}
                             </p>
                             <div className="flex items-center justify-between mt-0.5">
-                              <p className="text-[9px] sm:text-[10px]" style={{ color: textMuted }}>
+                              <p className={cn(
+                                "text-[9px] sm:text-[10px]",
+                                themeMode === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                              )}>
                                 Min: {service.min_quantity || 100}
                               </p>
                               <SpeedGauge 
@@ -1209,13 +1215,13 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                       
                       <h3 className={cn(
                         "text-xl sm:text-2xl font-bold mb-2 tracking-tight",
-                        themeMode === 'dark' ? 'text-foreground' : 'text-gray-900'
+                        themeMode === 'dark' ? 'text-white' : 'text-gray-900'
                       )}>
                         Order Details
                       </h3>
                       <p className={cn(
                         "text-xs sm:text-sm truncate max-w-xs mx-auto",
-                        themeMode === 'dark' ? 'text-muted-foreground' : 'text-gray-600'
+                        themeMode === 'dark' ? 'text-gray-400' : 'text-gray-600'
                       )}>
                         {selectedService?.name}
                       </p>
@@ -1223,7 +1229,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                     
                     {/* Target URL */}
                     <div className="space-y-2">
-                      <Label className={cn("font-semibold text-sm", themeMode === 'dark' ? 'text-foreground' : 'text-gray-900')}>Link / Username *</Label>
+                      <Label className={cn("font-semibold text-sm", themeMode === 'dark' ? 'text-white' : 'text-gray-900')}>Link / Username *</Label>
                       <Input
                         placeholder="https://instagram.com/yourprofile"
                         value={targetUrl}
@@ -1234,7 +1240,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
 
                     {/* Quantity */}
                     <div className="space-y-2">
-                      <Label className={cn("font-semibold text-sm", themeMode === 'dark' ? 'text-foreground' : 'text-gray-900')}>Quantity</Label>
+                      <Label className={cn("font-semibold text-sm", themeMode === 'dark' ? 'text-white' : 'text-gray-900')}>Quantity</Label>
                       <div className="flex flex-wrap gap-1.5 sm:gap-2 mb-2">
                         {quantityPresets.map((preset) => (
                           <Button
@@ -1261,7 +1267,10 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                         className={cn("rounded-xl tabular-nums text-sm", inputBg)}
                       />
                       {selectedService && (
-                        <p className="text-[10px] sm:text-xs" style={{ color: textMuted }}>
+                        <p className={cn(
+                          "text-[10px] sm:text-xs",
+                          themeMode === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                        )}>
                           Min: {selectedService.min_quantity || 100} | Max: {(selectedService.max_quantity || 10000).toLocaleString()}
                         </p>
                       )}
@@ -1334,10 +1343,16 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                       )}>
                         Step 5 of 6
                       </Badge>
-                      <h3 className="text-xl sm:text-2xl font-bold mb-2 tracking-tight" style={{ color: textColor }}>
+                      <h3 className={cn(
+                        "text-xl sm:text-2xl font-bold mb-2 tracking-tight",
+                        themeMode === 'dark' ? 'text-white' : 'text-gray-900'
+                      )}>
                         Complete Payment
                       </h3>
-                      <p className="text-xs sm:text-sm" style={{ color: textMuted }}>
+                      <p className={cn(
+                        "text-xs sm:text-sm",
+                        themeMode === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                      )}>
                         Select a payment method to complete your order
                       </p>
                     </div>
