@@ -35,9 +35,9 @@ export function FastOrderAnalyticsCard({
   conversionRate,
   growthTrend
 }: FastOrderAnalyticsCardProps) {
-  // Use provided stages or generate mock data
+  // Use provided stages - show real zeros when no data (no mock data)
   const displayStages = stages.length > 0 ? stages : [
-    { name: 'Visitors', count: 0, percentage: 100, dropOff: 0 },
+    { name: 'Visitors', count: 0, percentage: 0, dropOff: 0 },
     { name: 'Selections', count: 0, percentage: 0, dropOff: 0 },
     { name: 'Checkout', count: 0, percentage: 0, dropOff: 0 },
     { name: 'Completed', count: 0, percentage: 0, dropOff: 0 },

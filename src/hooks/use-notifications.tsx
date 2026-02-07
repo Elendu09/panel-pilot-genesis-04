@@ -32,9 +32,9 @@ const getActionUrlFromType = (type: string | null, title: string): string | unde
   // Orders
   if (type === 'order' || lowTitle.includes('order')) return '/panel/orders';
   
-  // Deposit from tenants -> Payment Methods (Transactions tab)
+  // Deposit from tenants -> Payments (Transactions tab)
   if (lowTitle.includes('deposit') || lowTitle.includes('pending verification') || lowTitle.includes('manual transfer') || lowTitle.includes('buyer payment')) {
-    return '/panel/payment-methods?tab=transactions';
+    return '/panel/payments?tab=transactions';
   }
   
   // Subscription/balance/commission -> Billing  
@@ -42,8 +42,8 @@ const getActionUrlFromType = (type: string | null, title: string): string | unde
     return '/panel/billing';
   }
   
-  // Generic payment type -> Payment Methods
-  if (type === 'payment') return '/panel/payment-methods?tab=transactions';
+  // Generic payment type -> Payments
+  if (type === 'payment') return '/panel/payments?tab=transactions';
   
   if (type === 'provider' || lowTitle.includes('provider') || lowTitle.includes('sync')) return '/panel/providers';
   if (lowTitle.includes('domain') || lowTitle.includes('dns') || lowTitle.includes('ssl')) return '/panel/domain';
