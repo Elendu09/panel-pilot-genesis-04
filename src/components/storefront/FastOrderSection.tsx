@@ -1385,13 +1385,13 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                       )}>
                         <div className="flex justify-between">
                           <span className={themeMode === 'dark' ? 'text-gray-400' : 'text-gray-500'}>Service</span>
-                          <span className={cn("font-medium truncate max-w-[180px] sm:max-w-[220px]", themeMode === 'dark' ? 'text-foreground' : 'text-gray-900')}>
+                          <span className={cn("font-medium truncate max-w-[180px] sm:max-w-[220px]", themeMode === 'dark' ? 'text-white' : 'text-gray-900')}>
                             {selectedService?.name}
                           </span>
                         </div>
                         <div className="flex justify-between">
                           <span className={themeMode === 'dark' ? 'text-gray-400' : 'text-gray-500'}>Quantity</span>
-                          <span className={cn("font-semibold tabular-nums", themeMode === 'dark' ? 'text-foreground' : 'text-gray-900')}>
+                          <span className={cn("font-semibold tabular-nums", themeMode === 'dark' ? 'text-white' : 'text-gray-900')}>
                             {quantity.toLocaleString()}
                           </span>
                         </div>
@@ -1471,9 +1471,9 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                                 <MethodIcon className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                               </div>
                               <div className="flex-1 text-left">
-                                <span className={cn(
+                              <span className={cn(
                                   "font-semibold text-sm sm:text-base",
-                                  themeMode === 'dark' ? 'text-foreground' : 'text-gray-900'
+                                  themeMode === 'dark' ? 'text-white' : 'text-gray-900'
                                 )}>
                                   {method.name}
                                 </span>
@@ -1517,7 +1517,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                       )}>
                         <div className="flex justify-between text-xs sm:text-sm">
                           <span className={themeMode === 'dark' ? 'text-gray-400' : 'text-gray-500'}>Your Balance:</span>
-                          <span className={cn("font-semibold tabular-nums", themeMode === 'dark' ? 'text-foreground' : 'text-gray-900')}>
+                          <span className={cn("font-semibold tabular-nums", themeMode === 'dark' ? 'text-white' : 'text-gray-900')}>
                             ${(buyer.balance || 0).toFixed(2)}
                           </span>
                         </div>
@@ -1638,7 +1638,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
 
       {/* Guest Signup Modal */}
       <Dialog open={showGuestModal} onOpenChange={handleModalClose}>
-        <DialogContent className="max-w-[95vw] sm:max-w-md w-full overflow-hidden p-2 xs:p-3 sm:p-6 mx-1 sm:mx-auto max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] sm:max-w-md w-full overflow-hidden overflow-x-hidden p-2 xs:p-3 sm:p-6 mx-1 sm:mx-auto max-h-[90vh] overflow-y-auto">
           {/* Modal Progress Indicator - Compact on mobile */}
           <div className="flex items-center justify-center gap-1.5 sm:gap-2 mb-2">
             <div className={cn(
@@ -1711,7 +1711,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
+          <div className="space-y-4 py-4 w-full overflow-hidden">
             {accountCreated ? (
               <>
                 {/* Credentials Display - Mobile responsive */}
@@ -1860,38 +1860,38 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
               </>
             ) : (
               <>
-                <div className="space-y-2">
+                <div className="space-y-2 w-full">
                   <Label>Email *</Label>
-                  <div className="relative">
+                  <div className="relative w-full">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                       type="email"
                       placeholder="your@email.com"
                       value={guestEmail}
                       onChange={(e) => setGuestEmail(e.target.value)}
-                      className="pl-10"
+                      className="pl-10 w-full"
                     />
                   </div>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2 w-full">
                   <Label>Name (Optional)</Label>
-                  <div className="relative">
+                  <div className="relative w-full">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                       type="text"
                       placeholder="Your name"
                       value={guestName}
                       onChange={(e) => setGuestName(e.target.value)}
-                      className="pl-10"
+                      className="pl-10 w-full"
                     />
                   </div>
                 </div>
 
                 {selectedService && (
-                  <div className="p-3 bg-muted/50 rounded-lg">
+                  <div className="p-3 bg-muted/50 rounded-lg w-full overflow-hidden">
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Service:</span>
-                      <span className="font-medium truncate ml-2">{selectedService.name}</span>
+                      <span className="text-muted-foreground shrink-0">Service:</span>
+                      <span className="font-medium truncate ml-2 max-w-[60%]">{selectedService.name}</span>
                     </div>
                     <div className="flex justify-between text-sm mt-1">
                       <span className="text-muted-foreground">Quantity:</span>
@@ -1905,7 +1905,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                 )}
 
                 <Button 
-                  className="w-full bg-blue-500 hover:bg-blue-600" 
+                  className="w-full max-w-full bg-blue-500 hover:bg-blue-600" 
                   onClick={handleGuestSignup}
                   disabled={isGuestSignup || !guestEmail}
                 >
