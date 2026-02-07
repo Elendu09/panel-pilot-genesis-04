@@ -1,510 +1,324 @@
 
-
-# Comprehensive Enhancement Plan: Fast Order Dark Mode, Payment Route, Analytics Tracking, Strategic Ad Placements & Purchase UI
-
----
-
-## Executive Summary
-
-This plan addresses 5 major areas based on the user's requirements and uploaded reference images:
-
-1. **Fast Order Dark Mode Text Visibility** - Fix text contrast across ALL steps (not just payment)
-2. **Payment Route Fix** - Update `/panel/payment` to `/panel/payments`
-3. **Analytics Tracking** - Fix fake data issues and implement real visitor tracking
-4. **Strategic Ad Placements** - Add ads to Chat Inbox (as promotional messages) and fix provider marketplace display
-5. **Purchase Management UI Enhancement** - Improve "My Ads" section styling
+# Comprehensive Fix Plan: Dark Mode Text Visibility, Mobile Responsiveness, and Trend Indicators
 
 ---
 
-## Part 1: Fast Order Dark Mode Text Visibility (All Steps)
+## Issues Identified
 
-Based on the uploaded reference images, the current implementation has text visibility issues where platform names and service counts are barely visible in dark mode.
+### Issue 1: Fast Order Dark Mode Text Visibility (All Steps)
+Based on the uploaded screenshots, text elements like "Select a Network", "Complete Payment", and step labels are black/invisible in dark mode.
 
-### Files to Modify
+**Root Cause Analysis:**
+Looking at `FastOrderSection.tsx`:
+- The step indicator text on lines 893-912 uses theme-aware colors (`themeMode === 'dark' ? 'text-white'`)
+- However, the step badge text (lines 893-899) and subtitles still use default colors that may not contrast well
+- The main issue is that the outer step indicator header (showing step names like "Network", "Category", "Service", "Order", "Pay") is not explicitly styled for dark mode
+
+**Files Affected:**
 - `src/components/storefront/FastOrderSection.tsx`
 
-### Dark Mode Color Palette (from reference)
-| Element | Current Issue | Fix |
-|---------|--------------|-----|
-| Network names (e.g., "Other", "Instagram") | Using `text-foreground` which may not be visible | Use explicit `text-white` for dark mode |
-| Service counts (e.g., "385 services") | Using `text-muted-foreground` which is too dim | Use `text-gray-300` for better contrast |
-| Card backgrounds | May blend with page | Use `bg-[#1a1a2e]` with clear borders |
-| Step badges | Blue-tinted | Keep as reference shows orange accent style |
-| Main titles | Inconsistent contrast | Ensure explicit white in dark mode |
+### Issue 2: Complete Payment UI Dark Mode
+The payment method cards and text need better contrast in dark mode.
 
-### Specific Fixes
-
-**Step 1 - Network Selection (lines 915-965):**
+**Current State (lines 1474-1478):**
 ```typescript
-// Network name - ensure visibility
 <span className={cn(
-  "text-xs sm:text-sm font-semibold capitalize block tracking-tight",
-  themeMode === 'dark' ? 'text-white' : 'text-gray-900'  // Changed from text-foreground
+  "font-semibold text-sm sm:text-base",
+  themeMode === 'dark' ? 'text-foreground' : 'text-gray-900'
 )}>
-  {network.label}
-</span>
-// Service count
-<span className={cn(
-  "text-[10px] sm:text-xs",
-  themeMode === 'dark' ? 'text-gray-300' : 'text-gray-600'  // Lighter for visibility
-)}>
-  {network.count} service{network.count !== 1 ? 's' : ''}
-</span>
 ```
 
-**Step 2 - Category Selection (lines 1038-1052):**
+**Issue:** Using `text-foreground` in dark mode may not provide enough contrast. Should use explicit `text-white`.
+
+### Issue 3: Quick Checkout Modal Mobile Responsiveness
+From the uploaded screenshot, the email input fields and button extend outside the visible area on mobile.
+
+**Current State (lines 1641, 1867-1918):**
 ```typescript
-// Category name
-<span className={cn(
-  "text-xs sm:text-sm font-semibold capitalize block tracking-tight",
-  themeMode === 'dark' ? 'text-white' : 'text-gray-900'
-)}>
-  {category.name}
-</span>
-// Count
-<span className={cn(
-  "text-[10px] sm:text-xs",
-  themeMode === 'dark' ? 'text-gray-300' : 'text-gray-600'
-)}>
-  {category.count} service{category.count !== 1 ? 's' : ''}
-</span>
+<DialogContent className="max-w-[95vw] sm:max-w-md w-full overflow-hidden p-2 xs:p-3 sm:p-6...">
+...
+<Input
+  type="email"
+  placeholder="your@email.com"
+  value={guestEmail}
+  onChange={(e) => setGuestEmail(e.target.value)}
+  className="pl-10"  // No width constraints
+/>
 ```
 
-**Step 3 - Service Selection (lines 1155-1175):**
+**Issue:** Input fields don't have proper width constraints (`w-full`) and the form container needs `overflow-x-hidden`.
+
+### Issue 4: Trend Indicators (Up/Down Based on Real Data)
+The user asks if trend indicators are real or mock.
+
+**Current State:**
+- **FastOrderAnalyticsCard** (lines 82-94): Already implemented with functional up/down/neutral trends from `changes.orders`
+- **Analytics.tsx** (lines 479-487): `calculateChange()` function calculates real trends by comparing current vs previous period data
+- **AdsFunnelCard**: Does NOT currently show trend indicators
+- **ProviderAds (My Ads)**: Does NOT show trend indicators for individual ad performance
+
+**Conclusion:** The trends in FastOrderAnalyticsCard ARE real and based on actual data. However, AdsFunnelCard and My Ads section don't have period comparison trends - they only show current totals.
+
+---
+
+## Implementation Plan
+
+### Part 1: Fast Order Dark Mode Text Fixes (All Steps)
+
+**File:** `src/components/storefront/FastOrderSection.tsx`
+
+#### 1.1 Step Indicator Labels
+The step progress indicator (Network, Category, Service, Order, Pay) needs explicit white text in dark mode.
+
+Find the step indicator header section and ensure all labels use:
 ```typescript
-// Service name
-<p className={cn(
-  "text-[10px] sm:text-xs line-clamp-1",
-  themeMode === 'dark' ? 'text-gray-300' : 'text-gray-600'
-)}>
-  {service.name}
-</p>
-// Min quantity
-<p className={cn(
-  "text-[9px] sm:text-[10px]",
-  themeMode === 'dark' ? 'text-gray-400' : 'text-gray-500'
-)}>
-  Min: {service.min_quantity || 100}
-</p>
+className={cn(
+  "text-xs font-medium",
+  themeMode === 'dark' ? 'text-gray-300' : 'text-gray-500'
+)}
 ```
 
-**Step 4 - Order Details (lines 1226-1290):**
+#### 1.2 Badge Text Visibility
+Update step badges (e.g., "Step 1 of 6") to have better contrast:
 ```typescript
-// Labels
-<Label className={cn(
-  "font-semibold text-sm", 
-  themeMode === 'dark' ? 'text-white' : 'text-gray-900'
-)}>Link / Username *</Label>
-
-// Min/Max text
-<p className={cn(
-  "text-[10px] sm:text-xs",
-  themeMode === 'dark' ? 'text-gray-400' : 'text-gray-500'
+<Badge className={cn(
+  "mb-3 font-semibold",
+  themeMode === 'dark' 
+    ? 'bg-orange-500/20 text-orange-300 border-orange-500/30' // Change from blue to orange per design
+    : 'bg-blue-50 text-blue-600 border-blue-200'
 )}>
-  Min: {selectedService.min_quantity || 100} | Max: {(selectedService.max_quantity || 10000).toLocaleString()}
-</p>
 ```
 
-**All Steps - Main Title Enhancement:**
+#### 1.3 Main Title Headers (All Steps)
+Ensure all "Select a Network", "Choose a Category", etc. titles use:
 ```typescript
-// Ensure all step titles use explicit white in dark mode
-<h3 className={cn(
+className={cn(
   "text-xl sm:text-2xl font-bold mb-2 tracking-tight",
   themeMode === 'dark' ? 'text-white' : 'text-gray-900'
+)}
+```
+
+#### 1.4 Subtitle Text
+Ensure subtitles like "Choose the platform you want to boost" use:
+```typescript
+className={cn(
+  "text-sm",
+  themeMode === 'dark' ? 'text-gray-400' : 'text-gray-600'
+)}
+```
+
+### Part 2: Complete Payment UI Dark Mode
+
+**File:** `src/components/storefront/FastOrderSection.tsx`
+
+#### 2.1 Payment Method Name Text (lines 1474-1478)
+Change from `text-foreground` to explicit `text-white`:
+```typescript
+<span className={cn(
+  "font-semibold text-sm sm:text-base",
+  themeMode === 'dark' ? 'text-white' : 'text-gray-900'  // Changed from text-foreground
 )}>
+  {method.name}
+</span>
+```
+
+#### 2.2 Order Summary Service/Quantity/Link Labels (lines 1386-1403)
+Ensure explicit white text for values:
+```typescript
+<span className={cn(
+  "font-medium truncate max-w-[180px] sm:max-w-[220px]", 
+  themeMode === 'dark' ? 'text-white' : 'text-gray-900'  // Changed from text-foreground
+)}>
+  {selectedService?.name}
+</span>
+```
+
+#### 2.3 Balance Display Text (lines 1518-1521)
+```typescript
+<span className={cn(
+  "font-semibold tabular-nums", 
+  themeMode === 'dark' ? 'text-white' : 'text-gray-900'  // Changed from text-foreground
+)}>
+  ${(buyer.balance || 0).toFixed(2)}
+</span>
+```
+
+### Part 3: Quick Checkout Modal Mobile Responsiveness
+
+**File:** `src/components/storefront/FastOrderSection.tsx`
+
+#### 3.1 Dialog Content Container (line 1641)
+Add overflow control:
+```typescript
+<DialogContent className="max-w-[95vw] sm:max-w-md w-full overflow-hidden overflow-x-hidden p-2 xs:p-3 sm:p-6 mx-1 sm:mx-auto max-h-[90vh] overflow-y-auto">
+```
+
+#### 3.2 Form Container (lines 1714, 1862-1931)
+Wrap the form in a container with proper overflow:
+```typescript
+<div className="space-y-4 py-4 w-full overflow-hidden">
+```
+
+#### 3.3 Input Fields (lines 1867, 1880)
+Ensure inputs don't overflow:
+```typescript
+<div className="relative w-full">
+  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+  <Input
+    type="email"
+    placeholder="your@email.com"
+    value={guestEmail}
+    onChange={(e) => setGuestEmail(e.target.value)}
+    className="pl-10 w-full"  // Added w-full
+  />
+</div>
+```
+
+#### 3.4 Service Summary Card (lines 1891-1904)
+Ensure the service name truncates properly:
+```typescript
+<div className="flex justify-between text-sm">
+  <span className="text-muted-foreground shrink-0">Service:</span>
+  <span className="font-medium truncate ml-2 max-w-[60%]">{selectedService.name}</span>
+</div>
+```
+
+#### 3.5 Button Width (lines 1907-1918)
+Ensure button doesn't overflow:
+```typescript
+<Button 
+  className="w-full max-w-full bg-blue-500 hover:bg-blue-600" 
+  onClick={handleGuestSignup}
+  disabled={isGuestSignup || !guestEmail}
+>
+```
+
+### Part 4: Functional Trend Indicators (Up/Down Based on Real Data)
+
+#### 4.1 FastOrderAnalyticsCard - Already Functional ✓
+The `growthTrend` prop receives real data from `changes.orders` which is calculated using `calculateChange()` function that compares current vs previous period.
+
+No changes needed - this is already working correctly.
+
+#### 4.2 AdsFunnelCard - Add Period Comparison Trends
+
+**File:** `src/components/analytics/AdsFunnelCard.tsx`
+
+Add period comparison by storing previous period metrics:
+```typescript
+const [previousMetrics, setPreviousMetrics] = useState({
+  impressions: 0,
+  clicks: 0,
+  conversions: 0,
+  totalSpent: 0
+});
+
+// In fetchAdsData, calculate trends:
+const getTrend = (current: number, previous: number): 'up' | 'down' | 'neutral' => {
+  if (previous === 0) return current > 0 ? 'up' : 'neutral';
+  const change = ((current - previous) / previous) * 100;
+  if (change > 5) return 'up';
+  if (change < -5) return 'down';
+  return 'neutral';
+};
+
+const getChangeValue = (current: number, previous: number): string => {
+  if (previous === 0) return current > 0 ? '+100%' : '0%';
+  const change = ((current - previous) / previous) * 100;
+  return `${change >= 0 ? '+' : ''}${change.toFixed(0)}%`;
+};
+```
+
+Update the header badges to show real trends:
+```typescript
+<Badge 
+  variant="outline" 
+  className={cn(
+    "text-xs font-medium",
+    overallTrend === 'up' 
+      ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+      : overallTrend === 'down'
+      ? "bg-red-500/10 text-red-500 border-red-500/20"
+      : "bg-muted text-muted-foreground"
+  )}
+>
+  {overallTrend === 'up' && <TrendingUp className="w-3 h-3 mr-1" />}
+  {overallTrend === 'down' && <TrendingDown className="w-3 h-3 mr-1" />}
+  {spentChange} vs last period
+</Badge>
+```
+
+#### 4.3 ProviderAds (My Ads) - Add Performance Trends
+
+**File:** `src/pages/panel/ProviderAds.tsx`
+
+For each ad in the My Ads section, add trend indicators based on comparing first half vs second half of the ad duration, or daily averages:
+
+```typescript
+// Calculate daily average and trend
+const totalDays = differenceInDays(new Date(ad.expires_at), new Date(ad.starts_at)) || 1;
+const elapsedDays = differenceInDays(new Date(), new Date(ad.starts_at)) || 1;
+const dailyImpressionAvg = ad.impressions / Math.max(elapsedDays, 1);
+const expectedImpressions = dailyImpressionAvg * totalDays;
+
+// Trend: is performance meeting expectations?
+const performanceTrend = ad.impressions >= (expectedImpressions * 0.5) ? 'up' : 'down';
+```
+
+Add trend icon next to CTR display:
+```typescript
+<div className="flex items-center justify-center gap-1 mb-1">
+  <TrendingUp className="w-3 h-3 text-green-500" />
+  <span className="text-lg font-bold">
+    {ad.impressions > 0 ? ((ad.clicks / ad.impressions) * 100).toFixed(1) : '0'}%
+  </span>
+  {performanceTrend === 'up' ? (
+    <TrendingUp className="w-3 h-3 text-emerald-500" />
+  ) : (
+    <TrendingDown className="w-3 h-3 text-red-500" />
+  )}
+</div>
 ```
 
 ---
 
-## Part 2: Payment Route Fix
-
-### Current State
-- **MoreMenu.tsx line 50:** Routes to `/panel/payment` 
-- **Router line 467:** Uses `payments` (with 's')
-- **Mismatch:** MoreMenu points to `/panel/payment` but route is `/panel/payments`
-
-### Files to Modify
-- `src/pages/panel/MoreMenu.tsx` (line 50)
-
-### Fix
-Change from `/panel/payment` to `/panel/payments`:
-```typescript
-// Line 50
-{ name: "Payment", href: "/panel/payments", icon: CreditCard, color: "text-green-500", bgColor: "bg-green-500/10" },
-```
-
-### Additional Cleanup
-Also update these files that reference `/panel/payment-methods`:
-- `src/hooks/use-notifications.tsx` (lines 37, 46)
-- `src/pages/panel/PanelOverview.tsx` (line 586)
-- `src/components/billing/PaymentMethodsQuickAccess.tsx` (line 120)
-
----
-
-## Part 3: Analytics Tracking - Fix Fake Data & Real Tracking
-
-### Current Issues
-1. `FastOrderAnalyticsCard.tsx` generates mock data when stages are empty (line 39-44)
-2. Analytics events are tracked but may not be properly aggregated
-3. Need to verify RLS policies allow proper event tracking
-
-### Files to Modify
-- `src/pages/panel/Analytics.tsx` - Fix data fetching for Fast Order funnel
-- `src/hooks/use-analytics-tracking.tsx` - Enhance tracking calls
-- `src/components/analytics/FastOrderAnalyticsCard.tsx` - Remove mock data fallback
-
-### Fixes
-
-**1. Remove Mock Data Fallback (FastOrderAnalyticsCard.tsx):**
-```typescript
-// Line 39-44 - Show real zeros instead of mock
-const displayStages = stages.length > 0 ? stages : [
-  { name: 'Visitors', count: 0, percentage: 0, dropOff: 0 },
-  { name: 'Selections', count: 0, percentage: 0, dropOff: 0 },
-  { name: 'Checkout', count: 0, percentage: 0, dropOff: 0 },
-  { name: 'Completed', count: 0, percentage: 0, dropOff: 0 },
-];
-```
-
-**2. Enhance Tracking in FastOrderSection (ensure events fire):**
-```typescript
-// Track page visit on mount (line 163)
-useEffect(() => {
-  if (panelId) {
-    trackPageVisit('fast_order');
-  }
-}, [panelId, trackPageVisit]);
-
-// Track step changes with deduplication disabled for step progression
-useEffect(() => {
-  if (currentStep > 1) {
-    trackFastOrderStep(currentStep, `step_${currentStep}`);
-  }
-}, [currentStep]);
-```
-
-**3. Fix Analytics.tsx Data Fetching:**
-Ensure `buildFastOrderFunnel` properly queries analytics_events table by panel_id and aggregates:
-- `fast_order_visit` events → Visitors
-- `service_select` events → Selections  
-- `checkout_start` events → Checkout
-- `order_complete` events → Completed
-
----
-
-## Part 4: Strategic Ad Placements
-
-### Current Issues
-1. Ads only show in Provider Management marketplace
-2. Users complain of low impressions - ads not visible enough
-3. All providers showing in marketplace, making sponsored ads blend in
-
-### New Ad Placement Strategy
-
-**Location 1: Chat Inbox - Promotional Messages**
-
-Add sponsored panel promotions as message-style cards in the chat list.
-
-**File:** `src/pages/panel/ChatInbox.tsx`
-
-```typescript
-// Add promotional message card between chat sessions
-interface SponsoredPromotion {
-  panel_id: string;
-  panel_name: string;
-  logo_url: string;
-  ad_type: string;
-  tagline: string;
-}
-
-// In chat list, intersperse sponsored promotions every 5 sessions
-{chatSessions.map((session, index) => (
-  <>
-    {/* Show sponsored ad every 5 sessions */}
-    {index > 0 && index % 5 === 0 && sponsoredPanels.length > 0 && (
-      <div className="p-3 border-b border-border/50 bg-gradient-to-r from-amber-500/5 to-amber-500/10">
-        <div className="flex items-center gap-3">
-          <Badge className="bg-amber-500/10 text-amber-500 text-[9px]">Sponsored</Badge>
-          <Avatar className="w-8 h-8">
-            <AvatarImage src={sponsoredPanels[index % sponsoredPanels.length].logo_url} />
-          </Avatar>
-          <div className="flex-1">
-            <p className="text-sm font-medium">{sponsoredPanels[...].panel_name}</p>
-            <p className="text-xs text-muted-foreground">Check out their services →</p>
-          </div>
-        </div>
-      </div>
-    )}
-    {/* Regular chat session */}
-    <ChatSessionCard session={session} />
-  </>
-))}
-```
-
-**Location 2: Provider Marketplace - Dedicated "Sponsored" Section**
-
-**File:** `src/pages/panel/ProviderManagement.tsx`
-
-Separate sponsored providers into their own clearly marked section:
-
-```typescript
-// Split providers into sponsored vs regular
-const sponsoredProviders = directProviders.filter(p => p.ad_type);
-const regularProviders = directProviders.filter(p => !p.ad_type);
-
-return (
-  <>
-    {/* Sponsored Section - Always visible first */}
-    {sponsoredProviders.length > 0 && (
-      <div className="mb-8">
-        <div className="flex items-center gap-2 mb-4">
-          <Crown className="w-5 h-5 text-amber-500" />
-          <h3 className="font-bold text-lg">Sponsored Providers</h3>
-          <Badge className="bg-amber-500/10 text-amber-500">Ads</Badge>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {sponsoredProviders.map((provider, index) => (
-            <SponsoredProviderCard 
-              key={provider.id}
-              provider={provider}
-              rank={index + 1}
-            />
-          ))}
-        </div>
-      </div>
-    )}
-    
-    {/* Regular Providers Section */}
-    <div>
-      <h3 className="font-bold text-lg mb-4">All Providers</h3>
-      {/* Paginate to show fewer at a time */}
-      <div className="grid gap-2">
-        {regularProviders.slice(0, visibleCount).map((provider, index) => (
-          <ProviderListItem 
-            provider={provider}
-            rank={sponsoredProviders.length + index + 1}
-          />
-        ))}
-      </div>
-      {regularProviders.length > visibleCount && (
-        <Button onClick={() => setVisibleCount(prev => prev + 10)}>
-          Load More
-        </Button>
-      )}
-    </div>
-  </>
-);
-```
-
-**Location 3: Storefront Widget Area**
-
-Add subtle sponsored provider recommendation in the FloatingChatWidget:
-```typescript
-// In chat widget, after FAQ section
-{sponsoredPanel && (
-  <div className="p-3 border-t border-border/50 bg-gradient-to-r from-primary/5 to-primary/10">
-    <p className="text-xs text-muted-foreground mb-2">Recommended</p>
-    <div className="flex items-center gap-2">
-      <Avatar className="w-6 h-6">
-        <AvatarImage src={sponsoredPanel.logo_url} />
-      </Avatar>
-      <span className="text-sm font-medium">{sponsoredPanel.name}</span>
-      <Badge className="ml-auto text-[9px]">Visit</Badge>
-    </div>
-  </div>
-)}
-```
-
----
-
-## Part 5: Purchase Management UI Enhancement ("My Ads" Section)
-
-### Current State
-The "Purchase Ads" tab has good card/list toggle UI, but "My Ads" section (lines 580-644) uses basic styling.
-
-### File to Modify
-- `src/pages/panel/ProviderAds.tsx`
-
-### Enhancements
-
-**1. Empty State Enhancement:**
-```typescript
-{myAds.length === 0 ? (
-  <Card className="glass-card bg-gradient-to-br from-amber-500/5 to-amber-500/10 border-amber-500/20">
-    <CardContent className="py-16 text-center">
-      <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-amber-500/20 to-amber-500/10 flex items-center justify-center">
-        <Crown className="w-10 h-10 text-amber-500" />
-      </div>
-      <h3 className="text-xl font-bold mb-2">No Active Ads</h3>
-      <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
-        Boost your panel's visibility in the marketplace by purchasing an advertisement
-      </p>
-      <Button 
-        onClick={() => setActiveTab('purchase')}
-        className="gap-2 bg-gradient-to-r from-amber-500 to-amber-600"
-      >
-        <Sparkles className="w-4 h-4" />
-        Browse Ad Options
-      </Button>
-    </CardContent>
-  </Card>
-) : (
-  // Active ads list with enhanced styling
-)}
-```
-
-**2. Active Ads Card Enhancement:**
-```typescript
-{myAds.map((ad) => {
-  const config = adTypeConfig[ad.ad_type];
-  const Icon = config?.icon || Crown;
-  const daysLeft = differenceInDays(new Date(ad.expires_at), new Date());
-  const isExpired = daysLeft < 0;
-  const isExpiringSoon = daysLeft <= 3 && daysLeft >= 0;
-
-  return (
-    <Card 
-      key={ad.id} 
-      className={cn(
-        "glass-card overflow-hidden transition-all",
-        isExpired && "opacity-50 grayscale",
-        isExpiringSoon && "ring-2 ring-amber-500/50",
-        ad.is_active && !isExpired && "ring-1 ring-green-500/30"
-      )}
-    >
-      {/* Status bar at top */}
-      <div className={cn(
-        "h-1.5",
-        isExpired ? "bg-red-500" : isExpiringSoon ? "bg-amber-500" : "bg-green-500"
-      )} />
-      
-      <CardContent className="p-5">
-        <div className="flex items-center gap-4">
-          {/* Icon with gradient background */}
-          <div className={cn(
-            "w-14 h-14 rounded-xl flex items-center justify-center shrink-0",
-            `bg-gradient-to-br ${config?.gradient}`
-          )}>
-            <Icon className="w-7 h-7 text-white" />
-          </div>
-          
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <h3 className="font-bold text-lg capitalize">{config?.title || ad.ad_type}</h3>
-              <Badge className={cn(
-                isExpired 
-                  ? "bg-red-500/10 text-red-500 border-red-500/20" 
-                  : isExpiringSoon
-                  ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
-                  : "bg-green-500/10 text-green-500 border-green-500/20"
-              )}>
-                {isExpired ? 'Expired' : isExpiringSoon ? `${daysLeft}d left` : 'Active'}
-              </Badge>
-            </div>
-            
-            <p className="text-sm text-muted-foreground">
-              Started {format(new Date(ad.starts_at), 'MMM d, yyyy')} • 
-              Ends {format(new Date(ad.expires_at), 'MMM d, yyyy')}
-            </p>
-          </div>
-        </div>
-        
-        {/* Performance metrics with visual bars */}
-        <div className="grid grid-cols-4 gap-4 mt-4 pt-4 border-t border-border/50">
-          <div className="text-center">
-            <div className="flex items-center justify-center gap-1 mb-1">
-              <Eye className="w-3 h-3 text-blue-500" />
-              <span className="text-lg font-bold">{formatCompactNumber(ad.impressions)}</span>
-            </div>
-            <p className="text-[10px] text-muted-foreground">Views</p>
-          </div>
-          <div className="text-center">
-            <div className="flex items-center justify-center gap-1 mb-1">
-              <MousePointer className="w-3 h-3 text-purple-500" />
-              <span className="text-lg font-bold">{formatCompactNumber(ad.clicks)}</span>
-            </div>
-            <p className="text-[10px] text-muted-foreground">Clicks</p>
-          </div>
-          <div className="text-center">
-            <div className="flex items-center justify-center gap-1 mb-1">
-              <TrendingUp className="w-3 h-3 text-green-500" />
-              <span className="text-lg font-bold">
-                {ad.impressions > 0 ? ((ad.clicks / ad.impressions) * 100).toFixed(1) : '0'}%
-              </span>
-            </div>
-            <p className="text-[10px] text-muted-foreground">CTR</p>
-          </div>
-          <div className="text-center">
-            <div className="flex items-center justify-center gap-1 mb-1">
-              <DollarSign className="w-3 h-3 text-amber-500" />
-              <span className="text-lg font-bold">${ad.total_spent.toFixed(0)}</span>
-            </div>
-            <p className="text-[10px] text-muted-foreground">Spent</p>
-          </div>
-        </div>
-        
-        {/* Action buttons for expiring/expired ads */}
-        {(isExpired || isExpiringSoon) && (
-          <div className="mt-4 pt-4 border-t border-border/50">
-            <Button 
-              className="w-full gap-2 bg-gradient-to-r from-amber-500 to-amber-600"
-              onClick={() => handleRenewAd(ad)}
-            >
-              <RefreshCw className="w-4 h-4" />
-              {isExpired ? 'Reactivate Ad' : 'Extend Duration'}
-            </Button>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-})}
-```
-
----
-
-## Files to Modify Summary
+## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/components/storefront/FastOrderSection.tsx` | Fix dark mode text visibility in ALL steps |
-| `src/pages/panel/MoreMenu.tsx` | Change `/panel/payment` to `/panel/payments` |
-| `src/hooks/use-notifications.tsx` | Update payment-methods references |
-| `src/components/analytics/FastOrderAnalyticsCard.tsx` | Remove mock data, show real zeros |
-| `src/pages/panel/Analytics.tsx` | Ensure proper event aggregation |
-| `src/pages/panel/ChatInbox.tsx` | Add sponsored promotional messages |
-| `src/pages/panel/ProviderManagement.tsx` | Separate sponsored section, add pagination |
-| `src/pages/panel/ProviderAds.tsx` | Enhance "My Ads" section UI |
+| `src/components/storefront/FastOrderSection.tsx` | Dark mode text fixes across all steps, payment UI, Quick Checkout mobile responsiveness |
+| `src/components/analytics/AdsFunnelCard.tsx` | Add period comparison for real up/down trends |
+| `src/pages/panel/ProviderAds.tsx` | Add performance trend indicators to My Ads section |
 
 ---
 
-## Technical Implementation Notes
+## Technical Notes
 
-### Dark Mode Text Contrast
-The reference image shows:
-- Platform names (Instagram, Facebook, etc.) should be **white** text
-- Service counts should be **light gray** (not the current muted foreground which is too dark)
-- Card backgrounds use `#1a1a2e` with `#2d2d3d` borders
+### Dark Mode Color Palette (per design reference)
+- Background: `#0a0a12`
+- Card Background: `#1a1a2e`
+- Border: `#2d2d3d`
+- Primary Text: `text-white`
+- Secondary Text: `text-gray-300` or `text-gray-400`
+- Accent (completed steps): Orange gradient (`from-orange-500 to-amber-500`)
+- Accent (selection): Teal (`teal-500`)
+- Accent (price): Teal (`text-teal-400`)
 
-### Analytics Tracking Flow
-```text
-1. User visits Fast Order page → track 'fast_order_visit'
-2. User selects service → track 'service_select' 
-3. User fills details & clicks checkout → track 'checkout_start'
-4. Order completes → track 'order_complete'
-
-Events stored in analytics_events table with:
-- panel_id (for tenant isolation)
-- session_id (for unique visitor counting)
-- event_type (for funnel stage identification)
-```
-
-### Ad Impression Tracking
-When ads are displayed in new locations (Chat Inbox, etc.), increment the `impressions` count:
+### Trend Calculation Logic
 ```typescript
-await supabase
-  .from('provider_ads')
-  .update({ impressions: ad.impressions + 1 })
-  .eq('id', ad.id);
+// calculateChange from analytics-utils.ts
+const change = previousValue === 0 
+  ? (currentValue > 0 ? 100 : 0)
+  : ((currentValue - previousValue) / previousValue) * 100;
+
+return {
+  value: `${change >= 0 ? '+' : ''}${change.toFixed(0)}%`,
+  trend: change > 5 ? 'up' : change < -5 ? 'down' : 'neutral'
+};
 ```
 
+### Mobile Responsiveness Best Practices
+- Use `w-full` on all input fields
+- Add `overflow-hidden` on containers
+- Use `truncate` with `max-w-[X%]` for dynamic text
+- Ensure buttons don't exceed container width with `max-w-full`
