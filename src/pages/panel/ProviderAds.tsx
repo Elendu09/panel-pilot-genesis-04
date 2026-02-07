@@ -576,18 +576,14 @@ const ProviderAds = () => {
           </Card>
         </TabsContent>
 
-        {/* My Ads - Enhanced UI */}
+        {/* My Ads */}
         <TabsContent value="my-ads">
           {myAds.length === 0 ? (
-            <Card className="glass-card bg-gradient-to-br from-amber-500/5 to-amber-500/10 border-amber-500/20">
-              <CardContent className="py-16 text-center">
-                <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-amber-500/20 to-amber-500/10 flex items-center justify-center">
-                  <Crown className="w-10 h-10 text-amber-500" />
-                </div>
-                <h3 className="text-xl font-bold mb-2">No Active Ads</h3>
-                <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
-                  Boost your panel's visibility in the marketplace by purchasing an advertisement
-                </p>
+            <Card className="glass-card">
+              <CardContent className="py-12 text-center">
+                <Crown className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="font-semibold mb-2">No Active Ads</h3>
+                <p className="text-muted-foreground mb-4">Purchase an ad to boost your panel's visibility</p>
               </CardContent>
             </Card>
           ) : (
@@ -597,88 +593,46 @@ const ProviderAds = () => {
                 const Icon = config?.icon || Crown;
                 const daysLeft = differenceInDays(new Date(ad.expires_at), new Date());
                 const isExpired = daysLeft < 0;
-                const isExpiringSoon = daysLeft <= 3 && daysLeft >= 0;
 
                 return (
-                  <Card 
-                    key={ad.id} 
-                    className={cn(
-                      "glass-card overflow-hidden transition-all",
-                      isExpired && "opacity-50 grayscale",
-                      isExpiringSoon && "ring-2 ring-amber-500/50",
-                      ad.is_active && !isExpired && "ring-1 ring-green-500/30"
-                    )}
-                  >
-                    {/* Status bar at top */}
-                    <div className={cn(
-                      "h-1.5",
-                      isExpired ? "bg-red-500" : isExpiringSoon ? "bg-amber-500" : "bg-green-500"
-                    )} />
-                    
-                    <CardContent className="p-5">
+                  <Card key={ad.id} className={cn("glass-card", isExpired && "opacity-60")}>
+                    <CardContent className="p-4">
                       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div className="flex items-center gap-4">
-                          {/* Icon with gradient background */}
-                          <div className={cn(
-                            "w-14 h-14 rounded-xl flex items-center justify-center shrink-0",
-                            config?.bgColor
-                          )}>
-                            <Icon className={cn("w-7 h-7", config?.color)} />
+                        <div className="flex items-center gap-3">
+                          <div className={cn("p-2 rounded-xl", config?.bgColor)}>
+                            <Icon className={cn("w-5 h-5", config?.color)} />
                           </div>
-                          
                           <div>
-                            <div className="flex items-center gap-2 mb-1">
-                              <h3 className="font-bold text-lg capitalize">{config?.title || ad.ad_type}</h3>
-                              <Badge className={cn(
-                                isExpired 
-                                  ? "bg-red-500/10 text-red-500 border-red-500/20" 
-                                  : isExpiringSoon
-                                  ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
-                                  : "bg-green-500/10 text-green-500 border-green-500/20"
-                              )}>
-                                {isExpired ? 'Expired' : isExpiringSoon ? `${daysLeft}d left` : 'Active'}
-                              </Badge>
+                            <h3 className="font-semibold capitalize">{config?.title || ad.ad_type}</h3>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Calendar className="w-3 h-3" />
+                              {isExpired ? (
+                                <span className="text-red-500">Expired</span>
+                              ) : (
+                                <span>{daysLeft} days left</span>
+                              )}
                             </div>
-                            
-                            <p className="text-sm text-muted-foreground">
-                              Started {format(new Date(ad.starts_at), 'MMM d, yyyy')} • 
-                              Ends {format(new Date(ad.expires_at), 'MMM d, yyyy')}
-                            </p>
                           </div>
                         </div>
                         
-                        {/* Performance metrics */}
                         <div className="flex items-center gap-4 text-sm">
-                          <div className="text-center px-3 py-2 rounded-lg bg-muted/50">
-                            <div className="flex items-center justify-center gap-1 mb-1">
-                              <Eye className="w-3 h-3 text-blue-500" />
-                              <span className="text-lg font-bold">{ad.impressions.toLocaleString()}</span>
-                            </div>
-                            <p className="text-[10px] text-muted-foreground">Views</p>
+                          <div className="text-center">
+                            <p className="font-bold">{ad.impressions.toLocaleString()}</p>
+                            <p className="text-xs text-muted-foreground">Views</p>
                           </div>
-                          <div className="text-center px-3 py-2 rounded-lg bg-muted/50">
-                            <div className="flex items-center justify-center gap-1 mb-1">
-                              <MousePointer className="w-3 h-3 text-purple-500" />
-                              <span className="text-lg font-bold">{ad.clicks.toLocaleString()}</span>
-                            </div>
-                            <p className="text-[10px] text-muted-foreground">Clicks</p>
+                          <div className="text-center">
+                            <p className="font-bold">{ad.clicks.toLocaleString()}</p>
+                            <p className="text-xs text-muted-foreground">Clicks</p>
                           </div>
-                          <div className="text-center px-3 py-2 rounded-lg bg-muted/50">
-                            <div className="flex items-center justify-center gap-1 mb-1">
-                              <TrendingUp className="w-3 h-3 text-green-500" />
-                              <span className="text-lg font-bold">
-                                {ad.impressions > 0 ? ((ad.clicks / ad.impressions) * 100).toFixed(1) : '0'}%
-                              </span>
-                            </div>
-                            <p className="text-[10px] text-muted-foreground">CTR</p>
+                          <div className="text-center">
+                            <p className="font-bold">
+                              {ad.impressions > 0 ? ((ad.clicks / ad.impressions) * 100).toFixed(1) : '0'}%
+                            </p>
+                            <p className="text-xs text-muted-foreground">CTR</p>
                           </div>
-                          <div className="text-center px-3 py-2 rounded-lg bg-amber-500/10">
-                            <div className="flex items-center justify-center gap-1 mb-1">
-                              <DollarSign className="w-3 h-3 text-amber-500" />
-                              <span className="text-lg font-bold">${ad.total_spent.toFixed(0)}</span>
-                            </div>
-                            <p className="text-[10px] text-muted-foreground">Spent</p>
-                          </div>
+                          <Badge className={isExpired ? "bg-red-500/10 text-red-500" : "bg-green-500/10 text-green-500"}>
+                            {isExpired ? 'Expired' : 'Active'}
+                          </Badge>
                         </div>
                       </div>
                     </CardContent>

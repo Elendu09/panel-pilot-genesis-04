@@ -55,7 +55,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { SponsoredPromotionCard } from '@/components/chat/SponsoredPromotionCard';
 
 interface ChatSession {
   id: string;
@@ -115,15 +114,6 @@ const ChatInbox = ({ embedded = false }: ChatInboxProps) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
-  // Sponsored panels for promotions
-  const [sponsoredPanels, setSponsoredPanels] = useState<{
-    panel_id: string;
-    panel_name: string;
-    logo_url: string | null;
-    subdomain: string | null;
-    custom_domain: string | null;
-  }[]>([]);
 
   // Get panel ID
   useEffect(() => {
@@ -161,48 +151,6 @@ const ChatInbox = ({ embedded = false }: ChatInboxProps) => {
     };
 
     fetchCannedResponses();
-  }, [panelId]);
-
-  // Fetch sponsored panels for promotional placements
-  useEffect(() => {
-    if (!panelId) return;
-
-    const fetchSponsoredPanels = async () => {
-      try {
-        // Get active sponsored/featured ads
-        const { data: ads } = await supabase
-          .from('provider_ads')
-          .select('panel_id')
-          .eq('is_active', true)
-          .in('ad_type', ['sponsored', 'featured'])
-          .gt('expires_at', new Date().toISOString())
-          .limit(5);
-
-        if (!ads || ads.length === 0) return;
-
-        // Get panel details for the ads
-        const panelIds = ads.map(a => a.panel_id).filter(Boolean);
-        const { data: panels } = await supabase
-          .from('panels')
-          .select('id, name, subdomain, custom_domain, logo_url')
-          .in('id', panelIds)
-          .neq('id', panelId); // Exclude own panel
-
-        if (panels) {
-          setSponsoredPanels(panels.map(p => ({
-            panel_id: p.id,
-            panel_name: p.name,
-            logo_url: p.logo_url,
-            subdomain: p.subdomain,
-            custom_domain: p.custom_domain
-          })));
-        }
-      } catch (error) {
-        console.error('Error fetching sponsored panels:', error);
-      }
-    };
-
-    fetchSponsoredPanels();
   }, [panelId]);
 
   // Fetch chat sessions
@@ -819,19 +767,8 @@ const ChatInbox = ({ embedded = false }: ChatInboxProps) => {
           </div>
         ) : (
           <div className="space-y-3">
-            {filteredSessions.map((session, index) => (
-              <div key={session.id}>
-                <SessionCard session={session} />
-                {/* Show sponsored promotion every 5 sessions */}
-                {sponsoredPanels.length > 0 && (index + 1) % 5 === 0 && index < filteredSessions.length - 1 && (
-                  <div className="mt-3">
-                    <SponsoredPromotionCard 
-                      promotion={sponsoredPanels[(Math.floor(index / 5)) % sponsoredPanels.length]}
-                      className="rounded-xl border border-amber-500/20"
-                    />
-                  </div>
-                )}
-              </div>
+            {filteredSessions.map((session) => (
+              <SessionCard key={session.id} session={session} />
             ))}
           </div>
         )}
