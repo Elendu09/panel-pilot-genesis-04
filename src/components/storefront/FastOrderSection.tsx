@@ -826,10 +826,10 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
               )}>
                 <Zap className="w-8 h-8 text-muted-foreground" />
               </div>
-              <h3 className="text-xl font-bold mb-2 tracking-tight" style={{ color: textColor }}>
+              <h3 className={cn("text-xl font-bold mb-2 tracking-tight", themeMode === 'dark' ? 'text-white' : 'text-gray-900')}>
                 No Services Available Yet
               </h3>
-              <p className="mb-6 text-sm" style={{ color: textMuted }}>
+              <p className={cn("mb-6 text-sm", themeMode === 'dark' ? 'text-gray-400' : 'text-gray-600')}>
                 This panel hasn't added any services yet. Please check back later.
               </p>
               <Button 
@@ -1318,7 +1318,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                     </Button>
                     
                     {!buyer && (
-                      <p className="text-[10px] sm:text-xs text-center" style={{ color: textMuted }}>
+                      <p className={cn("text-[10px] sm:text-xs text-center", themeMode === 'dark' ? 'text-gray-400' : 'text-gray-600')}>
                         Quick signup - no password required to get started
                       </p>
                     )}
@@ -1427,10 +1427,10 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                               "w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3",
                               themeMode === 'dark' ? 'text-amber-400' : 'text-amber-500'
                             )} />
-                            <h3 className="text-base sm:text-lg font-semibold mb-2" style={{ color: textColor }}>
+                            <h3 className={cn("text-base sm:text-lg font-semibold mb-2", themeMode === 'dark' ? 'text-white' : 'text-gray-900')}>
                               No Payment Gateway Available
                             </h3>
-                            <p className="text-xs sm:text-sm mb-4" style={{ color: textMuted }}>
+                            <p className={cn("text-xs sm:text-sm mb-4", themeMode === 'dark' ? 'text-gray-400' : 'text-gray-600')}>
                               Payment methods are currently being configured. Please contact support for assistance.
                             </p>
                             <Button asChild variant="outline" size="sm" className="gap-2">
@@ -1559,7 +1559,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                       </Button>
                     )}
 
-                    <p className="text-[10px] sm:text-xs text-center flex items-center justify-center gap-1.5" style={{ color: textMuted }}>
+                    <p className={cn("text-[10px] sm:text-xs text-center flex items-center justify-center gap-1.5", themeMode === 'dark' ? 'text-gray-400' : 'text-gray-600')}>
                       <Lock className="w-3 h-3" />
                       Secure payment • Order will be processed immediately
                     </p>
@@ -1589,8 +1589,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.2 }}
-                      className="text-2xl font-bold mb-2"
-                      style={{ color: textColor }}
+                      className={cn("text-2xl font-bold mb-2", themeMode === 'dark' ? 'text-white' : 'text-gray-900')}
                     >
                       Order Placed!
                     </motion.h3>
