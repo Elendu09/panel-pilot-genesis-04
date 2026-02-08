@@ -1,324 +1,258 @@
 
-# Comprehensive Fix Plan: Dark Mode Text Visibility, Mobile Responsiveness, and Trend Indicators
+# Comprehensive Fix Plan: My Ads Trends, Dark Mode Text Visibility, Quick Checkout Padding, and Service Not Found Error
 
 ---
 
-## Issues Identified
+## Issues Analysis Summary
 
-### Issue 1: Fast Order Dark Mode Text Visibility (All Steps)
-Based on the uploaded screenshots, text elements like "Select a Network", "Complete Payment", and step labels are black/invisible in dark mode.
+Based on the uploaded screenshot and code analysis, I identified **5 major issues**:
 
-**Root Cause Analysis:**
-Looking at `FastOrderSection.tsx`:
-- The step indicator text on lines 893-912 uses theme-aware colors (`themeMode === 'dark' ? 'text-white'`)
-- However, the step badge text (lines 893-899) and subtitles still use default colors that may not contrast well
-- The main issue is that the outer step indicator header (showing step names like "Network", "Category", "Service", "Order", "Pay") is not explicitly styled for dark mode
+1. **My Ads Trend Indicators** - Currently using simple daily calculation, not comparing to previous period data. Also needs countdown timer (days:hours:minutes:seconds).
 
-**Files Affected:**
-- `src/components/storefront/FastOrderSection.tsx`
+2. **Fast Order Dark Mode Text Visibility** - Despite previous fixes, some text in Steps 1-5 still appears black/invisible in dark mode. The uploaded screenshot shows "Complete Payment" and other UI elements with poor contrast.
 
-### Issue 2: Complete Payment UI Dark Mode
-The payment method cards and text need better contrast in dark mode.
+3. **Quick Checkout Modal Padding** - Email input focus ring extends outside the container on mobile.
 
-**Current State (lines 1474-1478):**
-```typescript
-<span className={cn(
-  "font-semibold text-sm sm:text-base",
-  themeMode === 'dark' ? 'text-foreground' : 'text-gray-900'
-)}>
-```
+4. **"Order Failed: Service not found" Error** - **CRITICAL BUG**: The `buyer-order` edge function queries for `is_enabled` column, but the database only has `is_active` column. This causes the query to fail.
 
-**Issue:** Using `text-foreground` in dark mode may not provide enough contrast. Should use explicit `text-white`.
-
-### Issue 3: Quick Checkout Modal Mobile Responsiveness
-From the uploaded screenshot, the email input fields and button extend outside the visible area on mobile.
-
-**Current State (lines 1641, 1867-1918):**
-```typescript
-<DialogContent className="max-w-[95vw] sm:max-w-md w-full overflow-hidden p-2 xs:p-3 sm:p-6...">
-...
-<Input
-  type="email"
-  placeholder="your@email.com"
-  value={guestEmail}
-  onChange={(e) => setGuestEmail(e.target.value)}
-  className="pl-10"  // No width constraints
-/>
-```
-
-**Issue:** Input fields don't have proper width constraints (`w-full`) and the form container needs `overflow-x-hidden`.
-
-### Issue 4: Trend Indicators (Up/Down Based on Real Data)
-The user asks if trend indicators are real or mock.
-
-**Current State:**
-- **FastOrderAnalyticsCard** (lines 82-94): Already implemented with functional up/down/neutral trends from `changes.orders`
-- **Analytics.tsx** (lines 479-487): `calculateChange()` function calculates real trends by comparing current vs previous period data
-- **AdsFunnelCard**: Does NOT currently show trend indicators
-- **ProviderAds (My Ads)**: Does NOT show trend indicators for individual ad performance
-
-**Conclusion:** The trends in FastOrderAnalyticsCard ARE real and based on actual data. However, AdsFunnelCard and My Ads section don't have period comparison trends - they only show current totals.
+5. **Category Display Mismatch** - Fast Order uses `is_active = true` filter but New Order may use different logic. Need to align service filtering.
 
 ---
 
-## Implementation Plan
+## Part 1: Fix My Ads Trend Indicators (Real Period Comparison + Countdown Timer)
 
-### Part 1: Fast Order Dark Mode Text Fixes (All Steps)
+**File:** `src/pages/panel/ProviderAds.tsx`
+
+### Current Problem
+The current trend calculation (lines 654-661) compares impressions against a projected pace, but doesn't compare to previous period data. Also, time remaining shows only days, not a live countdown.
+
+### Solution
+
+**1.1 Add Real Period Comparison**
+Store historical metrics snapshots and compare current vs previous period:
+
+```typescript
+// Calculate trends by comparing current metrics to what they were X days ago
+// If no historical data, use current pace vs expected pace as fallback
+const calculateTrend = (current: number, previous: number): 'up' | 'down' | 'neutral' => {
+  if (previous === 0) return current > 0 ? 'up' : 'neutral';
+  const change = ((current - previous) / previous) * 100;
+  if (change > 10) return 'up';
+  if (change < -10) return 'down';
+  return 'neutral';
+};
+```
+
+**1.2 Add Live Countdown Timer**
+Replace simple "Xd left" badge with live countdown:
+
+```typescript
+// Add useState for countdown
+const [countdowns, setCountdowns] = useState<Record<string, string>>({});
+
+// Add useEffect for live timer
+useEffect(() => {
+  const timer = setInterval(() => {
+    const newCountdowns: Record<string, string> = {};
+    myAds.forEach(ad => {
+      const now = new Date();
+      const expires = new Date(ad.expires_at);
+      const diff = expires.getTime() - now.getTime();
+      
+      if (diff <= 0) {
+        newCountdowns[ad.id] = 'Expired';
+      } else {
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+        
+        if (days > 0) {
+          newCountdowns[ad.id] = `${days}d ${hours}h ${minutes}m`;
+        } else if (hours > 0) {
+          newCountdowns[ad.id] = `${hours}h ${minutes}m ${seconds}s`;
+        } else {
+          newCountdowns[ad.id] = `${minutes}m ${seconds}s`;
+        }
+      }
+    });
+    setCountdowns(newCountdowns);
+  }, 1000);
+  
+  return () => clearInterval(timer);
+}, [myAds]);
+```
+
+Update the badge display (line 640):
+```typescript
+<Badge className={cn(...)}>
+  {isExpired ? 'Expired' : countdowns[ad.id] || 'Active'}
+</Badge>
+```
+
+---
+
+## Part 2: Fix Fast Order Dark Mode Text Visibility (All Steps)
 
 **File:** `src/components/storefront/FastOrderSection.tsx`
 
-#### 1.1 Step Indicator Labels
-The step progress indicator (Network, Category, Service, Order, Pay) needs explicit white text in dark mode.
+Based on the screenshot, the following elements need explicit dark mode text colors:
 
-Find the step indicator header section and ensure all labels use:
-```typescript
-className={cn(
-  "text-xs font-medium",
-  themeMode === 'dark' ? 'text-gray-300' : 'text-gray-500'
-)}
-```
+### 2.1 Step 5 "Complete Payment" Title (lines 1346-1358)
+Already has `themeMode === 'dark' ? 'text-white'` - verify it's being applied correctly.
 
-#### 1.2 Badge Text Visibility
-Update step badges (e.g., "Step 1 of 6") to have better contrast:
+### 2.2 "Payment Method" Label (line 1409)
+Currently uses inline style `style={{ color: textColor }}`. This may not work reliably. Change to:
 ```typescript
-<Badge className={cn(
-  "mb-3 font-semibold",
-  themeMode === 'dark' 
-    ? 'bg-orange-500/20 text-orange-300 border-orange-500/30' // Change from blue to orange per design
-    : 'bg-blue-50 text-blue-600 border-blue-200'
-)}>
-```
-
-#### 1.3 Main Title Headers (All Steps)
-Ensure all "Select a Network", "Choose a Category", etc. titles use:
-```typescript
-className={cn(
-  "text-xl sm:text-2xl font-bold mb-2 tracking-tight",
+<Label className={cn(
+  "font-semibold text-sm",
   themeMode === 'dark' ? 'text-white' : 'text-gray-900'
-)}
+)}>Payment Method</Label>
 ```
 
-#### 1.4 Subtitle Text
-Ensure subtitles like "Choose the platform you want to boost" use:
+### 2.3 "ORDER TOTAL" Label (lines 1368-1372)
+Already styled, but verify contrast. The gray-400 might be too dim:
 ```typescript
-className={cn(
-  "text-sm",
-  themeMode === 'dark' ? 'text-gray-400' : 'text-gray-600'
-)}
+themeMode === 'dark' ? 'text-gray-300' : 'text-gray-500'  // Lighter for better visibility
 ```
 
-### Part 2: Complete Payment UI Dark Mode
+### 2.4 "Your Balance:" Label (line 1519)
+Currently `text-gray-400` in dark mode - should be `text-gray-300`:
+```typescript
+<span className={themeMode === 'dark' ? 'text-gray-300' : 'text-gray-500'}>Your Balance:</span>
+```
+
+### 2.5 All Step Badges (Step 1-5)
+Verify all step badges use visible colors in dark mode.
+
+### 2.6 Fix textColor/textMuted Variables
+Search for any usage of `style={{ color: textColor }}` or `style={{ color: textMuted }}` and replace with explicit Tailwind classes for dark mode support.
+
+---
+
+## Part 3: Fix Quick Checkout Modal Padding/Overflow
 
 **File:** `src/components/storefront/FastOrderSection.tsx`
 
-#### 2.1 Payment Method Name Text (lines 1474-1478)
-Change from `text-foreground` to explicit `text-white`:
+### Current Issue (lines 1863-1874)
+The email input has `w-full` but the focus ring may extend outside due to padding issues.
+
+### Solution
+Add `box-border` and reduce ring offset:
+
 ```typescript
-<span className={cn(
-  "font-semibold text-sm sm:text-base",
-  themeMode === 'dark' ? 'text-white' : 'text-gray-900'  // Changed from text-foreground
-)}>
-  {method.name}
-</span>
-```
+// Line 1641 - DialogContent
+<DialogContent className="max-w-[95vw] sm:max-w-md w-full overflow-hidden p-3 sm:p-6 mx-2 sm:mx-auto max-h-[90vh] overflow-y-auto box-border">
 
-#### 2.2 Order Summary Service/Quantity/Link Labels (lines 1386-1403)
-Ensure explicit white text for values:
-```typescript
-<span className={cn(
-  "font-medium truncate max-w-[180px] sm:max-w-[220px]", 
-  themeMode === 'dark' ? 'text-white' : 'text-gray-900'  // Changed from text-foreground
-)}>
-  {selectedService?.name}
-</span>
-```
-
-#### 2.3 Balance Display Text (lines 1518-1521)
-```typescript
-<span className={cn(
-  "font-semibold tabular-nums", 
-  themeMode === 'dark' ? 'text-white' : 'text-gray-900'  // Changed from text-foreground
-)}>
-  ${(buyer.balance || 0).toFixed(2)}
-</span>
-```
-
-### Part 3: Quick Checkout Modal Mobile Responsiveness
-
-**File:** `src/components/storefront/FastOrderSection.tsx`
-
-#### 3.1 Dialog Content Container (line 1641)
-Add overflow control:
-```typescript
-<DialogContent className="max-w-[95vw] sm:max-w-md w-full overflow-hidden overflow-x-hidden p-2 xs:p-3 sm:p-6 mx-1 sm:mx-auto max-h-[90vh] overflow-y-auto">
-```
-
-#### 3.2 Form Container (lines 1714, 1862-1931)
-Wrap the form in a container with proper overflow:
-```typescript
-<div className="space-y-4 py-4 w-full overflow-hidden">
-```
-
-#### 3.3 Input Fields (lines 1867, 1880)
-Ensure inputs don't overflow:
-```typescript
-<div className="relative w-full">
-  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+// Lines 1867-1873 - Email input container
+<div className="relative w-full overflow-hidden">
+  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10" />
   <Input
     type="email"
     placeholder="your@email.com"
     value={guestEmail}
     onChange={(e) => setGuestEmail(e.target.value)}
-    className="pl-10 w-full"  // Added w-full
+    className="pl-10 w-full focus-visible:ring-offset-0 focus-visible:ring-1"
   />
 </div>
 ```
 
-#### 3.4 Service Summary Card (lines 1891-1904)
-Ensure the service name truncates properly:
+Apply same fix to name input (lines 1878-1886).
+
+---
+
+## Part 4: Fix "Service Not Found" Error (CRITICAL BUG)
+
+**File:** `supabase/functions/buyer-order/index.ts`
+
+### Root Cause
+**Line 80**: The edge function queries for `is_enabled` column, but the database only has `is_active` column.
+
 ```typescript
-<div className="flex justify-between text-sm">
-  <span className="text-muted-foreground shrink-0">Service:</span>
-  <span className="font-medium truncate ml-2 max-w-[60%]">{selectedService.name}</span>
-</div>
+// CURRENT (BROKEN):
+.select('id, name, price, min_quantity, max_quantity, is_enabled, panel_id')
+
+// Line 93 also checks:
+if (!service.is_enabled) { ... }
 ```
 
-#### 3.5 Button Width (lines 1907-1918)
-Ensure button doesn't overflow:
-```typescript
-<Button 
-  className="w-full max-w-full bg-blue-500 hover:bg-blue-600" 
-  onClick={handleGuestSignup}
-  disabled={isGuestSignup || !guestEmail}
->
-```
-
-### Part 4: Functional Trend Indicators (Up/Down Based on Real Data)
-
-#### 4.1 FastOrderAnalyticsCard - Already Functional ✓
-The `growthTrend` prop receives real data from `changes.orders` which is calculated using `calculateChange()` function that compares current vs previous period.
-
-No changes needed - this is already working correctly.
-
-#### 4.2 AdsFunnelCard - Add Period Comparison Trends
-
-**File:** `src/components/analytics/AdsFunnelCard.tsx`
-
-Add period comparison by storing previous period metrics:
-```typescript
-const [previousMetrics, setPreviousMetrics] = useState({
-  impressions: 0,
-  clicks: 0,
-  conversions: 0,
-  totalSpent: 0
-});
-
-// In fetchAdsData, calculate trends:
-const getTrend = (current: number, previous: number): 'up' | 'down' | 'neutral' => {
-  if (previous === 0) return current > 0 ? 'up' : 'neutral';
-  const change = ((current - previous) / previous) * 100;
-  if (change > 5) return 'up';
-  if (change < -5) return 'down';
-  return 'neutral';
-};
-
-const getChangeValue = (current: number, previous: number): string => {
-  if (previous === 0) return current > 0 ? '+100%' : '0%';
-  const change = ((current - previous) / previous) * 100;
-  return `${change >= 0 ? '+' : ''}${change.toFixed(0)}%`;
-};
-```
-
-Update the header badges to show real trends:
-```typescript
-<Badge 
-  variant="outline" 
-  className={cn(
-    "text-xs font-medium",
-    overallTrend === 'up' 
-      ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
-      : overallTrend === 'down'
-      ? "bg-red-500/10 text-red-500 border-red-500/20"
-      : "bg-muted text-muted-foreground"
-  )}
->
-  {overallTrend === 'up' && <TrendingUp className="w-3 h-3 mr-1" />}
-  {overallTrend === 'down' && <TrendingDown className="w-3 h-3 mr-1" />}
-  {spentChange} vs last period
-</Badge>
-```
-
-#### 4.3 ProviderAds (My Ads) - Add Performance Trends
-
-**File:** `src/pages/panel/ProviderAds.tsx`
-
-For each ad in the My Ads section, add trend indicators based on comparing first half vs second half of the ad duration, or daily averages:
+### Solution
+Change `is_enabled` to `is_active`:
 
 ```typescript
-// Calculate daily average and trend
-const totalDays = differenceInDays(new Date(ad.expires_at), new Date(ad.starts_at)) || 1;
-const elapsedDays = differenceInDays(new Date(), new Date(ad.starts_at)) || 1;
-const dailyImpressionAvg = ad.impressions / Math.max(elapsedDays, 1);
-const expectedImpressions = dailyImpressionAvg * totalDays;
+// Line 80
+.select('id, name, price, min_quantity, max_quantity, is_active, panel_id')
 
-// Trend: is performance meeting expectations?
-const performanceTrend = ad.impressions >= (expectedImpressions * 0.5) ? 'up' : 'down';
-```
-
-Add trend icon next to CTR display:
-```typescript
-<div className="flex items-center justify-center gap-1 mb-1">
-  <TrendingUp className="w-3 h-3 text-green-500" />
-  <span className="text-lg font-bold">
-    {ad.impressions > 0 ? ((ad.clicks / ad.impressions) * 100).toFixed(1) : '0'}%
-  </span>
-  {performanceTrend === 'up' ? (
-    <TrendingUp className="w-3 h-3 text-emerald-500" />
-  ) : (
-    <TrendingDown className="w-3 h-3 text-red-500" />
-  )}
-</div>
+// Line 93
+if (!service.is_active) {
+  return new Response(
+    JSON.stringify({ success: false, error: 'Service is currently disabled' }),
+    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  );
+}
 ```
 
 ---
 
-## Files to Modify
+## Part 5: Fix Category Display Mismatch
+
+**Files:** 
+- `src/pages/FastOrder.tsx`
+- `src/components/storefront/FastOrderSection.tsx`
+
+### Current Behavior
+- **Fast Order (line 412)**: Filters by `is_active = true`
+- **Edge function (line 82)**: Also checks `panel_id` match
+
+### Potential Issues
+1. Services imported from providers may have mismatched IDs
+2. Category filtering may exclude some services
+
+### Solution
+Ensure consistent filtering and add logging for debugging:
+
+```typescript
+// In FastOrder.tsx - add provider_service_id to service fetch
+const { data: servicesData, error: servicesError } = await supabase
+  .from('services')
+  .select('id, name, price, category, min_quantity, max_quantity, provider_service_id, is_active')
+  .eq('panel_id', resolvedPanelId)
+  .eq('is_active', true)
+  .eq('is_hidden', false)  // Also filter out hidden services
+  .order('display_order', { ascending: true });
+```
+
+---
+
+## Files to Modify Summary
 
 | File | Changes |
 |------|---------|
-| `src/components/storefront/FastOrderSection.tsx` | Dark mode text fixes across all steps, payment UI, Quick Checkout mobile responsiveness |
-| `src/components/analytics/AdsFunnelCard.tsx` | Add period comparison for real up/down trends |
-| `src/pages/panel/ProviderAds.tsx` | Add performance trend indicators to My Ads section |
+| `src/pages/panel/ProviderAds.tsx` | Add live countdown timer, improve trend comparison logic |
+| `src/components/storefront/FastOrderSection.tsx` | Fix dark mode text visibility, Quick Checkout modal padding |
+| `supabase/functions/buyer-order/index.ts` | **CRITICAL**: Change `is_enabled` to `is_active` |
+| `src/pages/FastOrder.tsx` | Add `is_hidden = false` filter to service query |
 
 ---
 
-## Technical Notes
+## Technical Implementation Notes
 
-### Dark Mode Color Palette (per design reference)
-- Background: `#0a0a12`
-- Card Background: `#1a1a2e`
-- Border: `#2d2d3d`
-- Primary Text: `text-white`
-- Secondary Text: `text-gray-300` or `text-gray-400`
-- Accent (completed steps): Orange gradient (`from-orange-500 to-amber-500`)
-- Accent (selection): Teal (`teal-500`)
-- Accent (price): Teal (`text-teal-400`)
+### Countdown Timer Format
+- **> 1 day**: `Xd Xh Xm`
+- **< 1 day**: `Xh Xm Xs`
+- **< 1 hour**: `Xm Xs`
 
-### Trend Calculation Logic
-```typescript
-// calculateChange from analytics-utils.ts
-const change = previousValue === 0 
-  ? (currentValue > 0 ? 100 : 0)
-  : ((currentValue - previousValue) / previousValue) * 100;
+### Dark Mode Color Reference
+| Element | Dark Mode | Light Mode |
+|---------|-----------|------------|
+| Primary Text | `text-white` | `text-gray-900` |
+| Secondary Text | `text-gray-300` | `text-gray-600` |
+| Muted Text | `text-gray-400` | `text-gray-500` |
+| Labels | `text-white` | `text-gray-900` |
+| Prices | `text-teal-400` | `text-green-500` |
 
-return {
-  value: `${change >= 0 ? '+' : ''}${change.toFixed(0)}%`,
-  trend: change > 5 ? 'up' : change < -5 ? 'down' : 'neutral'
-};
-```
+### Edge Function Column Fix
+This is a **critical bug** that breaks all Fast Order purchases. The database schema uses `is_active` but the edge function looks for `is_enabled`. After deploying the fix, all Fast Order payments should work correctly.
 
-### Mobile Responsiveness Best Practices
-- Use `w-full` on all input fields
-- Add `overflow-hidden` on containers
-- Use `truncate` with `max-w-[X%]` for dynamic text
-- Ensure buttons don't exceed container width with `max-w-full`
+### Service ID Display
+Panel owners see internal database UUIDs in service management, but the `provider_service_id` field contains the original ID from the provider. Both are now shown in Fast Order for easier debugging.
