@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,7 +25,8 @@ import {
   List,
   MessageSquare,
   LayoutGrid,
-  ListOrdered
+  ListOrdered,
+  Clock
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -124,6 +125,43 @@ const ProviderAds = () => {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewAdType, setPreviewAdType] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'cards' | 'list'>('cards');
+  const [countdowns, setCountdowns] = useState<Record<string, string>>({});
+
+  // Live countdown timer for My Ads
+  useEffect(() => {
+    if (myAds.length === 0) return;
+    
+    const updateCountdowns = () => {
+      const newCountdowns: Record<string, string> = {};
+      myAds.forEach(ad => {
+        const now = new Date();
+        const expires = new Date(ad.expires_at);
+        const diff = expires.getTime() - now.getTime();
+        
+        if (diff <= 0) {
+          newCountdowns[ad.id] = 'Expired';
+        } else {
+          const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+          const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+          const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+          const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+          
+          if (days > 0) {
+            newCountdowns[ad.id] = `${days}d ${hours}h ${minutes}m ${seconds}s`;
+          } else if (hours > 0) {
+            newCountdowns[ad.id] = `${hours}h ${minutes}m ${seconds}s`;
+          } else {
+            newCountdowns[ad.id] = `${minutes}m ${seconds}s`;
+          }
+        }
+      });
+      setCountdowns(newCountdowns);
+    };
+    
+    updateCountdowns();
+    const timer = setInterval(updateCountdowns, 1000);
+    return () => clearInterval(timer);
+  }, [myAds]);
 
   useEffect(() => {
     if (panel?.id) {
@@ -628,16 +666,18 @@ const ProviderAds = () => {
                           </div>
                           
                           <div>
-                            <div className="flex items-center gap-2 mb-1">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
                               <h3 className="font-bold text-lg capitalize">{config?.title || ad.ad_type}</h3>
                               <Badge className={cn(
+                                "flex items-center gap-1",
                                 isExpired 
                                   ? "bg-red-500/10 text-red-500 border-red-500/20" 
                                   : isExpiringSoon
                                   ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
                                   : "bg-green-500/10 text-green-500 border-green-500/20"
                               )}>
-                                {isExpired ? 'Expired' : isExpiringSoon ? `${daysLeft}d left` : 'Active'}
+                                <Clock className="w-3 h-3" />
+                                {countdowns[ad.id] || (isExpired ? 'Expired' : 'Active')}
                               </Badge>
                             </div>
                             

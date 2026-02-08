@@ -1367,7 +1367,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                       <div className="text-center mb-3">
                         <p className={cn(
                           "text-[10px] sm:text-xs uppercase tracking-widest font-semibold mb-1",
-                          themeMode === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                          themeMode === 'dark' ? 'text-gray-300' : 'text-gray-500'
                         )}>
                           ORDER TOTAL
                         </p>
@@ -1406,7 +1406,10 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
 
                     {/* Payment Methods */}
                     <div className="space-y-2 sm:space-y-3">
-                      <Label className="font-semibold text-sm" style={{ color: textColor }}>Payment Method</Label>
+                      <Label className={cn(
+                        "font-semibold text-sm",
+                        themeMode === 'dark' ? 'text-white' : 'text-gray-900'
+                      )}>Payment Method</Label>
                       
                       {loadingPaymentMethods ? (
                         <div className="flex items-center justify-center py-8">
@@ -1516,7 +1519,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                         themeMode === 'dark' ? "bg-gray-800/50 border-gray-700/50" : "bg-gray-50 border-gray-200"
                       )}>
                         <div className="flex justify-between text-xs sm:text-sm">
-                          <span className={themeMode === 'dark' ? 'text-gray-400' : 'text-gray-500'}>Your Balance:</span>
+                          <span className={themeMode === 'dark' ? 'text-gray-300' : 'text-gray-500'}>Your Balance:</span>
                           <span className={cn("font-semibold tabular-nums", themeMode === 'dark' ? 'text-white' : 'text-gray-900')}>
                             ${(buyer.balance || 0).toFixed(2)}
                           </span>
@@ -1862,27 +1865,27 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
               <>
                 <div className="space-y-2 w-full">
                   <Label>Email *</Label>
-                  <div className="relative w-full">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <div className="relative w-full overflow-hidden">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10" />
                     <Input
                       type="email"
                       placeholder="your@email.com"
                       value={guestEmail}
                       onChange={(e) => setGuestEmail(e.target.value)}
-                      className="pl-10 w-full"
+                      className="pl-10 w-full box-border focus-visible:ring-offset-0 focus-visible:ring-1"
                     />
                   </div>
                 </div>
                 <div className="space-y-2 w-full">
                   <Label>Name (Optional)</Label>
-                  <div className="relative w-full">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <div className="relative w-full overflow-hidden">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10" />
                     <Input
                       type="text"
                       placeholder="Your name"
                       value={guestName}
                       onChange={(e) => setGuestName(e.target.value)}
-                      className="pl-10 w-full"
+                      className="pl-10 w-full box-border focus-visible:ring-offset-0 focus-visible:ring-1"
                     />
                   </div>
                 </div>

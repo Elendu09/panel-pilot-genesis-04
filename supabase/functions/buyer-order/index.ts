@@ -74,10 +74,10 @@ serve(async (req) => {
       );
     }
 
-    // Verify the service exists and is enabled
+    // Verify the service exists and is active
     const { data: service, error: serviceError } = await supabase
       .from('services')
-      .select('id, name, price, min_quantity, max_quantity, is_enabled, panel_id')
+      .select('id, name, price, min_quantity, max_quantity, is_active, panel_id')
       .eq('id', serviceId)
       .eq('panel_id', panelId)
       .single();
@@ -90,7 +90,7 @@ serve(async (req) => {
       );
     }
 
-    if (!service.is_enabled) {
+    if (!service.is_active) {
       return new Response(
         JSON.stringify({ success: false, error: 'Service is currently disabled' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
