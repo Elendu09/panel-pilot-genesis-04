@@ -404,12 +404,13 @@ const FastOrderContent = () => {
         if (panelError) throw panelError;
         setPanel(panelData);
 
-        // Fetch services
+        // Fetch services - include is_hidden filter and provider_service_id for debugging
         const { data: servicesData, error: servicesError } = await supabase
           .from('services')
-          .select('id, name, price, category, min_quantity, max_quantity')
+          .select('id, name, price, category, min_quantity, max_quantity, provider_service_id')
           .eq('panel_id', resolvedPanelId)
           .eq('is_active', true)
+          .eq('is_hidden', false)
           .order('display_order', { ascending: true });
 
         if (servicesError) throw servicesError;
