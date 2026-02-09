@@ -180,7 +180,7 @@ export const BuyerThemeWrapper = ({
       headingFont: branding.headingFont || 'Inter',
       headingWeight: branding.headingWeight || '700',
       // Section toggles
-      enableFastOrder: branding.enableFastOrder ?? true,
+      enableFastOrder: branding.enableFastOrder ?? false,
       enablePlatformFeatures: branding.enablePlatformFeatures ?? true,
       enableStats: branding.enableStats ?? true,
       enableFeatures: branding.enableFeatures ?? true,

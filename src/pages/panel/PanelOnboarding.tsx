@@ -246,6 +246,39 @@ const PanelOnboarding = () => {
         ? themePresets.find(t => t.key === selectedTheme)?.secondary || secondaryColor 
         : secondaryColor;
 
+      // Theme-specific animation style mapping
+      const animationStyles: Record<string, string> = {
+        'smmstay': 'glow-box',
+        'flysmm': 'gradient-wave',
+        'tgref': 'typewriter',
+        'alipanel': 'highlight',
+        'smmvisit': 'text-reveal',
+        'default': 'gradient-wave',
+      };
+
+      // Build custom_branding with proper theme defaults
+      const customBranding = {
+        heroTitle: 'Boost Your Social Media Presence',
+        heroSubtitle: 'Get real followers, likes, and views at the lowest prices. Trusted by over 50,000+ customers worldwide.',
+        heroCTAText: 'Get Started',
+        heroSecondaryCTAText: 'Fast Order',
+        heroBadgeText: '#1 SMM Panel',
+        heroAnimatedTextStyle: animationStyles[selectedTheme] || 'gradient-wave',
+        heroAnimatedTextPosition: 'last',
+        enableFastOrder: false,
+        enablePlatformFeatures: true,
+        enableStats: true,
+        enableFeatures: true,
+        enableTestimonials: true,
+        enableFAQs: true,
+        enableFooter: true,
+        primaryColor: finalPrimaryColor,
+        secondaryColor: finalSecondaryColor,
+        companyName: panelName,
+        themeMode: 'dark',
+        selectedTheme: selectedTheme,
+      };
+
       const { error } = await supabase
         .from('panels')
         .insert([
@@ -261,7 +294,8 @@ const PanelOnboarding = () => {
             custom_domain: domainType === 'custom' ? customDomain : null,
             primary_color: finalPrimaryColor,
             secondary_color: finalSecondaryColor,
-            onboarding_completed: true
+            onboarding_completed: true,
+            custom_branding: customBranding,
           }
         ]);
 
