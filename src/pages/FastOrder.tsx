@@ -11,7 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { useBuyerThemeMode } from '@/contexts/BuyerThemeContext';
+import { useTheme } from '@/hooks/use-theme';
 import { BuyerThemeWrapper } from '@/components/buyer-themes';
 import { useAnalyticsTracking } from '@/hooks/use-analytics-tracking';
 
@@ -330,8 +330,11 @@ const FastOrderContent = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   
-  // Use buyer theme context for consistent dark/light mode on tenant sites
-  const { themeMode: resolvedTheme } = useBuyerThemeMode();
+  // Get actual theme from context instead of database branding
+  const { theme } = useTheme();
+  const resolvedTheme = theme === 'system' 
+    ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+    : theme;
   
   // Dark mode background color
   const pageBgClass = resolvedTheme === 'dark' 
