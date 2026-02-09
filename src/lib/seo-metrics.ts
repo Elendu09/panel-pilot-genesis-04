@@ -31,21 +31,26 @@ export function clampToPx(text: string, maxPx: number, font = '16px Arial') {
 
 export function generateSeoMeta(input: {
   panelName: string;
-  domain?: string; // Now only used for description context, not title
+  domain?: string;
   offeringHint?: string;
 }) {
   const panelName = (input.panelName || 'Panel').trim();
   const offeringHint = (input.offeringHint || '').trim();
 
-  // Generate SEO-optimized title WITHOUT domain name (cleaner for search results)
+  // Generate SEO-optimized title
   const rawTitle = `${panelName} - Best SMM Panel | Social Media Marketing Services`;
 
-  // Description focuses on value proposition without domain
-  const baseDesc = offeringHint
-    ? `${offeringHint} — ${panelName} offers premium social media marketing services. Buy real followers, likes, views & more at the best prices. Instant delivery & 24/7 support.`
-    : `${panelName} offers premium social media marketing services. Buy real followers, likes, views & more at the best prices. Instant delivery & 24/7 support.`;
-
-  const rawDescription = baseDesc;
+  // Shorter base description template that stays within limits
+  const shortDesc = `${panelName} offers premium SMM services. Buy real followers, likes & views at the best prices. Instant delivery & 24/7 support.`;
+  
+  // Only add offering hint if it fits within limits
+  let rawDescription = shortDesc;
+  if (offeringHint) {
+    const withHint = `${offeringHint} — ${shortDesc}`;
+    if (measureTextPx(withHint) <= SEO_DESC_PX_RANGE.max) {
+      rawDescription = withHint;
+    }
+  }
 
   const title = clampToPx(rawTitle, SEO_TITLE_PX_RANGE.max);
   const description = clampToPx(rawDescription, SEO_DESC_PX_RANGE.max);

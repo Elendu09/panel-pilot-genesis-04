@@ -177,7 +177,7 @@ const defaultCustomization = {
   glowEffects: true,
   
   // Hero Section
-  enableFastOrder: true,
+  enableFastOrder: false,
   heroTitle: 'Boost Your Social Media Presence',
   heroSubtitle: 'Get real followers, likes, and views at the lowest prices. Trusted by over 50,000+ customers worldwide.',
   heroBadgeText: '#1 SMM Panel',
