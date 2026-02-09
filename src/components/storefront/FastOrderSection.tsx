@@ -1,5 +1,5 @@
 import { useState, useEffect, useContext, useMemo, useCallback } from 'react';
-import { useTheme } from '@/hooks/use-theme';
+import { useBuyerThemeMode } from '@/contexts/BuyerThemeContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -162,15 +162,10 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
   // Analytics tracking for Fast Order funnel
   const { trackServiceSelect, trackCheckoutStart, trackOrderComplete } = useAnalyticsTracking(panelId);
   
-  // Use actual theme from context instead of customization
-  const { theme } = useTheme();
-  const themeMode = theme === 'system' 
-    ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-    : theme;
+  // Use buyer theme context for consistent dark/light mode on tenant sites
+  const { themeMode } = useBuyerThemeMode();
   
-  // Use proper theme-aware text colors
-  const textColor = themeMode === 'dark' ? 'hsl(var(--foreground))' : 'hsl(var(--foreground))';
-  const textMuted = themeMode === 'dark' ? 'hsl(var(--muted-foreground))' : 'hsl(var(--muted-foreground))';
+  // All text colors handled via Tailwind classes with themeMode checks
   
   // True dark/light mode card styles
   const cardBg = themeMode === 'dark' 
