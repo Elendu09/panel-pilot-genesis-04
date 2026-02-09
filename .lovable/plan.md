@@ -1,226 +1,239 @@
 
-# Comprehensive Fix Plan: My Ads Trends, Dark Mode Text Visibility, Quick Checkout Padding, and Service Not Found Error
+# Comprehensive Fix Plan: SEO Auto-Generation, Theme Sync, Fast Order Dark Mode, and Banner Text
 
 ---
 
 ## Issues Analysis Summary
 
-Based on the uploaded screenshot and code analysis, I identified **5 major issues**:
+Based on the screenshots and code analysis, I identified **5 major issues**:
 
-1. **My Ads Trend Indicators** - Currently using simple daily calculation, not comparing to previous period data. Also needs countdown timer (days:hours:minutes:seconds).
+1. **SEO Auto-Generate Exceeds Length Limit** - The `generateSeoMeta` function generates descriptions that exceed the 1000px max limit (screenshot shows 1107px), causing validation errors on "Next" click.
 
-2. **Fast Order Dark Mode Text Visibility** - Despite previous fixes, some text in Steps 1-5 still appears black/invisible in dark mode. The uploaded screenshot shows "Complete Payment" and other UI elements with poor contrast.
+2. **Theme Sync Issues After Onboarding** - SMMStay theme shows incomplete hero text ("BOOST YOUR" with brackets) because:
+   - The onboarding only saves `buyer_theme` and colors to the `panels` table
+   - It does NOT save `custom_branding` with proper defaults for `heroTitle`, `heroAnimatedTextStyle`, etc.
+   - When the storefront loads, it uses empty `custom_branding` which lacks theme-specific defaults
 
-3. **Quick Checkout Modal Padding** - Email input focus ring extends outside the container on mobile.
+3. **Fast Order Switch Default Value** - Currently defaults to `true` (showing "Fast Order + View Services"), but should default to `false` (showing "Get Started + Fast Order").
 
-4. **"Order Failed: Service not found" Error** - **CRITICAL BUG**: The `buyer-order` edge function queries for `is_enabled` column, but the database only has `is_active` column. This causes the query to fail.
+4. **Fast Order Dark Mode Text Visibility** - Several elements still have inline styles or missing dark mode text colors (though most were already fixed in previous edits).
 
-5. **Category Display Mismatch** - Fast Order uses `is_active = true` filter but New Order may use different logic. Need to align service filtering.
-
----
-
-## Part 1: Fix My Ads Trend Indicators (Real Period Comparison + Countdown Timer)
-
-**File:** `src/pages/panel/ProviderAds.tsx`
-
-### Current Problem
-The current trend calculation (lines 654-661) compares impressions against a projected pace, but doesn't compare to previous period data. Also, time remaining shows only days, not a live countdown.
-
-### Solution
-
-**1.1 Add Real Period Comparison**
-Store historical metrics snapshots and compare current vs previous period:
-
-```typescript
-// Calculate trends by comparing current metrics to what they were X days ago
-// If no historical data, use current pace vs expected pace as fallback
-const calculateTrend = (current: number, previous: number): 'up' | 'down' | 'neutral' => {
-  if (previous === 0) return current > 0 ? 'up' : 'neutral';
-  const change = ((current - previous) / previous) * 100;
-  if (change > 10) return 'up';
-  if (change < -10) return 'down';
-  return 'neutral';
-};
-```
-
-**1.2 Add Live Countdown Timer**
-Replace simple "Xd left" badge with live countdown:
-
-```typescript
-// Add useState for countdown
-const [countdowns, setCountdowns] = useState<Record<string, string>>({});
-
-// Add useEffect for live timer
-useEffect(() => {
-  const timer = setInterval(() => {
-    const newCountdowns: Record<string, string> = {};
-    myAds.forEach(ad => {
-      const now = new Date();
-      const expires = new Date(ad.expires_at);
-      const diff = expires.getTime() - now.getTime();
-      
-      if (diff <= 0) {
-        newCountdowns[ad.id] = 'Expired';
-      } else {
-        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-        
-        if (days > 0) {
-          newCountdowns[ad.id] = `${days}d ${hours}h ${minutes}m`;
-        } else if (hours > 0) {
-          newCountdowns[ad.id] = `${hours}h ${minutes}m ${seconds}s`;
-        } else {
-          newCountdowns[ad.id] = `${minutes}m ${seconds}s`;
-        }
-      }
-    });
-    setCountdowns(newCountdowns);
-  }, 1000);
-  
-  return () => clearInterval(timer);
-}, [myAds]);
-```
-
-Update the badge display (line 640):
-```typescript
-<Badge className={cn(...)}>
-  {isExpired ? 'Expired' : countdowns[ad.id] || 'Active'}
-</Badge>
-```
+5. **Ads Banner Text** - Change default text from "SMM Pilot" to "HOME OF SMM" in the FreeTierBanner component.
 
 ---
 
-## Part 2: Fix Fast Order Dark Mode Text Visibility (All Steps)
+## Part 1: Fix SEO Auto-Generate Length Limit
 
-**File:** `src/components/storefront/FastOrderSection.tsx`
-
-Based on the screenshot, the following elements need explicit dark mode text colors:
-
-### 2.1 Step 5 "Complete Payment" Title (lines 1346-1358)
-Already has `themeMode === 'dark' ? 'text-white'` - verify it's being applied correctly.
-
-### 2.2 "Payment Method" Label (line 1409)
-Currently uses inline style `style={{ color: textColor }}`. This may not work reliably. Change to:
-```typescript
-<Label className={cn(
-  "font-semibold text-sm",
-  themeMode === 'dark' ? 'text-white' : 'text-gray-900'
-)}>Payment Method</Label>
-```
-
-### 2.3 "ORDER TOTAL" Label (lines 1368-1372)
-Already styled, but verify contrast. The gray-400 might be too dim:
-```typescript
-themeMode === 'dark' ? 'text-gray-300' : 'text-gray-500'  // Lighter for better visibility
-```
-
-### 2.4 "Your Balance:" Label (line 1519)
-Currently `text-gray-400` in dark mode - should be `text-gray-300`:
-```typescript
-<span className={themeMode === 'dark' ? 'text-gray-300' : 'text-gray-500'}>Your Balance:</span>
-```
-
-### 2.5 All Step Badges (Step 1-5)
-Verify all step badges use visible colors in dark mode.
-
-### 2.6 Fix textColor/textMuted Variables
-Search for any usage of `style={{ color: textColor }}` or `style={{ color: textMuted }}` and replace with explicit Tailwind classes for dark mode support.
-
----
-
-## Part 3: Fix Quick Checkout Modal Padding/Overflow
-
-**File:** `src/components/storefront/FastOrderSection.tsx`
-
-### Current Issue (lines 1863-1874)
-The email input has `w-full` but the focus ring may extend outside due to padding issues.
-
-### Solution
-Add `box-border` and reduce ring offset:
-
-```typescript
-// Line 1641 - DialogContent
-<DialogContent className="max-w-[95vw] sm:max-w-md w-full overflow-hidden p-3 sm:p-6 mx-2 sm:mx-auto max-h-[90vh] overflow-y-auto box-border">
-
-// Lines 1867-1873 - Email input container
-<div className="relative w-full overflow-hidden">
-  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10" />
-  <Input
-    type="email"
-    placeholder="your@email.com"
-    value={guestEmail}
-    onChange={(e) => setGuestEmail(e.target.value)}
-    className="pl-10 w-full focus-visible:ring-offset-0 focus-visible:ring-1"
-  />
-</div>
-```
-
-Apply same fix to name input (lines 1878-1886).
-
----
-
-## Part 4: Fix "Service Not Found" Error (CRITICAL BUG)
-
-**File:** `supabase/functions/buyer-order/index.ts`
+**File:** `src/lib/seo-metrics.ts`
 
 ### Root Cause
-**Line 80**: The edge function queries for `is_enabled` column, but the database only has `is_active` column.
-
+The `generateSeoMeta` function generates descriptions that exceed the 1000px limit. The current template:
 ```typescript
-// CURRENT (BROKEN):
-.select('id, name, price, min_quantity, max_quantity, is_enabled, panel_id')
-
-// Line 93 also checks:
-if (!service.is_enabled) { ... }
+const baseDesc = offeringHint
+  ? `${offeringHint} — ${panelName} offers premium social media marketing services. Buy real followers, likes, views & more at the best prices. Instant delivery & 24/7 support.`
+  : `${panelName} offers premium social media marketing services. Buy real followers, likes, views & more at the best prices. Instant delivery & 24/7 support.`;
 ```
 
+This can exceed 1000px when combined with a longer `offeringHint` and `panelName`.
+
 ### Solution
-Change `is_enabled` to `is_active`:
+Ensure the generated description is always clamped to the max pixel limit:
 
 ```typescript
-// Line 80
-.select('id, name, price, min_quantity, max_quantity, is_active, panel_id')
+export function generateSeoMeta(input: {
+  panelName: string;
+  domain?: string;
+  offeringHint?: string;
+}) {
+  const panelName = (input.panelName || 'Panel').trim();
+  const offeringHint = (input.offeringHint || '').trim();
 
-// Line 93
-if (!service.is_active) {
-  return new Response(
-    JSON.stringify({ success: false, error: 'Service is currently disabled' }),
-    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-  );
+  // Generate SEO-optimized title
+  const rawTitle = `${panelName} - Best SMM Panel | Social Media Marketing Services`;
+
+  // Shorter base description template that stays within limits
+  const shortDesc = `${panelName} offers premium SMM services. Buy real followers, likes & views at the best prices. Instant delivery & 24/7 support.`;
+  
+  // Only add offering hint if it fits
+  let rawDescription = shortDesc;
+  if (offeringHint) {
+    const withHint = `${offeringHint} — ${shortDesc}`;
+    // Only use hint version if it fits within limits
+    if (measureTextPx(withHint) <= SEO_DESC_PX_RANGE.max) {
+      rawDescription = withHint;
+    }
+  }
+
+  // Apply clamping to ensure we never exceed limits
+  const title = clampToPx(rawTitle, SEO_TITLE_PX_RANGE.max);
+  const description = clampToPx(rawDescription, SEO_DESC_PX_RANGE.max);
+
+  return { title, description };
 }
 ```
 
 ---
 
-## Part 5: Fix Category Display Mismatch
+## Part 2: Fix Theme Sync After Onboarding
 
-**Files:** 
-- `src/pages/FastOrder.tsx`
-- `src/components/storefront/FastOrderSection.tsx`
+**File:** `src/pages/panel/PanelOnboarding.tsx`
 
-### Current Behavior
-- **Fast Order (line 412)**: Filters by `is_active = true`
-- **Edge function (line 82)**: Also checks `panel_id` match
+### Root Cause
+When a panel is created during onboarding, only basic fields are saved:
+```typescript
+const { error } = await supabase
+  .from('panels')
+  .insert([
+    {
+      name: panelName,
+      buyer_theme: selectedTheme,
+      primary_color: finalPrimaryColor,
+      secondary_color: finalSecondaryColor,
+      // NO custom_branding field!
+    }
+  ]);
+```
 
-### Potential Issues
-1. Services imported from providers may have mismatched IDs
-2. Category filtering may exclude some services
+The `custom_branding` JSONB column is NOT populated with theme defaults. When the storefront loads and `BuyerThemeWrapper` tries to read `branding.heroTitle` or `branding.enableFastOrder`, they are undefined.
 
 ### Solution
-Ensure consistent filtering and add logging for debugging:
+Add `custom_branding` with proper theme defaults during panel creation:
 
 ```typescript
-// In FastOrder.tsx - add provider_service_id to service fetch
-const { data: servicesData, error: servicesError } = await supabase
-  .from('services')
-  .select('id, name, price, category, min_quantity, max_quantity, provider_service_id, is_active')
-  .eq('panel_id', resolvedPanelId)
-  .eq('is_active', true)
-  .eq('is_hidden', false)  // Also filter out hidden services
-  .order('display_order', { ascending: true });
+// Get theme-specific defaults
+const getThemeDefaults = (themeKey: string, panelName: string) => {
+  const animationStyles: Record<string, string> = {
+    'smmstay': 'glow-box',
+    'flysmm': 'gradient-wave',
+    'tgref': 'typewriter',
+    'alipanel': 'highlight',
+    'smmvisit': 'text-reveal',
+    'default': 'gradient-wave',
+  };
+  
+  return {
+    // Hero content
+    heroTitle: 'Boost Your Social Media Presence',
+    heroSubtitle: 'Get real followers, likes, and views at the lowest prices. Trusted by over 50,000+ customers worldwide.',
+    heroCTAText: 'Get Started',
+    heroSecondaryCTAText: 'Fast Order',
+    heroBadgeText: '#1 SMM Panel',
+    heroAnimatedTextStyle: animationStyles[themeKey] || 'gradient-wave',
+    heroAnimatedTextPosition: 'last',
+    
+    // CRITICAL: Default Fast Order to OFF (per user requirement)
+    enableFastOrder: false,
+    
+    // Section toggles - all ON by default
+    enablePlatformFeatures: true,
+    enableStats: true,
+    enableFeatures: true,
+    enableTestimonials: true,
+    enableFAQs: true,
+    enableFooter: true,
+    
+    // Colors (from selected theme)
+    primaryColor: finalPrimaryColor,
+    secondaryColor: finalSecondaryColor,
+    
+    // Company name
+    companyName: panelName,
+    
+    // Theme mode
+    themeMode: 'dark',
+    
+    // Selected theme
+    selectedTheme: themeKey,
+  };
+};
+
+const customBranding = getThemeDefaults(selectedTheme, panelName);
+
+const { error } = await supabase
+  .from('panels')
+  .insert([
+    {
+      name: panelName,
+      description: description || null,
+      owner_id: profile?.id,
+      status: 'active',
+      is_approved: true,
+      theme_type: 'dark_gradient',
+      buyer_theme: selectedTheme,
+      subdomain: finalSubdomain,
+      custom_domain: domainType === 'custom' ? customDomain : null,
+      primary_color: finalPrimaryColor,
+      secondary_color: finalSecondaryColor,
+      onboarding_completed: true,
+      custom_branding: customBranding,  // ADD THIS!
+    }
+  ]);
 ```
+
+---
+
+## Part 3: Fix enableFastOrder Default Value
+
+**Files:**
+- `src/components/buyer-themes/BuyerThemeWrapper.tsx` (line 183)
+- `src/hooks/usePanelCustomization.tsx` (line ~77)
+- `src/pages/panel/DesignCustomization.tsx` (line 180)
+
+### Current State
+All three files default `enableFastOrder` to `true`:
+```typescript
+enableFastOrder: branding.enableFastOrder ?? true,  // WRONG
+```
+
+### Solution
+Change the default to `false`:
+```typescript
+enableFastOrder: branding.enableFastOrder ?? false,  // CORRECT
+```
+
+This ensures new panels show "Get Started + Fast Order" buttons by default.
+
+---
+
+## Part 4: Fix Ads Banner Text
+
+**File:** `src/components/storefront/FreeTierBanner.tsx`
+
+### Current State (lines 13-14):
+```typescript
+platformUrl = 'https://smmpilot.online',
+platformName = 'SMM Pilot'
+```
+
+### Solution
+Change to "HOME OF SMM":
+```typescript
+platformUrl = 'https://homeofsmm.com',
+platformName = 'HOME OF SMM'
+```
+
+---
+
+## Part 5: Fast Order Dark Mode - Final Verification
+
+Most dark mode issues have already been fixed. However, ensure these specific elements use explicit classes:
+
+**File:** `src/components/storefront/FastOrderSection.tsx`
+
+Review and ensure all step titles, labels, and content areas use:
+```typescript
+className={cn(
+  "text-xl font-bold",
+  themeMode === 'dark' ? 'text-white' : 'text-gray-900'
+)}
+```
+
+Not inline styles like:
+```typescript
+style={{ color: textColor }}  // BAD - may not work reliably
+```
+
+The previous edits have addressed most of these, but a final pass will ensure consistency.
 
 ---
 
@@ -228,31 +241,44 @@ const { data: servicesData, error: servicesError } = await supabase
 
 | File | Changes |
 |------|---------|
-| `src/pages/panel/ProviderAds.tsx` | Add live countdown timer, improve trend comparison logic |
-| `src/components/storefront/FastOrderSection.tsx` | Fix dark mode text visibility, Quick Checkout modal padding |
-| `supabase/functions/buyer-order/index.ts` | **CRITICAL**: Change `is_enabled` to `is_active` |
-| `src/pages/FastOrder.tsx` | Add `is_hidden = false` filter to service query |
+| `src/lib/seo-metrics.ts` | Shorten description template, validate hint fits before including |
+| `src/pages/panel/PanelOnboarding.tsx` | Add `custom_branding` with theme defaults during panel creation |
+| `src/components/buyer-themes/BuyerThemeWrapper.tsx` | Change `enableFastOrder` default from `true` to `false` |
+| `src/hooks/usePanelCustomization.tsx` | Change `enableFastOrder` default from `true` to `false` |
+| `src/pages/panel/DesignCustomization.tsx` | Change `enableFastOrder` default from `true` to `false` |
+| `src/components/storefront/FreeTierBanner.tsx` | Change platform name to "HOME OF SMM" |
 
 ---
 
-## Technical Implementation Notes
+## Technical Notes
 
-### Countdown Timer Format
-- **> 1 day**: `Xd Xh Xm`
-- **< 1 day**: `Xh Xm Xs`
-- **< 1 hour**: `Xm Xs`
+### Theme Animation Style Mapping
+```typescript
+const animationStyles: Record<string, HeroAnimationStyle> = {
+  'smmstay': 'glow-box',      // Neon glow boxes
+  'flysmm': 'gradient-wave',  // Gradient wave animation
+  'tgref': 'typewriter',      // Terminal typewriter effect
+  'alipanel': 'highlight',    // Highlight animation
+  'smmvisit': 'text-reveal',  // Text reveal animation
+  'default': 'gradient-wave', // Default gradient wave
+};
+```
 
-### Dark Mode Color Reference
-| Element | Dark Mode | Light Mode |
-|---------|-----------|------------|
-| Primary Text | `text-white` | `text-gray-900` |
-| Secondary Text | `text-gray-300` | `text-gray-600` |
-| Muted Text | `text-gray-400` | `text-gray-500` |
-| Labels | `text-white` | `text-gray-900` |
-| Prices | `text-teal-400` | `text-green-500` |
+### SEO Pixel Limits Reference
+- **Title**: 300-580px
+- **Description**: 450-1000px
 
-### Edge Function Column Fix
-This is a **critical bug** that breaks all Fast Order purchases. The database schema uses `is_active` but the edge function looks for `is_enabled`. After deploying the fix, all Fast Order payments should work correctly.
+### CTA Button Logic
+- **enableFastOrder = false (DEFAULT)**: "Get Started" + "Fast Order"
+- **enableFastOrder = true**: "Fast Order" + "View Services"
 
-### Service ID Display
-Panel owners see internal database UUIDs in service management, but the `provider_service_id` field contains the original ID from the provider. Both are now shown in Fast Order for easier debugging.
+### Why Theme Sync Was Breaking
+1. User selects SMMStay theme in onboarding
+2. Panel is created with `buyer_theme: 'smmstay'` but NO `custom_branding`
+3. Storefront loads and reads `custom_branding` (empty object `{}`)
+4. `heroTitle` is undefined, so translations fallback is used
+5. BUT `heroAnimatedTextStyle` is also undefined
+6. The `getAnimatedWordFromTitle` function tries to parse the title but returns incomplete parts
+7. Result: "BOOST YOUR" with glow-box around "PRESENCE" missing
+
+By saving proper defaults in `custom_branding` during onboarding, the theme will render correctly from day one.
