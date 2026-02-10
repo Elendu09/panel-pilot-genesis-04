@@ -1,22 +1,22 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   MessageSquare, 
   Plus, 
   Clock, 
   CheckCircle,
-  AlertCircle,
   XCircle,
   Send,
   Search,
-  Filter,
   Inbox,
   Loader2,
   AlertTriangle,
-  LogIn
+  LogIn,
+  HelpCircle,
+  MessagesSquare
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -36,6 +36,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -62,6 +69,24 @@ interface Message {
   timestamp: string;
 }
 
+interface ChatSession {
+  id: string;
+  visitor_id: string;
+  visitor_name: string | null;
+  visitor_email: string | null;
+  status: string;
+  created_at: string;
+  last_message_at: string | null;
+}
+
+interface ChatMessage {
+  id: string;
+  session_id: string;
+  sender_type: string;
+  content: string;
+  created_at: string;
+}
+
 const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
   open: { label: "Open", color: "bg-primary/10 text-primary border-primary/20", icon: Inbox },
   in_progress: { label: "In Progress", color: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20", icon: Clock },
@@ -75,6 +100,15 @@ const priorityConfig: Record<string, string> = {
   high: "bg-orange-500/10 text-orange-500",
   urgent: "bg-red-500/10 text-red-500",
 };
+
+const defaultFAQs = [
+  { question: "How long does delivery take?", answer: "Most orders begin processing within minutes of placement. Delivery speed depends on the service type — some complete instantly while others may take up to 72 hours." },
+  { question: "How do I add funds to my account?", answer: "Navigate to the Deposit page from your dashboard. We accept various payment methods. Your balance updates instantly after a successful payment." },
+  { question: "What payment methods are accepted?", answer: "We support multiple payment methods including cryptocurrency, credit cards, and various e-wallets depending on the payment gateway configured by the panel." },
+  { question: "Can I get a refund?", answer: "Refund policies vary by service. If an order is not delivered or only partially completed, please open a support ticket and our team will review your case." },
+  { question: "Is it safe to use your services?", answer: "Yes! We use secure payment processing and never ask for your social media passwords. All services are delivered through official platform APIs." },
+  { question: "What happens if my order fails?", answer: "If an order fails or is partially delivered, the remaining balance will be automatically refunded to your account. You can also contact support for assistance." },
+];
 
 const BuyerSupport = () => {
   const { buyer, loading: authLoading } = useBuyerAuth();
@@ -90,6 +124,17 @@ const BuyerSupport = () => {
   const [newMessage, setNewMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  // Chat state
+  const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
+  const [selectedChat, setSelectedChat] = useState<ChatSession | null>(null);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // FAQ state
+  const [faqs, setFaqs] = useState(defaultFAQs);
+
   // New ticket form
   const [newTicket, setNewTicket] = useState({
     subject: "",
@@ -97,13 +142,90 @@ const BuyerSupport = () => {
     message: ""
   });
 
+  // Fetch panel FAQs from custom_branding
+  useEffect(() => {
+    const fetchFaqs = async () => {
+      if (!panel?.id) return;
+      const { data } = await supabase
+        .from('panels')
+        .select('custom_branding')
+        .eq('id', panel.id)
+        .single();
+      const branding = data?.custom_branding as any;
+      if (branding?.faqs?.length > 0) {
+        setFaqs(branding.faqs);
+      }
+    };
+    fetchFaqs();
+  }, [panel?.id]);
+
   useEffect(() => {
     fetchTickets();
   }, [buyer?.id, panel?.id]);
 
+  // Fetch chat sessions
+  useEffect(() => {
+    if (!buyer?.id || !panel?.id) return;
+    const fetchChats = async () => {
+      setChatLoading(true);
+      const { data } = await supabase
+        .from('chat_sessions')
+        .select('*')
+        .eq('panel_id', panel.id)
+        .eq('visitor_id', buyer.id)
+        .order('last_message_at', { ascending: false, nullsFirst: false });
+      setChatSessions(data || []);
+      setChatLoading(false);
+    };
+    fetchChats();
+
+    // Realtime subscription for chat sessions
+    const channel = supabase
+      .channel('buyer-chat-sessions')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'chat_sessions',
+        filter: `visitor_id=eq.${buyer.id}`
+      }, () => { fetchChats(); })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [buyer?.id, panel?.id]);
+
+  // Fetch messages for selected chat & subscribe to realtime
+  useEffect(() => {
+    if (!selectedChat) { setChatMessages([]); return; }
+    
+    const fetchMessages = async () => {
+      const { data } = await supabase
+        .from('chat_messages')
+        .select('*')
+        .eq('session_id', selectedChat.id)
+        .order('created_at', { ascending: true });
+      setChatMessages(data || []);
+      setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+    };
+    fetchMessages();
+
+    const channel = supabase
+      .channel(`buyer-chat-${selectedChat.id}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'chat_messages',
+        filter: `session_id=eq.${selectedChat.id}`
+      }, (payload) => {
+        setChatMessages(prev => [...prev, payload.new as ChatMessage]);
+        setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [selectedChat?.id]);
+
   const fetchTickets = async () => {
     if (!buyer?.id || !panel?.id) return;
-    
     setLoading(true);
     setError(null);
     try {
@@ -113,9 +235,7 @@ const BuyerSupport = () => {
         .eq('panel_id', panel.id)
         .eq('user_id', buyer.id)
         .order('created_at', { ascending: false });
-
       if (error) throw error;
-      // Transform data to match Ticket type
       const transformedTickets = (data || []).map(ticket => ({
         ...ticket,
         messages: Array.isArray(ticket.messages) ? ticket.messages : []
@@ -134,128 +254,97 @@ const BuyerSupport = () => {
       toast({ variant: "destructive", title: "Please fill in all fields" });
       return;
     }
-
     if (!buyer?.id || !panel?.id) {
       toast({ variant: "destructive", title: "Error", description: "Session expired. Please refresh and try again." });
       return;
     }
-
     setSubmitting(true);
     try {
-      const initialMessage = {
-        sender: 'buyer' as const,
-        content: newTicket.message,
-        timestamp: new Date().toISOString()
-      };
-
-      const { data, error } = await supabase
+      const initialMessage = { sender: 'buyer' as const, content: newTicket.message, timestamp: new Date().toISOString() };
+      const { error } = await supabase
         .from('support_tickets')
-        .insert([{
-          panel_id: panel.id,
-          user_id: buyer.id,
-          subject: newTicket.subject,
-          priority: newTicket.priority,
-          ticket_type: 'user_to_panel',
-          status: 'open',
-          messages: [initialMessage] as unknown as any
-        }])
+        .insert([{ panel_id: panel.id, user_id: buyer.id, subject: newTicket.subject, priority: newTicket.priority, ticket_type: 'user_to_panel', status: 'open', messages: [initialMessage] as unknown as any }])
         .select()
         .single();
+      if (error) throw new Error(error.message || 'Failed to create ticket');
 
-      if (error) {
-        console.error('Ticket creation error:', error);
-        throw new Error(error.message || 'Failed to create ticket');
-      }
-
-      // Notify panel owner about new ticket
+      // Notify panel owner
       try {
-        // Get panel owner_id
-        const { data: panelData } = await supabase
-          .from('panels')
-          .select('owner_id')
-          .eq('id', panel.id)
-          .single();
-        
+        const { data: panelData } = await supabase.from('panels').select('owner_id').eq('id', panel.id).single();
         if (panelData?.owner_id) {
-          await supabase.from('panel_notifications').insert({
-            user_id: panelData.owner_id,
-            title: 'New Support Ticket',
-            message: `${buyer.full_name || buyer.email} submitted a ticket: "${newTicket.subject}"`,
-            type: 'system',
-            is_read: false
-          });
+          await supabase.from('panel_notifications').insert({ user_id: panelData.owner_id, title: 'New Support Ticket', message: `${buyer.full_name || buyer.email} submitted: "${newTicket.subject}"`, type: 'system', is_read: false });
         }
-      } catch (notifError) {
-        console.error('Failed to send notification:', notifError);
-        // Don't fail ticket creation if notification fails
-      }
+      } catch (e) { /* notification failure is non-critical */ }
 
       toast({ title: "Ticket Created", description: "We'll respond as soon as possible" });
       setIsNewTicketOpen(false);
       setNewTicket({ subject: "", priority: "medium", message: "" });
       fetchTickets();
     } catch (error: any) {
-      console.error('Error creating ticket:', error);
-      toast({ 
-        variant: "destructive", 
-        title: "Error", 
-        description: error.message || "Failed to create ticket. Please try again." 
-      });
-    } finally {
-      setSubmitting(false);
-    }
+      toast({ variant: "destructive", title: "Error", description: error.message || "Failed to create ticket." });
+    } finally { setSubmitting(false); }
   };
 
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !selectedTicket) return;
-
     setSubmitting(true);
     try {
-      const newMsg: Message = {
-        sender: 'buyer',
-        content: newMessage,
-        timestamp: new Date().toISOString()
-      };
-
+      const newMsg: Message = { sender: 'buyer', content: newMessage, timestamp: new Date().toISOString() };
       const updatedMessages = [...(selectedTicket.messages || []), newMsg];
-
-      const { error } = await supabase
-        .from('support_tickets')
-        .update({ 
-          messages: updatedMessages,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', selectedTicket.id);
-
+      const { error } = await supabase.from('support_tickets').update({ messages: updatedMessages, updated_at: new Date().toISOString() }).eq('id', selectedTicket.id);
       if (error) throw error;
-
       setSelectedTicket({ ...selectedTicket, messages: updatedMessages });
-      setTickets(prev => prev.map(t => 
-        t.id === selectedTicket.id ? { ...t, messages: updatedMessages } : t
-      ));
+      setTickets(prev => prev.map(t => t.id === selectedTicket.id ? { ...t, messages: updatedMessages } : t));
       setNewMessage("");
-      toast({ title: "Message sent" });
     } catch (error) {
-      console.error('Error sending message:', error);
       toast({ variant: "destructive", title: "Error", description: "Failed to send message" });
-    } finally {
-      setSubmitting(false);
+    } finally { setSubmitting(false); }
+  };
+
+  const handleResolveTicket = async (ticketId: string) => {
+    try {
+      const { error } = await supabase.from('support_tickets').update({ status: 'resolved', updated_at: new Date().toISOString() }).eq('id', ticketId);
+      if (error) throw error;
+      toast({ title: "Ticket resolved" });
+      if (selectedTicket?.id === ticketId) setSelectedTicket({ ...selectedTicket, status: 'resolved' });
+      fetchTickets();
+    } catch { toast({ variant: "destructive", title: "Failed to update ticket" }); }
+  };
+
+  // Chat: send message
+  const handleSendChatMessage = async () => {
+    if (!chatInput.trim() || !selectedChat) return;
+    const { error } = await supabase.from('chat_messages').insert({ session_id: selectedChat.id, sender_type: 'visitor', content: chatInput.trim() });
+    if (!error) {
+      setChatInput("");
+      await supabase.from('chat_sessions').update({ last_message_at: new Date().toISOString() }).eq('id', selectedChat.id);
     }
   };
 
-  const openTicket = (ticket: Ticket) => {
-    setSelectedTicket(ticket);
-    setIsTicketViewOpen(true);
+  // Chat: create new session
+  const handleStartChat = async () => {
+    if (!buyer?.id || !panel?.id) return;
+    const { data, error } = await supabase.from('chat_sessions').insert({
+      panel_id: panel.id,
+      visitor_id: buyer.id,
+      visitor_name: buyer.full_name || buyer.email,
+      visitor_email: buyer.email,
+      status: 'active'
+    }).select().single();
+    if (!error && data) {
+      setChatSessions(prev => [data, ...prev]);
+      setSelectedChat(data);
+    }
   };
 
-  // Filter tickets
+  const openTicket = (ticket: Ticket) => { setSelectedTicket(ticket); setIsTicketViewOpen(true); };
+
   const filteredTickets = tickets.filter(ticket => {
     const matchesStatus = statusFilter === "all" || ticket.status === statusFilter;
     const matchesSearch = ticket.subject.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesStatus && matchesSearch;
   });
 
-  // Group tickets by status for Kanban view
   const kanbanColumns = [
     { id: 'open', title: 'Open', tickets: filteredTickets.filter(t => t.status === 'open') },
     { id: 'in_progress', title: 'In Progress', tickets: filteredTickets.filter(t => t.status === 'in_progress') },
@@ -263,43 +352,28 @@ const BuyerSupport = () => {
     { id: 'closed', title: 'Closed', tickets: filteredTickets.filter(t => t.status === 'closed') },
   ];
 
-  // Loading state - use neutral color to prevent blue flash
   if (panelLoading || authLoading) {
-    return (
-      <BuyerLayout>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-        </div>
-      </BuyerLayout>
-    );
+    return (<BuyerLayout><div className="flex items-center justify-center min-h-[60vh]"><Loader2 className="w-8 h-8 animate-spin text-muted-foreground" /></div></BuyerLayout>);
   }
 
-  // Not authenticated
   if (!buyer) {
     return (
       <BuyerLayout>
         <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
-          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-            <LogIn className="w-8 h-8 text-primary" />
-          </div>
+          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4"><LogIn className="w-8 h-8 text-primary" /></div>
           <h2 className="text-xl font-bold mb-2">Login Required</h2>
           <p className="text-muted-foreground mb-4 text-sm">Please sign in to access support.</p>
-          <Button asChild>
-            <a href="/auth">Sign In</a>
-          </Button>
+          <Button asChild><a href="/auth">Sign In</a></Button>
         </div>
       </BuyerLayout>
     );
   }
 
-  // Error state
   if (error) {
     return (
       <BuyerLayout>
         <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
-          <div className="w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-500/10 flex items-center justify-center mb-4">
-            <AlertTriangle className="w-8 h-8 text-amber-500" />
-          </div>
+          <div className="w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-500/10 flex items-center justify-center mb-4"><AlertTriangle className="w-8 h-8 text-amber-500" /></div>
           <h2 className="text-xl font-bold mb-2">Something went wrong</h2>
           <p className="text-muted-foreground mb-4 text-sm">{error}</p>
           <Button onClick={fetchTickets}>Try Again</Button>
@@ -312,181 +386,241 @@ const BuyerSupport = () => {
     <BuyerLayout>
       <div className="space-y-6">
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col md:flex-row md:items-center justify-between gap-4"
-        >
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">
-              Support Center
-            </h1>
+            <h1 className="text-2xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">Support Center</h1>
             <p className="text-muted-foreground">Get help with your orders and account</p>
           </div>
-          <Button onClick={() => setIsNewTicketOpen(true)} className="gap-2">
-            <Plus className="w-4 h-4" />
-            New Ticket
-          </Button>
+          <Button onClick={() => setIsNewTicketOpen(true)} className="gap-2"><Plus className="w-4 h-4" />New Ticket</Button>
         </motion.div>
 
-        {/* Search and Filter */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="flex flex-col md:flex-row gap-4"
-        >
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Search tickets..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 bg-card/50"
-            />
-          </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-full md:w-[180px]">
-              <SelectValue placeholder="Filter by status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Tickets</SelectItem>
-              <SelectItem value="open">Open</SelectItem>
-              <SelectItem value="in_progress">In Progress</SelectItem>
-              <SelectItem value="resolved">Resolved</SelectItem>
-              <SelectItem value="closed">Closed</SelectItem>
-            </SelectContent>
-          </Select>
-        </motion.div>
+        {/* Tabs: Tickets | Live Chat | FAQ */}
+        <Tabs defaultValue="tickets" className="w-full">
+          <TabsList className="grid w-full grid-cols-3 max-w-md">
+            <TabsTrigger value="tickets" className="gap-2"><MessageSquare className="w-4 h-4" />Tickets</TabsTrigger>
+            <TabsTrigger value="chat" className="gap-2"><MessagesSquare className="w-4 h-4" />Live Chat</TabsTrigger>
+            <TabsTrigger value="faq" className="gap-2"><HelpCircle className="w-4 h-4" />FAQ</TabsTrigger>
+          </TabsList>
 
-        {/* Kanban Board */}
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-          </div>
-        ) : filteredTickets.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-          >
+          {/* ===== TICKETS TAB ===== */}
+          <TabsContent value="tickets" className="space-y-4 mt-4">
+            {/* Search and Filter */}
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input placeholder="Search tickets..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10 bg-card/50" />
+              </div>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full md:w-[180px]"><SelectValue placeholder="Filter by status" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Tickets</SelectItem>
+                  <SelectItem value="open">Open</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="resolved">Resolved</SelectItem>
+                  <SelectItem value="closed">Closed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Kanban Board */}
+            {loading ? (
+              <div className="flex items-center justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-muted-foreground" /></div>
+            ) : filteredTickets.length === 0 ? (
+              <Card className="glass-card">
+                <CardContent className="py-12 text-center">
+                  <MessageSquare className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                  <h3 className="text-lg font-semibold mb-2">No tickets yet</h3>
+                  <p className="text-muted-foreground mb-4">Create your first support ticket</p>
+                  <Button onClick={() => setIsNewTicketOpen(true)} className="gap-2"><Plus className="w-4 h-4" />New Ticket</Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {kanbanColumns.map((column) => {
+                  const config = statusConfig[column.id];
+                  const StatusIcon = config.icon;
+                  return (
+                    <div key={column.id} className="space-y-3">
+                      <div className="flex items-center gap-2 px-2">
+                        <StatusIcon className="w-4 h-4 text-muted-foreground" />
+                        <h3 className="font-semibold">{column.title}</h3>
+                        <Badge variant="secondary" className="ml-auto">{column.tickets.length}</Badge>
+                      </div>
+                      <div className="space-y-2 min-h-[200px] p-2 rounded-xl bg-muted/30">
+                        <AnimatePresence>
+                          {column.tickets.map((ticket) => (
+                            <motion.div key={ticket.id} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}>
+                              <Card className="glass-card cursor-pointer hover:shadow-lg transition-all duration-200" onClick={() => openTicket(ticket)}>
+                                <CardContent className="p-3 space-y-2">
+                                  <p className="font-medium text-sm line-clamp-2">{ticket.subject}</p>
+                                  <div className="flex items-center justify-between">
+                                    <Badge className={cn("text-xs", priorityConfig[ticket.priority])}>{ticket.priority}</Badge>
+                                    <span className="text-xs text-muted-foreground">{new Date(ticket.created_at).toLocaleDateString()}</span>
+                                  </div>
+                                  {ticket.messages?.length > 0 && (
+                                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                      <MessageSquare className="w-3 h-3" />{ticket.messages.length} message{ticket.messages.length > 1 ? 's' : ''}
+                                    </div>
+                                  )}
+                                </CardContent>
+                              </Card>
+                            </motion.div>
+                          ))}
+                        </AnimatePresence>
+                        {column.tickets.length === 0 && <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">No tickets</div>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* ===== LIVE CHAT TAB ===== */}
+          <TabsContent value="chat" className="mt-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 min-h-[500px]">
+              {/* Chat sessions list */}
+              <Card className="glass-card md:col-span-1">
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-sm">Conversations</h3>
+                    <Button size="sm" variant="outline" onClick={handleStartChat} className="gap-1 text-xs">
+                      <Plus className="w-3 h-3" />New
+                    </Button>
+                  </div>
+                  {chatLoading ? (
+                    <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
+                  ) : chatSessions.length === 0 ? (
+                    <div className="text-center py-8">
+                      <MessagesSquare className="w-10 h-10 mx-auto mb-3 text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground mb-3">No conversations yet</p>
+                      <Button size="sm" onClick={handleStartChat}>Start Chat</Button>
+                    </div>
+                  ) : (
+                    <ScrollArea className="h-[400px]">
+                      <div className="space-y-2">
+                        {chatSessions.map(session => (
+                          <div
+                            key={session.id}
+                            onClick={() => setSelectedChat(session)}
+                            className={cn(
+                              "p-3 rounded-lg cursor-pointer transition-colors",
+                              selectedChat?.id === session.id ? "bg-primary/10 border border-primary/20" : "hover:bg-muted/50"
+                            )}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium truncate">{session.visitor_name || 'Chat'}</span>
+                              <Badge variant={session.status === 'active' ? 'default' : 'secondary'} className="text-[10px] px-1.5">
+                                {session.status}
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {session.last_message_at ? new Date(session.last_message_at).toLocaleString() : new Date(session.created_at).toLocaleString()}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Chat messages */}
+              <Card className="glass-card md:col-span-2">
+                <CardContent className="p-4 flex flex-col h-full min-h-[500px]">
+                  {selectedChat ? (
+                    <>
+                      <div className="flex items-center gap-2 pb-3 border-b border-border/50 mb-3">
+                        <MessagesSquare className="w-5 h-5 text-primary" />
+                        <span className="font-semibold text-sm">Chat with Support</span>
+                        <Badge variant={selectedChat.status === 'active' ? 'default' : 'secondary'} className="ml-auto text-xs">
+                          {selectedChat.status}
+                        </Badge>
+                      </div>
+                      <ScrollArea className="flex-1 pr-2">
+                        <div className="space-y-3 py-2">
+                          {chatMessages.map(msg => (
+                            <div key={msg.id} className={cn("max-w-[80%] p-3 rounded-xl text-sm", msg.sender_type === 'visitor' ? "ml-auto bg-primary text-primary-foreground" : "bg-muted")}>
+                              <p>{msg.content}</p>
+                              <p className={cn("text-[10px] mt-1", msg.sender_type === 'visitor' ? "text-primary-foreground/70" : "text-muted-foreground")}>
+                                {new Date(msg.created_at).toLocaleTimeString()}
+                              </p>
+                            </div>
+                          ))}
+                          <div ref={chatEndRef} />
+                        </div>
+                      </ScrollArea>
+                      {selectedChat.status === 'active' && (
+                        <div className="flex gap-2 pt-3 border-t border-border/50 mt-auto">
+                          <Input
+                            placeholder="Type a message..."
+                            value={chatInput}
+                            onChange={(e) => setChatInput(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleSendChatMessage()}
+                          />
+                          <Button onClick={handleSendChatMessage} disabled={!chatInput.trim()}>
+                            <Send className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full text-center">
+                      <MessagesSquare className="w-12 h-12 text-muted-foreground mb-3" />
+                      <p className="text-muted-foreground text-sm">Select a conversation or start a new one</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* ===== FAQ TAB ===== */}
+          <TabsContent value="faq" className="mt-4">
             <Card className="glass-card">
-              <CardContent className="py-12 text-center">
-                <MessageSquare className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-lg font-semibold mb-2">No tickets yet</h3>
-                <p className="text-muted-foreground mb-4">Create your first support ticket</p>
-                <Button onClick={() => setIsNewTicketOpen(true)} className="gap-2">
-                  <Plus className="w-4 h-4" />
-                  New Ticket
-                </Button>
+              <CardContent className="p-6">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-3 rounded-xl bg-primary/10"><HelpCircle className="w-6 h-6 text-primary" /></div>
+                  <div>
+                    <h2 className="font-semibold text-lg">Frequently Asked Questions</h2>
+                    <p className="text-sm text-muted-foreground">Find quick answers to common questions</p>
+                  </div>
+                </div>
+                <Accordion type="single" collapsible className="w-full space-y-2">
+                  {faqs.map((faq, index) => (
+                    <AccordionItem key={index} value={`faq-${index}`} className="border rounded-lg px-4">
+                      <AccordionTrigger className="text-sm font-medium hover:no-underline">
+                        {faq.question}
+                      </AccordionTrigger>
+                      <AccordionContent className="text-sm text-muted-foreground">
+                        {faq.answer}
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
               </CardContent>
             </Card>
-          </motion.div>
-        ) : (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
-          >
-            {kanbanColumns.map((column, colIndex) => {
-              const config = statusConfig[column.id];
-              const StatusIcon = config.icon;
-              
-              return (
-                <motion.div
-                  key={column.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: colIndex * 0.1 }}
-                  className="space-y-3"
-                >
-                  <div className="flex items-center gap-2 px-2">
-                    <StatusIcon className="w-4 h-4 text-muted-foreground" />
-                    <h3 className="font-semibold">{column.title}</h3>
-                    <Badge variant="secondary" className="ml-auto">{column.tickets.length}</Badge>
-                  </div>
-                  
-                  <div className="space-y-2 min-h-[200px] p-2 rounded-xl bg-muted/30">
-                    <AnimatePresence>
-                      {column.tickets.map((ticket, ticketIndex) => (
-                        <motion.div
-                          key={ticket.id}
-                          initial={{ opacity: 0, scale: 0.95 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.95 }}
-                          transition={{ delay: ticketIndex * 0.05 }}
-                        >
-                          <Card 
-                            className="glass-card cursor-pointer hover:shadow-lg transition-all duration-200"
-                            onClick={() => openTicket(ticket)}
-                          >
-                            <CardContent className="p-3 space-y-2">
-                              <p className="font-medium text-sm line-clamp-2">{ticket.subject}</p>
-                              <div className="flex items-center justify-between">
-                                <Badge className={cn("text-xs", priorityConfig[ticket.priority])}>
-                                  {ticket.priority}
-                                </Badge>
-                                <span className="text-xs text-muted-foreground">
-                                  {new Date(ticket.created_at).toLocaleDateString()}
-                                </span>
-                              </div>
-                              {ticket.messages?.length > 0 && (
-                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                  <MessageSquare className="w-3 h-3" />
-                                  {ticket.messages.length} message{ticket.messages.length > 1 ? 's' : ''}
-                                </div>
-                              )}
-                            </CardContent>
-                          </Card>
-                        </motion.div>
-                      ))}
-                    </AnimatePresence>
-                    
-                    {column.tickets.length === 0 && (
-                      <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">
-                        No tickets
-                      </div>
-                    )}
-                  </div>
-                </motion.div>
-              );
-            })}
-          </motion.div>
-        )}
+          </TabsContent>
+        </Tabs>
 
         {/* New Ticket Dialog */}
         <Dialog open={isNewTicketOpen} onOpenChange={setIsNewTicketOpen}>
           <DialogContent className="glass-card border-primary/20">
             <DialogHeader>
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <MessageSquare className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <DialogTitle>Create New Ticket</DialogTitle>
-                  <DialogDescription>Describe your issue and we'll help you</DialogDescription>
-                </div>
+                <div className="p-2 rounded-lg bg-primary/10"><MessageSquare className="w-5 h-5 text-primary" /></div>
+                <div><DialogTitle>Create New Ticket</DialogTitle><DialogDescription>Describe your issue and we'll help you</DialogDescription></div>
               </div>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>Subject</Label>
-                <Input
-                  placeholder="Brief description of your issue"
-                  value={newTicket.subject}
-                  onChange={(e) => setNewTicket({ ...newTicket, subject: e.target.value })}
-                  className="border-border focus:border-primary focus-visible:ring-primary/30"
-                />
+                <Input placeholder="Brief description of your issue" value={newTicket.subject} onChange={(e) => setNewTicket({ ...newTicket, subject: e.target.value })} />
               </div>
               <div className="space-y-2">
                 <Label>Priority</Label>
-                <Select 
-                  value={newTicket.priority} 
-                  onValueChange={(v) => setNewTicket({ ...newTicket, priority: v })}
-                >
-                  <SelectTrigger className="border-border focus:ring-primary/30 focus:border-primary">
-                    <SelectValue />
-                  </SelectTrigger>
+                <Select value={newTicket.priority} onValueChange={(v) => setNewTicket({ ...newTicket, priority: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="low">Low</SelectItem>
                     <SelectItem value="medium">Medium</SelectItem>
@@ -497,20 +631,12 @@ const BuyerSupport = () => {
               </div>
               <div className="space-y-2">
                 <Label>Message</Label>
-                <Textarea
-                  placeholder="Describe your issue in detail..."
-                  value={newTicket.message}
-                  onChange={(e) => setNewTicket({ ...newTicket, message: e.target.value })}
-                  rows={4}
-                  className="border-border focus:border-primary focus-visible:ring-primary/30"
-                />
+                <Textarea placeholder="Describe your issue in detail..." value={newTicket.message} onChange={(e) => setNewTicket({ ...newTicket, message: e.target.value })} rows={4} />
               </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsNewTicketOpen(false)}>Cancel</Button>
-              <Button onClick={handleCreateTicket} disabled={submitting} className="bg-primary hover:bg-primary/90">
-                {submitting ? "Creating..." : "Create Ticket"}
-              </Button>
+              <Button onClick={handleCreateTicket} disabled={submitting}>{submitting ? "Creating..." : "Create Ticket"}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -519,74 +645,44 @@ const BuyerSupport = () => {
         <Dialog open={isTicketViewOpen} onOpenChange={setIsTicketViewOpen}>
           <DialogContent className="glass-card max-w-lg max-h-[80vh] flex flex-col">
             <DialogHeader>
-              <div className="flex items-start justify-between">
-                <div className="space-y-1">
-                  <DialogTitle className="pr-8">{selectedTicket?.subject}</DialogTitle>
-                  <div className="flex items-center gap-2">
-                    <Badge className={cn(statusConfig[selectedTicket?.status || 'open'].color)}>
-                      {statusConfig[selectedTicket?.status || 'open'].label}
-                    </Badge>
-                    <Badge className={cn(priorityConfig[selectedTicket?.priority || 'medium'])}>
-                      {selectedTicket?.priority}
-                    </Badge>
-                  </div>
+              <div className="space-y-1">
+                <DialogTitle className="pr-8">{selectedTicket?.subject}</DialogTitle>
+                <div className="flex items-center gap-2">
+                  <Badge className={cn(statusConfig[selectedTicket?.status || 'open'].color)}>{statusConfig[selectedTicket?.status || 'open'].label}</Badge>
+                  <Badge className={cn(priorityConfig[selectedTicket?.priority || 'medium'])}>{selectedTicket?.priority}</Badge>
+                  {selectedTicket?.status === 'open' || selectedTicket?.status === 'in_progress' ? (
+                    <Button size="sm" variant="outline" className="ml-auto text-xs gap-1" onClick={() => selectedTicket && handleResolveTicket(selectedTicket.id)}>
+                      <CheckCircle className="w-3 h-3" />Resolve
+                    </Button>
+                  ) : null}
                 </div>
               </div>
             </DialogHeader>
-            
             <ScrollArea className="flex-1 pr-4">
               <div className="space-y-4 py-4">
                 {(selectedTicket?.messages || []).map((msg: Message, index: number) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    className={cn(
-                      "p-3 rounded-xl max-w-[85%]",
-                      msg.sender === 'buyer'
-                        ? "ml-auto bg-primary text-primary-foreground"
-                        : "bg-muted"
-                    )}
+                  <motion.div key={index} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}
+                    className={cn("p-3 rounded-xl max-w-[85%]", msg.sender === 'buyer' ? "ml-auto bg-primary text-primary-foreground" : "bg-muted")}
                   >
                     <p className="text-sm">{msg.content}</p>
-                    <p className={cn(
-                      "text-xs mt-1",
-                      msg.sender === 'buyer' ? "text-primary-foreground/70" : "text-muted-foreground"
-                    )}>
-                      {new Date(msg.timestamp).toLocaleString()}
-                    </p>
+                    <p className={cn("text-xs mt-1", msg.sender === 'buyer' ? "text-primary-foreground/70" : "text-muted-foreground")}>{new Date(msg.timestamp).toLocaleString()}</p>
                   </motion.div>
                 ))}
               </div>
             </ScrollArea>
-
-            {selectedTicket?.status !== 'closed' && (
+            {selectedTicket?.status !== 'closed' && selectedTicket?.status !== 'resolved' && (
               <div className="flex gap-2 pt-4 border-t">
-                <Input
-                  placeholder="Type your message..."
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                  className="border-border focus:border-primary focus-visible:ring-primary/30"
-                />
-                <Button onClick={handleSendMessage} disabled={submitting || !newMessage.trim()} className="bg-primary hover:bg-primary/90">
-                  <Send className="w-4 h-4" />
-                </Button>
+                <Input placeholder="Type your message..." value={newMessage} onChange={(e) => setNewMessage(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()} />
+                <Button onClick={handleSendMessage} disabled={submitting || !newMessage.trim()}><Send className="w-4 h-4" /></Button>
               </div>
             )}
           </DialogContent>
         </Dialog>
       </div>
-      
-      {/* Live Chat Widget for instant AI support */}
+
+      {/* Live Chat Widget */}
       {panel?.id && (
-        <FloatingChatWidget 
-          panelId={panel.id} 
-          panelName={panel.name}
-          pageContext="Buyer Support Page"
-          enableAI={true}
-        />
+        <FloatingChatWidget panelId={panel.id} panelName={panel.name} pageContext="Buyer Support Page" enableAI={true} />
       )}
     </BuyerLayout>
   );

@@ -328,7 +328,7 @@ const TenantContent = () => {
     return (
       <QueryClientProvider client={queryClient}>
         <HelmetProvider>
-          <ThemeProvider defaultTheme="dark" storageKey="smm-panel-theme">
+           <ThemeProvider defaultTheme={panelDefaultTheme} storageKey={`smm-tenant-theme-${panel.id}`}>
             <TooltipProvider>
               <CurrencyProvider>
                 <Toaster />

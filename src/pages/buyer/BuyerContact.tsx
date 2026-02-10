@@ -140,12 +140,13 @@ const BuyerContact = () => {
     }
   };
 
+  const defaultEmail = 'support@homeofsmm.com';
   const contactMethods = [
     {
       icon: Mail,
       label: "Email",
-      value: contactInfo.email,
-      href: contactInfo.email ? `mailto:${contactInfo.email}` : undefined,
+      value: contactInfo.email || defaultEmail,
+      href: `mailto:${contactInfo.email || defaultEmail}`,
       color: "text-primary",
       bgColor: "bg-primary/10",
     },
