@@ -263,9 +263,21 @@ const ProviderAds = () => {
 
       if (adError) throw adError;
 
-      // Create transaction record
+      // Create transaction record with user_id for RLS visibility
+      const { data: { user } } = await supabase.auth.getUser();
+      let profileId: string | undefined;
+      if (user) {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('user_id', user.id)
+          .single();
+        profileId = profileData?.id;
+      }
+
       await supabase.from('transactions').insert({
         panel_id: panel.id,
+        user_id: profileId,
         type: 'debit',
         amount: price,
         status: 'completed',

@@ -12,6 +12,19 @@ import BuyerThemeSMMVisit, { smmVisitThemeConfig } from './BuyerThemeSMMVisit';
 
 export type BuyerThemeKey = 'default' | 'alipanel' | 'flysmm' | 'smmstay' | 'tgref' | 'smmvisit';
 
+// Helper: get theme-specific default animation style
+const getThemeDefaultAnimationStyle = (themeKey: BuyerThemeKey): string => {
+  const map: Record<BuyerThemeKey, string> = {
+    default: 'gradient-wave',
+    alipanel: 'highlight',
+    flysmm: 'gradient-wave',
+    smmstay: 'glow-box',
+    tgref: 'typewriter',
+    smmvisit: 'text-reveal',
+  };
+  return map[themeKey] || 'gradient-wave';
+};
+
 interface BuyerThemeContextValue {
   themeKey: BuyerThemeKey;
   themeConfig: typeof defaultThemeConfig;
@@ -187,11 +200,13 @@ export const BuyerThemeWrapper = ({
       enableTestimonials: branding.enableTestimonials ?? true,
       enableFAQs: branding.enableFAQs ?? true,
       // Content
-      heroTitle: branding.heroTitle || '',
-      heroSubtitle: branding.heroSubtitle || '',
-      heroBadgeText: branding.heroBadgeText || '',
+      heroTitle: branding.heroTitle || 'Boost Your Social Media Presence',
+      heroSubtitle: branding.heroSubtitle || 'Get real followers, likes, and views at the lowest prices. Trusted by over 50,000+ customers worldwide.',
+      heroBadgeText: branding.heroBadgeText || '#1 SMM Panel',
       heroCTAText: branding.heroCTAText || 'Get Started',
       heroSecondaryCTAText: branding.heroSecondaryCTAText || 'Fast Order',
+      heroAnimatedTextStyle: branding.heroAnimatedTextStyle || getThemeDefaultAnimationStyle(themeKey),
+      heroAnimatedTextPosition: branding.heroAnimatedTextPosition || 'last',
       featureCards: branding.featureCards || [],
       testimonials: branding.testimonials || [],
       faqs: branding.faqs || [],
