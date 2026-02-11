@@ -42,9 +42,9 @@ const Index = () => {
   }, []);
   
   // SEO-optimized title and description with proper pixel lengths
-  const seoTitle = "HOME OF SMM - #1 SMM Panel Platform | Create Your Own SMM Panel";
-  const seoDescription = "Create and manage your own SMM panel with HOME OF SMM. Start your social media marketing business with custom branding, automated orders, multiple payment gateways, and powerful analytics. Join 10,000+ panel owners today. Best SMM panel script 2025.";
-  const seoKeywords = "SMM panel, SMM panel script, create SMM panel, best SMM panel, SMM reseller panel, SMM panel software, social media marketing panel, white label SMM panel, cheapest SMM panel, SMM panel provider, buy SMM panel, SMM panel 2025, instagram followers panel, youtube views panel, tiktok likes panel, SMM services, social media marketing, SMM automation";
+  const seoTitle = "Home of SMM – Create & Manage Your Own SMM Panel";
+  const seoDescription = "Launch your own SMM panel with Home of SMM. Get custom branding, automated orders, multiple payment gateways, and real-time analytics to grow your SMM business fast.";
+  const seoKeywords = "SMM panel, SMM panel script, create SMM panel, best SMM panel, SMM reseller panel, SMM panel software, social media marketing panel, white label SMM panel, cheapest SMM panel, SMM panel provider, buy SMM panel, SMM panel 2026, instagram followers panel, youtube views panel, tiktok likes panel, SMM services, social media marketing, SMM automation";
   
   // FAQ data for structured data
   const faqData = [

@@ -92,7 +92,7 @@ export const TGRefHomepage = ({
   const showBlogInMenu = customization.showBlogInMenu ?? false;
 
   // Fast Order toggle - determines CTA buttons
-  const enableFastOrder = customization.enableFastOrder !== false;
+  const enableFastOrder = customization.enableFastOrder === true;
 
   // Section toggles
   const showStats = customization.enableStats !== false;

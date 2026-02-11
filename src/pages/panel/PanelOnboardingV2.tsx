@@ -282,7 +282,8 @@ const PanelOnboardingV2 = () => {
     const progressData = {
       panelName, description, selectedPlan, subdomain, customDomain, 
       domainType, primaryColor, secondaryColor, paymentCompleted,
-      selectedTheme, brandingMode, seoTitle, seoDescription, seoKeywords
+      selectedTheme, brandingMode, seoTitle, seoDescription, seoKeywords,
+      currency
     };
 
     try {
@@ -425,11 +426,26 @@ const PanelOnboardingV2 = () => {
             onboarding_completed: true,
             default_currency: currency,
             custom_branding: {
-              selectedTheme: selectedTheme, // CRITICAL: Save selectedTheme for Storefront.tsx
-              heroAnimationStyle: defaultAnimationStyle,
+              selectedTheme: selectedTheme,
+              heroTitle: 'Boost Your Social Media Presence',
+              heroSubtitle: 'Get real followers, likes, and views at the lowest prices. Trusted by over 50,000+ customers worldwide.',
+              heroCTAText: 'Get Started',
+              heroSecondaryCTAText: 'Fast Order',
+              heroBadgeText: '#1 SMM Panel',
+              heroAnimatedTextStyle: defaultAnimationStyle,
+              heroAnimatedTextPosition: 'last',
+              enableFastOrder: false,
+              enablePlatformFeatures: true,
+              enableStats: true,
+              enableFeatures: true,
+              enableTestimonials: true,
+              enableFAQs: true,
+              enableFooter: true,
               enableAnimations: true,
               primaryColor: finalPrimaryColor,
-              secondaryColor: finalSecondaryColor
+              secondaryColor: finalSecondaryColor,
+              companyName: panelName,
+              themeMode: 'dark',
             }
           }
         ])

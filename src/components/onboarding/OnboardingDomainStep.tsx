@@ -41,7 +41,7 @@ interface OnboardingDomainStepProps {
   onCurrencyChange?: (value: string) => void;
 }
 
-type DomainOption = 'have-domain' | 'register-new';
+type DomainOption = 'have-domain' | 'register-new' | 'free-subdomain';
 
 const tldOptions = [
   { value: '.com', label: '.com', price: '$10-15/yr' },
@@ -348,14 +348,16 @@ export const OnboardingDomainStep = ({
 
                     <div className="space-y-2">
                       {dnsRecords.map((record, i) => (
-                        <div key={i} className="flex items-center gap-2 p-3 rounded-lg bg-background/50 text-sm font-mono">
-                          <Badge variant="outline" className="shrink-0 w-16 justify-center">{record.type}</Badge>
-                          <span className="w-24 shrink-0 text-muted-foreground">{record.name}</span>
-                          <span className="flex-1 truncate">{record.value}</span>
+                        <div key={i} className="flex flex-col sm:flex-row sm:items-center gap-2 p-3 rounded-lg bg-background/50 text-sm font-mono">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="shrink-0 w-16 justify-center">{record.type}</Badge>
+                            <span className="text-muted-foreground">{record.name}</span>
+                          </div>
+                          <span className="flex-1 text-xs sm:text-sm break-all">{record.value}</span>
                           <Button 
                             variant="ghost" 
                             size="icon" 
-                            className="h-8 w-8 shrink-0"
+                            className="h-8 w-8 shrink-0 self-end sm:self-auto"
                             onClick={() => copyToClipboard(record.value)}
                           >
                             <Copy className="w-4 h-4" />
@@ -364,14 +366,16 @@ export const OnboardingDomainStep = ({
                       ))}
                       
                       {verificationToken && (
-                        <div className="flex items-center gap-2 p-3 rounded-lg bg-background/50 text-sm font-mono">
-                          <Badge variant="outline" className="shrink-0 w-16 justify-center">TXT</Badge>
-                          <span className="w-24 shrink-0 text-muted-foreground">_homeofsmm</span>
-                          <span className="flex-1 truncate">homeofsmm-verify={verificationToken}</span>
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 p-3 rounded-lg bg-background/50 text-sm font-mono">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="shrink-0 w-16 justify-center">TXT</Badge>
+                            <span className="text-muted-foreground">_homeofsmm</span>
+                          </div>
+                          <span className="flex-1 text-xs sm:text-sm break-all">homeofsmm-verify={verificationToken}</span>
                           <Button 
                             variant="ghost" 
                             size="icon" 
-                            className="h-8 w-8 shrink-0"
+                            className="h-8 w-8 shrink-0 self-end sm:self-auto"
                             onClick={() => copyToClipboard(`homeofsmm-verify=${verificationToken}`)}
                           >
                             <Copy className="w-4 h-4" />
@@ -475,6 +479,62 @@ export const OnboardingDomainStep = ({
             </div>
           )}
         </div>
+
+        {/* Option 3: Free Subdomain */}
+        <div className={cn(
+          "rounded-xl border-2 transition-all",
+          domainOption === 'free-subdomain' ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
+        )}>
+          <div 
+            className="flex items-start space-x-3 p-4 cursor-pointer"
+            onClick={() => { setDomainOption('free-subdomain'); onDomainTypeChange('subdomain'); }}
+          >
+            <RadioGroupItem value="free-subdomain" id="free-subdomain" className="mt-1" />
+            <div className="flex-1">
+              <Label htmlFor="free-subdomain" className="font-medium cursor-pointer text-base">
+                Use Free Subdomain
+              </Label>
+              <p className="text-sm text-muted-foreground mt-1">
+                Use a free *.{PRIMARY_PLATFORM_DOMAIN} subdomain — no cost, instant setup
+              </p>
+            </div>
+            <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20">Free</Badge>
+          </div>
+
+          {domainOption === 'free-subdomain' && (
+            <div className="px-4 pb-4 pt-0 space-y-3">
+              <Label className="text-sm font-medium">Choose Your Subdomain</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  value={subdomain}
+                  onChange={(e) => onSubdomainChange(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ''))}
+                  placeholder="mysmm"
+                  className="bg-background/50 h-12"
+                />
+                <div className="px-3 h-12 flex items-center bg-muted/50 rounded-lg border border-border text-sm">
+                  <span className="text-muted-foreground">.{PRIMARY_PLATFORM_DOMAIN}</span>
+                </div>
+              </div>
+              {checkingSubdomain && (
+                <p className="text-sm text-muted-foreground flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Checking availability...
+                </p>
+              )}
+              {subdomainAvailable === true && subdomain.length >= 3 && (
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-500/10 text-emerald-600">
+                  <CheckCircle className="w-5 h-5" />
+                  <span className="font-medium">Subdomain available!</span>
+                </div>
+              )}
+              {subdomainAvailable === false && (
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 text-destructive">
+                  <XCircle className="w-5 h-5" />
+                  <span className="font-medium">Subdomain already taken</span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </RadioGroup>
 
       {/* Currency Selector */}
@@ -490,11 +550,13 @@ export const OnboardingDomainStep = ({
             <div>
               <p className="text-sm text-muted-foreground">Your panel will be available at:</p>
               <p className="font-medium text-primary">
-                {customDomain 
-                  ? `https://${customDomain}`
-                  : searchDomain 
-                    ? `https://${searchDomain}${selectedTld}` 
-                    : `https://${subdomain || 'yourname'}.homeofsmm.com`
+                {domainOption === 'free-subdomain'
+                  ? `https://${subdomain || 'yourname'}.${PRIMARY_PLATFORM_DOMAIN}`
+                  : customDomain 
+                    ? `https://${customDomain}`
+                    : searchDomain 
+                      ? `https://${searchDomain}${selectedTld}` 
+                      : `https://${subdomain || 'yourname'}.${PRIMARY_PLATFORM_DOMAIN}`
                 }
               </p>
             </div>

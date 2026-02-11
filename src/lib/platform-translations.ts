@@ -4,7 +4,7 @@
 export const platformTranslations = {
   en: {
     // Buyer Theme Homepage Defaults (for AliPanel, SMMVisit, FlySMM, SMMStay, TGRef)
-    'buyer.hero.title': 'Boost Your',
+    'buyer.hero.title': 'Boost Your Social Media Presence',
     'buyer.hero.subtitle': 'Get real followers, likes, and views at the lowest prices. Trusted by thousands of customers worldwide.',
     'buyer.hero.badge': '#1 Rated SMM Panel',
     'buyer.hero.cta': 'Get Started',
@@ -210,8 +210,8 @@ export const platformTranslations = {
     
     // Homepage Hero
     'home.badge': 'Automate Your Business',
-    'home.title.line1': 'Create your own',
-    'home.title.line2': 'smm panel',
+    'home.title.line1': 'Create Your Own',
+    'home.title.line2': 'SMM Panel',
     'home.cta.create': 'Create panel',
     'home.cta.tools': 'Service Tools',
     'home.animated.profit': 'for profit',
@@ -316,7 +316,7 @@ export const platformTranslations = {
   },
   es: {
     // Buyer Theme Homepage Defaults
-    'buyer.hero.title': 'Impulsa Tu',
+    'buyer.hero.title': 'Impulsa Tu Presencia en Redes Sociales',
     'buyer.hero.subtitle': 'Obtén seguidores, likes y vistas reales a los mejores precios. Miles de clientes confían en nosotros.',
     'buyer.hero.badge': 'Panel SMM #1',
     'buyer.hero.cta': 'Empezar Ahora',
@@ -598,7 +598,7 @@ export const platformTranslations = {
   },
   pt: {
     // Buyer Theme Homepage Defaults
-    'buyer.hero.title': 'Impulsione Seu',
+    'buyer.hero.title': 'Impulsione Sua Presença nas Redes Sociais',
     'buyer.hero.subtitle': 'Obtenha seguidores, curtidas e visualizações reais aos melhores preços. Milhares de clientes confiam em nós.',
     'buyer.hero.badge': 'Painel SMM #1',
     'buyer.hero.cta': 'Começar Agora',
@@ -880,7 +880,7 @@ export const platformTranslations = {
   },
   ar: {
     // Buyer Theme Homepage Defaults (Arabic)
-    'buyer.hero.title': 'عزز حضورك',
+    'buyer.hero.title': 'عزز حضورك على وسائل التواصل الاجتماعي',
     'buyer.hero.subtitle': 'احصل على متابعين وإعجابات ومشاهدات حقيقية بأفضل الأسعار. موثوق من آلاف العملاء.',
     'buyer.hero.badge': 'لوحة SMM رقم 1',
     'buyer.hero.cta': 'ابدأ الآن',
@@ -1162,7 +1162,7 @@ export const platformTranslations = {
   },
   tr: {
     // Buyer Theme Homepage Defaults (Turkish)
-    'buyer.hero.title': 'Büyütün',
+    'buyer.hero.title': 'Sosyal Medya Varlığınızı Büyütün',
     'buyer.hero.subtitle': 'En düşük fiyatlarla gerçek takipçi, beğeni ve görüntüleme alın. Binlerce müşteri tarafından güveniliyor.',
     'buyer.hero.badge': '#1 SMM Paneli',
     'buyer.hero.cta': 'Şimdi Başla',
@@ -1436,7 +1436,7 @@ export const platformTranslations = {
   },
   ru: {
     // Buyer Theme Homepage Defaults (Russian)
-    'buyer.hero.title': 'Прокачайте Свой',
+    'buyer.hero.title': 'Прокачайте Своё Присутствие в Соцсетях',
     'buyer.hero.subtitle': 'Получайте реальных подписчиков, лайки и просмотры по лучшим ценам. Нам доверяют тысячи клиентов.',
     'buyer.hero.badge': 'SMM Панель #1',
     'buyer.hero.cta': 'Начать Сейчас',
@@ -1710,7 +1710,7 @@ export const platformTranslations = {
   },
   fr: {
     // Buyer Theme Homepage Defaults (French)
-    'buyer.hero.title': 'Boostez Votre',
+    'buyer.hero.title': 'Boostez Votre Présence sur les Réseaux Sociaux',
     'buyer.hero.subtitle': 'Obtenez des abonnés, likes et vues réels aux meilleurs prix. Des milliers de clients nous font confiance.',
     'buyer.hero.badge': 'Panel SMM #1',
     'buyer.hero.cta': 'Commencer',
@@ -1984,7 +1984,7 @@ export const platformTranslations = {
   },
   de: {
     // Buyer Theme Homepage Defaults (German)
-    'buyer.hero.title': 'Steigern Sie Ihr',
+    'buyer.hero.title': 'Steigern Sie Ihre Social-Media-Präsenz',
     'buyer.hero.subtitle': 'Erhalten Sie echte Follower, Likes und Views zu den besten Preisen. Tausende Kunden vertrauen uns.',
     'buyer.hero.badge': '#1 SMM Panel',
     'buyer.hero.cta': 'Jetzt Starten',
@@ -2258,7 +2258,7 @@ export const platformTranslations = {
   },
   zh: {
     // Buyer Theme Homepage Defaults (Chinese)
-    'buyer.hero.title': '提升您的',
+    'buyer.hero.title': '提升您的社交媒体影响力',
     'buyer.hero.subtitle': '以最低价格获得真实的粉丝、点赞和观看量。数千客户信赖我们。',
     'buyer.hero.badge': '#1 SMM面板',
     'buyer.hero.cta': '立即开始',
@@ -2532,7 +2532,7 @@ export const platformTranslations = {
   },
   hi: {
     // Buyer Theme Homepage Defaults (Hindi)
-    'buyer.hero.title': 'अपना बढ़ाएं',
+    'buyer.hero.title': 'अपनी सोशल मीडिया उपस्थिति बढ़ाएं',
     'buyer.hero.subtitle': 'सबसे कम कीमतों पर असली फॉलोअर्स, लाइक्स और व्यूज पाएं। हजारों ग्राहक हम पर भरोसा करते हैं।',
     'buyer.hero.badge': '#1 SMM पैनल',
     'buyer.hero.cta': 'अभी शुरू करें',
