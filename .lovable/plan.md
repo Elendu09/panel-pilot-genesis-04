@@ -1,235 +1,217 @@
 
 
-# Comprehensive Fix Plan: Contact Email, Transaction Visibility, Theme Sync, and Support Enhancement
+# Comprehensive Fix Plan: SEO, Onboarding Persistence, Theme Sync, and Domain Issues
 
 ---
 
-## Issues Identified (6 Total)
+## Issues Summary (8 Total)
 
-### Issue 1: Contact Email Default
-The platform contact email needs to default to "support@homeofsmm.com".
-
-### Issue 2: Ad Purchase Transactions Not Visible in Billing
-**Root Cause (CRITICAL):** The `transactions` table RLS policy requires `user_id` to match the current user's profile ID. However, the ad purchase code in `ProviderAds.tsx` (line 267) inserts transactions with only `panel_id` and NO `user_id`. The SELECT policy also filters by `user_id`, so even the `TransactionHistory` component (which queries by `panel_id`) cannot see them because RLS blocks the rows.
-
-Fix requires:
-1. Adding `user_id` (profile ID) to the ad purchase transaction insert
-2. Updating the RLS SELECT policy to also allow viewing by `panel_id` (for panel owners)
-
-### Issue 3: Hero Incomplete Text / Theme Not Syncing with Design Customization
-**Root Cause:** The onboarding saves hardcoded strings in `custom_branding.heroTitle` ("Boost Your Social Media Presence"), but the theme homepages (SMMStay, AliPanel, etc.) read `customization.heroTitle` from `BuyerThemeWrapper`. The issue is that `BuyerThemeWrapper` line 190 sets:
-```
-heroTitle: branding.heroTitle || '',
-```
-If `heroTitle` is an empty string or if it was not saved during onboarding (for older panels), it falls back to `''`, causing incomplete display. The themes then try to split this into animated words and non-animated words, leading to broken rendering.
-
-The real fix: The onboarding `custom_branding` already has the right content (added in previous edit), but the `BuyerThemeWrapper` fallback chain and the `DesignCustomization` defaults need to stay in sync. The themes should fall back to a sensible default title if none is set, rather than empty string.
-
-### Issue 4: Text/Background Error on All Themes Until Dark/Light Mode Toggle
-**Root Cause (CRITICAL):** There is a race condition between TWO theme providers that both modify `document.documentElement`:
-
-1. `ThemeProvider` (use-theme.tsx, line 331 in TenantRouter) - Sets `<html>` to "dark" based on `localStorage['smm-panel-theme']`
-2. `BuyerThemeProvider` (BuyerThemeContext.tsx) - Also sets `<html>` to dark/light based on buyer preference
-
-On initial load, `ThemeProvider` runs first and may set a stale value. Then `BuyerThemeProvider` runs and sets the correct value. But each theme wrapper component (e.g., `BuyerThemeSMMStay`) ALSO wraps children in `<div className={themeMode === 'light' ? 'light' : 'dark'}>`, creating a nested scope.
-
-The problem: `ThemeProvider` sets `<html class="dark">` but if `BuyerThemeProvider` hasn't applied yet, the Tailwind `dark:` utilities on outer elements respond to the wrong state. Additionally, the theme wrapper CSS uses hardcoded colors (`--theme-background: #000000`) that don't change with light/dark mode.
-
-**Fix:** Make the `ThemeProvider` in TenantRouter use the panel's `defaultThemeMode` directly as its default, AND ensure `BuyerThemeProvider` applies synchronously before first paint. Also ensure theme wrapper components apply their light mode CSS variables correctly.
-
-### Issue 5: Enhance Buyer Support Page
-Add chat inbox integration, FAQ section, and "Talk to Human" sync with panel owner's live support (ChatInbox).
-
-### Issue 6: Ads Banner Text
-Already fixed in previous edit (FreeTierBanner). Verify it's applied.
+### 1. Main Homepage SEO Title/Description Update
+### 2. "Boost Your" Incomplete Hero Text (ROOT CAUSE FOUND)
+### 3. enableFastOrder Default Not Working in Themes
+### 4. Onboarding V2 custom_branding Missing Theme Defaults
+### 5. Currency Selector - Lock to USD Only
+### 6. Domain Step - Add Free Subdomain Card + Fix subdomain display (.smmpilot.online)
+### 7. Payment Simulated Success Without Real Payment (Security Issue)
+### 8. Mobile Responsiveness in DNS Configuration Section
 
 ---
 
-## Implementation Plan
+## Part 1: Main Homepage SEO Update
 
-### Part 1: Contact Email Default
+**File:** `src/pages/Index.tsx`
 
-**File:** `src/pages/buyer/BuyerContact.tsx`
+Update title, description, and OG/Twitter tags:
 
-Add default contact email "support@homeofsmm.com" when no panel contact info is configured. In the `contactMethods` array construction, add a fallback:
+- Title: `"Home of SMM - Create & Manage Your Own SMM Panel"`
+- Description: `"Launch your own SMM panel with Home of SMM. Get custom branding, automated orders, multiple payment gateways, and real-time analytics to grow your SMM business fast."`
+- OG + Twitter descriptions match the meta description
 
-```typescript
-// If no email is configured in panel settings, show default platform email
-const defaultEmail = 'support@homeofsmm.com';
-const emailValue = contactInfo.email || defaultEmail;
-```
+**File:** `src/components/sections/HeroSection.tsx`
 
-Ensure the Email contact method always shows with the fallback.
+Ensure the H1 heading uses semantic structure. Current H1 renders `t('home.title.line1')` + `t('home.title.line2')` which is "Create your own" + "smm panel". This is correct semantically but needs to render as an H1 tag (already does at line 125).
 
----
+Also update `src/lib/platform-translations.ts` English entry:
+- `'home.title.line1': 'Create Your Own'` (capitalize for SEO)
+- `'home.title.line2': 'SMM Panel'` (capitalize)
 
-### Part 2: Fix Ad Transaction Visibility (RLS + Missing user_id)
-
-**File 1:** `src/pages/panel/ProviderAds.tsx` (line 267)
-
-Add `user_id` from the authenticated profile to the transaction insert:
-
-```typescript
-// Get the profile ID for the current user
-const { data: profileData } = await supabase
-  .from('profiles')
-  .select('id')
-  .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
-  .single();
-
-await supabase.from('transactions').insert({
-  panel_id: panel.id,
-  user_id: profileData?.id,  // ADD THIS
-  type: 'ad_purchase',       // Use specific type instead of 'debit'
-  amount: price,
-  status: 'completed',
-  description: `Ad purchase: ${tier.ad_type} (${duration})`,
-  payment_method: 'balance'
-});
-```
-
-**Database:** Update RLS policy on `transactions` table to also allow panel owners to view transactions by `panel_id`:
-
-```sql
--- Drop existing select policy
-DROP POLICY IF EXISTS "Users can view their transactions" ON transactions;
-
--- Create new policy that allows viewing by user_id OR panel ownership
-CREATE POLICY "Users can view their transactions" ON transactions FOR SELECT
-USING (
-  user_id IN (SELECT id FROM profiles WHERE user_id = auth.uid())
-  OR
-  panel_id IN (SELECT id FROM panels WHERE owner_id IN (SELECT id FROM profiles WHERE user_id = auth.uid()))
-);
-```
-
-Also update INSERT policy to allow panel owners to insert with panel_id:
-
-```sql
-DROP POLICY IF EXISTS "Users can create transactions" ON transactions;
-
-CREATE POLICY "Users can create transactions" ON transactions FOR INSERT
-WITH CHECK (
-  user_id IN (SELECT id FROM profiles WHERE user_id = auth.uid())
-  OR
-  panel_id IN (SELECT id FROM panels WHERE owner_id IN (SELECT id FROM profiles WHERE user_id = auth.uid()))
-);
-```
+Ensure section headings use H2/H3 tags properly for crawlers.
 
 ---
 
-### Part 3: Fix Theme Sync - Hero Text & Design Customization Integration
+## Part 2: Fix "Boost Your" Incomplete Hero Text (CRITICAL ROOT CAUSE)
 
-**File:** `src/components/buyer-themes/BuyerThemeWrapper.tsx` (line 190)
+**Root Cause Found:** The translation `buyer.hero.title` in `src/lib/platform-translations.ts` (line 7) is set to just `"Boost Your"` -- only 2 words. Each theme homepage (TGRef, SMMStay, AliPanel, FlySMM, SMMVisit) falls back to `t('buyer.hero.title')` when `customization.heroTitle` is falsy, producing the incomplete "Boost Your" with the last word animated.
 
-Change the heroTitle fallback from empty string to a sensible default:
-
-```typescript
-heroTitle: branding.heroTitle || 'Boost Your Social Media Presence',
-heroSubtitle: branding.heroSubtitle || 'Get real followers, likes, and views at the lowest prices.',
-heroBadgeText: branding.heroBadgeText || '#1 SMM Panel',
-```
-
-Also ensure `heroAnimatedTextStyle` uses the theme-specific default:
+**But wait** -- `BuyerThemeWrapper.tsx` line 203 already sets `heroTitle: branding.heroTitle || 'Boost Your Social Media Presence'`. So `customization.heroTitle` should be `"Boost Your Social Media Presence"`. The problem is that in V2 onboarding (line 427-433), the `custom_branding` saved is:
 
 ```typescript
-heroAnimatedTextStyle: branding.heroAnimatedTextStyle || getThemeDefaultAnimationStyle(themeKey),
-heroAnimatedTextPosition: branding.heroAnimatedTextPosition || 'last',
-```
-
-This requires importing `getThemeDefaultAnimationStyle` and passing `themeKey` into the customization memo.
-
----
-
-### Part 4: Fix Theme Dark/Light Mode Race Condition
-
-**Root Cause Fix:** The `ThemeProvider` in TenantRouter should use the panel's theme mode instead of hardcoded "dark".
-
-**File:** `src/pages/TenantRouter.tsx` (line 331)
-
-Change:
-```typescript
-<ThemeProvider defaultTheme="dark" storageKey="smm-panel-theme">
-```
-To:
-```typescript
-<ThemeProvider defaultTheme={panelDefaultTheme} storageKey={`smm-tenant-theme-${panel.id}`}>
-```
-
-Using a panel-specific storage key prevents cross-contamination between different tenant sites and the panel owner dashboard.
-
-**File:** Each theme wrapper (BuyerThemeDefault, BuyerThemeSMMStay, BuyerThemeAliPanel, etc.)
-
-The theme wrappers all have CSS like:
-```css
-.buyer-theme-smmstay {
-  --theme-background: #000000;
-  background: var(--theme-background);
-  color: var(--theme-text);
+custom_branding: {
+  selectedTheme: selectedTheme,
+  heroAnimationStyle: defaultAnimationStyle,  // WRONG KEY - should be heroAnimatedTextStyle
+  enableAnimations: true,
+  primaryColor, secondaryColor
 }
 ```
 
-These hardcoded values only work for dark mode. For light mode support, add light mode CSS overrides:
+Key issues:
+1. Uses `heroAnimationStyle` instead of `heroAnimatedTextStyle` -- so the animation style is never read
+2. Does NOT include `heroTitle`, `heroSubtitle`, `enableFastOrder`, etc.
+3. Since `branding.heroTitle` is undefined, `BuyerThemeWrapper` defaults it to "Boost Your Social Media Presence" -- which SHOULD work
+4. BUT each theme ALSO has `const heroTitle = customization.heroTitle || t('buyer.hero.title')` -- and since `customization.heroTitle` comes from the wrapper and IS set to the full string, this should work too...
 
-```css
-.light .buyer-theme-smmstay,
-.buyer-theme-smmstay.light-mode {
-  --theme-background: #FFFFFF;
-  --theme-surface: #F8F9FA;
-  --theme-text: #1A1A2E;
-  --theme-muted: #6B7280;
-}
-```
+Let me re-check: The wrapper sets `heroTitle: branding.heroTitle || 'Boost Your Social Media Presence'`. If `branding` (from `custom_branding`) has `heroTitle` as an empty string `""`, it would be falsy and the fallback kicks in. So the wrapper should produce the full title.
 
-This needs to be done for each theme that supports light mode (all except SMMVisit which is light-only).
+The REAL issue is likely that the translation fallback `t('buyer.hero.title')` returns `"Boost Your"` and this IS being used. This happens if `customization` is empty/not loaded yet (race condition) or if the theme component re-evaluates before the wrapper's customization is ready.
+
+**Fix in `src/lib/platform-translations.ts`:** Change all `buyer.hero.title` translations to include the full title:
+- English: `'buyer.hero.title': 'Boost Your Social Media Presence'`
+- And all other languages similarly
+
+**Fix in `src/pages/panel/PanelOnboardingV2.tsx`:** Save complete `custom_branding` with all required fields (heroTitle, heroSubtitle, enableFastOrder, heroAnimatedTextStyle, etc.) during panel creation.
 
 ---
 
-### Part 5: Enhance Buyer Support Page
+## Part 3: Fix enableFastOrder Default in All Theme Homepages
 
-**File:** `src/pages/buyer/BuyerSupport.tsx`
+**Files (5 theme homepages):**
+- `src/components/buyer-themes/tgref/TGRefHomepage.tsx` (line 95)
+- `src/components/buyer-themes/flysmm/FlySMMHomepage.tsx` (line 94)
+- `src/components/buyer-themes/smmstay/SMMStayHomepage.tsx` (line 93)
+- `src/components/buyer-themes/smmvisit/SMMVisitHomepage.tsx` (line 159)
+- `src/components/buyer-themes/alipanel/AliPanelHomepage.tsx` (line 100)
 
-Add three new sections:
-
-#### 5.1 FAQ Section
-Add a collapsible FAQ section above the ticket kanban using Accordion component. FAQs will be fetched from panel's `custom_branding.faqs` array (already stored in the database from Design Customization).
-
+All have:
 ```typescript
-// Fetch FAQs from panel custom_branding
-const faqs = panelCustomization?.faqs || defaultFAQs;
-
-// Default FAQ items
-const defaultFAQs = [
-  { question: "How long does delivery take?", answer: "Most orders start within minutes..." },
-  { question: "How do I add funds?", answer: "Go to the Deposit page..." },
-  { question: "What payment methods are accepted?", answer: "We accept various payment methods..." },
-  { question: "Can I get a refund?", answer: "Contact support for refund requests..." },
-];
+const enableFastOrder = customization.enableFastOrder !== false;
 ```
 
-#### 5.2 Live Chat Integration Tab
-Add a "Live Chat" tab alongside the ticket kanban that connects to the existing `chat_sessions` system. When a buyer clicks "Talk to Human" from the floating chat widget, the session appears here AND in the panel owner's ChatInbox.
-
+This defaults to `true` when `enableFastOrder` is `undefined`. Change to:
 ```typescript
-// Tab layout: "Tickets" | "Live Chat" | "FAQ"
-<Tabs defaultValue="tickets">
-  <TabsList>
-    <TabsTrigger value="tickets">Tickets</TabsTrigger>
-    <TabsTrigger value="chat">Live Chat</TabsTrigger>
-    <TabsTrigger value="faq">FAQ</TabsTrigger>
-  </TabsList>
-  ...
-</Tabs>
+const enableFastOrder = customization.enableFastOrder === true;
 ```
 
-The Live Chat tab will:
-- Show existing chat sessions for the buyer
-- Allow sending messages that sync to `chat_sessions` table
-- Subscribe to realtime updates from the panel owner (ChatInbox)
-- When a buyer opens a chat session, it uses the same `chat_sessions` table that `ChatInbox.tsx` reads from
+This ensures default is `false` (showing "Get Started + Fast Order" buttons).
 
-#### 5.3 Ticket Status Updates
-Allow buyers to update ticket status (mark as resolved) and add the panel owner's ChatInbox context actions.
+---
+
+## Part 4: Fix PanelOnboardingV2 custom_branding
+
+**File:** `src/pages/panel/PanelOnboardingV2.tsx` (lines 427-433)
+
+Replace the minimal `custom_branding` with a complete object:
+
+```typescript
+custom_branding: {
+  selectedTheme: selectedTheme,
+  heroTitle: 'Boost Your Social Media Presence',
+  heroSubtitle: 'Get real followers, likes, and views at the lowest prices. Trusted by over 50,000+ customers worldwide.',
+  heroCTAText: 'Get Started',
+  heroSecondaryCTAText: 'Fast Order',
+  heroBadgeText: '#1 SMM Panel',
+  heroAnimatedTextStyle: defaultAnimationStyle,  // Fix key name
+  heroAnimatedTextPosition: 'last',
+  enableFastOrder: false,
+  enablePlatformFeatures: true,
+  enableStats: true,
+  enableFeatures: true,
+  enableTestimonials: true,
+  enableFAQs: true,
+  enableFooter: true,
+  enableAnimations: true,
+  primaryColor: finalPrimaryColor,
+  secondaryColor: finalSecondaryColor,
+  companyName: panelName,
+  themeMode: 'dark',
+}
+```
+
+---
+
+## Part 5: Currency Selector - USD Only
+
+**File:** `src/components/onboarding/OnboardingCurrencySelector.tsx`
+
+Remove the dropdown entirely and just display "USD ($)" as a static badge. Remove the `onChange` prop usage -- always emit 'USD'.
+
+Simplified to show a static info card:
+```
+Default Panel Currency: USD ($)
+"All prices and transactions will be in USD."
+```
+
+---
+
+## Part 6: Domain Step Improvements
+
+### 6.1 Add Free Subdomain Card (3rd option)
+
+**File:** `src/components/onboarding/OnboardingDomainStep.tsx`
+
+For Pro/Basic plans (the section starting at line 264), add a third RadioGroup option for "Free Subdomain" alongside "I have a domain" and "Register new domain". Currently free plan users see the subdomain section automatically, but Pro/Basic users only see custom domain options.
+
+Add a new option:
+```typescript
+<RadioGroupItem value="free-subdomain" id="free-subdomain" />
+<Label>Use Free Subdomain</Label>
+<p>Use a free *.smmpilot.online subdomain</p>
+```
+
+When selected, show the subdomain input field (reuse existing subdomain UI).
+
+### 6.2 Fix Subdomain Display Domain
+
+**File:** `src/components/onboarding/OnboardingDomainStep.tsx`
+
+The subdomain display currently uses `PRIMARY_PLATFORM_DOMAIN` which is `smmpilot.online` (correct per `hosting-config.ts`). However, in PanelOnboardingV2 lines 449 and 905-906, it shows `.homeofsmm.com`. Fix PanelOnboardingV2 to use `PRIMARY_PLATFORM_DOMAIN` constant consistently.
+
+### 6.3 Mobile Responsiveness for DNS Section
+
+The DNS records section (lines 349-365) uses a horizontal layout with `flex items-center gap-2`. On mobile, the record value overflows. Fix:
+
+```typescript
+<div className="flex flex-col sm:flex-row sm:items-center gap-2 p-3 rounded-lg bg-background/50 text-sm font-mono">
+  <div className="flex items-center gap-2">
+    <Badge variant="outline" className="shrink-0 w-16 justify-center">{record.type}</Badge>
+    <span className="text-muted-foreground">{record.name}</span>
+  </div>
+  <span className="flex-1 truncate text-xs sm:text-sm break-all">{record.value}</span>
+  <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 self-end sm:self-auto"
+    onClick={() => copyToClipboard(record.value)}>
+    <Copy className="w-4 h-4" />
+  </Button>
+</div>
+```
+
+---
+
+## Part 7: Fix Payment Simulation (Security Issue)
+
+**File:** `src/components/onboarding/OnboardingPaymentStep.tsx`
+
+Current code (lines 76-93) simulates payment success with a `setTimeout` -- no actual payment is processed. This allows users to get Pro features without paying.
+
+Fix: Remove the simulated payment flow. Instead:
+- For paid plans, redirect to an actual payment gateway (or show "Contact admin" if no gateway configured)
+- Do NOT set `subscription_status: 'active'` without payment confirmation
+- Add a `subscription_status: 'pending'` state and only activate after webhook confirmation
+
+Since real payment processing requires webhook infrastructure, for now:
+1. Remove the fake success simulation
+2. Show a message: "Payment integration coming soon. Start with the Free plan."
+3. Or if providers exist, create a real checkout session via edge function
+
+---
+
+## Part 8: DNS TXT Record Stability
+
+The verification token is generated client-side via the `add-vercel-domain` edge function. On page reload, a new token would be generated. The V2 onboarding already saves progress via `saveProgress()` -- but the `verificationToken` is NOT saved in `onboarding_data`.
+
+**Fix in `src/pages/panel/PanelOnboardingV2.tsx`:**
+Add `verificationToken` state and include it in `saveProgress` data.
+
+**Fix in `src/components/onboarding/OnboardingDomainStep.tsx`:**
+Accept `verificationToken` as a prop and reuse it instead of generating a new one on re-render.
 
 ---
 
@@ -237,46 +219,42 @@ Allow buyers to update ticket status (mark as resolved) and add the panel owner'
 
 | File | Changes |
 |------|---------|
-| `src/pages/buyer/BuyerContact.tsx` | Default email to support@homeofsmm.com |
-| `src/pages/panel/ProviderAds.tsx` | Add `user_id` and use `ad_purchase` type for transactions |
-| `src/components/buyer-themes/BuyerThemeWrapper.tsx` | Fix heroTitle fallback, add animated text style default |
-| `src/pages/TenantRouter.tsx` | Use panel-specific theme storage key, match default theme |
-| `src/components/buyer-themes/BuyerThemeDefault.tsx` | Add light mode CSS variables |
-| `src/components/buyer-themes/BuyerThemeSMMStay.tsx` | Add light mode CSS variables |
-| `src/components/buyer-themes/BuyerThemeAliPanel.tsx` | Add light mode CSS variables |
-| `src/components/buyer-themes/BuyerThemeFlySMM.tsx` | Add light mode CSS variables |
-| `src/components/buyer-themes/BuyerThemeTGRef.tsx` | Add light mode CSS variables |
-| `src/pages/buyer/BuyerSupport.tsx` | Add FAQ section, live chat tab, ticket updates |
-| **Database (RLS)** | Update transactions SELECT/INSERT policies for panel_id access |
+| `src/pages/Index.tsx` | Update SEO title, description, OG/Twitter tags |
+| `src/lib/platform-translations.ts` | Fix `buyer.hero.title` to full title in all languages; capitalize `home.title.line1/2` |
+| `src/pages/panel/PanelOnboardingV2.tsx` | Fix `custom_branding` object, save verificationToken, use `PRIMARY_PLATFORM_DOMAIN` |
+| `src/components/buyer-themes/tgref/TGRefHomepage.tsx` | Change `enableFastOrder !== false` to `=== true` |
+| `src/components/buyer-themes/flysmm/FlySMMHomepage.tsx` | Same enableFastOrder fix |
+| `src/components/buyer-themes/smmstay/SMMStayHomepage.tsx` | Same enableFastOrder fix |
+| `src/components/buyer-themes/smmvisit/SMMVisitHomepage.tsx` | Same enableFastOrder fix |
+| `src/components/buyer-themes/alipanel/AliPanelHomepage.tsx` | Same enableFastOrder fix |
+| `src/components/onboarding/OnboardingCurrencySelector.tsx` | Lock to USD only |
+| `src/components/onboarding/OnboardingDomainStep.tsx` | Add free subdomain card, fix mobile responsiveness |
+| `src/components/onboarding/OnboardingPaymentStep.tsx` | Remove fake payment simulation |
 
 ---
 
 ## Technical Notes
 
-### Theme Race Condition Explanation
+### "Boost Your" Root Cause Chain
 ```
-Timeline on initial tenant load:
-1. ThemeProvider reads localStorage['smm-panel-theme'] -> sets <html class="dark">
-2. BuyerThemeProvider reads localStorage['buyer-theme-{panelId}'] -> sets <html class="dark"> (correct)
-3. Theme wrapper renders <div class="dark">...</div>
-4. Tailwind dark: utilities resolve against <html> class
-
-Problem: If step 1 sets "light" (from panel owner dashboard visit), 
-step 2 hasn't run yet, and the page flashes wrong colors.
-
-Fix: Use panel-specific storage key so tenant theme never conflicts with dashboard theme.
+1. V2 Onboarding saves custom_branding WITHOUT heroTitle
+2. BuyerThemeWrapper defaults heroTitle to "Boost Your Social Media Presence" -- OK
+3. BUT heroAnimatedTextStyle key is wrong ("heroAnimationStyle" vs "heroAnimatedTextStyle")
+4. So getThemeDefaultAnimationStyle returns theme default -- this works
+5. The actual "Boost Your" shows because the translation fallback is ALSO "Boost Your"
+6. If customization loads slowly, theme renders with t('buyer.hero.title') = "Boost Your"
+7. Fix BOTH: save correct custom_branding AND fix translation fallback
 ```
 
-### Transaction RLS Fix
-The current INSERT policy only checks `user_id`, but ad purchases are panel-level operations. The updated policy allows inserts when the user owns the panel referenced by `panel_id`.
-
-### Live Chat Sync Architecture
+### enableFastOrder Logic
 ```
-Buyer clicks "Talk to Human" in FloatingChatWidget
-  -> Creates row in chat_sessions (panel_id, buyer_id, status: 'active')
-  -> Messages stored in chat_messages table
-  -> Panel owner's ChatInbox subscribes to chat_sessions realtime
-  -> Both parties see messages via realtime subscription
-  -> BuyerSupport "Live Chat" tab shows same sessions
+customization.enableFastOrder !== false  --> true when undefined (WRONG)
+customization.enableFastOrder === true   --> false when undefined (CORRECT)
+```
+
+### Domain Display Constants
+```
+PRIMARY_PLATFORM_DOMAIN = 'smmpilot.online'  (from hosting-config.ts)
+Subdomains: *.smmpilot.online (correct, NOT homeofsmm.com)
 ```
 
