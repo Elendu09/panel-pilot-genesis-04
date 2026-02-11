@@ -156,7 +156,7 @@ export const SMMVisitHomepage = ({
 
   // Toggles - use nullish coalescing to properly handle undefined/false values
   const showBlogInMenu = customization.showBlogInMenu ?? false;
-  const enableFastOrder = customization.enableFastOrder !== false;
+  const enableFastOrder = customization.enableFastOrder === true;
   const showStats = customization.enableStats !== false;
   const showFeatures = customization.enableFeatures !== false;
   const showTestimonials = customization.enableTestimonials !== false;

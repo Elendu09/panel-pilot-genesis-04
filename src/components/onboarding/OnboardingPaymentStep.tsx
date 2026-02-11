@@ -75,29 +75,22 @@ export const OnboardingPaymentStep = ({
 
     setProcessing(true);
     try {
-      // In a real implementation, this would call an edge function to create a checkout session
-      // For now, we'll simulate the payment flow
-      toast({
-        title: 'Redirecting to payment...',
-        description: `Processing ${selectedPlan} subscription via ${selectedProvider}`
-      });
-
-      // Simulate payment processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Update panel subscription tier
+      // Create a pending subscription — payment must be confirmed via webhook
       if (panelId) {
         await supabase
           .from('panels')
           .update({ 
             subscription_tier: selectedPlan,
-            subscription_status: 'active'
+            subscription_status: 'pending'
           })
           .eq('id', panelId);
       }
 
-      toast({ title: 'Payment Successful! 🎉' });
-      onPaymentSuccess();
+      toast({
+        variant: 'destructive',
+        title: 'Payment gateway not yet configured',
+        description: 'Please contact the platform administrator or continue with the Free plan.'
+      });
     } catch (error) {
       console.error('Payment error:', error);
       toast({ variant: 'destructive', title: 'Payment failed. Please try again.' });
