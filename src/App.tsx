@@ -12,9 +12,9 @@ import { HelmetProvider } from "react-helmet-async";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
 
-// Critical path - load immediately
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
+// Lazy load all pages for smaller initial bundle
+const Index = lazy(() => import("./pages/Index"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 // Lazy load non-critical routes for better TTI
 const Services = lazy(() => import("./pages/Services"));
