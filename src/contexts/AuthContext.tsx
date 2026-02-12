@@ -169,14 +169,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // Check if identifier is a username (no @ symbol)
       if (!identifier.includes('@')) {
-        // Look up the email by username using case-insensitive match
-        const { data: profileData, error: lookupError } = await supabase
-          .from('profiles')
-          .select('email')
-          .ilike('username', identifier.trim())
-          .single();
+        // Use SECURITY DEFINER function to bypass RLS for username lookup
+        const { data: email, error: lookupError } = await supabase
+          .rpc('lookup_email_by_username', { p_username: identifier.trim() });
         
-        if (lookupError || !profileData?.email) {
+        if (lookupError || !email) {
           toast({
             variant: "destructive",
             title: "Sign In Error",
@@ -185,7 +182,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return { error: { message: 'Username not found' } };
         }
         
-        loginEmail = profileData.email;
+        loginEmail = email;
       }
       
       const { data, error } = await supabase.auth.signInWithPassword({

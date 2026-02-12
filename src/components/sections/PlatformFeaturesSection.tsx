@@ -35,7 +35,7 @@ export const PlatformFeaturesSection = () => {
   ];
 
   return (
-    <section className="py-24 bg-card/50 border-t border-border relative overflow-hidden">
+    <section className="py-24 bg-card/50 border-t border-border relative overflow-hidden" aria-labelledby="platform-features-heading">
       {/* Grid, Bubbles & Particles */}
       <BackgroundEffects variant="section" showGrid showBubbles showParticles bubbleCount={5} particleCount={10} />
       
@@ -44,7 +44,7 @@ export const PlatformFeaturesSection = () => {
           {/* Left Content */}
           <div className="space-y-8">
             <div>
-              <h2 className="text-4xl md:text-5xl font-bold mb-6 leading-tight">
+              <h2 id="platform-features-heading" className="text-4xl md:text-5xl font-bold mb-6 leading-tight">
                 {t('platform_features.title.world_of')}
                 <br />
                 <span className="bg-gradient-primary bg-clip-text text-transparent">
