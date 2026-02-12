@@ -1043,9 +1043,7 @@ async function handleForgotPassword(supabaseAdmin: any, body: any, req: Request)
 
   return jsonResponse({ 
     success: true, 
-    message: 'If an account exists with this email, you will receive a password reset link.',
-    // Only include in development - remove in production
-    _debug_password: newPassword
+    message: 'If an account exists with this email, you will receive a password reset link.'
   });
 }
 

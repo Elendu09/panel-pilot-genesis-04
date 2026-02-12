@@ -89,7 +89,7 @@ serve(async (req) => {
       return errorResponse("Action is required");
     }
 
-    console.log(`[buyer-api] action=${action}, key=${key.substring(0, 10)}...`);
+    console.log(`[buyer-api] action=${action}`);
 
     // Validate API key - check both panel_api_keys and client_users tables
     let panelId: string | null = null;
@@ -122,7 +122,7 @@ serve(async (req) => {
     }
 
     if (!panelId) {
-      console.log('[buyer-api] Invalid API key attempt:', key.substring(0, 10));
+      console.log('[buyer-api] Invalid API key attempt');
       return errorResponse("Invalid API key");
     }
 
