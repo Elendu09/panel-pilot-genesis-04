@@ -91,8 +91,8 @@ const BuyerAuth = () => {
       if (!panelId) return;
       
       try {
-        const { data: settings } = await supabase
-          .from('panel_settings')
+        const { data: settings } = await (supabase as any)
+          .from('panel_settings_public')
           .select('oauth_google_enabled, oauth_google_client_id, oauth_telegram_enabled, oauth_telegram_client_id, oauth_vk_enabled, oauth_vk_client_id, oauth_discord_enabled, oauth_discord_client_id')
           .eq('panel_id', panelId)
           .single();

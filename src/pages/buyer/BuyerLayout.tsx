@@ -82,8 +82,8 @@ const BuyerLayoutInner = ({ children }: BuyerLayoutProps) => {
   useEffect(() => {
     const fetchSettings = async () => {
       if (!panel?.id) return;
-      const { data } = await supabase
-        .from('panel_settings')
+      const { data } = await (supabase as any)
+        .from('panel_settings_public')
         .select('floating_chat_whatsapp, floating_chat_telegram, floating_chat_enabled, blog_enabled')
         .eq('panel_id', panel.id)
         .single();
