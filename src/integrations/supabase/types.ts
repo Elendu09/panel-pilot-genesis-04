@@ -3728,6 +3728,7 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       is_any_admin: { Args: { _user_id: string }; Returns: boolean }
       is_email_verified: { Args: { user_id: string }; Returns: boolean }
+      is_panel_owner: { Args: { _panel_id: string }; Returns: boolean }
       lookup_email_by_username: {
         Args: { p_username: string }
         Returns: string

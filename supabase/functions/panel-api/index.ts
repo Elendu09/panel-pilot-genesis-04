@@ -93,7 +93,7 @@ serve(async (req) => {
       return errorResponse("Action is required", 400);
     }
 
-    console.log(`[panel-api] action=${action}, key=${key.substring(0, 10)}...`);
+    console.log(`[panel-api] action=${action}`);
 
     // Validate panel owner API key
     const { data: apiKeyData, error: apiKeyError } = await supabase
