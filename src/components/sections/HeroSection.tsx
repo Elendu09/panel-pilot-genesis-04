@@ -142,6 +142,11 @@ export const HeroSection = memo(() => {
             </motion.span>
           </motion.h1>
 
+          {/* Hidden SEO subtitle for search engines */}
+          <p className="sr-only">
+            Launch your own SMM panel with Home of SMM. Create, manage, and scale your social media marketing business with custom branding, automated orders, and real-time analytics.
+          </p>
+
           {/* CTA Buttons */}
           <motion.div 
             className="flex flex-col sm:flex-row gap-4 justify-center mb-12"

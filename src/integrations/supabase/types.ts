@@ -3728,6 +3728,10 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       is_any_admin: { Args: { _user_id: string }; Returns: boolean }
       is_email_verified: { Args: { user_id: string }; Returns: boolean }
+      lookup_email_by_username: {
+        Args: { p_username: string }
+        Returns: string
+      }
       recalculate_provider_costs: {
         Args: { p_provider_id: string }
         Returns: number
