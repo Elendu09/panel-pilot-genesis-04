@@ -52,10 +52,9 @@ export function usePlatformStats() {
     const fetchStats = async () => {
       try {
         // Fetch panel count
-        const { count: panelCount } = await supabase
-          .from('panels')
-          .select('id', { count: 'exact', head: true })
-          .eq('status', 'active');
+        const { count: panelCount } = await (supabase as any)
+          .from('panels_public')
+          .select('id', { count: 'exact', head: true });
 
         // Fetch service count
         const { count: serviceCount } = await supabase
