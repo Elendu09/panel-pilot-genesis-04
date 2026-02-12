@@ -102,6 +102,13 @@ export type Database = {
             referencedRelation: "panels"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "analytics_events_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       announcements: {
@@ -190,6 +197,13 @@ export type Database = {
             referencedRelation: "panels"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "api_logs_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       audit_logs: {
@@ -237,6 +251,13 @@ export type Database = {
             referencedRelation: "panels"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "audit_logs_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       balance_alerts: {
@@ -273,6 +294,13 @@ export type Database = {
             columns: ["panel_id"]
             isOneToOne: false
             referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "balance_alerts_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels_public"
             referencedColumns: ["id"]
           },
         ]
@@ -329,6 +357,13 @@ export type Database = {
             columns: ["panel_id"]
             isOneToOne: false
             referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blog_posts_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels_public"
             referencedColumns: ["id"]
           },
         ]
@@ -397,6 +432,13 @@ export type Database = {
             referencedRelation: "panels"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "bulk_operation_jobs_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       buyer_cart: {
@@ -443,6 +485,13 @@ export type Database = {
             columns: ["panel_id"]
             isOneToOne: false
             referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "buyer_cart_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels_public"
             referencedColumns: ["id"]
           },
           {
@@ -496,6 +545,13 @@ export type Database = {
             columns: ["panel_id"]
             isOneToOne: false
             referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "buyer_favorites_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels_public"
             referencedColumns: ["id"]
           },
           {
@@ -570,6 +626,13 @@ export type Database = {
             referencedRelation: "panels"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "buyer_notifications_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       buyer_themes: {
@@ -620,6 +683,13 @@ export type Database = {
             referencedRelation: "panels"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "buyer_themes_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       canned_responses: {
@@ -662,6 +732,13 @@ export type Database = {
             columns: ["panel_id"]
             isOneToOne: false
             referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "canned_responses_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels_public"
             referencedColumns: ["id"]
           },
         ]
@@ -743,6 +820,13 @@ export type Database = {
             referencedRelation: "panels"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "chat_sessions_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       client_custom_prices: {
@@ -789,6 +873,13 @@ export type Database = {
             columns: ["panel_id"]
             isOneToOne: false
             referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_custom_prices_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels_public"
             referencedColumns: ["id"]
           },
           {
@@ -919,6 +1010,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "client_users_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "client_users_referred_by_fkey"
             columns: ["referred_by"]
             isOneToOne: false
@@ -1007,10 +1105,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "direct_provider_connections_source_panel_id_fkey"
+            columns: ["source_panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "direct_provider_connections_target_panel_id_fkey"
             columns: ["target_panel_id"]
             isOneToOne: false
             referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "direct_provider_connections_target_panel_id_fkey"
+            columns: ["target_panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels_public"
             referencedColumns: ["id"]
           },
         ]
@@ -1061,6 +1173,13 @@ export type Database = {
             columns: ["panel_id"]
             isOneToOne: false
             referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "domain_verifications_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels_public"
             referencedColumns: ["id"]
           },
         ]
@@ -1161,6 +1280,13 @@ export type Database = {
             referencedRelation: "panels"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "invoice_settings_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: true
+            referencedRelation: "panels_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       invoices: {
@@ -1259,6 +1385,13 @@ export type Database = {
             columns: ["panel_id"]
             isOneToOne: false
             referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels_public"
             referencedColumns: ["id"]
           },
           {
@@ -1415,6 +1548,13 @@ export type Database = {
             referencedRelation: "panels"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "order_refills_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       orders: {
@@ -1497,6 +1637,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "orders_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "orders_service_id_fkey"
             columns: ["service_id"]
             isOneToOne: false
@@ -1554,6 +1701,13 @@ export type Database = {
             referencedRelation: "panels"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "panel_analytics_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       panel_api_keys: {
@@ -1590,6 +1744,13 @@ export type Database = {
             columns: ["panel_id"]
             isOneToOne: false
             referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "panel_api_keys_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels_public"
             referencedColumns: ["id"]
           },
         ]
@@ -1654,6 +1815,13 @@ export type Database = {
             referencedRelation: "panels"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "panel_domains_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       panel_notifications: {
@@ -1693,6 +1861,13 @@ export type Database = {
             columns: ["panel_id"]
             isOneToOne: false
             referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "panel_notifications_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels_public"
             referencedColumns: ["id"]
           },
           {
@@ -1839,6 +2014,13 @@ export type Database = {
             referencedRelation: "panels"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "panel_settings_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: true
+            referencedRelation: "panels_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       panel_subscriptions: {
@@ -1884,6 +2066,13 @@ export type Database = {
             columns: ["panel_id"]
             isOneToOne: true
             referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "panel_subscriptions_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: true
+            referencedRelation: "panels_public"
             referencedColumns: ["id"]
           },
         ]
@@ -1942,6 +2131,13 @@ export type Database = {
             referencedRelation: "panels"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "panel_team_members_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       panel_templates: {
@@ -1978,6 +2174,13 @@ export type Database = {
             columns: ["panel_id"]
             isOneToOne: false
             referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "panel_templates_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels_public"
             referencedColumns: ["id"]
           },
         ]
@@ -2315,6 +2518,13 @@ export type Database = {
             referencedRelation: "panels"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "platform_fees_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       platform_payment_providers: {
@@ -2557,6 +2767,13 @@ export type Database = {
             referencedRelation: "panels"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "pricing_rules_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       profiles: {
@@ -2670,6 +2887,13 @@ export type Database = {
             referencedRelation: "panels"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "promo_codes_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       provider_ad_pricing: {
@@ -2765,6 +2989,13 @@ export type Database = {
             referencedRelation: "panels"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "provider_ads_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       provider_integrations: {
@@ -2816,6 +3047,13 @@ export type Database = {
             columns: ["panel_id"]
             isOneToOne: false
             referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_integrations_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels_public"
             referencedColumns: ["id"]
           },
         ]
@@ -2914,6 +3152,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "provider_services_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "provider_services_provider_id_fkey"
             columns: ["provider_id"]
             isOneToOne: false
@@ -2965,6 +3210,13 @@ export type Database = {
             columns: ["panel_id"]
             isOneToOne: false
             referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_sync_logs_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels_public"
             referencedColumns: ["id"]
           },
           {
@@ -3044,10 +3296,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "providers_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "providers_source_panel_id_fkey"
             columns: ["source_panel_id"]
             isOneToOne: false
             referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "providers_source_panel_id_fkey"
+            columns: ["source_panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels_public"
             referencedColumns: ["id"]
           },
         ]
@@ -3102,6 +3368,13 @@ export type Database = {
             columns: ["panel_id"]
             isOneToOne: false
             referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_rewards_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels_public"
             referencedColumns: ["id"]
           },
           {
@@ -3174,6 +3447,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "service_access_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "service_access_service_id_fkey"
             columns: ["service_id"]
             isOneToOne: false
@@ -3237,6 +3517,13 @@ export type Database = {
             referencedRelation: "panels"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "service_categories_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       service_reviews: {
@@ -3296,6 +3583,13 @@ export type Database = {
             columns: ["panel_id"]
             isOneToOne: false
             referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_reviews_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels_public"
             referencedColumns: ["id"]
           },
           {
@@ -3450,6 +3744,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "services_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "services_pricing_rule_id_fkey"
             columns: ["pricing_rule_id"]
             isOneToOne: false
@@ -3508,6 +3809,13 @@ export type Database = {
             columns: ["panel_id"]
             isOneToOne: false
             referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_tickets_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels_public"
             referencedColumns: ["id"]
           },
           {
@@ -3611,6 +3919,13 @@ export type Database = {
             referencedRelation: "panels"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "transactions_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       user_roles: {
@@ -3676,7 +3991,254 @@ export type Database = {
             referencedRelation: "panels"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "services_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels_public"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      panel_settings_public: {
+        Row: {
+          blog_enabled: boolean | null
+          contact_info: Json | null
+          created_at: string | null
+          custom_css: string | null
+          floating_chat_custom_label: string | null
+          floating_chat_custom_url: string | null
+          floating_chat_discord: string | null
+          floating_chat_enabled: boolean | null
+          floating_chat_message: string | null
+          floating_chat_messenger: string | null
+          floating_chat_position: string | null
+          floating_chat_telegram: string | null
+          floating_chat_whatsapp: string | null
+          id: string | null
+          integrations: Json | null
+          live_chat_enabled: boolean | null
+          low_balance_alert_enabled: boolean | null
+          low_balance_threshold: number | null
+          maintenance_message: string | null
+          maintenance_mode: boolean | null
+          oauth_discord_client_id: string | null
+          oauth_discord_enabled: boolean | null
+          oauth_google_client_id: string | null
+          oauth_google_enabled: boolean | null
+          oauth_telegram_client_id: string | null
+          oauth_telegram_enabled: boolean | null
+          oauth_vk_client_id: string | null
+          oauth_vk_enabled: boolean | null
+          panel_id: string | null
+          privacy_policy: string | null
+          seo_description: string | null
+          seo_keywords: string | null
+          seo_title: string | null
+          social_links: Json | null
+          terms_of_service: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          blog_enabled?: boolean | null
+          contact_info?: Json | null
+          created_at?: string | null
+          custom_css?: string | null
+          floating_chat_custom_label?: string | null
+          floating_chat_custom_url?: string | null
+          floating_chat_discord?: string | null
+          floating_chat_enabled?: boolean | null
+          floating_chat_message?: string | null
+          floating_chat_messenger?: string | null
+          floating_chat_position?: string | null
+          floating_chat_telegram?: string | null
+          floating_chat_whatsapp?: string | null
+          id?: string | null
+          integrations?: Json | null
+          live_chat_enabled?: boolean | null
+          low_balance_alert_enabled?: boolean | null
+          low_balance_threshold?: number | null
+          maintenance_message?: string | null
+          maintenance_mode?: boolean | null
+          oauth_discord_client_id?: string | null
+          oauth_discord_enabled?: boolean | null
+          oauth_google_client_id?: string | null
+          oauth_google_enabled?: boolean | null
+          oauth_telegram_client_id?: string | null
+          oauth_telegram_enabled?: boolean | null
+          oauth_vk_client_id?: string | null
+          oauth_vk_enabled?: boolean | null
+          panel_id?: string | null
+          privacy_policy?: string | null
+          seo_description?: string | null
+          seo_keywords?: string | null
+          seo_title?: string | null
+          social_links?: Json | null
+          terms_of_service?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          blog_enabled?: boolean | null
+          contact_info?: Json | null
+          created_at?: string | null
+          custom_css?: string | null
+          floating_chat_custom_label?: string | null
+          floating_chat_custom_url?: string | null
+          floating_chat_discord?: string | null
+          floating_chat_enabled?: boolean | null
+          floating_chat_message?: string | null
+          floating_chat_messenger?: string | null
+          floating_chat_position?: string | null
+          floating_chat_telegram?: string | null
+          floating_chat_whatsapp?: string | null
+          id?: string | null
+          integrations?: Json | null
+          live_chat_enabled?: boolean | null
+          low_balance_alert_enabled?: boolean | null
+          low_balance_threshold?: number | null
+          maintenance_message?: string | null
+          maintenance_mode?: boolean | null
+          oauth_discord_client_id?: string | null
+          oauth_discord_enabled?: boolean | null
+          oauth_google_client_id?: string | null
+          oauth_google_enabled?: boolean | null
+          oauth_telegram_client_id?: string | null
+          oauth_telegram_enabled?: boolean | null
+          oauth_vk_client_id?: string | null
+          oauth_vk_enabled?: boolean | null
+          panel_id?: string | null
+          privacy_policy?: string | null
+          seo_description?: string | null
+          seo_keywords?: string | null
+          seo_title?: string | null
+          social_links?: Json | null
+          terms_of_service?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "panel_settings_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: true
+            referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "panel_settings_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: true
+            referencedRelation: "panels_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      panels_public: {
+        Row: {
+          blog_enabled: boolean | null
+          buyer_theme: string | null
+          created_at: string | null
+          custom_branding: Json | null
+          custom_domain: string | null
+          default_currency: string | null
+          description: string | null
+          domain: string | null
+          features: Json | null
+          id: string | null
+          logo_url: string | null
+          name: string | null
+          primary_color: string | null
+          secondary_color: string | null
+          settings: Json | null
+          status: Database["public"]["Enums"]["panel_status"] | null
+          subdomain: string | null
+          theme_type: Database["public"]["Enums"]["theme_type"] | null
+          updated_at: string | null
+        }
+        Insert: {
+          blog_enabled?: boolean | null
+          buyer_theme?: string | null
+          created_at?: string | null
+          custom_branding?: Json | null
+          custom_domain?: string | null
+          default_currency?: string | null
+          description?: string | null
+          domain?: string | null
+          features?: Json | null
+          id?: string | null
+          logo_url?: string | null
+          name?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          settings?: Json | null
+          status?: Database["public"]["Enums"]["panel_status"] | null
+          subdomain?: string | null
+          theme_type?: Database["public"]["Enums"]["theme_type"] | null
+          updated_at?: string | null
+        }
+        Update: {
+          blog_enabled?: boolean | null
+          buyer_theme?: string | null
+          created_at?: string | null
+          custom_branding?: Json | null
+          custom_domain?: string | null
+          default_currency?: string | null
+          description?: string | null
+          domain?: string | null
+          features?: Json | null
+          id?: string | null
+          logo_url?: string | null
+          name?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          settings?: Json | null
+          status?: Database["public"]["Enums"]["panel_status"] | null
+          subdomain?: string | null
+          theme_type?: Database["public"]["Enums"]["theme_type"] | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      platform_providers_public: {
+        Row: {
+          balance: number | null
+          commission_percentage: number | null
+          created_at: string | null
+          description: string | null
+          id: string | null
+          is_active: boolean | null
+          last_sync_at: string | null
+          logo_url: string | null
+          name: string | null
+          sync_status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          balance?: number | null
+          commission_percentage?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          last_sync_at?: string | null
+          logo_url?: string | null
+          name?: string | null
+          sync_status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          balance?: number | null
+          commission_percentage?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          last_sync_at?: string | null
+          logo_url?: string | null
+          name?: string | null
+          sync_status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
     }
     Functions: {
