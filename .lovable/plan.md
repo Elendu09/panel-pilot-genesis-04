@@ -1,217 +1,166 @@
 
 
-# Comprehensive Fix Plan: SEO, Onboarding Persistence, Theme Sync, and Domain Issues
+# Fix Plan: SEO, Auth, Skeleton, Headings, and Payment Gateway
 
 ---
 
-## Issues Summary (8 Total)
-
-### 1. Main Homepage SEO Title/Description Update
-### 2. "Boost Your" Incomplete Hero Text (ROOT CAUSE FOUND)
-### 3. enableFastOrder Default Not Working in Themes
-### 4. Onboarding V2 custom_branding Missing Theme Defaults
-### 5. Currency Selector - Lock to USD Only
-### 6. Domain Step - Add Free Subdomain Card + Fix subdomain display (.smmpilot.online)
-### 7. Payment Simulated Success Without Real Payment (Security Issue)
-### 8. Mobile Responsiveness in DNS Configuration Section
-
----
-
-## Part 1: Main Homepage SEO Update
+## Issue 1: Remove Loading Skeleton from Homepage
 
 **File:** `src/pages/Index.tsx`
 
-Update title, description, and OG/Twitter tags:
+The `SectionSkeleton` component shows a spinning loader while lazy-loaded sections load. Replace with `null` fallback so sections appear seamlessly without spinners.
 
-- Title: `"Home of SMM - Create & Manage Your Own SMM Panel"`
-- Description: `"Launch your own SMM panel with Home of SMM. Get custom branding, automated orders, multiple payment gateways, and real-time analytics to grow your SMM business fast."`
-- OG + Twitter descriptions match the meta description
+Change all `<Suspense fallback={<SectionSkeleton />}>` to `<Suspense fallback={null}>` (lines 121-135). Also remove the unused `SectionSkeleton` component definition (lines 19-24).
+
+---
+
+## Issue 2: Fix SEO Title and Meta Description
+
+**File:** `src/pages/Index.tsx`
+
+Update line 45-46 to the exact values provided:
+
+- **Title:** `HOME OF SMM – Create & Manage Your Own SMM Panel`
+- **Description:** `Launch your own SMM panel with Home of SMM. Get custom branding, automated orders, multiple payment gateways, and real-time analytics to grow revenue.`
+
+(Note: removing "your SMM business fast." and using "revenue." as specified)
+
+---
+
+## Issue 3: Improve Heading Structure for SEO/AEO/GEO Indexing
+
+The homepage H1 currently renders "Create Your Own" + "SMM Panel" which is correct. The issue is that section headings need proper semantic structure and `aria-labelledby` connections for crawlers.
+
+### Changes needed:
 
 **File:** `src/components/sections/HeroSection.tsx`
+- The H1 is fine as-is (line 125). But add a visually hidden subtitle `<p>` below it for search engines describing the page purpose.
 
-Ensure the H1 heading uses semantic structure. Current H1 renders `t('home.title.line1')` + `t('home.title.line2')` which is "Create your own" + "smm panel". This is correct semantically but needs to render as an H1 tag (already does at line 125).
+**File:** `src/components/sections/PlatformFeaturesSection.tsx`
+- The section uses `<h2>` (line 47) but lacks `id` and `aria-labelledby`. Add `id="platform-features-heading"` and `aria-labelledby` on the section tag.
 
-Also update `src/lib/platform-translations.ts` English entry:
-- `'home.title.line1': 'Create Your Own'` (capitalize for SEO)
-- `'home.title.line2': 'SMM Panel'` (capitalize)
+**File:** `src/components/sections/StatsSection.tsx`
+- Already has `id="stats-heading"` and `aria-labelledby="stats-heading"` (line 63, 78). Good.
 
-Ensure section headings use H2/H3 tags properly for crawlers.
+**File:** `src/components/sections/FeaturesSection.tsx`
+- Already has `id="features-heading"` and `aria-labelledby="features-heading"` (line 65, 86). Good.
+
+**File:** `src/components/sections/TestimonialsSection.tsx`
+- Already has `id="testimonials-heading"` and `aria-labelledby="testimonials-heading"` (line 57, 86). Good.
+
+**File:** `src/components/sections/FAQSection.tsx`
+- Already has `id="faq-heading"` and `aria-labelledby="faq-heading"` (line 85, 114). Good.
+
+**File:** `src/lib/platform-translations.ts`
+- Revert `home.title.line1` back to `'Create Your Own'` and `home.title.line2` to `'SMM Panel'` (lowercase "your" is fine -- the user wants it noticeable, not fully uppercased).
+
+Primary fix: Add `id` and `aria-labelledby` to PlatformFeaturesSection, and add a hidden SEO paragraph under the H1.
 
 ---
 
-## Part 2: Fix "Boost Your" Incomplete Hero Text (CRITICAL ROOT CAUSE)
+## Issue 4: Fix Username Sign-In (CRITICAL ROOT CAUSE)
 
-**Root Cause Found:** The translation `buyer.hero.title` in `src/lib/platform-translations.ts` (line 7) is set to just `"Boost Your"` -- only 2 words. Each theme homepage (TGRef, SMMStay, AliPanel, FlySMM, SMMVisit) falls back to `t('buyer.hero.title')` when `customization.heroTitle` is falsy, producing the incomplete "Boost Your" with the last word animated.
+**Root Cause:** The `profiles` table RLS SELECT policy is:
+```sql
+user_id = auth.uid()
+```
 
-**But wait** -- `BuyerThemeWrapper.tsx` line 203 already sets `heroTitle: branding.heroTitle || 'Boost Your Social Media Presence'`. So `customization.heroTitle` should be `"Boost Your Social Media Presence"`. The problem is that in V2 onboarding (line 427-433), the `custom_branding` saved is:
+When a user tries to sign in with a username, `AuthContext.signIn()` queries `profiles` by username BEFORE the user is authenticated. Since `auth.uid()` is null at that point, the RLS policy blocks ALL rows, so the username lookup returns nothing.
+
+**Fix:** Add a new RLS policy that allows anyone to look up a profile by username (only exposing the email column via the query, which is safe since the sign-in form already accepts email):
+
+```sql
+CREATE POLICY "Allow username lookup for auth" ON profiles
+FOR SELECT USING (true);
+```
+
+However, this would expose all profile data. A safer approach is to use a **database function** with `SECURITY DEFINER` that bypasses RLS:
+
+```sql
+CREATE OR REPLACE FUNCTION public.lookup_email_by_username(p_username text)
+RETURNS text
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+DECLARE
+  v_email text;
+BEGIN
+  SELECT email INTO v_email
+  FROM profiles
+  WHERE LOWER(username) = LOWER(p_username)
+  LIMIT 1;
+  RETURN v_email;
+END;
+$$;
+```
+
+Then in `src/contexts/AuthContext.tsx`, replace the `.ilike('username', ...)` query with an RPC call:
 
 ```typescript
-custom_branding: {
-  selectedTheme: selectedTheme,
-  heroAnimationStyle: defaultAnimationStyle,  // WRONG KEY - should be heroAnimatedTextStyle
-  enableAnimations: true,
-  primaryColor, secondaryColor
+if (!identifier.includes('@')) {
+  const { data: email, error: lookupError } = await supabase
+    .rpc('lookup_email_by_username', { p_username: identifier.trim() });
+  
+  if (lookupError || !email) {
+    toast({ variant: "destructive", title: "Sign In Error", description: "Username not found." });
+    return { error: { message: 'Username not found' } };
+  }
+  loginEmail = email;
 }
 ```
 
-Key issues:
-1. Uses `heroAnimationStyle` instead of `heroAnimatedTextStyle` -- so the animation style is never read
-2. Does NOT include `heroTitle`, `heroSubtitle`, `enableFastOrder`, etc.
-3. Since `branding.heroTitle` is undefined, `BuyerThemeWrapper` defaults it to "Boost Your Social Media Presence" -- which SHOULD work
-4. BUT each theme ALSO has `const heroTitle = customization.heroTitle || t('buyer.hero.title')` -- and since `customization.heroTitle` comes from the wrapper and IS set to the full string, this should work too...
-
-Let me re-check: The wrapper sets `heroTitle: branding.heroTitle || 'Boost Your Social Media Presence'`. If `branding` (from `custom_branding`) has `heroTitle` as an empty string `""`, it would be falsy and the fallback kicks in. So the wrapper should produce the full title.
-
-The REAL issue is likely that the translation fallback `t('buyer.hero.title')` returns `"Boost Your"` and this IS being used. This happens if `customization` is empty/not loaded yet (race condition) or if the theme component re-evaluates before the wrapper's customization is ready.
-
-**Fix in `src/lib/platform-translations.ts`:** Change all `buyer.hero.title` translations to include the full title:
-- English: `'buyer.hero.title': 'Boost Your Social Media Presence'`
-- And all other languages similarly
-
-**Fix in `src/pages/panel/PanelOnboardingV2.tsx`:** Save complete `custom_branding` with all required fields (heroTitle, heroSubtitle, enableFastOrder, heroAnimatedTextStyle, etc.) during panel creation.
+Additionally, the `signUp` function saves username AFTER signup (line 143-147), but the `handle_new_user` trigger doesn't save username. The update query may also fail due to RLS (the user just signed up but may not be authenticated yet if email verification is required). Fix: Save the username via the `raw_user_meta_data` in the trigger, or use a SECURITY DEFINER function for the signup username save too.
 
 ---
 
-## Part 3: Fix enableFastOrder Default in All Theme Homepages
+## Issue 5: Fix Payment Gateway in Panel Onboarding
 
-**Files (5 theme homepages):**
-- `src/components/buyer-themes/tgref/TGRefHomepage.tsx` (line 95)
-- `src/components/buyer-themes/flysmm/FlySMMHomepage.tsx` (line 94)
-- `src/components/buyer-themes/smmstay/SMMStayHomepage.tsx` (line 93)
-- `src/components/buyer-themes/smmvisit/SMMVisitHomepage.tsx` (line 159)
-- `src/components/buyer-themes/alipanel/AliPanelHomepage.tsx` (line 100)
+**Root Cause:** The `platform_payment_providers` table has ALL providers set to `is_enabled: false`. The `OnboardingPaymentStep` queries with `.eq('is_enabled', true)`, so it gets 0 results and shows "No payment providers configured."
 
-All have:
-```typescript
-const enableFastOrder = customization.enableFastOrder !== false;
-```
+**Fixes needed:**
 
-This defaults to `true` when `enableFastOrder` is `undefined`. Change to:
-```typescript
-const enableFastOrder = customization.enableFastOrder === true;
-```
+1. **Admin must enable at least one provider** -- but since none are enabled, the onboarding payment step should gracefully handle this by showing a clear message and allowing the user to skip to Free plan.
 
-This ensures default is `false` (showing "Get Started + Fast Order" buttons).
+2. The current `OnboardingPaymentStep.tsx` already handles this case (lines 117-133) -- it shows "No payment providers configured" with a "Continue with Free Plan" button. This is correct behavior.
+
+3. However, the `onSkip` prop may not be passed from `PanelOnboardingV2.tsx`. Need to verify and ensure the skip button actually works and transitions to the next step with `subscription_tier: 'free'`.
+
+**File:** `src/pages/panel/PanelOnboardingV2.tsx` -- ensure that when the OnboardingPaymentStep is rendered, the `onSkip` prop is passed and sets the plan to free.
+
+**File:** `src/components/onboarding/OnboardingPaymentStep.tsx` -- the current implementation is already correct (no fake payment simulation). Just ensure the skip flow works.
 
 ---
 
-## Part 4: Fix PanelOnboardingV2 custom_branding
+## Issue 6: Subdomain FAQ Text Fix
 
-**File:** `src/pages/panel/PanelOnboardingV2.tsx` (lines 427-433)
+**File:** `src/components/sections/FAQSection.tsx` (line 72)
 
-Replace the minimal `custom_branding` with a complete object:
-
-```typescript
-custom_branding: {
-  selectedTheme: selectedTheme,
-  heroTitle: 'Boost Your Social Media Presence',
-  heroSubtitle: 'Get real followers, likes, and views at the lowest prices. Trusted by over 50,000+ customers worldwide.',
-  heroCTAText: 'Get Started',
-  heroSecondaryCTAText: 'Fast Order',
-  heroBadgeText: '#1 SMM Panel',
-  heroAnimatedTextStyle: defaultAnimationStyle,  // Fix key name
-  heroAnimatedTextPosition: 'last',
-  enableFastOrder: false,
-  enablePlatformFeatures: true,
-  enableStats: true,
-  enableFeatures: true,
-  enableTestimonials: true,
-  enableFAQs: true,
-  enableFooter: true,
-  enableAnimations: true,
-  primaryColor: finalPrimaryColor,
-  secondaryColor: finalSecondaryColor,
-  companyName: panelName,
-  themeMode: 'dark',
-}
-```
+Change `yourpanel.homeofsmm.com` to `yourpanel.smmpilot.online` to match the actual platform domain.
 
 ---
 
-## Part 5: Currency Selector - USD Only
+## Database Migration Required
 
-**File:** `src/components/onboarding/OnboardingCurrencySelector.tsx`
-
-Remove the dropdown entirely and just display "USD ($)" as a static badge. Remove the `onChange` prop usage -- always emit 'USD'.
-
-Simplified to show a static info card:
+```sql
+-- 1. Create secure username lookup function (bypasses RLS)
+CREATE OR REPLACE FUNCTION public.lookup_email_by_username(p_username text)
+RETURNS text
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+DECLARE
+  v_email text;
+BEGIN
+  SELECT email INTO v_email
+  FROM profiles
+  WHERE LOWER(username) = LOWER(p_username)
+  LIMIT 1;
+  RETURN v_email;
+END;
+$$;
 ```
-Default Panel Currency: USD ($)
-"All prices and transactions will be in USD."
-```
-
----
-
-## Part 6: Domain Step Improvements
-
-### 6.1 Add Free Subdomain Card (3rd option)
-
-**File:** `src/components/onboarding/OnboardingDomainStep.tsx`
-
-For Pro/Basic plans (the section starting at line 264), add a third RadioGroup option for "Free Subdomain" alongside "I have a domain" and "Register new domain". Currently free plan users see the subdomain section automatically, but Pro/Basic users only see custom domain options.
-
-Add a new option:
-```typescript
-<RadioGroupItem value="free-subdomain" id="free-subdomain" />
-<Label>Use Free Subdomain</Label>
-<p>Use a free *.smmpilot.online subdomain</p>
-```
-
-When selected, show the subdomain input field (reuse existing subdomain UI).
-
-### 6.2 Fix Subdomain Display Domain
-
-**File:** `src/components/onboarding/OnboardingDomainStep.tsx`
-
-The subdomain display currently uses `PRIMARY_PLATFORM_DOMAIN` which is `smmpilot.online` (correct per `hosting-config.ts`). However, in PanelOnboardingV2 lines 449 and 905-906, it shows `.homeofsmm.com`. Fix PanelOnboardingV2 to use `PRIMARY_PLATFORM_DOMAIN` constant consistently.
-
-### 6.3 Mobile Responsiveness for DNS Section
-
-The DNS records section (lines 349-365) uses a horizontal layout with `flex items-center gap-2`. On mobile, the record value overflows. Fix:
-
-```typescript
-<div className="flex flex-col sm:flex-row sm:items-center gap-2 p-3 rounded-lg bg-background/50 text-sm font-mono">
-  <div className="flex items-center gap-2">
-    <Badge variant="outline" className="shrink-0 w-16 justify-center">{record.type}</Badge>
-    <span className="text-muted-foreground">{record.name}</span>
-  </div>
-  <span className="flex-1 truncate text-xs sm:text-sm break-all">{record.value}</span>
-  <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 self-end sm:self-auto"
-    onClick={() => copyToClipboard(record.value)}>
-    <Copy className="w-4 h-4" />
-  </Button>
-</div>
-```
-
----
-
-## Part 7: Fix Payment Simulation (Security Issue)
-
-**File:** `src/components/onboarding/OnboardingPaymentStep.tsx`
-
-Current code (lines 76-93) simulates payment success with a `setTimeout` -- no actual payment is processed. This allows users to get Pro features without paying.
-
-Fix: Remove the simulated payment flow. Instead:
-- For paid plans, redirect to an actual payment gateway (or show "Contact admin" if no gateway configured)
-- Do NOT set `subscription_status: 'active'` without payment confirmation
-- Add a `subscription_status: 'pending'` state and only activate after webhook confirmation
-
-Since real payment processing requires webhook infrastructure, for now:
-1. Remove the fake success simulation
-2. Show a message: "Payment integration coming soon. Start with the Free plan."
-3. Or if providers exist, create a real checkout session via edge function
-
----
-
-## Part 8: DNS TXT Record Stability
-
-The verification token is generated client-side via the `add-vercel-domain` edge function. On page reload, a new token would be generated. The V2 onboarding already saves progress via `saveProgress()` -- but the `verificationToken` is NOT saved in `onboarding_data`.
-
-**Fix in `src/pages/panel/PanelOnboardingV2.tsx`:**
-Add `verificationToken` state and include it in `saveProgress` data.
-
-**Fix in `src/components/onboarding/OnboardingDomainStep.tsx`:**
-Accept `verificationToken` as a prop and reuse it instead of generating a new one on re-render.
 
 ---
 
@@ -219,42 +168,33 @@ Accept `verificationToken` as a prop and reuse it instead of generating a new on
 
 | File | Changes |
 |------|---------|
-| `src/pages/Index.tsx` | Update SEO title, description, OG/Twitter tags |
-| `src/lib/platform-translations.ts` | Fix `buyer.hero.title` to full title in all languages; capitalize `home.title.line1/2` |
-| `src/pages/panel/PanelOnboardingV2.tsx` | Fix `custom_branding` object, save verificationToken, use `PRIMARY_PLATFORM_DOMAIN` |
-| `src/components/buyer-themes/tgref/TGRefHomepage.tsx` | Change `enableFastOrder !== false` to `=== true` |
-| `src/components/buyer-themes/flysmm/FlySMMHomepage.tsx` | Same enableFastOrder fix |
-| `src/components/buyer-themes/smmstay/SMMStayHomepage.tsx` | Same enableFastOrder fix |
-| `src/components/buyer-themes/smmvisit/SMMVisitHomepage.tsx` | Same enableFastOrder fix |
-| `src/components/buyer-themes/alipanel/AliPanelHomepage.tsx` | Same enableFastOrder fix |
-| `src/components/onboarding/OnboardingCurrencySelector.tsx` | Lock to USD only |
-| `src/components/onboarding/OnboardingDomainStep.tsx` | Add free subdomain card, fix mobile responsiveness |
-| `src/components/onboarding/OnboardingPaymentStep.tsx` | Remove fake payment simulation |
+| `src/pages/Index.tsx` | Update SEO title/description, remove SectionSkeleton |
+| `src/lib/platform-translations.ts` | Ensure H1 translations are correct |
+| `src/components/sections/PlatformFeaturesSection.tsx` | Add `id` and `aria-labelledby` for heading |
+| `src/components/sections/HeroSection.tsx` | Add hidden SEO paragraph under H1 |
+| `src/components/sections/FAQSection.tsx` | Fix subdomain text to .smmpilot.online |
+| `src/contexts/AuthContext.tsx` | Use RPC `lookup_email_by_username` instead of direct query |
+| `src/pages/panel/PanelOnboardingV2.tsx` | Ensure onSkip is passed to payment step |
+| **Database migration** | Create `lookup_email_by_username` function |
 
 ---
 
 ## Technical Notes
 
-### "Boost Your" Root Cause Chain
-```
-1. V2 Onboarding saves custom_branding WITHOUT heroTitle
-2. BuyerThemeWrapper defaults heroTitle to "Boost Your Social Media Presence" -- OK
-3. BUT heroAnimatedTextStyle key is wrong ("heroAnimationStyle" vs "heroAnimatedTextStyle")
-4. So getThemeDefaultAnimationStyle returns theme default -- this works
-5. The actual "Boost Your" shows because the translation fallback is ALSO "Boost Your"
-6. If customization loads slowly, theme renders with t('buyer.hero.title') = "Boost Your"
-7. Fix BOTH: save correct custom_branding AND fix translation fallback
-```
+### Why Username Login Was Broken
+The profiles table RLS policy (`user_id = auth.uid()`) blocks ALL queries from unauthenticated users. Since username lookup happens BEFORE authentication, the query always returns empty. The fix creates a SECURITY DEFINER function that bypasses RLS safely, only returning the email address (no sensitive data exposed).
 
-### enableFastOrder Logic
-```
-customization.enableFastOrder !== false  --> true when undefined (WRONG)
-customization.enableFastOrder === true   --> false when undefined (CORRECT)
-```
+### Payment Gateway Status
+All `platform_payment_providers` have `is_enabled: false`. This is an admin configuration issue -- the platform administrator needs to enable at least one provider (e.g., Stripe, PayPal) in the admin dashboard. The code correctly handles this by showing "Continue with Free Plan". No code bug here -- just admin setup needed.
 
-### Domain Display Constants
+### Heading Hierarchy for SEO
 ```
-PRIMARY_PLATFORM_DOMAIN = 'smmpilot.online'  (from hosting-config.ts)
-Subdomains: *.smmpilot.online (correct, NOT homeofsmm.com)
+H1: "Create Your Own SMM Panel" (Hero - one per page)
+H2: "Enter the World of..." (Platform Features)
+H2: "Trusted by Thousands" (Stats)  
+H2: "Powerful Features" (Features)
+H2: "What Our Users Say" (Testimonials)
+H2: "Your Questions, Answered" (FAQ)
 ```
+All sections already use H2 tags. Adding proper `id` and `aria-labelledby` attributes improves accessibility and crawler parsing.
 
