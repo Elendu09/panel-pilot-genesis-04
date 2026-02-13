@@ -1,166 +1,132 @@
 
 
-# Fix Plan: SEO, Auth, Skeleton, Headings, and Payment Gateway
+# Comprehensive Fix Plan: Homepage Content, SEO, Sitemap, Payments, and Translation
+
+This is a large set of changes spanning multiple areas. Here is the breakdown:
 
 ---
 
-## Issue 1: Remove Loading Skeleton from Homepage
+## 1. Rewrite Homepage Content (SMM Panel Creation Focus)
 
-**File:** `src/pages/Index.tsx`
+The homepage text currently mixes "buying SMM services" language with "creating SMM panels." All content will be rewritten to focus exclusively on creating and managing SMM panels.
 
-The `SectionSkeleton` component shows a spinning loader while lazy-loaded sections load. Replace with `null` fallback so sections appear seamlessly without spinners.
+**Files to modify:**
 
-Change all `<Suspense fallback={<SectionSkeleton />}>` to `<Suspense fallback={null}>` (lines 121-135). Also remove the unused `SectionSkeleton` component definition (lines 19-24).
+- **`src/pages/Index.tsx`** (lines 38-49):
+  - Shorten SEO title to: `HOME OF SMM - #1 SMM Panel Platform` (under 580px, no repetition)
+  - Shorten meta description to: `Create your own SMM panel with HOME OF SMM. Custom branding, 200+ payment gateways, automated orders, and real-time analytics.` (under 1000px)
+  - Rewrite FAQ data array with new questions in this order:
+    1. "What is an SMM Panel?" - explains the concept
+    2. "What is HOME OF SMM?" - explains the platform
+    3. "How do I create my own SMM Panel?" - step-by-step
+    4. "How to make money through SMM?" - revenue model
+    5. "What makes HOME OF SMM the best SMM Panel platform?" - competitive advantages
+    6. "How much does it cost to start?" - pricing/commission model
+
+- **`src/components/sections/FAQSection.tsx`** (lines 45-82): Update the hardcoded FAQ array to match the new questions above.
+
+- **`src/components/sections/HeroSection.tsx`**: Already focused on panel creation -- no changes needed.
 
 ---
 
-## Issue 2: Fix SEO Title and Meta Description
-
-**File:** `src/pages/Index.tsx`
-
-Update line 45-46 to the exact values provided:
-
-- **Title:** `HOME OF SMM – Create & Manage Your Own SMM Panel`
-- **Description:** `Launch your own SMM panel with Home of SMM. Get custom branding, automated orders, multiple payment gateways, and real-time analytics to grow revenue.`
-
-(Note: removing "your SMM business fast." and using "revenue." as specified)
-
----
-
-## Issue 3: Improve Heading Structure for SEO/AEO/GEO Indexing
-
-The homepage H1 currently renders "Create Your Own" + "SMM Panel" which is correct. The issue is that section headings need proper semantic structure and `aria-labelledby` connections for crawlers.
-
-### Changes needed:
-
-**File:** `src/components/sections/HeroSection.tsx`
-- The H1 is fine as-is (line 125). But add a visually hidden subtitle `<p>` below it for search engines describing the page purpose.
-
-**File:** `src/components/sections/PlatformFeaturesSection.tsx`
-- The section uses `<h2>` (line 47) but lacks `id` and `aria-labelledby`. Add `id="platform-features-heading"` and `aria-labelledby` on the section tag.
-
-**File:** `src/components/sections/StatsSection.tsx`
-- Already has `id="stats-heading"` and `aria-labelledby="stats-heading"` (line 63, 78). Good.
-
-**File:** `src/components/sections/FeaturesSection.tsx`
-- Already has `id="features-heading"` and `aria-labelledby="features-heading"` (line 65, 86). Good.
-
-**File:** `src/components/sections/TestimonialsSection.tsx`
-- Already has `id="testimonials-heading"` and `aria-labelledby="testimonials-heading"` (line 57, 86). Good.
-
-**File:** `src/components/sections/FAQSection.tsx`
-- Already has `id="faq-heading"` and `aria-labelledby="faq-heading"` (line 85, 114). Good.
+## 2. Fix "buyer.cta.getStartedFree" Translation Error in FlySMM Theme
 
 **File:** `src/lib/platform-translations.ts`
-- Revert `home.title.line1` back to `'Create Your Own'` and `home.title.line2` to `'SMM Panel'` (lowercase "your" is fine -- the user wants it noticeable, not fully uppercased).
+- Add missing key `'buyer.cta.getStartedFree': 'Get Started Free'` to the `en` section (around line 162, near other `buyer.cta.*` keys)
+- Add corresponding translations in `es`, `fr`, `ar`, `ru`, `pt`, `hi`, `zh`, `tr`, `de` sections
 
-Primary fix: Add `id` and `aria-labelledby` to PlatformFeaturesSection, and add a hidden SEO paragraph under the H1.
-
----
-
-## Issue 4: Fix Username Sign-In (CRITICAL ROOT CAUSE)
-
-**Root Cause:** The `profiles` table RLS SELECT policy is:
-```sql
-user_id = auth.uid()
-```
-
-When a user tries to sign in with a username, `AuthContext.signIn()` queries `profiles` by username BEFORE the user is authenticated. Since `auth.uid()` is null at that point, the RLS policy blocks ALL rows, so the username lookup returns nothing.
-
-**Fix:** Add a new RLS policy that allows anyone to look up a profile by username (only exposing the email column via the query, which is safe since the sign-in form already accepts email):
-
-```sql
-CREATE POLICY "Allow username lookup for auth" ON profiles
-FOR SELECT USING (true);
-```
-
-However, this would expose all profile data. A safer approach is to use a **database function** with `SECURITY DEFINER` that bypasses RLS:
-
-```sql
-CREATE OR REPLACE FUNCTION public.lookup_email_by_username(p_username text)
-RETURNS text
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path TO 'public'
-AS $$
-DECLARE
-  v_email text;
-BEGIN
-  SELECT email INTO v_email
-  FROM profiles
-  WHERE LOWER(username) = LOWER(p_username)
-  LIMIT 1;
-  RETURN v_email;
-END;
-$$;
-```
-
-Then in `src/contexts/AuthContext.tsx`, replace the `.ilike('username', ...)` query with an RPC call:
-
-```typescript
-if (!identifier.includes('@')) {
-  const { data: email, error: lookupError } = await supabase
-    .rpc('lookup_email_by_username', { p_username: identifier.trim() });
-  
-  if (lookupError || !email) {
-    toast({ variant: "destructive", title: "Sign In Error", description: "Username not found." });
-    return { error: { message: 'Username not found' } };
-  }
-  loginEmail = email;
-}
-```
-
-Additionally, the `signUp` function saves username AFTER signup (line 143-147), but the `handle_new_user` trigger doesn't save username. The update query may also fail due to RLS (the user just signed up but may not be authenticated yet if email verification is required). Fix: Save the username via the `raw_user_meta_data` in the trigger, or use a SECURITY DEFINER function for the signup username save too.
+**File:** `src/components/buyer-themes/flysmm/FlySMMHomepage.tsx` (line 472) -- the fallback `|| 'Get Started Free'` is already there, but the translation key needs to exist to avoid showing the raw key when the fallback somehow fails.
 
 ---
 
-## Issue 5: Fix Payment Gateway in Panel Onboarding
+## 3. Fix Sitemap (XML Format Instead of HTML)
 
-**Root Cause:** The `platform_payment_providers` table has ALL providers set to `is_enabled: false`. The `OnboardingPaymentStep` queries with `.eq('is_enabled', true)`, so it gets 0 results and shows "No payment providers configured."
+**Problem:** The `/sitemap.xml` route renders via React, so Google sees HTML (with `<head>`, `<body>`, etc.) wrapping the XML. Google expects raw XML with `Content-Type: application/xml`.
 
-**Fixes needed:**
+**Solution:** Create a Supabase Edge Function `generate-platform-sitemap` that returns proper XML with the correct content type. Then update `public/robots.txt` to point to this edge function URL, or alternatively serve the sitemap as a static file.
 
-1. **Admin must enable at least one provider** -- but since none are enabled, the onboarding payment step should gracefully handle this by showing a clear message and allowing the user to skip to Free plan.
+**Simpler approach:** Generate a proper static `public/sitemap.xml` file and update `src/pages/Sitemap.tsx` to set `Content-Type` properly. Since React cannot set HTTP headers, the best approach is:
 
-2. The current `OnboardingPaymentStep.tsx` already handles this case (lines 117-133) -- it shows "No payment providers configured" with a "Continue with Free Plan" button. This is correct behavior.
+- Create a static **`public/sitemap.xml`** file with proper XML content for the platform pages
+- The React route at `/sitemap.xml` will still render for tenant domains (edge function call), but the static file will be served first for the platform domain by the hosting
 
-3. However, the `onSkip` prop may not be passed from `PanelOnboardingV2.tsx`. Need to verify and ensure the skip button actually works and transitions to the next step with `subscription_tier: 'free'`.
-
-**File:** `src/pages/panel/PanelOnboardingV2.tsx` -- ensure that when the OnboardingPaymentStep is rendered, the `onSkip` prop is passed and sets the plan to free.
-
-**File:** `src/components/onboarding/OnboardingPaymentStep.tsx` -- the current implementation is already correct (no fake payment simulation). Just ensure the skip flow works.
-
----
-
-## Issue 6: Subdomain FAQ Text Fix
-
-**File:** `src/components/sections/FAQSection.tsx` (line 72)
-
-Change `yourpanel.homeofsmm.com` to `yourpanel.smmpilot.online` to match the actual platform domain.
-
----
-
-## Database Migration Required
-
-```sql
--- 1. Create secure username lookup function (bypasses RLS)
-CREATE OR REPLACE FUNCTION public.lookup_email_by_username(p_username text)
-RETURNS text
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path TO 'public'
-AS $$
-DECLARE
-  v_email text;
-BEGIN
-  SELECT email INTO v_email
-  FROM profiles
-  WHERE LOWER(username) = LOWER(p_username)
-  LIMIT 1;
-  RETURN v_email;
-END;
-$$;
+**File:** `public/sitemap.xml` -- new file with proper XML:
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://homeofsmm.com/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>
+  <url><loc>https://homeofsmm.com/features</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  ...all platform URLs...
+</urlset>
 ```
+
+---
+
+## 4. Add Helmet Meta Tags to Pages Missing Them
+
+The following pages are missing `<Helmet>` tags, causing Google to not detect proper page titles:
+
+| Page | New Title | New Description |
+|------|-----------|-----------------|
+| `src/pages/About.tsx` | `About Us - HOME OF SMM` | `Meet the team behind HOME OF SMM. Learn about our mission to empower SMM entrepreneurs worldwide.` |
+| `src/pages/Contact.tsx` | `Contact Us - HOME OF SMM` | `Get in touch with HOME OF SMM. We are here to help you succeed with your SMM panel.` |
+| `src/pages/Pricing.tsx` | `Pricing - HOME OF SMM` | `Affordable SMM panel pricing. Start free, pay only 5% commission on orders. No hidden fees.` |
+| `src/pages/Terms.tsx` | `Terms of Service - HOME OF SMM` | `Terms of service for HOME OF SMM platform.` |
+| `src/pages/Privacy.tsx` | `Privacy Policy - HOME OF SMM` | `Privacy policy for HOME OF SMM platform.` |
+
+Each page will get a `<Helmet>` block with `<title>` and `<meta name="description">`.
+
+**CEO name fix in About page:** Replace "Alex Thompson" with "Nzube Elendu" as CEO & Founder (line 52-53). Update the bio text accordingly.
+
+---
+
+## 5. Remove Tenant Detection Loading from Main Website
+
+**Problem:** On the platform domain (homeofsmm.com), the `TenantRouter` already does synchronous detection and renders `<App />` immediately (line 157-163). However, the dev/preview domain (`*.lovable.app`) is classified as "development" and also goes to App immediately. So the loading issue might be from the initial `setInitialBranding()` IIFE or the `useTenant` hook being called elsewhere.
+
+**Fix:** The `TenantRouter` already handles this correctly for production domains. For the preview domain, it also returns App immediately. No code change needed here -- the loading is already optimized.
+
+However, the `TenantHead.tsx` component used in tenant storefronts calls `useTenant()` which triggers a database query. This does NOT affect the main homepage (which uses `Index.tsx` with its own Helmet). No changes needed.
+
+---
+
+## 6. Fix Payment Gateway in Onboarding
+
+**Root Cause:** Flutterwave IS enabled in `platform_payment_providers` table (`is_enabled: true`). The `OnboardingPaymentStep` queries for providers with `is_enabled = true AND supports_subscriptions = true`. Flutterwave matches both conditions, so the provider DOES show up.
+
+**The real bug** is in `handlePayment()` (line 70-99): It does NOT actually call the `process-payment` edge function. Instead, it just updates the panel's subscription_tier and then shows a hardcoded error toast saying "Payment gateway not yet configured." This is a placeholder that was never replaced with real payment processing.
+
+**Fix:** Update `handlePayment()` in `OnboardingPaymentStep.tsx` to:
+1. Call the `process-payment` edge function with the selected gateway, amount, panelId, and a return URL
+2. If successful, redirect the user to the payment URL returned by the edge function
+3. Handle errors gracefully
+
+---
+
+## 7. Fix SEO Title and Meta Description (from Screenshot)
+
+The screenshot shows:
+- Title: "HOME OF SMM - #1 SMM Panel Platform | Create Your Own SMM Panel" (655px, too long, has repetition)
+- Description: too long at 1454px
+
+**Fix:** Already addressed in Issue 1 above:
+- Title shortened to: `HOME OF SMM - #1 SMM Panel Platform` (no repetition, under 580px)
+- Description shortened to fit under 1000px
+
+Also fix `JsonLdSchema.tsx` which contains "White-Label SMM provider" text that may be showing as a snippet:
+- Update the Organization schema description to match the new meta description
+
+---
+
+## 8. Create Blog Posts for SEO/AEO/GEO
+
+Blog posts are stored in the `platform_blog_posts` database table. I will insert seed blog posts via SQL migration covering SEO-relevant topics:
+
+1. "What is an SMM Panel? Complete Guide for 2026"
+2. "How to Create Your Own SMM Panel in 5 Minutes"
+3. "How to Make Money with an SMM Panel Business"
+4. "Best SMM Panel Platform: What to Look For"
+5. "SMM Panel Payment Gateways: A Complete Guide"
 
 ---
 
@@ -168,33 +134,16 @@ $$;
 
 | File | Changes |
 |------|---------|
-| `src/pages/Index.tsx` | Update SEO title/description, remove SectionSkeleton |
-| `src/lib/platform-translations.ts` | Ensure H1 translations are correct |
-| `src/components/sections/PlatformFeaturesSection.tsx` | Add `id` and `aria-labelledby` for heading |
-| `src/components/sections/HeroSection.tsx` | Add hidden SEO paragraph under H1 |
-| `src/components/sections/FAQSection.tsx` | Fix subdomain text to .smmpilot.online |
-| `src/contexts/AuthContext.tsx` | Use RPC `lookup_email_by_username` instead of direct query |
-| `src/pages/panel/PanelOnboardingV2.tsx` | Ensure onSkip is passed to payment step |
-| **Database migration** | Create `lookup_email_by_username` function |
-
----
-
-## Technical Notes
-
-### Why Username Login Was Broken
-The profiles table RLS policy (`user_id = auth.uid()`) blocks ALL queries from unauthenticated users. Since username lookup happens BEFORE authentication, the query always returns empty. The fix creates a SECURITY DEFINER function that bypasses RLS safely, only returning the email address (no sensitive data exposed).
-
-### Payment Gateway Status
-All `platform_payment_providers` have `is_enabled: false`. This is an admin configuration issue -- the platform administrator needs to enable at least one provider (e.g., Stripe, PayPal) in the admin dashboard. The code correctly handles this by showing "Continue with Free Plan". No code bug here -- just admin setup needed.
-
-### Heading Hierarchy for SEO
-```
-H1: "Create Your Own SMM Panel" (Hero - one per page)
-H2: "Enter the World of..." (Platform Features)
-H2: "Trusted by Thousands" (Stats)  
-H2: "Powerful Features" (Features)
-H2: "What Our Users Say" (Testimonials)
-H2: "Your Questions, Answered" (FAQ)
-```
-All sections already use H2 tags. Adding proper `id` and `aria-labelledby` attributes improves accessibility and crawler parsing.
+| `src/pages/Index.tsx` | Shorter title, shorter description, rewritten FAQ data |
+| `src/components/sections/FAQSection.tsx` | Rewritten FAQ questions and answers |
+| `src/lib/platform-translations.ts` | Add `buyer.cta.getStartedFree` key to all languages |
+| `public/sitemap.xml` | New static XML sitemap file |
+| `src/pages/About.tsx` | Add Helmet, fix CEO name to "Nzube Elendu" |
+| `src/pages/Contact.tsx` | Add Helmet with proper title/description |
+| `src/pages/Pricing.tsx` | Add Helmet with proper title/description |
+| `src/pages/Terms.tsx` | Add Helmet with proper title/description |
+| `src/pages/Privacy.tsx` | Add Helmet with proper title/description |
+| `src/components/onboarding/OnboardingPaymentStep.tsx` | Wire `handlePayment()` to `process-payment` edge function and redirect to gateway URL |
+| `src/components/seo/JsonLdSchema.tsx` | Update description text to remove "White-Label SMM provider" |
+| **Database migration** | Insert 5 SEO blog posts into `platform_blog_posts` |
 
