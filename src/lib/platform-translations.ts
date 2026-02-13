@@ -160,6 +160,7 @@ export const platformTranslations = {
     'buyer.cta.dominate': 'Dominate',
     'buyer.cta.fastOrder': 'Fast Order Now',
     'buyer.cta.getStarted': 'Get Started Now',
+    'buyer.cta.getStartedFree': 'Get Started Free',
     'buyer.cta.execute': 'Execute',
     
     // Testimonials - additional
@@ -472,6 +473,7 @@ export const platformTranslations = {
     'buyer.cta.dominate': 'Dominar',
     'buyer.cta.fastOrder': 'Pedido Rápido Ahora',
     'buyer.cta.getStarted': 'Empezar Ahora',
+    'buyer.cta.getStartedFree': 'Empieza Gratis',
     'buyer.cta.execute': 'Ejecutar',
     
     // Testimonials - additional
@@ -754,6 +756,7 @@ export const platformTranslations = {
     'buyer.cta.dominate': 'Dominar',
     'buyer.cta.fastOrder': 'Pedido Rápido Agora',
     'buyer.cta.getStarted': 'Começar Agora',
+    'buyer.cta.getStartedFree': 'Comece Grátis',
     'buyer.cta.execute': 'Executar',
     
     // Testimonials - additional
@@ -1036,6 +1039,7 @@ export const platformTranslations = {
     'buyer.cta.dominate': 'للسيطرة',
     'buyer.cta.fastOrder': 'طلب سريع الآن',
     'buyer.cta.getStarted': 'ابدأ الآن',
+    'buyer.cta.getStartedFree': 'ابدأ مجاناً',
     'buyer.cta.execute': 'تنفيذ',
     
     // Testimonials - additional
@@ -1318,6 +1322,7 @@ export const platformTranslations = {
     'buyer.cta.dominate': 'Hükmetmeye',
     'buyer.cta.fastOrder': 'Hızlı Sipariş Ver',
     'buyer.cta.getStarted': 'Şimdi Başla',
+    'buyer.cta.getStartedFree': 'Ücretsiz Başla',
     'buyer.cta.execute': 'Çalıştır',
     
     // Testimonials - additional
@@ -1592,6 +1597,7 @@ export const platformTranslations = {
     'buyer.cta.dominate': 'Доминировать',
     'buyer.cta.fastOrder': 'Быстрый Заказ Сейчас',
     'buyer.cta.getStarted': 'Начать Сейчас',
+    'buyer.cta.getStartedFree': 'Начать Бесплатно',
     'buyer.cta.execute': 'Выполнить',
     
     // Testimonials - additional
@@ -1866,6 +1872,7 @@ export const platformTranslations = {
     'buyer.cta.dominate': 'Dominer',
     'buyer.cta.fastOrder': 'Commande Rapide Maintenant',
     'buyer.cta.getStarted': 'Commencer Maintenant',
+    'buyer.cta.getStartedFree': 'Commencer Gratuitement',
     'buyer.cta.execute': 'Exécuter',
     
     // Testimonials - additional
@@ -2140,6 +2147,7 @@ export const platformTranslations = {
     'buyer.cta.dominate': 'Dominieren',
     'buyer.cta.fastOrder': 'Schnellbestellung Jetzt',
     'buyer.cta.getStarted': 'Jetzt Starten',
+    'buyer.cta.getStartedFree': 'Kostenlos Starten',
     'buyer.cta.execute': 'Ausführen',
     
     // Testimonials - additional
@@ -2414,6 +2422,7 @@ export const platformTranslations = {
     'buyer.cta.dominate': '主导',
     'buyer.cta.fastOrder': '立即快速下单',
     'buyer.cta.getStarted': '立即开始',
+    'buyer.cta.getStartedFree': '免费开始',
     'buyer.cta.execute': '执行',
     
     // Testimonials - additional
@@ -2688,6 +2697,7 @@ export const platformTranslations = {
     'buyer.cta.dominate': 'हावी होने',
     'buyer.cta.fastOrder': 'अभी तेज़ ऑर्डर करें',
     'buyer.cta.getStarted': 'अभी शुरू करें',
+    'buyer.cta.getStartedFree': 'मुफ्त में शुरू करें',
     'buyer.cta.execute': 'निष्पादित करें',
     
     // Testimonials - additional
