@@ -35,18 +35,18 @@ const Index = () => {
   }, []);
   
   // SEO-optimized title and description with proper pixel lengths
-  const seoTitle = "HOME OF SMM – Create & Manage Your Own SMM Panel";
-  const seoDescription = "Launch your own SMM panel with Home of SMM. Get custom branding, automated orders, multiple payment gateways, and real-time analytics to grow revenue.";
-  const seoKeywords = "SMM panel, SMM panel script, create SMM panel, best SMM panel, SMM reseller panel, SMM panel software, social media marketing panel, white label SMM panel, cheapest SMM panel, SMM panel provider, buy SMM panel, SMM panel 2026, instagram followers panel, youtube views panel, tiktok likes panel, SMM services, social media marketing, SMM automation";
+  const seoTitle = "HOME OF SMM - #1 SMM Panel Platform";
+  const seoDescription = "Create your own SMM panel with HOME OF SMM. Custom branding, 200+ payment gateways, automated orders, and real-time analytics.";
+  const seoKeywords = "SMM panel, create SMM panel, best SMM panel, SMM panel platform, SMM reseller panel, SMM panel software, white label SMM panel, SMM panel provider, SMM panel 2026, how to create SMM panel, make money SMM panel, SMM business, social media marketing panel, SMM automation";
   
   // FAQ data for structured data
   const faqData = [
-    { question: "What is an SMM panel and how does it work?", answer: "An SMM panel is a social media marketing platform that allows users to purchase social media services like followers, likes, views, and comments. Our white-label solution lets you create and manage your own branded SMM panel with custom domains, themes, and complete control over pricing and services." },
-    { question: "Is it legal to use an SMM panel for social media growth?", answer: "Yes, SMM panels are legal business tools. However, it's important to comply with each social media platform's terms of service and local regulations. We recommend transparency with your customers about the nature of the services and ensuring all services are delivered ethically." },
-    { question: "How much can I earn with my SMM panel?", answer: "Earnings vary based on your marketing efforts, pricing strategy, and customer base. Our platform charges only 5% commission on completed orders with zero fees if you have no income. Many successful panel owners earn thousands monthly by building a loyal customer base." },
-    { question: "What payment methods do you support?", answer: "We support 200+ payment systems including PayPal, Stripe, Paystack, Korapay, Flutterwave, PerfectMoney, Cryptomus, USDT, and bank transfers for multiple countries." },
-    { question: "Can I use my own domain name?", answer: "Absolutely! You can connect your own custom domain or use a free subdomain (yourpanel.smmpilot.online). We provide SSL certificates and handle all the technical setup for you." },
-    { question: "Do you provide customer support?", answer: "Yes, we provide comprehensive support for panel owners including setup assistance, technical support, and business guidance. Your customers will contact you directly for support, but we're here to help you succeed." }
+    { question: "What is an SMM Panel?", answer: "An SMM panel is a web-based platform where resellers sell social media marketing services such as followers, likes, views, and comments. Panel owners set their own prices, connect service providers via API, and manage customers through a branded dashboard." },
+    { question: "What is HOME OF SMM?", answer: "HOME OF SMM is the leading platform for creating and managing your own SMM panel. We provide everything you need — custom branding, 200+ payment gateways, automated order processing, multi-language support, and real-time analytics — so you can launch your SMM business in minutes." },
+    { question: "How do I create my own SMM Panel?", answer: "Sign up for free on HOME OF SMM, choose your panel name and subdomain, customize your branding and theme, connect your preferred SMM service providers via API, configure payment methods, and start selling. The entire setup takes less than 5 minutes with zero coding required." },
+    { question: "How to make money through SMM?", answer: "As an SMM panel owner, you buy services wholesale from providers and resell them at a markup to your customers. HOME OF SMM charges only 5% commission on completed orders with zero fees when you have no income. Many panel owners earn thousands monthly by building a loyal customer base." },
+    { question: "What makes HOME OF SMM the best SMM Panel platform?", answer: "HOME OF SMM offers the most affordable pricing (start free, 5% commission only), 200+ payment gateways, 10+ language localizations, custom domains, white-label branding, automated order processing, and dedicated support. No other platform matches this combination of features at this price." },
+    { question: "How much does it cost to start an SMM Panel?", answer: "You can start completely free with HOME OF SMM. There are no setup fees, no monthly subscriptions required, and you only pay a 5% commission on completed orders. Upgrade to Basic ($5/mo) or Pro ($15/mo) for advanced features like custom domains and unlimited services." }
   ];
   
   return (

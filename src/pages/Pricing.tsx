@@ -35,6 +35,7 @@ import {
 import { Link } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useCurrency } from "@/contexts/CurrencyContext";
+import { Helmet } from "react-helmet-async";
 
 export default function Pricing() {
   const { t } = useLanguage();
@@ -221,6 +222,11 @@ export default function Pricing() {
 
   return (
     <div className="min-h-screen bg-background">
+      <Helmet>
+        <title>Pricing - HOME OF SMM</title>
+        <meta name="description" content="Affordable SMM panel pricing. Start free, pay only 5% commission on orders. No hidden fees." />
+        <link rel="canonical" href="https://homeofsmm.com/pricing" />
+      </Helmet>
       <Navigation />
       
       {/* Hero Section with Animated Background */}
