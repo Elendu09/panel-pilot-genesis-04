@@ -212,6 +212,70 @@ async function handleServices(supabase: any, panelId: string) {
   return jsonResponse(formattedServices);
 }
 
+// Forward order to upstream provider
+async function forwardOrderToProvider(
+  supabase: any,
+  serviceId: string,
+  targetUrl: string,
+  quantity: number,
+  orderId: string
+): Promise<{ success: boolean; externalOrderId?: string; error?: string }> {
+  try {
+    const { data: service } = await supabase
+      .from('services')
+      .select('provider_id, provider_service_id')
+      .eq('id', serviceId)
+      .single();
+
+    if (!service?.provider_id || !service?.provider_service_id) {
+      return { success: false, error: 'No provider linked' };
+    }
+
+    const { data: provider } = await supabase
+      .from('providers')
+      .select('api_endpoint, api_key, is_active')
+      .eq('id', service.provider_id)
+      .single();
+
+    if (!provider || !provider.is_active) {
+      return { success: false, error: 'Provider inactive' };
+    }
+
+    const formData = new URLSearchParams();
+    formData.append('key', provider.api_key);
+    formData.append('action', 'add');
+    formData.append('service', service.provider_service_id);
+    formData.append('link', targetUrl);
+    formData.append('quantity', String(quantity));
+
+    const response = await fetch(provider.api_endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: formData.toString(),
+    });
+
+    const result = await response.json();
+    console.log('[buyer-api] Provider response:', JSON.stringify(result));
+
+    if (result.order) {
+      await supabase
+        .from('orders')
+        .update({ provider_order_id: String(result.order), status: 'processing' })
+        .eq('id', orderId);
+      return { success: true, externalOrderId: String(result.order) };
+    } else {
+      await supabase
+        .from('orders')
+        .update({ notes: `Provider error: ${result.error || 'Unknown'}` })
+        .eq('id', orderId);
+      return { success: false, error: result.error || 'Unknown provider error' };
+    }
+  } catch (error: any) {
+    console.error('[buyer-api] Provider forwarding error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
 // Add new order
 async function handleAddOrder(supabase: any, panelId: string, params: BuyerApiRequest) {
   const { service, link, quantity, comments, username, min, max, posts, delay, expiry, runs, interval } = params;
@@ -239,7 +303,6 @@ async function handleAddOrder(supabase: any, panelId: string, params: BuyerApiRe
 
   const orderQuantity = quantity || serviceData.min_quantity;
   
-  // Validate quantity
   if (orderQuantity < serviceData.min_quantity) {
     return errorResponse(`Quantity too low. Minimum: ${serviceData.min_quantity}`);
   }
@@ -248,8 +311,6 @@ async function handleAddOrder(supabase: any, panelId: string, params: BuyerApiRe
   }
 
   const price = (serviceData.price / 1000) * orderQuantity;
-
-  // Generate order number
   const orderNumber = 'ORD' + Date.now().toString().slice(-10) + Math.random().toString(36).slice(-4).toUpperCase();
 
   // Create order
@@ -273,9 +334,10 @@ async function handleAddOrder(supabase: any, panelId: string, params: BuyerApiRe
     return errorResponse("Failed to create order");
   }
 
-  console.log(`[buyer-api] Order created: ${order.order_number}`);
+  // Forward to upstream provider
+  const providerResult = await forwardOrderToProvider(supabase, serviceData.id, link, orderQuantity, order.id);
+  console.log(`[buyer-api] Order ${order.order_number} forwarding result:`, providerResult);
 
-  // Return in standard SMM format
   return jsonResponse({ order: order.order_number });
 }
 

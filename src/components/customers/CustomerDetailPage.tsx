@@ -253,14 +253,16 @@ export function CustomerDetailPage({
 
       if (updateError) throw updateError;
 
-      // Log transaction
+      // Log transaction with proper panel_id and buyer_id
       await supabase
         .from('transactions')
         .insert({
           user_id: customer.id,
+          buyer_id: customer.id,
           amount: adjustmentType === 'add' ? amount : -amount,
-          type: adjustmentType === 'add' ? 'credit' : 'debit',
+          type: adjustmentType === 'add' ? 'admin_credit' : 'admin_debit',
           status: 'completed',
+          payment_method: 'admin',
           description: adjustmentReason || `Balance ${adjustmentType === 'add' ? 'added' : 'deducted'} by admin`
         });
 

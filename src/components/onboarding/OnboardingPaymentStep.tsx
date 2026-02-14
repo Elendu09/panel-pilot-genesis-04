@@ -96,7 +96,7 @@ export const OnboardingPaymentStep = ({
 
       if (fnError) throw fnError;
 
-      if (data?.success && data?.url) {
+      if (data?.success && (data?.redirectUrl || data?.url)) {
         // Update panel subscription status to pending before redirect
         if (panelId) {
           await supabase
@@ -108,7 +108,7 @@ export const OnboardingPaymentStep = ({
             .eq('id', panelId);
         }
         // Redirect to payment gateway
-        window.location.href = data.url;
+        window.location.href = data.redirectUrl || data.url;
       } else {
         toast({
           variant: 'destructive',

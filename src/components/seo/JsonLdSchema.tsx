@@ -253,7 +253,7 @@ export const MainHomepageSchemas = () => {
         name="HOME OF SMM"
         url={baseUrl}
         logo={`${baseUrl}/og-image.png`}
-        description="Create your own SMM panel with HOME OF SMM. Custom branding, 200+ payment gateways, automated orders, and real-time analytics."
+        description="Launch your own SMM panel with Home of SMM. Get custom branding, automated orders, multiple payment gateways, and real-time analytics to grow your revenue"
         sameAs={[
           'https://twitter.com/homeofsmm',
           'https://facebook.com/homeofsmm',
@@ -267,7 +267,7 @@ export const MainHomepageSchemas = () => {
       />
       <SoftwareApplicationSchema
         name="HOME OF SMM Panel"
-        description="Create and manage your own SMM panel with HOME OF SMM. Custom branding, automated orders, 200+ payment gateways, and real-time analytics to grow your SMM business."
+        description="Launch your own SMM panel with Home of SMM. Get custom branding, automated orders, multiple payment gateways, and real-time analytics to grow your revenue"
         applicationCategory="BusinessApplication"
         offers={{
           price: '0',
