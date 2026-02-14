@@ -15,11 +15,95 @@ interface OrderRequest {
   price: number;
   promoCode?: string;
   notes?: string;
-  paymentType?: 'balance' | 'direct'; // balance = deduct from balance, direct = pay via gateway
+  paymentType?: 'balance' | 'direct';
+}
+
+// Forward order to upstream provider API
+async function forwardToProvider(
+  supabase: any,
+  serviceId: string,
+  targetUrl: string,
+  quantity: number,
+  orderId: string
+): Promise<{ success: boolean; externalOrderId?: string; error?: string }> {
+  try {
+    // Get service's provider info
+    const { data: service } = await supabase
+      .from('services')
+      .select('provider_id, provider_service_id')
+      .eq('id', serviceId)
+      .single();
+
+    if (!service?.provider_id || !service?.provider_service_id) {
+      console.log('[buyer-order] No provider linked to service, skipping forwarding');
+      return { success: false, error: 'No provider linked' };
+    }
+
+    // Get provider API credentials
+    const { data: provider } = await supabase
+      .from('providers')
+      .select('api_endpoint, api_key, is_active')
+      .eq('id', service.provider_id)
+      .single();
+
+    if (!provider || !provider.is_active) {
+      console.log('[buyer-order] Provider not found or inactive');
+      return { success: false, error: 'Provider inactive' };
+    }
+
+    console.log(`[buyer-order] Forwarding to provider: ${provider.api_endpoint}`);
+
+    // Call provider's API (standard SMM panel API format)
+    const formData = new URLSearchParams();
+    formData.append('key', provider.api_key);
+    formData.append('action', 'add');
+    formData.append('service', service.provider_service_id);
+    formData.append('link', targetUrl);
+    formData.append('quantity', String(quantity));
+
+    const response = await fetch(provider.api_endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: formData.toString(),
+    });
+
+    const result = await response.json();
+    console.log('[buyer-order] Provider response:', JSON.stringify(result));
+
+    if (result.order) {
+      // Update order with provider's order ID and set to processing
+      await supabase
+        .from('orders')
+        .update({
+          provider_order_id: String(result.order),
+          status: 'processing',
+        })
+        .eq('id', orderId);
+
+      return { success: true, externalOrderId: String(result.order) };
+    } else {
+      const errorMsg = result.error || 'Unknown provider error';
+      // Keep order as pending with error note for manual retry
+      await supabase
+        .from('orders')
+        .update({
+          notes: `Provider error: ${errorMsg}`,
+        })
+        .eq('id', orderId);
+
+      return { success: false, error: errorMsg };
+    }
+  } catch (error: any) {
+    console.error('[buyer-order] Provider forwarding error:', error);
+    await supabase
+      .from('orders')
+      .update({ notes: `Forwarding failed: ${error.message}` })
+      .eq('id', orderId);
+    return { success: false, error: error.message };
+  }
 }
 
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -52,29 +136,22 @@ serve(async (req) => {
       .single();
 
     if (buyerError || !buyer) {
-      console.error('[buyer-order] Buyer not found:', buyerError);
       return new Response(
         JSON.stringify({ success: false, error: 'Buyer not found or does not belong to this panel' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Check if buyer has sufficient balance (only for balance payment type)
+    // Check balance for balance payment type
     const currentBalance = buyer.balance || 0;
     if (paymentType === 'balance' && currentBalance < price) {
       return new Response(
-        JSON.stringify({ 
-          success: false,
-          error: 'Insufficient balance',
-          currentBalance,
-          required: price,
-          needsPayment: true // Signal that direct payment is needed
-        }),
+        JSON.stringify({ success: false, error: 'Insufficient balance', currentBalance, required: price, needsPayment: true }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Verify the service exists and is active
+    // Verify service exists and is active
     const { data: service, error: serviceError } = await supabase
       .from('services')
       .select('id, name, price, min_quantity, max_quantity, is_active, panel_id')
@@ -83,7 +160,6 @@ serve(async (req) => {
       .single();
 
     if (serviceError || !service) {
-      console.error('[buyer-order] Service not found:', serviceError);
       return new Response(
         JSON.stringify({ success: false, error: 'Service not found' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -102,12 +178,7 @@ serve(async (req) => {
     const maxQty = service.max_quantity || 1000000;
     if (quantity < minQty || quantity > maxQty) {
       return new Response(
-        JSON.stringify({ 
-          success: false,
-          error: `Quantity must be between ${minQty} and ${maxQty}`,
-          minQuantity: minQty,
-          maxQuantity: maxQty
-        }),
+        JSON.stringify({ success: false, error: `Quantity must be between ${minQty} and ${maxQty}` }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -115,7 +186,7 @@ serve(async (req) => {
     // Generate order number
     const orderNumber = `ORD${Date.now()}${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
-    // Create the order with status based on payment type
+    // Create the order
     const orderStatus = paymentType === 'direct' ? 'awaiting_payment' : 'pending';
     const { data: order, error: orderError } = await supabase
       .from('orders')
@@ -135,7 +206,6 @@ serve(async (req) => {
       .single();
 
     if (orderError) {
-      console.error('[buyer-order] Order creation failed:', orderError);
       return new Response(
         JSON.stringify({ success: false, error: 'Failed to create order', details: orderError.message }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -150,15 +220,10 @@ serve(async (req) => {
 
       const { error: balanceError } = await supabase
         .from('client_users')
-        .update({ 
-          balance: newBalance,
-          total_spent: newTotalSpent
-        })
+        .update({ balance: newBalance, total_spent: newTotalSpent })
         .eq('id', buyerId);
 
       if (balanceError) {
-        console.error('[buyer-order] Balance update failed:', balanceError);
-        // Rollback the order if balance update fails
         await supabase.from('orders').delete().eq('id', order.id);
         return new Response(
           JSON.stringify({ success: false, error: 'Failed to update balance' }),
@@ -167,21 +232,26 @@ serve(async (req) => {
       }
     }
 
-    // Create notification for buyer
-    const notificationMessage = paymentType === 'direct' 
+    // Forward order to upstream provider (only for balance-paid orders)
+    let providerResult = null;
+    if (paymentType === 'balance') {
+      providerResult = await forwardToProvider(supabase, serviceId, targetUrl, quantity, order.id);
+      console.log(`[buyer-order] Provider forwarding result:`, providerResult);
+    }
+
+    // Create notification
+    const notificationMessage = paymentType === 'direct'
       ? `Order #${orderNumber} created. Complete payment to start processing.`
       : `Order #${orderNumber} for ${quantity.toLocaleString()} ${service.name} has been placed successfully.`;
-    
-    await supabase
-      .from('buyer_notifications')
-      .insert({
-        buyer_id: buyerId,
-        panel_id: panelId,
-        order_id: order.id,
-        type: 'order',
-        title: paymentType === 'direct' ? 'Order Awaiting Payment' : 'Order Placed',
-        message: notificationMessage,
-      });
+
+    await supabase.from('buyer_notifications').insert({
+      buyer_id: buyerId,
+      panel_id: panelId,
+      order_id: order.id,
+      type: 'order',
+      title: paymentType === 'direct' ? 'Order Awaiting Payment' : 'Order Placed',
+      message: notificationMessage,
+    });
 
     // Update promo code usage if used
     if (promoCode) {
@@ -192,27 +262,28 @@ serve(async (req) => {
         .eq('panel_id', panelId);
     }
 
-    console.log(`[buyer-order] Order ${orderNumber} created successfully, paymentType: ${paymentType}, new balance: ${newBalance}`);
+    console.log(`[buyer-order] Order ${orderNumber} created successfully`);
 
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         success: true,
         order: {
           id: order.id,
           orderNumber: order.order_number,
-          status: order.status,
+          status: providerResult?.success ? 'processing' : order.status,
           quantity: order.quantity,
           price: order.price,
           serviceName: service.name,
+          providerOrderId: providerResult?.externalOrderId || null,
         },
         newBalance,
         paymentType,
-        requiresPayment: paymentType === 'direct'
+        requiresPayment: paymentType === 'direct',
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('[buyer-order] Error:', error);
     return new Response(
       JSON.stringify({ success: false, error: error.message || 'Internal server error' }),
