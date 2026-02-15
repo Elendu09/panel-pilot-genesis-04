@@ -18,72 +18,8 @@ import { Rocket, Sparkles } from 'lucide-react';
 // Lazy load App to reduce initial bundle for tenant domains
 const App = lazy(() => import('../App'));
 
-// CRITICAL: Set initial branding immediately based on domain
-// This prevents "HOME OF SMM" from flashing on tenant domains
-(function setInitialBranding() {
-  if (typeof window === 'undefined') return;
-  const hostname = window.location.hostname.toLowerCase();
-  const hostnameWithoutWww = hostname.startsWith('www.') ? hostname.slice(4) : hostname;
-  
-  // Check if platform domain
-  const platformDomains = ['homeofsmm.com', 'smmpilot.online'];
-  const isPlatform = platformDomains.some(d => hostnameWithoutWww === d);
-  
-  // Check if development/preview domain
-  const isDevDomain = hostname.includes('lovableproject.com') || 
-                       hostname.includes('lovable.app') || 
-                       hostname === 'localhost' ||
-                       hostname.startsWith('localhost:');
-  
-  if (isPlatform) {
-    document.title = 'HOME OF SMM - Advanced SMM Panel Platform';
-  } else if (!isDevDomain) {
-    // TENANT DOMAIN - Remove ALL platform branding immediately
-    
-    // 1. Set neutral title based on subdomain or hostname
-    const parts = hostname.split('.');
-    let tenantName = 'SMM Panel';
-    
-    // Check for subdomain pattern (xxx.homeofsmm.com, xxx.smmpilot.online)
-    const isSubdomain = platformDomains.some(d => hostname.endsWith(`.${d}`));
-    if (isSubdomain && parts.length > 2) {
-      tenantName = parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
-    } else if (!isSubdomain) {
-      // Custom domain - use first part of hostname
-      tenantName = parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
-    }
-    
-    document.title = `${tenantName} - Loading...`;
-    
-    // 2. Remove ALL existing favicons (prevents platform favicon flash)
-    document.querySelectorAll('link[rel*="icon"], link[rel="apple-touch-icon"]').forEach(el => el.remove());
-    
-    // 3. Add .ico favicon immediately (Google looks for /favicon.ico)
-    const faviconIco = document.createElement('link');
-    faviconIco.rel = 'icon';
-    faviconIco.type = 'image/x-icon';
-    faviconIco.href = '/default-tenant-favicon.ico';
-    document.head.appendChild(faviconIco);
-    
-    // Also add shortcut icon for legacy support
-    const shortcutIcon = document.createElement('link');
-    shortcutIcon.rel = 'shortcut icon';
-    shortcutIcon.type = 'image/x-icon';
-    shortcutIcon.href = '/default-tenant-favicon.ico';
-    document.head.appendChild(shortcutIcon);
-    
-    // 4. Remove any platform-specific meta tags
-    document.querySelectorAll('meta[property="og:title"], meta[property="og:site_name"], meta[name="title"]').forEach(el => {
-      const content = el.getAttribute('content') || '';
-      if (content.toLowerCase().includes('home of smm') || content.toLowerCase().includes('homeofsmm')) {
-        el.remove();
-      }
-    });
-    
-    // 5. Hide body briefly to prevent any visual flash (will be shown once React renders)
-    document.documentElement.style.visibility = 'hidden';
-  }
-})();
+// No IIFE branding hack needed - index.html is now clean with neutral fallback.
+// React Helmet in Index.tsx and TenantHead.tsx handle all SEO.
 
 // Lazy load buyer pages for code splitting
 const BuyerDashboard = lazy(() => import('./buyer/BuyerDashboard'));
@@ -183,58 +119,10 @@ const TenantContent = () => {
     setLoadingTimeout(false);
   }, [loading]);
 
-  // Always set default favicon for tenant domains and make document visible
-  useEffect(() => {
-    if (isTenantDomain && typeof document !== 'undefined') {
-      // Make document visible (was hidden by index.html script to prevent branding flash)
-      document.documentElement.style.visibility = 'visible';
-      document.documentElement.style.opacity = '1';
-      
-      // Remove existing favicons
-      document.querySelectorAll('link[rel*="icon"], link[rel="apple-touch-icon"]').forEach(el => el.remove());
-      
-      // Add .ico favicon (Google looks for /favicon.ico)
-      const faviconIco = document.createElement('link');
-      faviconIco.rel = 'icon';
-      faviconIco.type = 'image/x-icon';
-      faviconIco.href = '/default-tenant-favicon.ico';
-      document.head.appendChild(faviconIco);
-      
-      // Add shortcut icon for legacy browser support
-      const shortcutIcon = document.createElement('link');
-      shortcutIcon.rel = 'shortcut icon';
-      shortcutIcon.type = 'image/x-icon';
-      shortcutIcon.href = '/default-tenant-favicon.ico';
-      document.head.appendChild(shortcutIcon);
-      
-      // Add PNG favicon for other sizes
-      const faviconPng = document.createElement('link');
-      faviconPng.rel = 'icon';
-      faviconPng.type = 'image/png';
-      faviconPng.sizes = '32x32';
-      faviconPng.href = '/default-panel-favicon.png';
-      document.head.appendChild(faviconPng);
-      
-      // Add apple touch icon with proper 180x180 size
-      const appleIcon = document.createElement('link');
-      appleIcon.rel = 'apple-touch-icon';
-      appleIcon.sizes = '180x180';
-      appleIcon.href = '/default-panel-apple-touch-icon.png';
-      document.head.appendChild(appleIcon);
-    }
-  }, [isTenantDomain]);
+  // Favicon for tenant domains is handled by TenantHead.tsx via Helmet
+  // No visibility hacks needed - index.html is now clean
 
-  // Set early title for tenant domains based on subdomain
-  useEffect(() => {
-    if (isTenantDomain && !panel) {
-      const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
-      const subdomain = hostname.split('.')[0];
-      if (subdomain && subdomain !== 'www') {
-        // Set a subdomain-based title early, before panel loads
-        document.title = `${subdomain.charAt(0).toUpperCase() + subdomain.slice(1)} - SMM Panel`;
-      }
-    }
-  }, [isTenantDomain, panel]);
+  // Title is set by TenantHead.tsx via Helmet - no manual DOM manipulation needed
 
   // Show centered logo + shimmer for tenant domains during loading - prevents blank screen
   if (loading && !loadingTimeout) {

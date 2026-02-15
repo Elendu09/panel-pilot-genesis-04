@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useTenant } from '@/hooks/useTenant';
 import { supabase } from '@/integrations/supabase/client';
@@ -47,49 +47,7 @@ export const TenantHead = ({ title, description }: TenantHeadProps) => {
   const canonicalUrl = typeof window !== 'undefined' ? window.location.origin : '';
   const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
   
-  // CRITICAL: Set document title immediately using useLayoutEffect
-  // This runs synchronously before paint, preventing "HOME OF SMM" flash
-  useLayoutEffect(() => {
-    if (panel?.name) {
-      document.title = pageTitle;
-    }
-  }, [panel?.name, pageTitle]);
-  
-  // Force favicon update via DOM manipulation (overrides index.html)
-  // Prioritize .ico format for Google crawler compatibility
-  useEffect(() => {
-    // Remove all existing favicon links
-    document.querySelectorAll('link[rel*="icon"], link[rel="apple-touch-icon"]').forEach(el => el.remove());
-    
-    // Add primary .ico favicon (best for Google)
-    const faviconIco = document.createElement('link');
-    faviconIco.rel = 'icon';
-    faviconIco.type = 'image/x-icon';
-    faviconIco.href = faviconIcoUrl;
-    document.head.appendChild(faviconIco);
-    
-    // Add shortcut icon (legacy browser support)
-    const shortcutIcon = document.createElement('link');
-    shortcutIcon.rel = 'shortcut icon';
-    shortcutIcon.type = 'image/x-icon';
-    shortcutIcon.href = faviconIcoUrl;
-    document.head.appendChild(shortcutIcon);
-    
-    // Add PNG favicon for other sizes
-    const faviconPng32 = document.createElement('link');
-    faviconPng32.rel = 'icon';
-    faviconPng32.type = 'image/png';
-    faviconPng32.sizes = '32x32';
-    faviconPng32.href = faviconPngUrl;
-    document.head.appendChild(faviconPng32);
-    
-    // Add apple touch icon
-    const appleIcon = document.createElement('link');
-    appleIcon.rel = 'apple-touch-icon';
-    appleIcon.sizes = '180x180';
-    appleIcon.href = appleTouchIconUrl;
-    document.head.appendChild(appleIcon);
-  }, [faviconIcoUrl, faviconPngUrl, appleTouchIconUrl]);
+  // Favicon and title are handled by Helmet below - no DOM manipulation needed
   
   // Inject enabled service integrations (GA, GTM, Crisp, etc.)
   useEffect(() => {

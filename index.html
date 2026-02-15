@@ -4,37 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
-    <!-- EARLY TENANT DETECTION: Runs BEFORE any content renders -->
-    <script>
-      (function() {
-        var h = location.hostname.toLowerCase().replace(/^www\./, '');
-        var isPlatform = h === 'homeofsmm.com' || h === 'smmpilot.online';
-        var isDev = h.includes('lovable.app') || h.includes('lovableproject.com') || h === 'localhost' || h === '127.0.0.1';
-        
-        if (!isPlatform && !isDev) {
-          // TENANT DOMAIN - Neutralize all platform branding immediately
-          document.title = 'Loading...';
-          
-          // Mark as tenant for later use
-          window.__IS_TENANT_DOMAIN__ = true;
-          
-          // Hide document until React loads to prevent any flash
-          document.documentElement.style.visibility = 'hidden';
-          document.documentElement.style.opacity = '0';
-          
-          // AGGRESSIVE: Remove ALL existing favicons immediately (before they load)
-          var existingFavicons = document.querySelectorAll('link[rel*="icon"]');
-          for (var i = 0; i < existingFavicons.length; i++) {
-            existingFavicons[i].parentNode.removeChild(existingFavicons[i]);
-          }
-        }
-      })();
-    </script>
-    
-    <!-- Platform-only meta tags (will be removed/replaced for tenants by React) -->
-    <title data-platform-only>Home of SMM – Create &amp; Manage Your Own SMM Panel</title>
-    <meta name="description" content="Launch your own SMM panel with Home of SMM. Get custom branding, automated orders, multiple payment gateways, and real-time analytics to grow your revenue">
-    <meta name="keywords" content="SMM panel, SMM panel script, create SMM panel, best SMM panel, SMM reseller panel, SMM panel software, social media marketing panel, white label SMM panel, cheapest SMM panel">
+    <!-- Minimal fallback title - React Helmet is the single source of truth for all SEO -->
+    <title>Loading...</title>
+    <meta name="description" content="" />
     
     <!-- Preconnect for Performance - Critical third-party origins -->
     <link rel="preconnect" href="https://tooudgubuhxjbbvzjcgx.supabase.co" crossorigin>
@@ -70,141 +42,18 @@
       })();
     </script>
     
-    <!-- Author & Publisher (platform-only, replaced for tenants) -->
-    <meta name="author" content="HOME OF SMM" data-platform-only />
-    <meta name="publisher" content="HOME OF SMM" data-platform-only />
-    <meta name="copyright" content="HOME OF SMM" data-platform-only />
-    
-    <!-- Robots & Indexing -->
-    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
-    <meta name="googlebot" content="index, follow" />
-    <meta name="bingbot" content="index, follow" />
-    
-    <!-- Language & Distribution -->
-    <meta name="language" content="English" />
-    <meta name="distribution" content="global" />
-    <meta name="rating" content="general" />
-    <meta name="revisit-after" content="1 days" />
-    
-    <!-- Geo Tags -->
-    <meta name="geo.region" content="US" />
-    <meta name="geo.placename" content="United States" />
+    <!-- Robots & Indexing (safe defaults - Helmet overrides per page/tenant) -->
+    <meta name="robots" content="index, follow" />
     
     <!-- Theme Color -->
     <meta name="theme-color" content="#6366F1" />
-    <meta name="msapplication-TileColor" content="#6366F1" />
-    <meta name="msapplication-navbutton-color" content="#6366F1" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     
-    <!-- Mobile Web App (platform-only, replaced for tenants) -->
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-title" content="HOME OF SMM" data-platform-only />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="format-detection" content="telephone=no" />
-    
-    <!-- Open Graph (platform-only, replaced for tenants) -->
-    <meta property="og:type" content="website" />
-    <meta property="og:locale" content="en_US" />
-    <meta property="og:site_name" content="HOME OF SMM" data-platform-only />
-    
-    
-    <meta property="og:image" content="https://storage.googleapis.com/gpt-engineer-file-uploads/a8nFu1Vlx5VQr6NAikq0H0XDcv42/social-images/social-1767449564584-HOME OF SMM SCREENSHOT.png">
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="HOME OF SMM - SMM Panel Platform" data-platform-only />
-    
-    <!-- Twitter Card (platform-only, replaced for tenants) -->
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@homeofsmm" data-platform-only />
-    <meta name="twitter:creator" content="@homeofsmm" data-platform-only />
-    
-    
-    <meta name="twitter:image" content="https://storage.googleapis.com/gpt-engineer-file-uploads/a8nFu1Vlx5VQr6NAikq0H0XDcv42/social-images/social-1767449564584-HOME OF SMM SCREENSHOT.png">
-    
-    <!-- Favicon handling: Conditional based on domain type -->
-    <script>
-      (function() {
-        if (window.__IS_TENANT_DOMAIN__) {
-          // For tenants: Insert .ico favicon for Google crawler compatibility
-          var link = document.createElement('link');
-          link.rel = 'icon';
-          link.type = 'image/x-icon';
-          link.href = '/default-tenant-favicon.ico';
-          document.head.appendChild(link);
-          
-          // Also add shortcut icon (legacy support)
-          var shortcut = document.createElement('link');
-          shortcut.rel = 'shortcut icon';
-          shortcut.type = 'image/x-icon';
-          shortcut.href = '/default-tenant-favicon.ico';
-          document.head.appendChild(shortcut);
-          
-          // Add apple touch icon
-          var apple = document.createElement('link');
-          apple.rel = 'apple-touch-icon';
-          apple.sizes = '180x180';
-          apple.href = '/default-panel-apple-touch-icon.png';
-          document.head.appendChild(apple);
-        }
-      })();
-    </script>
-    
-    <!-- Platform favicon links (these will be removed for tenants) -->
+    <!-- Default favicon - Helmet overrides for tenants -->
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
-    <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" data-platform-only />
-    <link rel="apple-touch-icon" sizes="180x180" href="/favicon.ico" data-platform-only />
-    <link rel="icon" type="image/x-icon" sizes="32x32" href="/favicon.ico" data-platform-only />
-    <link rel="icon" type="image/x-icon" sizes="16x16" href="/favicon.ico" data-platform-only />
     
     <!-- Sitemap -->
     <link rel="sitemap" type="application/xml" title="Sitemap" href="/sitemap.xml" />
-    
-    <!-- Canonical URL (platform-only, replaced for tenants) -->
-    <link rel="canonical" href="https://homeofsmm.com/" data-platform-only />
-    
-    <!-- CLEANUP SCRIPT: Runs after favicon links are declared -->
-    <script>
-      (function() {
-        if (window.__IS_TENANT_DOMAIN__) {
-          // Remove all platform-only meta tags and links
-          var platformOnly = document.querySelectorAll('[data-platform-only]');
-          for (var i = 0; i < platformOnly.length; i++) {
-            platformOnly[i].parentNode.removeChild(platformOnly[i]);
-          }
-          
-          // Ensure tenant favicon.ico exists
-          var hasTenantFavicon = document.querySelector('link[href*="default-tenant-favicon.ico"]');
-          if (!hasTenantFavicon) {
-            var link = document.createElement('link');
-            link.rel = 'icon';
-            link.type = 'image/x-icon';
-            link.href = '/default-tenant-favicon.ico';
-            document.head.insertBefore(link, document.head.firstChild);
-          }
-        }
-      })();
-    </script>
-    
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  <meta property="og:title" content="Home of SMM – Create &amp; Manage Your Own SMM Panel">
-  <meta name="twitter:title" content="Home of SMM – Create &amp; Manage Your Own SMM Panel">
-  <meta property="og:description" content="Launch your own SMM panel with Home of SMM. Get custom branding, automated orders, multiple payment gateways, and real-time analytics to grow your revenue">
-  <meta name="twitter:description" content="Launch your own SMM panel with Home of SMM. Get custom branding, automated orders, multiple payment gateways, and real-time analytics to grow your revenue">
-</head>
+  </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
