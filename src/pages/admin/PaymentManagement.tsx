@@ -201,7 +201,7 @@ const PaymentManagement = () => {
       const response = await supabase.functions.invoke('admin-panel-ops', {
         body: {
           action: 'add_funds',
-          panelId: selectedPanelId,
+          panel_id: selectedPanelId,
           amount: parseFloat(fundingAmount),
           type: fundingType,
           reason: fundingReason || `Admin ${fundingType} - Manual adjustment`
