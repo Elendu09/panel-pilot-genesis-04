@@ -83,12 +83,13 @@ export const OnboardingPaymentStep = ({
 
       const returnUrl = `${window.location.origin}/panel/billing?payment=success`;
 
-      const { data, error: fnError } = await supabase.functions.invoke('process-payment', {
+      const { data, error: fnError } = await supabase.functions.invoke('process-subscription-payment', {
         body: {
           gateway: selectedProvider,
           amount: planPrices[selectedPlan],
+          plan: selectedPlan,
           panelId,
-          buyerId: user.id,
+          userId: user.id,
           returnUrl,
           currency: 'usd',
         }
