@@ -877,75 +877,18 @@ const ProviderManagement = () => {
             />
           )}
 
-          {/* Top Providers Section - Gold bordered grid */}
-          {filteredDirect.filter(p => p.ad_type === 'top').length > 0 && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-lg bg-gradient-to-br from-amber-500/20 to-yellow-500/10">
-                  <TrendingUp className="w-5 h-5 text-amber-500" />
-                </div>
-                <h3 className="font-semibold text-lg">Top Providers</h3>
-                <Badge variant="outline" className="border-amber-500/30 text-amber-500">{filteredDirect.filter(p => p.ad_type === 'top').length}</Badge>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {filteredDirect.filter(p => p.ad_type === 'top').map((provider) => (
-                  <DirectProviderCard
-                    key={provider.id}
-                    provider={provider}
-                    onEnable={handleEnableDirectProvider}
-                    isEnabled={provider.is_connected}
-                    isLoading={enablingProvider === provider.id}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Best Providers Section */}
-          {filteredDirect.filter(p => p.ad_type === 'best').length > 0 && (
+          {/* Top Providers Section (HomeOfSMM Panels with ads) */}
+          {filteredDirect.filter(p => p.ad_type === 'top' || p.ad_type === 'best' || p.ad_type === 'featured').length > 0 && (
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500/20 to-cyan-500/10">
                   <Sparkles className="w-5 h-5 text-blue-500" />
                 </div>
-                <h3 className="font-semibold text-lg">Best Providers</h3>
-                <Badge variant="outline" className="border-blue-500/30 text-blue-500">{filteredDirect.filter(p => p.ad_type === 'best').length}</Badge>
+                <h3 className="font-semibold text-lg">Top Providers</h3>
+                <Badge variant="outline">{filteredDirect.filter(p => p.ad_type === 'top' || p.ad_type === 'best' || p.ad_type === 'featured').length}</Badge>
               </div>
               <div className="space-y-2">
-                {filteredDirect.filter(p => p.ad_type === 'best').map((provider, index) => (
-                  <ProviderListItem
-                    key={provider.id}
-                    id={provider.id}
-                    name={provider.name}
-                    domain={provider.custom_domain || `${provider.subdomain}.smmpilot.online`}
-                    logoUrl={provider.logo_url}
-                    serviceCount={provider.service_count}
-                    adType={provider.ad_type}
-                    isConnected={provider.is_connected}
-                    onAction={() => handleEnableDirectProvider(provider)}
-                    onManualConnect={() => openManualConnect(provider)}
-                    isLoading={enablingProvider === provider.id}
-                    actionLabel="Enable"
-                    rank={index + 1}
-                    showRank={true}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Featured Providers Section */}
-          {filteredDirect.filter(p => p.ad_type === 'featured').length > 0 && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-lg bg-gradient-to-br from-purple-500/20 to-pink-500/10">
-                  <Crown className="w-5 h-5 text-purple-500" />
-                </div>
-                <h3 className="font-semibold text-lg">Featured Providers</h3>
-                <Badge variant="outline" className="border-purple-500/30 text-purple-500">{filteredDirect.filter(p => p.ad_type === 'featured').length}</Badge>
-              </div>
-              <div className="space-y-2">
-                {filteredDirect.filter(p => p.ad_type === 'featured').map((provider, index) => (
+                {filteredDirect.filter(p => p.ad_type === 'top' || p.ad_type === 'best' || p.ad_type === 'featured').map((provider, index) => (
                   <ProviderListItem
                     key={provider.id}
                     id={provider.id}

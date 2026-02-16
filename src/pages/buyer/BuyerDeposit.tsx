@@ -276,7 +276,7 @@ const BuyerDeposit = () => {
         .from('transactions')
         .select('*')
         .or(`user_id.eq.${buyer.id},buyer_id.eq.${buyer.id}`)
-        .in('type', ['deposit', 'credit', 'admin_credit'])
+        .eq('type', 'deposit')
         .order('created_at', { ascending: false })
         .limit(20);
       

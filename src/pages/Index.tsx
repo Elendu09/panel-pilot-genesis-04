@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from "react";
+import { Helmet } from "react-helmet-async";
 import { Navigation } from "@/components/layout/Navigation";
 import { HeroSection } from "@/components/sections/HeroSection";
 import { Footer } from "@/components/layout/Footer";
@@ -16,6 +17,7 @@ const CursorEffects = lazy(() => import(/* webpackChunkName: "cursor-effects" */
 
 
 const Index = () => {
+  const canonicalUrl = typeof window !== 'undefined' ? window.location.origin : 'https://homeofsmm.com';
   const [showEffects, setShowEffects] = useState(false);
   
   // Defer cursor effects until after initial render
@@ -31,6 +33,11 @@ const Index = () => {
       }
     };
   }, []);
+  
+  // SEO-optimized title and description with proper pixel lengths
+  const seoTitle = "HOME OF SMM - #1 SMM Panel Platform";
+  const seoDescription = "Create your own SMM panel with HOME OF SMM. Custom branding, 200+ payment gateways, automated orders, and real-time analytics.";
+  const seoKeywords = "SMM panel, create SMM panel, best SMM panel, SMM panel platform, SMM reseller panel, SMM panel software, white label SMM panel, SMM panel provider, SMM panel 2026, how to create SMM panel, make money SMM panel, SMM business, social media marketing panel, SMM automation";
   
   // FAQ data for structured data
   const faqData = [
@@ -51,9 +58,55 @@ const Index = () => {
         </Suspense>
       )}
       
-      {/* JSON-LD Structured Data only - no Helmet, SEO lives in index.html */}
+      {/* JSON-LD Structured Data */}
       <MainHomepageSchemas />
       <FAQPageSchema faqs={faqData} />
+      
+      <Helmet>
+        <title>{seoTitle}</title>
+        <meta name="description" content={seoDescription} />
+        <meta name="keywords" content={seoKeywords} />
+        <link rel="canonical" href={canonicalUrl} />
+        
+        {/* Open Graph Tags */}
+        <meta property="og:title" content={seoTitle} />
+        <meta property="og:description" content={seoDescription} />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={canonicalUrl} />
+        <meta property="og:site_name" content="HOME OF SMM" />
+        <meta property="og:image" content={`${canonicalUrl}/og-image.png`} />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:locale" content="en_US" />
+        
+        {/* Twitter Card Tags */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:site" content="@homeofsmm" />
+        <meta name="twitter:creator" content="@homeofsmm" />
+        <meta name="twitter:title" content={seoTitle} />
+        <meta name="twitter:description" content={seoDescription} />
+        <meta name="twitter:image" content={`${canonicalUrl}/og-image.png`} />
+        
+        {/* Additional SEO Tags */}
+        <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+        <meta name="author" content="HOME OF SMM" />
+        <meta name="publisher" content="HOME OF SMM" />
+        <meta name="copyright" content="HOME OF SMM" />
+        <meta name="language" content="English" />
+        <meta name="revisit-after" content="1 days" />
+        <meta name="distribution" content="global" />
+        <meta name="rating" content="general" />
+        
+        {/* Geo Tags */}
+        <meta name="geo.region" content="US" />
+        <meta name="geo.placename" content="United States" />
+        
+        {/* Mobile optimization */}
+        <meta name="format-detection" content="telephone=no" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="HOME OF SMM" />
+      </Helmet>
       
       <Navigation />
       <main role="main" aria-label="Main content" itemScope itemType="https://schema.org/WebPage">
