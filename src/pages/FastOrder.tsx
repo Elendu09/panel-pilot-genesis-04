@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { useTheme } from '@/hooks/use-theme';
 import { BuyerThemeWrapper } from '@/components/buyer-themes';
 import { useAnalyticsTracking } from '@/hooks/use-analytics-tracking';
-import { useUnifiedServices } from '@/hooks/useUnifiedServices';
+
 interface Panel {
   id: string;
   name: string;
@@ -349,6 +349,10 @@ const FastOrderContent = () => {
     // Not wrapped in BuyerAuthProvider - that's okay
   }
   
+  const [panel, setPanel] = useState<Panel | null>(null);
+  const [services, setServices] = useState<Service[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentStep, setCurrentStep] = useState(1);
 
@@ -376,64 +380,50 @@ const FastOrderContent = () => {
     }
   }, [currentStep, resolvedPanelId, trackFastOrderStep]);
 
-  const [panel, setPanel] = useState<Panel | null>(null);
-  const [panelLoading, setPanelLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // Use unified services hook for consistent data across all buyer pages
-  const { services: unifiedServices, loading: servicesLoading } = useUnifiedServices({ 
-    panelId: resolvedPanelId, 
-    enabled: !!resolvedPanelId 
-  });
-
-  // Map unified services to the shape FastOrderSection expects
-  const services: Service[] = unifiedServices.map(s => ({
-    id: s.id,
-    name: s.name,
-    price: s.price,
-    category: s.category,
-    min_quantity: s.min_quantity,
-    max_quantity: s.max_quantity,
-    provider_service_id: s.providerServiceId || undefined,
-  }));
-
-  const loading = panelLoading || servicesLoading;
-
   useEffect(() => {
+    // Store resolved panelId for future use
     if (resolvedPanelId) {
       localStorage.setItem('current_panel_id', resolvedPanelId);
     }
 
-    const fetchPanel = async () => {
+    const fetchData = async () => {
       if (!resolvedPanelId) {
         setError('No panel specified');
-        setPanelLoading(false);
+        setLoading(false);
         return;
       }
 
       try {
+        // Fetch panel data
         const { data: panelData, error: panelError } = await supabase
           .from('panels')
           .select('id, name, logo_url, primary_color, custom_branding')
           .eq('id', resolvedPanelId)
-          .maybeSingle();
+          .single();
 
         if (panelError) throw panelError;
-        if (!panelData) {
-          setError('Panel not found');
-          setPanelLoading(false);
-          return;
-        }
         setPanel(panelData);
+
+        // Fetch services - include is_hidden filter and provider_service_id for debugging
+        const { data: servicesData, error: servicesError } = await supabase
+          .from('services')
+          .select('id, name, price, category, min_quantity, max_quantity, provider_service_id')
+          .eq('panel_id', resolvedPanelId)
+          .eq('is_active', true)
+          .eq('is_hidden', false)
+          .order('display_order', { ascending: true });
+
+        if (servicesError) throw servicesError;
+        setServices(servicesData || []);
       } catch (err: any) {
-        console.error('Error fetching panel:', err);
-        setError(err.message || 'Failed to load panel');
+        console.error('Error fetching data:', err);
+        setError(err.message || 'Failed to load data');
       } finally {
-        setPanelLoading(false);
+        setLoading(false);
       }
     };
 
-    fetchPanel();
+    fetchData();
   }, [resolvedPanelId]);
 
   if (loading) {

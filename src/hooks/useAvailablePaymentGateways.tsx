@@ -69,7 +69,7 @@ export const useAvailablePaymentGateways = (opts: {
           .eq("is_enabled", true),
         panelSettings
           ? Promise.resolve({ data: { settings: panelSettings } } as any)
-          : (supabase as any).from("panels_public").select("settings").eq("id", panelId!).maybeSingle(),
+          : supabase.from("panels").select("settings").eq("id", panelId!).maybeSingle(),
       ]);
 
       setPlatformEnabledProviders((providers || []).filter((p) => p.is_enabled));

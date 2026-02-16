@@ -45,8 +45,8 @@ const BuyerPrivacy = () => {
       if (!panel?.id) return;
       
       try {
-        const { data } = await (supabase as any)
-          .from('panel_settings_public')
+        const { data } = await supabase
+          .from('panel_settings')
           .select('privacy_policy, contact_info, updated_at')
           .eq('panel_id', panel.id)
           .single();

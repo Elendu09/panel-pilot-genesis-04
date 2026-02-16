@@ -66,8 +66,8 @@ export const SMMVisitHomepage = ({
     const checkGoogleOAuth = async () => {
       if (!panelId) return;
       try {
-        const { data } = await (supabase as any)
-          .from('panel_settings_public')
+        const { data } = await supabase
+          .from('panel_settings')
           .select('social_links')
           .eq('panel_id', panelId)
           .maybeSingle();

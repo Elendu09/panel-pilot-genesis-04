@@ -97,8 +97,8 @@ export const TenantHead = ({ title, description }: TenantHeadProps) => {
     
     const injectIntegrations = async () => {
       try {
-        const { data } = await (supabase as any)
-          .from('panel_settings_public')
+        const { data } = await supabase
+          .from('panel_settings')
           .select('integrations')
           .eq('panel_id', panel.id)
           .maybeSingle();

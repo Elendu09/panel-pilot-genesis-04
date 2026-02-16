@@ -75,51 +75,25 @@ export const OnboardingPaymentStep = ({
 
     setProcessing(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast({ variant: 'destructive', title: 'Please sign in first' });
-        return;
+      // Create a pending subscription — payment must be confirmed via webhook
+      if (panelId) {
+        await supabase
+          .from('panels')
+          .update({ 
+            subscription_tier: selectedPlan,
+            subscription_status: 'pending'
+          })
+          .eq('id', panelId);
       }
 
-      const returnUrl = `${window.location.origin}/panel/billing?payment=success`;
-
-      const { data, error: fnError } = await supabase.functions.invoke('process-subscription-payment', {
-        body: {
-          gateway: selectedProvider,
-          amount: planPrices[selectedPlan],
-          plan: selectedPlan,
-          panelId,
-          userId: user.id,
-          returnUrl,
-          currency: 'usd',
-        }
+      toast({
+        variant: 'destructive',
+        title: 'Payment gateway not yet configured',
+        description: 'Please contact the platform administrator or continue with the Free plan.'
       });
-
-      if (fnError) throw fnError;
-
-      if (data?.success && data?.url) {
-        // Update panel subscription status to pending before redirect
-        if (panelId) {
-          await supabase
-            .from('panels')
-            .update({ 
-              subscription_tier: selectedPlan,
-              subscription_status: 'pending'
-            })
-            .eq('id', panelId);
-        }
-        // Redirect to payment gateway
-        window.location.href = data.url;
-      } else {
-        toast({
-          variant: 'destructive',
-          title: 'Payment Error',
-          description: data?.error || 'Could not initialize payment. Please try again.'
-        });
-      }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Payment error:', error);
-      toast({ variant: 'destructive', title: 'Payment failed', description: error.message || 'Please try again.' });
+      toast({ variant: 'destructive', title: 'Payment failed. Please try again.' });
     } finally {
       setProcessing(false);
     }

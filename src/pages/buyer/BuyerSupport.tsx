@@ -146,8 +146,8 @@ const BuyerSupport = () => {
   useEffect(() => {
     const fetchFaqs = async () => {
       if (!panel?.id) return;
-      const { data } = await (supabase as any)
-        .from('panels_public')
+      const { data } = await supabase
+        .from('panels')
         .select('custom_branding')
         .eq('id', panel.id)
         .single();

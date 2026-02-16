@@ -23,7 +23,6 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Helmet } from "react-helmet-async";
 
 export default function Contact() {
   const { t } = useLanguage();
@@ -123,11 +122,6 @@ export default function Contact() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-secondary/10">
-      <Helmet>
-        <title>Contact Us - HOME OF SMM</title>
-        <meta name="description" content="Get in touch with HOME OF SMM. We're here to help you succeed with your SMM panel." />
-        <link rel="canonical" href="https://homeofsmm.com/contact" />
-      </Helmet>
       <Navigation />
       
       {/* Hero Section */}

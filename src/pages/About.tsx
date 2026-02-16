@@ -1,4 +1,3 @@
-import { Helmet } from "react-helmet-async";
 import { Navigation } from "@/components/layout/Navigation";
 import { Footer } from "@/components/layout/Footer";
 import { Card } from "@/components/ui/card";
@@ -51,9 +50,9 @@ export default function About() {
 
   const team = [
     {
-      name: "Nzube Elendu",
+      name: "Alex Thompson",
       role: "CEO & Founder",
-      bio: "Visionary entrepreneur passionate about empowering SMM businesses worldwide. Leading HOME OF SMM to democratize social media marketing tools for everyone."
+      bio: "Former Meta engineer with 10+ years in social media technology. Passionate about democratizing SMM tools."
     },
     {
       name: "Sarah Chen",
@@ -74,11 +73,6 @@ export default function About() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-secondary/10">
-      <Helmet>
-        <title>About Us - HOME OF SMM</title>
-        <meta name="description" content="Meet the team behind HOME OF SMM. Learn about our mission to empower SMM entrepreneurs worldwide." />
-        <link rel="canonical" href="https://homeofsmm.com/about" />
-      </Helmet>
       <Navigation />
       
       {/* Hero Section */}

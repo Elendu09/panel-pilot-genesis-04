@@ -114,8 +114,8 @@ export const BuyerThemeWrapper = ({
     queryKey: ['panel-buyer-theme', panelId, refreshKey],
     queryFn: async () => {
       if (!panelId) return null;
-      const { data } = await (supabase as any)
-        .from('panels_public')
+      const { data } = await supabase
+        .from('panels')
         .select('buyer_theme, custom_branding, logo_url, name, primary_color, secondary_color')
         .eq('id', panelId)
         .single();

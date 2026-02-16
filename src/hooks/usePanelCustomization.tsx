@@ -12,8 +12,8 @@ export function usePanelCustomization(panelId: string | undefined) {
       if (!panelId) return null;
       
       // Fetch panel with custom_branding in a single query
-      const { data, error } = await (supabase as any)
-        .from('panels_public')
+      const { data, error } = await supabase
+        .from('panels')
         .select('custom_branding, theme_type, primary_color, secondary_color, logo_url, name, blog_enabled')
         .eq('id', panelId)
         .single();

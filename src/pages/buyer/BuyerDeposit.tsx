@@ -162,7 +162,7 @@ const BuyerDeposit = () => {
       try {
         // Fetch panel settings AND platform-enabled providers in parallel
         const [panelRes, providersRes] = await Promise.all([
-          (supabase as any).from('panels_public').select('settings').eq('id', panel.id).single(),
+          supabase.from('panels').select('settings').eq('id', panel.id).single(),
           supabase.from('platform_payment_providers').select('provider_name, is_enabled').eq('is_enabled', true)
         ]);
         

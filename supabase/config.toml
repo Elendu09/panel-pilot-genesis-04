@@ -134,6 +134,3 @@ verify_jwt = false
 
 [functions.oauth-callback]
 verify_jwt = false
-
-[functions.process-subscription-payment]
-verify_jwt = false
