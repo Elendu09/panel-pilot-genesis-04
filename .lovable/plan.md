@@ -1,200 +1,143 @@
+# Comprehensive Fix Plan: SEO, Transactions, Orders, Marketplace, and Payments
 
-
-# Fix Plan: SEO, Auth, Skeleton, Headings, and Payment Gateway
-
----
-
-## Issue 1: Remove Loading Skeleton from Homepage
-
-**File:** `src/pages/Index.tsx`
-
-The `SectionSkeleton` component shows a spinning loader while lazy-loaded sections load. Replace with `null` fallback so sections appear seamlessly without spinners.
-
-Change all `<Suspense fallback={<SectionSkeleton />}>` to `<Suspense fallback={null}>` (lines 121-135). Also remove the unused `SectionSkeleton` component definition (lines 19-24).
+This plan addresses all five areas you raised. Here is a detailed breakdown of every issue and the fix.
 
 ---
 
-## Issue 2: Fix SEO Title and Meta Description
+## 1. SEO Title and Description Consistency
 
-**File:** `src/pages/Index.tsx`
+**Problem:** The `index.html` has TWO sets of conflicting titles/descriptions. Lines 35-36 have one version, and lines 203-206 have another. The React Helmet also sets a THIRD version. Seobility and Google may pick any of these depending on timing, causing inconsistent SEO signals.
 
-Update line 45-46 to the exact values provided:
+**Root Cause:** `index.html` contains hardcoded `<title>` and OG/Twitter meta tags that conflict with the Helmet-rendered ones from `Index.tsx`. Since your site is an SPA hosted on Vercel, crawlers may see the HTML-level tags before React hydrates.
 
-- **Title:** `HOME OF SMM – Create & Manage Your Own SMM Panel`
-- **Description:** `Launch your own SMM panel with Home of SMM. Get custom branding, automated orders, multiple payment gateways, and real-time analytics to grow revenue.`
+**Fix:**
 
-(Note: removing "your SMM business fast." and using "revenue." as specified)
+- Update `index.html` lines 35-36 and 203-206 to use YOUR exact desired title: `Home of SMM – Create & Manage Your Own SMM Panel` and description: `Launch your own SMM panel with Home of SMM. Get custom branding, automated orders, multiple payment gateways, and real-time analytics to grow your revenue`
+- Update `src/pages/Index.tsx` line 38-39 to use the SAME exact title and description (currently different: "HOME OF SMM - #1 SMM Panel Platform")
+- Update `src/components/seo/JsonLdSchema.tsx` Organization and SoftwareApplication descriptions to match
 
----
-
-## Issue 3: Improve Heading Structure for SEO/AEO/GEO Indexing
-
-The homepage H1 currently renders "Create Your Own" + "SMM Panel" which is correct. The issue is that section headings need proper semantic structure and `aria-labelledby` connections for crawlers.
-
-### Changes needed:
-
-**File:** `src/components/sections/HeroSection.tsx`
-- The H1 is fine as-is (line 125). But add a visually hidden subtitle `<p>` below it for search engines describing the page purpose.
-
-**File:** `src/components/sections/PlatformFeaturesSection.tsx`
-- The section uses `<h2>` (line 47) but lacks `id` and `aria-labelledby`. Add `id="platform-features-heading"` and `aria-labelledby` on the section tag.
-
-**File:** `src/components/sections/StatsSection.tsx`
-- Already has `id="stats-heading"` and `aria-labelledby="stats-heading"` (line 63, 78). Good.
-
-**File:** `src/components/sections/FeaturesSection.tsx`
-- Already has `id="features-heading"` and `aria-labelledby="features-heading"` (line 65, 86). Good.
-
-**File:** `src/components/sections/TestimonialsSection.tsx`
-- Already has `id="testimonials-heading"` and `aria-labelledby="testimonials-heading"` (line 57, 86). Good.
-
-**File:** `src/components/sections/FAQSection.tsx`
-- Already has `id="faq-heading"` and `aria-labelledby="faq-heading"` (line 85, 114). Good.
-
-**File:** `src/lib/platform-translations.ts`
-- Revert `home.title.line1` back to `'Create Your Own'` and `home.title.line2` to `'SMM Panel'` (lowercase "your" is fine -- the user wants it noticeable, not fully uppercased).
-
-Primary fix: Add `id` and `aria-labelledby` to PlatformFeaturesSection, and add a hidden SEO paragraph under the H1.
+**Tenant SEO:** Already handled correctly -- `TenantHead.tsx` uses Helmet with panel-specific `seo_title` and `seo_description` from `panel_settings`. Each tenant panel's SEO is synced from their dashboard settings. No changes needed here.
 
 ---
 
-## Issue 4: Fix Username Sign-In (CRITICAL ROOT CAUSE)
+## 2. Provider Marketplace Ads Restructuring
 
-**Root Cause:** The `profiles` table RLS SELECT policy is:
-```sql
-user_id = auth.uid()
-```
+**Problem:** The current marketplace in `ProviderManagement.tsx` shows ads in a flat list. The ad hierarchy (Sponsored > Top > Best > Featured) needs better visual separation for maximum ad ROI.
 
-When a user tries to sign in with a username, `AuthContext.signIn()` queries `profiles` by username BEFORE the user is authenticated. Since `auth.uid()` is null at that point, the RLS policy blocks ALL rows, so the username lookup returns nothing.
+**Fix -- Restructure marketplace tab (lines 859-980):**
 
-**Fix:** Add a new RLS policy that allows anyone to look up a profile by username (only exposing the email column via the query, which is safe since the sign-in form already accepts email):
-
-```sql
-CREATE POLICY "Allow username lookup for auth" ON profiles
-FOR SELECT USING (true);
-```
-
-However, this would expose all profile data. A safer approach is to use a **database function** with `SECURITY DEFINER` that bypasses RLS:
-
-```sql
-CREATE OR REPLACE FUNCTION public.lookup_email_by_username(p_username text)
-RETURNS text
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path TO 'public'
-AS $$
-DECLARE
-  v_email text;
-BEGIN
-  SELECT email INTO v_email
-  FROM profiles
-  WHERE LOWER(username) = LOWER(p_username)
-  LIMIT 1;
-  RETURN v_email;
-END;
-$$;
-```
-
-Then in `src/contexts/AuthContext.tsx`, replace the `.ilike('username', ...)` query with an RPC call:
-
-```typescript
-if (!identifier.includes('@')) {
-  const { data: email, error: lookupError } = await supabase
-    .rpc('lookup_email_by_username', { p_username: identifier.trim() });
-  
-  if (lookupError || !email) {
-    toast({ variant: "destructive", title: "Sign In Error", description: "Username not found." });
-    return { error: { message: 'Username not found' } };
-  }
-  loginEmail = email;
-}
-```
-
-Additionally, the `signUp` function saves username AFTER signup (line 143-147), but the `handle_new_user` trigger doesn't save username. The update query may also fail due to RLS (the user just signed up but may not be authenticated yet if email verification is required). Fix: Save the username via the `raw_user_meta_data` in the trigger, or use a SECURITY DEFINER function for the signup username save too.
+- **Sponsored Section** (top): Full-width horizontal slider (already exists via `SponsoredProviderSlider`) -- keep as-is
+- **Top Providers Section**: Separate card-based grid (2 columns) with gold borders and "Top" badges, placed immediately after sponsored
+- **Best Providers**: Highlighted list items with "Best" badge and subtle accent background
+- **Featured Providers**: Standard list with "Featured" badge
+- **Regular Providers**: Standard list (no badge), shown after all ad tiers
+- Add clear section headers with tier descriptions to encourage panel owners to purchase ads
+- Add a "Promote Your Panel" CTA button linking to `/panel/ads` between ad sections
 
 ---
 
-## Issue 5: Fix Payment Gateway in Panel Onboarding
+## 3. Balance Adjustment: Billing & Deposit Transaction Issues
 
-**Root Cause:** The `platform_payment_providers` table has ALL providers set to `is_enabled: false`. The `OnboardingPaymentStep` queries with `.eq('is_enabled', true)`, so it gets 0 results and shows "No payment providers configured."
+**Problem A: Admin balance adjustments showing in Billing page**
 
-**Fixes needed:**
+- When panel owner adds balance to a customer via `CustomerDetailPage.tsx` (line 257-265), the transaction is inserted with `type: 'credit'` and `user_id: customer.id` but **NO `panel_id**` and **NO `buyer_id**`
+- The `TransactionHistory.tsx` (Billing page) queries by `panel_id`, so these transactions should NOT appear there -- unless `panel_id` was somehow set
 
-1. **Admin must enable at least one provider** -- but since none are enabled, the onboarding payment step should gracefully handle this by showing a clear message and allowing the user to skip to Free plan.
+**Problem B: Customer doesn't see admin-added funds in "Recent Deposits"**
 
-2. The current `OnboardingPaymentStep.tsx` already handles this case (lines 117-133) -- it shows "No payment providers configured" with a "Continue with Free Plan" button. This is correct behavior.
+- `BuyerDeposit.tsx` (line 279) filters by `type = 'deposit'`, but admin adjustments use `type: 'credit'`
+- So the customer never sees admin balance additions in their deposit history
 
-3. However, the `onSkip` prop may not be passed from `PanelOnboardingV2.tsx`. Need to verify and ensure the skip button actually works and transitions to the next step with `subscription_tier: 'free'`.
+**Fix:**
 
-**File:** `src/pages/panel/PanelOnboardingV2.tsx` -- ensure that when the OnboardingPaymentStep is rendered, the `onSkip` prop is passed and sets the plan to free.
-
-**File:** `src/components/onboarding/OnboardingPaymentStep.tsx` -- the current implementation is already correct (no fake payment simulation). Just ensure the skip flow works.
+1. `**CustomerDetailPage.tsx**` (line 257-265): Add `panel_id` and `buyer_id` to the transaction insert. Change `type` to `'admin_credit'` or `'admin_debit'` to distinguish from payment deposits:
+  ```
+   panel_id: panel.id (need to pass panelId as prop)
+   buyer_id: customer.id
+   type: 'admin_credit' / 'admin_debit'
+  ```
+2. `**BuyerDeposit.tsx**` (line 279): Expand filter to include admin adjustments:
+  ```
+   .in('type', ['deposit', 'credit', 'admin_credit'])
+  ```
+3. `**TransactionHistory.tsx**` (line 129-131): Already handles `admin_credit`/`admin_debit` types in filter -- good, but ensure the filter mapping is correct
 
 ---
 
-## Issue 6: Subdomain FAQ Text Fix
+## 4. Onboarding Payment Step -- Process Payment Fix
 
-**File:** `src/components/sections/FAQSection.tsx` (line 72)
+**Problem:** The `OnboardingPaymentStep.tsx` calls `process-payment` edge function. The function returns `{ success: true, redirectUrl: "..." }` but the component checks `data?.url` (line 99). Since the field is named `redirectUrl`, not `url`, the redirect never happens.
 
-Change `yourpanel.homeofsmm.com` to `yourpanel.smmpilot.online` to match the actual platform domain.
+**Fix:**
+
+- Change line 99 from `data?.url` to `data?.redirectUrl`
+- Also update `window.location.href = data.url` to `data.redirectUrl`
 
 ---
 
-## Database Migration Required
+## 5. Fast Order and New Order Not Working
 
-```sql
--- 1. Create secure username lookup function (bypasses RLS)
-CREATE OR REPLACE FUNCTION public.lookup_email_by_username(p_username text)
-RETURNS text
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path TO 'public'
-AS $$
-DECLARE
-  v_email text;
-BEGIN
-  SELECT email INTO v_email
-  FROM profiles
-  WHERE LOWER(username) = LOWER(p_username)
-  LIMIT 1;
-  RETURN v_email;
-END;
-$$;
-```
+**Problem:** Orders are created in the database but never forwarded to the upstream provider for fulfillment. The `buyer-order` edge function and the `buyer-api` `handleAddOrder` function both create order records with `status: 'pending'` but there is **NO automatic order forwarding** to the connected provider's API.
+
+**Root Cause:** The system creates orders locally but lacks an order-forwarding mechanism. When a panel imports services from a provider (via API), orders placed by buyers should be forwarded to the provider's API using the `action=add` endpoint. This step is completely missing.
+
+**Fix -- Add Provider Order Forwarding to `buyer-order` edge function:**
+After creating the order and deducting balance, add:
+
+1. Look up the service's `provider_id` and `provider_service_id`
+2. Get the provider's `api_endpoint` and `api_key`
+3. Call the provider's API: `POST {api_endpoint}` with `{ key, action: 'add', service: provider_service_id, link: targetUrl, quantity }`
+4. Store the provider's returned order ID in `orders.external_order_id`
+5. Update order status to `'processing'` on success, `'error'` on failure
+
+**Add same forwarding logic to `buyer-api` `handleAddOrder` function** (line 256-279) since external API clients also place orders.
+
+**Schema change needed:** Add `external_order_id` column to orders table if not exists (for tracking provider-side order ID).
+
+---
+
+## 6. `process-payment` Edge Function -- Response Field Name Consistency
+
+**Problem:** The edge function returns `redirectUrl` but some callers check for `url`. Need to ensure all callers use `redirectUrl`.
+
+**Files to check/fix:**
+
+- `OnboardingPaymentStep.tsx`: Change `data.url` to `data.redirectUrl` (already noted above)
+- `FastOrderSection.tsx` line 766: Already correctly uses `paymentResult.redirectUrl` -- good
+- `BuyerDeposit.tsx`: Need to verify it uses `redirectUrl`
+- `Lastly Improve my website main homepage to serve also AMP version also for seo improvement` 
 
 ---
 
 ## Files to Modify Summary
 
-| File | Changes |
-|------|---------|
-| `src/pages/Index.tsx` | Update SEO title/description, remove SectionSkeleton |
-| `src/lib/platform-translations.ts` | Ensure H1 translations are correct |
-| `src/components/sections/PlatformFeaturesSection.tsx` | Add `id` and `aria-labelledby` for heading |
-| `src/components/sections/HeroSection.tsx` | Add hidden SEO paragraph under H1 |
-| `src/components/sections/FAQSection.tsx` | Fix subdomain text to .smmpilot.online |
-| `src/contexts/AuthContext.tsx` | Use RPC `lookup_email_by_username` instead of direct query |
-| `src/pages/panel/PanelOnboardingV2.tsx` | Ensure onSkip is passed to payment step |
-| **Database migration** | Create `lookup_email_by_username` function |
+
+| File                                                  | Changes                                                                                 |
+| ----------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `index.html`                                          | Fix SEO title/description to match desired values exactly                               |
+| `src/pages/Index.tsx`                                 | Match SEO title/description to user's exact wording                                     |
+| `src/components/seo/JsonLdSchema.tsx`                 | Match description text                                                                  |
+| `src/pages/panel/ProviderManagement.tsx`              | Restructure marketplace ad sections with better hierarchy                               |
+| `src/components/customers/CustomerDetailPage.tsx`     | Add `panel_id`, `buyer_id` to transaction insert; use `admin_credit`/`admin_debit` type |
+| `src/pages/buyer/BuyerDeposit.tsx`                    | Include `admin_credit`/`credit` types in deposit history filter                         |
+| `src/components/onboarding/OnboardingPaymentStep.tsx` | Fix `data.url` to `data.redirectUrl`                                                    |
+| `supabase/functions/buyer-order/index.ts`             | Add provider order forwarding after order creation                                      |
+| `supabase/functions/buyer-api/index.ts`               | Add provider order forwarding in `handleAddOrder`                                       |
+| **Database migration**                                | Add `external_order_id` column to `orders` table if missing                             |
+
 
 ---
 
-## Technical Notes
+## Technical Details: Provider Order Forwarding Logic
 
-### Why Username Login Was Broken
-The profiles table RLS policy (`user_id = auth.uid()`) blocks ALL queries from unauthenticated users. Since username lookup happens BEFORE authentication, the query always returns empty. The fix creates a SECURITY DEFINER function that bypasses RLS safely, only returning the email address (no sensitive data exposed).
+After an order is created in `buyer-order`:
 
-### Payment Gateway Status
-All `platform_payment_providers` have `is_enabled: false`. This is an admin configuration issue -- the platform administrator needs to enable at least one provider (e.g., Stripe, PayPal) in the admin dashboard. The code correctly handles this by showing "Continue with Free Plan". No code bug here -- just admin setup needed.
-
-### Heading Hierarchy for SEO
+```text
+1. Get service -> provider_id
+2. Get provider -> api_endpoint, api_key
+3. POST to provider API: { key: api_key, action: 'add', service: provider_service_id, link: targetUrl, quantity }
+4. Parse response -> { order: "12345" }
+5. UPDATE orders SET external_order_id = response.order, status = 'processing'
 ```
-H1: "Create Your Own SMM Panel" (Hero - one per page)
-H2: "Enter the World of..." (Platform Features)
-H2: "Trusted by Thousands" (Stats)  
-H2: "Powerful Features" (Features)
-H2: "What Our Users Say" (Testimonials)
-H2: "Your Questions, Answered" (FAQ)
-```
-All sections already use H2 tags. Adding proper `id` and `aria-labelledby` attributes improves accessibility and crawler parsing.
 
+If provider forwarding fails, the order stays as `pending` with an error note, allowing manual retry.

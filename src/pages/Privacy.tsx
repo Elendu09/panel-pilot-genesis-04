@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Helmet } from "react-helmet-async";
 import { Navigation } from "@/components/layout/Navigation";
 import { Footer } from "@/components/layout/Footer";
 import { LegalTableOfContents } from "@/components/buyer/LegalTableOfContents";
@@ -54,6 +55,11 @@ const Privacy = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <Helmet>
+        <title>Privacy Policy - HOME OF SMM</title>
+        <meta name="description" content="Privacy policy for HOME OF SMM platform." />
+        <link rel="canonical" href="https://homeofsmm.com/privacy" />
+      </Helmet>
       <Navigation />
       <div className="container mx-auto px-4 py-12">
         <div className="flex gap-8">

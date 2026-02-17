@@ -472,8 +472,8 @@ export const FloatingChatWidget = ({
   useEffect(() => {
     if (panelId) {
       const fetchSettings = async () => {
-        const { data } = await supabase
-          .from('panel_settings')
+        const { data } = await (supabase as any)
+          .from('panel_settings_public')
           .select('floating_chat_enabled, floating_chat_whatsapp, floating_chat_telegram, floating_chat_messenger, floating_chat_discord, floating_chat_custom_url, floating_chat_custom_label, floating_chat_position, floating_chat_message, integrations')
           .eq('panel_id', panelId)
           .single();

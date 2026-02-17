@@ -305,11 +305,10 @@ export function useTenant(): TenantDetectionResult {
           }
         }
         
-        // Panel query selection - includes blog_enabled and integrations for navigation and announcements
+        // Panel query selection - uses panels_public view (excludes sensitive financial data)
         const panelFields = `
           id, name, subdomain, custom_domain, theme_type, primary_color,
-          secondary_color, logo_url, status, custom_branding, settings,
-          panel_settings (seo_title, seo_description, seo_keywords, maintenance_mode, maintenance_message, contact_info, social_links, blog_enabled, integrations)
+          secondary_color, logo_url, status, custom_branding, settings
         `;
 
         // PRIORITY 0: Try full hostname as custom_domain first (for any custom domain)
@@ -317,15 +316,10 @@ export function useTenant(): TenantDetectionResult {
           searchAttempts.push(`custom_domain=${hostname} (priority 0)`);
           console.log('[useTenant] P0: Searching custom_domain for:', hostname);
           
-          const { data: customPanel, error: customError } = await supabase
-            .from('panels')
-            .select(`
-              id, name, subdomain, custom_domain, theme_type, primary_color,
-              secondary_color, logo_url, status, custom_branding, settings,
-              panel_settings (seo_title, seo_description, seo_keywords, maintenance_mode, maintenance_message, contact_info, social_links, blog_enabled, integrations)
-            `)
+          const { data: customPanel, error: customError } = await (supabase as any)
+            .from('panels_public')
+            .select(panelFields)
             .eq('custom_domain', hostname)
-            .in('status', ['active', 'pending'])
             .maybeSingle();
 
           console.log('[useTenant] P0 result:', { found: !!customPanel, error: customError?.message });
@@ -342,11 +336,10 @@ export function useTenant(): TenantDetectionResult {
           console.log('[useTenant] P1: Searching subdomain:', subdomain);
           
           const result = await fetchWithRetry(
-            async () => supabase
-              .from('panels')
+            async () => (supabase as any)
+              .from('panels_public')
               .select(panelFields)
               .eq('subdomain', subdomain)
-              .in('status', ['active', 'pending'])
               .maybeSingle(),
             3,
             signal
@@ -365,34 +358,10 @@ export function useTenant(): TenantDetectionResult {
         // PRIORITY 2: Try custom domain in panels table (for custom domains)
         if (!panelData) {
           searchAttempts.push(`panels.custom_domain=${hostname}`);
-          const { data: customDomainPanel, error: customDomainError } = await supabase
-            .from('panels')
-            .select(`
-              id,
-              name,
-              subdomain,
-              custom_domain,
-              theme_type,
-              primary_color,
-              secondary_color,
-              logo_url,
-              status,
-              custom_branding,
-              settings,
-              panel_settings (
-                seo_title,
-                seo_description,
-                seo_keywords,
-                maintenance_mode,
-                maintenance_message,
-                contact_info,
-                social_links,
-                blog_enabled,
-                integrations
-              )
-            `)
+          const { data: customDomainPanel, error: customDomainError } = await (supabase as any)
+            .from('panels_public')
+            .select(panelFields)
             .or(`custom_domain.eq.${hostname}`)
-            .in('status', ['active', 'pending'])
             .maybeSingle();
 
           console.log('[useTenant] Custom domain (panels) search result:', { customDomainPanel, customDomainError });
@@ -424,34 +393,10 @@ export function useTenant(): TenantDetectionResult {
 
           if (domainData?.panel_id) {
             // Found in panel_domains, now fetch the panel
-            const { data: linkedPanel, error: linkedError } = await supabase
-              .from('panels')
-              .select(`
-                id,
-                name,
-                subdomain,
-                custom_domain,
-                theme_type,
-                primary_color,
-                secondary_color,
-                logo_url,
-                status,
-                custom_branding,
-                settings,
-                panel_settings (
-                  seo_title,
-                  seo_description,
-                  seo_keywords,
-                  maintenance_mode,
-                  maintenance_message,
-                  contact_info,
-                  social_links,
-                  blog_enabled,
-                  integrations
-                )
-              `)
+            const { data: linkedPanel, error: linkedError } = await (supabase as any)
+              .from('panels_public')
+              .select(panelFields)
               .eq('id', domainData.panel_id)
-              .in('status', ['active', 'pending'])
               .maybeSingle();
 
             console.log('[useTenant] Linked panel result:', { linkedPanel, linkedError });
@@ -465,34 +410,10 @@ export function useTenant(): TenantDetectionResult {
         // PRIORITY 4: Fallback subdomain search for non-smmpilot domains
         if (!panelData && subdomain && !isSubdomainOfPlatform) {
           searchAttempts.push(`subdomain=${subdomain}`);
-            const { data: subdomainPanel, error: subdomainError } = await supabase
-            .from('panels')
-            .select(`
-              id,
-              name,
-              subdomain,
-              custom_domain,
-              theme_type,
-              primary_color,
-              secondary_color,
-              logo_url,
-              status,
-              custom_branding,
-              settings,
-              panel_settings (
-                seo_title,
-                seo_description,
-                seo_keywords,
-                maintenance_mode,
-                maintenance_message,
-                contact_info,
-                social_links,
-                blog_enabled,
-                integrations
-              )
-            `)
+            const { data: subdomainPanel, error: subdomainError } = await (supabase as any)
+            .from('panels_public')
+            .select(panelFields)
             .eq('subdomain', subdomain)
-            .in('status', ['active', 'pending'])
             .maybeSingle();
 
           console.log('[useTenant] Subdomain search result:', { subdomainPanel, subdomainError });
@@ -510,34 +431,10 @@ export function useTenant(): TenantDetectionResult {
             
             console.log('[useTenant] Trying extracted subdomain:', extractedSubdomain);
             
-            const { data: fallbackPanel, error: fallbackError } = await supabase
-              .from('panels')
-              .select(`
-                id,
-                name,
-                subdomain,
-                custom_domain,
-                theme_type,
-                primary_color,
-                secondary_color,
-                logo_url,
-                status,
-                custom_branding,
-                settings,
-                panel_settings (
-                  seo_title,
-                  seo_description,
-                  seo_keywords,
-                  maintenance_mode,
-                  maintenance_message,
-                  contact_info,
-                  social_links,
-                  blog_enabled,
-                  integrations
-                )
-              `)
+            const { data: fallbackPanel, error: fallbackError } = await (supabase as any)
+              .from('panels_public')
+              .select(panelFields)
               .eq('subdomain', extractedSubdomain)
-              .in('status', ['active', 'pending'])
               .maybeSingle();
 
             console.log('[useTenant] Fallback search result:', { fallbackPanel, fallbackError });
@@ -565,13 +462,25 @@ export function useTenant(): TenantDetectionResult {
 
         if (panelData) {
           console.log('[useTenant] Panel found:', panelData.name, panelData.status);
-          const panelSettings = panelData.panel_settings;
           const branding = panelData.custom_branding;
           const settings = panelData.settings;
           
+          // Fetch panel_settings separately from secure view (excludes OAuth secrets)
+          let panelSettings: any = {};
+          try {
+            const { data: psData } = await (supabase as any)
+              .from('panel_settings_public')
+              .select('seo_title, seo_description, seo_keywords, maintenance_mode, maintenance_message, contact_info, social_links, blog_enabled, integrations')
+              .eq('panel_id', panelData.id)
+              .maybeSingle();
+            panelSettings = psData || {};
+          } catch (e) {
+            console.warn('[useTenant] Failed to fetch panel settings:', e);
+          }
+          
           // Merge panel_settings with settings from panels table
           const mergedSettings = {
-            ...(Array.isArray(panelSettings) ? panelSettings[0] : panelSettings || {}),
+            ...panelSettings,
             ...(typeof settings === 'object' ? settings : {})
           };
 
