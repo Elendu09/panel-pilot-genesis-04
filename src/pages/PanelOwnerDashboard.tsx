@@ -52,6 +52,7 @@ import PaymentMethods from "./panel/PaymentMethods";
 import SecuritySettings from "./panel/SecuritySettings";
 import MoreMenu from "./panel/MoreMenu";
 import Billing from "./panel/Billing";
+import TransactionHistoryPage from "./panel/TransactionHistoryPage";
 import Integrations from "./panel/Integrations";
 import TeamManagement from "./panel/TeamManagement";
 import PromoManagement from "./panel/PromoManagement";
@@ -125,6 +126,7 @@ const PanelOwnerDashboard = () => {
     { name: 'Dashboard', href: '/panel', icon: LayoutDashboard, tourId: 'overview' },
     { name: 'Services', href: '/panel/services', icon: Package, tourId: 'services' },
     { name: 'Orders', href: '/panel/orders', icon: ShoppingCart, badge: pendingCount > 0 ? pendingCount : undefined, tourId: 'orders' },
+    { name: 'Transactions', href: '/panel/transactions', icon: CreditCard, tourId: 'transactions' },
     { name: 'Customers', href: '/panel/customers', icon: Users, tourId: 'customers' },
     { name: 'Analytics', href: '/panel/analytics', icon: BarChart3, tourId: 'analytics' },
   ];
@@ -467,6 +469,7 @@ const PanelOwnerDashboard = () => {
               <Route path="payments" element={<PaymentMethods />} />
               <Route path="security" element={<SecuritySettings />} />
               <Route path="billing" element={<Billing />} />
+              <Route path="transactions" element={<TransactionHistoryPage />} />
               <Route path="integrations" element={<Integrations />} />
               <Route path="team" element={<TeamManagement />} />
               <Route path="promotions" element={<PromoManagement />} />

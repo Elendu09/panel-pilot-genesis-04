@@ -87,25 +87,8 @@ const Index = () => {
         <meta name="twitter:description" content={seoDescription} />
         <meta name="twitter:image" content={`${canonicalUrl}/og-image.png`} />
         
-        {/* Additional SEO Tags */}
+        {/* Robots - page-specific override */}
         <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
-        <meta name="author" content="HOME OF SMM" />
-        <meta name="publisher" content="HOME OF SMM" />
-        <meta name="copyright" content="HOME OF SMM" />
-        <meta name="language" content="English" />
-        <meta name="revisit-after" content="1 days" />
-        <meta name="distribution" content="global" />
-        <meta name="rating" content="general" />
-        
-        {/* Geo Tags */}
-        <meta name="geo.region" content="US" />
-        <meta name="geo.placename" content="United States" />
-        
-        {/* Mobile optimization */}
-        <meta name="format-detection" content="telephone=no" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="HOME OF SMM" />
       </Helmet>
       
       <Navigation />
