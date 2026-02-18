@@ -21,7 +21,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
-import { TransactionHistory } from '@/components/billing/TransactionHistory';
+
 import { CommissionTracker } from '@/components/billing/CommissionTracker';
 import { QuickDeposit } from '@/components/billing/QuickDeposit';
 import { usePanel } from '@/hooks/usePanel';
@@ -415,7 +415,7 @@ const Billing = () => {
       {/* Header */}
       <motion.div variants={itemVariants}>
         <h1 className="text-2xl md:text-3xl font-bold">Billing & Subscription</h1>
-        <p className="text-muted-foreground">Manage your subscription, balance, and transactions</p>
+        <p className="text-muted-foreground">Manage your subscription, balance, and pricing plans</p>
       </motion.div>
 
       {/* Overview Cards Row */}
@@ -506,21 +506,6 @@ const Billing = () => {
         </div>
       </motion.div>
 
-      {/* Transaction History */}
-      <motion.div variants={itemVariants}>
-        <Card className="bg-card/60 backdrop-blur-xl border-border/50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CreditCard className="w-5 h-5" />
-              Transaction History
-            </CardTitle>
-            <CardDescription>View all your panel transactions</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <TransactionHistory panelId={panel?.id} />
-          </CardContent>
-        </Card>
-      </motion.div>
 
       {/* Pricing Plans */}
       <motion.div variants={itemVariants}>
