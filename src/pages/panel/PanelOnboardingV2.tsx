@@ -142,12 +142,13 @@ const PanelOnboardingV2 = () => {
         // Check for incomplete onboarding to resume
         const { data: incompletePanel } = await supabase
           .from('panels')
-          .select('onboarding_step, onboarding_data, default_currency')
+          .select('id, onboarding_step, onboarding_data, default_currency')
           .eq('owner_id', profile.id)
           .eq('onboarding_completed', false)
           .maybeSingle();
 
         if (incompletePanel) {
+          setCreatedPanelId(incompletePanel.id);
           const savedStep = incompletePanel.onboarding_step || 0;
           const savedData = incompletePanel.onboarding_data as Record<string, any> | null;
           
@@ -241,7 +242,7 @@ const PanelOnboardingV2 = () => {
     setCheckingSubdomain(true);
     try {
       const { data } = await supabase
-        .from('panels')
+        .from('panels_public')
         .select('subdomain')
         .eq('subdomain', subdomainToCheck)
         .maybeSingle();
@@ -287,7 +288,7 @@ const PanelOnboardingV2 = () => {
     };
 
     try {
-      await supabase.from('panels').upsert({
+      const { data: upsertedPanel } = await supabase.from('panels').upsert({
         owner_id: profile.id,
         name: panelName || 'My Panel',
         subdomain: subdomain || 'temp-' + profile.id.slice(0, 8),
@@ -296,7 +297,11 @@ const PanelOnboardingV2 = () => {
         default_currency: currency,
         onboarding_completed: false,
         status: 'pending'
-      }, { onConflict: 'owner_id' });
+      }, { onConflict: 'owner_id' }).select('id').single();
+
+      if (upsertedPanel?.id && !createdPanelId) {
+        setCreatedPanelId(upsertedPanel.id);
+      }
     } catch (error) {
       console.error('Error saving progress:', error);
     }

@@ -132,7 +132,7 @@ const PanelOnboarding = () => {
     setCheckingSubdomain(true);
     try {
       const { data } = await supabase
-        .from('panels')
+        .from('panels_public')
         .select('subdomain')
         .eq('subdomain', subdomainToCheck)
         .maybeSingle();
