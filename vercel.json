@@ -14,8 +14,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "frame-ancestors 'self' https://smmpilot.online https://homeofsmm.com https://panel-pilot-genesis-04.lovable.app https://*.lovable.app https://*.lovableproject.com;"
-        },
+          "value": "frame-ancestors 'self' https://homeofsmm.com https://*.smmpilot.online;"
         { "key": "X-Content-Type-Options", "value": "nosniff" },
         { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
         { "key": "X-XSS-Protection", "value": "1; mode=block" }
