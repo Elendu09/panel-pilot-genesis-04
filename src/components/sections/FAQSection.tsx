@@ -170,11 +170,11 @@ export const FAQSection = () => {
                 </motion.div>
                 
                 {/* Question */}
-                <span className={`font-semibold text-lg flex-1 transition-colors ${
+                <h3 className={`font-semibold text-lg flex-1 transition-colors ${
                   openIndex === index ? 'text-primary' : 'text-foreground group-hover:text-primary/80'
                 }`}>
                   {faq.question}
-                </span>
+                </h3>
                 
                 {/* Chevron */}
                 <motion.div
