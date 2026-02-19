@@ -396,10 +396,10 @@ const FastOrderContent = () => {
       try {
         // Fetch panel data
         const { data: panelData, error: panelError } = await supabase
-          .from('panels')
+          .from('panels_public')
           .select('id, name, logo_url, primary_color, custom_branding')
           .eq('id', resolvedPanelId)
-          .single();
+          .maybeSingle();
 
         if (panelError) throw panelError;
         setPanel(panelData);
