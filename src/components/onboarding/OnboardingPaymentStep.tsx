@@ -91,6 +91,8 @@ export const OnboardingPaymentStep = ({
           buyerId: user.id,
           returnUrl,
           currency: 'usd',
+          isOwnerDeposit: true,
+          metadata: { type: 'subscription', plan: selectedPlan },
         }
       });
 
