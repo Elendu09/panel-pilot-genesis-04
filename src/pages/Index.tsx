@@ -35,7 +35,7 @@ const Index = () => {
   }, []);
   
   // SEO-optimized title and description with proper pixel lengths
-  const seoTitle = "HOME OF SMM – Create and Manage Your Own SMM Panel";
+  const seoTitle = "HOME OF SMM: Create and Manage Your Own SMM Panel";
   const seoDescription = "Launch your own SMM panel with Home of SMM. Get custom branding, automated orders, multiple payment gateways, and real-time analytics to grow revenue";
   const seoKeywords = "HOME OF SMM, SMM panel, create SMM panel, best SMM panel, perfect SMM panel, SMM panel platform, SMM reseller panel, SMM panel software, white label SMM panel, SMM panel provider, SMM panel 2026, how to create SMM panel, make money SMM panel, SMM business, social media marketing panel, SMM automation";
   
