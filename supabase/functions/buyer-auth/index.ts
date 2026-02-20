@@ -369,12 +369,12 @@ async function verifyPassword(password: string, storedHash: string): Promise<boo
 
 // Check if a string is a bcrypt hash
 function isBcryptHash(str: string): boolean {
-  return str && str.startsWith('$2');
+  return Boolean(str && str.startsWith('$2'));
 }
 
 // Check if a string is a PBKDF2 hash
 function isPbkdf2Hash(str: string): boolean {
-  return str && str.startsWith('$pbkdf2$');
+  return Boolean(str && str.startsWith('$pbkdf2$'));
 }
 
 serve(async (req) => {
@@ -424,9 +424,9 @@ serve(async (req) => {
         return jsonResponse({ error: 'Invalid action' });
     }
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Buyer auth error:', error);
-    return jsonResponse({ error: error.message || 'Authentication failed' });
+    return jsonResponse({ error: (error as Error).message || 'Authentication failed' });
   }
 });
 

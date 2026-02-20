@@ -300,7 +300,7 @@ const Billing = () => {
           gateway: method,
           amount,
           panelId: panel.id,
-          userId: profile.id, // Use userId for panel owner context
+          buyerId: profile.id, // Edge function expects 'buyerId'
           isOwnerDeposit: true, // Flag for panel owner deposit
           returnUrl: `${window.location.origin}/panel/billing?deposit=success`,
           cancelUrl: `${window.location.origin}/panel/billing?deposit=cancelled`,

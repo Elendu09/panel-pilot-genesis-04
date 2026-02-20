@@ -1,234 +1,73 @@
 <!DOCTYPE html>
-‎<html lang="en">
-‎  <head>
-‎    <meta charset="UTF-8" />
-‎    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-‎    
-‎    <!-- EARLY TENANT DETECTION: Runs BEFORE any content renders -->
-‎    <script>
-‎      (function() {
-‎        var h = location.hostname.toLowerCase().replace(/^www\./, '');
-‎        var isPlatform = h === 'homeofsmm.com' || h === 'smmpilot.online';
-‎        var isDev = h.includes('lovable.app') || h.includes('lovableproject.com') || h === 'localhost' || h === '127.0.0.1';
-‎        
-‎        if (!isPlatform && !isDev) {
-‎          // TENANT DOMAIN - Neutralize all platform branding immediately
-‎          document.title = 'Loading...';
-‎          
-‎          // Mark as tenant for later use
-‎          window.__IS_TENANT_DOMAIN__ = true;
-‎          
-‎          // Hide document until React loads to prevent any flash
-‎          document.documentElement.style.visibility = 'hidden';
-‎          document.documentElement.style.opacity = '0';
-‎          
-‎          // AGGRESSIVE: Remove ALL existing favicons immediately (before they load)
-‎          var existingFavicons = document.querySelectorAll('link[rel*="icon"]');
-‎          for (var i = 0; i < existingFavicons.length; i++) {
-‎            existingFavicons[i].parentNode.removeChild(existingFavicons[i]);
-‎          }
-‎        }
-‎      })();
-‎    </script>
-‎    
-‎    <!-- Platform-only meta tags (will be removed/replaced for tenants by React) -->
-‎<title data-platform>HOME OF SMM: Create and Manage Your Own SMM Panel</title>
-‎  <meta name="description" content="Launch your own SMM panel with Home of SMM. Get custom branding, automated orders, multiple payment gateways, and real-time analytics to grow revenue." data-platform />
-‎  <meta name="robots" content="index, follow, max-image-preview:large" />
-‎  <link rel="canonical" href="https://homeofsmm.com/" data-platform />
-‎
-‎  <!-- ===== OPEN GRAPH ===== -->
-‎  <meta property="og:type" content="website" data-platform />
-‎  <meta property="og:site_name" content="HOME OF SMM" data-platform />
-‎  <meta property="og:title" content="HOME OF SMM: Create and Manage Your Own SMM Panel />
-‎  <meta property="og:description" content="Launch your own SMM panel with Home of SMM. Get custom branding, automated orders, multiple payment gateways, and real-time analytics to grow revenue." data-platform />
-‎  <meta property="og:url" content="https://homeofsmm.com/" data-platform />
-‎  <meta property="og:image" content="/og-image.png" data-platform />
-‎
-‎  <!-- ===== TWITTER ===== -->
-‎  <meta name="twitter:card" content="summary_large_image" data-platform />
-‎  <meta name="twitter:title" content="HOME OF SMM: Create and Manage Your Own SMM Panel" data-platform />
-‎  <meta name="twitter:description" content="Launch your own SMM panel with Home of SMM. Get custom branding, automated orders, multiple payment gateways, and real-time analytics to grow revenue" data-platform />
-‎  <meta name="twitter:image" content="/og-image.png" data-platform />
-‎    <meta name="keywords" content="HOME OF SMM, SMM Panel, Perfert SMM panel, SMM panel script, create SMM panel, best SMM panel, SMM reseller panel, SMM panel software, social media marketing panel, white label SMM panel, cheapest SMM panel" data-platform-only>
-‎
-‎    <!-- Preconnect for Performance - Critical third-party origins -->
-‎    <link rel="preconnect" href="https://tooudgubuhxjbbvzjcgx.supabase.co" crossorigin>
-‎    <link rel="dns-prefetch" href="https://tooudgubuhxjbbvzjcgx.supabase.co">
-‎    <link rel="preconnect" href="https://fonts.googleapis.com">
-‎    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-‎    <link rel="dns-prefetch" href="https://fonts.googleapis.com">
-‎    
-‎    <!-- Critical inline styles for initial render - prevents FOUC and improves FCP -->
-‎    <style>
-‎      :root{--background:222.2 84% 4.9%;--foreground:210 40% 98%;--primary:217.2 91.2% 59.8%}
-‎      body{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;margin:0;background:hsl(var(--background));color:hsl(var(--foreground))}
-‎      #root{min-height:100vh}
-‎      @keyframes spin{to{transform:rotate(360deg)}}
-‎      .animate-spin{animation:spin 1s linear infinite}
-‎    </style>
-‎    
-‎    <!-- Google Fonts - Non-render blocking -->
-‎    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
-‎    <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
-‎    
-‎    <!-- Secondary fonts loaded async after initial render -->
-‎    <script>
-‎      (function() {
-‎        var secondaryFonts = document.createElement('link');
-‎        secondaryFonts.rel = 'stylesheet';
-‎        secondaryFonts.href = 'https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Roboto:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700;800;900&family=Nunito:wght@400;500;600;700;800&family=Raleway:wght@400;500;600;700&family=Open+Sans:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap';
-‎        if ('requestIdleCallback' in window) {
-‎          requestIdleCallback(function() { document.head.appendChild(secondaryFonts); });
-‎        } else {
-‎          setTimeout(function() { document.head.appendChild(secondaryFonts); }, 100);
-‎        }
-‎      })();
-‎    </script>
-‎    
-‎    <!-- Author & Publisher (platform-only, replaced for tenants) -->
-‎    <meta name="author" content="HOME OF SMM" data-platform-only />
-‎    <meta name="publisher" content="HOME OF SMM" data-platform-only />
-‎    <meta name="copyright" content="HOME OF SMM" data-platform-only />
-‎    
-‎    <!-- Robots & Indexing -->
-‎    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
-‎    <meta name="googlebot" content="index, follow" />
-‎    <meta name="bingbot" content="index, follow" />
-‎    
-‎    <!-- Language & Distribution -->
-‎    <meta name="language" content="English" />
-‎    <meta name="distribution" content="global" />
-‎    <meta name="rating" content="general" />
-‎    <meta name="revisit-after" content="1 days" />
-‎    
-‎    <!-- Geo Tags -->
-‎    <meta name="geo.region" content="US" />
-‎    <meta name="geo.placename" content="United States" />
-‎    
-‎    <!-- Theme Color -->
-‎    <meta name="theme-color" content="#6366F1" />
-‎    <meta name="msapplication-TileColor" content="#6366F1" />
-‎    <meta name="msapplication-navbutton-color" content="#6366F1" />
-‎    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-‎    
-‎    <!-- Mobile Web App (platform-only, replaced for tenants) -->
-‎    <meta name="apple-mobile-web-app-capable" content="yes" />
-‎    <meta name="apple-mobile-web-app-title" content="HOME OF SMM" data-platform-only />
-‎    <meta name="mobile-web-app-capable" content="yes" />
-‎    <meta name="format-detection" content="telephone=no" />
-‎    
-‎    <!-- Open Graph (platform-only, replaced for tenants) -->
-‎    <meta property="og:type" content="website" data-platform-only />
-‎    <meta property="og:locale" content="en_US" data-platform-only />
-‎    <meta property="og:site_name" content="HOME OF SMM" data-platform-only />
-‎    
-‎    
-‎    <meta property="og:image" content="https://storage.googleapis.com/gpt-engineer-file-uploads/a8nFu1Vlx5VQr6NAikq0H0XDcv42/social-images/social-1767449564584-HOME OF SMM SCREENSHOT.png" data-platform-only>
-‎    <meta property="og:image:width" content="1200" data-platform-only />
-‎    <meta property="og:image:height" content="630" data-platform-only />
-‎    <meta property="og:image:alt" content="HOME OF SMM - SMM Panel Platform" data-platform-only />
-‎    
-‎    <!-- Twitter Card (platform-only, replaced for tenants) -->
-‎    <meta name="twitter:card" content="summary_large_image" data-platform-only />
-‎    <meta name="twitter:site" content="@homeofsmm" data-platform-only />
-‎    <meta name="twitter:creator" content="@homeofsmm" data-platform-only />
-‎    
-‎    
-‎    <meta name="twitter:image" content="https://storage.googleapis.com/gpt-engineer-file-uploads/a8nFu1Vlx5VQr6NAikq0H0XDcv42/social-images/social-1767449564584-HOME OF SMM SCREENSHOT.png" data-platform-only>
-‎    
-‎    <!-- Favicon handling: Conditional based on domain type -->
-‎    <script>
-‎      (function() {
-‎        if (window.__IS_TENANT_DOMAIN__) {
-‎          // For tenants: Insert .ico favicon for Google crawler compatibility
-‎          var link = document.createElement('link');
-‎          link.rel = 'icon';
-‎          link.type = 'image/x-icon';
-‎          link.href = '/default-tenant-favicon.ico';
-‎          document.head.appendChild(link);
-‎          
-‎          // Also add shortcut icon (legacy support)
-‎          var shortcut = document.createElement('link');
-‎          shortcut.rel = 'shortcut icon';
-‎          shortcut.type = 'image/x-icon';
-‎          shortcut.href = '/default-tenant-favicon.ico';
-‎          document.head.appendChild(shortcut);
-‎          
-‎          // Add apple touch icon
-‎          var apple = document.createElement('link');
-‎          apple.rel = 'apple-touch-icon';
-‎          apple.sizes = '180x180';
-‎          apple.href = '/default-panel-apple-touch-icon.png';
-‎          document.head.appendChild(apple);
-‎        }
-‎      })();
-‎    </script>
-‎    
-‎    <!-- Platform favicon links (these will be removed for tenants) -->
-‎    <link rel="icon" type="image/x-icon" href="/favicon.ico">
-‎    <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" data-platform-only />
-‎    <link rel="apple-touch-icon" sizes="180x180" href="/favicon.ico" data-platform-only />
-‎    <link rel="icon" type="image/x-icon" sizes="32x32" href="/favicon.ico" data-platform-only />
-‎    <link rel="icon" type="image/x-icon" sizes="16x16" href="/favicon.ico" data-platform-only />
-‎    
-‎    <!-- Sitemap -->
-‎    <link rel="sitemap" type="application/xml" title="Sitemap" href="/sitemap.xml" />
-‎    
-‎    <!-- Canonical URL (platform-only, replaced for tenants) -->
-‎    <link rel="canonical" href="https://homeofsmm.com/" data-platform-only />
-‎    
-‎    <!-- CLEANUP SCRIPT: Runs after favicon links are declared -->
-‎    <script>
-‎      (function() {
-‎        if (window.__IS_TENANT_DOMAIN__) {
-‎          // Remove all platform-only meta tags and links
-‎          var platformOnly = document.querySelectorAll('[data-platform-only]');
-‎          for (var i = 0; i < platformOnly.length; i++) {
-‎            platformOnly[i].parentNode.removeChild(platformOnly[i]);
-‎          }
-‎          
-‎          // Ensure tenant favicon.ico exists
-‎          var hasTenantFavicon = document.querySelector('link[href*="default-tenant-favicon.ico"]');
-‎          if (!hasTenantFavicon) {
-‎            var link = document.createElement('link');
-‎            link.rel = 'icon';
-‎            link.type = 'image/x-icon';
-‎            link.href = '/default-tenant-favicon.ico';
-‎            document.head.insertBefore(link, document.head.firstChild);
-‎          }
-‎        }
-‎      })();
-‎    </script>
-‎    
-‎  
-‎  
-‎  
-‎  
-‎  
-‎  
-‎  
-‎  
-‎  
-‎  
-‎  
-‎  
-‎  
-‎  
-‎  
-‎</head>
-‎  <body>
-‎  <div id="root"></div>
-‎
-‎  <!-- SEO fallback (non-JS crawlers) -->
-‎  <noscript>
-‎    <h1>HOME OF SMM: Create and Manage Your Own SMM Panel</h1>
-‎    <p>Launch your own SMM panel with Home of SMM. Get custom branding, automated orders, multiple payment gateways, and real-time analytics to grow revenue.</p>
-‎  </noscript>
-‎
-‎  <script type="module" src="/src/main.tsx"></script>
-‎</body>
-‎</html>    
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <!-- EARLY TENANT DETECTION: Runs BEFORE any content renders -->
+    <script>
+      (function() {
+        var h = location.hostname.toLowerCase().replace(/^www\./, '');
+        var isPlatform = h === 'homeofsmm.com' || h === 'smmpilot.online';
+        var isDev = h.includes('lovable.app') || h.includes('lovableproject.com') || h === 'localhost' || h === '127.0.0.1';
+        
+        if (!isPlatform && !isDev) {
+          // TENANT DOMAIN - Neutralize all platform branding immediately
+          document.title = 'Loading...';
+          
+          // Mark as tenant for later use
+          window.__IS_TENANT_DOMAIN__ = true;
+          
+          // Hide document until React loads to prevent any flash
+          document.documentElement.style.visibility = 'hidden';
+          document.documentElement.style.opacity = '0';
+          
+          // AGGRESSIVE: Remove ALL existing favicons immediately (before they load)
+          var existingFavicons = document.querySelectorAll('link[rel*="icon"]');
+          for (var i = 0; i < existingFavicons.length; i++) {
+            existingFavicons[i].parentNode.removeChild(existingFavicons[i]);
+          }
+        }
+      })();
+    </script>
+    
+    <!-- Platform-only meta tags (will be removed for tenants by cleanup script) -->
+    <title data-platform-only>HOME OF SMM: Create and Manage Your Own SMM Panel</title>
+    <meta name="description" content="Launch your own SMM panel with Home of SMM. Get custom branding, automated orders, multiple payment gateways, and real-time analytics to grow revenue." data-platform-only />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <link rel="canonical" href="https://homeofsmm.com/" data-platform-only />
+
+    <!-- ===== OPEN GRAPH ===== -->
+    <meta property="og:type" content="website" data-platform-only />
+    <meta property="og:site_name" content="HOME OF SMM" data-platform-only />
+    <meta property="og:title" content="HOME OF SMM: Create and Manage Your Own SMM Panel" data-platform-only />
+    <meta property="og:description" content="Launch your own SMM panel with Home of SMM. Get custom branding, automated orders, multiple payment gateways, and real-time analytics to grow revenue." data-platform-only />
+    <meta property="og:url" content="https://homeofsmm.com/" data-platform-only />
+    <meta property="og:image" content="/og-image.png" data-platform-only />
+
+    <!-- ===== TWITTER ===== -->
+    <meta name="twitter:card" content="summary_large_image" data-platform-only />
+    <meta name="twitter:title" content="HOME OF SMM: Create and Manage Your Own SMM Panel" data-platform-only />
+    <meta name="twitter:description" content="Launch your own SMM panel with Home of SMM. Get custom branding, automated orders, multiple payment gateways, and real-time analytics to grow revenue." data-platform-only />
+    <meta name="twitter:image" content="/og-image.png" data-platform-only />
+    <meta name="keywords" content="HOME OF SMM, SMM Panel, Perfert SMM panel, SMM panel script, create SMM panel, best SMM panel, SMM reseller panel, SMM panel software, social media marketing panel, white label SMM panel, cheapest SMM panel" data-platform-only>
+
+    <!-- Preconnect for Performance - Critical third-party origins -->
+    <link rel="preconnect" href="https://tooudgubuhxjbbvzjcgx.supabase.co" crossorigin>
+    <link rel="dns-prefetch" href="https://tooudgubuhxjbbvzjcgx.supabase.co">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+    
+    <!-- Critical inline styles for initial render - prevents FOUC and improves FCP -->
+    <style>
+      :root{--background:222.2 84% 4.9%;--foreground:210 40% 98%;--primary:217.2 91.2% 59.8%}
+      body{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;margin:0;background:hsl(var(--background));color:hsl(var(--foreground))}
+      #root{min-height:100vh}
+      @keyframes spin{to{transform:rotate(360deg)}}
+      .animate-spin{animation:spin 1s linear infinite}
+    </style>
+    
     <!-- Google Fonts - Non-render blocking -->
     <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
@@ -280,10 +119,7 @@
     <meta name="format-detection" content="telephone=no" />
     
     <!-- Open Graph (platform-only, replaced for tenants) -->
-    <meta property="og:type" content="website" data-platform-only />
     <meta property="og:locale" content="en_US" data-platform-only />
-    <meta property="og:site_name" content="HOME OF SMM" data-platform-only />
-    
     
     <meta property="og:image" content="https://storage.googleapis.com/gpt-engineer-file-uploads/a8nFu1Vlx5VQr6NAikq0H0XDcv42/social-images/social-1767449564584-HOME OF SMM SCREENSHOT.png" data-platform-only>
     <meta property="og:image:width" content="1200" data-platform-only />
@@ -291,10 +127,8 @@
     <meta property="og:image:alt" content="HOME OF SMM - SMM Panel Platform" data-platform-only />
     
     <!-- Twitter Card (platform-only, replaced for tenants) -->
-    <meta name="twitter:card" content="summary_large_image" data-platform-only />
     <meta name="twitter:site" content="@homeofsmm" data-platform-only />
     <meta name="twitter:creator" content="@homeofsmm" data-platform-only />
-    
     
     <meta name="twitter:image" content="https://storage.googleapis.com/gpt-engineer-file-uploads/a8nFu1Vlx5VQr6NAikq0H0XDcv42/social-images/social-1767449564584-HOME OF SMM SCREENSHOT.png" data-platform-only>
     
@@ -361,57 +195,16 @@
         }
       })();
     </script>
-    
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-</head>
+  </head>
   <body>
-    <div id="root"></div>
-    <!-- SEO fallback for non-JS crawlers -->
-    <noscript>
-      <header>
-        <h1>Home of SMM – Create &amp; Manage Your Own SMM Panel</h1>
-        <p>Launch your own SMM panel with Home of SMM. Get custom branding, automated orders, multiple payment gateways, and real-time analytics to grow your revenue.</p>
-      </header>
-      <main>
-        <section>
-          <h2>Platform Features</h2>
-          <p>HOME OF SMM provides everything you need to create, manage, and scale your own SMM panel business with zero coding required.</p>
-        </section>
-        <section>
-          <h2>Trusted by Thousands of Panel Owners</h2>
-        </section>
-        <section>
-          <h2>Powerful Features for Your SMM Panel</h2>
-          <p>200+ payment gateways, 20+ language localizations, custom domains, white-label branding, and automated order processing.</p>
-        </section>
-        <section>
-          <h2>What Our Users Say</h2>
-        </section>
-        <section>
-          <h2>Frequently Asked Questions</h2>
-          <h3>What is an SMM Panel?</h3>
-          <p>An SMM panel is a web-based platform where resellers sell social media marketing services such as followers, likes, views, and comments.</p>
-          <h3>How do I create my own SMM Panel?</h3>
-          <p>Sign up for free on HOME OF SMM, choose your panel name, customize branding, connect providers via API, and start selling in under 5 minutes.</p>
-          <h3>How much does it cost to start an SMM Panel?</h3>
-          <p>Start completely free. No setup fees, no monthly subscriptions. Only 5% commission on completed orders.</p>
-        </section>
-      </main>
-    </noscript>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+  <div id="root"></div>
+
+  <!-- SEO fallback (non-JS crawlers) -->
+  <noscript>
+    <h1>HOME OF SMM: Create and Manage Your Own SMM Panel</h1>
+    <p>Launch your own SMM panel with Home of SMM. Get custom branding, automated orders, multiple payment gateways, and real-time analytics to grow revenue.</p>
+  </noscript>
+
+  <script type="module" src="/src/main.tsx"></script>
+</body>
 </html>

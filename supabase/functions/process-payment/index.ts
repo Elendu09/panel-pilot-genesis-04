@@ -14,7 +14,9 @@ interface PaymentRequest {
   transactionId?: string;
   returnUrl: string;
   currency?: string;
-  orderId?: string; // If paying for a specific order (direct order payment)
+  orderId?: string;
+  isOwnerDeposit?: boolean;
+  metadata?: Record<string, any>;
 }
 
 serve(async (req) => {
@@ -30,7 +32,7 @@ serve(async (req) => {
     );
 
     const body: PaymentRequest = await req.json();
-    const { gateway, amount, panelId, buyerId, transactionId, returnUrl, currency = 'usd', orderId } = body;
+    const { gateway, amount, panelId, buyerId, transactionId, returnUrl, currency = 'usd', orderId, isOwnerDeposit, metadata } = body;
 
     console.log(`[process-payment] Processing ${gateway} payment: $${amount} for panel ${panelId}${orderId ? `, order: ${orderId}` : ''}`);
 
@@ -42,7 +44,10 @@ serve(async (req) => {
       );
     }
 
-    // Fetch panel's payment gateway credentials FIRST (before creating transaction)
+    // Determine if this is a panel owner payment (billing, subscriptions, commissions)
+    const isOwnerPayment = isOwnerDeposit || metadata?.type === 'subscription' || metadata?.type === 'commission_payment';
+
+    // Fetch panel name (needed for payment descriptions)
     const { data: panel, error: panelError } = await supabase
       .from('panels')
       .select('settings, name')
@@ -57,52 +62,96 @@ serve(async (req) => {
       );
     }
 
-    const panelSettings = panel.settings as Record<string, any> || {};
-    const paymentSettings = panelSettings.payments || {};
-    const enabledMethods = paymentSettings.enabledMethods || [];
-    const manualPayments = paymentSettings.manualPayments || [];
-    
-    console.log('[process-payment] Panel settings:', { 
-      panelName: panel.name, 
-      enabledMethodsCount: enabledMethods.length,
-      manualPaymentsCount: manualPayments.length,
-      requestedGateway: gateway 
-    });
-    
-    // Find the gateway config
-    let gatewayConfig = enabledMethods.find((m: any) => {
-      const methodId = typeof m === 'string' ? m : m.id;
-      return methodId === gateway;
-    });
-    
-    // For string-only entries, create a minimal config
-    if (typeof gatewayConfig === 'string') {
-      gatewayConfig = { id: gatewayConfig, enabled: true };
-    }
-    
-    // For manual payment methods, check manualPayments array
-    if (!gatewayConfig && (gateway.startsWith('manual_') || gateway === 'manual_transfer')) {
-      gatewayConfig = manualPayments.find((m: any) => m.id === gateway);
-    }
-    
-    // If still no config but gateway is in enabled list (for simpler configs)
-    if (!gatewayConfig && enabledMethods.includes(gateway)) {
-      gatewayConfig = { id: gateway, enabled: true };
-    }
-    
-    if (!gatewayConfig || gatewayConfig.enabled === false) {
-      console.error('[process-payment] Gateway not enabled:', { 
-        gateway, 
-        enabledMethods,
-        foundConfig: gatewayConfig 
+    let gatewayConfig: any = null;
+
+    if (isOwnerPayment) {
+      // For panel owner payments (billing, subscriptions, commissions), use admin-configured gateways
+      console.log('[process-payment] Owner payment detected, looking up admin gateway:', gateway);
+      
+      const { data: adminProvider, error: adminError } = await supabase
+        .from('platform_payment_providers')
+        .select('*')
+        .eq('provider_name', gateway)
+        .eq('is_enabled', true)
+        .maybeSingle();
+
+      if (adminError) {
+        console.error('[process-payment] Admin provider lookup error:', adminError);
+      }
+
+      if (!adminProvider) {
+        console.error('[process-payment] Admin gateway not found:', gateway);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: `Payment gateway "${gateway}" is not configured by the platform administrator. Please contact support.` 
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const config = adminProvider.config as Record<string, any> || {};
+      gatewayConfig = {
+        id: adminProvider.provider_name,
+        enabled: true,
+        secretKey: config.secret_key || config.secretKey,
+        apiKey: config.api_key || config.apiKey,
+        publicKey: config.public_key || config.publicKey,
+        contractCode: config.contract_code || config.contractCode,
+        payeeName: config.payee_name || config.payeeName,
+        storeId: config.store_id || config.storeId,
+      };
+      
+      console.log('[process-payment] Using admin gateway config for:', gateway);
+    } else {
+      // For buyer/tenant payments, use panel-configured gateways
+      const panelSettings = panel.settings as Record<string, any> || {};
+      const paymentSettings = panelSettings.payments || {};
+      const enabledMethods = paymentSettings.enabledMethods || [];
+      const manualPayments = paymentSettings.manualPayments || [];
+      
+      console.log('[process-payment] Buyer payment - Panel settings:', { 
+        panelName: panel.name, 
+        enabledMethodsCount: enabledMethods.length,
+        manualPaymentsCount: manualPayments.length,
+        requestedGateway: gateway 
       });
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: `${gateway} is not enabled for this panel. Please configure payment methods in panel settings.` 
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      
+      // Find the gateway config
+      gatewayConfig = enabledMethods.find((m: any) => {
+        const methodId = typeof m === 'string' ? m : m.id;
+        return methodId === gateway;
+      });
+      
+      // For string-only entries, create a minimal config
+      if (typeof gatewayConfig === 'string') {
+        gatewayConfig = { id: gatewayConfig, enabled: true };
+      }
+      
+      // For manual payment methods, check manualPayments array
+      if (!gatewayConfig && (gateway.startsWith('manual_') || gateway === 'manual_transfer')) {
+        gatewayConfig = manualPayments.find((m: any) => m.id === gateway);
+      }
+      
+      // If still no config but gateway is in enabled list (for simpler configs)
+      if (!gatewayConfig && enabledMethods.includes(gateway)) {
+        gatewayConfig = { id: gateway, enabled: true };
+      }
+      
+      if (!gatewayConfig || gatewayConfig.enabled === false) {
+        console.error('[process-payment] Gateway not enabled:', { 
+          gateway, 
+          enabledMethods,
+          foundConfig: gatewayConfig 
+        });
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: `${gateway} is not enabled for this panel. Please configure payment methods in panel settings.` 
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     // Now create transaction AFTER validating gateway (server-side creation bypasses RLS)
@@ -1191,10 +1240,10 @@ serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[process-payment] Error:', error);
     return new Response(
-      JSON.stringify({ success: false, error: error.message || 'Internal server error' }),
+      JSON.stringify({ success: false, error: (error as Error).message || 'Internal server error' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

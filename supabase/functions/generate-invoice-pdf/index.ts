@@ -233,8 +233,8 @@ serve(async (req) => {
       if (txError) throw new Error(`Transaction not found: ${txError.message}`);
 
       // Get panel settings for company snapshot
-      let companySnapshot = { name: "SMM Panel" };
-      let settings = null;
+      let companySnapshot: Record<string, any> = { name: "SMM Panel" };
+      let settings: any = null;
 
       if (transaction.panel_id) {
         const { data: settingsData } = await supabase
@@ -247,7 +247,7 @@ serve(async (req) => {
           settings = settingsData;
           companySnapshot = {
             name: settingsData.company_name,
-            address: settingsData.company_address,
+            address: settingsData.company_address || '',
             email: settingsData.company_email,
             phone: settingsData.company_phone,
             logo_url: settingsData.company_logo_url,
@@ -331,10 +331,10 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error generating invoice:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: (error as Error).message }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

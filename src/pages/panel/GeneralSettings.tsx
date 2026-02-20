@@ -256,6 +256,7 @@ const GeneralSettings = () => {
           logo_url: settings.logoUrl,
           custom_branding: {
             ...existingBranding,  // PRESERVE existing branding (selectedTheme, colors, etc.)
+            companyName: settings.panelName, // Sync company name with panel name for storefront
             faviconUrl: settings.faviconUrl,
             appleTouchIconUrl: settings.appleTouchIconUrl,
             ogImageUrl: settings.ogImageUrl,
