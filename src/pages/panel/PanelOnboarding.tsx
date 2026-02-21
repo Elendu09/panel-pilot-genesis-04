@@ -419,7 +419,7 @@ const PanelOnboarding = () => {
                 <RadioGroupItem value="subdomain" id="subdomain" />
                 <div className="flex-1">
                   <Label htmlFor="subdomain" className="font-medium cursor-pointer">Free Subdomain</Label>
-                  <p className="text-sm text-muted-foreground">yourname.homeofsmm.com</p>
+                  <p className="text-sm text-muted-foreground">yourname.smmpilot.online</p>
                 </div>
                 <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-500">Free</Badge>
               </div>
@@ -446,7 +446,7 @@ const PanelOnboarding = () => {
                     placeholder="mysmm"
                     className="bg-background/50"
                   />
-                  <span className="text-sm text-muted-foreground whitespace-nowrap">.homeofsmm.com</span>
+                  <span className="text-sm text-muted-foreground whitespace-nowrap">.smmpilot.online</span>
                 </div>
                 {checkingSubdomain && (
                   <p className="text-sm text-muted-foreground flex items-center gap-2">
@@ -749,7 +749,7 @@ const PanelOnboarding = () => {
                   {seoTitle || `${panelName || 'Your Panel'} - #1 SMM Panel`}
                 </p>
                 <p className="text-green-700 text-xs">
-                  {domainType === 'custom' ? customDomain : `${subdomain || 'yourpanel'}.homeofsmm.com`}
+                  {domainType === 'custom' ? customDomain : `${subdomain || 'yourpanel'}.smmpilot.online`}
                 </p>
                 <p className="text-gray-600 text-sm line-clamp-2">
                   {seoDescription || 'Get real followers, likes, views & more. Instant delivery and 24/7 support.'}

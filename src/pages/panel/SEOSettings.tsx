@@ -305,7 +305,7 @@ Sitemap: https://example.com/sitemap.xml`,
                     onClick={() => {
                       const generated = generateSeoMeta({
                         panelName: panelSubdomain || 'Panel',
-                        domain: seoData.canonicalUrl || `https://${panelSubdomain}.homeofsmm.com`,
+                        domain: seoData.canonicalUrl || `https://${panelSubdomain}.smmpilot.online`,
                         offeringHint: '',
                       });
                       setSeoData((prev) => ({
@@ -420,7 +420,7 @@ Sitemap: https://example.com/sitemap.xml`,
             <CardContent>
               <div className="flex gap-2">
                 <Input
-                  value={seoData.canonicalUrl || `https://${panelSubdomain}.homeofsmm.com`}
+                  value={seoData.canonicalUrl || `https://${panelSubdomain}.smmpilot.online`}
                   onChange={(e) => setSeoData({ ...seoData, canonicalUrl: e.target.value })}
                   placeholder="https://yourdomain.com"
                 />
@@ -586,7 +586,7 @@ Sitemap: https://example.com/sitemap.xml`,
                   {seoData.title || "Your Panel Title"}
                 </div>
                 <div className="text-green-700 text-sm">
-                  {seoData.canonicalUrl || `https://${panelSubdomain}.homeofsmm.com`}
+                  {seoData.canonicalUrl || `https://${panelSubdomain}.smmpilot.online`}
                 </div>
                 <div className="text-gray-600 text-sm mt-1">
                   {seoData.description || "Your meta description will appear here..."}
@@ -613,7 +613,7 @@ Sitemap: https://example.com/sitemap.xml`,
                 )}
                 <div className="p-3 bg-card rounded-b-lg border-t">
                   <p className="text-xs text-muted-foreground uppercase">
-                    {panelSubdomain}.homeofsmm.com
+                    {panelSubdomain}.smmpilot.online
                   </p>
                   <p className="font-semibold mt-1 line-clamp-1">
                     {seoData.title || "Your Panel Title"}
