@@ -700,7 +700,7 @@ const UserManagement = () => {
                       <div key={panel.id} className="flex items-center justify-between p-3 bg-accent/50 rounded-lg">
                         <div>
                           <p className="font-medium">{panel.name}</p>
-                          <p className="text-sm text-muted-foreground">{panel.subdomain}.homeofsmm.com</p>
+                          <p className="text-sm text-muted-foreground">{panel.subdomain}.smmpilot.online</p>
                         </div>
                         <Badge className={panel.status === 'active' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}>
                           {panel.status}

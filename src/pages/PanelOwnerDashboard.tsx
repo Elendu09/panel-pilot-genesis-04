@@ -1,5 +1,5 @@
 import { useState, useEffect, lazy, Suspense } from "react";
-import { Routes, Route, Link, useLocation } from "react-router-dom";
+import { Routes, Route, Link, useLocation, useNavigate } from "react-router-dom";
 import { 
   LayoutDashboard, 
   Settings, 
@@ -75,11 +75,19 @@ const PanelOwnerDashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sidebarStats, setSidebarStats] = useState({ todayRevenue: 0, activeOrders: 0 });
   const location = useLocation();
+  const navigate = useNavigate();
   const canonicalUrl = typeof window !== 'undefined' ? `${window.location.origin}${location.pathname}` : '';
   const { profile, signOut } = useAuth();
   const { isOpen: tourOpen, completeTour, restartTour } = useOnboardingTour();
   const { pendingCount } = usePendingOrders();
-  const { panel } = usePanel();
+  const { panel, loading: panelLoading } = usePanel();
+
+  // Guard: redirect to onboarding if not completed
+  useEffect(() => {
+    if (!panelLoading && (!panel || !panel.onboarding_completed)) {
+      navigate('/panel/onboarding', { replace: true });
+    }
+  }, [panel, panelLoading, navigate]);
   const { open: searchOpen, setOpen: setSearchOpen } = usePanelSearch();
 
   // Fetch real sidebar stats
@@ -121,6 +129,15 @@ const PanelOwnerDashboard = () => {
     const interval = setInterval(fetchSidebarStats, 60000);
     return () => clearInterval(interval);
   }, [panel?.id]);
+
+  // Don't render dashboard until we confirm onboarding is complete
+  if (panelLoading || !panel?.onboarding_completed) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-primary/5 to-secondary/10">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
 
   const mainNavigation = [
     { name: 'Dashboard', href: '/panel', icon: LayoutDashboard, tourId: 'overview' },
