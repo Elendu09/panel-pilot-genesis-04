@@ -1,156 +1,132 @@
 
 
-# Fix Plan: SEO Isolation, Payment Gateway Errors, Services Visibility, and Panel Name Sync
+# Fix Plan: SEO, Payments, Services, and Panel Name Sync
 
-## Issue 1: SEO -- index.html Overriding Helmet on All Pages
+## Issue 1: Payment "Missing Required Fields" (Billing + Onboarding)
 
-**Root Cause (Critical):**
-1. The `index.html` has a broken structure -- everything after line 231 (`</html>`) is **duplicated content outside the HTML document**. Lines 232-417 are orphaned tags that browsers try to parse but produce unpredictable results.
-2. The `<title>` tag on line 35 uses `data-platform` attribute, but the cleanup script (line 186) only removes `[data-platform-only]` elements. So the platform `<title>` and `<meta description>` are **never removed** for tenant domains.
-3. The hardcoded `<title>` in `index.html` competes with React Helmet's `<title>` -- React Helmet should win, but the duplicated/malformed HTML confuses it.
+**Root Cause (CRITICAL):** The `saveProgress` function in `PanelOnboardingV2.tsx` (line 291) uses `.upsert({...}, { onConflict: 'owner_id' })`, but the `panels` table has **NO unique constraint on `owner_id`**. This means the upsert silently fails every time, `createdPanelId` is never set, and the Payment step receives `panelId: undefined`. The edge function then returns "Missing required fields" because `panelId` is missing.
 
 **Fix:**
-- Clean up `index.html` completely: remove all duplicated content after `</html>` (lines 232+)
-- Change `data-platform` to `data-platform-only` on the `<title>` and `<meta description>` tags so the tenant cleanup script removes them
-- The `Index.tsx` Helmet already sets proper homepage-specific SEO tags -- that remains the single source for platform pages
-- The `TenantHead.tsx` Helmet already reads from `panel_settings` for tenant pages -- that remains the single source for tenant SEO
-- Ensure `TenantHead.tsx` also syncs SEO from the panel's `settings.seo` and `panel_settings` table (it already does via `panelSettings?.seo_title`, `panelSettings?.seo_description`)
+1. **Database migration:** Add a unique index on `panels.owner_id` to make the upsert work:
+   ```sql
+   CREATE UNIQUE INDEX panels_owner_id_unique ON public.panels (owner_id);
+   ```
+2. **Code fix in `PanelOnboardingV2.tsx`:** Ensure `saveProgress` always captures the panel ID even when the panel already exists (remove the `!createdPanelId` guard so it always updates):
+   ```typescript
+   if (upsertedPanel?.id) {
+     setCreatedPanelId(upsertedPanel.id);
+   }
+   ```
+3. **Also fix `handleComplete`:** Change from `INSERT` to `UPSERT` (matching `saveProgress` pattern) to prevent duplicate panel errors when `saveProgress` has already created a record.
+4. **Billing.tsx:** Already fixed with `buyerId: profile.id` -- verified correct.
 
-## Issue 2: Payment "Missing Required Fields" Error (Billing Deposit + Onboarding)
+## Issue 2: SEO -- index.html Overriding Helmet Tags
 
-**Root Cause:**
-The `process-payment` edge function (line 37) requires `buyerId` as a mandatory field:
-```
-if (!gateway || !amount || !panelId || !buyerId) { return "Missing required fields" }
-```
+**Root Cause:** The `index.html` structure is now correct with `data-platform-only` attributes. However, the issue persists because social crawlers (Facebook, Twitter, LinkedIn) and link preview services do NOT execute JavaScript -- they only read the raw HTML. React Helmet modifies the DOM client-side, which crawlers never see.
 
-But the **Billing page** `handleDeposit` (line 303) sends `userId: profile.id` instead of `buyerId`. The field name mismatch means `buyerId` is `undefined`, triggering the "Missing required fields" error.
-
-Additionally, the edge function (lines 45-106) looks up gateway credentials from the **panel's** `settings.payments.enabledMethods`. But for panel owner billing, the gateways come from `platform_payment_providers` (admin-configured). The panel owner may not have "flutterwave" in their buyer-facing payment methods, causing the "flutterwave is not enabled for this panel" error shown in screenshot 1.
-
-**Fix for Billing.tsx (handleDeposit):**
-- Change `userId: profile.id` to `buyerId: profile.id` to match the edge function's expected field name
-- Add `isOwnerDeposit: true` flag (already present, but not used by edge function)
-
-**Fix for process-payment edge function:**
-- Add logic to check `platform_payment_providers` table when `isOwnerDeposit: true` or when the payment is a subscription/commission type
-- Use admin gateway credentials from `platform_payment_providers.config` instead of the panel's buyer-facing settings
-- This way panel owner billing (subscriptions, deposits, commissions) uses admin-configured gateways while buyer deposits use panel-configured gateways
-
-**Fix for OnboardingPaymentStep.tsx:**
-- It sends `buyerId: user.id` (correct field name) but the edge function then looks for the gateway in the **panel's** settings, which are empty during onboarding. The panel hasn't configured any buyer payment methods yet.
-- Same fix: the edge function needs to check `platform_payment_providers` for admin gateways when the request context indicates it's an owner/subscription payment.
-
-## Issue 3: Services Not Showing for "soc" Panel in Tenant
-
-**Database check:** Panel "AiSoc" (subdomain: soc) has **2,073 active, visible services**. The data exists.
-
-**Root Cause:** The `useUnifiedServices` hook fetches services from the `services` table using RLS. The RLS policy "Public can view services from active panels" should allow this. However, the services query requires `panelId` which comes from `useTenant()`. If tenant detection fails or is delayed, `panelId` is `null` and no services are fetched.
-
-**Likely cause:** The `useTenant` hook queries `panels_public` view which may not include the `soc` panel if its `status` is not 'active'. Let me verify.
+**This is an inherent limitation of client-side rendered SPAs.** However, we can improve the situation:
 
 **Fix:**
-- Check if the `panels_public` view filters by status and ensure the soc panel has `status = 'active'`
-- Add better error logging in `useUnifiedServices` when panelId is null or services return 0 despite data existing
+- The cleanup script already strips `data-platform-only` tags for tenant domains. For the platform homepage, the `Index.tsx` Helmet tags should override the `index.html` tags at runtime for users.
+- For social previews on tenant domains: The tenant detection script (line 9-31 in `index.html`) already sets `document.title = 'Loading...'` and removes platform tags. This is the best we can do without SSR.
+- No code changes needed -- the current implementation is already correct.
 
-## Issue 4: Panel Name Change Not Reflected in Tenant Storefront
+## Issue 3: SEO Preview Shows "homeofsmm.com" Instead of "smmpilot.online"
 
-**Root Cause:** When the panel owner updates their panel name in General Settings, `handleSave` (line 254) updates `panels.name` but does NOT update `custom_branding.companyName`. The storefront hero (line 122) reads `customization.companyName` first (from `custom_branding`), which still holds the old value.
+**Root Cause:** Multiple files hardcode `homeofsmm.com` as the subdomain suffix:
+- `PanelOnboarding.tsx` lines 422, 449, 752
+- `PanelOnboardingV2.tsx` lines 880, 926-927
+- `SEOPreviewCards.tsx` line 22
+- `SEOSettings.tsx` lines 308, 423, 589, 616
 
-For example, the "soc" panel has:
-- `panels.name` = "AiSoc" (updated)
-- `custom_branding.companyName` = "socpanel ai" (stale)
+The actual platform domain is `smmpilot.online` (per `PLATFORM_DOMAIN` in tenant config).
 
-The storefront displays "socpanel ai" because `companyName` in `custom_branding` takes priority.
+**Fix:** Replace all `homeofsmm.com` references in these files with `smmpilot.online`.
 
-**Fix in GeneralSettings.tsx `handleSave`:**
-- When updating `custom_branding`, also sync `companyName` to match the new panel name:
+Files to update:
+| File | Lines | Change |
+|------|-------|--------|
+| `src/pages/panel/PanelOnboarding.tsx` | 422, 449, 752 | `.homeofsmm.com` to `.smmpilot.online` |
+| `src/pages/panel/PanelOnboardingV2.tsx` | 880, 926-927 | `.homeofsmm.com` to `.smmpilot.online` |
+| `src/components/settings/SEOPreviewCards.tsx` | 22 | `.homeofsmm.com` to `.smmpilot.online` |
+| `src/pages/panel/SEOSettings.tsx` | 308, 423, 589, 616 | `.homeofsmm.com` to `.smmpilot.online` |
+
+## Issue 4: SEO Auto-generate Exceeding Pixel Limit
+
+**Root Cause:** The `generateSeoMeta` function in `src/lib/seo-metrics.ts` already calls `clampToPx(rawDescription, SEO_DESC_PX_RANGE.max)` which should truncate. However, the onboarding step's `handleNext` auto-generates SEO but does NOT clamp user-edited text when they modify the auto-generated description and make it longer.
+
+**Fix:** In `PanelOnboardingV2.tsx` and `PanelOnboarding.tsx`, auto-clamp the description to the pixel limit when the auto-generate button is clicked. The `generateSeoMeta` function already does this, so the issue is only when users manually edit. Add a blur handler or validation that warns and clamps.
+
+## Issue 5: Services Not Showing for "soc" Panel in Tenant
+
+**Database verified:** Panel "AiSoc" (subdomain: soc) has 2,073 active, visible services. Status is `active`. The `panels_public` view includes panels with `active` status.
+
+**Root Cause:** The RLS policy on `services` table reads:
+```sql
+is_active = true AND panel_id IN (SELECT id FROM panels WHERE status = 'active')
 ```
-custom_branding: {
-  ...existingBranding,
-  companyName: settings.panelName, // <-- ADD THIS LINE
-  faviconUrl: settings.faviconUrl,
-  ...
-}
+
+This queries the `panels` base table (not the view). Anonymous/unauthenticated users have NO SELECT access to the `panels` table because the `panels` table has owner-only RLS. The inner SELECT `FROM panels WHERE status = 'active'` returns 0 rows for anonymous users, so the services RLS policy evaluates to `false` for ALL services.
+
+**This is the root cause.** The services RLS policy relies on a subquery against a table that anonymous users cannot read.
+
+**Fix (Database migration):** Create a `SECURITY DEFINER` function to check panel status, bypassing RLS:
+```sql
+CREATE OR REPLACE FUNCTION public.is_panel_active(p_panel_id uuid)
+RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.panels 
+    WHERE id = p_panel_id AND status = 'active'
+  );
+$$;
 ```
 
-## Issue 5: Build Errors (TypeScript)
+Then update the RLS policy:
+```sql
+DROP POLICY "Public can view services from active panels" ON public.services;
+CREATE POLICY "Public can view services from active panels" ON public.services
+  FOR SELECT USING (is_active = true AND public.is_panel_active(panel_id));
+```
 
-All 40+ build errors are pre-existing TypeScript issues in edge functions (`error.message` on `unknown` type, type mismatches). These need to be fixed with `(error as Error).message` patterns and proper type assertions.
+## Issue 6: Panel Name Not Updating in Tenant Storefront
 
-**Fix:** Apply `(error as Error).message` across all affected edge functions and fix specific type issues:
-- `buyer-auth/index.ts`: Fix boolean return type with `return Boolean(str && str.startsWith('$2'))`
-- `serve-favicon/index.ts`: Add `.maybeSingle()` type handling
-- `process-payment/index.ts`: Fix `string | undefined` assignments with `transactionIdToUse!` or default values
-- `generate-invoice-pdf/index.ts`: Fix `address` property on company object
-- `domain-health-check/index.ts`: Fix DNS TXT record type casting
+**Root Cause:** Already fixed in the previous session. The `GeneralSettings.tsx` line 259 now includes:
+```typescript
+companyName: settings.panelName, // Sync company name with panel name for storefront
+```
+
+**Status:** This fix is already in place. If it's still not working, the user may need to clear the tenant cache (30-second TTL) by refreshing the storefront after saving.
 
 ---
 
-## Files to Modify
+## Summary of All Changes
 
-| File | Changes |
-|------|---------|
-| `index.html` | Remove duplicated content after `</html>` (lines 232+); change `data-platform` to `data-platform-only` on title and meta description |
-| `src/pages/panel/Billing.tsx` | Line 303: Change `userId: profile.id` to `buyerId: profile.id` |
-| `src/pages/panel/GeneralSettings.tsx` | Line 258: Add `companyName: settings.panelName` to custom_branding update |
-| `supabase/functions/process-payment/index.ts` | Add admin gateway lookup when `isOwnerDeposit` or subscription payment; fix TypeScript errors |
-| Multiple edge function files | Fix `(error as Error).message` and other TS errors across ~20 files |
+### Database Migration (SQL)
+```sql
+-- 1. Add unique constraint on owner_id for upsert support
+CREATE UNIQUE INDEX IF NOT EXISTS panels_owner_id_unique ON public.panels (owner_id);
 
-## Technical Details
+-- 2. Create SECURITY DEFINER function for anonymous service access
+CREATE OR REPLACE FUNCTION public.is_panel_active(p_panel_id uuid)
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path TO 'public' AS $$
+  SELECT EXISTS (SELECT 1 FROM public.panels WHERE id = p_panel_id AND status = 'active');
+$$;
 
-### process-payment edge function changes:
-After line 33 (body parsing), add logic:
-```typescript
-// For panel owner payments (billing, subscriptions), use admin-configured gateways
-const isOwnerPayment = body.isOwnerDeposit || body.metadata?.type === 'subscription' || body.metadata?.type === 'commission_payment';
-
-if (isOwnerPayment) {
-  // Fetch from platform_payment_providers instead of panel settings
-  const { data: adminProvider } = await supabase
-    .from('platform_payment_providers')
-    .select('*')
-    .eq('provider_name', gateway)
-    .eq('is_enabled', true)
-    .maybeSingle();
-  
-  if (!adminProvider) {
-    return error response: gateway not configured by admin
-  }
-  
-  gatewayConfig = { 
-    id: adminProvider.provider_name, 
-    enabled: true, 
-    secretKey: adminProvider.config?.secret_key,
-    apiKey: adminProvider.config?.api_key 
-  };
-  // Skip the panel settings gateway lookup
-}
+-- 3. Fix services RLS policy to use SECURITY DEFINER function
+DROP POLICY IF EXISTS "Public can view services from active panels" ON public.services;
+CREATE POLICY "Public can view services from active panels" ON public.services
+  FOR SELECT USING (is_active = true AND public.is_panel_active(panel_id));
 ```
 
-### Billing.tsx handleDeposit fix (line 299-313):
-```typescript
-body: {
-  gateway: method,
-  amount,
-  panelId: panel.id,
-  buyerId: profile.id,  // was 'userId' -- edge function expects 'buyerId'
-  isOwnerDeposit: true,
-  returnUrl: ...,
-  ...
-}
-```
-
-### GeneralSettings.tsx handleSave fix (line 257-264):
-```typescript
-custom_branding: {
-  ...existingBranding,
-  companyName: settings.panelName,  // Sync with panel name
-  faviconUrl: settings.faviconUrl,
-  appleTouchIconUrl: settings.appleTouchIconUrl,
-  ogImageUrl: settings.ogImageUrl,
-  logoUrl: settings.logoUrl,
-  heroImageUrl: settings.heroImageUrl,
-},
-```
+### File Changes
+| File | Change |
+|------|--------|
+| `src/pages/panel/PanelOnboardingV2.tsx` | Fix `createdPanelId` capture; change `handleComplete` to upsert; change `homeofsmm.com` to `smmpilot.online` |
+| `src/pages/panel/PanelOnboarding.tsx` | Change `homeofsmm.com` to `smmpilot.online` in 3 places |
+| `src/pages/panel/SEOSettings.tsx` | Change `homeofsmm.com` to `smmpilot.online` in 4 places |
+| `src/components/settings/SEOPreviewCards.tsx` | Change default URL from `homeofsmm.com` to `smmpilot.online` |
 
