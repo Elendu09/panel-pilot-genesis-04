@@ -299,7 +299,7 @@ const PanelOnboardingV2 = () => {
         status: 'pending'
       }, { onConflict: 'owner_id' }).select('id').single();
 
-      if (upsertedPanel?.id && !createdPanelId) {
+      if (upsertedPanel?.id) {
         setCreatedPanelId(upsertedPanel.id);
       }
     } catch (error) {
@@ -411,15 +411,17 @@ const PanelOnboardingV2 = () => {
       // Get default animation style for the selected theme
       const defaultAnimationStyle = getThemeDefaultAnimationStyle(selectedTheme);
 
+      // Determine status based on domain type and payment
+      const panelStatus = domainType === 'custom' && !paymentCompleted ? 'pending' : 'active';
+      
       const { data: panelData, error } = await supabase
         .from('panels')
-        .insert([
-          {
+        .upsert({
             name: panelName,
             description: description || null,
             owner_id: profile?.id,
-            status: 'active',
-            is_approved: true,
+            status: panelStatus,
+            is_approved: panelStatus === 'active',
             theme_type: 'dark_gradient', // Always use dark_gradient for base type
             buyer_theme: selectedTheme, // Store actual theme selection
             subdomain: finalSubdomain,
@@ -452,8 +454,7 @@ const PanelOnboardingV2 = () => {
               companyName: panelName,
               themeMode: 'dark',
             }
-          }
-        ])
+        }, { onConflict: 'owner_id' })
         .select()
         .single();
 
@@ -463,14 +464,12 @@ const PanelOnboardingV2 = () => {
       if (panelData) {
         await supabase
           .from('panel_settings')
-          .insert([
-            {
+          .upsert({
               panel_id: panelData.id,
               seo_title: seoTitle || `${panelName} - SMM Services`,
               seo_description: seoDescription || description || `Professional SMM services from ${panelName}`,
               seo_keywords: seoKeywords || 'SMM, social media marketing, services'
-            }
-          ]);
+          }, { onConflict: 'panel_id' });
       }
 
       toast({
@@ -877,7 +876,7 @@ const PanelOnboardingV2 = () => {
                   {seoTitle || `${panelName || 'Your Panel'} - #1 SMM Panel`}
                 </p>
                 <p className="text-green-700 dark:text-green-500 text-xs">
-                  {domainType === 'custom' ? customDomain : `${subdomain || 'yourpanel'}.homeofsmm.com`}
+                  {domainType === 'custom' ? customDomain : `${subdomain || 'yourpanel'}.smmpilot.online`}
                 </p>
                 <p className="text-gray-600 dark:text-gray-400 text-sm line-clamp-2">
                   {seoDescription || 'Get real followers, likes, views & more. Instant delivery and 24/7 support.'}
@@ -923,8 +922,8 @@ const PanelOnboardingV2 = () => {
                   <span>
                     Domain: <strong>
                       {domainType === 'subdomain' 
-                        ? `${subdomain}.homeofsmm.com` 
-                        : customDomain || `${subdomain}.homeofsmm.com`
+                        ? `${subdomain}.smmpilot.online` 
+                        : customDomain || `${subdomain}.smmpilot.online`
                       }
                     </strong>
                   </span>
