@@ -1,132 +1,159 @@
 
+# Fix Plan: Onboarding Guard, Payment Errors, SEO Domain, and Panel Gateway Configuration
 
-# Fix Plan: SEO, Payments, Services, and Panel Name Sync
+## Issue 1: Users Can Bypass Onboarding to Dashboard (CRITICAL)
 
-## Issue 1: Payment "Missing Required Fields" (Billing + Onboarding)
+**Root Cause:** The `ProtectedRoute` component only checks if the user is authenticated and has the correct role (`panel_owner`). It does NOT check `onboarding_completed`. The onboarding redirect only happens in `Auth.tsx` after login -- but if a user navigates directly to `/panel` via URL bar, they skip the guard entirely.
 
-**Root Cause (CRITICAL):** The `saveProgress` function in `PanelOnboardingV2.tsx` (line 291) uses `.upsert({...}, { onConflict: 'owner_id' })`, but the `panels` table has **NO unique constraint on `owner_id`**. This means the upsert silently fails every time, `createdPanelId` is never set, and the Payment step receives `panelId: undefined`. The edge function then returns "Missing required fields" because `panelId` is missing.
+Screenshot evidence: User's panel "AiSMM" has `onboarding_completed: false` and `status: pending` in the database, yet the dashboard shows it as "Live" with full access.
 
-**Fix:**
-1. **Database migration:** Add a unique index on `panels.owner_id` to make the upsert work:
-   ```sql
-   CREATE UNIQUE INDEX panels_owner_id_unique ON public.panels (owner_id);
-   ```
-2. **Code fix in `PanelOnboardingV2.tsx`:** Ensure `saveProgress` always captures the panel ID even when the panel already exists (remove the `!createdPanelId` guard so it always updates):
-   ```typescript
-   if (upsertedPanel?.id) {
-     setCreatedPanelId(upsertedPanel.id);
-   }
-   ```
-3. **Also fix `handleComplete`:** Change from `INSERT` to `UPSERT` (matching `saveProgress` pattern) to prevent duplicate panel errors when `saveProgress` has already created a record.
-4. **Billing.tsx:** Already fixed with `buyerId: profile.id` -- verified correct.
+**Fix:** Add an onboarding guard in `PanelOwnerDashboard.tsx` that checks `panel.onboarding_completed` on load. If `false`, redirect to `/panel/onboarding`. This is the single chokepoint since all `/panel/*` routes render through `PanelOwnerDashboard`.
 
-## Issue 2: SEO -- index.html Overriding Helmet Tags
+## Issue 2: Payment Error -- "flutterwave is not enabled for this panel"
 
-**Root Cause:** The `index.html` structure is now correct with `data-platform-only` attributes. However, the issue persists because social crawlers (Facebook, Twitter, LinkedIn) and link preview services do NOT execute JavaScript -- they only read the raw HTML. React Helmet modifies the DOM client-side, which crawlers never see.
+**Root Cause:** The edge function code was updated to handle `isOwnerDeposit` correctly in the previous session. However, the `OnboardingPaymentStep` passes `panelId: undefined` because `createdPanelId` is never captured when `saveProgress` fails silently.
 
-**This is an inherent limitation of client-side rendered SPAs.** However, we can improve the situation:
+The `saveProgress` upsert on `owner_id` was added but the unique index migration may have failed (panels can have duplicate `owner_id` -- confirmed by database: the same user has multiple panels). A unique index on `owner_id` would break multi-panel support.
 
-**Fix:**
-- The cleanup script already strips `data-platform-only` tags for tenant domains. For the platform homepage, the `Index.tsx` Helmet tags should override the `index.html` tags at runtime for users.
-- For social previews on tenant domains: The tenant detection script (line 9-31 in `index.html`) already sets `document.title = 'Loading...'` and removes platform tags. This is the best we can do without SSR.
-- No code changes needed -- the current implementation is already correct.
+**Real fix:** Instead of relying on upsert with `owner_id`, the payment step needs `panelId` to be available. Since onboarding creates a panel in `saveProgress`, we need to:
+1. Change `saveProgress` from upsert to: first check if `createdPanelId` exists, then UPDATE; if not, INSERT and capture the ID
+2. Ensure `handlePayment` in `OnboardingPaymentStep` validates `panelId` exists before calling the edge function, showing a clear error if not
 
-## Issue 3: SEO Preview Shows "homeofsmm.com" Instead of "smmpilot.online"
+Additionally, the `process-payment` edge function needs `panelId` to fetch panel settings. For owner payments during onboarding (when the panel may not have settings yet), we should allow `panelId` to be optional for owner deposits and skip the panel settings lookup entirely.
 
-**Root Cause:** Multiple files hardcode `homeofsmm.com` as the subdomain suffix:
-- `PanelOnboarding.tsx` lines 422, 449, 752
-- `PanelOnboardingV2.tsx` lines 880, 926-927
-- `SEOPreviewCards.tsx` line 22
-- `SEOSettings.tsx` lines 308, 423, 589, 616
+## Issue 3: Only Flutterwave Shows in Payment Gateways
 
-The actual platform domain is `smmpilot.online` (per `PLATFORM_DOMAIN` in tenant config).
+**Root Cause:** This is correct behavior based on the database. Only Flutterwave has `is_enabled: true` in `platform_payment_providers`. All other providers (Stripe, PayPal, Paystack, Razorpay, etc.) have `is_enabled: false`. The admin needs to enable more providers in the admin panel.
 
-**Fix:** Replace all `homeofsmm.com` references in these files with `smmpilot.online`.
+The `OnboardingPaymentStep` correctly queries `platform_payment_providers` with `.eq('is_enabled', true)`.
 
-Files to update:
-| File | Lines | Change |
-|------|-------|--------|
-| `src/pages/panel/PanelOnboarding.tsx` | 422, 449, 752 | `.homeofsmm.com` to `.smmpilot.online` |
-| `src/pages/panel/PanelOnboardingV2.tsx` | 880, 926-927 | `.homeofsmm.com` to `.smmpilot.online` |
-| `src/components/settings/SEOPreviewCards.tsx` | 22 | `.homeofsmm.com` to `.smmpilot.online` |
-| `src/pages/panel/SEOSettings.tsx` | 308, 423, 589, 616 | `.homeofsmm.com` to `.smmpilot.online` |
+**No code fix needed** -- this is an admin configuration issue. However, the user also mentions "panel payment gateway cannot be configured by admin only user." This means the panel owner's Payment Methods page should only allow panel owners to configure their buyer-facing gateways (not admin gateways). This is already the correct architecture. No change needed.
 
-## Issue 4: SEO Auto-generate Exceeding Pixel Limit
+## Issue 4: SEO Preview Shows "homeofsmm.com" in Onboarding
 
-**Root Cause:** The `generateSeoMeta` function in `src/lib/seo-metrics.ts` already calls `clampToPx(rawDescription, SEO_DESC_PX_RANGE.max)` which should truncate. However, the onboarding step's `handleNext` auto-generates SEO but does NOT clamp user-edited text when they modify the auto-generated description and make it longer.
+**Root Cause:** The `OnboardingDomainStep.tsx` component still has `homeofsmm` references in the DNS verification TXT record instructions (lines 143, 372, 374, 379).
 
-**Fix:** In `PanelOnboardingV2.tsx` and `PanelOnboarding.tsx`, auto-clamp the description to the pixel limit when the auto-generate button is clicked. The `generateSeoMeta` function already does this, so the issue is only when users manually edit. Add a blur handler or validation that warns and clamps.
+Additionally, the SEO step in `PanelOnboardingV2.tsx` was already fixed to use `smmpilot.online` (line 879). The screenshot showing `aiii.homeofsmm.com` suggests the user is viewing an older cached version or the legacy onboarding page.
 
-## Issue 5: Services Not Showing for "soc" Panel in Tenant
+**Fix:** Update `OnboardingDomainStep.tsx` to replace remaining `homeofsmm` references with `smmpilot` branding for consistency.
 
-**Database verified:** Panel "AiSoc" (subdomain: soc) has 2,073 active, visible services. Status is `active`. The `panels_public` view includes panels with `active` status.
+## Issue 5: Services Not Showing for "soc" Panel
 
-**Root Cause:** The RLS policy on `services` table reads:
-```sql
-is_active = true AND panel_id IN (SELECT id FROM panels WHERE status = 'active')
-```
-
-This queries the `panels` base table (not the view). Anonymous/unauthenticated users have NO SELECT access to the `panels` table because the `panels` table has owner-only RLS. The inner SELECT `FROM panels WHERE status = 'active'` returns 0 rows for anonymous users, so the services RLS policy evaluates to `false` for ALL services.
-
-**This is the root cause.** The services RLS policy relies on a subquery against a table that anonymous users cannot read.
-
-**Fix (Database migration):** Create a `SECURITY DEFINER` function to check panel status, bypassing RLS:
-```sql
-CREATE OR REPLACE FUNCTION public.is_panel_active(p_panel_id uuid)
-RETURNS boolean
-LANGUAGE sql STABLE SECURITY DEFINER
-SET search_path TO 'public'
-AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM public.panels 
-    WHERE id = p_panel_id AND status = 'active'
-  );
-$$;
-```
-
-Then update the RLS policy:
-```sql
-DROP POLICY "Public can view services from active panels" ON public.services;
-CREATE POLICY "Public can view services from active panels" ON public.services
-  FOR SELECT USING (is_active = true AND public.is_panel_active(panel_id));
-```
-
-## Issue 6: Panel Name Not Updating in Tenant Storefront
-
-**Root Cause:** Already fixed in the previous session. The `GeneralSettings.tsx` line 259 now includes:
-```typescript
-companyName: settings.panelName, // Sync company name with panel name for storefront
-```
-
-**Status:** This fix is already in place. If it's still not working, the user may need to clear the tenant cache (30-second TTL) by refreshing the storefront after saving.
+The previous migration created the `is_panel_active()` SECURITY DEFINER function and updated the RLS policy. The "soc" panel has `status: active` and 2,073 services. If the migration was applied successfully, services should now be visible. If the user is still experiencing this issue, it may be a deployment/cache issue.
 
 ---
 
-## Summary of All Changes
+## Files to Modify
 
-### Database Migration (SQL)
-```sql
--- 1. Add unique constraint on owner_id for upsert support
-CREATE UNIQUE INDEX IF NOT EXISTS panels_owner_id_unique ON public.panels (owner_id);
-
--- 2. Create SECURITY DEFINER function for anonymous service access
-CREATE OR REPLACE FUNCTION public.is_panel_active(p_panel_id uuid)
-RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER
-SET search_path TO 'public' AS $$
-  SELECT EXISTS (SELECT 1 FROM public.panels WHERE id = p_panel_id AND status = 'active');
-$$;
-
--- 3. Fix services RLS policy to use SECURITY DEFINER function
-DROP POLICY IF EXISTS "Public can view services from active panels" ON public.services;
-CREATE POLICY "Public can view services from active panels" ON public.services
-  FOR SELECT USING (is_active = true AND public.is_panel_active(panel_id));
-```
-
-### File Changes
 | File | Change |
 |------|--------|
-| `src/pages/panel/PanelOnboardingV2.tsx` | Fix `createdPanelId` capture; change `handleComplete` to upsert; change `homeofsmm.com` to `smmpilot.online` |
-| `src/pages/panel/PanelOnboarding.tsx` | Change `homeofsmm.com` to `smmpilot.online` in 3 places |
-| `src/pages/panel/SEOSettings.tsx` | Change `homeofsmm.com` to `smmpilot.online` in 4 places |
-| `src/components/settings/SEOPreviewCards.tsx` | Change default URL from `homeofsmm.com` to `smmpilot.online` |
+| `src/pages/PanelOwnerDashboard.tsx` | Add onboarding guard: if `panel.onboarding_completed === false`, redirect to `/panel/onboarding` |
+| `src/pages/panel/PanelOnboardingV2.tsx` | Fix `saveProgress` to use INSERT/UPDATE instead of broken upsert; ensure `createdPanelId` is always set before payment step |
+| `src/components/onboarding/OnboardingPaymentStep.tsx` | Add validation that `panelId` is present; show error if missing instead of silent failure |
+| `supabase/functions/process-payment/index.ts` | Make `panelId` optional for owner deposits; skip panel settings lookup when not needed |
+| `src/components/onboarding/OnboardingDomainStep.tsx` | Replace `homeofsmm` references with `smmpilot` for TXT verification records |
 
+## Technical Details
+
+### PanelOwnerDashboard.tsx -- Onboarding Guard
+```typescript
+// After line 82 (const { panel } = usePanel())
+const navigate = useNavigate();
+
+useEffect(() => {
+  if (!loading && panel && !panel.onboarding_completed) {
+    navigate('/panel/onboarding', { replace: true });
+  }
+}, [panel, loading, navigate]);
+
+// Also handle case where no panel exists yet
+useEffect(() => {
+  if (!loading && !panel && profile?.role === 'panel_owner') {
+    navigate('/panel/onboarding', { replace: true });
+  }
+}, [panel, loading, profile, navigate]);
+```
+
+### PanelOnboardingV2.tsx -- Fix saveProgress
+Replace the upsert approach (which requires a unique constraint that breaks multi-panel support) with explicit INSERT or UPDATE:
+```typescript
+const saveProgress = async (step: number) => {
+  if (!profile?.id) return;
+  
+  const progressData = { ... };
+
+  try {
+    if (createdPanelId) {
+      // UPDATE existing panel
+      await supabase.from('panels')
+        .update({
+          name: panelName || 'My Panel',
+          subdomain: subdomain || 'temp-' + profile.id.slice(0, 8),
+          onboarding_step: step,
+          onboarding_data: progressData,
+          default_currency: currency,
+        })
+        .eq('id', createdPanelId);
+    } else {
+      // INSERT new panel
+      const { data } = await supabase.from('panels')
+        .insert({
+          owner_id: profile.id,
+          name: panelName || 'My Panel',
+          subdomain: subdomain || 'temp-' + profile.id.slice(0, 8),
+          onboarding_step: step,
+          onboarding_data: progressData,
+          default_currency: currency,
+          onboarding_completed: false,
+          status: 'pending',
+        })
+        .select('id')
+        .single();
+      
+      if (data?.id) {
+        setCreatedPanelId(data.id);
+      }
+    }
+  } catch (error) {
+    console.error('Error saving progress:', error);
+  }
+};
+```
+
+### OnboardingPaymentStep.tsx -- Validate panelId
+```typescript
+const handlePayment = async () => {
+  if (!panelId) {
+    toast({ 
+      variant: 'destructive', 
+      title: 'Setup Error', 
+      description: 'Panel not yet created. Please go back and complete previous steps first.' 
+    });
+    return;
+  }
+  // ... rest of payment logic
+};
+```
+
+### process-payment edge function -- Optional panelId for owner deposits
+For owner/subscription payments, make `panelId` validation more lenient and skip the panel settings lookup when not strictly needed:
+```typescript
+if (!gateway || !amount || !buyerId) {
+  // panelId is required for buyer payments but optional for owner deposits
+  if (!isOwnerDeposit && !panelId) {
+    return error: 'Missing required fields';
+  }
+}
+```
+
+### OnboardingDomainStep.tsx -- Replace homeofsmm references
+- Line 143: `homeofsmm-verify=` to `smmpilot-verify=`
+- Line 372: `_homeofsmm` to `_smmpilot`
+- Line 374: `homeofsmm-verify=` to `smmpilot-verify=`
+- Line 379: `homeofsmm-verify=` to `smmpilot-verify=`
+
+### Database -- Remove broken unique index
+The unique index on `owner_id` from the previous migration needs to be dropped since users can have multiple panels:
+```sql
+DROP INDEX IF EXISTS panels_owner_id_unique;
+```
