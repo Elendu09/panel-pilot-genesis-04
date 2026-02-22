@@ -1,5 +1,5 @@
 import { useState, useEffect, lazy, Suspense } from "react";
-import { Routes, Route, Link, useLocation } from "react-router-dom";
+import { Routes, Route, Link, useLocation, useNavigate } from "react-router-dom";
 import { 
   LayoutDashboard, 
   Settings, 
@@ -79,8 +79,16 @@ const PanelOwnerDashboard = () => {
   const { profile, signOut } = useAuth();
   const { isOpen: tourOpen, completeTour, restartTour } = useOnboardingTour();
   const { pendingCount } = usePendingOrders();
-  const { panel } = usePanel();
+  const { panel, loading: panelLoading } = usePanel();
   const { open: searchOpen, setOpen: setSearchOpen } = usePanelSearch();
+  const navigate = useNavigate();
+
+  // Onboarding guard: redirect if onboarding not completed
+  useEffect(() => {
+    if (!panelLoading && (!panel || !panel.onboarding_completed)) {
+      navigate('/panel/onboarding', { replace: true });
+    }
+  }, [panel, panelLoading, navigate]);
 
   // Fetch real sidebar stats
   useEffect(() => {

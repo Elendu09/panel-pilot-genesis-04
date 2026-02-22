@@ -288,19 +288,36 @@ const PanelOnboardingV2 = () => {
     };
 
     try {
-      const { data: upsertedPanel } = await supabase.from('panels').upsert({
-        owner_id: profile.id,
-        name: panelName || 'My Panel',
-        subdomain: subdomain || 'temp-' + profile.id.slice(0, 8),
-        onboarding_step: step,
-        onboarding_data: progressData,
-        default_currency: currency,
-        onboarding_completed: false,
-        status: 'pending'
-      }, { onConflict: 'owner_id' }).select('id').single();
+      if (createdPanelId) {
+        // UPDATE existing panel
+        await supabase.from('panels')
+          .update({
+            name: panelName || 'My Panel',
+            subdomain: subdomain || 'temp-' + profile.id.slice(0, 8),
+            onboarding_step: step,
+            onboarding_data: progressData,
+            default_currency: currency,
+          })
+          .eq('id', createdPanelId);
+      } else {
+        // INSERT new panel and capture ID
+        const { data: newPanel } = await supabase.from('panels')
+          .insert({
+            owner_id: profile.id,
+            name: panelName || 'My Panel',
+            subdomain: subdomain || 'temp-' + profile.id.slice(0, 8),
+            onboarding_step: step,
+            onboarding_data: progressData,
+            default_currency: currency,
+            onboarding_completed: false,
+            status: 'pending'
+          })
+          .select('id')
+          .single();
 
-      if (upsertedPanel?.id) {
-        setCreatedPanelId(upsertedPanel.id);
+        if (newPanel?.id) {
+          setCreatedPanelId(newPanel.id);
+        }
       }
     } catch (error) {
       console.error('Error saving progress:', error);
@@ -412,18 +429,16 @@ const PanelOnboardingV2 = () => {
       const defaultAnimationStyle = getThemeDefaultAnimationStyle(selectedTheme);
 
       // Determine status based on domain type and payment
-      const panelStatus = domainType === 'custom' && !paymentCompleted ? 'pending' : 'active';
+      const panelStatus = (domainType === 'custom' && !paymentCompleted ? 'pending' : 'active') as 'pending' | 'active';
       
-      const { data: panelData, error } = await supabase
-        .from('panels')
-        .upsert({
+      const panelPayload = {
             name: panelName,
             description: description || null,
             owner_id: profile?.id,
             status: panelStatus,
             is_approved: panelStatus === 'active',
-            theme_type: 'dark_gradient', // Always use dark_gradient for base type
-            buyer_theme: selectedTheme, // Store actual theme selection
+            theme_type: 'dark_gradient' as const,
+            buyer_theme: selectedTheme,
             subdomain: finalSubdomain,
             custom_domain: domainType === 'custom' ? customDomain : null,
             primary_color: finalPrimaryColor,
@@ -454,11 +469,31 @@ const PanelOnboardingV2 = () => {
               companyName: panelName,
               themeMode: 'dark',
             }
-        }, { onConflict: 'owner_id' })
-        .select()
-        .single();
+      };
 
-      if (error) throw error;
+      let panelData: any = null;
+      
+      if (createdPanelId) {
+        // UPDATE existing panel
+        const { data, error: updateError } = await supabase
+          .from('panels')
+          .update(panelPayload)
+          .eq('id', createdPanelId)
+          .select()
+          .single();
+        if (updateError) throw updateError;
+        panelData = data;
+      } else {
+        // INSERT new panel
+        const { data, error: insertError } = await supabase
+          .from('panels')
+          .insert(panelPayload)
+          .select()
+          .single();
+        if (insertError) throw insertError;
+        panelData = data;
+      }
+
 
       // Create panel settings with SEO
       if (panelData) {

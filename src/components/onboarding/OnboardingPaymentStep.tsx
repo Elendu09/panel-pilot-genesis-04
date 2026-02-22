@@ -68,6 +68,10 @@ export const OnboardingPaymentStep = ({
   };
 
   const handlePayment = async () => {
+    if (!panelId) {
+      toast({ variant: 'destructive', title: 'Setup Error', description: 'Panel not yet created. Please go back and complete previous steps first.' });
+      return;
+    }
     if (!selectedProvider) {
       toast({ variant: 'destructive', title: 'Please select a payment method' });
       return;

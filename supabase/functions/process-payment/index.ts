@@ -36,7 +36,10 @@ serve(async (req) => {
 
     console.log(`[process-payment] Processing ${gateway} payment: $${amount} for panel ${panelId}${orderId ? `, order: ${orderId}` : ''}`);
 
-    if (!gateway || !amount || !panelId || !buyerId) {
+    // Determine if this is a panel owner payment (billing, subscriptions, commissions)
+    const isOwnerPayment = isOwnerDeposit || metadata?.type === 'subscription' || metadata?.type === 'commission_payment';
+
+    if (!gateway || !amount || !buyerId || (!panelId && !isOwnerPayment)) {
       console.error('[process-payment] Missing fields:', { gateway, amount, panelId, buyerId });
       return new Response(
         JSON.stringify({ success: false, error: 'Missing required fields' }),
@@ -44,22 +47,23 @@ serve(async (req) => {
       );
     }
 
-    // Determine if this is a panel owner payment (billing, subscriptions, commissions)
-    const isOwnerPayment = isOwnerDeposit || metadata?.type === 'subscription' || metadata?.type === 'commission_payment';
+    // Fetch panel name (needed for payment descriptions) - skip if no panelId
+    let panel: any = null;
+    if (panelId) {
+      const { data: panelData, error: panelError } = await supabase
+        .from('panels')
+        .select('settings, name')
+        .eq('id', panelId)
+        .single();
 
-    // Fetch panel name (needed for payment descriptions)
-    const { data: panel, error: panelError } = await supabase
-      .from('panels')
-      .select('settings, name')
-      .eq('id', panelId)
-      .single();
-
-    if (panelError || !panel) {
-      console.error('[process-payment] Panel fetch error:', panelError);
-      return new Response(
-        JSON.stringify({ success: false, error: 'Panel not found' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      if (panelError || !panelData) {
+        console.error('[process-payment] Panel fetch error:', panelError);
+        return new Response(
+          JSON.stringify({ success: false, error: 'Panel not found' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      panel = panelData;
     }
 
     let gatewayConfig: any = null;
