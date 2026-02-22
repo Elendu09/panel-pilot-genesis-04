@@ -10,7 +10,7 @@ interface FreeTierBannerProps {
 
 export const FreeTierBanner = ({ 
   onDismiss, 
-  platformUrl = 'https://smmpilot.online',
+  platformUrl = 'https://homeofsmm.com',
   platformName = 'HOME OF SMM'
 }: FreeTierBannerProps) => {
   return (

@@ -74,7 +74,7 @@ export function DirectProviderCard({
     }
   };
 
-  const domain = provider.custom_domain || `${provider.subdomain}.smmpilot.online`;
+  const domain = provider.custom_domain || `${provider.subdomain}.homeofsmm.com`;
   const adConfig = provider.ad_type ? adBadgeConfig[provider.ad_type] : null;
   const AdIcon = adConfig?.icon;
 

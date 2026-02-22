@@ -102,10 +102,10 @@ const APIManagement = () => {
       }
       // For development/preview environments, show brand domain
       if (hostname.includes('localhost') || hostname.includes('lovable.app')) {
-        return 'https://smmpilot.online';
+        return 'https://homeofsmm.com';
       }
     }
-    return 'https://smmpilot.online';
+    return 'https://homeofsmm.com';
   };
 
   // Panel Owner API is centralized at the platform domain
