@@ -140,7 +140,7 @@ export const OnboardingDomainStep = ({
       const { data, error } = await supabase.functions.invoke('verify-domain-dns', {
         body: { 
           domain: customDomain,
-          expected_txt_value: verificationToken ? `homeofsmm-verify=${verificationToken}` : undefined
+          expected_txt_value: verificationToken ? `smmpilot-verify=${verificationToken}` : undefined
         }
       });
 
@@ -369,14 +369,14 @@ export const OnboardingDomainStep = ({
                         <div className="flex flex-col sm:flex-row sm:items-center gap-2 p-3 rounded-lg bg-background/50 text-sm font-mono">
                           <div className="flex items-center gap-2">
                             <Badge variant="outline" className="shrink-0 w-16 justify-center">TXT</Badge>
-                            <span className="text-muted-foreground">_homeofsmm</span>
+                            <span className="text-muted-foreground">_smmpilot</span>
                           </div>
-                          <span className="flex-1 text-xs sm:text-sm break-all">homeofsmm-verify={verificationToken}</span>
+                          <span className="flex-1 text-xs sm:text-sm break-all">smmpilot-verify={verificationToken}</span>
                           <Button 
                             variant="ghost" 
                             size="icon" 
                             className="h-8 w-8 shrink-0 self-end sm:self-auto"
-                            onClick={() => copyToClipboard(`homeofsmm-verify=${verificationToken}`)}
+                            onClick={() => copyToClipboard(`smmpilot-verify=${verificationToken}`)}
                           >
                             <Copy className="w-4 h-4" />
                           </Button>
