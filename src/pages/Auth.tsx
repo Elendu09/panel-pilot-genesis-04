@@ -92,7 +92,7 @@ const Auth = () => {
       }
     } catch (error) {
       console.error('Error checking onboarding:', error);
-      navigate('/panel', { replace: true });
+      navigate('/panel/onboarding', { replace: true });
     }
   };
 

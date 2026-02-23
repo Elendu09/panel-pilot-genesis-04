@@ -2386,7 +2386,7 @@ export default function DesignCustomization() {
                     const storefrontUrl = panelCustomDomain 
                       ? `https://${panelCustomDomain}`
                       : panelSubdomain 
-                        ? `https://${panelSubdomain}.homeofsmm.com`
+                        ? `https://${panelSubdomain}.smmpilot.online`
                         : null;
                     if (storefrontUrl) {
                       window.open(storefrontUrl, '_blank');
@@ -2405,7 +2405,7 @@ export default function DesignCustomization() {
                 {panelCustomDomain 
                   ? `Opens ${panelCustomDomain} in new tab` 
                   : panelSubdomain 
-                    ? `Opens ${panelSubdomain}.homeofsmm.com in new tab`
+                    ? `Opens ${panelSubdomain}.smmpilot.online in new tab`
                     : 'Configure your subdomain first'}
               </TooltipContent>
             </Tooltip>
@@ -3459,7 +3459,7 @@ export default function DesignCustomization() {
                     <ExternalLink className="w-2 h-2 sm:w-2.5 sm:h-2.5 text-primary" />
                   </div>
                   <span className="text-[10px] sm:text-xs text-muted-foreground font-mono truncate">
-                    {customization.companyName?.toLowerCase().replace(/\s+/g, '') || 'yourpanel'}.homeofsmm.com
+                    {customization.companyName?.toLowerCase().replace(/\s+/g, '') || 'yourpanel'}.smmpilot.online
                   </span>
                 </div>
               </div>
@@ -3635,7 +3635,7 @@ export default function DesignCustomization() {
                       </div>
                       <div className="flex-1 flex justify-center">
                         <div className="px-4 py-1 bg-[#1a1a1a] rounded-md text-[10px] text-muted-foreground font-mono">
-                          {customization.companyName?.toLowerCase().replace(/\s+/g, '') || 'yourpanel'}.homeofsmm.com
+                          {customization.companyName?.toLowerCase().replace(/\s+/g, '') || 'yourpanel'}.smmpilot.online
                         </div>
                       </div>
                       {previewDirection === 'rtl' && (
