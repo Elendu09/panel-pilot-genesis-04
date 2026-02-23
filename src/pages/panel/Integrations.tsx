@@ -463,7 +463,6 @@ const Integrations = () => {
         // Add subdomain options for both platforms
         if (panel.subdomain) {
           allDomains.push(`${panel.subdomain}.smmpilot.online`);
-          allDomains.push(`${panel.subdomain}.homeofsmm.com`);
         }
         
         // Add custom domain if set on panel

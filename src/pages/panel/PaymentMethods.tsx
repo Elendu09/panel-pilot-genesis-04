@@ -18,6 +18,7 @@ import { usePanel } from "@/hooks/usePanel";
 import { supabase } from "@/integrations/supabase/client";
 import { useAvailablePaymentGateways } from "@/hooks/useAvailablePaymentGateways";
 import { useAdminPaymentGateways } from "@/hooks/useAdminPaymentGateways";
+
 import { TransactionKanban } from "@/components/billing/TransactionKanban";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { PaymentMethodRow } from "@/components/billing/PaymentMethodRow";
@@ -110,9 +111,6 @@ const PaymentMethods = () => {
   const [syncing, setSyncing] = useState(false);
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
 
-  // Platform-enabled providers (admin-controlled)
-  const [platformEnabledProviderNames, setPlatformEnabledProviderNames] = useState<Set<string>>(new Set());
-  const [platformProvidersLoaded, setPlatformProvidersLoaded] = useState(false);
 
   const { refresh: refreshAvailableGateways } = useAvailablePaymentGateways({
     panelId: panel?.id,
@@ -130,27 +128,9 @@ const PaymentMethods = () => {
     if (panel?.id) {
       loadConfiguredGateways();
       fetchPaymentStats();
-      fetchPlatformEnabledProviders();
     }
   }, [panel?.id]);
 
-  const fetchPlatformEnabledProviders = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('platform_payment_providers')
-        .select('provider_name, is_enabled')
-        .eq('is_enabled', true);
-
-      if (error) throw error;
-      setPlatformEnabledProviderNames(new Set((data || []).map(p => p.provider_name)));
-    } catch (e) {
-      console.error('Failed to fetch platform payment providers', e);
-      // If fetch fails, keep behavior permissive to avoid blocking UI.
-      setPlatformEnabledProviderNames(new Set());
-    } finally {
-      setPlatformProvidersLoaded(true);
-    }
-  };
 
   const loadConfiguredGateways = () => {
     const settings = panel?.settings as any;
@@ -262,12 +242,6 @@ const PaymentMethods = () => {
   };
 
   const filteredGateways = getGatewaysForCategory()
-    .filter(g => {
-      // If platform providers are available, hide anything not enabled by admin.
-      if (!platformProvidersLoaded) return true;
-      if (platformEnabledProviderNames.size === 0) return true;
-      return platformEnabledProviderNames.has(g.id);
-    })
     .filter(g => 
       g.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       g.regions.some(r => r.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -458,7 +432,7 @@ const PaymentMethods = () => {
   const syncWithPlatform = async () => {
     setSyncing(true);
     try {
-      await fetchPlatformEnabledProviders();
+      await refreshAvailableGateways();
       await refreshAvailableGateways();
       setLastSynced(new Date());
       toast({ title: "Synced with platform", description: "Payment methods are up to date" });

@@ -110,7 +110,7 @@ const PanelOnboardingV2 = () => {
   const currentStepKey = currentStepData?.key;
   
   // Progress based on visible steps
-  const visibleStepIndex = visibleSteps.findIndex(s => s.id === currentStep);
+  const visibleStepIndex = Math.max(0, visibleSteps.findIndex(s => s.id === currentStep));
   const progress = ((visibleStepIndex + 1) / visibleSteps.length) * 100;
 
   useEffect(() => {

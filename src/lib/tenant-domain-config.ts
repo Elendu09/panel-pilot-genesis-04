@@ -283,8 +283,8 @@ export function getDnsConfigForDomain(
   baseRecords.push(
     {
       type: 'TXT' as const,
-      host: '_homeofsmm',
-      value: `homeofsmm-verify=${verificationToken}`,
+      host: '_smmpilot',
+      value: `smmpilot-verify=${verificationToken}`,
       ttl: 3600,
       description: 'Verifies domain ownership for your panel',
       required: true,
@@ -327,7 +327,7 @@ export function getDnsConfigForDomain(
         '📋 OPTION 2: Keep existing DNS (Manual setup)',
         `1. Add A Record: @ → ${VERCEL_IP}`,
         `2. Add CNAME: www → ${VERCEL_CNAME}`,
-        `3. Add TXT: _homeofsmm → homeofsmm-verify=${verificationToken}`,
+        `3. Add TXT: _smmpilot → smmpilot-verify=${verificationToken}`,
         '4. In Vercel: Add domain and verify',
         '⚠️ Note: Wildcards require Vercel nameservers',
       ],
@@ -342,7 +342,7 @@ export function getDnsConfigForDomain(
         hostingProvider === 'vercel'
           ? `4. Add CNAME Record: Host = www, Value = ${VERCEL_CNAME}`
           : `4. Add A Record: Host = www, Value = ${LOVABLE_IP}`,
-        `5. Add TXT Record: Host = _homeofsmm, Value = homeofsmm-verify=${verificationToken}`,
+        `5. Add TXT Record: Host = _smmpilot, Value = smmpilot-verify=${verificationToken}`,
         hostingProvider === 'lovable' ? `6. Add TXT Record: Host = _lovable, Value = lovable_verify=${verificationToken}` : null,
         '7. Save all changes and wait up to 48 hours for propagation',
       ].filter(Boolean) as string[],
@@ -356,7 +356,7 @@ export function getDnsConfigForDomain(
         hostingProvider === 'vercel'
           ? `4. Type = CNAME, Name = www, Value = ${VERCEL_CNAME}, TTL = 1 Hour`
           : `4. Type = A, Name = www, Value = ${LOVABLE_IP}, TTL = 1 Hour`,
-        `5. Type = TXT, Name = _homeofsmm, Value = homeofsmm-verify=${verificationToken}`,
+        `5. Type = TXT, Name = _smmpilot, Value = smmpilot-verify=${verificationToken}`,
         hostingProvider === 'lovable' ? `6. Type = TXT, Name = _lovable, Value = lovable_verify=${verificationToken}` : null,
         '7. Save and wait for DNS propagation',
       ].filter(Boolean) as string[],
@@ -370,7 +370,7 @@ export function getDnsConfigForDomain(
         hostingProvider === 'vercel'
           ? `4. Add CNAME record: Name = www, Content = ${VERCEL_CNAME}, Proxy = OFF`
           : `4. Add A record: Name = www, Content = ${LOVABLE_IP}, Proxy = OFF`,
-        `5. Add TXT record: Name = _homeofsmm, Content = homeofsmm-verify=${verificationToken}`,
+        `5. Add TXT record: Name = _smmpilot, Content = smmpilot-verify=${verificationToken}`,
         hostingProvider === 'lovable' ? `6. Add TXT record: Name = _lovable, Content = lovable_verify=${verificationToken}` : null,
         '⚠️ IMPORTANT: Disable Cloudflare proxy (orange cloud → gray) for A/CNAME records',
       ].filter(Boolean) as string[],
