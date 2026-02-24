@@ -167,9 +167,9 @@ Deno.serve(async (req) => {
     
     return new Response(xml, { headers: corsHeaders });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[generate-sitemap] Error:', error);
-    return new Response(`Error: ${error.message}`, { status: 500, headers: { 'Content-Type': 'text/plain' } });
+    return new Response(`Error: ${(error as Error).message}`, { status: 500, headers: { 'Content-Type': 'text/plain' } });
   }
 });
 

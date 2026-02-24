@@ -232,9 +232,9 @@ serve(async (req) => {
         return jsonResponse({ error: 'Invalid action' });
     }
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Team auth error:', error);
-    return jsonResponse({ error: error.message || 'Authentication failed' });
+    return jsonResponse({ error: (error as Error).message || 'Authentication failed' });
   }
 });
 

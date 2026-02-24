@@ -51,6 +51,7 @@ const PanelOnboardingV2 = () => {
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
   const [checkingPanel, setCheckingPanel] = useState(true);
+  const [restoringState, setRestoringState] = useState(true);
   const { user, profile } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -182,6 +183,7 @@ const PanelOnboardingV2 = () => {
         console.error('Error checking panel:', error);
       } finally {
         setCheckingPanel(false);
+        setRestoringState(false);
       }
     };
     
@@ -538,7 +540,7 @@ const PanelOnboardingV2 = () => {
     exit: { opacity: 0, x: -20 }
   };
 
-  if (checkingPanel) {
+  if (checkingPanel || restoringState) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-secondary/10 flex items-center justify-center">
         <div className="text-center">

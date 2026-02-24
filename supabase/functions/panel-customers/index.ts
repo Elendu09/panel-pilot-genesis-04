@@ -119,9 +119,9 @@ serve(async (req) => {
       default:
         return jsonResponse({ error: 'Invalid action' }, 400);
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Panel customers error:', error);
-    return jsonResponse({ error: error.message || 'Internal server error' }, 500);
+    return jsonResponse({ error: (error as Error).message || 'Internal server error' }, 500);
   }
 });
 

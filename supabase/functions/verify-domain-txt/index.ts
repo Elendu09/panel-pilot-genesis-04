@@ -178,10 +178,10 @@ serve(async (req) => {
       }
     );
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error(`[verify-domain-txt] Error:`, error);
     return new Response(
-      JSON.stringify({ error: error.message || "Verification failed" }),
+      JSON.stringify({ error: (error as Error).message || "Verification failed" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

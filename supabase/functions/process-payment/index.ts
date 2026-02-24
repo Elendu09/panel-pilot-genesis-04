@@ -66,6 +66,8 @@ serve(async (req) => {
       panel = panelData;
     }
 
+    const panelName = panel?.name || 'Platform';
+
     let gatewayConfig: any = null;
 
     if (isOwnerPayment) {
@@ -191,7 +193,7 @@ serve(async (req) => {
       txId = newTx.id;
       console.log('[process-payment] Created transaction:', txId, orderId ? `for order ${orderId}` : '');
     }
-    const transactionIdToUse = txId;
+    const transactionIdToUse: string = txId!;
 
     let redirectUrl: string | null = null;
     let paymentId: string | null = null;
@@ -217,7 +219,7 @@ serve(async (req) => {
           body: new URLSearchParams({
             'payment_method_types[0]': 'card',
             'line_items[0][price_data][currency]': currency,
-            'line_items[0][price_data][product_data][name]': `Account Deposit - ${panel.name}`,
+            'line_items[0][price_data][product_data][name]': `Account Deposit - ${panelName}`,
             'line_items[0][price_data][unit_amount]': String(Math.round(amount * 100)),
             'line_items[0][quantity]': '1',
             'mode': 'payment',
@@ -289,7 +291,7 @@ serve(async (req) => {
                 currency_code: currency.toUpperCase(),
                 value: amount.toFixed(2),
               },
-              description: `Account Deposit - ${panel.name}`,
+              description: `Account Deposit - ${panelName}`,
               custom_id: transactionIdToUse,
             }],
             application_context: {
@@ -334,7 +336,7 @@ serve(async (req) => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            name: `Deposit - ${panel.name}`,
+            name: `Deposit - ${panelName}`,
             description: `Account deposit of $${amount}`,
             pricing_type: 'fixed_price',
             local_price: {
@@ -391,7 +393,7 @@ serve(async (req) => {
               email: `buyer-${buyerId}@panel.local`,
             },
             customizations: {
-              title: `Deposit - ${panel.name}`,
+              title: `Deposit - ${panelName}`,
               description: `Account deposit of $${amount}`,
             },
             payment_options: 'card,banktransfer,ussd,mobilemoney',
@@ -606,7 +608,7 @@ serve(async (req) => {
             amount: amount,
             customerEmail: `buyer-${buyerId}@panel.local`,
             paymentReference: transactionIdToUse,
-            paymentDescription: `Deposit - ${panel.name}`,
+            paymentDescription: `Deposit - ${panelName}`,
             currencyCode: currency.toUpperCase(),
             contractCode: monnifyContractCode,
             redirectUrl: `${returnUrl}?success=true&transaction_id=${transactionIdToUse}`,
@@ -638,7 +640,7 @@ serve(async (req) => {
           headers: { 'x-api-key': nowPaymentsApiKey, 'Content-Type': 'application/json' },
           body: JSON.stringify({
             price_amount: amount, price_currency: currency, order_id: transactionIdToUse,
-            order_description: `Deposit - ${panel.name}`,
+            order_description: `Deposit - ${panelName}`,
             ipn_callback_url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/payment-webhook?gateway=nowpayments`,
             success_url: `${returnUrl}?success=true&transaction_id=${transactionIdToUse}`,
             cancel_url: `${returnUrl}?cancelled=true&transaction_id=${transactionIdToUse}`,
@@ -675,7 +677,7 @@ serve(async (req) => {
             price_amount: amount,
             price_currency: currency.toUpperCase(),
             receive_currency: currency.toUpperCase(),
-            title: `Deposit - ${panel.name}`,
+            title: `Deposit - ${panelName}`,
             callback_url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/payment-webhook?gateway=coingate`,
             success_url: `${returnUrl}?success=true&transaction_id=${transactionIdToUse}`,
             cancel_url: `${returnUrl}?cancelled=true&transaction_id=${transactionIdToUse}`,
@@ -720,7 +722,7 @@ serve(async (req) => {
             goodsType: '01',
             goodsCategory: 'Z000',
             referenceGoodsId: transactionIdToUse,
-            goodsName: `Deposit - ${panel.name}`,
+            goodsName: `Deposit - ${panelName}`,
           },
           returnUrl: `${returnUrl}?success=true&transaction_id=${transactionIdToUse}`,
           cancelUrl: `${returnUrl}?cancelled=true&transaction_id=${transactionIdToUse}`,
@@ -825,7 +827,7 @@ serve(async (req) => {
           pay_to_email: skrillEmail,
           amount: amount.toString(),
           currency: currency.toUpperCase(),
-          detail1_description: `Deposit - ${panel.name}`,
+          detail1_description: `Deposit - ${panelName}`,
           transaction_id: transactionIdToUse,
           return_url: `${returnUrl}?success=true&transaction_id=${transactionIdToUse}`,
           cancel_url: `${returnUrl}?cancelled=true&transaction_id=${transactionIdToUse}`,
@@ -840,7 +842,7 @@ serve(async (req) => {
       case 'perfectmoney': {
         // Perfect Money integration
         const pmAccountId = gatewayConfig.apiKey;
-        const pmPayeeName = gatewayConfig.payeeName || panel.name;
+        const pmPayeeName = gatewayConfig.payeeName || panelName;
         
         if (!pmAccountId) {
           return new Response(
@@ -888,7 +890,7 @@ serve(async (req) => {
           body: JSON.stringify({
             idempotency_key: transactionIdToUse,
             quick_pay: {
-              name: `Deposit - ${panel.name}`,
+              name: `Deposit - ${panelName}`,
               price_money: {
                 amount: Math.round(amount * 100), // Square uses cents
                 currency: currency.toUpperCase(),
@@ -973,7 +975,7 @@ serve(async (req) => {
           body: new URLSearchParams({
             'payment_method_types[0]': 'us_bank_account',
             'line_items[0][price_data][currency]': 'usd', // ACH only supports USD
-            'line_items[0][price_data][product_data][name]': `Account Deposit - ${panel.name}`,
+             'line_items[0][price_data][product_data][name]': `Account Deposit - ${panelName}`,
             'line_items[0][price_data][unit_amount]': String(Math.round(amount * 100)),
             'line_items[0][quantity]': '1',
             'mode': 'payment',
@@ -1021,7 +1023,7 @@ serve(async (req) => {
           body: new URLSearchParams({
             'payment_method_types[0]': 'sepa_debit',
             'line_items[0][price_data][currency]': 'eur', // SEPA only supports EUR
-            'line_items[0][price_data][product_data][name]': `Account Deposit - ${panel.name}`,
+            'line_items[0][price_data][product_data][name]': `Account Deposit - ${panelName}`,
             'line_items[0][price_data][unit_amount]': String(Math.round(amount * 100)),
             'line_items[0][quantity]': '1',
             'mode': 'payment',

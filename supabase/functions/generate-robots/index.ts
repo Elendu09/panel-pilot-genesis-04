@@ -195,8 +195,8 @@ Crawl-delay: 1`;
 
     return new Response(tenantRobots, { headers: corsHeaders });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[generate-robots] Error:', error);
-    return new Response(`Error: ${error.message}`, { status: 500, headers: corsHeaders });
+    return new Response(`Error: ${(error as Error).message}`, { status: 500, headers: corsHeaders });
   }
 });
