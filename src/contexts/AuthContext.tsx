@@ -138,14 +138,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           title: "Sign Up Error",
           description: error.message
         });
-      } else {
-        // Update profile with username if provided
-        if (data.user && username) {
-          await supabase
-            .from('profiles')
-            .update({ username: username })
-            .eq('user_id', data.user.id);
-        }
+    } else {
+      // Username is now captured by the handle_new_user trigger from raw_user_meta_data
         toast({
           title: "Success",
           description: "Please check your email to confirm your account."

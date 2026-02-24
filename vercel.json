@@ -6,11 +6,11 @@
 "framework": "vite",
 "rewrites": [
 { "source": "/api/v2/:path*", "destination": "https://tooudgubuhxjbbvzjcgx.supabase.co/functions/v1/:path*" },
-{ "source": "/(.)", "destination": "/" }
+{ "source": "/(.*)", "destination": "/" }
 ],
 "headers": [
 {
-"source": "/(.)",
+"source": "/(.*)",
 "headers": [
 {
 "key": "Content-Security-Policy",
@@ -22,7 +22,7 @@
 ]
 },
 {
-"source": "/assets/(.)",
+"source": "/assets/(.*)",
 "headers": [
 { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
 ]
@@ -34,13 +34,13 @@
 ]
 },
 {
-"source": "/(.).png",
+"source": "/(.*).png",
 "headers": [
 { "key": "Cache-Control", "value": "public, max-age=604800, stale-while-revalidate=86400" }
 ]
 },
 {
-"source": "/(.*).ico",
+"source": "/(.*)\\.ico",
 "headers": [
 { "key": "Cache-Control", "value": "public, max-age=604800, stale-while-revalidate=86400" }
 ]

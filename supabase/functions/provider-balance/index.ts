@@ -230,12 +230,12 @@ serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error fetching provider balance:", error);
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message || "Failed to fetch balance" 
+        error: (error as Error).message || "Failed to fetch balance" 
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

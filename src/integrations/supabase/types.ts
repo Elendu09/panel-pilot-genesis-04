@@ -3860,7 +3860,9 @@ export type Database = {
           buyer_id: string | null
           created_at: string
           description: string | null
+          external_id: string | null
           id: string
+          metadata: Json | null
           order_id: string | null
           panel_id: string | null
           payment_id: string | null
@@ -3874,7 +3876,9 @@ export type Database = {
           buyer_id?: string | null
           created_at?: string
           description?: string | null
+          external_id?: string | null
           id?: string
+          metadata?: Json | null
           order_id?: string | null
           panel_id?: string | null
           payment_id?: string | null
@@ -3888,7 +3892,9 @@ export type Database = {
           buyer_id?: string | null
           created_at?: string
           description?: string | null
+          external_id?: string | null
           id?: string
+          metadata?: Json | null
           order_id?: string | null
           panel_id?: string | null
           payment_id?: string | null

@@ -323,10 +323,10 @@ Return ONLY valid JSON (no markdown, no explanation):
       JSON.stringify({ enhanced, suggestion: 'AI-enhanced' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error in enhance-seo-text:', error);
     return new Response(
-      JSON.stringify({ error: error.message, enhanced: '' }),
+      JSON.stringify({ error: (error as Error).message, enhanced: '' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

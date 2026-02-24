@@ -124,7 +124,9 @@ const Auth = () => {
     e.preventDefault();
     setLoading(true);
     
-    if (!username.trim()) {
+    const trimmedUsername = username.trim();
+    
+    if (!trimmedUsername) {
       toast({
         variant: "destructive",
         title: "Username Required",
@@ -134,7 +136,44 @@ const Auth = () => {
       return;
     }
     
-    const { error } = await signUp(email, password, username);
+    if (trimmedUsername.length < 3) {
+      toast({
+        variant: "destructive",
+        title: "Username Too Short",
+        description: "Username must be at least 3 characters."
+      });
+      setLoading(false);
+      return;
+    }
+    
+    if (trimmedUsername.length > 20) {
+      toast({
+        variant: "destructive",
+        title: "Username Too Long",
+        description: "Username must be 20 characters or less."
+      });
+      setLoading(false);
+      return;
+    }
+    
+    // Check username uniqueness
+    const { data: existingUser } = await supabase
+      .from('profiles')
+      .select('id')
+      .ilike('username', trimmedUsername)
+      .maybeSingle();
+    
+    if (existingUser) {
+      toast({
+        variant: "destructive",
+        title: "Username Taken",
+        description: "This username is already in use. Please choose another."
+      });
+      setLoading(false);
+      return;
+    }
+    
+    const { error } = await signUp(email, password, trimmedUsername);
     
     if (!error) {
       setRegisteredEmail(email);
@@ -301,15 +340,20 @@ const Auth = () => {
             <TabsContent value="signup">
               <form onSubmit={handleSignUp} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="username">Username *</Label>
+                  <Label htmlFor="username">Username * <span className="text-xs text-muted-foreground">(3-20 characters)</span></Label>
                   <Input
                     id="username"
                     type="text"
                     value={username}
-                    onChange={(e) => setUsername(e.target.value)}
+                    onChange={(e) => setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 20))}
                     placeholder="Choose a username"
                     required
+                    minLength={3}
+                    maxLength={20}
                   />
+                  {username.length > 0 && username.length < 3 && (
+                    <p className="text-xs text-destructive">Username must be at least 3 characters</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signupEmail">Email *</Label>

@@ -46,12 +46,12 @@ async function validateStripe(apiKey: string): Promise<ValidationResponse> {
         error: errorData.error?.message || 'Authentication failed',
       };
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Stripe validation error:', error);
     return {
       success: false,
       message: 'Failed to connect to Stripe',
-      error: error.message,
+      error: (error as Error).message,
     };
   }
 }
@@ -92,12 +92,12 @@ async function validatePayPal(clientId: string, clientSecret: string): Promise<V
         error: errorData.error_description || 'Authentication failed',
       };
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('PayPal validation error:', error);
     return {
       success: false,
       message: 'Failed to connect to PayPal',
-      error: error.message,
+      error: (error as Error).message,
     };
   }
 }
@@ -128,12 +128,12 @@ async function validateCoinbase(apiKey: string): Promise<ValidationResponse> {
         error: errorData.error?.message || 'Authentication failed',
       };
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Coinbase validation error:', error);
     return {
       success: false,
       message: 'Failed to connect to Coinbase Commerce',
-      error: error.message,
+      error: (error as Error).message,
     };
   }
 }
@@ -162,12 +162,12 @@ async function validateFlutterwave(secretKey: string): Promise<ValidationRespons
         error: 'Authentication failed',
       };
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Flutterwave validation error:', error);
     return {
       success: false,
       message: 'Failed to connect to Flutterwave',
-      error: error.message,
+      error: (error as Error).message,
     };
   }
 }
@@ -196,12 +196,12 @@ async function validatePaystack(secretKey: string): Promise<ValidationResponse> 
         error: 'Authentication failed',
       };
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Paystack validation error:', error);
     return {
       success: false,
       message: 'Failed to connect to Paystack',
-      error: error.message,
+      error: (error as Error).message,
     };
   }
 }
@@ -230,12 +230,12 @@ async function validateKoraPay(secretKey: string): Promise<ValidationResponse> {
         error: 'Authentication failed',
       };
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Kora Pay validation error:', error);
     return {
       success: false,
       message: 'Failed to connect to Kora Pay',
-      error: error.message,
+      error: (error as Error).message,
     };
   }
 }
@@ -302,10 +302,10 @@ serve(async (req) => {
       JSON.stringify(result),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Validation error:', error);
     return new Response(
-      JSON.stringify({ success: false, message: 'Server error', error: error.message }),
+      JSON.stringify({ success: false, message: 'Server error', error: (error as Error).message }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
   }
