@@ -241,6 +241,7 @@ const Billing = () => {
           amount: plan.price,
           panelId: panel.id,
           buyerId: profile.id,
+          isOwnerDeposit: true,
           returnUrl: `${window.location.origin}/panel/billing?upgrade=success`,
           cancelUrl: `${window.location.origin}/panel/billing?upgrade=cancelled`,
           metadata: {
@@ -354,6 +355,7 @@ const Billing = () => {
           amount: commissionData.pendingCommission,
           panelId: panel.id,
           buyerId: profile.id,
+          isOwnerDeposit: true,
           returnUrl: `${window.location.origin}/panel/billing?commission=success`,
           cancelUrl: `${window.location.origin}/panel/billing?commission=cancelled`,
           metadata: {
