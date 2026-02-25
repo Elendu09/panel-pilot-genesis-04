@@ -54,6 +54,170 @@ interface ProviderConfig {
   sandboxMode?: boolean;
 }
 
+// Provider-specific field configuration for correct credential labels
+const providerFieldConfig: Record<string, {
+  field1Label: string;
+  field1Placeholder: string;
+  field1Description: string;
+  field1Key: string; // maps to config key
+  field2Label: string;
+  field2Placeholder: string;
+  field2Description: string;
+  field2Key: string;
+  hasField2: boolean;
+  extraFields?: Array<{key: string; label: string; placeholder: string; description: string}>;
+  docsUrl: string;
+}> = {
+  stripe: {
+    field1Label: 'Publishable Key',
+    field1Placeholder: 'pk_test_... or pk_live_...',
+    field1Description: 'Stripe Dashboard → Developers → API Keys',
+    field1Key: 'publicKey',
+    field2Label: 'Secret Key',
+    field2Placeholder: 'sk_test_... or sk_live_...',
+    field2Description: 'Server-side key. Keep confidential.',
+    field2Key: 'secretKey',
+    hasField2: true,
+    docsUrl: 'https://dashboard.stripe.com/apikeys'
+  },
+  paypal: {
+    field1Label: 'Client ID',
+    field1Placeholder: 'Your PayPal Client ID',
+    field1Description: 'PayPal Developer → My Apps & Credentials',
+    field1Key: 'publicKey',
+    field2Label: 'Client Secret',
+    field2Placeholder: 'Your PayPal Client Secret',
+    field2Description: 'Generated alongside Client ID',
+    field2Key: 'secretKey',
+    hasField2: true,
+    docsUrl: 'https://developer.paypal.com/dashboard/applications'
+  },
+  paystack: {
+    field1Label: 'Public Key',
+    field1Placeholder: 'pk_test_... or pk_live_...',
+    field1Description: 'Paystack Dashboard → Settings → API Keys',
+    field1Key: 'publicKey',
+    field2Label: 'Secret Key',
+    field2Placeholder: 'sk_test_... or sk_live_...',
+    field2Description: 'Server-side key for API calls',
+    field2Key: 'secretKey',
+    hasField2: true,
+    docsUrl: 'https://dashboard.paystack.com/#/settings/developers'
+  },
+  flutterwave: {
+    field1Label: 'Public Key',
+    field1Placeholder: 'FLWPUBK_TEST-... or FLWPUBK-...',
+    field1Description: 'Flutterwave Dashboard → Settings → API Keys',
+    field1Key: 'publicKey',
+    field2Label: 'Secret Key',
+    field2Placeholder: 'FLWSECK_TEST-... or FLWSECK-...',
+    field2Description: 'Server-side key. Never expose client-side.',
+    field2Key: 'secretKey',
+    hasField2: true,
+    extraFields: [{ key: 'encryptionKey', label: 'Encryption Key', placeholder: 'FLWSECK_TEST...', description: 'Required for direct card charge endpoints' }],
+    docsUrl: 'https://developer.flutterwave.com/docs/integration-guides/authentication'
+  },
+  razorpay: {
+    field1Label: 'Key ID',
+    field1Placeholder: 'rzp_test_... or rzp_live_...',
+    field1Description: 'Razorpay Dashboard → Settings → API Keys',
+    field1Key: 'publicKey',
+    field2Label: 'Key Secret',
+    field2Placeholder: 'Your Razorpay Key Secret',
+    field2Description: 'Shown only once when generated. Store securely.',
+    field2Key: 'secretKey',
+    hasField2: true,
+    docsUrl: 'https://dashboard.razorpay.com/app/website-app-settings/api-keys'
+  },
+  coinbase: {
+    field1Label: 'API Key',
+    field1Placeholder: 'Your Coinbase Commerce API Key',
+    field1Description: 'Coinbase Commerce → Settings → API Keys',
+    field1Key: 'publicKey',
+    field2Label: '',
+    field2Placeholder: '',
+    field2Description: '',
+    field2Key: 'secretKey',
+    hasField2: false,
+    docsUrl: 'https://commerce.coinbase.com/dashboard/settings'
+  },
+  cryptomus: {
+    field1Label: 'Merchant ID',
+    field1Placeholder: 'Your CryptoMus Merchant ID',
+    field1Description: 'CryptoMus Dashboard → Settings',
+    field1Key: 'merchantId',
+    field2Label: 'API Key',
+    field2Placeholder: 'Your CryptoMus Payment API Key',
+    field2Description: 'Payment API key from dashboard',
+    field2Key: 'secretKey',
+    hasField2: true,
+    docsUrl: 'https://doc.cryptomus.com/'
+  },
+  polar: {
+    field1Label: 'Access Token',
+    field1Placeholder: 'Your Polar.sh Access Token',
+    field1Description: 'Polar.sh → Settings → Access Tokens',
+    field1Key: 'publicKey',
+    field2Label: '',
+    field2Placeholder: '',
+    field2Description: '',
+    field2Key: 'secretKey',
+    hasField2: false,
+    docsUrl: 'https://polar.sh/settings'
+  },
+  nowpayments: {
+    field1Label: 'API Key',
+    field1Placeholder: 'Your NOWPayments API Key',
+    field1Description: 'NOWPayments Dashboard → Store Settings → API Keys',
+    field1Key: 'publicKey',
+    field2Label: 'IPN Secret',
+    field2Placeholder: 'Your IPN callback secret',
+    field2Description: 'For verifying payment notifications',
+    field2Key: 'secretKey',
+    hasField2: true,
+    docsUrl: 'https://nowpayments.io/help/what-is-api-key'
+  },
+  paddle: {
+    field1Label: 'Vendor ID',
+    field1Placeholder: 'Your Paddle Vendor ID (numeric)',
+    field1Description: 'Paddle Dashboard → Developer Tools → Authentication',
+    field1Key: 'publicKey',
+    field2Label: 'API Key',
+    field2Placeholder: 'Your Paddle API Key',
+    field2Description: 'Found in Developer Tools → Authentication',
+    field2Key: 'secretKey',
+    hasField2: true,
+    docsUrl: 'https://developer.paddle.com/getting-started/overview'
+  },
+  lemonsqueezy: {
+    field1Label: 'API Key',
+    field1Placeholder: 'Your Lemon Squeezy API Key',
+    field1Description: 'Lemon Squeezy → Settings → API',
+    field1Key: 'publicKey',
+    field2Label: 'Signing Secret',
+    field2Placeholder: 'Your webhook signing secret',
+    field2Description: 'For verifying webhook signatures',
+    field2Key: 'secretKey',
+    hasField2: true,
+    docsUrl: 'https://docs.lemonsqueezy.com/api'
+  },
+};
+
+const getProviderFieldConfig = (providerName: string) => {
+  return providerFieldConfig[providerName] || {
+    field1Label: 'Public/API Key',
+    field1Placeholder: 'Your public or API key',
+    field1Description: 'Check provider documentation',
+    field1Key: 'publicKey',
+    field2Label: 'Secret Key',
+    field2Placeholder: 'Your secret key',
+    field2Description: 'Server-side key',
+    field2Key: 'secretKey',
+    hasField2: true,
+    docsUrl: '',
+  };
+};
+
 const categoryIcons: Record<string, React.ElementType> = {
   card: CreditCard,
   wallet: Wallet,
@@ -382,46 +546,67 @@ export const SubscriptionProviderManager = () => {
                 {/* Config Section - Only show when enabled */}
                 {provider.is_enabled && (
                   <div className="border-t border-border/50 p-4 space-y-4 bg-background/30">
-                    {/* API Keys */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground">
-                          {provider.provider_name === 'paypal' ? 'Client ID' : 'Public/API Key'}
-                        </Label>
-                        <Input
-                          placeholder={`${provider.provider_name}_pk_...`}
-                          value={config.publicKey}
-                          onChange={(e) => updateConfig(provider.provider_name, 'publicKey', e.target.value)}
-                          className="h-9 text-sm font-mono bg-background/50"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground">
-                          {provider.provider_name === 'paypal' ? 'Client Secret' : 'Secret Key'}
-                        </Label>
-                        <Input
-                          type="password"
-                          placeholder="••••••••••••"
-                          value={config.secretKey}
-                          onChange={(e) => updateConfig(provider.provider_name, 'secretKey', e.target.value)}
-                          className="h-9 text-sm font-mono bg-background/50"
-                        />
-                      </div>
-                    </div>
+                    {/* API Keys - Provider-specific labels */}
+                    {(() => {
+                      const fieldConfig = getProviderFieldConfig(provider.provider_name);
+                      return (
+                        <>
+                          <div className={cn("grid gap-3", fieldConfig.hasField2 ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1")}>
+                            <div className="space-y-1.5">
+                              <Label className="text-xs font-medium">{fieldConfig.field1Label}</Label>
+                              <Input
+                                placeholder={fieldConfig.field1Placeholder}
+                                value={(config as any)[fieldConfig.field1Key] || ''}
+                                onChange={(e) => updateConfig(provider.provider_name, fieldConfig.field1Key, e.target.value)}
+                                className="h-9 text-sm font-mono bg-background/50"
+                              />
+                              <p className="text-[10px] text-muted-foreground">{fieldConfig.field1Description}</p>
+                            </div>
+                            {fieldConfig.hasField2 && (
+                              <div className="space-y-1.5">
+                                <Label className="text-xs font-medium">{fieldConfig.field2Label}</Label>
+                                <Input
+                                  type="password"
+                                  placeholder={fieldConfig.field2Placeholder}
+                                  value={(config as any)[fieldConfig.field2Key] || ''}
+                                  onChange={(e) => updateConfig(provider.provider_name, fieldConfig.field2Key, e.target.value)}
+                                  className="h-9 text-sm font-mono bg-background/50"
+                                />
+                                <p className="text-[10px] text-muted-foreground">{fieldConfig.field2Description}</p>
+                              </div>
+                            )}
+                          </div>
 
-                    {/* Provider-specific fields */}
-                    {provider.provider_name === 'flutterwave' && (
-                      <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground">Encryption Key</Label>
-                        <Input
-                          type="password"
-                          placeholder="••••••••••••"
-                          value={config.encryptionKey || ''}
-                          onChange={(e) => updateConfig(provider.provider_name, 'encryptionKey', e.target.value)}
-                          className="h-9 text-sm font-mono bg-background/50"
-                        />
-                      </div>
-                    )}
+                          {/* Extra fields (e.g. Flutterwave encryption key) */}
+                          {fieldConfig.extraFields?.map((extra) => (
+                            <div key={extra.key} className="space-y-1.5">
+                              <Label className="text-xs font-medium">{extra.label}</Label>
+                              <Input
+                                type="password"
+                                placeholder={extra.placeholder}
+                                value={(config as any)[extra.key] || ''}
+                                onChange={(e) => updateConfig(provider.provider_name, extra.key, e.target.value)}
+                                className="h-9 text-sm font-mono bg-background/50"
+                              />
+                              <p className="text-[10px] text-muted-foreground">{extra.description}</p>
+                            </div>
+                          ))}
+
+                          {/* Docs link */}
+                          {fieldConfig.docsUrl && (
+                            <a
+                              href={fieldConfig.docsUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                              View {provider.display_name} API Docs
+                            </a>
+                          )}
+                        </>
+                      );
+                    })()}
 
                     {/* Webhook URL */}
                     <div className="space-y-1.5">

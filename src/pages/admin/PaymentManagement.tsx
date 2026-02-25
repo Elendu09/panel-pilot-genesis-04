@@ -394,7 +394,6 @@ const PaymentManagement = () => {
           { value: "subscription-providers", label: "Payment Providers", icon: CreditCard },
           { value: "transactions", label: "Transactions", icon: ArrowUpRight },
           { value: "panel-funding", label: "Panel Funding", icon: Building2 },
-          { value: "methods", label: "Methods", icon: Coins },
           { value: "fees", label: "Fees", icon: DollarSign },
           { value: "payouts", label: "Payouts", icon: DollarSign },
         ]}
@@ -771,82 +770,7 @@ const PaymentManagement = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="methods" className="space-y-6">
-          <Card className="bg-gradient-card border-border shadow-card">
-            <CardHeader className="gap-3">
-              <CardTitle className="flex items-center justify-between">
-                <span>Global Payment Methods</span>
-                <Badge variant="secondary" className="ml-2">{enabled.size} enabled</Badge>
-              </CardTitle>
-              <CardDescription>Toggle up to 120+ global methods. Enabled methods can be used by panels if Expose to Panels is on.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex flex-col md:flex-row gap-3">
-                <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    className="pl-9"
-                    placeholder="Search payment methods..."
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                  />
-                </div>
-                <div className="w-full md:w-52">
-                  <Select value={catFilter} onValueChange={(v) => setCatFilter(v as any)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All categories</SelectItem>
-                      <SelectItem value="card">Cards</SelectItem>
-                      <SelectItem value="wallet">Wallets</SelectItem>
-                      <SelectItem value="bank">Bank</SelectItem>
-                      <SelectItem value="crypto">Crypto</SelectItem>
-                      <SelectItem value="local">Local</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={enableAll}>Enable all</Button>
-                  <Button variant="outline" onClick={disableAll}>Disable all</Button>
-                </div>
-              </div>
-
-              <label className="flex items-center justify-between p-3 border rounded-lg">
-                <div className="flex items-center gap-2">
-                  <Filter className="w-4 h-4" />
-                  <div>
-                    <div className="font-medium">Expose to Panels</div>
-                    <div className="text-xs text-muted-foreground">When enabled, panels can add these methods in their Payment Methods.</div>
-                  </div>
-                </div>
-                <Switch checked={exposeToPanels} onCheckedChange={setExposeToPanels} />
-              </label>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-                {filtered.map((m) => (
-                  <div
-                    key={m.id}
-                    className={`flex items-center justify-between p-3 rounded-lg border bg-card/50 ${enabled.has(m.id) ? 'ring-1 ring-primary/40' : ''}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-md bg-primary/15 flex items-center justify-center text-primary font-semibold">
-                        {m.name.slice(0,2).toUpperCase()}
-                      </div>
-                      <div>
-                        <div className="font-medium">{m.name}</div>
-                        <div className="text-xs text-muted-foreground capitalize">{m.category}</div>
-                      </div>
-                    </div>
-                    <Switch checked={enabled.has(m.id)} onCheckedChange={() => toggleOne(m.id)} />
-                  </div>
-                ))}
-              </div>
-
-              <p className="text-xs text-muted-foreground">Showing {filtered.length} of {ALL_METHODS.length}+ methods</p>
-            </CardContent>
-          </Card>
-        </TabsContent>
+        {/* Methods tab removed - use Payment Providers tab for gateway configuration */}
 
         <TabsContent value="fees" className="space-y-6">
           <Card className="bg-gradient-card border-border shadow-card">
