@@ -68,6 +68,17 @@ serve(async (req) => {
 
     const panelName = panel?.name || 'Platform';
 
+    // Fetch user email for payment gateways that require it
+    let buyerEmail = metadata?.ownerEmail || '';
+    if (!buyerEmail) {
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('id', buyerId)
+        .single();
+      buyerEmail = profileData?.email || `user-${buyerId}@platform.local`;
+    }
+
     let gatewayConfig: any = null;
 
     if (isOwnerPayment) {
@@ -170,7 +181,8 @@ serve(async (req) => {
         .from('transactions')
         .insert({
           user_id: buyerId,
-          buyer_id: buyerId, // Set both user_id and buyer_id for consistent querying
+          // buyer_id FK references client_users, so only set it for buyer (non-owner) payments
+          ...(isOwnerPayment ? {} : { buyer_id: buyerId }),
           panel_id: panelId,
           amount: amount,
           type: txType,
@@ -390,7 +402,7 @@ serve(async (req) => {
             currency: currency.toUpperCase(),
             redirect_url: `${returnUrl}?success=true&transaction_id=${transactionIdToUse}`,
             customer: {
-              email: `buyer-${buyerId}@panel.local`,
+              email: buyerEmail,
             },
             customizations: {
               title: `Deposit - ${panelName}`,
@@ -438,7 +450,7 @@ serve(async (req) => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            email: `buyer-${buyerId}@panel.local`,
+            email: buyerEmail,
             amount: Math.round(amount * 100),
             currency: currency.toUpperCase(),
             callback_url: `${returnUrl}?success=true&transaction_id=${transactionIdToUse}`,
@@ -489,7 +501,7 @@ serve(async (req) => {
             reference: transactionIdToUse,
             redirect_url: `${returnUrl}?success=true&transaction_id=${transactionIdToUse}`,
             customer: {
-              email: `buyer-${buyerId}@panel.local`,
+              email: buyerEmail,
             },
             metadata: {
               panelId,
@@ -606,7 +618,7 @@ serve(async (req) => {
           },
           body: JSON.stringify({
             amount: amount,
-            customerEmail: `buyer-${buyerId}@panel.local`,
+            customerEmail: buyerEmail,
             paymentReference: transactionIdToUse,
             paymentDescription: `Deposit - ${panelName}`,
             currencyCode: currency.toUpperCase(),
