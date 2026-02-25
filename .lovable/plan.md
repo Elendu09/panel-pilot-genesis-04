@@ -1,179 +1,212 @@
 
-# Fix Plan: Vercel 404, Payment Transaction, Username Auth, Step Counter, and Build Errors
 
-## Issue 1: Vercel 404 Error on Routes like `/auth?verified=true`
+# Plan: Admin Payment Gateway Enhancement + Payment Error Fixes
 
-**Root Cause:** The `vercel.json` rewrites use `/(.)` (matches single character) instead of `/(.*)` (matches any path). The diff shows the wildcard `*` was lost during a manual edit.
+## Analysis Summary
 
-**Fix in `vercel.json`:**
-- Line 9: `"source": "/(.)"` must become `"source": "/(.*)"` 
-- Line 13: `"source": "/(.)"` must become `"source": "/(.*)"` 
-- Line 25: `"source": "/assets/(.)"` must become `"source": "/assets/(.*)"` 
-- Line 37: `"source": "/(.).png"` must become `"source": "/(.*).png"` 
+### Issue 1: Admin Payment Gateway Labels Are Incorrect
+The `SubscriptionProviderManager.tsx` component uses generic "Public/API Key" and "Secret Key" labels for ALL providers, but each payment gateway has different credential names:
 
-All regex patterns need the `*` quantifier restored.
+- **Stripe**: "Publishable Key" + "Secret Key"
+- **PayPal**: "Client ID" + "Client Secret"
+- **Paystack**: "Public Key" + "Secret Key"
+- **Flutterwave**: "Public Key" + "Secret Key" + "Encryption Key" (already has extra field)
+- **Razorpay**: "Key ID" + "Key Secret"
+- **Coinbase Commerce**: "API Key" (single key only, no secret)
+- **CryptoMus**: "Merchant ID" + "API Key"
+- **Polar.sh**: "Access Token" (single key only)
+
+Currently all providers show the same two generic input fields. The admin can't tell which credentials go where.
+
+### Issue 2: "Failed to create transaction record" Errors
+
+Three separate causes:
+
+**A. Billing upgrade missing `isOwnerDeposit` flag** (`Billing.tsx` line 238-252): The `handleUpgrade` call to `process-payment` does NOT include `isOwnerDeposit: true`. Without this flag, the edge function treats it as a buyer payment and tries to find the gateway in panel settings (which don't have admin gateways configured). It fails at the gateway config lookup.
+
+**B. Onboarding payment step counter still showing wrong step**: The `restoringState` flag was added but needs verification that the restoration effect properly sets `selectedPlan` before rendering.
+
+**C. The `metadata` column migration may not have run**: The DB query confirms `metadata` and `external_id` columns DO exist now, so this is resolved.
+
+### Root Cause of "Failed to create transaction record"
+
+After testing the edge function directly, the actual error path is:
+1. For **upgrade** in Billing: Missing `isOwnerDeposit: true` → edge function treats as buyer payment → tries `panel.settings.payments.enabledMethods` → gateway not found → returns error BEFORE creating transaction. The error message "Failed to create transaction record" is misleading since the function never reaches the transaction creation code.
+2. For **deposit** in Billing: The `QuickDeposit` component correctly passes `isOwnerDeposit: true` via `handleDeposit`, but the Billing page's `handleDeposit` function also correctly passes it. So deposit should work unless the gateway config in `platform_payment_providers` is missing keys.
+
+Let me trace the upgrade flow more carefully: `handleUpgrade` passes `metadata: { type: 'subscription' }` but NOT `isOwnerDeposit: true`. In the edge function line 40: `isOwnerPayment = isOwnerDeposit || metadata?.type === 'subscription'`. So `metadata.type === 'subscription'` SHOULD trigger the owner payment path. But the edge function at line 42 checks `!panelId && !isOwnerPayment` - panelId IS provided, so this passes. Then it fetches the panel (line 52-66) - this should work. Then at line 73 it checks `isOwnerPayment` which is TRUE (because metadata.type === 'subscription'). So it should use admin gateways.
+
+This means the gateway config fetch from `platform_payment_providers` succeeds (Flutterwave/Paystack are enabled), the config is extracted at line 99-109, and the transaction insert at line 169-184 should work since `metadata` column now exists.
+
+The remaining issue could be that `profile.id` (used as `buyerId`) is different from `user.id`. Let me check: In `AuthContext`, `profile.id` is the profile's ID. But `user_id` in the transactions table expects the auth user's UUID. The edge function uses `buyerId` as both `user_id` and `buyer_id` (line 172-173). If `profile.id` matches the auth user ID, this works. But if profiles use a different primary key... Actually, in the DB schema, profiles have `id` and `user_id` columns. `profile.id` might be the same as `user_id` if the `handle_new_user` trigger sets `id = NEW.id` (which it does). So this should be fine.
+
+**The real issue** is likely that the edge function was NOT redeployed after the metadata column migration. The function code references `metadata` in the INSERT, and if the function was deployed before the column existed, it would have worked initially but cached a stale schema. But since edge functions don't cache DB schemas (they run queries at runtime), this shouldn't matter.
+
+Let me reconsider: The user screenshots show "Failed to create transaction record" which is the exact error string from line 189. This means the transaction INSERT itself fails. Possible reasons:
+1. The `user_id` foreign key constraint - if `buyerId` doesn't match an existing auth user
+2. The `panel_id` foreign key constraint - if panelId doesn't match
+3. RLS policies blocking the insert even with service_role key (unlikely since service_role bypasses RLS)
+
+Since we're using `createClient` with `SUPABASE_SERVICE_ROLE_KEY`, RLS is bypassed. The most likely cause is that the function needs to be redeployed with the latest code that includes the `panelName` fallback and proper error handling.
 
 ---
 
-## Issue 2: "Failed to create transaction record" Payment Error
+## Implementation Plan
 
-**Root Cause:** The `process-payment` edge function tries to insert `metadata` and later update `external_id` on the `transactions` table, but **neither column exists**. The database only has: `id, user_id, order_id, amount, type, status, payment_method, payment_id, description, created_at, panel_id, buyer_id`.
+### 1. Enhance Admin Payment Gateway Labels (SubscriptionProviderManager.tsx)
 
-The transaction INSERT at line 167-180 includes `metadata` (for orderId), and the UPDATE at line 1227 uses `external_id`. Both fail silently or cause errors.
+Create a provider-specific configuration map that defines the correct field names, placeholders, descriptions, and required fields for each gateway:
 
-**Fix:**
-
-**Database migration** to add the missing columns:
-```sql
-ALTER TABLE public.transactions 
-  ADD COLUMN IF NOT EXISTS metadata jsonb DEFAULT NULL,
-  ADD COLUMN IF NOT EXISTS external_id text DEFAULT NULL;
-```
-
-Also fix the `transactionIdToUse` type issue causing build errors. Since `txId` can be `string | undefined` when `transactionId` is optional and the insert may fail, we need to ensure it's always `string` after the transaction is created:
 ```typescript
-const transactionIdToUse: string = txId!;
+const providerFieldConfig: Record<string, {
+  field1Label: string;
+  field1Placeholder: string;
+  field1Description: string;
+  field2Label: string;
+  field2Placeholder: string;
+  field2Description: string;
+  hasField2: boolean;
+  extraFields?: Array<{key: string; label: string; placeholder: string; description: string; type?: string}>;
+  docsUrl: string;
+}> = {
+  stripe: {
+    field1Label: 'Publishable Key',
+    field1Placeholder: 'pk_test_... or pk_live_...',
+    field1Description: 'Found in Stripe Dashboard → Developers → API Keys',
+    field2Label: 'Secret Key',
+    field2Placeholder: 'sk_test_... or sk_live_...',
+    field2Description: 'Server-side key. Keep this confidential.',
+    hasField2: true,
+    docsUrl: 'https://dashboard.stripe.com/apikeys'
+  },
+  paypal: {
+    field1Label: 'Client ID',
+    field1Placeholder: 'Your PayPal Client ID',
+    field1Description: 'Found in PayPal Developer → My Apps & Credentials',
+    field2Label: 'Client Secret',
+    field2Placeholder: 'Your PayPal Client Secret',
+    field2Description: 'Generated alongside Client ID',
+    hasField2: true,
+    docsUrl: 'https://developer.paypal.com/dashboard/applications'
+  },
+  paystack: {
+    field1Label: 'Public Key',
+    field1Placeholder: 'pk_test_... or pk_live_...',
+    field1Description: 'Found in Paystack Dashboard → Settings → API Keys',
+    field2Label: 'Secret Key',
+    field2Placeholder: 'sk_test_... or sk_live_...',
+    field2Description: 'Server-side key for API authentication',
+    hasField2: true,
+    docsUrl: 'https://dashboard.paystack.com/#/settings/developers'
+  },
+  flutterwave: {
+    field1Label: 'Public Key',
+    field1Placeholder: 'FLWPUBK_TEST-... or FLWPUBK-...',
+    field1Description: 'Found in Flutterwave Dashboard → Settings → API Keys',
+    field2Label: 'Secret Key',
+    field2Placeholder: 'FLWSECK_TEST-... or FLWSECK-...',
+    field2Description: 'Server-side key. Never expose client-side.',
+    hasField2: true,
+    extraFields: [{ key: 'encryptionKey', label: 'Encryption Key', placeholder: 'FLWSECK_TEST...', description: 'Required for direct card charge endpoints' }],
+    docsUrl: 'https://developer.flutterwave.com/docs/authentication'
+  },
+  razorpay: {
+    field1Label: 'Key ID',
+    field1Placeholder: 'rzp_test_... or rzp_live_...',
+    field1Description: 'Found in Razorpay Dashboard → Settings → API Keys',
+    field2Label: 'Key Secret',
+    field2Placeholder: 'Your Razorpay Key Secret',
+    field2Description: 'Shown only once when generated. Store securely.',
+    hasField2: true,
+    docsUrl: 'https://dashboard.razorpay.com/app/website-app-settings/api-keys'
+  },
+  coinbase: {
+    field1Label: 'API Key',
+    field1Placeholder: 'Your Coinbase Commerce API Key',
+    field1Description: 'Found in Coinbase Commerce → Settings → API Keys',
+    field2Label: '',
+    field2Placeholder: '',
+    field2Description: '',
+    hasField2: false,
+    docsUrl: 'https://commerce.coinbase.com/dashboard/settings'
+  },
+  cryptomus: {
+    field1Label: 'Merchant ID',
+    field1Placeholder: 'Your CryptoMus Merchant ID',
+    field1Description: 'Found in CryptoMus Dashboard → Settings',
+    field2Label: 'API Key',
+    field2Placeholder: 'Your CryptoMus API Key',
+    field2Description: 'Payment API key from dashboard',
+    hasField2: true,
+    docsUrl: 'https://doc.cryptomus.com/'
+  },
+  polar: {
+    field1Label: 'Access Token',
+    field1Placeholder: 'Your Polar.sh Access Token',
+    field1Description: 'Generate from Polar.sh Dashboard → Settings → Access Tokens',
+    field2Label: '',
+    field2Placeholder: '',
+    field2Description: '',
+    hasField2: false,
+    docsUrl: 'https://polar.sh/settings'
+  }
+};
 ```
 
-Additionally, when `panel` is null (owner deposit without panelId), the gateway cases reference `panel.name` which would crash. Add a fallback:
+**Changes to `SubscriptionProviderManager.tsx` lines 386-410:**
+- Replace the static "Public/API Key" and "Secret Key" labels with dynamic labels from `providerFieldConfig`
+- Add placeholder text matching the actual key format per gateway
+- Add a small help text/description under each field
+- Conditionally hide the second field when `hasField2` is false (e.g., Coinbase, Polar)
+- Add a "View Docs" link button next to each provider that opens the official docs URL
+- Move the Flutterwave encryption key rendering into the `extraFields` pattern
+- For CryptoMus, map `field1` to `merchantId` instead of `publicKey`
+
+### 2. Fix Billing Upgrade Payment - Add `isOwnerDeposit` Flag
+
+**File:** `src/pages/panel/Billing.tsx` lines 238-252
+
+Add `isOwnerDeposit: true` to the `handleUpgrade` body:
 ```typescript
-const panelName = panel?.name || 'Platform';
-```
-Then replace all `panel.name` references in gateway cases with `panelName`.
-
----
-
-## Issue 3: Username Sign-In "Username not found" Error
-
-**Root Cause:** The `lookup_email_by_username` RPC function works correctly. However, the `signUp` function in `AuthContext.tsx` updates the profile username AFTER signup (line 144-147), but by that time the user might not be confirmed yet. The `handle_new_user` trigger creates the profile with no username. Then the update at line 144 might fail because the user isn't fully authenticated yet.
-
-The real issue: During signup, Supabase creates the auth user and fires the `handle_new_user` trigger which creates a profile WITHOUT a username. Then `signUp` tries to update the profile, but the user hasn't verified their email yet, so RLS blocks the update (the user isn't authenticated).
-
-**Fix in `AuthContext.tsx`:**
-- Pass username in `raw_user_meta_data` during signup (already done at line 129)
-- Update `handle_new_user` trigger to extract username from metadata:
-```sql
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER
-SET search_path TO 'public' AS $$
-BEGIN
-  INSERT INTO public.profiles (id, user_id, email, full_name, avatar_url, username)
-  VALUES (
-    NEW.id, NEW.id, NEW.email,
-    COALESCE(NEW.raw_user_meta_data->>'full_name',''),
-    COALESCE(NEW.raw_user_meta_data->>'avatar_url',''),
-    NEW.raw_user_meta_data->>'username'
-  );
-  RETURN NEW;
-END;
-$$;
+body: {
+  gateway: defaultGateway,
+  amount: plan.price,
+  panelId: panel.id,
+  buyerId: profile.id,
+  isOwnerDeposit: true,  // ADD THIS
+  returnUrl: ...,
+  metadata: { type: 'subscription', plan: planName.toLowerCase(), panelId: panel.id }
+}
 ```
 
-**Username validation in `Auth.tsx` signup form:**
-- Add min length (3) and max length (20) validation
-- Add a uniqueness check before submitting
-- Add visual feedback for username constraints
+This ensures the edge function uses admin-configured gateways instead of panel buyer gateways.
 
----
+### 3. Fix Commission Payment - Add `isOwnerDeposit` Flag  
 
-## Issue 4: Step Counter Shows "Step 1 of 6" Instead of Correct Number
+**File:** `src/pages/panel/Billing.tsx` lines 350-364
 
-**Root Cause:** When the user resumes onboarding at the payment step (step id=2), `visibleSteps.findIndex(s => s.id === currentStep)` returns the index within the filtered visible steps array. The `Math.max(0, ...)` guard was added but the issue persists because:
+The `handlePayCommission` call also needs `isOwnerDeposit: true` added to the body.
 
-1. When `selectedPlan` is `pro`, the payment step IS visible (7 steps total: 0-6)
-2. The payment step has `id: 2`, so `findIndex` should find it at index 2 (0-indexed), showing "Step 3 of 7"
-3. But the screenshot shows "Step 1 of 6" -- this means `visibleStepIndex` is 0
+### 4. Redeploy process-payment Edge Function
 
-This happens because on resume, `selectedPlan` defaults to `'free'` initially (line 61), and the saved data restoration happens asynchronously. So `shouldShowPaymentStep` evaluates to `false` (since `selectedPlan` starts as `'free'`), removing the payment step from `visibleSteps`. Then `findIndex` for step id=2 returns -1, `Math.max(0, -1)` = 0, showing "Step 1 of 6".
+The edge function code already has the correct logic with `panelName` fallback and `metadata` column support. It just needs to be redeployed to ensure the latest version is live.
 
-**Fix:** The `selectedPlan` must be restored BEFORE `visibleSteps` is computed. The issue is that state restoration is async (in `useEffect`), so there's a render cycle where the old default values are used. 
+### 5. Remove "Global Methods" Tab from Admin PaymentManagement
 
-Add a `restoringState` flag that prevents rendering until state is fully restored:
-```typescript
-const [restoringState, setRestoringState] = useState(true);
-```
-Set it to `false` after all saved data is restored. Show a loader while restoring.
+**File:** `src/pages/admin/PaymentManagement.tsx`
 
----
+The "Methods" tab (lines 397, ~700-800) shows 60+ generic payment methods with toggle switches. This is confusing alongside the "Payment Providers" tab which is the actual functional configuration. Based on user's instruction: "anything apart from billing & subscription should be deleted like the global payments."
 
-## Issue 5: Build Errors (TypeScript)
-
-**Root Cause:** Multiple edge functions use `error.message` on `unknown` type errors, and `process-payment` has `transactionIdToUse` typed as `string | undefined`.
-
-**Fix for `process-payment/index.ts`:**
-- Line 194: Cast `txId` properly: `const transactionIdToUse = txId as string;`
-- All `panel.name` references when panel could be null: use `panelName` fallback variable
-
-**Fix for other edge functions:** Each `catch (error)` block needs `(error as Error).message`. This affects ~30 files but is a straightforward pattern replacement.
+Remove the "methods" tab entry from the tabs array (line 397) and the corresponding `TabsContent value="methods"` section. Keep: Payment Providers, Transactions, Panel Funding, Fees, Payouts.
 
 ---
 
 ## Summary of All Changes
 
-### Database Migration
-```sql
--- Add missing columns to transactions table
-ALTER TABLE public.transactions 
-  ADD COLUMN IF NOT EXISTS metadata jsonb DEFAULT NULL,
-  ADD COLUMN IF NOT EXISTS external_id text DEFAULT NULL;
-
--- Fix handle_new_user to capture username from signup metadata
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER
-SET search_path TO 'public' AS $$
-BEGIN
-  INSERT INTO public.profiles (id, user_id, email, full_name, avatar_url, username)
-  VALUES (
-    NEW.id, NEW.id, NEW.email,
-    COALESCE(NEW.raw_user_meta_data->>'full_name',''),
-    COALESCE(NEW.raw_user_meta_data->>'avatar_url',''),
-    NEW.raw_user_meta_data->>'username'
-  );
-  RETURN NEW;
-END;
-$$;
-```
-
-### File Changes
-
 | File | Change |
 |------|--------|
-| `vercel.json` | Restore `(.*)` wildcard patterns in all rewrite/header source rules |
-| `supabase/functions/process-payment/index.ts` | Fix `transactionIdToUse` type; add `panelName` fallback for null panel; cast error types |
-| `src/pages/Auth.tsx` | Add username validation (3-20 chars, uniqueness check) in signup form |
-| `src/pages/panel/PanelOnboardingV2.tsx` | Add `restoringState` flag to prevent step counter flash; don't render until saved state is loaded |
-| ~30 edge function files | Replace `error.message` with `(error as Error).message` in catch blocks |
+| `src/components/admin/SubscriptionProviderManager.tsx` | Add provider-specific field labels, placeholders, descriptions, and docs links for each gateway |
+| `src/pages/panel/Billing.tsx` | Add `isOwnerDeposit: true` to upgrade and commission payment calls |
+| `src/pages/admin/PaymentManagement.tsx` | Remove the "Methods" tab (global payment toggles) |
+| Edge function deployment | Redeploy `process-payment` to ensure latest code is live |
 
-### Edge Function Build Error Fixes (all same pattern)
-
-Files needing `(error as Error).message`:
-- `add-vercel-domain/index.ts`
-- `admin-panel-ops/index.ts`
-- `auto-verify-domains/index.ts`
-- `categorize-others/index.ts`
-- `currency-convert/index.ts`
-- `dns-lookup/index.ts` (2 places)
-- `dns-namecheap/index.ts`
-- `enhance-seo-text/index.ts`
-- `generate-robots/index.ts`
-- `generate-service-description/index.ts`
-- `generate-sitemap/index.ts`
-- `import-provider-services/index.ts`
-- `normalize-services/index.ts`
-- `panel-customers/index.ts`
-- `payment-webhook/index.ts`
-- `process-referral-reward/index.ts`
-- `provider-balance/index.ts`
-- `provider-services/index.ts`
-- `save-platform-config/index.ts`
-- `send-notification/index.ts`
-- `team-auth/index.ts`
-- `update-security-settings/index.ts`
-- `validate-payment-gateway/index.ts` (7 places)
-- `verify-domain-dns/index.ts`
-- `verify-domain-txt/index.ts`
-
-Additional specific fixes:
-- `domain-health-check/index.ts` line 127: cast TXT records type
-- `serve-favicon/index.ts` lines 100-101: add `.single()` or type assertion for panel query
-- `webhook-notify/index.ts` lines 191, 232: fix null URL and `.rpc` condition
