@@ -85,7 +85,7 @@ export const OnboardingPaymentStep = ({
         return;
       }
 
-      const returnUrl = `${window.location.origin}/panel/billing?payment=success`;
+      const returnUrl = `${window.location.origin}/panel/onboarding?payment=success`;
 
       const { data, error: fnError } = await supabase.functions.invoke('process-payment', {
         body: {
