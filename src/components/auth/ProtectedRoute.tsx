@@ -26,7 +26,11 @@ export function ProtectedRoute({
     }
   }, [user, location.pathname]);
 
-  if (loading) {
+  // Show loading spinner while auth state is being determined
+  // CRITICAL: Also wait for profile to load when user exists but profile hasn't loaded yet.
+  // Without this, there's a race condition where user is set (session restored) but profile
+  // is still null (async fetch pending), causing premature redirect to "/" on page reload.
+  if (loading || (user && !profile)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-primary/5 to-secondary/10">
         <Loader2 className="h-8 w-8 animate-spin" />
