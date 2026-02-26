@@ -56,15 +56,15 @@ const Privacy = () => {
   return (
     <div className="min-h-screen bg-background">
       <Helmet>
-        <title>Privacy Policy - HOME OF SMM</title>
-        <meta name="description" content="Privacy policy for HOME OF SMM platform." />
-        <link rel="canonical" href="https://homeofsmm.com/privacy" />
+        <title>Privacy Policy - SMMPilot</title>
+        <meta name="description" content="Privacy policy for SMMPilot platform." />
+        <link rel="canonical" href="https://smmpilot.online/privacy" />
       </Helmet>
       <Navigation />
       <div className="container mx-auto px-4 py-12">
-        <div className="flex gap-8">
+        <div className="flex flex-col lg:flex-row gap-8">
           {/* Main Content */}
-          <div className="flex-1 max-w-4xl">
+          <div className="flex-1 min-w-0">
             <h1 className="text-4xl font-bold mb-8 text-center py-4">Privacy Policy</h1>
             
             {/* Mobile TOC */}

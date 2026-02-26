@@ -190,6 +190,23 @@ const PanelOnboardingV2 = () => {
     checkExistingPanel();
   }, [user, profile, navigate]);
 
+  // Detect payment=success return from gateway
+  useEffect(() => {
+    if (restoringState) return; // Wait until state is restored
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('payment') === 'success') {
+      setPaymentCompleted(true);
+      // If currently on payment step, advance to domain step
+      if (currentStep === 2) {
+        markStepComplete(2);
+        setCurrentStep(3);
+      }
+      // Clean URL
+      window.history.replaceState({}, '', '/panel/onboarding');
+      toast({ title: 'Payment Successful', description: 'Your subscription payment has been confirmed.' });
+    }
+  }, [restoringState]);
+
   // Auto-generate subdomain from panel name
   useEffect(() => {
     if (panelName && !subdomain) {

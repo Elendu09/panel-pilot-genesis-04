@@ -56,15 +56,15 @@ const Terms = () => {
   return (
     <div className="min-h-screen bg-background">
       <Helmet>
-        <title>Terms of Service - HOME OF SMM</title>
-        <meta name="description" content="Terms of service for HOME OF SMM platform." />
-        <link rel="canonical" href="https://homeofsmm.com/terms" />
+        <title>Terms of Service - SMMPilot</title>
+        <meta name="description" content="Terms of service for SMMPilot platform." />
+        <link rel="canonical" href="https://smmpilot.online/terms" />
       </Helmet>
       <Navigation />
       <div className="container mx-auto px-4 py-12">
-        <div className="flex gap-8">
+        <div className="flex flex-col lg:flex-row gap-8">
           {/* Main Content */}
-          <div className="flex-1 max-w-4xl">
+          <div className="flex-1 min-w-0">
             <h1 className="text-4xl font-bold mb-8 text-center py-4">Terms of Service</h1>
             
             {/* Mobile TOC */}

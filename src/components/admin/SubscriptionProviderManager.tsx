@@ -443,7 +443,7 @@ export const SubscriptionProviderManager = () => {
 
       {/* Category Tabs */}
       <Tabs value={activeCategory} onValueChange={setActiveCategory}>
-        <TabsList className="grid w-full grid-cols-6 h-auto p-1">
+        <TabsList className="grid w-full grid-cols-3 md:grid-cols-6 h-auto p-1">
           <TabsTrigger value="all" className="text-xs py-2">
             All
           </TabsTrigger>

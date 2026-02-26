@@ -443,7 +443,50 @@ serve(async (req) => {
               message: `Your payment of $${depositAmount.toFixed(2)} was successful. Your order is now being processed.`,
             });
         } else {
-          // This is a regular deposit - credit buyer balance
+          // Handle subscription payments first
+          if (txMetadata?.type === 'subscription' && txPanelId) {
+            const planName = txMetadata.plan || 'basic';
+            
+            // Update panel subscription tier
+            await supabase.from('panels').update({
+              subscription_tier: planName,
+              subscription_status: 'active',
+            }).eq('id', txPanelId);
+            
+            // Upsert panel_subscriptions record
+            const expiresAt = new Date();
+            expiresAt.setMonth(expiresAt.getMonth() + 1);
+            
+            await supabase.from('panel_subscriptions').upsert({
+              panel_id: txPanelId,
+              plan_type: planName,
+              price: depositAmount,
+              status: 'active',
+              started_at: new Date().toISOString(),
+              expires_at: expiresAt.toISOString(),
+            }, { onConflict: 'panel_id' });
+            
+            console.log(`[payment-webhook] Subscription updated: ${planName} for panel ${txPanelId}`);
+
+            // Notify panel owner
+            const { data: subPanel } = await supabase
+              .from('panels')
+              .select('owner_id')
+              .eq('id', txPanelId)
+              .single();
+
+            if (subPanel?.owner_id) {
+              await supabase.from('panel_notifications').insert({
+                panel_id: txPanelId,
+                user_id: subPanel.owner_id,
+                type: 'payment',
+                title: 'Subscription Activated',
+                message: `Your ${planName} plan subscription has been activated successfully.`,
+              });
+            }
+          }
+
+          // This is a regular deposit - credit balance
           const { data: buyer } = await supabase
             .from('client_users')
             .select('balance, total_spent')
@@ -451,9 +494,9 @@ serve(async (req) => {
             .single();
 
           if (buyer) {
+            // Buyer (client_user) deposit
             const newBalance = (buyer.balance || 0) + depositAmount;
             
-            // Update buyer balance
             await supabase
               .from('client_users')
               .update({ 
@@ -494,6 +537,31 @@ serve(async (req) => {
                     message: `A deposit of $${depositAmount.toFixed(2)} was completed via ${gateway}.`,
                   });
               }
+            }
+          } else if (txPanelId) {
+            // Not a client_user — check if this is a panel owner deposit
+            const { data: panelData } = await supabase
+              .from('panels')
+              .select('balance, owner_id')
+              .eq('id', txPanelId)
+              .single();
+
+            if (panelData && panelData.owner_id === userId) {
+              const newBalance = (panelData.balance || 0) + depositAmount;
+              await supabase
+                .from('panels')
+                .update({ balance: newBalance })
+                .eq('id', txPanelId);
+              console.log(`[payment-webhook] Credited $${depositAmount} to panel ${txPanelId}, new balance: ${newBalance}`);
+
+              // Notify panel owner
+              await supabase.from('panel_notifications').insert({
+                panel_id: txPanelId,
+                user_id: userId,
+                type: 'payment',
+                title: 'Deposit Successful',
+                message: `$${depositAmount.toFixed(2)} has been added to your panel balance via ${gateway}.`,
+              });
             }
           }
         }

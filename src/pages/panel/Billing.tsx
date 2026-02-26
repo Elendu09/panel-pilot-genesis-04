@@ -122,6 +122,15 @@ const Billing = () => {
   useEffect(() => {
     if (panel?.id) {
       fetchBillingData();
+
+      // Detect return from payment gateway
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('deposit') === 'success' || params.get('upgrade') === 'success' || params.get('commission') === 'success') {
+        toast({ title: 'Payment Processing', description: 'Your payment is being confirmed. Balance will update shortly.' });
+        setTimeout(() => fetchBillingData(), 3000);
+        window.history.replaceState({}, '', '/panel/billing');
+      }
+
       // Subscribe to transaction updates for real-time balance
       const channel = supabase
         .channel('billing-transactions')
