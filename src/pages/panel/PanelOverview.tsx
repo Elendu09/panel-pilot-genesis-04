@@ -30,7 +30,8 @@ import {
   ChevronRight,
   Palette,
   Wallet,
-  Crown
+  Crown,
+  Percent
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { useAuth } from '@/contexts/AuthContext';
@@ -361,6 +362,11 @@ const PanelOverview = () => {
     visible: { opacity: 1, y: 0, transition: { duration: 0.4 } }
   };
 
+  const completedOrders = liveOrders.filter(o => o.status === 'completed').length;
+  const conversionRate = stats.totalOrders > 0 
+    ? ((completedOrders / stats.totalOrders) * 100) 
+    : 0;
+
   const statsData = [
     {
       title: "Total Revenue",
@@ -368,9 +374,9 @@ const PanelOverview = () => {
       change: changes.revenue.value,
       trend: changes.revenue.trend,
       icon: DollarSign,
-      gradient: "from-emerald-500 to-emerald-600",
-      bgColor: "bg-emerald-500/10",
-      textColor: "text-emerald-500",
+      gradient: "from-blue-500 to-blue-600",
+      bgColor: "bg-blue-500/10",
+      textColor: "text-blue-500",
       href: "/panel/analytics"
     },
     {
@@ -379,32 +385,32 @@ const PanelOverview = () => {
       change: changes.orders.value,
       trend: changes.orders.trend,
       icon: ShoppingCart,
-      gradient: "from-blue-500 to-blue-600",
-      bgColor: "bg-blue-500/10",
-      textColor: "text-blue-500",
+      gradient: "from-pink-500 to-pink-600",
+      bgColor: "bg-pink-500/10",
+      textColor: "text-pink-500",
       href: "/panel/orders"
     },
     {
-      title: "Active Services",
-      value: stats.activeServices.toString(),
-      change: changes.services.value,
-      trend: changes.services.trend,
-      icon: Package,
-      gradient: "from-violet-500 to-violet-600",
-      bgColor: "bg-violet-500/10",
-      textColor: "text-violet-500",
-      href: "/panel/services"
-    },
-    {
-      title: "Total Customers",
+      title: "Active Users",
       value: stats.totalCustomers.toLocaleString(),
       change: changes.customers.value,
       trend: changes.customers.trend,
       icon: Users,
+      gradient: "from-emerald-500 to-emerald-600",
+      bgColor: "bg-emerald-500/10",
+      textColor: "text-emerald-500",
+      href: "/panel/customers"
+    },
+    {
+      title: "Conversion Rate",
+      value: `${conversionRate.toFixed(0)}%`,
+      change: changes.orders.value,
+      trend: changes.orders.trend,
+      icon: Percent,
       gradient: "from-amber-500 to-amber-600",
       bgColor: "bg-amber-500/10",
       textColor: "text-amber-500",
-      href: "/panel/customers"
+      href: "/panel/analytics"
     },
   ];
 
