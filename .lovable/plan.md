@@ -1,57 +1,105 @@
 
 
-# Plan: Fix Theme Sync, Translation Errors, and Payment Balance/Subscription Issues
+# Plan: Verify Payment Flow, Update Dashboard Stats Cards
 
-## Issue 1: Theme Sync Conflict on Tenant Storefront
+## Analysis
 
-Both `ThemeProvider` (from `use-theme.tsx`) and `BuyerThemeProvider` (from `BuyerThemeContext.tsx`) independently modify `document.documentElement.classList`, causing a race condition. When the page loads, `ThemeProvider` sets the theme based on `localStorage['smm-tenant-theme-${panelId}']`, then `BuyerThemeProvider` overwrites it based on `localStorage['buyer-theme-${panelId}']`. These fight each other.
+### Balance Update & Payment Flow
+The webhook (`payment-webhook/index.ts`) and metadata fix (`process-payment/index.ts`) are already in place from prior edits. The critical chain is:
+1. `process-payment` creates transaction with `metadata: { type: 'panel_deposit', ... }` -- **fixed in last edit**
+2. Webhook receives callback, finds transaction, updates status to `completed`
+3. Webhook checks `txMetadata.type` -- for deposits, credits `panels.balance` for owner, `client_users.balance` for buyers
+4. Webhook checks `txMetadata.type === 'subscription'` -- updates `panels.subscription_tier` and `panel_subscriptions`
 
-**Fix in `src/contexts/BuyerThemeContext.tsx`**: Synchronize with the `ThemeProvider` by listening for the `theme-change` custom event (already dispatched by `use-theme.tsx` line 116). When the main `ThemeProvider` changes theme, `BuyerThemeProvider` should update its internal state to match. Also, when `BuyerThemeProvider` toggles theme, it should update the `ThemeProvider`'s localStorage key too.
+This flow is correctly implemented. If it's still not working, the issue is likely that the **webhook URL is not configured in the payment gateway dashboard** (e.g., Flutterwave, Paystack). The gateway needs to POST to:
+```
+https://tooudgubuhxjbbvzjcgx.supabase.co/functions/v1/payment-webhook?gateway=flutterwave
+```
+This is a gateway-side configuration, not a code issue.
 
-**Fix in `src/hooks/use-theme.tsx`**: In the tenant storefront context, listen for `BuyerThemeProvider` changes as well. The simplest approach: make `BuyerThemeProvider.toggleThemeMode()` dispatch the same `theme-change` event so both contexts stay in sync.
+### Domain Configuration on Plan Upgrade
+Already handled: `DomainSettings.tsx` shows `UpgradePrompt` when `panel.subscription_tier === 'free'`. When a subscription payment succeeds, the webhook updates `panels.subscription_tier` to `basic` or `pro`, which removes the upgrade prompt. No code changes needed.
 
-## Issue 2: Missing Translation Key
+### Dashboard Stats Cards (from screenshot)
+The user's screenshot shows: **Total Revenue, Total Orders, Active Users, Conversion Rate** with colored icons. Current code shows: Total Revenue, Total Orders, **Active Services**, **Total Customers**. Need to update to match the screenshot.
 
-`buyer.about.defaultDescription` is used in `BuyerAbout.tsx` but doesn't exist in `src/lib/platform-translations.ts`.
+## Changes
 
-**Fix in `src/lib/platform-translations.ts`**: Add the missing key after line 196:
+### 1. Update PanelOverview stats to match screenshot
+
+**File: `src/pages/panel/PanelOverview.tsx`**
+
+- Change `activeServices` stat card to **"Active Users"** (use `totalCustomers` count, which already queries `client_users`)
+- Change `totalCustomers` stat card to **"Conversion Rate"** (calculated as `completedOrders / totalOrders * 100`)
+- Update icons: Active Users gets `Users` icon with green gradient, Conversion Rate gets `Percent` icon with orange/amber gradient
+- Keep the data sources the same (already querying real data)
+
+Specific changes to `statsData` array (around line 364):
 ```typescript
-'buyer.about.defaultDescription': 'We are a professional social media marketing service provider, helping businesses and individuals grow their online presence with high-quality, affordable services.',
+const completedOrders = liveOrders.filter(o => o.status === 'completed').length;
+const conversionRate = stats.totalOrders > 0 
+  ? ((completedOrders / stats.totalOrders) * 100) 
+  : 0;
+
+const statsData = [
+  {
+    title: "Total Revenue",
+    value: `$${stats.totalRevenue.toFixed(2)}`,
+    change: changes.revenue.value,
+    trend: changes.revenue.trend,
+    icon: DollarSign,
+    gradient: "from-blue-500 to-blue-600",
+    bgColor: "bg-blue-500/10",
+    textColor: "text-blue-500",
+    href: "/panel/analytics"
+  },
+  {
+    title: "Total Orders",
+    value: stats.totalOrders.toLocaleString(),
+    change: changes.orders.value,
+    trend: changes.orders.trend,
+    icon: ShoppingCart,
+    gradient: "from-pink-500 to-pink-600",
+    bgColor: "bg-pink-500/10",
+    textColor: "text-pink-500",
+    href: "/panel/orders"
+  },
+  {
+    title: "Active Users",
+    value: stats.totalCustomers.toLocaleString(),
+    change: changes.customers.value,
+    trend: changes.customers.trend,
+    icon: Users,
+    gradient: "from-emerald-500 to-emerald-600",
+    bgColor: "bg-emerald-500/10",
+    textColor: "text-emerald-500",
+    href: "/panel/customers"
+  },
+  {
+    title: "Conversion Rate",
+    value: `${conversionRate.toFixed(0)}%`,
+    change: changes.orders.value,
+    trend: changes.orders.trend,
+    icon: Percent,
+    gradient: "from-amber-500 to-amber-600",
+    bgColor: "bg-amber-500/10",
+    textColor: "text-amber-500",
+    href: "/panel/analytics"
+  },
+];
 ```
 
-## Issue 3: Transaction Metadata Not Stored (ROOT CAUSE of balance/subscription failures)
+Also add `Percent` to the imports from `lucide-react`.
 
-**Critical bug** in `supabase/functions/process-payment/index.ts` line 193:
-```typescript
-...(orderId ? { metadata: { orderId } } : {})
-```
-This ONLY stores metadata when there's an `orderId`. For deposit and subscription payments (which have no orderId), the metadata passed from the client (`{ type: 'subscription', plan: 'basic' }` or `{ type: 'panel_deposit' }`) is **never saved** to the transaction record.
+### 2. Add `Percent` icon import
 
-When the webhook fires and reads `tx.metadata`, it gets `null` or `{}`. So:
-- `txMetadata?.type === 'subscription'` → false → subscription never activates
-- The deposit falls through to `client_users` lookup → user not found → falls through to panel owner check → this part works IF the owner_id matches, but without metadata it's fragile
+**File: `src/pages/panel/PanelOverview.tsx`** -- Add `Percent` to the lucide-react import line.
 
-**Fix in `supabase/functions/process-payment/index.ts`** line 193: Always merge client-provided metadata:
-```typescript
-metadata: {
-  ...(metadata || {}),
-  ...(orderId ? { orderId } : {}),
-}
-```
-
-## Issue 4: Webhook Transaction Lookup by `tx_ref` Instead of `id`
-
-For Flutterwave, the webhook extracts `transactionId = event.data?.tx_ref` (line 94). The `process-payment` function sets `tx_ref` as the transaction ID when initializing Flutterwave (need to verify this). But the webhook then does `UPDATE transactions WHERE id = transactionId`. If `tx_ref` doesn't match the UUID `id`, the lookup fails silently.
-
-**Fix**: The webhook already has a fallback to search by `external_id` (line 387-395). Need to ensure `process-payment` stores the `tx_ref` as `external_id` in the transaction record, OR passes the transaction UUID as `tx_ref` to Flutterwave. Let me verify this is already handled. The `transactionIdToUse` UUID is used as `tx_ref` for Flutterwave (need to confirm in the gateway-specific code).
-
-## Summary of All Changes
+## Summary
 
 | File | Change |
 |------|--------|
-| `supabase/functions/process-payment/index.ts` | Fix metadata storage: always save client metadata to transaction record |
-| `src/lib/platform-translations.ts` | Add missing `buyer.about.defaultDescription` key |
-| `src/contexts/BuyerThemeContext.tsx` | Sync with ThemeProvider via `theme-change` event listener |
-| `src/hooks/use-theme.tsx` | Listen for buyer theme changes to stay in sync |
-| Edge function redeployment | Redeploy `process-payment` with metadata fix |
+| `src/pages/panel/PanelOverview.tsx` | Update stats cards to show Total Revenue, Total Orders, Active Users, Conversion Rate with matching icons/colors from screenshot |
+
+**No webhook or edge function changes needed** -- the payment flow code is already correct. If balance still doesn't update after a successful gateway payment, the webhook URL must be configured in the payment provider's dashboard settings.
 
