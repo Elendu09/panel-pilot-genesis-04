@@ -112,6 +112,21 @@ export function ThemeProvider({
     return () => mediaQuery.removeEventListener("change", handleChange)
   }, [theme])
 
+  // Listen for buyer theme changes to stay in sync
+  useEffect(() => {
+    const handleBuyerThemeChange = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.source === 'buyer' && detail?.theme) {
+        const newTheme = detail.theme as Theme;
+        localStorage.setItem(storageKey, newTheme);
+        setThemeState(newTheme);
+      }
+    };
+
+    window.addEventListener('theme-change', handleBuyerThemeChange);
+    return () => window.removeEventListener('theme-change', handleBuyerThemeChange);
+  }, [storageKey])
+
   const setTheme = useCallback(async (t: Theme) => {
     // IMMEDIATELY update DOM for instant visual feedback (before state update)
     const root = window.document.documentElement
