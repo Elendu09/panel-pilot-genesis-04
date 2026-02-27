@@ -68,7 +68,6 @@ export function BuyerThemeProvider({
   useEffect(() => {
     const handleDesignUpdate = () => {
       const stored = localStorage.getItem(storageKey);
-      // Only reset to default if buyer hasn't set preference
       if (!stored) {
         setThemeModeState(defaultThemeMode);
       }
@@ -77,6 +76,20 @@ export function BuyerThemeProvider({
     window.addEventListener('panelDesignUpdated', handleDesignUpdate);
     return () => window.removeEventListener('panelDesignUpdated', handleDesignUpdate);
   }, [defaultThemeMode, storageKey]);
+
+  // Listen for theme-change events from ThemeProvider to stay in sync
+  useEffect(() => {
+    const handleThemeChange = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.theme && (detail.theme === 'light' || detail.theme === 'dark')) {
+        setThemeModeState(detail.theme);
+        localStorage.setItem(storageKey, detail.theme);
+      }
+    };
+
+    window.addEventListener('theme-change', handleThemeChange);
+    return () => window.removeEventListener('theme-change', handleThemeChange);
+  }, [storageKey]);
 
   const setThemeMode = useCallback((mode: ThemeMode) => {
     // Immediately update DOM for instant feedback
@@ -88,9 +101,16 @@ export function BuyerThemeProvider({
     // Save to localStorage so buyer's preference persists
     localStorage.setItem(storageKey, mode);
     
+    // Also update ThemeProvider's storage key so both stay in sync
+    const themeProviderKey = panelId ? `smm-tenant-theme-${panelId}` : 'smm-panel-theme';
+    localStorage.setItem(themeProviderKey, mode);
+    
+    // Dispatch theme-change event so ThemeProvider picks it up
+    window.dispatchEvent(new CustomEvent('theme-change', { detail: { theme: mode, source: 'buyer' } }));
+    
     // Update state
     setThemeModeState(mode);
-  }, [storageKey]);
+  }, [storageKey, panelId]);
 
   const toggleThemeMode = useCallback(() => {
     setThemeMode(themeMode === 'dark' ? 'light' : 'dark');

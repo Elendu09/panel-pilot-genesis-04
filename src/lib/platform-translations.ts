@@ -194,6 +194,7 @@ export const platformTranslations = {
     'buyer.about.ctaSubtitle': 'Join thousands of satisfied customers today',
     'buyer.about.signUpCta': 'Create Account',
     'buyer.about.contactCta': 'Contact Us',
+    'buyer.about.defaultDescription': 'We are a professional social media marketing service provider, helping businesses and individuals grow their online presence with high-quality, affordable services.',
     
     // Hero - trusted badge
     'buyer.hero.trustedBy': 'Trusted by 10,000+ customers',

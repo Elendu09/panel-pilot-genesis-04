@@ -189,8 +189,11 @@ serve(async (req) => {
           payment_method: gateway,
           status: 'pending',
           description: txDescription,
-          // Store orderId in metadata for webhook processing
-          ...(orderId ? { metadata: { orderId } } : {})
+          // Always store client-provided metadata + orderId for webhook processing
+          metadata: {
+            ...(metadata || {}),
+            ...(orderId ? { orderId } : {}),
+          }
         })
         .select('id')
         .single();
