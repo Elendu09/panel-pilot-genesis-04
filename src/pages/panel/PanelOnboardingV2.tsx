@@ -32,7 +32,7 @@ import { OnboardingPlanSelector } from '@/components/onboarding/OnboardingPlanSe
 import { OnboardingPaymentStep } from '@/components/onboarding/OnboardingPaymentStep';
 import { OnboardingDomainStep } from '@/components/onboarding/OnboardingDomainStep';
 import { ThemeMiniPreview } from '@/components/design/ThemeMiniPreview';
-import { SEO_DESC_PX_RANGE, SEO_TITLE_PX_RANGE, isInRange, measureTextPx } from '@/lib/seo-metrics';
+import { SEO_DESC_PX_RANGE, SEO_TITLE_PX_RANGE, isInRange, measureTextPx, clampToPx, generateSeoMeta } from '@/lib/seo-metrics';
 import { getThemeDefaultAnimationStyle } from '@/components/buyer-themes/shared/AnimatedHeroText';
 
 // Fixed step definitions - NEVER change this array dynamically
@@ -245,8 +245,11 @@ const PanelOnboardingV2 = () => {
       if (error) throw error;
       
       if (data) {
-        setSeoTitle(data.title || '');
-        setSeoDescription(data.description || '');
+        // Clamp AI-generated text to pixel limits to prevent validation errors
+        const clampedTitle = clampToPx(data.title || '', SEO_TITLE_PX_RANGE.max);
+        const clampedDesc = clampToPx(data.description || '', SEO_DESC_PX_RANGE.max);
+        setSeoTitle(clampedTitle);
+        setSeoDescription(clampedDesc);
         setSeoKeywords(data.keywords || '');
       }
     } catch (error) {
@@ -435,9 +438,30 @@ const PanelOnboardingV2 = () => {
       return;
     }
 
+    // Auto-fill empty SEO fields with fallback values before validating
+    let finalSeoTitle = seoTitle;
+    let finalSeoDesc = seoDescription;
+    let finalSeoKeywords = seoKeywords;
+    
+    if (!finalSeoTitle.trim() || !finalSeoDesc.trim()) {
+      const fallback = generateSeoMeta({ panelName, offeringHint: description });
+      if (!finalSeoTitle.trim()) {
+        finalSeoTitle = fallback.title;
+        setSeoTitle(fallback.title);
+      }
+      if (!finalSeoDesc.trim()) {
+        finalSeoDesc = fallback.description;
+        setSeoDescription(fallback.description);
+      }
+      if (!finalSeoKeywords.trim()) {
+        finalSeoKeywords = `${panelName.toLowerCase()}, smm panel, buy followers, social media marketing`;
+        setSeoKeywords(finalSeoKeywords);
+      }
+    }
+
     // Validate SEO
-    const titlePx = measureTextPx(seoTitle || '');
-    const descPx = measureTextPx(seoDescription || '');
+    const titlePx = measureTextPx(finalSeoTitle);
+    const descPx = measureTextPx(finalSeoDesc);
     
     if (!isInRange(titlePx, SEO_TITLE_PX_RANGE) || !isInRange(descPx, SEO_DESC_PX_RANGE)) {
       toast({
@@ -658,7 +682,7 @@ const PanelOnboardingV2 = () => {
           >
             <OnboardingPaymentStep
               selectedPlan={selectedPlan as 'basic' | 'pro'}
-              panelId={createdPanelId || undefined}
+              panelId={createdPanelIdRef.current || undefined}
               onPaymentSuccess={handlePaymentSuccess}
               onSkip={() => {
                 // Keep selectedPlan as-is (trial logic preserves the plan choice)
@@ -971,65 +995,129 @@ const PanelOnboardingV2 = () => {
             initial="enter"
             animate="center"
             exit="exit"
-            className="space-y-6 text-center"
+            className="space-y-8"
           >
-            <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-primary to-primary/50 flex items-center justify-center">
-              <Rocket className="w-10 h-10 text-white" />
-            </div>
-            
-            <div>
-              <h2 className="text-2xl font-bold mb-2 flex items-center justify-center gap-2">
-                Ready to Launch!
-                <Sparkles className="w-6 h-6 text-primary" />
-              </h2>
-              <p className="text-muted-foreground">
-                Your panel "{panelName}" is ready to go live
-              </p>
+            {/* Success Banner */}
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500/10 via-primary/5 to-emerald-500/10 border border-emerald-500/20 p-6">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+              <div className="relative flex flex-col items-center text-center gap-4">
+                <motion.div 
+                  initial={{ scale: 0 }} 
+                  animate={{ scale: 1 }} 
+                  transition={{ type: 'spring', stiffness: 200, delay: 0.2 }}
+                  className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-primary flex items-center justify-center shadow-lg shadow-emerald-500/25"
+                >
+                  <Rocket className="w-8 h-8 text-primary-foreground" />
+                </motion.div>
+                <div>
+                  <h2 className="text-2xl font-bold mb-1">Ready to Launch!</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Everything looks good. Review your configuration below.
+                  </p>
+                </div>
+              </div>
             </div>
 
-            <Card className="bg-card/60 text-left">
-              <CardContent className="p-4 space-y-3">
-                <div className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-emerald-500" />
-                  <span>Plan: <strong className="capitalize">{selectedPlan}</strong></span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-emerald-500" />
-                  <span>
-                    Domain: <strong>
-                      {domainType === 'subdomain' 
-                        ? `${subdomain}.smmpilot.online` 
-                        : customDomain || `${subdomain}.smmpilot.online`
-                      }
-                    </strong>
-                  </span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-emerald-500" />
-                  <span>Theme: <strong className="capitalize">{themePresets.find(t => t.key === selectedTheme)?.name || 'Custom'}</strong></span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-emerald-500" />
-                  <span>SEO configured</span>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Configuration Summary */}
+            <div className="relative rounded-2xl border border-border/60 bg-card/80 backdrop-blur-sm overflow-hidden">
+              {/* Gradient border glow */}
+              <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/10 via-transparent to-emerald-500/10 pointer-events-none" />
+              
+              <div className="relative p-6 space-y-5">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Configuration Summary</h3>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Panel Name */}
+                  <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/30 border border-border/40">
+                    <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                      <FileText className="w-4 h-4 text-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs text-muted-foreground">Panel Name</p>
+                      <p className="text-sm font-semibold truncate">{panelName}</p>
+                    </div>
+                  </div>
 
+                  {/* Plan */}
+                  <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/30 border border-border/40">
+                    <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                      <CreditCard className="w-4 h-4 text-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs text-muted-foreground">Plan</p>
+                      <p className="text-sm font-semibold capitalize">{selectedPlan}</p>
+                    </div>
+                  </div>
+
+                  {/* Domain */}
+                  <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/30 border border-border/40">
+                    <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                      <Globe className="w-4 h-4 text-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs text-muted-foreground">Domain</p>
+                      <p className="text-sm font-semibold truncate">
+                        {domainType === 'subdomain' 
+                          ? `${subdomain}.smmpilot.online` 
+                          : customDomain || `${subdomain}.smmpilot.online`
+                        }
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Theme */}
+                  <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/30 border border-border/40">
+                    <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                      <Palette className="w-4 h-4 text-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs text-muted-foreground">Theme</p>
+                      <p className="text-sm font-semibold">{themePresets.find(t => t.key === selectedTheme)?.name || 'Custom'}</p>
+                    </div>
+                  </div>
+
+                  {/* Currency */}
+                  <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/30 border border-border/40">
+                    <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                      <Settings className="w-4 h-4 text-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs text-muted-foreground">Currency</p>
+                      <p className="text-sm font-semibold">{currency}</p>
+                    </div>
+                  </div>
+
+                  {/* SEO */}
+                  <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/30 border border-border/40">
+                    <div className="w-9 h-9 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0 mt-0.5">
+                      <CheckCircle className="w-4 h-4 text-emerald-500" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs text-muted-foreground">SEO</p>
+                      <p className="text-sm font-semibold text-emerald-500">Configured</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Launch Button */}
             <Button 
-              className="w-full gap-2" 
+              className="w-full gap-2 h-12 text-base font-semibold bg-gradient-to-r from-primary to-emerald-500 hover:from-primary/90 hover:to-emerald-500/90 text-primary-foreground shadow-lg shadow-primary/25" 
               size="lg"
               onClick={handleComplete}
               disabled={loading}
             >
               {loading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="w-5 h-5 animate-spin" />
                   Creating Panel...
                 </>
               ) : (
                 <>
+                  <Rocket className="w-5 h-5" />
                   Launch My Panel
-                  <Rocket className="w-4 h-4" />
+                  <Sparkles className="w-4 h-4" />
                 </>
               )}
             </Button>

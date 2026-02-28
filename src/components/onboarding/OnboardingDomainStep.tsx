@@ -268,7 +268,10 @@ export const OnboardingDomainStep = ({
 
       <RadioGroup 
         value={domainOption} 
-        onValueChange={(value: DomainOption) => setDomainOption(value)}
+        onValueChange={(value: DomainOption) => {
+          setDomainOption(value);
+          onDomainTypeChange(value === 'free-subdomain' ? 'subdomain' : 'custom');
+        }}
         className="space-y-4"
       >
         {/* Option 1: I have a domain */}
