@@ -141,7 +141,7 @@ export const ThemeThree = ({ panel, services = [], customization = {}, isPreview
         ) : null;
       case 'faqs':
         return customization.enableFAQs !== false ? (
-          <StorefrontFAQSection key="faqs" customization={themeThreeCustomization} panelId={panel?.id} />
+          <StorefrontFAQSection key="faqs" customization={themeThreeCustomization} />
         ) : null;
       default:
         return null;

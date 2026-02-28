@@ -143,7 +143,7 @@ export const ThemeFour = ({ panel, services = [], customization = {}, isPreview 
         ) : null;
       case 'faqs':
         return customization.enableFAQs !== false ? (
-          <StorefrontFAQSection key="faqs" customization={themeFourCustomization} panelId={panel?.id} />
+          <StorefrontFAQSection key="faqs" customization={themeFourCustomization} />
         ) : null;
       default:
         return null;

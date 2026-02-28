@@ -87,11 +87,6 @@ export function useAnalyticsTracking(panelId: string | undefined) {
     trackEvent('order_complete', { orderId, amount }, { deduplicate: false });
   }, [trackEvent]);
 
-  // Track FAQ click
-  const trackFaqClick = useCallback((question: string) => {
-    trackEvent('faq_click', { question }, { deduplicate: false });
-  }, [trackEvent]);
-
   return {
     trackEvent,
     trackPageVisit,
@@ -99,7 +94,6 @@ export function useAnalyticsTracking(panelId: string | undefined) {
     trackServiceSelect,
     trackCheckoutStart,
     trackOrderComplete,
-    trackFaqClick,
     sessionId,
   };
 }

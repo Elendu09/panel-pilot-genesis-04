@@ -526,7 +526,53 @@ export function useTenant(): TenantDetectionResult {
         abortControllerRef.current.abort();
       }
     };
-  }, [initialIsPlatform]);
+  }, [initialIsPlatform, refreshKey]);
+
+  // Realtime subscription: listen for panel updates so name/branding changes reflect instantly
+  useEffect(() => {
+    if (!panel?.id) return;
+
+    const channel = supabase
+      .channel(`tenant-panel-${panel.id}`)
+      .on(
+        'postgres_changes' as any,
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'panels',
+          filter: `id=eq.${panel.id}`,
+        },
+        (payload: any) => {
+          console.log('[useTenant] Realtime panel update received:', payload.new?.name);
+          const updated = payload.new;
+          if (!updated) return;
+
+          // Clear cache so next navigation also gets fresh data
+          tenantCache.delete(hostname);
+
+          setPanel((prev) => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              name: updated.name ?? prev.name,
+              logo_url: updated.logo_url ?? prev.logo_url,
+              custom_branding: updated.custom_branding && typeof updated.custom_branding === 'object'
+                ? updated.custom_branding as DesignCustomization
+                : prev.custom_branding,
+              primary_color: updated.primary_color ?? prev.primary_color,
+              secondary_color: updated.secondary_color ?? prev.secondary_color,
+              theme_type: updated.theme_type ?? prev.theme_type,
+              status: updated.status ?? prev.status,
+            };
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [panel?.id, hostname]);
 
   return {
     panel,
