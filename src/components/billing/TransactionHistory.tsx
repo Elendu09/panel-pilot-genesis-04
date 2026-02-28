@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,11 +11,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
 import { 
   Receipt,
   ChevronLeft,
   ChevronRight,
-  Loader2,
   RefreshCw,
   Bell,
   ArrowUpRight,
@@ -23,7 +23,10 @@ import {
   CreditCard,
   Crown,
   Megaphone,
-  DollarSign
+  DollarSign,
+  TrendingUp,
+  TrendingDown,
+  Wallet
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -53,7 +56,6 @@ export const TransactionHistory = ({ panelId }: TransactionHistoryProps) => {
   useEffect(() => {
     fetchTransactions();
 
-    // Set up real-time subscription for transaction updates
     const channel = supabase
       .channel('transaction-updates')
       .on('postgres_changes', {
@@ -64,8 +66,6 @@ export const TransactionHistory = ({ panelId }: TransactionHistoryProps) => {
       }, (payload) => {
         const newTx = payload.new as Transaction;
         setTransactions(prev => [newTx, ...prev]);
-        
-        // Show toast for new transactions
         if (newTx.status === 'completed') {
           toast.success('New Transaction', {
             description: `${newTx.type}: $${Math.abs(newTx.amount).toFixed(2)}`,
@@ -83,8 +83,6 @@ export const TransactionHistory = ({ panelId }: TransactionHistoryProps) => {
         setTransactions(prev => 
           prev.map(tx => tx.id === updatedTx.id ? updatedTx : tx)
         );
-        
-        // Notify on status change to completed
         if (updatedTx.status === 'completed' && payload.old?.status !== 'completed') {
           toast.success('Payment Completed', {
             description: `$${Math.abs(updatedTx.amount).toFixed(2)} has been processed`
@@ -93,17 +91,11 @@ export const TransactionHistory = ({ panelId }: TransactionHistoryProps) => {
       })
       .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(channel); };
   }, [panelId]);
 
   const fetchTransactions = async () => {
-    if (!panelId) {
-      setLoading(false);
-      return;
-    }
-    
+    if (!panelId) { setLoading(false); return; }
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -112,7 +104,6 @@ export const TransactionHistory = ({ panelId }: TransactionHistoryProps) => {
         .eq('panel_id', panelId)
         .order('created_at', { ascending: false })
         .limit(100);
-
       if (error) throw error;
       setTransactions(data || []);
     } catch (error) {
@@ -123,15 +114,18 @@ export const TransactionHistory = ({ panelId }: TransactionHistoryProps) => {
     }
   };
 
+  // Summary stats
+  const summary = useMemo(() => {
+    const completed = transactions.filter(tx => tx.status === 'completed' || !tx.status);
+    const totalIn = completed.filter(tx => tx.amount > 0).reduce((s, tx) => s + tx.amount, 0);
+    const totalOut = completed.filter(tx => tx.amount < 0).reduce((s, tx) => s + Math.abs(tx.amount), 0);
+    return { totalIn, totalOut, net: totalIn - totalOut, count: completed.length };
+  }, [transactions]);
+
   const filteredTransactions = transactions.filter(tx => {
     if (filter === "all") return true;
-    // Handle admin adjustments and ads
-    if (tx.type === 'admin_credit' || tx.type === 'admin_debit') {
-      return filter === 'deposit';
-    }
-    if (tx.type === 'debit' || tx.type === 'ad_purchase') {
-      return filter === 'ads';
-    }
+    if (tx.type === 'admin_credit' || tx.type === 'admin_debit') return filter === 'deposit';
+    if (tx.type === 'debit' || tx.type === 'ad_purchase') return filter === 'ads';
     return tx.type === filter;
   });
 
@@ -140,21 +134,12 @@ export const TransactionHistory = ({ panelId }: TransactionHistoryProps) => {
 
   const getTypeColor = (type: string) => {
     switch (type) {
-      case "deposit": 
-      case "admin_credit": 
-        return "bg-green-500/10 text-green-500 border-green-500/30";
-      case "withdrawal": 
-      case "admin_debit": 
-        return "bg-orange-500/10 text-orange-500 border-orange-500/30";
-      case "commission": 
-        return "bg-purple-500/10 text-purple-500 border-purple-500/30";
-      case "subscription": 
-        return "bg-blue-500/10 text-blue-500 border-blue-500/30";
-      case "debit":
-      case "ad_purchase":
-        return "bg-amber-500/10 text-amber-500 border-amber-500/30";
-      default: 
-        return "bg-muted text-muted-foreground";
+      case "deposit": case "admin_credit": return "bg-green-500/10 text-green-500 border-green-500/30";
+      case "withdrawal": case "admin_debit": return "bg-orange-500/10 text-orange-500 border-orange-500/30";
+      case "commission": return "bg-purple-500/10 text-purple-500 border-purple-500/30";
+      case "subscription": return "bg-blue-500/10 text-blue-500 border-blue-500/30";
+      case "debit": case "ad_purchase": return "bg-amber-500/10 text-amber-500 border-amber-500/30";
+      default: return "bg-muted text-muted-foreground";
     }
   };
 
@@ -171,92 +156,152 @@ export const TransactionHistory = ({ panelId }: TransactionHistoryProps) => {
     switch (type) {
       case "admin_credit": return "Credit";
       case "admin_debit": return "Debit";
-      case "ad_purchase": 
-      case "debit": return "Ads";
+      case "ad_purchase": case "debit": return "Ads";
       default: return type.charAt(0).toUpperCase() + type.slice(1);
     }
   };
 
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case "deposit":
-      case "admin_credit":
-        return <ArrowDownRight className="w-3.5 h-3.5" />;
-      case "withdrawal":
-      case "admin_debit":
-        return <ArrowUpRight className="w-3.5 h-3.5" />;
-      case "subscription":
-        return <Crown className="w-3.5 h-3.5" />;
-      case "commission":
-        return <DollarSign className="w-3.5 h-3.5" />;
-      case "debit":
-      case "ad_purchase":
-        return <Megaphone className="w-3.5 h-3.5" />;
-      default:
-        return <CreditCard className="w-3.5 h-3.5" />;
+      case "deposit": case "admin_credit": return <ArrowDownRight className="w-4 h-4" />;
+      case "withdrawal": case "admin_debit": return <ArrowUpRight className="w-4 h-4" />;
+      case "subscription": return <Crown className="w-4 h-4" />;
+      case "commission": return <DollarSign className="w-4 h-4" />;
+      case "debit": case "ad_purchase": return <Megaphone className="w-4 h-4" />;
+      default: return <CreditCard className="w-4 h-4" />;
     }
   };
 
-  // Mobile card component for each transaction
+  const getIndicatorColor = (type: string) => {
+    switch (type) {
+      case "deposit": case "admin_credit": return "bg-green-500";
+      case "withdrawal": case "admin_debit": return "bg-orange-500";
+      case "commission": return "bg-purple-500";
+      case "subscription": return "bg-blue-500";
+      case "debit": case "ad_purchase": return "bg-amber-500";
+      default: return "bg-muted-foreground";
+    }
+  };
+
+  // Timeline-style mobile card
   const TransactionCard = ({ tx }: { tx: Transaction }) => (
-    <Card className="bg-card/50 backdrop-blur-sm border-border/50 overflow-hidden">
-      <CardContent className="p-4">
+    <div className="relative flex gap-3 pl-4">
+      {/* Timeline indicator line */}
+      <div className="absolute left-0 top-0 bottom-0 w-1 rounded-full">
+        <div className={cn("w-full h-full rounded-full", getIndicatorColor(tx.type))} />
+      </div>
+      <div className="flex-1 py-3">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3 min-w-0 flex-1">
             <div className={cn(
-              "p-2 rounded-lg shrink-0",
-              tx.amount >= 0 ? "bg-green-500/10" : "bg-red-500/10"
+              "p-2 rounded-xl shrink-0 shadow-sm",
+              tx.amount >= 0 ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-destructive"
             )}>
               {getTypeIcon(tx.type)}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 flex-wrap mb-1">
-                <Badge variant="outline" className={cn("text-xs capitalize", getTypeColor(tx.type))}>
+              <p className="text-sm font-semibold truncate">{tx.description || getTypeLabel(tx.type)}</p>
+              <div className="flex items-center gap-2 flex-wrap mt-1">
+                <Badge variant="outline" className={cn("text-[10px] capitalize", getTypeColor(tx.type))}>
                   {getTypeLabel(tx.type)}
                 </Badge>
-                <Badge variant="outline" className={cn("text-xs capitalize", getStatusColor(tx.status))}>
+                <Badge variant="outline" className={cn("text-[10px] capitalize", getStatusColor(tx.status))}>
                   {tx.status || 'completed'}
                 </Badge>
               </div>
-              <p className="text-sm truncate">{tx.description || 'Transaction'}</p>
-              <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+              <div className="flex items-center gap-2 mt-1.5 text-[11px] text-muted-foreground">
                 <span>{new Date(tx.created_at).toLocaleDateString()}</span>
                 <span>•</span>
                 <span>{new Date(tx.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                {tx.payment_method && (
+                  <>
+                    <span>•</span>
+                    <span className="capitalize">{tx.payment_method.replace('_', ' ')}</span>
+                  </>
+                )}
               </div>
-              {tx.payment_method && (
-                <p className="text-xs text-muted-foreground mt-1 capitalize">
-                  via {tx.payment_method.replace('_', ' ')}
-                </p>
-              )}
             </div>
           </div>
-          <div className="text-right shrink-0">
-            <p className={cn(
-              "text-lg font-bold font-mono",
-              tx.amount >= 0 ? "text-green-500" : "text-destructive"
-            )}>
-              {tx.amount >= 0 ? "+" : "-"}${Math.abs(tx.amount).toFixed(2)}
-            </p>
-          </div>
+          <p className={cn(
+            "text-lg font-bold font-mono shrink-0",
+            tx.amount >= 0 ? "text-green-500" : "text-destructive"
+          )}>
+            {tx.amount >= 0 ? "+" : "-"}${Math.abs(tx.amount).toFixed(2)}
+          </p>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
+  );
+
+  // Shimmer loading state
+  const LoadingSkeleton = () => (
+    <div className="space-y-4">
+      <div className="grid grid-cols-3 gap-3">
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="p-4 rounded-xl bg-card/50">
+            <Skeleton themed className="h-4 w-16 mb-2" />
+            <Skeleton themed className="h-7 w-24" />
+          </div>
+        ))}
+      </div>
+      <div className="space-y-3">
+        {[...Array(5)].map((_, i) => (
+          <div key={i} className="flex gap-3 pl-4">
+            <Skeleton themed className="h-10 w-10 rounded-xl shrink-0" />
+            <div className="flex-1 space-y-2">
+              <Skeleton themed className="h-4 w-40" />
+              <Skeleton themed className="h-3 w-28" />
+            </div>
+            <Skeleton themed className="h-6 w-20" />
+          </div>
+        ))}
+      </div>
+    </div>
   );
 
   return (
-    <Card className="bg-card/60 backdrop-blur-xl border-border/50">
+    <Card className="bg-card/60 backdrop-blur-xl border-0 shadow-lg shadow-primary/5">
       <CardHeader className="pb-3">
         <div className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
-              <Receipt className="w-5 h-5" />
+              <Receipt className="w-5 h-5 text-primary" />
               Transaction History
             </CardTitle>
             <Button variant="ghost" size="icon" onClick={fetchTransactions} disabled={loading}>
               <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
             </Button>
           </div>
+
+          {/* Summary Stats */}
+          {!loading && transactions.length > 0 && (
+            <div className="grid grid-cols-3 gap-2 md:gap-3">
+              <div className="p-3 rounded-xl bg-gradient-to-br from-green-500/10 to-green-500/5">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <TrendingUp className="w-3.5 h-3.5 text-green-500" />
+                  <span className="text-[10px] text-green-600 dark:text-green-400 font-medium uppercase tracking-wider">Total In</span>
+                </div>
+                <p className="text-lg font-bold text-green-500 font-mono">${summary.totalIn.toFixed(2)}</p>
+              </div>
+              <div className="p-3 rounded-xl bg-gradient-to-br from-red-500/10 to-red-500/5">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <TrendingDown className="w-3.5 h-3.5 text-red-500" />
+                  <span className="text-[10px] text-red-600 dark:text-red-400 font-medium uppercase tracking-wider">Total Out</span>
+                </div>
+                <p className="text-lg font-bold text-destructive font-mono">${summary.totalOut.toFixed(2)}</p>
+              </div>
+              <div className="p-3 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Wallet className="w-3.5 h-3.5 text-primary" />
+                  <span className="text-[10px] text-primary font-medium uppercase tracking-wider">Net</span>
+                </div>
+                <p className={cn("text-lg font-bold font-mono", summary.net >= 0 ? "text-green-500" : "text-destructive")}>
+                  {summary.net >= 0 ? "+" : "-"}${Math.abs(summary.net).toFixed(2)}
+                </p>
+              </div>
+            </div>
+          )}
+
           <div className="overflow-x-auto -mx-4 px-4 pb-1">
             <Tabs value={filter} onValueChange={(v) => { setFilter(v as typeof filter); setPage(1); }}>
               <TabsList className="bg-muted/50 w-full sm:w-auto">
@@ -272,28 +317,29 @@ export const TransactionHistory = ({ panelId }: TransactionHistoryProps) => {
       </CardHeader>
       <CardContent>
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-          </div>
+          <LoadingSkeleton />
         ) : paginatedTransactions.length === 0 ? (
-          <div className="text-center py-12">
-            <Receipt className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-            <p className="text-muted-foreground">No transactions found</p>
+          <div className="text-center py-16">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-muted/30 flex items-center justify-center">
+              <Receipt className="w-8 h-8 text-muted-foreground/50" />
+            </div>
+            <p className="text-muted-foreground font-medium">No transactions found</p>
+            <p className="text-xs text-muted-foreground mt-1">Transactions will appear here once processed</p>
           </div>
         ) : (
           <>
-            {/* Mobile Card View */}
-            <div className="block md:hidden space-y-3">
+            {/* Mobile Timeline View */}
+            <div className="block md:hidden space-y-1 divide-y divide-border/30">
               {paginatedTransactions.map((tx) => (
                 <TransactionCard key={tx.id} tx={tx} />
               ))}
             </div>
 
             {/* Desktop Table View */}
-            <div className="hidden md:block rounded-lg border border-border/50 overflow-hidden">
+            <div className="hidden md:block rounded-xl border-0 overflow-hidden">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-muted/30 hover:bg-muted/30">
+                  <TableRow className="bg-muted/20 hover:bg-muted/20 border-b border-border/30">
                     <TableHead>Date</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Description</TableHead>
@@ -303,8 +349,15 @@ export const TransactionHistory = ({ panelId }: TransactionHistoryProps) => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {paginatedTransactions.map((tx) => (
-                    <TableRow key={tx.id} className="group">
+                  {paginatedTransactions.map((tx, idx) => (
+                    <TableRow 
+                      key={tx.id} 
+                      className={cn(
+                        "group transition-colors border-b border-border/20",
+                        idx % 2 === 0 ? "bg-transparent" : "bg-muted/10",
+                        "hover:bg-gradient-to-r hover:from-primary/5 hover:to-transparent"
+                      )}
+                    >
                       <TableCell className="text-sm text-muted-foreground">
                         <div>
                           <p>{new Date(tx.created_at).toLocaleDateString()}</p>
@@ -331,7 +384,7 @@ export const TransactionHistory = ({ panelId }: TransactionHistoryProps) => {
                       <TableCell className="text-right font-medium">
                         <span className={cn(
                           tx.amount >= 0 ? "text-green-500" : "text-destructive",
-                          "font-mono"
+                          "font-mono font-bold"
                         )}>
                           {tx.amount >= 0 ? "+" : ""}${Math.abs(tx.amount).toFixed(2)}
                         </span>

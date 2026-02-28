@@ -552,13 +552,19 @@ export function useTenant(): TenantDetectionResult {
 
           setPanel((prev) => {
             if (!prev) return prev;
+            const newName = updated.name ?? prev.name;
+            const baseBranding = updated.custom_branding && typeof updated.custom_branding === 'object'
+              ? updated.custom_branding as DesignCustomization
+              : prev.custom_branding;
+            // Always sync companyName with panel name for storefront consistency
+            const syncedBranding = baseBranding
+              ? { ...baseBranding, companyName: newName } as DesignCustomization
+              : prev.custom_branding;
             return {
               ...prev,
-              name: updated.name ?? prev.name,
+              name: newName,
               logo_url: updated.logo_url ?? prev.logo_url,
-              custom_branding: updated.custom_branding && typeof updated.custom_branding === 'object'
-                ? updated.custom_branding as DesignCustomization
-                : prev.custom_branding,
+              custom_branding: syncedBranding,
               primary_color: updated.primary_color ?? prev.primary_color,
               secondary_color: updated.secondary_color ?? prev.secondary_color,
               theme_type: updated.theme_type ?? prev.theme_type,

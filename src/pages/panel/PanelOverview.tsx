@@ -43,6 +43,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 import { calculateChange, getPreviousPeriodRange } from '@/lib/analytics-utils';
 import SubdomainPreview from '@/components/panel/SubdomainPreview';
 import { RecommendedProviderWidget } from '@/components/dashboard/RecommendedProviderWidget';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface LiveOrder {
   id: string;
@@ -459,8 +460,46 @@ const PanelOverview = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="space-y-6 animate-in fade-in duration-500">
+        {/* Welcome header shimmer */}
+        <div className="rounded-2xl bg-gradient-to-br from-card/80 to-card/40 p-6">
+          <div className="flex items-center gap-4">
+            <Skeleton themed className="h-14 w-14 rounded-xl" />
+            <div className="space-y-2 flex-1">
+              <Skeleton themed className="h-6 w-48" />
+              <Skeleton themed className="h-4 w-72" />
+            </div>
+          </div>
+        </div>
+        {/* Stats grid shimmer */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="rounded-xl bg-card/50 p-4 space-y-3">
+              <div className="flex justify-between">
+                <Skeleton themed className="h-4 w-16" />
+                <Skeleton themed className="h-10 w-10 rounded-xl" />
+              </div>
+              <Skeleton themed className="h-8 w-24" />
+              <Skeleton themed className="h-4 w-20" />
+            </div>
+          ))}
+        </div>
+        {/* Quick actions shimmer */}
+        <div className="grid grid-cols-3 md:grid-cols-6 gap-2 md:gap-3">
+          {[...Array(6)].map((_, i) => (
+            <Skeleton key={i} themed className="h-20 rounded-lg" />
+          ))}
+        </div>
+        {/* Kanban shimmer */}
+        <div className="hidden md:grid md:grid-cols-3 gap-4">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="space-y-3">
+              <Skeleton themed className="h-16 rounded-xl" />
+              <Skeleton themed className="h-24 rounded-xl" />
+              <Skeleton themed className="h-24 rounded-xl" />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -599,19 +638,7 @@ const PanelOverview = () => {
             
             {/* Right side - Action Buttons */}
             <div className="flex flex-wrap items-center gap-2 sm:gap-3 self-start lg:self-center">
-              {/* Panel Balance - Enhanced Card */}
-              <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-gradient-to-br from-emerald-500/15 to-emerald-600/5 border border-emerald-500/25 shadow-sm shadow-emerald-500/10">
-                <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-emerald-500/20">
-                  <Wallet className="w-5 h-5 text-emerald-500" />
-                </div>
-                <div className="text-right">
-                  <div className="flex items-center gap-1.5 justify-end">
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_6px_rgba(34,197,94,0.6)]" />
-                    <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium leading-none">Live Balance</p>
-                  </div>
-                  <p className="text-lg font-bold text-emerald-500 tracking-tight">${panelData?.balance?.toFixed(2) || '0.00'}</p>
-                </div>
-              </div>
+              {/* Plan Badge moved here, balance moved to standalone section */}
               {/* Plan Badge */}
               <Badge 
                 variant="outline" 
@@ -1040,6 +1067,33 @@ const PanelOverview = () => {
             </div>
           </CardContent>
         </Card>
+      </motion.div>
+
+      {/* Panel Balance — Standalone Prominent Display */}
+      <motion.div variants={itemVariants}>
+        <div className="flex items-center justify-between px-5 py-4 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-transparent">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-emerald-500/20 shadow-lg shadow-emerald-500/10">
+              <Wallet className="w-6 h-6 text-emerald-500" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
+                <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold uppercase tracking-wider">Live Balance</p>
+              </div>
+              <p className="text-3xl font-bold text-emerald-500 tracking-tight mt-0.5">${panelData?.balance?.toFixed(2) || '0.00'}</p>
+            </div>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/panel/payment-methods')}
+            className="gap-1.5 border-emerald-500/30 hover:bg-emerald-500/10"
+          >
+            <Wallet className="w-4 h-4" />
+            <span className="hidden sm:inline">Add Funds</span>
+          </Button>
+        </div>
       </motion.div>
 
       {/* Recommended Provider Ad Widget */}

@@ -111,12 +111,12 @@ const APIManagement = () => {
   // Panel Owner API is centralized at the platform domain
   const apiBaseUrl = getPlatformDomain();
   
-  // Buyer API URL (for reference - uses tenant domains)
+  // Buyer API URL (for reference - uses tenant domains on smmpilot.online)
   const buyerApiUrl = panel?.custom_domain 
     ? `https://${panel.custom_domain}/api/v2`
     : panel?.subdomain 
-      ? `https://${panel.subdomain}.${apiBaseUrl.replace('https://', '')}/api/v2`
-      : `https://yourpanel.${apiBaseUrl.replace('https://', '')}/api/v2`;
+      ? `https://${panel.subdomain}.smmpilot.online/api/v2`
+      : `https://yourpanel.smmpilot.online/api/v2`;
 
   // Fetch API key and logs
   useEffect(() => {

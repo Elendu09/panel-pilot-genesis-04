@@ -16,6 +16,16 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useNotifications, NotificationType } from "@/hooks/use-notifications";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
@@ -117,6 +127,7 @@ interface NotificationCenterProps {
 export const NotificationCenter = ({ variant = "popover" }: NotificationCenterProps) => {
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   const navigate = useNavigate();
   const { notifications, unreadCount, markAsRead, markAllAsRead, clearAll, getByType } = useNotifications();
 
@@ -147,13 +158,32 @@ export const NotificationCenter = ({ variant = "popover" }: NotificationCenterPr
         <Button
           variant="ghost"
           size="sm"
-          onClick={clearAll}
+          onClick={() => setShowClearConfirm(true)}
           disabled={notifications.length === 0}
           className="h-8 text-xs text-muted-foreground hover:text-destructive"
         >
           <Trash2 className="w-3.5 h-3.5 mr-1" />
           Clear
         </Button>
+        <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Clear all notifications?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete all your notifications. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => { clearAll(); setShowClearConfirm(false); }}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Delete All
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">

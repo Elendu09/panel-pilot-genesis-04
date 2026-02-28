@@ -68,7 +68,7 @@ export function CustomerMobileCard({
   };
 
   return (
-    <Card className="bg-card/60 backdrop-blur-xl border-border/50">
+    <Card className="bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-xl border-0 shadow-lg shadow-primary/5 hover:shadow-xl hover:shadow-primary/10 transition-all duration-300 hover:scale-[1.01]">
       <CardContent className="p-4">
         {/* Header with avatar and actions */}
         <div className="flex items-start justify-between mb-3">
@@ -119,17 +119,17 @@ export function CustomerMobileCard({
 
         {/* Stats grid */}
         <div className="grid grid-cols-3 gap-2 text-center">
-          <div className="bg-muted/30 rounded-lg p-2">
+          <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-lg p-2">
             <DollarSign className="w-4 h-4 mx-auto text-primary mb-1" />
             <p className="text-sm font-semibold text-primary">${customer.balance.toFixed(2)}</p>
             <p className="text-xs text-muted-foreground">Balance</p>
           </div>
-          <div className="bg-muted/30 rounded-lg p-2">
+          <div className="bg-gradient-to-br from-muted/40 to-muted/20 rounded-lg p-2">
             <DollarSign className="w-4 h-4 mx-auto text-muted-foreground mb-1" />
             <p className="text-sm font-semibold">${customer.totalSpent.toFixed(0)}</p>
             <p className="text-xs text-muted-foreground">Spent</p>
           </div>
-          <div className="bg-muted/30 rounded-lg p-2">
+          <div className="bg-gradient-to-br from-muted/40 to-muted/20 rounded-lg p-2">
             <ShoppingCart className="w-4 h-4 mx-auto text-muted-foreground mb-1" />
             <p className="text-sm font-semibold">{customer.totalOrders}</p>
             <p className="text-xs text-muted-foreground">Orders</p>

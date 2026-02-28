@@ -1178,18 +1178,58 @@ const CustomerManagement = () => {
           </div>
           )}
 
-          {/* Mobile Cards */}
-          <div className="md:hidden space-y-3">
-            {filteredCustomers.map((customer) => (
-              <CustomerMobileCard
-                key={customer.id}
-                customer={customer as any}
-                onView={() => handleViewDetails(customer)}
-                onEdit={() => handleEditCustomer(customer)}
-                onAdjustBalance={() => { setSelectedCustomer(customer); setShowBalanceModal(true); }}
-                onSuspend={async () => { await handleSingleSuspend(customer.id); }}
-              />
-            ))}
+          {/* Mobile Table-style View */}
+          <div className="md:hidden overflow-x-auto rounded-lg">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border/30 text-left text-xs text-muted-foreground">
+                  <th className="py-2 px-2 font-medium">Customer</th>
+                  <th className="py-2 px-2 font-medium">Status</th>
+                  <th className="py-2 px-2 font-medium text-right">Balance</th>
+                  <th className="py-2 px-2 font-medium text-right">Spent</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/20">
+                {filteredCustomers.map((customer) => (
+                  <tr 
+                    key={customer.id} 
+                    className="hover:bg-muted/20 transition-colors cursor-pointer"
+                    onClick={() => handleViewDetails(customer)}
+                  >
+                    <td className="py-2.5 px-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-xs shrink-0">
+                          {(customer.name || customer.email).split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm truncate">{customer.name || customer.username || 'N/A'}</p>
+                          <p className="text-[10px] text-muted-foreground truncate">{customer.email}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-2.5 px-2">
+                      <Badge 
+                        variant="outline" 
+                        className={cn(
+                          "text-[10px] px-1.5",
+                          customer.isBanned ? "bg-destructive/10 text-destructive border-destructive/20" :
+                          customer.status === 'active' ? "bg-green-500/10 text-green-500 border-green-500/20" :
+                          "bg-muted text-muted-foreground"
+                        )}
+                      >
+                        {customer.isBanned ? 'Banned' : customer.status === 'active' ? 'Active' : 'Inactive'}
+                      </Badge>
+                    </td>
+                    <td className="py-2.5 px-2 text-right font-mono text-xs font-semibold text-primary">
+                      ${Number(customer.balance || 0).toFixed(2)}
+                    </td>
+                    <td className="py-2.5 px-2 text-right font-mono text-xs text-muted-foreground">
+                      ${Number(customer.totalSpent || 0).toFixed(0)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </CardContent>
       </Card>
