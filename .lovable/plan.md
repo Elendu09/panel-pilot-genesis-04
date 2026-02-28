@@ -1,55 +1,53 @@
+# Plan: Fix Data Leaks, Missing Filters & Billing Page Enhancements
 
+## Critical Issues Found
 
-# Plan: Onboarding Full Audit — Fix Errors & Redesign Complete Step
+### Issue 1: Transaction data leak — no `panel_id` filter (SECURITY BUG)
 
-## Issues Found
+`**PaymentMethods.tsx` line 158**: Fetches ALL transactions across all panels:
 
-### 1. Custom domain type never set on "have-domain" selection (BUG)
-In `OnboardingDomainStep.tsx`, when a Basic/Pro user selects "I have a domain" radio option, `domainOption` is set to `'have-domain'` but `onDomainTypeChange('custom')` is **never called**. This means `domainType` stays `'subdomain'` in the parent, and on completion the panel gets a subdomain instead of the custom domain. Similarly, "register-new" never calls `onDomainTypeChange('custom')`.
-
-**Fix in `OnboardingDomainStep.tsx`**: Add `onDomainTypeChange('custom')` in the `onValueChange` handler of the `RadioGroup`, and call `onDomainTypeChange('subdomain')` for the free-subdomain option (already done for click but not for radio change).
-
-### 2. Payment step uses stale `createdPanelId` state instead of ref (BUG)
-Line 661: `panelId={createdPanelId || undefined}` — This uses React state which may be stale during the same render cycle. Should use `createdPanelIdRef.current`.
-
-**Fix in `PanelOnboardingV2.tsx` line 661**: Change to `panelId={createdPanelIdRef.current || undefined}`.
-
-### 3. SEO auto-generated text not clamped to pixel limits (BUG)
-`generateAllSeo()` sets `seoTitle` and `seoDescription` from the edge function response without clamping to `SEO_TITLE_PX_RANGE.max` / `SEO_DESC_PX_RANGE.max`. If the AI returns text that's too long, the user gets a validation error they can't easily fix.
-
-**Fix in `PanelOnboardingV2.tsx` `generateAllSeo()`**: Import `clampToPx` from `seo-metrics` and clamp both title and description before setting state.
-
-### 4. handleComplete fails if user skipped SEO step with empty fields (BUG)
-If `seoTitle` or `seoDescription` is empty, `measureTextPx('')` returns 0, which is outside `SEO_TITLE_PX_RANGE`, causing validation to block completion. The fallback generation only triggers if the user actually visits the SEO step.
-
-**Fix**: In `handleComplete`, if SEO fields are empty, auto-generate fallback values before validating.
-
-### 5. Complete step UI needs redesign
-Current "Complete your panel" step is a basic Card with minimal styling. Needs better container, visual hierarchy, and padding.
-
-**Redesign in `PanelOnboardingV2.tsx` lines 966-1036**:
-- Add gradient border glow effect on the summary card
-- Add animated confetti/sparkle icon
-- Show all configuration items in a structured grid with icons
-- Add currency to the summary
-- Better spacing, rounded corners, and visual separation
-- Add a subtle "Everything looks good" success banner
-
-### 6. Domain step RadioGroup doesn't sync domainType on option change (BUG)
-The `RadioGroup`'s `onValueChange` only sets `domainOption` state locally. It needs to also call `onDomainTypeChange` to sync the parent.
-
-**Fix in `OnboardingDomainStep.tsx`**: Update the RadioGroup `onValueChange`:
-```tsx
-onValueChange={(value: DomainOption) => {
-  setDomainOption(value);
-  onDomainTypeChange(value === 'free-subdomain' ? 'subdomain' : 'custom');
-}}
+```typescript
+const { data: transactions } = await supabase
+  .from('transactions')
+  .select('*')
+  .order('created_at', { ascending: false });
 ```
+
+Missing `.eq('panel_id', panel.id)`. This means top depositors, recent transactions, and payment method usage stats are calculated from **all panels' data**, not just the current panel.
+
+`**Analytics.tsx` lines 211-216 and 249-253**: Same issue — transactions fetched without `panel_id` filter. Revenue calculations, deposit metrics, and period comparisons include data from other panels.
+
+**Fix**: Add `.eq('panel_id', panel.id)` to all transaction queries in both files.
+
+### Issue 2: `PaymentMethods.tsx` calls `refreshAvailableGateways()` twice (line 435-436)
+
+```typescript
+await refreshAvailableGateways();
+await refreshAvailableGateways(); // duplicate
+```
+
+**Fix**: Remove the duplicate call.
+
+
+
+### Issue 4: Billing page `QuickDeposit` doesn't pass selected gateway
+
+`QuickDeposit` component uses `useAdminPaymentGateways()` to fetch admin-configured gateways, correctly selecting from them. The `handleDeposit` in Billing passes the `method` string from `QuickDeposit` to `process-payment`. This works correctly but the default `selectedMethod` is hardcoded to `"stripe"` (line 28 of QuickDeposit.tsx), which may not exist in admin gateways.
+
+**Fix**: Change default `selectedMethod` from `"stripe"` to `""` add in admin payment to set default for subscription and others can still work for quick deposit in billing page `useEffect`.
+
+### Issue 5: `Analytics.tsx` previous period transactions also missing `panel_id` filter
+
+Line 249-253 fetches previous period transactions without panel filter, corrupting period-over-period comparison metrics.
+
+**Fix**: Add `.eq('panel_id', panel.id)` filter.
 
 ## Summary of Changes
 
-| File | Change |
-|------|--------|
-| `src/components/onboarding/OnboardingDomainStep.tsx` | Fix RadioGroup to sync `domainType` with parent on option change |
-| `src/pages/panel/PanelOnboardingV2.tsx` | Fix panelId prop to use ref; clamp SEO auto-gen; auto-fill empty SEO on complete; redesign Complete step UI |
 
+| File                                      | Change                                                                                                    |
+| ----------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `src/pages/panel/PaymentMethods.tsx`      | Add `.eq('panel_id', panel.id)` to transactions query; remove duplicate `refreshAvailableGateways()` call |
+| `src/pages/panel/Analytics.tsx`           | Add `.eq('panel_id', panel.id)` to both current and previous period transaction queries                   |
+| `src/pages/panel/Billing.tsx`             | Import and add `TransactionHistory` component below deposit/commission grid                               |
+| `src/components/billing/QuickDeposit.tsx` | Change default `selectedMethod` from `"stripe"` to `""`                                                   |
