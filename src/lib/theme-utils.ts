@@ -418,6 +418,68 @@ export const getLastWordFromTitle = (title: string): { prefix: string; lastWord:
   return { prefix: words.join(' '), lastWord };
 };
 
+// Generate CSS variables string from customization for injection into storefront
+export const generateDesignCSSVariables = (customization: ThemeCustomization): string => {
+  const vars: string[] = [];
+  
+  // Typography
+  if (customization.fontFamily) vars.push(`--font-family: '${customization.fontFamily}', sans-serif`);
+  if (customization.headingFont) vars.push(`--heading-font: '${customization.headingFont}', sans-serif`);
+  if (customization.baseFontSize) vars.push(`--base-font-size: ${customization.baseFontSize}px`);
+  if (customization.headingWeight) vars.push(`--heading-weight: ${customization.headingWeight}`);
+  if (customization.bodyWeight) vars.push(`--body-weight: ${customization.bodyWeight}`);
+  if (customization.lineHeight) vars.push(`--line-height: ${customization.lineHeight}`);
+  if (customization.letterSpacing !== undefined) vars.push(`--letter-spacing: ${customization.letterSpacing}px`);
+  
+  // Spacing & Layout
+  if (customization.sectionPaddingY) vars.push(`--section-padding-y: ${customization.sectionPaddingY}px`);
+  if (customization.containerMaxWidth) vars.push(`--container-max-width: ${customization.containerMaxWidth}px`);
+  if (customization.cardSpacing) vars.push(`--card-spacing: ${customization.cardSpacing}px`);
+  if (customization.elementGap) vars.push(`--element-gap: ${customization.elementGap}px`);
+  
+  // Cards & Buttons
+  if (customization.cardRadius) vars.push(`--card-radius: ${customization.cardRadius}px`);
+  if (customization.buttonRadius) vars.push(`--button-radius: ${customization.buttonRadius}px`);
+  
+  // Animations
+  if (customization.animationDuration) vars.push(`--animation-duration: ${customization.animationDuration}ms`);
+  
+  // Background pattern
+  const bgStyles = getBackgroundStyles(customization);
+  if (customization.backgroundPattern && customization.backgroundPattern !== 'none') {
+    vars.push(`--bg-pattern: ${bgStyles.backgroundImage}`);
+    vars.push(`--bg-pattern-size: ${bgStyles.backgroundSize}`);
+  }
+
+  if (vars.length === 0) return '';
+  
+  return `.buyer-theme-wrapper, [class*="buyer-theme"] {
+  ${vars.join(';\n  ')};
+  font-family: var(--font-family, 'Inter', sans-serif);
+  font-size: var(--base-font-size, 16px);
+  font-weight: var(--body-weight, 400);
+  line-height: var(--line-height, 1.6);
+  letter-spacing: var(--letter-spacing, 0px);
+}
+.buyer-theme-wrapper h1, .buyer-theme-wrapper h2, .buyer-theme-wrapper h3,
+.buyer-theme-wrapper h4, .buyer-theme-wrapper h5, .buyer-theme-wrapper h6,
+[class*="buyer-theme"] h1, [class*="buyer-theme"] h2, [class*="buyer-theme"] h3,
+[class*="buyer-theme"] h4, [class*="buyer-theme"] h5, [class*="buyer-theme"] h6 {
+  font-family: var(--heading-font, var(--font-family, 'Inter', sans-serif));
+  font-weight: var(--heading-weight, 700);
+}
+.buyer-theme-wrapper section, [class*="buyer-theme"] section {
+  padding-top: var(--section-padding-y, 80px);
+  padding-bottom: var(--section-padding-y, 80px);
+}
+.buyer-theme-wrapper .container, [class*="buyer-theme"] .container {
+  max-width: var(--container-max-width, 1280px);
+}
+.buyer-theme-wrapper button, [class*="buyer-theme"] button {
+  border-radius: var(--button-radius, 12px);
+}`;
+};
+
 // Complete icon map for social links in all themes
 export const getSocialIconMap = (): Record<string, LucideIcon> => {
   return {

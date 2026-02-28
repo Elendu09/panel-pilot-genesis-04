@@ -67,7 +67,7 @@ const DomainSettings = () => {
     fetchData();
   }, [profile?.id]);
 
-  // Auto-verify pending domains every 30 seconds
+  // Auto-verify pending domains every 30 seconds (only DNS-pending, not txt_pending)
   useEffect(() => {
     if (!panel?.id || domains.length === 0) return;
 
@@ -123,6 +123,46 @@ const DomainSettings = () => {
     }
   };
 
+  // Verify TXT record only (Step 1)
+  const verifyTxtRecord = async (domainId: string, domainName: string) => {
+    setVerifyingDomains(prev => new Set(prev).add(domainId));
+    try {
+      const { data: health, error: healthError } = await supabase.functions.invoke("domain-health-check", {
+        body: { domain: domainName, check_type: 'txt' },
+      });
+
+      if (healthError) throw healthError;
+
+      const txtOk = !!health?.txt_ok || !!health?.dns_ok;
+
+      if (txtOk) {
+        await supabase
+          .from("panel_domains")
+          .update({
+            verification_status: 'pending', // TXT verified, now DNS pending
+            txt_verified_at: new Date().toISOString(),
+          })
+          .eq("id", domainId);
+
+        toast({ title: "TXT Verified!", description: "Now configure your A and CNAME records." });
+      } else {
+        toast({ variant: "destructive", title: "TXT Not Found", description: "Add the TXT record at your registrar and try again." });
+      }
+
+      await fetchData();
+    } catch (error) {
+      console.error("TXT verification error:", error);
+      toast({ variant: "destructive", title: "Verification Failed" });
+    } finally {
+      setVerifyingDomains(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(domainId);
+        return newSet;
+      });
+    }
+  };
+
+  // Verify DNS records (Step 2)
   const verifyDomain = async (domainId: string, domainName: string, showToasts = true) => {
     setVerifyingDomains(prev => new Set(prev).add(domainId));
 
@@ -136,22 +176,36 @@ const DomainSettings = () => {
       const dnsOk = !!health?.dns_ok;
       const httpsOk = !!health?.https_ok;
 
-      await supabase
-        .from("panel_domains")
-        .update({
-          verification_status: dnsOk ? "verified" : "pending",
-          verified_at: dnsOk ? new Date().toISOString() : null,
-          dns_configured: dnsOk,
-          ssl_status: httpsOk ? "active" : "pending",
-        })
-        .eq("id", domainId);
+      if (dnsOk) {
+        await supabase
+          .from("panel_domains")
+          .update({
+            verification_status: "verified",
+            verified_at: new Date().toISOString(),
+            dns_configured: true,
+            ssl_status: httpsOk ? "active" : "pending",
+          })
+          .eq("id", domainId);
 
-      if (showToasts) {
-        if (dnsOk && httpsOk) {
-          toast({ title: "Domain Verified!", description: `${domainName} is verified and HTTPS is active.` });
-        } else if (dnsOk) {
-          toast({ title: "DNS Verified", description: "DNS is correct, SSL is still provisioning." });
-        } else {
+        // Only set custom_domain after full verification
+        await supabase
+          .from('panels')
+          .update({ custom_domain: domainName })
+          .eq('id', panel.id);
+
+        if (showToasts) {
+          toast({ title: "Domain Verified!", description: `${domainName} is active.` });
+        }
+      } else {
+        await supabase
+          .from("panel_domains")
+          .update({
+            verification_status: "pending",
+            dns_configured: false,
+          })
+          .eq("id", domainId);
+
+        if (showToasts) {
           toast({ variant: "destructive", title: "DNS Not Configured", description: `Point your A record to ${VERCEL_IP}` });
         }
       }
@@ -195,8 +249,8 @@ const DomainSettings = () => {
     }
     
     // Check subscription tier - custom domains require paid plan
-    const subscriptionTier = panel?.subscription_tier || 'free';
-    if (subscriptionTier === 'free') {
+    const effectivePlan = activePlan || panel?.subscription_tier || 'free';
+    if (effectivePlan === 'free') {
       toast({ 
         variant: "destructive", 
         title: "Upgrade Required", 
@@ -209,26 +263,25 @@ const DomainSettings = () => {
     try {
       const verificationToken = crypto.randomUUID().substring(0, 16);
       
+      const txtRecord = `smmpilot-verify=${verificationToken}`;
+      
       const { error } = await supabase
         .from('panel_domains')
         .insert({
           panel_id: panel.id,
           domain: newDomain.trim().toLowerCase(),
           is_primary: true,
-          verification_status: 'pending',
+          verification_status: 'txt_pending',
           ssl_status: 'pending',
           verification_token: verificationToken,
+          txt_verification_record: txtRecord,
         });
 
       if (error) throw error;
 
-      // Also update the panel's custom_domain field
-      await supabase
-        .from('panels')
-        .update({ custom_domain: newDomain.trim().toLowerCase() })
-        .eq('id', panel.id);
+      // Do NOT set panels.custom_domain yet — wait for full verification
 
-      toast({ title: "Domain added!", description: "Configure your DNS records to complete setup." });
+      toast({ title: "Domain added!", description: "Verify TXT record ownership before configuring DNS." });
       setShowAddDialog(false);
       setNewDomain("");
       await fetchData();
@@ -267,9 +320,11 @@ const DomainSettings = () => {
     switch (status) {
       case "verified":
       case "active":
-        return <Badge className="bg-green-500/10 text-green-500 border-green-500/20"><CheckCircle className="w-3 h-3 mr-1" /> Verified</Badge>;
+        return <Badge className="bg-green-500/10 text-green-500 border-green-500/20"><CheckCircle className="w-3 h-3 mr-1" /> Active</Badge>;
       case "pending":
-        return <Badge className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20"><Clock className="w-3 h-3 mr-1" /> Pending</Badge>;
+        return <Badge className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20"><Clock className="w-3 h-3 mr-1" /> DNS Pending</Badge>;
+      case "txt_pending":
+        return <Badge className="bg-orange-500/10 text-orange-500 border-orange-500/20"><AlertCircle className="w-3 h-3 mr-1" /> TXT Pending</Badge>;
       case "error":
         return <Badge className="bg-red-500/10 text-red-500 border-red-500/20"><AlertCircle className="w-3 h-3 mr-1" /> Error</Badge>;
       default:
@@ -404,17 +459,68 @@ const DomainSettings = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {currentDomain.verification_status !== 'verified' && (
+                  {/* Step 1: TXT Verification */}
+                  {currentDomain.verification_status === 'txt_pending' && (
+                    <>
+                      <Alert className="border-orange-500/20 bg-orange-500/5">
+                        <AlertCircle className="w-4 h-4 text-orange-500" />
+                        <AlertDescription>
+                          <strong>Step 1:</strong> Add the TXT record below at your domain registrar to prove ownership. DNS records will be shown after verification.
+                        </AlertDescription>
+                      </Alert>
+                      
+                      <div className="p-3 rounded-lg bg-muted/50 border border-border/50">
+                        <div className="flex items-center justify-between mb-2">
+                          <Badge variant="outline">TXT</Badge>
+                          <Button variant="ghost" size="sm" onClick={() => copyToClipboard(currentDomain.verification_token ? `smmpilot-verify=${currentDomain.verification_token}` : '')}>
+                            <Copy className="w-3 h-3" />
+                          </Button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div>
+                            <span className="text-muted-foreground">Host:</span>
+                            <code className="ml-2 bg-background px-1 rounded">_smmpilot</code>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Value:</span>
+                            <code className="ml-2 bg-background px-1 rounded text-xs break-all">smmpilot-verify={currentDomain.verification_token}</code>
+                          </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-2">Add this TXT record to verify domain ownership</p>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <Button 
+                          onClick={() => verifyTxtRecord(currentDomain.id, currentDomain.domain)} 
+                          disabled={verifyingDomains.has(currentDomain.id)}
+                        >
+                          {verifyingDomains.has(currentDomain.id) ? (
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          ) : (
+                            <CheckCircle className="w-4 h-4 mr-2" />
+                          )}
+                          Verify TXT Record
+                        </Button>
+                        <Button variant="outline" onClick={() => deleteDomain(currentDomain.id)}>
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Remove
+                        </Button>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Step 2: DNS Configuration (shown after TXT verified) */}
+                  {currentDomain.verification_status === 'pending' && (
                     <>
                       <Alert className="border-amber-500/20 bg-amber-500/5">
                         <Info className="w-4 h-4 text-amber-500" />
                         <AlertDescription>
-                          Add the following DNS records at your domain registrar to verify ownership.
+                          <strong>Step 2:</strong> TXT verified ✓ — Now add the following DNS records to point your domain.
                         </AlertDescription>
                       </Alert>
                       
                       <div className="space-y-3">
-                        {dnsRecords.map((record, idx) => (
+                        {dnsRecords.filter(r => r.type !== 'TXT').map((record, idx) => (
                           <div key={idx} className="p-3 rounded-lg bg-muted/50 border border-border/50">
                             <div className="flex items-center justify-between mb-2">
                               <Badge variant="outline">{record.type}</Badge>
@@ -436,26 +542,36 @@ const DomainSettings = () => {
                           </div>
                         ))}
                       </div>
+
+                      <div className="flex gap-2">
+                        <Button 
+                          onClick={() => verifyDomain(currentDomain.id, currentDomain.domain)} 
+                          disabled={verifyingDomains.has(currentDomain.id)}
+                        >
+                          {verifyingDomains.has(currentDomain.id) ? (
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          ) : (
+                            <RefreshCw className="w-4 h-4 mr-2" />
+                          )}
+                          Verify DNS
+                        </Button>
+                        <Button variant="outline" onClick={() => deleteDomain(currentDomain.id)}>
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Remove
+                        </Button>
+                      </div>
                     </>
                   )}
 
-                  <div className="flex gap-2">
-                    <Button 
-                      onClick={() => verifyDomain(currentDomain.id, currentDomain.domain)} 
-                      disabled={verifyingDomains.has(currentDomain.id)}
-                    >
-                      {verifyingDomains.has(currentDomain.id) ? (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      ) : (
-                        <RefreshCw className="w-4 h-4 mr-2" />
-                      )}
-                      Verify Now
-                    </Button>
-                    <Button variant="outline" onClick={() => deleteDomain(currentDomain.id)}>
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      Remove
-                    </Button>
-                  </div>
+                  {/* Verified state */}
+                  {currentDomain.verification_status === 'verified' && (
+                    <div className="flex gap-2">
+                      <Button variant="outline" onClick={() => deleteDomain(currentDomain.id)}>
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Remove Domain
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </>
@@ -519,25 +635,25 @@ const DomainSettings = () => {
               </p>
             </div>
             
-            {/* DNS Preview */}
+            {/* TXT Preview */}
             {newDomain && isValidCustomDomain(newDomain).valid && (
               <div className="p-4 rounded-lg bg-muted/50 border border-border/50 space-y-3">
                 <h4 className="text-sm font-medium flex items-center gap-2">
                   <Network className="w-4 h-4" />
-                  Required DNS Records
+                  Verification Flow
                 </h4>
                 <div className="space-y-2 text-xs">
                   <div className="flex items-center gap-2 p-2 bg-background rounded">
-                    <Badge variant="outline" className="text-[10px]">A</Badge>
-                    <code className="text-muted-foreground">@ → {VERCEL_IP}</code>
+                    <Badge variant="outline" className="text-[10px]">Step 1</Badge>
+                    <span className="text-muted-foreground">Add TXT record to verify ownership</span>
                   </div>
                   <div className="flex items-center gap-2 p-2 bg-background rounded">
-                    <Badge variant="outline" className="text-[10px]">CNAME</Badge>
-                    <code className="text-muted-foreground">www → {VERCEL_CNAME}</code>
+                    <Badge variant="outline" className="text-[10px]">Step 2</Badge>
+                    <span className="text-muted-foreground">Configure A & CNAME records</span>
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  ⏱️ DNS propagation typically takes 10-30 minutes
+                  🔒 Domain ownership must be verified before DNS configuration
                 </p>
               </div>
             )}
@@ -545,8 +661,7 @@ const DomainSettings = () => {
             <Alert>
               <Info className="w-4 h-4" />
               <AlertDescription className="text-sm">
-                After adding, you'll need to configure DNS records at your domain registrar.
-                We'll automatically verify and enable SSL once DNS is configured.
+                After adding, you'll first verify ownership with a TXT record, then configure DNS records.
               </AlertDescription>
             </Alert>
           </div>
