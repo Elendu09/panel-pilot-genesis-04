@@ -61,6 +61,7 @@ import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { usePanel } from "@/hooks/usePanel";
+import { PanelSwitcher } from "@/components/panel/PanelSwitcher";
 
 // Lazy load ProviderAds
 const ProviderAds = lazy(() => import("./panel/ProviderAds"));
@@ -362,6 +363,8 @@ const PanelOwnerDashboard = () => {
 
         {/* Sticky Footer */}
         <div className="mt-auto p-2 border-t border-sidebar-border/50 space-y-2 bg-sidebar/95 backdrop-blur-sm sticky bottom-0">
+          {/* Panel Switcher */}
+          <PanelSwitcher collapsed={!sidebarOpen} />
           {/* Quick Stats */}
           <AnimatePresence>
             {sidebarOpen && (

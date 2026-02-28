@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -18,52 +18,122 @@ interface Panel {
   logo_url: string | null;
   onboarding_completed: boolean;
   settings?: any;
+  subscription_tier?: string;
+  custom_branding?: any;
 }
+
+// Panel limits by subscription tier
+export const PANEL_LIMITS: Record<string, number> = {
+  free: 1,
+  basic: 2,
+  pro: 5,
+};
 
 export function usePanel() {
   const { profile } = useAuth();
   const [panel, setPanel] = useState<Panel | null>(null);
+  const [allPanels, setAllPanels] = useState<Panel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const fetchPanels = useCallback(async () => {
     if (!profile?.id) {
       setLoading(false);
       return;
     }
 
-    const fetchPanel = async () => {
-      try {
-        const { data, error: fetchError } = await supabase
-          .from('panels')
-          .select('*')
-          .eq('owner_id', profile.id)
-          .maybeSingle();
+    try {
+      // Fetch ALL panels for this owner
+      const { data: panels, error: fetchError } = await supabase
+        .from('panels')
+        .select('*')
+        .eq('owner_id', profile.id)
+        .order('created_at', { ascending: true });
 
-        if (fetchError) throw fetchError;
-        setPanel(data);
-      } catch (err) {
-        console.error('Error fetching panel:', err);
-        setError(err instanceof Error ? err.message : 'Failed to fetch panel');
-      } finally {
-        setLoading(false);
+      if (fetchError) throw fetchError;
+
+      const panelList = panels || [];
+      setAllPanels(panelList);
+
+      if (panelList.length === 0) {
+        setPanel(null);
+        return;
       }
-    };
 
-    fetchPanel();
-  }, [profile?.id]);
+      // Determine active panel: use active_panel_id from profile, else first panel
+      const activePanelId = (profile as any)?.active_panel_id;
+      let activePanel = panelList.find(p => p.id === activePanelId);
+      
+      if (!activePanel) {
+        // Default to first panel (or first with onboarding completed)
+        activePanel = panelList.find(p => p.onboarding_completed) || panelList[0];
+      }
 
-  const refreshPanel = async () => {
+      setPanel(activePanel);
+    } catch (err) {
+      console.error('Error fetching panels:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch panel');
+    } finally {
+      setLoading(false);
+    }
+  }, [profile?.id, (profile as any)?.active_panel_id]);
+
+  useEffect(() => {
+    fetchPanels();
+  }, [fetchPanels]);
+
+  const switchPanel = useCallback(async (panelId: string) => {
     if (!profile?.id) return;
-    
-    const { data } = await supabase
-      .from('panels')
-      .select('*')
-      .eq('owner_id', profile.id)
-      .maybeSingle();
-    
-    setPanel(data);
-  };
 
-  return { panel, loading, error, refreshPanel };
+    // Update active_panel_id in profiles
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({ active_panel_id: panelId } as any)
+      .eq('id', profile.id);
+
+    if (updateError) {
+      console.error('Error switching panel:', updateError);
+      return;
+    }
+
+    // Update local state immediately
+    const newActive = allPanels.find(p => p.id === panelId);
+    if (newActive) {
+      setPanel(newActive);
+    }
+  }, [profile?.id, allPanels]);
+
+  const refreshPanel = useCallback(async () => {
+    await fetchPanels();
+  }, [fetchPanels]);
+
+  // Get max panels allowed based on highest-tier subscription
+  const getMaxPanels = useCallback(() => {
+    if (allPanels.length === 0) return 1;
+    
+    // Check actual subscription from any panel
+    let highestTier = 'free';
+    for (const p of allPanels) {
+      const tier = (p as any).subscription_tier || 'free';
+      if (tier === 'pro') { highestTier = 'pro'; break; }
+      if (tier === 'basic' && highestTier === 'free') highestTier = 'basic';
+    }
+
+    return PANEL_LIMITS[highestTier] || 1;
+  }, [allPanels]);
+
+  const canCreatePanel = useCallback(() => {
+    return allPanels.length < getMaxPanels();
+  }, [allPanels, getMaxPanels]);
+
+  return { 
+    panel, 
+    allPanels,
+    loading, 
+    error, 
+    refreshPanel, 
+    switchPanel,
+    canCreatePanel,
+    getMaxPanels,
+  };
 }
