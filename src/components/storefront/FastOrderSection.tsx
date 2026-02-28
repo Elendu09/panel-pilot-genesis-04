@@ -626,6 +626,9 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
             description: `Order #${orderNumber} is now being processed.`
           });
           
+          // Track order completion for analytics funnel
+          trackOrderComplete(orderId, 0);
+          
           setShowOrderSuccess(true);
           setTimeout(() => {
             setShowOrderSuccess(false);
@@ -715,6 +718,9 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
           await navigator.clipboard.writeText(order.orderNumber);
         } catch {}
 
+        // Track order completion for analytics funnel
+        trackOrderComplete(order.id, totalPrice);
+
         setShowOrderSuccess(true);
         setTimeout(() => {
           setShowOrderSuccess(false);
@@ -775,6 +781,8 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
             title: "Order Created",
             description: "Complete payment to start processing.",
           });
+          // Track order completion for analytics funnel
+          trackOrderComplete(order.id, totalPrice);
           setPlacedOrderId(order.id);
           setPlacedOrderNumber(order.orderNumber);
           setCurrentStep(6);

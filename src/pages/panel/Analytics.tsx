@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { TabsContent } from "@/components/ui/tabs";
+import { TabsContent } from "@/components/ui/tabs"; // kept for potential future use
 import { 
   BarChart, 
   Bar, 
@@ -66,7 +66,7 @@ const Analytics = () => {
   const { profile } = useAuth();
   const { panel } = usePanel();
   const [dateRange, setDateRange] = useState("30d");
-  const [activeTab, setActiveTab] = useState("overview");
+  // Tabs removed — single Overview page
   const [loading, setLoading] = useState(true);
   
   // Custom date range state
@@ -137,7 +137,8 @@ const Analytics = () => {
   });
   
   const [insightsData, setInsightsData] = useState<any[]>([]);
-  
+  const [prevDepositsTotal, setPrevDepositsTotal] = useState(0);
+
   // Real deposit breakdown state - replaces simulated percentages
   const [depositBreakdown, setDepositBreakdown] = useState({
     completed: 0,
@@ -318,7 +319,11 @@ const Analytics = () => {
         refunds: volumeCalc.refunds,
         netRevenue: volumeCalc.netRevenue
       });
-      
+
+      // ========= REAL PREVIOUS DEPOSITS TOTAL =========
+      const prevDepositsAmount = prevDeposits.reduce((sum, d) => sum + (d.amount || 0), 0);
+      setPrevDepositsTotal(prevDepositsAmount);
+
       // ========= REAL DEPOSIT BREAKDOWN =========
       // Calculate actual deposit breakdown from transactions (replaces simulated percentages)
       const allDeposits = (transactions || []).filter(t => t.type === 'deposit');
@@ -661,8 +666,7 @@ const Analytics = () => {
           </div>
         </div>
         
-        {/* Sub-Tabs: Overview / Payments / Customers */}
-        <AnalyticsTabs activeTab={activeTab} onTabChange={setActiveTab} />
+        {/* Tabs removed — single Overview page */}
       </div>
 
       {/* Top Stat Cards Row - 4 gradient cards */}
@@ -711,7 +715,7 @@ const Analytics = () => {
       </motion.div>
 
       {/* Main Dashboard Grid - Tab Filtered Content */}
-      {(activeTab === 'overview' || activeTab === 'payments') && (
+      {(
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -742,7 +746,7 @@ const Analytics = () => {
       )}
 
       {/* Deposit Analytics Row - Real data breakdown */}
-      {(activeTab === 'overview' || activeTab === 'payments') && (
+      {(
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -754,7 +758,7 @@ const Analytics = () => {
             completedDeposits={depositBreakdown.completed}
             pendingDeposits={depositBreakdown.pending}
             failedDeposits={depositBreakdown.failed}
-            previousTotalDeposits={volumeData.previousGrossVolume * 0.3}
+            previousTotalDeposits={prevDepositsTotal}
           />
         </motion.div>
       )}
@@ -766,46 +770,34 @@ const Analytics = () => {
         transition={{ delay: 0.2 }}
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
       >
-        {/* Retention Card - Show in Overview & Customers */}
-        {(activeTab === 'overview' || activeTab === 'customers') && (
-          <RetentionCard
-            currentRate={retentionData.currentRate}
-            data={retentionData.monthlyData}
-          />
-        )}
+        <RetentionCard
+          currentRate={retentionData.currentRate}
+          data={retentionData.monthlyData}
+        />
         
-        {/* Transactions Card - Show in Overview & Payments */}
-        {(activeTab === 'overview' || activeTab === 'payments') && (
-          <CompactStatCard
-            title="Transactions"
-            value={transactionsData.total}
-            change={transactionsData.change}
-            sparklineData={transactionsData.sparkline}
-            peakLabel={transactionsData.peakDay}
-            sparklineColor="hsl(var(--primary))"
-          />
-        )}
+        <CompactStatCard
+          title="Transactions"
+          value={transactionsData.total}
+          change={transactionsData.change}
+          sparklineData={transactionsData.sparkline}
+          peakLabel={transactionsData.peakDay}
+          sparklineColor="hsl(var(--primary))"
+        />
         
-        {/* Customers Card - Show in Overview & Customers */}
-        {(activeTab === 'overview' || activeTab === 'customers') && (
-          <CompactStatCard
-            title="Customers"
-            value={customersData.total}
-            change={customersData.change}
-            sparklineData={customersData.sparkline}
-            peakLabel={customersData.peakDay}
-            sparklineColor="hsl(217, 91%, 60%)"
-          />
-        )}
+        <CompactStatCard
+          title="Customers"
+          value={customersData.total}
+          change={customersData.change}
+          sparklineData={customersData.sparkline}
+          peakLabel={customersData.peakDay}
+          sparklineColor="hsl(217, 91%, 60%)"
+        />
         
-        {/* Insights Card - Show in Overview & Payments */}
-        {(activeTab === 'overview' || activeTab === 'payments') && (
-          <InsightsCard insights={insightsData} />
-        )}
+        <InsightsCard insights={insightsData} />
       </motion.div>
 
       {/* Third Row: Charts - Tab Filtered */}
-      {(activeTab === 'overview' || activeTab === 'payments') && (
+      {(
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Order Trends Chart */}
           <motion.div
@@ -890,7 +882,7 @@ const Analytics = () => {
       )}
 
       {/* Fourth Row: Customer Growth - Show in Overview & Customers */}
-      {(activeTab === 'overview' || activeTab === 'customers') && (
+      {(
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

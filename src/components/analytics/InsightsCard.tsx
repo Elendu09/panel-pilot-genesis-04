@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { MoreHorizontal, Sparkles, TrendingUp, AlertTriangle, Info, ChevronRight } from 'lucide-react';
+import { Sparkles, TrendingUp, AlertTriangle, Info, ChevronRight, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -18,6 +19,7 @@ interface InsightsCardProps {
 }
 
 export function InsightsCard({ insights }: InsightsCardProps) {
+  const [showAll, setShowAll] = useState(false);
   const topInsight = insights[0];
   
   if (!topInsight) {
@@ -41,9 +43,6 @@ export function InsightsCard({ insights }: InsightsCardProps) {
               </Tooltip>
             </TooltipProvider>
           </CardTitle>
-          <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
-            <MoreHorizontal className="h-4 w-4" />
-          </Button>
         </CardHeader>
         <CardContent className="relative">
           <p className="text-muted-foreground text-sm">No insights available yet.</p>
@@ -125,9 +124,6 @@ export function InsightsCard({ insights }: InsightsCardProps) {
             </Tooltip>
           </TooltipProvider>
         </CardTitle>
-        <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-muted">
-          <MoreHorizontal className="h-4 w-4" />
-        </Button>
       </CardHeader>
       <CardContent className="relative space-y-4">
         <div className="flex items-center gap-3 md:gap-4">
@@ -188,16 +184,40 @@ export function InsightsCard({ insights }: InsightsCardProps) {
           </div>
         </div>
         
-        {/* Additional insights preview */}
+        {/* Additional insights */}
         {insights.length > 1 && (
-          <div className="pt-3 border-t border-border/50 flex items-center justify-between">
-            <p className="text-xs text-muted-foreground">
-              +{insights.length - 1} more insight{insights.length > 2 ? 's' : ''}
-            </p>
-            <Button variant="ghost" size="sm" className="h-7 text-xs hover:bg-muted">
-              View all <ChevronRight className="w-3 h-3 ml-1" />
-            </Button>
-          </div>
+          <>
+            {showAll && insights.slice(1).map((insight, idx) => {
+              const insightColors = (() => {
+                switch (insight.type) {
+                  case 'success': return { ring: 'text-emerald-500', badge: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' };
+                  case 'warning': return { ring: 'text-amber-500', badge: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' };
+                  default: return { ring: 'text-blue-500', badge: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20' };
+                }
+              })();
+              const InsightIcon = insight.type === 'success' ? TrendingUp : insight.type === 'warning' ? AlertTriangle : Info;
+              return (
+                <div key={idx} className="pt-3 border-t border-border/50 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className={cn("p-1 rounded-lg border", insightColors.badge)}>
+                      <InsightIcon className="w-3.5 h-3.5" />
+                    </span>
+                    <h4 className="font-semibold text-foreground text-xs truncate">{insight.title}</h4>
+                    <span className={cn("text-xs font-bold ml-auto", insightColors.ring)}>{insight.metric.toFixed(0)}%</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground line-clamp-2">{insight.description}</p>
+                </div>
+              );
+            })}
+            <div className="pt-3 border-t border-border/50 flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">
+                {showAll ? `Showing all ${insights.length} insights` : `+${insights.length - 1} more insight${insights.length > 2 ? 's' : ''}`}
+              </p>
+              <Button variant="ghost" size="sm" className="h-7 text-xs hover:bg-muted" onClick={() => setShowAll(!showAll)}>
+                {showAll ? 'Collapse' : 'View all'} {showAll ? <ChevronDown className="w-3 h-3 ml-1" /> : <ChevronRight className="w-3 h-3 ml-1" />}
+              </Button>
+            </div>
+          </>
         )}
       </CardContent>
     </Card>

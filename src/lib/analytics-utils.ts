@@ -465,33 +465,31 @@ export function buildFastOrderFunnel(
     ];
   }
 
-  // Use visitors as base, or fallback to completed * 3 if no visit tracking yet
-  const baseVisitors = visitors > 0 ? visitors : Math.max(completed * 3, selections * 1.5, checkouts * 2);
-  
+  // Use only real tracked data — no fabricated fallbacks
   return [
     { 
       name: 'Visitors', 
-      count: Math.round(baseVisitors), 
+      count: visitors, 
       percentage: 100, 
       dropOff: 0 
     },
     { 
       name: 'Selections', 
-      count: selections > 0 ? selections : Math.round(baseVisitors * 0.6), 
-      percentage: baseVisitors > 0 ? (selections / baseVisitors) * 100 : 60,
-      dropOff: baseVisitors > 0 ? calculateDropOffRate(baseVisitors, selections) : 40
+      count: selections, 
+      percentage: visitors > 0 ? (selections / visitors) * 100 : 0,
+      dropOff: visitors > 0 ? calculateDropOffRate(visitors, selections) : 0
     },
     { 
       name: 'Checkout', 
-      count: checkouts > 0 ? checkouts : Math.round(completed * 1.2), 
-      percentage: baseVisitors > 0 ? (checkouts / baseVisitors) * 100 : 30,
-      dropOff: calculateDropOffRate(selections > 0 ? selections : baseVisitors * 0.6, checkouts > 0 ? checkouts : completed * 1.2)
+      count: checkouts, 
+      percentage: visitors > 0 ? (checkouts / visitors) * 100 : 0,
+      dropOff: selections > 0 ? calculateDropOffRate(selections, checkouts) : 0
     },
     { 
       name: 'Completed', 
       count: completed, 
-      percentage: baseVisitors > 0 ? (completed / baseVisitors) * 100 : 0,
-      dropOff: calculateDropOffRate(checkouts > 0 ? checkouts : completed * 1.2, completed)
+      percentage: visitors > 0 ? (completed / visitors) * 100 : 0,
+      dropOff: checkouts > 0 ? calculateDropOffRate(checkouts, completed) : 0
     },
   ];
 }

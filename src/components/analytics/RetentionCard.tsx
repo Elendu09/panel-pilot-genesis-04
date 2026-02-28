@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { MoreHorizontal, Info, Users, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Info, Users, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ResponsiveContainer, AreaChart, Area, XAxis, Tooltip } from 'recharts';
 import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -88,9 +88,6 @@ export function RetentionCard({ currentRate, data }: RetentionCardProps) {
           </div>
           
           <span className="text-xl md:text-2xl font-bold text-foreground tabular-nums">{currentRate.toFixed(0)}%</span>
-          <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
-            <MoreHorizontal className="h-4 w-4" />
-          </Button>
         </div>
       </CardHeader>
       <CardContent className="relative">

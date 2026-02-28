@@ -115,31 +115,19 @@ export function AdsFunnelCard({ panelId }: AdsFunnelCardProps) {
         const totalImpressions = panelAds.reduce((sum, ad) => sum + (ad.impressions || 0), 0);
         const totalClicks = panelAds.reduce((sum, ad) => sum + (ad.clicks || 0), 0);
         const totalSpent = panelAds.reduce((sum, ad) => sum + (ad.total_spent || 0), 0);
-        const estimatedConversions = Math.floor(totalClicks * 0.15);
-
         setMetrics({
           impressions: totalImpressions,
           clicks: totalClicks,
-          conversions: estimatedConversions,
+          conversions: 0, // No real conversion tracking — show 0
           totalSpent: totalSpent
         });
 
-        // Estimate previous period metrics (simulate based on ad age)
-        // For ads that started more than 30 days ago, use ~70% of current as "previous"
-        // This provides a realistic comparison when historical data isn't available per-period
-        const oldAds = panelAds.filter(ad => new Date(ad.created_at) < thirtyDaysAgo);
-        const newAds = panelAds.filter(ad => new Date(ad.created_at) >= thirtyDaysAgo);
-        
-        // Previous period estimate: older ads had ~60-80% of current performance
-        const prevImpressions = oldAds.reduce((sum, ad) => sum + Math.floor((ad.impressions || 0) * 0.7), 0);
-        const prevClicks = oldAds.reduce((sum, ad) => sum + Math.floor((ad.clicks || 0) * 0.7), 0);
-        const prevSpent = oldAds.reduce((sum, ad) => sum + (ad.total_spent || 0) * 0.7, 0);
-        
+        // No historical period data available — show zeros for previous
         setPreviousMetrics({
-          impressions: prevImpressions,
-          clicks: prevClicks,
-          conversions: Math.floor(prevClicks * 0.15),
-          totalSpent: prevSpent
+          impressions: 0,
+          clicks: 0,
+          conversions: 0,
+          totalSpent: 0
         });
       }
     } catch (error) {
