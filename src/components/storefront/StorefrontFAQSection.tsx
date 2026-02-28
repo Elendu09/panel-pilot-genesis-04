@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useDeviceKey, defaultFaqDeviceLayout, defaultFaqCompactMode } from "@/hooks/use-device-key";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useAnalyticsTracking } from "@/hooks/use-analytics-tracking";
+
 
 interface FAQ {
   question: string;
@@ -14,7 +14,6 @@ interface FAQ {
 
 interface StorefrontFAQSectionProps {
   customization?: any;
-  panelId?: string;
 }
 
 const containerVariants = {
@@ -51,9 +50,8 @@ const iconMapping: Record<string, React.ElementType> = {
   "🎯": Target,
 };
 
-export const StorefrontFAQSection = ({ customization = {}, panelId }: StorefrontFAQSectionProps) => {
+export const StorefrontFAQSection = ({ customization = {} }: StorefrontFAQSectionProps) => {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
-  const { trackFaqClick } = useAnalyticsTracking(panelId);
   const deviceKey = useDeviceKey();
   
   // Get translations - wrapped in try/catch since it may not always be available
@@ -221,11 +219,7 @@ export const StorefrontFAQSection = ({ customization = {}, panelId }: Storefront
                     faqCompactMode ? "px-4 py-3" : "px-6 py-5"
                   )}
                   onClick={() => {
-                    const wasOpen = openIndex === index;
-                    setOpenIndex(wasOpen ? null : index);
-                    if (!wasOpen) {
-                      trackFaqClick(faq.question);
-                    }
+                    setOpenIndex(openIndex === index ? null : index);
                   }}
                 >
                   {/* Icon */}

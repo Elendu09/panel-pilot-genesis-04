@@ -598,12 +598,17 @@ const PanelOverview = () => {
             
             {/* Right side - Action Buttons */}
             <div className="flex flex-wrap items-center gap-2 sm:gap-3 self-start lg:self-center">
-              {/* Panel Balance */}
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                <Wallet className="w-4 h-4 text-emerald-500" />
+              {/* Panel Balance - Enhanced Card */}
+              <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-gradient-to-br from-emerald-500/15 to-emerald-600/5 border border-emerald-500/25 shadow-sm shadow-emerald-500/10">
+                <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-emerald-500/20">
+                  <Wallet className="w-5 h-5 text-emerald-500" />
+                </div>
                 <div className="text-right">
-                  <p className="text-[10px] text-muted-foreground leading-none">Panel Balance</p>
-                  <p className="text-sm font-bold text-emerald-500">${panelData?.balance?.toFixed(2) || '0.00'}</p>
+                  <div className="flex items-center gap-1.5 justify-end">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_6px_rgba(34,197,94,0.6)]" />
+                    <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium leading-none">Live Balance</p>
+                  </div>
+                  <p className="text-lg font-bold text-emerald-500 tracking-tight">${panelData?.balance?.toFixed(2) || '0.00'}</p>
                 </div>
               </div>
               {/* Plan Badge */}
