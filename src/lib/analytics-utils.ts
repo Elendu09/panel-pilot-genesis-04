@@ -413,6 +413,46 @@ export function calculateGrossVolume(
  * Build Fast Order funnel from real analytics events
  * Tracks: Page Visit → Service Selection → Checkout → Order Complete
  */
+/**
+ * Extract top selected services from service_select analytics events
+ */
+export interface TopService {
+  serviceName: string;
+  category: string;
+  count: number;
+  percentage: number;
+}
+
+export function extractTopServices(events: AnalyticsEvent[], limit: number = 10): TopService[] {
+  const serviceMap = new Map<string, { serviceName: string; category: string; count: number }>();
+  
+  const serviceEvents = events.filter(e => e.event_type === 'service_select' && e.metadata);
+  
+  serviceEvents.forEach(event => {
+    const meta = event.metadata as { serviceName?: string; category?: string };
+    const name = meta?.serviceName || 'Unknown';
+    const category = meta?.category || 'Uncategorized';
+    const key = `${name}__${category}`;
+    
+    const existing = serviceMap.get(key);
+    if (existing) {
+      existing.count += 1;
+    } else {
+      serviceMap.set(key, { serviceName: name, category, count: 1 });
+    }
+  });
+  
+  const total = serviceEvents.length;
+  
+  return Array.from(serviceMap.values())
+    .sort((a, b) => b.count - a.count)
+    .slice(0, limit)
+    .map(s => ({
+      ...s,
+      percentage: total > 0 ? (s.count / total) * 100 : 0
+    }));
+}
+
 export function buildFastOrderFunnel(
   events: AnalyticsEvent[],
   completedOrdersCount: number

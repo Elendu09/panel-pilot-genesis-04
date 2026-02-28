@@ -160,7 +160,7 @@ export const ThemeOne = ({ panel, services = [], customization = {}, isPreview =
         ) : null;
       case 'faqs':
         return customization.enableFAQs !== false ? (
-          <StorefrontFAQSection key="faqs" customization={mergedCustomization} />
+          <StorefrontFAQSection key="faqs" customization={mergedCustomization} panelId={panel?.id} />
         ) : null;
       default:
         return null;
