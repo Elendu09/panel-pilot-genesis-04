@@ -141,6 +141,7 @@ const CustomerManagement = () => {
   const [selectedCustomers, setSelectedCustomers] = useState<string[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+  const [mobileViewMode, setMobileViewMode] = useState<'list' | 'grid'>('list');
   
   // Customer overview toggle - default to hidden, persisted in Supabase
   const [showOverview, setShowOverview] = useState(false);
@@ -878,8 +879,8 @@ const CustomerManagement = () => {
         ))}
       </div>
 
-      {/* Quick Search - Mobile Visible */}
-      <div className="block md:hidden">
+      {/* Quick Search + Mobile View Toggle */}
+      <div className="block md:hidden space-y-3">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
           <Input
@@ -888,6 +889,26 @@ const CustomerManagement = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10 bg-background/60"
           />
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant={mobileViewMode === 'list' ? 'default' : 'outline'}
+            size="sm"
+            className="h-8 gap-1.5 text-xs rounded-full"
+            onClick={() => setMobileViewMode('list')}
+          >
+            <List className="w-3.5 h-3.5" />
+            List
+          </Button>
+          <Button
+            variant={mobileViewMode === 'grid' ? 'default' : 'outline'}
+            size="sm"
+            className="h-8 gap-1.5 text-xs rounded-full"
+            onClick={() => setMobileViewMode('grid')}
+          >
+            <LayoutGrid className="w-3.5 h-3.5" />
+            Grid
+          </Button>
         </div>
       </div>
 
@@ -1178,7 +1199,8 @@ const CustomerManagement = () => {
           </div>
           )}
 
-          {/* Mobile Table-style View */}
+          {/* Mobile List View */}
+          {mobileViewMode === 'list' && (
           <div className="md:hidden overflow-x-auto rounded-lg">
             <table className="w-full text-sm">
               <thead>
@@ -1231,6 +1253,27 @@ const CustomerManagement = () => {
               </tbody>
             </table>
           </div>
+          )}
+
+          {/* Mobile Grid View */}
+          {mobileViewMode === 'grid' && (
+          <div className="md:hidden grid grid-cols-1 gap-3">
+            {filteredCustomers.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">No customers found</div>
+            ) : (
+              filteredCustomers.map((customer) => (
+                <CustomerMobileCard
+                  key={customer.id}
+                  customer={customer}
+                  onView={handleViewDetails}
+                  onEdit={handleEditCustomer}
+                  onAdjustBalance={(c) => { setSelectedCustomer(c); setShowBalanceModal(true); }}
+                  onSuspend={(c) => handleSingleSuspend(c.id)}
+                />
+              ))
+            )}
+          </div>
+          )}
         </CardContent>
       </Card>
 

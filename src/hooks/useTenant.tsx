@@ -484,9 +484,14 @@ export function useTenant(): TenantDetectionResult {
             ...(typeof settings === 'object' ? settings : {})
           };
 
+          // Sync companyName with panel name on initial load
+          const syncedBranding = branding && typeof branding === 'object'
+            ? { ...(branding as any), companyName: panelData.name } as DesignCustomization
+            : undefined;
+
           const resolvedPanel = {
             ...panelData,
-            custom_branding: branding && typeof branding === 'object' ? branding as DesignCustomization : undefined,
+            custom_branding: syncedBranding,
             settings: mergedSettings
           };
 
