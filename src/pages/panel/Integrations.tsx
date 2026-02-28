@@ -157,11 +157,12 @@ interface ServiceIntegration {
   color: string;
   category: 'chat' | 'analytics' | 'notifications' | 'other';
   fields: {
-    type: 'input' | 'textarea' | 'phone';
+    type: 'input' | 'textarea' | 'phone' | 'select' | 'color';
     name: string;
     label: string;
     placeholder: string;
     helper?: string;
+    options?: { value: string; label: string }[];
   }[];
 }
 
@@ -388,12 +389,19 @@ const serviceIntegrations: ServiceIntegration[] = [
     fields: [
       { type: 'input', name: 'title', label: 'Title', placeholder: '🎉 New Feature', helper: 'Short headline displayed prominently' },
       { type: 'input', name: 'text', label: 'Description', placeholder: 'Welcome to our panel! Check out our new services.', helper: 'Main announcement text' },
-      { type: 'input', name: 'icon', label: 'Icon', placeholder: 'megaphone', helper: 'Options: megaphone, sparkles, gift, bell, info, star, zap, alert' },
-      { type: 'input', name: 'displayMode', label: 'Display Mode', placeholder: 'header', helper: 'Options: header (top bar) or popup (modal dialog)' },
+      { type: 'select', name: 'icon', label: 'Icon', placeholder: 'megaphone', options: [
+        { value: 'megaphone', label: '📢 Megaphone' }, { value: 'sparkles', label: '✨ Sparkles' },
+        { value: 'gift', label: '🎁 Gift' }, { value: 'bell', label: '🔔 Bell' },
+        { value: 'info', label: 'ℹ️ Info' }, { value: 'star', label: '⭐ Star' },
+        { value: 'zap', label: '⚡ Zap' }, { value: 'alert', label: '⚠️ Alert' },
+      ]},
+      { type: 'select', name: 'displayMode', label: 'Display Mode', placeholder: 'header', options: [
+        { value: 'header', label: 'Header Bar (top)' }, { value: 'popup', label: 'Popup (modal dialog)' },
+      ]},
       { type: 'input', name: 'linkText', label: 'Link Text (optional)', placeholder: 'Learn More' },
       { type: 'input', name: 'linkUrl', label: 'Link URL (optional)', placeholder: 'https://example.com/promo' },
-      { type: 'input', name: 'backgroundColor', label: 'Background Color', placeholder: '#6366F1', helper: 'Use hex color like #6366F1' },
-      { type: 'input', name: 'textColor', label: 'Text Color', placeholder: '#FFFFFF', helper: 'Use hex color like #FFFFFF' }
+      { type: 'color', name: 'backgroundColor', label: 'Background Color', placeholder: '#6366F1' },
+      { type: 'color', name: 'textColor', label: 'Text Color', placeholder: '#FFFFFF' }
     ]
   },
   {
@@ -1128,6 +1136,35 @@ const Integrations = () => {
                     onChange={(e) => setTempServiceConfig(prev => ({ ...prev, [field.name]: e.target.value }))}
                     className="bg-background/50 font-mono text-xs min-h-[100px]"
                   />
+                ) : field.type === 'select' && field.options ? (
+                  <Select
+                    value={tempServiceConfig[field.name] || ''}
+                    onValueChange={(value) => setTempServiceConfig(prev => ({ ...prev, [field.name]: value }))}
+                  >
+                    <SelectTrigger className="bg-background/50">
+                      <SelectValue placeholder={field.placeholder} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {field.options.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : field.type === 'color' ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={tempServiceConfig[field.name] || field.placeholder || '#6366F1'}
+                      onChange={(e) => setTempServiceConfig(prev => ({ ...prev, [field.name]: e.target.value }))}
+                      className="w-10 h-10 rounded-lg border border-border cursor-pointer"
+                    />
+                    <Input
+                      placeholder={field.placeholder}
+                      value={tempServiceConfig[field.name] || ''}
+                      onChange={(e) => setTempServiceConfig(prev => ({ ...prev, [field.name]: e.target.value }))}
+                      className="bg-background/50 font-mono text-sm flex-1"
+                    />
+                  </div>
                 ) : (
                   <Input 
                     type={field.type === 'phone' ? 'tel' : 'text'}

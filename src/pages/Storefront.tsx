@@ -32,6 +32,7 @@ import { AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { generateBuyerThemeCSS } from '@/lib/color-utils';
 import { useBuyerThemeMode } from '@/contexts/BuyerThemeContext';
+import { generateDesignCSSVariables } from '@/lib/theme-utils';
 
 // Error Boundary Component
 const ErrorFallback = ({ error, panelName }: { error: string; panelName?: string }) => (
@@ -332,6 +333,8 @@ const Storefront = () => {
       <TenantHead />
       {/* Inject design preset colors as CSS variables */}
       {storefrontColorStyles && <style>{storefrontColorStyles}</style>}
+      {/* Inject design customization CSS variables (typography, spacing, buttons, background) */}
+      <style>{generateDesignCSSVariables(fullCustomization)}</style>
       {/* Announcements - renders as header bar or popup based on displayMode */}
       {announcementItems.map((item: any, idx: number) => {
         const displayMode = item.displayMode || 'header';
