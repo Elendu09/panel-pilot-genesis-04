@@ -221,7 +221,7 @@ export const TransactionHistory = ({ panelId }: TransactionHistoryProps) => {
             </div>
           </div>
           <p className={cn(
-            "text-lg font-bold font-mono shrink-0",
+            "text-sm sm:text-lg font-bold font-mono shrink-0",
             tx.amount >= 0 ? "text-green-500" : "text-destructive"
           )}>
             {tx.amount >= 0 ? "+" : "-"}${Math.abs(tx.amount).toFixed(2)}
@@ -258,7 +258,7 @@ export const TransactionHistory = ({ panelId }: TransactionHistoryProps) => {
   );
 
   return (
-    <Card className="bg-card/60 backdrop-blur-xl border-0 shadow-lg shadow-primary/5">
+    <Card className="bg-card/60 backdrop-blur-xl border-0 shadow-lg shadow-primary/5 w-full max-w-full overflow-hidden">
       <CardHeader className="pb-3">
         <div className="flex flex-col gap-4">
           <div className="flex items-center justify-between">

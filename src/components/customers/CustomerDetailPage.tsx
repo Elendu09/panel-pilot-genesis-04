@@ -335,11 +335,11 @@ export function CustomerDetailPage({
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent className="w-full sm:max-w-xl p-0 overflow-hidden">
-          <SheetHeader className="p-6 pb-0">
+        <SheetContent className="w-full sm:max-w-md p-0 overflow-hidden">
+          <SheetHeader className="p-4 pb-0">
             <div className="flex items-center justify-between">
-              <SheetTitle className="flex items-center gap-3">
-                <Avatar className="h-10 w-10 border-2 border-primary/20">
+              <SheetTitle className="flex items-center gap-2.5">
+                <Avatar className="h-8 w-8 border border-primary/20">
                   <AvatarFallback className="bg-primary/10 text-primary font-bold">
                     {customer.name.charAt(0).toUpperCase()}
                   </AvatarFallback>
@@ -369,44 +369,44 @@ export function CustomerDetailPage({
             </div>
           </SheetHeader>
 
-          <ScrollArea className="h-[calc(100vh-160px)] px-5 py-3">
-            <div className="space-y-4">
+          <ScrollArea className="h-[calc(100vh-140px)] px-4 py-2">
+            <div className="space-y-3">
               {/* Stats Cards */}
-              <div className="grid grid-cols-2 gap-3">
-                <Card className="bg-gradient-to-br from-green-500/10 to-green-500/5 border-green-500/20">
-                  <CardContent className="p-3">
+              <div className="grid grid-cols-2 gap-2">
+                <Card className="bg-gradient-to-br from-green-500/10 to-green-500/5 border-green-500/20 rounded-xl">
+                  <CardContent className="p-2.5">
                     <div className="flex items-center gap-1.5 mb-0.5">
-                      <Wallet className="w-3.5 h-3.5 text-green-500" />
-                      <span className="text-[10px] text-muted-foreground">Balance</span>
+                      <Wallet className="w-3 h-3 text-green-500" />
+                      <span className="text-[9px] text-muted-foreground">Balance</span>
                     </div>
-                    <p className="text-xl font-bold">${customer.balance.toFixed(2)}</p>
+                    <p className="text-lg font-bold">${customer.balance.toFixed(2)}</p>
                   </CardContent>
                 </Card>
-                <Card className="bg-gradient-to-br from-blue-500/10 to-blue-500/5 border-blue-500/20">
-                  <CardContent className="p-3">
+                <Card className="bg-gradient-to-br from-blue-500/10 to-blue-500/5 border-blue-500/20 rounded-xl">
+                  <CardContent className="p-2.5">
                     <div className="flex items-center gap-1.5 mb-0.5">
-                      <TrendingUp className="w-3.5 h-3.5 text-blue-500" />
-                      <span className="text-[10px] text-muted-foreground">Total Spent</span>
+                      <TrendingUp className="w-3 h-3 text-blue-500" />
+                      <span className="text-[9px] text-muted-foreground">Total Spent</span>
                     </div>
-                    <p className="text-xl font-bold">${customer.totalSpent.toFixed(2)}</p>
+                    <p className="text-lg font-bold">${customer.totalSpent.toFixed(2)}</p>
                   </CardContent>
                 </Card>
-                <Card className="bg-muted/50">
-                  <CardContent className="p-3">
+                <Card className="bg-muted/50 rounded-xl">
+                  <CardContent className="p-2.5">
                     <div className="flex items-center gap-1.5 mb-0.5">
-                      <ShoppingCart className="w-3.5 h-3.5 text-primary" />
-                      <span className="text-[10px] text-muted-foreground">Orders</span>
+                      <ShoppingCart className="w-3 h-3 text-primary" />
+                      <span className="text-[9px] text-muted-foreground">Orders</span>
                     </div>
-                    <p className="text-xl font-bold">{customer.totalOrders}</p>
+                    <p className="text-lg font-bold">{customer.totalOrders}</p>
                   </CardContent>
                 </Card>
-                <Card className="bg-muted/50">
-                  <CardContent className="p-3">
+                <Card className="bg-muted/50 rounded-xl">
+                  <CardContent className="p-2.5">
                     <div className="flex items-center gap-1.5 mb-0.5">
-                      <Calendar className="w-3.5 h-3.5 text-primary" />
-                      <span className="text-[10px] text-muted-foreground">Joined</span>
+                      <Calendar className="w-3 h-3 text-primary" />
+                      <span className="text-[9px] text-muted-foreground">Joined</span>
                     </div>
-                    <p className="text-sm font-medium">{format(new Date(customer.joinedAt), 'MMM d, yyyy')}</p>
+                    <p className="text-xs font-medium">{format(new Date(customer.joinedAt), 'MMM d, yyyy')}</p>
                   </CardContent>
                 </Card>
               </div>

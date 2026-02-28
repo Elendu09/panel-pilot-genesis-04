@@ -438,13 +438,11 @@ const PanelOwnerDashboard = () => {
         sidebarOpen ? "md:ml-64" : "md:ml-20"
       )}>
         {/* Mobile Header */}
-        <header className="md:hidden glass border-b border-border/50 p-4 flex items-center justify-between sticky top-0 z-10">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-primary-foreground" />
-            </div>
+        <header className="md:hidden glass border-b border-border/50 p-3 flex items-center justify-between sticky top-0 z-10">
+          <div className="flex items-center gap-2">
+            <PanelSwitcher collapsed />
             <span 
-              className="font-luckiest tracking-wide text-lg"
+              className="font-luckiest tracking-wide text-base"
               style={{
                 background: 'linear-gradient(135deg, #3B82F6, #60A5FA, #2563EB)',
                 WebkitBackgroundClip: 'text',
@@ -455,7 +453,7 @@ const PanelOwnerDashboard = () => {
               HOME OF SMM
             </span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <NotificationCenter variant="sheet" />
             <ThemeToggle />
           </div>

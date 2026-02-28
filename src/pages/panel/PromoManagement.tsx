@@ -269,9 +269,9 @@ const PromoManagement = () => {
           if (!open) resetForm();
         }}>
           <DialogTrigger asChild>
-            <Button className="gap-2">
+            <Button className="gap-2 px-3 md:px-4" size="sm">
               <Plus className="w-4 h-4" />
-              Create Promo
+              <span className="hidden sm:inline">Create</span> Promo
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[500px]">

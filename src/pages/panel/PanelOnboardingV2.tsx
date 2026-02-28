@@ -134,15 +134,25 @@ const PanelOnboardingV2 = () => {
       }
       
       try {
-        // Check for completed panel
-        const { data: existingPanel } = await supabase
+        // If creating a new additional panel, skip the redirect check
+        const params = new URLSearchParams(window.location.search);
+        const isNewPanel = params.get('new') === 'true';
+        
+        if (isNewPanel) {
+          setCheckingPanel(false);
+          setRestoringState(false);
+          return;
+        }
+
+        // Check for completed panels (use collection query for multi-panel support)
+        const { data: existingPanels } = await supabase
           .from('panels')
-          .select('*')
+          .select('id')
           .eq('owner_id', profile.id)
           .eq('onboarding_completed', true)
-          .maybeSingle();
+          .limit(1);
           
-        if (existingPanel) {
+        if (existingPanels && existingPanels.length > 0) {
           navigate('/panel');
           return;
         }
