@@ -1,100 +1,55 @@
 
 
-# Plan: Fix Payment Webhook Balance Issues, Onboarding Errors & Billing Enhancements
+# Plan: Onboarding Full Audit — Fix Errors & Redesign Complete Step
 
-## Critical Issues Found
+## Issues Found
 
-### Issue 1: Webhook balance credit for panel owner deposits is unreliable
+### 1. Custom domain type never set on "have-domain" selection (BUG)
+In `OnboardingDomainStep.tsx`, when a Basic/Pro user selects "I have a domain" radio option, `domainOption` is set to `'have-domain'` but `onDomainTypeChange('custom')` is **never called**. This means `domainType` stays `'subdomain'` in the parent, and on completion the panel gets a subdomain instead of the custom domain. Similarly, "register-new" never calls `onDomainTypeChange('custom')`.
 
-**Root cause**: In `payment-webhook/index.ts` lines 445-566, the flow is:
-1. Check if `txMetadata.type === 'subscription'` — handle subscription (lines 447-487)
-2. Then **always** try to find a `client_users` record by `userId` (line 490-494)
-3. If `buyer` found → credit client_users balance (wrong for owner deposits!)
-4. If `buyer` NOT found → fall through to panel owner check (lines 541-565)
+**Fix in `OnboardingDomainStep.tsx`**: Add `onDomainTypeChange('custom')` in the `onValueChange` handler of the `RadioGroup`, and call `onDomainTypeChange('subdomain')` for the free-subdomain option (already done for click but not for radio change).
 
-**The problem**: For panel owner deposits with `metadata.type === 'panel_deposit'`, the code still falls through to the `client_users` lookup first. If the `userId` (which is `profile.id`) accidentally matches a `client_users.id`, the balance goes to the wrong place. More critically, after handling a subscription payment (lines 447-487), the code **continues** to the deposit section and tries to credit balance AGAIN — double-handling.
+### 2. Payment step uses stale `createdPanelId` state instead of ref (BUG)
+Line 661: `panelId={createdPanelId || undefined}` — This uses React state which may be stale during the same render cycle. Should use `createdPanelIdRef.current`.
 
-**Fix**: Add explicit `panel_deposit` check and `return`/`break` after subscription handling to prevent fall-through.
+**Fix in `PanelOnboardingV2.tsx` line 661**: Change to `panelId={createdPanelIdRef.current || undefined}`.
 
-In `payment-webhook/index.ts`, restructure the completed payment logic (lines 445-567):
-```
-if (txMetadata?.type === 'subscription') {
-  // handle subscription... (existing code)
-  // DON'T fall through to deposit logic
-} else if (txMetadata?.type === 'panel_deposit') {
-  // Directly credit panel balance without checking client_users first
-  const { data: panelData } = await supabase
-    .from('panels')
-    .select('balance, owner_id')
-    .eq('id', txPanelId)
-    .single();
-  if (panelData) {
-    const newBalance = (panelData.balance || 0) + depositAmount;
-    await supabase.from('panels').update({ balance: newBalance }).eq('id', txPanelId);
-    // notify...
-  }
-} else if (txType === 'order_payment' && orderId) {
-  // existing order handling
-} else {
-  // Regular buyer deposit (existing client_users logic)
-}
-```
+### 3. SEO auto-generated text not clamped to pixel limits (BUG)
+`generateAllSeo()` sets `seoTitle` and `seoDescription` from the edge function response without clamping to `SEO_TITLE_PX_RANGE.max` / `SEO_DESC_PX_RANGE.max`. If the AI returns text that's too long, the user gets a validation error they can't easily fix.
 
-### Issue 2: Billing page `fetchBillingData` uses stale `panel.balance`
+**Fix in `PanelOnboardingV2.tsx` `generateAllSeo()`**: Import `clampToPx` from `seo-metrics` and clamp both title and description before setting state.
 
-In `Billing.tsx` line 164: `setPanelBalance(panel.balance || 0)` uses the `usePanel()` hook's cached value, which doesn't re-fetch after webhook updates.
+### 4. handleComplete fails if user skipped SEO step with empty fields (BUG)
+If `seoTitle` or `seoDescription` is empty, `measureTextPx('')` returns 0, which is outside `SEO_TITLE_PX_RANGE`, causing validation to block completion. The fallback generation only triggers if the user actually visits the SEO step.
 
-**Fix**: Query the panel balance fresh from the database in `fetchBillingData`:
-```typescript
-const { data: freshPanel } = await supabase
-  .from('panels')
-  .select('balance')
-  .eq('id', panel.id)
-  .single();
-setPanelBalance(freshPanel?.balance || 0);
-```
+**Fix**: In `handleComplete`, if SEO fields are empty, auto-generate fallback values before validating.
 
-### Issue 3: Onboarding payment step — `onSkip` sets plan to 'free' incorrectly
+### 5. Complete step UI needs redesign
+Current "Complete your panel" step is a basic Card with minimal styling. Needs better container, visual hierarchy, and padding.
 
-In `PanelOnboardingV2.tsx` line 645-649, the `onSkip` callback:
-```typescript
-onSkip={() => {
-  setSelectedPlan('free');  // Bug: resets plan to free instead of keeping trial
-  setPaymentCompleted(true);
-  handleNext();
+**Redesign in `PanelOnboardingV2.tsx` lines 966-1036**:
+- Add gradient border glow effect on the summary card
+- Add animated confetti/sparkle icon
+- Show all configuration items in a structured grid with icons
+- Add currency to the summary
+- Better spacing, rounded corners, and visual separation
+- Add a subtle "Everything looks good" success banner
+
+### 6. Domain step RadioGroup doesn't sync domainType on option change (BUG)
+The `RadioGroup`'s `onValueChange` only sets `domainOption` state locally. It needs to also call `onDomainTypeChange` to sync the parent.
+
+**Fix in `OnboardingDomainStep.tsx`**: Update the RadioGroup `onValueChange`:
+```tsx
+onValueChange={(value: DomainOption) => {
+  setDomainOption(value);
+  onDomainTypeChange(value === 'free-subdomain' ? 'subdomain' : 'custom');
 }}
 ```
-This should use the `handleSkipWithTrial` from `OnboardingPaymentStep` (which correctly keeps the selected plan and sets trial status), but the parent also overrides the plan to 'free'. The `onSkip` in the parent should NOT reset `selectedPlan` to 'free' — it should keep the selected plan and let the trial logic work.
-
-**Fix**: Change `onSkip` to not reset `selectedPlan`:
-```typescript
-onSkip={() => {
-  setPaymentCompleted(true);
-  markStepComplete(currentStep);
-  setCurrentStep(currentStep + 1);
-}}
-```
-
-### Issue 4: Onboarding step counter still shows wrong after payment return
-
-The step counter fix from the previous edit is in place but there's still a timing issue: when `?payment=success` is detected (line 200), `setPaymentCompleted(true)` causes `shouldShowPaymentStep` to become false, which removes the payment step from `visibleSteps`. The progress indicator then shows the wrong step count.
-
-The existing fallback (`visibleSteps.findIndex(s => s.id > currentStep)`) should handle this, but the step label text in the header (around line 1050) uses `visibleStepIndex + 1` which could show "Step 0" if both fallbacks fail.
-
-**Fix**: Clamp `visibleStepIndex` to minimum 0 and ensure step label shows correctly.
-
-### Issue 5: Billing page doesn't re-fetch panel data after realtime transaction update
-
-In `Billing.tsx` line 148, `fetchBillingData()` is called on realtime transaction update, but it reads `panel.balance` from the cached hook. Need to fetch fresh balance.
-
-**Fix**: Same as Issue 2 — fetch fresh balance from DB instead of hook cache.
 
 ## Summary of Changes
 
 | File | Change |
 |------|--------|
-| `supabase/functions/payment-webhook/index.ts` | Restructure completed payment logic: add explicit `panel_deposit` handling, prevent fall-through from subscription to deposit, eliminate double-crediting |
-| `src/pages/panel/Billing.tsx` | Fetch fresh panel balance from DB instead of using cached hook value |
-| `src/pages/panel/PanelOnboardingV2.tsx` | Fix `onSkip` to not reset selectedPlan to 'free'; fix step counter edge case |
-| Edge function redeployment | Redeploy `payment-webhook` |
+| `src/components/onboarding/OnboardingDomainStep.tsx` | Fix RadioGroup to sync `domainType` with parent on option change |
+| `src/pages/panel/PanelOnboardingV2.tsx` | Fix panelId prop to use ref; clamp SEO auto-gen; auto-fill empty SEO on complete; redesign Complete step UI |
 
