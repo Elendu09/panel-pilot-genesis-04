@@ -157,6 +157,7 @@ const PaymentMethods = () => {
       const { data: transactions } = await supabase
         .from('transactions')
         .select('*')
+        .eq('panel_id', panel.id)
         .order('created_at', { ascending: false });
       
       // Fetch customers
@@ -432,7 +433,6 @@ const PaymentMethods = () => {
   const syncWithPlatform = async () => {
     setSyncing(true);
     try {
-      await refreshAvailableGateways();
       await refreshAvailableGateways();
       setLastSynced(new Date());
       toast({ title: "Synced with platform", description: "Payment methods are up to date" });

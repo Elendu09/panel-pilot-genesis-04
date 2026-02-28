@@ -25,7 +25,7 @@ export const QuickDeposit = ({ onDeposit, loading }: QuickDepositProps) => {
   // Use admin-controlled payment gateways for panel owner deposits (not panel-configured buyer gateways)
   const { gateways, loading: gatewaysLoading } = useAdminPaymentGateways();
   const [amount, setAmount] = useState<number | string>(50);
-  const [selectedMethod, setSelectedMethod] = useState<string>("stripe");
+  const [selectedMethod, setSelectedMethod] = useState<string>("");
 
   useEffect(() => {
     if (!selectedMethod && gateways.length > 0) setSelectedMethod(gateways[0].id);
