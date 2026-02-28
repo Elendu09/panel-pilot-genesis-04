@@ -890,26 +890,6 @@ const CustomerManagement = () => {
             className="pl-10 bg-background/60"
           />
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant={mobileViewMode === 'list' ? 'default' : 'outline'}
-            size="sm"
-            className="h-8 gap-1.5 text-xs rounded-full"
-            onClick={() => setMobileViewMode('list')}
-          >
-            <List className="w-3.5 h-3.5" />
-            List
-          </Button>
-          <Button
-            variant={mobileViewMode === 'grid' ? 'default' : 'outline'}
-            size="sm"
-            className="h-8 gap-1.5 text-xs rounded-full"
-            onClick={() => setMobileViewMode('grid')}
-          >
-            <LayoutGrid className="w-3.5 h-3.5" />
-            Grid
-          </Button>
-        </div>
       </div>
 
       {/* Status Tabs removed - now using clickable stat cards above */}
@@ -942,6 +922,38 @@ const CustomerManagement = () => {
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <CardTitle className="text-lg">All Customers</CardTitle>
+              {/* Mobile List/Grid toggle */}
+              <div className="flex md:hidden items-center gap-1 p-1 rounded-lg bg-muted/50 border border-border">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setMobileViewMode('list')}
+                  className={cn(
+                    "gap-1 h-7 px-2 rounded-md transition-all",
+                    mobileViewMode === 'list' 
+                      ? "bg-primary text-primary-foreground shadow-sm" 
+                      : "hover:bg-background/80 text-muted-foreground"
+                  )}
+                >
+                  <List className="w-3.5 h-3.5" />
+                  <span className="text-xs">List</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setMobileViewMode('grid')}
+                  className={cn(
+                    "gap-1 h-7 px-2 rounded-md transition-all",
+                    mobileViewMode === 'grid' 
+                      ? "bg-primary text-primary-foreground shadow-sm" 
+                      : "hover:bg-background/80 text-muted-foreground"
+                  )}
+                >
+                  <LayoutGrid className="w-3.5 h-3.5" />
+                  <span className="text-xs">Grid</span>
+                </Button>
+              </div>
+              {/* Desktop Table/Grid toggle */}
               <div className="hidden md:flex items-center gap-1 p-1 rounded-lg bg-muted/50 border border-border">
                 <Button
                   variant="ghost"
@@ -1002,7 +1014,7 @@ const CustomerManagement = () => {
 
           {/* Desktop Table View */}
           {viewMode === 'table' && (
-          <div className="hidden md:block rounded-lg border border-border/50 overflow-hidden">
+          <div className="hidden md:block rounded-lg border border-border/50 overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/30 hover:bg-muted/30">
@@ -1041,7 +1053,7 @@ const CustomerManagement = () => {
                 {filteredCustomers.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                      No customers found
+                       No customers yet. Add your first customer to get started.
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -1097,7 +1109,7 @@ const CustomerManagement = () => {
                         <span className="text-muted-foreground">{customer.totalOrders}</span>
                       </TableCell>
                       <TableCell>
-                        <span className="text-xs text-muted-foreground">{customer.joinedAt}</span>
+                        <span className="text-xs text-muted-foreground">{new Date(customer.joinedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}</span>
                       </TableCell>
                       <TableCell>
                         {customer.customDiscount ? (
@@ -1177,7 +1189,7 @@ const CustomerManagement = () => {
           <div className="hidden md:grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {filteredCustomers.length === 0 ? (
               <div className="col-span-full text-center py-8 text-muted-foreground">
-                No customers found
+                No customers yet. Add your first customer to get started.
               </div>
             ) : (
               filteredCustomers.map((customer) => (
@@ -1212,7 +1224,9 @@ const CustomerManagement = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/20">
-                {filteredCustomers.map((customer) => (
+                {filteredCustomers.length === 0 ? (
+                  <tr><td colSpan={4} className="text-center py-8 text-muted-foreground text-sm">No customers yet. Add your first customer to get started.</td></tr>
+                ) : filteredCustomers.map((customer) => (
                   <tr 
                     key={customer.id} 
                     className="hover:bg-muted/20 transition-colors cursor-pointer"
@@ -1259,7 +1273,7 @@ const CustomerManagement = () => {
           {mobileViewMode === 'grid' && (
           <div className="md:hidden grid grid-cols-1 gap-3">
             {filteredCustomers.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">No customers found</div>
+              <div className="text-center py-8 text-muted-foreground">No customers yet. Add your first customer to get started.</div>
             ) : (
               filteredCustomers.map((customer) => (
                 <CustomerMobileCard

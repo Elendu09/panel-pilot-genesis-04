@@ -53,6 +53,7 @@ const DomainSettings = () => {
   const [domains, setDomains] = useState<PanelDomain[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("domains");
+  const [activePlan, setActivePlan] = useState<string | null>(null);
   
   // Add domain dialog
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -96,6 +97,16 @@ const DomainSettings = () => {
       setPanel(panelData);
 
       if (panelData) {
+        // Fetch active subscription to determine real plan
+        const { data: subData } = await supabase
+          .from('panel_subscriptions')
+          .select('plan_type')
+          .eq('panel_id', panelData.id)
+          .eq('status', 'active')
+          .maybeSingle();
+        
+        setActivePlan(subData?.plan_type || panelData.subscription_tier || 'free');
+
         const { data: domainsData, error: domainsError } = await supabase
           .from('panel_domains')
           .select('*')
@@ -341,7 +352,7 @@ const DomainSettings = () => {
         {/* Custom Domain Tab */}
         <TabsContent value="domains" className="space-y-6">
           {/* Upgrade prompt for free users */}
-          {panel?.subscription_tier === 'free' && (
+          {(activePlan === 'free' || activePlan === null) && (
             <UpgradePrompt
               feature="Custom Domain"
               currentPlan="free"
@@ -349,7 +360,7 @@ const DomainSettings = () => {
             />
           )}
           
-          {panel?.subscription_tier !== 'free' && domains.length === 0 && (
+          {activePlan && activePlan !== 'free' && domains.length === 0 && (
             <Card className="glass-card">
               <CardContent className="py-12 text-center">
                 <Globe className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
@@ -364,7 +375,7 @@ const DomainSettings = () => {
             </Card>
           )}
           
-          {panel?.subscription_tier !== 'free' && domains.length > 0 && currentDomain && (
+          {activePlan && activePlan !== 'free' && domains.length > 0 && currentDomain && (
             <>
               {/* DNS Verification Progress Component */}
               {currentDomain.verification_status !== 'verified' && (

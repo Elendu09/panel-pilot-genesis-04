@@ -650,7 +650,7 @@ const PanelOverview = () => {
               <Button 
                 variant="outline" 
                 size="sm"
-                onClick={() => navigate('/panel/payment-methods')}
+                onClick={() => navigate('/panel/payments')}
                 className="gap-1.5 bg-background/50 backdrop-blur-sm hover:bg-primary/10 border-primary/30"
               >
                 <Wallet className="w-4 h-4" />
@@ -1087,7 +1087,7 @@ const PanelOverview = () => {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => navigate('/panel/payment-methods')}
+            onClick={() => navigate('/panel/payments')}
             className="gap-1.5 border-emerald-500/30 hover:bg-emerald-500/10"
           >
             <Wallet className="w-4 h-4" />
