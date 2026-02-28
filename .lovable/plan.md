@@ -1,43 +1,24 @@
 
 
-# Plan: Multi-Panel Architecture — ✅ Implemented
+# Plan: Fix Multi-Panel Tier Detection
 
-## Architecture
+## Problem Found
+`getMaxPanels()` in `usePanel.tsx` determines panel limits by reading `subscription_tier` from the `panels` table. However, as discovered in the DomainSettings fix, `panels.subscription_tier` can be `null` even for paid users (the billing system updates `panel_subscriptions` but may not always update `panels.subscription_tier`). This means a Basic or Pro user could be blocked from creating additional panels.
 
-```text
-User → Profile (active_panel_id) → N Panels
-  Free: 1 panel
-  Basic: 2 panels (1 registered + 1 free)  
-  Pro: 5 panels (1 registered + 4 free)
-```
+## Fix
 
-## Changes Made
+### `src/hooks/usePanel.tsx` — Fetch actual tier from `panel_subscriptions`
+- In `fetchPanels`, after fetching panels, also query `panel_subscriptions` for any active subscription matching any of the user's panel IDs
+- Use the highest active subscription's `plan_type` to determine the tier, falling back to `panels.subscription_tier`
+- Store the resolved highest tier in state so `getMaxPanels` and `canCreatePanel` use it
 
-### Database
-- Added `active_panel_id` (uuid, FK to panels) to `profiles` table
-- Index on `profiles.active_panel_id`
+### `src/pages/panel/PanelOnboarding.tsx` — Set `subscription_tier: 'free'` for new panels
+- Line 292-308: Add `subscription_tier: 'free'` to the insert so additional panels explicitly get 'free' tier instead of `null`
 
-### `src/hooks/usePanel.tsx`
-- Fetches ALL panels for owner (not `.single()`)
-- Selects active panel via `profile.active_panel_id` or first completed panel
-- Exports `switchPanel()`, `canCreatePanel()`, `getMaxPanels()`, `allPanels`
-- `PANEL_LIMITS` constant: free=1, basic=2, pro=5
+## Files to Change
 
-### `src/components/panel/PanelSwitcher.tsx`
-- Dropdown panel switcher (Facebook-style)
-- Shows all panels with active indicator
-- "Create New Panel" option (gated by tier limit)
-- Collapsed mode for narrow sidebar
-- Reloads page on switch to refresh all data
+| File | Change |
+|------|--------|
+| `src/hooks/usePanel.tsx` | Query `panel_subscriptions` for active plans; use resolved tier in `getMaxPanels` |
+| `src/pages/panel/PanelOnboarding.tsx` | Add explicit `subscription_tier: 'free'` to panel insert |
 
-### `src/pages/PanelOwnerDashboard.tsx`
-- Integrated PanelSwitcher in sidebar footer
-- Works in both expanded and collapsed sidebar states
-
-### `src/pages/panel/PanelOnboarding.tsx`
-- Supports `?new=true` query param to skip redirect-to-panel check
-- Uses `.maybeSingle()` with subdomain filter instead of `.single()`
-- Sets `active_panel_id` on profile after panel creation
-
-### `src/pages/Auth.tsx`
-- Checks for `onboarding_completed = true` panels specifically
