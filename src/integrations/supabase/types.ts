@@ -2781,6 +2781,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          active_panel_id: string | null
           avatar_url: string | null
           balance: number | null
           created_at: string
@@ -2799,6 +2800,7 @@ export type Database = {
           username: string | null
         }
         Insert: {
+          active_panel_id?: string | null
           avatar_url?: string | null
           balance?: number | null
           created_at?: string
@@ -2817,6 +2819,7 @@ export type Database = {
           username?: string | null
         }
         Update: {
+          active_panel_id?: string | null
           avatar_url?: string | null
           balance?: number | null
           created_at?: string
@@ -2834,7 +2837,22 @@ export type Database = {
           user_id?: string
           username?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_active_panel_id_fkey"
+            columns: ["active_panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_active_panel_id_fkey"
+            columns: ["active_panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels_public"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       promo_codes: {
         Row: {

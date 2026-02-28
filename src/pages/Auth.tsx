@@ -74,11 +74,12 @@ const Auth = () => {
     if (!profile?.id) return;
 
     try {
-      // Check if user has completed onboarding
+      // Check if user has any completed onboarding panel
       const { data: panels } = await supabase
         .from('panels')
         .select('onboarding_completed')
         .eq('owner_id', profile.id)
+        .eq('onboarding_completed', true)
         .limit(1);
 
       const hasCompletedOnboarding = panels && panels.length > 0 && panels[0].onboarding_completed;

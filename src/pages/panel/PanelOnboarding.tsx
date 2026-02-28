@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,6 +35,8 @@ const PanelOnboarding = () => {
   const [checkingPanel, setCheckingPanel] = useState(true);
   const { user, profile } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isNewPanel = searchParams.get('new') === 'true';
   const { toast } = useToast();
 
   // Step 1: Basic Info
@@ -91,6 +93,12 @@ const PanelOnboarding = () => {
       }
       
       try {
+        // If creating a new additional panel, skip the redirect check
+        if (isNewPanel) {
+          setCheckingPanel(false);
+          return;
+        }
+
         const { data: existingPanel } = await supabase
           .from('panels')
           .select('*')
@@ -301,13 +309,21 @@ const PanelOnboarding = () => {
 
       if (error) throw error;
 
+      // Fetch the newly created panel by subdomain (more reliable for multi-panel)
       const { data: panelData } = await supabase
         .from('panels')
         .select('id')
         .eq('owner_id', profile?.id)
-        .single();
+        .eq('subdomain', finalSubdomain)
+        .maybeSingle();
 
       if (panelData) {
+        // Set as active panel
+        await supabase
+          .from('profiles')
+          .update({ active_panel_id: panelData.id } as any)
+          .eq('id', profile?.id);
+
         await supabase
           .from('panel_settings')
           .insert([
