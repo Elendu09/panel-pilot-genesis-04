@@ -172,14 +172,12 @@ export const TransactionHistory = ({ panelId }: TransactionHistoryProps) => {
     }
   };
 
-  const getIndicatorColor = (type: string) => {
-    switch (type) {
-      case "deposit": case "admin_credit": return "bg-green-500";
-      case "withdrawal": case "admin_debit": return "bg-orange-500";
-      case "commission": return "bg-purple-500";
-      case "subscription": return "bg-blue-500";
-      case "debit": case "ad_purchase": return "bg-amber-500";
-      default: return "bg-muted-foreground";
+  const getStatusIndicatorColor = (status: string | null) => {
+    switch (status) {
+      case "completed": return "bg-green-500";
+      case "pending": return "bg-yellow-500";
+      case "failed": return "bg-red-500";
+      default: return "bg-green-500";
     }
   };
 
@@ -188,7 +186,7 @@ export const TransactionHistory = ({ panelId }: TransactionHistoryProps) => {
     <div className="relative flex gap-3 pl-4">
       {/* Timeline indicator line */}
       <div className="absolute left-0 top-0 bottom-0 w-1 rounded-full">
-        <div className={cn("w-full h-full rounded-full", getIndicatorColor(tx.type))} />
+        <div className={cn("w-full h-full rounded-full", getStatusIndicatorColor(tx.status))} />
       </div>
       <div className="flex-1 py-3">
         <div className="flex items-start justify-between gap-3">

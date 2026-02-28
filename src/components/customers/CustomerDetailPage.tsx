@@ -339,7 +339,7 @@ export function CustomerDetailPage({
           <SheetHeader className="p-6 pb-0">
             <div className="flex items-center justify-between">
               <SheetTitle className="flex items-center gap-3">
-                <Avatar className="h-12 w-12 border-2 border-primary/20">
+                <Avatar className="h-10 w-10 border-2 border-primary/20">
                   <AvatarFallback className="bg-primary/10 text-primary font-bold">
                     {customer.name.charAt(0).toUpperCase()}
                   </AvatarFallback>
@@ -369,42 +369,42 @@ export function CustomerDetailPage({
             </div>
           </SheetHeader>
 
-          <ScrollArea className="h-[calc(100vh-180px)] px-6 py-4">
-            <div className="space-y-6">
+          <ScrollArea className="h-[calc(100vh-160px)] px-5 py-3">
+            <div className="space-y-4">
               {/* Stats Cards */}
               <div className="grid grid-cols-2 gap-3">
                 <Card className="bg-gradient-to-br from-green-500/10 to-green-500/5 border-green-500/20">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Wallet className="w-4 h-4 text-green-500" />
-                      <span className="text-xs text-muted-foreground">Balance</span>
+                  <CardContent className="p-3">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <Wallet className="w-3.5 h-3.5 text-green-500" />
+                      <span className="text-[10px] text-muted-foreground">Balance</span>
                     </div>
-                    <p className="text-2xl font-bold">${customer.balance.toFixed(2)}</p>
+                    <p className="text-xl font-bold">${customer.balance.toFixed(2)}</p>
                   </CardContent>
                 </Card>
                 <Card className="bg-gradient-to-br from-blue-500/10 to-blue-500/5 border-blue-500/20">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2 mb-1">
-                      <TrendingUp className="w-4 h-4 text-blue-500" />
-                      <span className="text-xs text-muted-foreground">Total Spent</span>
+                  <CardContent className="p-3">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <TrendingUp className="w-3.5 h-3.5 text-blue-500" />
+                      <span className="text-[10px] text-muted-foreground">Total Spent</span>
                     </div>
-                    <p className="text-2xl font-bold">${customer.totalSpent.toFixed(2)}</p>
+                    <p className="text-xl font-bold">${customer.totalSpent.toFixed(2)}</p>
                   </CardContent>
                 </Card>
                 <Card className="bg-muted/50">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2 mb-1">
-                      <ShoppingCart className="w-4 h-4 text-primary" />
-                      <span className="text-xs text-muted-foreground">Orders</span>
+                  <CardContent className="p-3">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <ShoppingCart className="w-3.5 h-3.5 text-primary" />
+                      <span className="text-[10px] text-muted-foreground">Orders</span>
                     </div>
-                    <p className="text-2xl font-bold">{customer.totalOrders}</p>
+                    <p className="text-xl font-bold">{customer.totalOrders}</p>
                   </CardContent>
                 </Card>
                 <Card className="bg-muted/50">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Calendar className="w-4 h-4 text-primary" />
-                      <span className="text-xs text-muted-foreground">Joined</span>
+                  <CardContent className="p-3">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <Calendar className="w-3.5 h-3.5 text-primary" />
+                      <span className="text-[10px] text-muted-foreground">Joined</span>
                     </div>
                     <p className="text-sm font-medium">{format(new Date(customer.joinedAt), 'MMM d, yyyy')}</p>
                   </CardContent>
