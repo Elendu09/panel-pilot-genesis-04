@@ -14,6 +14,64 @@ export type Database = {
   }
   public: {
     Tables: {
+      ad_analytics_daily: {
+        Row: {
+          ad_id: string | null
+          ad_type: string
+          clicks: number
+          conversions: number
+          created_at: string
+          date: string
+          id: string
+          impressions: number
+          panel_id: string
+        }
+        Insert: {
+          ad_id?: string | null
+          ad_type: string
+          clicks?: number
+          conversions?: number
+          created_at?: string
+          date?: string
+          id?: string
+          impressions?: number
+          panel_id: string
+        }
+        Update: {
+          ad_id?: string | null
+          ad_type?: string
+          clicks?: number
+          conversions?: number
+          created_at?: string
+          date?: string
+          id?: string
+          impressions?: number
+          panel_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_analytics_daily_ad_id_fkey"
+            columns: ["ad_id"]
+            isOneToOne: false
+            referencedRelation: "provider_ads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_analytics_daily_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_analytics_daily_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_webhooks: {
         Row: {
           created_at: string

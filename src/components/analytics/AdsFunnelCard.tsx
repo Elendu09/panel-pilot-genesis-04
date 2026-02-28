@@ -1,15 +1,16 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Crown, Megaphone, MousePointer, UserPlus, DollarSign, ArrowRight, Info, Target, TrendingUp, TrendingDown } from "lucide-react";
+import { Crown, Megaphone, MousePointer, UserPlus, DollarSign, ArrowRight, Info, Target, TrendingUp, TrendingDown, Flame, List, Check, MessageSquare } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCompactNumber } from "@/lib/analytics-utils";
 import { subDays } from "date-fns";
+import { MiniSparkline } from "./MiniSparkline";
 
 interface AdsFunnelCardProps {
   panelId: string;
@@ -70,6 +71,7 @@ export function AdsFunnelCard({ panelId }: AdsFunnelCardProps) {
     conversions: 0,
     totalSpent: 0
   });
+  const [perTypeData, setPerTypeData] = useState<Record<string, { impressions: number; clicks: number; conversions: number; spent: number; sparkline: number[] }>>({});
 
   useEffect(() => {
     fetchAdsData();
@@ -94,42 +96,59 @@ export function AdsFunnelCard({ panelId }: AdsFunnelCardProps) {
     if (!panelId) return;
     
     try {
-      // Get current period data (last 30 days)
-      const now = new Date();
-      const thirtyDaysAgo = subDays(now, 30);
-      const sixtyDaysAgo = subDays(now, 60);
-      
-      const { data: panelAds } = await supabase
-        .from('provider_ads')
-        .select('impressions, clicks, total_spent, is_active, expires_at, starts_at, created_at')
-        .eq('panel_id', panelId);
+      const thirtyDaysAgo = subDays(new Date(), 30).toISOString().split('T')[0];
 
-      if (panelAds) {
-        // Check for active ads
-        const activeAds = panelAds.filter(ad => 
-          ad.is_active && new Date(ad.expires_at) > new Date()
-        );
-        setHasActiveAds(activeAds.length > 0);
+      const [panelAdsRes, dailyRes] = await Promise.all([
+        supabase
+          .from('provider_ads')
+          .select('impressions, clicks, total_spent, is_active, expires_at, ad_type')
+          .eq('panel_id', panelId),
+        supabase
+          .from('ad_analytics_daily')
+          .select('ad_type, date, impressions, clicks, conversions')
+          .eq('panel_id', panelId)
+          .gte('date', thirtyDaysAgo)
+          .order('date', { ascending: true })
+      ]);
 
-        // Calculate current metrics from all ads
-        const totalImpressions = panelAds.reduce((sum, ad) => sum + (ad.impressions || 0), 0);
-        const totalClicks = panelAds.reduce((sum, ad) => sum + (ad.clicks || 0), 0);
-        const totalSpent = panelAds.reduce((sum, ad) => sum + (ad.total_spent || 0), 0);
-        setMetrics({
-          impressions: totalImpressions,
-          clicks: totalClicks,
-          conversions: 0, // No real conversion tracking — show 0
-          totalSpent: totalSpent
-        });
+      const panelAds = panelAdsRes.data || [];
+      const dailyRows = (dailyRes.data || []) as { ad_type: string; date: string; impressions: number; clicks: number; conversions: number }[];
 
-        // No historical period data available — show zeros for previous
-        setPreviousMetrics({
-          impressions: 0,
-          clicks: 0,
-          conversions: 0,
-          totalSpent: 0
-        });
+      // Active ads check
+      const activeAds = panelAds.filter(ad => 
+        ad.is_active && new Date(ad.expires_at) > new Date()
+      );
+      setHasActiveAds(activeAds.length > 0);
+
+      // Aggregate metrics
+      const totalImpressions = panelAds.reduce((sum, ad) => sum + (ad.impressions || 0), 0);
+      const totalClicks = panelAds.reduce((sum, ad) => sum + (ad.clicks || 0), 0);
+      const totalSpent = panelAds.reduce((sum, ad) => sum + (ad.total_spent || 0), 0);
+      const totalConversions = dailyRows.reduce((sum, r) => sum + (r.conversions || 0), 0);
+
+      setMetrics({
+        impressions: totalImpressions,
+        clicks: totalClicks,
+        conversions: totalConversions,
+        totalSpent: totalSpent
+      });
+
+      setPreviousMetrics({ impressions: 0, clicks: 0, conversions: 0, totalSpent: 0 });
+
+      // Build per-type data
+      const typeMap: Record<string, { impressions: number; clicks: number; conversions: number; spent: number; sparkline: number[] }> = {};
+      for (const type of ['sponsored', 'top', 'best', 'featured']) {
+        const typeAds = panelAds.filter(a => a.ad_type === type);
+        const typeDaily = dailyRows.filter(r => r.ad_type === type);
+        typeMap[type] = {
+          impressions: typeAds.reduce((s, a) => s + (a.impressions || 0), 0),
+          clicks: typeAds.reduce((s, a) => s + (a.clicks || 0), 0),
+          conversions: typeDaily.reduce((s, r) => s + (r.conversions || 0), 0),
+          spent: typeAds.reduce((s, a) => s + (a.total_spent || 0), 0),
+          sparkline: typeDaily.map(r => r.impressions || 0),
+        };
       }
+      setPerTypeData(typeMap);
     } catch (error) {
       console.error('Error fetching ads data:', error);
     } finally {
@@ -320,6 +339,50 @@ export function AdsFunnelCard({ panelId }: AdsFunnelCardProps) {
             <p className="text-[10px] md:text-xs text-muted-foreground">Conversion Rate</p>
           </div>
         </div>
+        {/* Per-Ad-Type Breakdown */}
+        {Object.keys(perTypeData).some(k => perTypeData[k].impressions > 0 || perTypeData[k].spent > 0) && (
+          <div className="mt-4 pt-4 border-t border-border/50">
+            <p className="text-xs font-medium text-muted-foreground mb-3 flex items-center gap-1.5">
+              <Target className="w-3 h-3" />
+              Performance by Ad Type
+            </p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              {([
+                { type: 'sponsored', icon: Flame, color: 'text-orange-500', bg: 'bg-orange-500/10', chartColor: '#f97316' },
+                { type: 'top', icon: List, color: 'text-blue-500', bg: 'bg-blue-500/10', chartColor: '#3b82f6' },
+                { type: 'best', icon: Check, color: 'text-emerald-500', bg: 'bg-emerald-500/10', chartColor: '#10b981' },
+                { type: 'featured', icon: MessageSquare, color: 'text-purple-500', bg: 'bg-purple-500/10', chartColor: '#a855f7' },
+              ] as const).map(({ type, icon: Icon, color, bg, chartColor }) => {
+                const d = perTypeData[type];
+                if (!d) return null;
+                const ctr = d.impressions > 0 ? ((d.clicks / d.impressions) * 100).toFixed(1) : '0.0';
+                return (
+                  <div key={type} className="p-2.5 rounded-xl border border-border/40 bg-card/50 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <div className={cn("w-5 h-5 rounded flex items-center justify-center", bg)}>
+                          <Icon className={cn("w-3 h-3", color)} />
+                        </div>
+                        <span className="text-[10px] font-semibold capitalize">{type}</span>
+                      </div>
+                      {d.sparkline.length > 1 && (
+                        <MiniSparkline data={d.sparkline} color={chartColor} width={40} height={16} />
+                      )}
+                    </div>
+                    <div className="text-xs">
+                      <span className="font-bold">{formatCompactNumber(d.impressions)}</span>
+                      <span className="text-muted-foreground"> views</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                      <span>{ctr}% CTR</span>
+                      <span>${d.spent.toFixed(0)}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

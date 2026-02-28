@@ -49,7 +49,7 @@ import { ProviderLimitBanner } from "@/components/providers/ProviderLimitBanner"
 import { DirectProviderCard } from "@/components/providers/DirectProviderCard";
 import { ProviderListItem } from "@/components/providers/ProviderListItem";
 import { SponsoredProviderSlider } from "@/components/providers/SponsoredProviderSlider";
-import { trackAdImpression, trackAdClick } from "@/lib/ad-tracking";
+import { trackAdImpression, trackAdClick, trackAdConversion } from "@/lib/ad-tracking";
 
 interface Provider {
   id: string;
@@ -448,6 +448,11 @@ const ProviderManagement = () => {
 
       if (error) throw new Error(error.message);
       if (!data.success) throw new Error(data.error);
+
+      // Track conversion for ad-bearing providers
+      if (directPanel.ad_type) {
+        trackAdConversion(directPanel.id, directPanel.ad_type);
+      }
 
       toast({ 
         title: "Provider Enabled!", 
