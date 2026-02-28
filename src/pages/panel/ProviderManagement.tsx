@@ -213,12 +213,13 @@ const ProviderManagement = () => {
         .neq('id', panel.id)
         .not('subdomain', 'is', null);
 
-      // Get active ads for these panels
+      // Get active ads for these panels, sorted by total_spent for priority ranking
       const { data: ads } = await supabase
         .from('provider_ads')
-        .select('panel_id, ad_type')
+        .select('panel_id, ad_type, total_spent')
         .eq('is_active', true)
-        .gt('expires_at', new Date().toISOString());
+        .gt('expires_at', new Date().toISOString())
+        .order('total_spent', { ascending: false });
 
       // Get existing connections
       const { data: connections } = await supabase
@@ -228,7 +229,13 @@ const ProviderManagement = () => {
         .eq('is_active', true);
 
       const connectedIds = new Set(connections?.map(c => c.target_panel_id) || []);
-      const adMap = new Map(ads?.map(a => [a.panel_id, a.ad_type]) || []);
+      // Build ad map keeping highest-spending ad type per panel (ads already sorted by total_spent DESC)
+      const adMap = new Map<string, string>();
+      for (const a of (ads || [])) {
+        if (a.panel_id && !adMap.has(a.panel_id)) {
+          adMap.set(a.panel_id, a.ad_type);
+        }
+      }
 
       // Fetch service counts for each panel
       const panelIds = panels?.map(p => p.id) || [];

@@ -46,22 +46,21 @@ import { MiniSparkline } from "@/components/analytics/MiniSparkline";
 // Ad reach placements per type
 const adReachMap: Record<string, { label: string; icon: typeof Globe }[]> = {
   sponsored: [
-    { label: "Marketplace — Sponsored Slider", icon: Globe },
-    { label: "Chat Inbox — Promotion Cards", icon: MessageSquare },
-    { label: "Provider Search — Top Results", icon: Target },
+    { label: "Marketplace — Premium Slider (auto-rotating)", icon: Globe },
+    { label: "Provider Search — Pinned Top Results", icon: Target },
+    { label: "Dashboard Overview — Recommended Provider Card", icon: Radio },
   ],
   top: [
-    { label: "Marketplace — Top Providers Grid", icon: Globe },
-    { label: "Provider Rankings — Highlighted", icon: Target },
+    { label: "Marketplace — Top Providers Grid Section", icon: Globe },
+    { label: "Provider Rankings — Blue Highlight Badge", icon: Target },
   ],
   best: [
-    { label: "Marketplace — Best Choice List", icon: Globe },
-    { label: "Service Pages — Editor's Pick", icon: Target },
+    { label: "Marketplace — Best Choice List Section", icon: Globe },
+    { label: "Provider Details — Editor's Pick Badge", icon: Target },
   ],
   featured: [
-    { label: "Chat Inbox — Recommendations", icon: MessageSquare },
-    { label: "Storefront Widget — Featured", icon: Radio },
-    { label: "Homepage Carousel", icon: Globe },
+    { label: "Chat Inbox — Promotion Cards (every 5 sessions)", icon: MessageSquare },
+    { label: "Dashboard Overview — Featured Provider Widget", icon: Radio },
   ],
 };
 
@@ -133,9 +132,9 @@ const adTypeConfig = {
     gradient: "from-purple-500 to-pink-500",
     title: "Direct offers",
     benefits: [
-      "Homepage carousel inclusion",
-      "'Featured' badge",
-      "Landing page visibility"
+      "Chat Inbox promotion cards",
+      "Dashboard 'Featured Provider' widget",
+      "Panel-owner-only visibility"
     ]
   },
 };

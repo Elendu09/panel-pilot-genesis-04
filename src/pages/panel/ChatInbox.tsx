@@ -169,13 +169,14 @@ const ChatInbox = ({ embedded = false }: ChatInboxProps) => {
 
     const fetchSponsoredPanels = async () => {
       try {
-        // Get active sponsored/featured ads
+        // Get active sponsored/featured ads, ranked by total_spent so highest spender appears first
         const { data: ads } = await supabase
           .from('provider_ads')
-          .select('panel_id')
+          .select('panel_id, total_spent')
           .eq('is_active', true)
           .in('ad_type', ['sponsored', 'featured'])
           .gt('expires_at', new Date().toISOString())
+          .order('total_spent', { ascending: false })
           .limit(5);
 
         if (!ads || ads.length === 0) return;
