@@ -43,6 +43,7 @@ import { cn } from "@/lib/utils";
 import { Helmet } from "react-helmet-async";
 import { Link } from "react-router-dom";
 import { MiniSparkline } from "@/components/analytics/MiniSparkline";
+import { AdAnalyticsTab } from "@/components/analytics/AdAnalyticsTab";
 
 // Ad reach placements per type
 const adReachMap: Record<string, { label: string; icon: typeof Globe }[]> = {
@@ -368,14 +369,18 @@ const ProviderAds = () => {
       </motion.div>
 
       <Tabs defaultValue="purchase" className="space-y-6">
-        <TabsList className="w-full grid grid-cols-2">
+        <TabsList className="w-full grid grid-cols-3">
           <TabsTrigger value="purchase" className="gap-2">
             <Crown className="w-4 h-4" />
-            Purchase Ads
+            <span className="hidden sm:inline">Purchase</span> Ads
           </TabsTrigger>
           <TabsTrigger value="my-ads" className="gap-2">
             <TrendingUp className="w-4 h-4" />
             My Ads ({myAds.filter(a => a.is_active && new Date(a.expires_at) > new Date()).length})
+          </TabsTrigger>
+          <TabsTrigger value="analytics" className="gap-2">
+            <Eye className="w-4 h-4" />
+            Analytics
           </TabsTrigger>
         </TabsList>
 
@@ -759,9 +764,11 @@ const ProviderAds = () => {
                           const cpm = ad.impressions > 0 ? (ad.total_spent / ad.impressions) * 1000 : 0;
                           
                           // Generate sparkline data (simulated daily distribution)
+                          // Use real daily data from ad_analytics_daily (fetched via AdAnalyticsTab)
+                          // For now, distribute impressions across elapsed days proportionally
                           const sparklineData = Array.from({ length: Math.min(elapsedDays, 14) }, (_, i) => {
-                            const base = dailyImpressionAvg;
-                            return Math.max(0, Math.round(base + (Math.random() - 0.5) * base * 0.6));
+                            const dayShare = ad.impressions / Math.min(elapsedDays, 14);
+                            return Math.max(0, Math.round(dayShare));
                           });
                           
                           return (
@@ -853,6 +860,10 @@ const ProviderAds = () => {
               })}
             </div>
           )}
+        </TabsContent>
+        {/* Analytics Tab */}
+        <TabsContent value="analytics">
+          {panel?.id && <AdAnalyticsTab panelId={panel.id} />}
         </TabsContent>
       </Tabs>
 
