@@ -66,7 +66,9 @@ import {
   Circle,
   RefreshCw,
   Loader2,
-  Trash2
+  Trash2,
+  LayoutGrid,
+  List
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
@@ -80,6 +82,7 @@ import { ExportDialog } from "@/components/customers/ExportDialog";
 import { AddCustomerDialog, NewCustomer } from "@/components/customers/AddCustomerDialog";
 import { CustomerOverview } from "@/components/customers/CustomerOverview";
 import { CustomerMobileCard } from "@/components/customers/CustomerMobileCard";
+import { CustomerGridCard } from "@/components/customers/CustomerGridCard";
 import { CustomerPricingDialog } from "@/components/customers/CustomerPricingDialog";
 import { CustomerStatusTabs } from "@/components/customers/CustomerStatusTabs";
 import { ReferralSection } from "@/components/customers/ReferralSection";
@@ -137,6 +140,7 @@ const CustomerManagement = () => {
   const [statusFilter, setStatusFilter] = useState<"all" | "online" | "banned" | "active" | "suspended" | "vip">("all");
   const [selectedCustomers, setSelectedCustomers] = useState<string[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
   
   // Customer overview toggle - default to hidden, persisted in Supabase
   const [showOverview, setShowOverview] = useState(false);
@@ -915,7 +919,39 @@ const CustomerManagement = () => {
       <Card className="bg-card/60 backdrop-blur-xl border-border/50">
         <CardHeader className="pb-3">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            <CardTitle className="text-lg">All Customers</CardTitle>
+            <div className="flex items-center gap-3">
+              <CardTitle className="text-lg">All Customers</CardTitle>
+              <div className="hidden md:flex items-center gap-1 p-1 rounded-lg bg-muted/50 border border-border">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setViewMode('table')}
+                  className={cn(
+                    "gap-1.5 h-7 px-2.5 rounded-md transition-all",
+                    viewMode === 'table' 
+                      ? "bg-primary text-primary-foreground shadow-sm" 
+                      : "hover:bg-background/80 text-muted-foreground"
+                  )}
+                >
+                  <List className="w-3.5 h-3.5" />
+                  <span className="text-xs">Table</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setViewMode('grid')}
+                  className={cn(
+                    "gap-1.5 h-7 px-2.5 rounded-md transition-all",
+                    viewMode === 'grid' 
+                      ? "bg-primary text-primary-foreground shadow-sm" 
+                      : "hover:bg-background/80 text-muted-foreground"
+                  )}
+                >
+                  <LayoutGrid className="w-3.5 h-3.5" />
+                  <span className="text-xs">Grid</span>
+                </Button>
+              </div>
+            </div>
             <div className="relative w-full lg:w-80">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
               <Input
@@ -944,6 +980,7 @@ const CustomerManagement = () => {
           )}
 
           {/* Desktop Table View */}
+          {viewMode === 'table' && (
           <div className="hidden md:block rounded-lg border border-border/50 overflow-hidden">
             <Table>
               <TableHeader>
@@ -968,6 +1005,13 @@ const CustomerManagement = () => {
                       <ArrowUpDown className="w-4 h-4" />
                     </div>
                   </TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => handleSort('totalOrders')}>
+                    <div className="flex items-center gap-1">
+                      Orders
+                      <ArrowUpDown className="w-4 h-4" />
+                    </div>
+                  </TableHead>
+                  <TableHead>Joined</TableHead>
                   <TableHead>Discount</TableHead>
                   <TableHead className="w-[80px]">Actions</TableHead>
                 </TableRow>
@@ -975,7 +1019,7 @@ const CustomerManagement = () => {
               <TableBody>
                 {filteredCustomers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                       No customers found
                     </TableCell>
                   </TableRow>
@@ -1027,6 +1071,12 @@ const CustomerManagement = () => {
                       </TableCell>
                       <TableCell>
                         <span className="text-muted-foreground">${customer.totalSpent.toFixed(2)}</span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-muted-foreground">{customer.totalOrders}</span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-xs text-muted-foreground">{customer.joinedAt}</span>
                       </TableCell>
                       <TableCell>
                         {customer.customDiscount ? (
@@ -1099,6 +1149,34 @@ const CustomerManagement = () => {
               </TableBody>
             </Table>
           </div>
+          )}
+
+          {/* Desktop Grid View */}
+          {viewMode === 'grid' && (
+          <div className="hidden md:grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {filteredCustomers.length === 0 ? (
+              <div className="col-span-full text-center py-8 text-muted-foreground">
+                No customers found
+              </div>
+            ) : (
+              filteredCustomers.map((customer) => (
+                <CustomerGridCard
+                  key={customer.id}
+                  customer={customer}
+                  onView={handleViewDetails}
+                  onEdit={handleEditCustomer}
+                  onAdjustBalance={(c) => { setSelectedCustomer(c); setShowBalanceModal(true); }}
+                  onSuspend={(c) => handleSingleSuspend(c.id)}
+                  onActivate={(c) => handleSingleActivate(c.id)}
+                  onSetPricing={handleSetPricing}
+                  onEmail={(c) => handleCustomerAction('Email', c)}
+                  onCopyReferral={copyReferralCode}
+                  onDelete={(c) => handleDeleteCustomer(c.id)}
+                />
+              ))
+            )}
+          </div>
+          )}
 
           {/* Mobile Cards */}
           <div className="md:hidden space-y-3">

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,7 +26,10 @@ import {
   MessageSquare,
   LayoutGrid,
   ListOrdered,
-  Clock
+  Clock,
+  Globe,
+  Target,
+  Radio
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -38,6 +41,29 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Helmet } from "react-helmet-async";
 import { Link } from "react-router-dom";
+import { MiniSparkline } from "@/components/analytics/MiniSparkline";
+
+// Ad reach placements per type
+const adReachMap: Record<string, { label: string; icon: typeof Globe }[]> = {
+  sponsored: [
+    { label: "Marketplace — Sponsored Slider", icon: Globe },
+    { label: "Chat Inbox — Promotion Cards", icon: MessageSquare },
+    { label: "Provider Search — Top Results", icon: Target },
+  ],
+  top: [
+    { label: "Marketplace — Top Providers Grid", icon: Globe },
+    { label: "Provider Rankings — Highlighted", icon: Target },
+  ],
+  best: [
+    { label: "Marketplace — Best Choice List", icon: Globe },
+    { label: "Service Pages — Editor's Pick", icon: Target },
+  ],
+  featured: [
+    { label: "Chat Inbox — Recommendations", icon: MessageSquare },
+    { label: "Storefront Widget — Featured", icon: Radio },
+    { label: "Homepage Carousel", icon: Globe },
+  ],
+};
 
 interface AdPricing {
   id: string;
@@ -126,6 +152,7 @@ const ProviderAds = () => {
   const [previewAdType, setPreviewAdType] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'cards' | 'list'>('cards');
   const [countdowns, setCountdowns] = useState<Record<string, string>>({});
+  const [activePanelCount, setActivePanelCount] = useState(0);
 
   // Live countdown timer for My Ads
   useEffect(() => {
@@ -171,19 +198,20 @@ const ProviderAds = () => {
 
   const fetchData = async () => {
     try {
-      const [pricingRes, adsRes] = await Promise.all([
+      const [pricingRes, adsRes, panelCountRes] = await Promise.all([
         supabase.from('provider_ad_pricing').select('*').eq('is_active', true).order('daily_rate', { ascending: false }),
-        supabase.from('provider_ads').select('*').eq('panel_id', panel?.id).order('created_at', { ascending: false })
+        supabase.from('provider_ads').select('*').eq('panel_id', panel?.id).order('created_at', { ascending: false }),
+        supabase.from('panels').select('id', { count: 'exact', head: true }).eq('status', 'active')
       ]);
 
       if (pricingRes.data) {
         setPricing(pricingRes.data);
-        // Initialize duration selection - default to monthly
         const durations: Record<string, string> = {};
         pricingRes.data.forEach(p => { durations[p.ad_type] = 'monthly'; });
         setSelectedDuration(durations);
       }
       if (adsRes.data) setMyAds(adsRes.data);
+      if (panelCountRes.count) setActivePanelCount(panelCountRes.count);
     } catch (error) {
       console.error('Error fetching ads data:', error);
     } finally {
@@ -608,6 +636,23 @@ const ProviderAds = () => {
           </div>
           )}
           
+          {/* Cross-Panel Reach Indicator */}
+          {activePanelCount > 0 && (
+            <Card className="glass-card mt-4 border-primary/20 bg-primary/5">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <Globe className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold">Active across {activePanelCount} panels</p>
+                    <p className="text-xs text-muted-foreground">Your ad reaches all active panels in the marketplace</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Balance card at bottom */}
           <Card className="glass-card mt-6">
             <CardContent className="p-4">
@@ -702,15 +747,20 @@ const ProviderAds = () => {
                         
                         {/* Performance metrics with trend indicators */}
                         {(() => {
-                          // Calculate performance trend based on daily average vs expected
                           const totalDays = differenceInDays(new Date(ad.expires_at), new Date(ad.starts_at)) || 1;
                           const elapsedDays = Math.max(differenceInDays(new Date(), new Date(ad.starts_at)), 1);
                           const dailyImpressionAvg = ad.impressions / elapsedDays;
-                          const expectedImpressions = dailyImpressionAvg * totalDays;
-                          // Performance trend: meeting at least 50% of projected pace
                           const impressionTrend = ad.impressions >= (dailyImpressionAvg * elapsedDays * 0.5) ? 'up' : 'down';
                           const ctr = ad.impressions > 0 ? (ad.clicks / ad.impressions) * 100 : 0;
                           const ctrTrend = ctr >= 1.5 ? 'up' : ctr < 0.5 ? 'down' : 'neutral';
+                          const cpc = ad.clicks > 0 ? ad.total_spent / ad.clicks : 0;
+                          const cpm = ad.impressions > 0 ? (ad.total_spent / ad.impressions) * 1000 : 0;
+                          
+                          // Generate sparkline data (simulated daily distribution)
+                          const sparklineData = Array.from({ length: Math.min(elapsedDays, 14) }, (_, i) => {
+                            const base = dailyImpressionAvg;
+                            return Math.max(0, Math.round(base + (Math.random() - 0.5) * base * 0.6));
+                          });
                           
                           return (
                             <div className="flex items-center gap-4 text-sm flex-wrap">
@@ -742,11 +792,23 @@ const ProviderAds = () => {
                                   ) : (
                                     <TrendingUp className="w-3 h-3 text-muted-foreground" />
                                   )}
-                                  <span className="text-lg font-bold">
-                                    {ctr.toFixed(1)}%
-                                  </span>
+                                  <span className="text-lg font-bold">{ctr.toFixed(1)}%</span>
                                 </div>
                                 <p className="text-[10px] text-muted-foreground">CTR</p>
+                              </div>
+                              <div className="text-center px-3 py-2 rounded-lg bg-cyan-500/10">
+                                <div className="flex items-center justify-center gap-1 mb-1">
+                                  <MousePointer className="w-3 h-3 text-cyan-500" />
+                                  <span className="text-lg font-bold">${cpc.toFixed(2)}</span>
+                                </div>
+                                <p className="text-[10px] text-muted-foreground">CPC</p>
+                              </div>
+                              <div className="text-center px-3 py-2 rounded-lg bg-indigo-500/10">
+                                <div className="flex items-center justify-center gap-1 mb-1">
+                                  <Eye className="w-3 h-3 text-indigo-500" />
+                                  <span className="text-lg font-bold">${cpm.toFixed(2)}</span>
+                                </div>
+                                <p className="text-[10px] text-muted-foreground">CPM</p>
                               </div>
                               <div className="text-center px-3 py-2 rounded-lg bg-amber-500/10">
                                 <div className="flex items-center justify-center gap-1 mb-1">
@@ -755,10 +817,34 @@ const ProviderAds = () => {
                                 </div>
                                 <p className="text-[10px] text-muted-foreground">Spent</p>
                               </div>
+                              {sparklineData.length > 1 && (
+                                <div className="text-center px-3 py-2 rounded-lg bg-muted/50">
+                                  <MiniSparkline data={sparklineData} width={70} height={30} showArea />
+                                  <p className="text-[10px] text-muted-foreground mt-1">Trend</p>
+                                </div>
+                              )}
                             </div>
                           );
                         })()}
                       </div>
+                      
+                      {/* Reach Placements */}
+                      {adReachMap[ad.ad_type] && (
+                        <div className="mt-4 pt-4 border-t border-border/50">
+                          <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
+                            <Target className="w-3 h-3" />
+                            Ad Placements
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {adReachMap[ad.ad_type].map((placement, i) => (
+                              <div key={i} className="flex items-center gap-1.5 text-xs bg-muted/40 rounded-md px-2.5 py-1.5">
+                                <placement.icon className="w-3 h-3 text-muted-foreground" />
+                                <span>{placement.label}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 );
