@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 import {
   Table,
   TableBody,
@@ -28,7 +28,6 @@ import {
   TrendingDown,
   Wallet
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -116,10 +115,11 @@ export const TransactionHistory = ({ panelId }: TransactionHistoryProps) => {
 
   // Summary stats
   const summary = useMemo(() => {
-    const completed = transactions.filter(tx => tx.status === 'completed' || !tx.status);
-    const totalIn = completed.filter(tx => tx.amount > 0).reduce((s, tx) => s + tx.amount, 0);
-    const totalOut = completed.filter(tx => tx.amount < 0).reduce((s, tx) => s + Math.abs(tx.amount), 0);
-    return { totalIn, totalOut, net: totalIn - totalOut, count: completed.length };
+    const total = transactions.length;
+    const completed = transactions.filter(tx => tx.status === 'completed' || !tx.status).length;
+    const failed = transactions.filter(tx => tx.status === 'failed').length;
+    const pending = transactions.filter(tx => tx.status === 'pending').length;
+    return { total, completed, failed, pending };
   }, [transactions]);
 
   const filteredTransactions = transactions.filter(tx => {
@@ -276,42 +276,54 @@ export const TransactionHistory = ({ panelId }: TransactionHistoryProps) => {
           {/* Summary Stats */}
           {!loading && transactions.length > 0 && (
             <div className="grid grid-cols-3 gap-2 md:gap-3">
+              <div className="p-3 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Receipt className="w-3.5 h-3.5 text-primary" />
+                  <span className="text-[10px] text-primary font-medium uppercase tracking-wider">Total</span>
+                </div>
+                <p className="text-lg font-bold text-primary font-mono">{summary.total}</p>
+              </div>
               <div className="p-3 rounded-xl bg-gradient-to-br from-green-500/10 to-green-500/5">
                 <div className="flex items-center gap-1.5 mb-1">
                   <TrendingUp className="w-3.5 h-3.5 text-green-500" />
-                  <span className="text-[10px] text-green-600 dark:text-green-400 font-medium uppercase tracking-wider">Total In</span>
+                  <span className="text-[10px] text-green-600 dark:text-green-400 font-medium uppercase tracking-wider">Completed</span>
                 </div>
-                <p className="text-lg font-bold text-green-500 font-mono">${summary.totalIn.toFixed(2)}</p>
+                <p className="text-lg font-bold text-green-500 font-mono">{summary.completed}</p>
               </div>
               <div className="p-3 rounded-xl bg-gradient-to-br from-red-500/10 to-red-500/5">
                 <div className="flex items-center gap-1.5 mb-1">
                   <TrendingDown className="w-3.5 h-3.5 text-red-500" />
-                  <span className="text-[10px] text-red-600 dark:text-red-400 font-medium uppercase tracking-wider">Total Out</span>
+                  <span className="text-[10px] text-red-600 dark:text-red-400 font-medium uppercase tracking-wider">Failed</span>
                 </div>
-                <p className="text-lg font-bold text-destructive font-mono">${summary.totalOut.toFixed(2)}</p>
-              </div>
-              <div className="p-3 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5">
-                <div className="flex items-center gap-1.5 mb-1">
-                  <Wallet className="w-3.5 h-3.5 text-primary" />
-                  <span className="text-[10px] text-primary font-medium uppercase tracking-wider">Net</span>
-                </div>
-                <p className={cn("text-lg font-bold font-mono", summary.net >= 0 ? "text-green-500" : "text-destructive")}>
-                  {summary.net >= 0 ? "+" : "-"}${Math.abs(summary.net).toFixed(2)}
-                </p>
+                <p className="text-lg font-bold text-destructive font-mono">{summary.failed}</p>
               </div>
             </div>
           )}
 
-          <div className="overflow-x-auto -mx-4 px-4 pb-1">
-            <Tabs value={filter} onValueChange={(v) => { setFilter(v as typeof filter); setPage(1); }}>
-              <TabsList className="bg-muted/50 w-full sm:w-auto">
-                <TabsTrigger value="all" className="text-xs px-2 sm:px-3">All</TabsTrigger>
-                <TabsTrigger value="deposit" className="text-xs px-2 sm:px-3">Deposits</TabsTrigger>
-                <TabsTrigger value="subscription" className="text-xs px-2 sm:px-3">Subs</TabsTrigger>
-                <TabsTrigger value="commission" className="text-xs px-2 sm:px-3">Commission</TabsTrigger>
-                <TabsTrigger value="ads" className="text-xs px-2 sm:px-3">Ads</TabsTrigger>
-              </TabsList>
-            </Tabs>
+          <div className="flex flex-wrap gap-1.5">
+            {[
+              { value: 'all', label: 'All', dotColor: '' },
+              { value: 'deposit', label: 'Deposits', dotColor: 'bg-green-500' },
+              { value: 'subscription', label: 'Subs', dotColor: 'bg-blue-500' },
+              { value: 'commission', label: 'Commission', dotColor: 'bg-purple-500' },
+              { value: 'ads', label: 'Ads', dotColor: 'bg-amber-500' },
+            ].map((tab) => (
+              <Button
+                key={tab.value}
+                variant={filter === tab.value ? "default" : "outline"}
+                size="sm"
+                className={cn(
+                  "h-7 text-xs rounded-full px-3 gap-1.5",
+                  filter === tab.value ? "shadow-sm" : "bg-background/60"
+                )}
+                onClick={() => { setFilter(tab.value as typeof filter); setPage(1); }}
+              >
+                {tab.dotColor && (
+                  <span className={cn("w-2 h-2 rounded-full", tab.dotColor)} />
+                )}
+                {tab.label}
+              </Button>
+            ))}
           </div>
         </div>
       </CardHeader>

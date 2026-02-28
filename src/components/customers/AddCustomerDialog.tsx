@@ -29,6 +29,7 @@ import {
   DollarSign
 } from "lucide-react";
 import { generateUsername, generatePassword } from "@/lib/customer-utils";
+import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
 interface AddCustomerDialogProps {
@@ -144,9 +145,28 @@ export function AddCustomerDialog({ open, onOpenChange, onAdd }: AddCustomerDial
     onOpenChange(false);
   };
 
+  const getInitials = () => {
+    if (!formData.fullName) return '?';
+    return formData.fullName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+  };
+
+  const isEmailValid = formData.email === '' || formData.email.includes('@');
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
+        {/* Step Indicator */}
+        <div className="flex items-center justify-center gap-2 pt-2">
+          <div className={cn(
+            "w-2.5 h-2.5 rounded-full transition-colors",
+            step === 'form' ? "bg-primary" : "bg-muted-foreground/30"
+          )} />
+          <div className={cn(
+            "w-2.5 h-2.5 rounded-full transition-colors",
+            step === 'success' ? "bg-green-500" : "bg-muted-foreground/30"
+          )} />
+        </div>
+
         {step === 'form' ? (
           <>
             <DialogHeader>
@@ -160,34 +180,45 @@ export function AddCustomerDialog({ open, onOpenChange, onAdd }: AddCustomerDial
             </DialogHeader>
 
             <div className="space-y-4 py-4">
-              {/* Required Fields */}
-              <div className="grid gap-4">
-                <div>
-                  <Label htmlFor="fullName">Full Name *</Label>
-                  <Input
-                    id="fullName"
-                    placeholder="John Doe"
-                    value={formData.fullName}
-                    onChange={(e) => setFormData(prev => ({ ...prev, fullName: e.target.value }))}
-                    className="mt-1"
-                  />
+              {/* Name with Avatar Preview */}
+              <div className="flex items-start gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-primary font-bold text-lg shrink-0 border border-primary/10">
+                  {getInitials()}
                 </div>
-                <div>
-                  <Label htmlFor="email">Email Address *</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="john@example.com"
-                    value={formData.email}
-                    onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                    className="mt-1"
-                  />
+                <div className="flex-1 space-y-3">
+                  <div>
+                    <Label htmlFor="fullName">Full Name *</Label>
+                    <Input
+                      id="fullName"
+                      placeholder="John Doe"
+                      value={formData.fullName}
+                      onChange={(e) => setFormData(prev => ({ ...prev, fullName: e.target.value }))}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="email">Email Address *</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="john@example.com"
+                      value={formData.email}
+                      onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                      className={cn("mt-1", !isEmailValid && "border-destructive focus-visible:ring-destructive")}
+                    />
+                    {!isEmailValid && (
+                      <p className="text-[11px] text-destructive mt-1">Please enter a valid email address</p>
+                    )}
+                  </div>
                 </div>
               </div>
 
               {/* Auto-generated Credentials */}
-              <div className="p-4 bg-muted/30 rounded-lg border border-border/50 space-y-3">
-                <h4 className="font-medium text-sm">Login Credentials</h4>
+              <div className="p-4 rounded-xl bg-gradient-to-br from-muted/40 to-muted/20 border border-border/30 space-y-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                  <h4 className="font-medium text-sm">Auto-generated Credentials</h4>
+                </div>
                 
                 <div>
                   <Label htmlFor="username" className="text-sm">Username</Label>
@@ -202,11 +233,8 @@ export function AddCustomerDialog({ open, onOpenChange, onAdd }: AddCustomerDial
                       <RefreshCw className="w-4 h-4" />
                     </Button>
                     <Button 
-                      type="button" 
-                      variant="outline" 
-                      size="icon" 
-                      onClick={() => copyToClipboard(formData.username, 'username')}
-                      title="Copy"
+                      type="button" variant="outline" size="icon" 
+                      onClick={() => copyToClipboard(formData.username, 'username')} title="Copy"
                     >
                       {copiedField === 'username' ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
                     </Button>
@@ -225,9 +253,7 @@ export function AddCustomerDialog({ open, onOpenChange, onAdd }: AddCustomerDial
                         className="pr-10"
                       />
                       <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
+                        type="button" variant="ghost" size="icon"
                         className="absolute right-0 top-0 h-full"
                         onClick={() => setShowPassword(!showPassword)}
                       >
@@ -238,11 +264,8 @@ export function AddCustomerDialog({ open, onOpenChange, onAdd }: AddCustomerDial
                       <RefreshCw className="w-4 h-4" />
                     </Button>
                     <Button 
-                      type="button" 
-                      variant="outline" 
-                      size="icon" 
-                      onClick={() => copyToClipboard(formData.password, 'password')}
-                      title="Copy"
+                      type="button" variant="outline" size="icon" 
+                      onClick={() => copyToClipboard(formData.password, 'password')} title="Copy"
                     >
                       {copiedField === 'password' ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
                     </Button>
@@ -251,7 +274,7 @@ export function AddCustomerDialog({ open, onOpenChange, onAdd }: AddCustomerDial
               </div>
 
               {/* Optional Fields */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="balance">Initial Balance</Label>
                   <div className="relative mt-1">
@@ -294,9 +317,9 @@ export function AddCustomerDialog({ open, onOpenChange, onAdd }: AddCustomerDial
               </div>
             </div>
 
-            <DialogFooter>
-              <Button variant="outline" onClick={handleClose}>Cancel</Button>
-              <Button onClick={handleSubmit}>
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              <Button variant="outline" onClick={handleClose} className="w-full sm:w-auto">Cancel</Button>
+              <Button onClick={handleSubmit} className="w-full sm:w-auto">
                 <UserPlus className="w-4 h-4 mr-2" />
                 Create Customer
               </Button>
@@ -312,7 +335,7 @@ export function AddCustomerDialog({ open, onOpenChange, onAdd }: AddCustomerDial
             </DialogHeader>
 
             <div className="space-y-4 py-4">
-              <div className="p-4 bg-muted/30 rounded-lg border border-border/50 space-y-3">
+              <div className="p-4 rounded-xl bg-gradient-to-br from-muted/40 to-muted/20 border border-border/30 space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Full Name</span>
                   <span className="font-medium">{formData.fullName}</span>
