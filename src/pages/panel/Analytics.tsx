@@ -45,7 +45,9 @@ import {
   generateInsights,
   aggregateDailyData,
   findPeakDay,
-  type AnalyticsEvent
+  extractTopServices,
+  type AnalyticsEvent,
+  type TopService
 } from "@/lib/analytics-utils";
 import {
   PaymentsFunnelCard,
@@ -138,6 +140,7 @@ const Analytics = () => {
   
   const [insightsData, setInsightsData] = useState<any[]>([]);
   const [prevDepositsTotal, setPrevDepositsTotal] = useState(0);
+  const [topServices, setTopServices] = useState<TopService[]>([]);
 
   // Real deposit breakdown state - replaces simulated percentages
   const [depositBreakdown, setDepositBreakdown] = useState({
@@ -293,6 +296,11 @@ const Analytics = () => {
         totalFastOrders: completedOrders,
         conversionRate: fastOrderConversionRate
       });
+
+      // ========= TOP SELECTED SERVICES (from service_select metadata) =========
+      const topServicesData = extractTopServices(typedEvents, 10);
+      setTopServices(topServicesData);
+
       const deposits = (transactions || []).filter(t => t.type === 'deposit' && t.status === 'completed');
       const refunds = (transactions || []).filter(t => t.type === 'refund' && t.status === 'completed');
       const volumeCalc = calculateGrossVolume(
@@ -736,6 +744,7 @@ const Analytics = () => {
             totalFastOrders={fastOrderFunnelData.totalFastOrders}
             conversionRate={fastOrderFunnelData.conversionRate}
             growthTrend={changes.orders}
+            topServices={topServices}
           />
           
           {/* Ads Performance Funnel - Real ads data with "No Ads" overlay */}

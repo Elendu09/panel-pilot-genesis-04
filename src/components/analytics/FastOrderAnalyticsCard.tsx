@@ -1,9 +1,12 @@
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { ArrowRight, Zap, Info, TrendingUp, TrendingDown, MousePointer, ListChecks, CreditCard, CheckCircle } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { ArrowRight, Zap, Info, TrendingUp, TrendingDown, MousePointer, ListChecks, CreditCard, CheckCircle, ChevronDown, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatCompactNumber } from '@/lib/analytics-utils';
+import type { TopService } from '@/lib/analytics-utils';
 
 interface FastOrderStage {
   name: string;
@@ -20,6 +23,7 @@ interface FastOrderAnalyticsCardProps {
     value: string;
     trend: 'up' | 'down' | 'neutral';
   };
+  topServices?: TopService[];
 }
 
 const stageConfig = [
@@ -33,8 +37,10 @@ export function FastOrderAnalyticsCard({
   stages,
   totalFastOrders,
   conversionRate,
-  growthTrend
+  growthTrend,
+  topServices = []
 }: FastOrderAnalyticsCardProps) {
+  const [showServices, setShowServices] = useState(false);
   // Use provided stages - show real zeros when no data (no mock data)
   const displayStages = stages.length > 0 ? stages : [
     { name: 'Visitors', count: 0, percentage: 0, dropOff: 0 },
@@ -166,6 +172,39 @@ export function FastOrderAnalyticsCard({
           </div>
         </div>
         
+        {/* Top Selected Services Breakdown */}
+        {topServices.length > 0 && (
+          <Collapsible open={showServices} onOpenChange={setShowServices} className="mt-4 pt-4 border-t border-border/50">
+            <CollapsibleTrigger className="flex items-center justify-between w-full text-sm group">
+              <div className="flex items-center gap-2">
+                <Star className="w-4 h-4 text-amber-500" />
+                <span className="font-medium text-foreground">Top Selected Services</span>
+                <Badge variant="outline" className="text-[10px] bg-muted/50">{topServices.length}</Badge>
+              </div>
+              <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform", showServices && "rotate-180")} />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-3 space-y-2">
+              {topServices.map((service, i) => (
+                <div key={`${service.serviceName}-${i}`} className="flex items-center justify-between p-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <span className="text-xs font-bold text-muted-foreground w-5 text-center">{i + 1}</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-foreground truncate">{service.serviceName}</p>
+                      <Badge variant="outline" className="text-[9px] mt-0.5 bg-primary/5 text-primary border-primary/20">
+                        {service.category}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="text-right flex-shrink-0 ml-2">
+                    <p className="text-sm font-bold text-foreground">{service.count}</p>
+                    <p className="text-[10px] text-muted-foreground">{service.percentage.toFixed(1)}%</p>
+                  </div>
+                </div>
+              ))}
+            </CollapsibleContent>
+          </Collapsible>
+        )}
+
         {/* Summary Stats */}
         <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-border/50">
           <div className="text-center p-2 rounded-lg bg-muted/30">

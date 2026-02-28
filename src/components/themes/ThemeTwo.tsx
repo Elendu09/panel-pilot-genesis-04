@@ -143,7 +143,7 @@ export const ThemeTwo = ({ panel, services = [], customization = {}, isPreview =
         ) : null;
       case 'faqs':
         return customization.enableFAQs !== false ? (
-          <StorefrontFAQSection key="faqs" customization={themeTwoCustomization} />
+          <StorefrontFAQSection key="faqs" customization={themeTwoCustomization} panelId={panel?.id} />
         ) : null;
       default:
         return null;
