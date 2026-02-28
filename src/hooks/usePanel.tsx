@@ -33,6 +33,7 @@ export function usePanel() {
   const { profile } = useAuth();
   const [panel, setPanel] = useState<Panel | null>(null);
   const [allPanels, setAllPanels] = useState<Panel[]>([]);
+  const [resolvedTier, setResolvedTier] = useState<string>('free');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -57,15 +58,44 @@ export function usePanel() {
 
       if (panelList.length === 0) {
         setPanel(null);
+        setResolvedTier('free');
         return;
       }
 
-      // Determine active panel: use active_panel_id from profile, else first panel
+      // Query panel_subscriptions for active plans to get the real tier
+      const panelIds = panelList.map(p => p.id);
+      const { data: subscriptions } = await supabase
+        .from('panel_subscriptions')
+        .select('plan_type, status')
+        .in('panel_id', panelIds)
+        .in('status', ['active'] as any);
+
+      // Determine the highest tier from active subscriptions
+      let highestTier = 'free';
+      if (subscriptions && subscriptions.length > 0) {
+        for (const sub of subscriptions) {
+          const planType = sub.plan_type || 'free';
+          if (planType === 'pro') { highestTier = 'pro'; break; }
+          if (planType === 'basic' && highestTier === 'free') highestTier = 'basic';
+        }
+      }
+
+      // Fallback: also check panels.subscription_tier in case subscriptions table is empty
+      if (highestTier === 'free') {
+        for (const p of panelList) {
+          const tier = (p as any).subscription_tier || 'free';
+          if (tier === 'pro') { highestTier = 'pro'; break; }
+          if (tier === 'basic' && highestTier === 'free') highestTier = 'basic';
+        }
+      }
+
+      setResolvedTier(highestTier);
+
+      // Determine active panel
       const activePanelId = (profile as any)?.active_panel_id;
       let activePanel = panelList.find(p => p.id === activePanelId);
       
       if (!activePanel) {
-        // Default to first panel (or first with onboarding completed)
         activePanel = panelList.find(p => p.onboarding_completed) || panelList[0];
       }
 
@@ -107,20 +137,10 @@ export function usePanel() {
     await fetchPanels();
   }, [fetchPanels]);
 
-  // Get max panels allowed based on highest-tier subscription
+  // Get max panels allowed based on resolved subscription tier
   const getMaxPanels = useCallback(() => {
-    if (allPanels.length === 0) return 1;
-    
-    // Check actual subscription from any panel
-    let highestTier = 'free';
-    for (const p of allPanels) {
-      const tier = (p as any).subscription_tier || 'free';
-      if (tier === 'pro') { highestTier = 'pro'; break; }
-      if (tier === 'basic' && highestTier === 'free') highestTier = 'basic';
-    }
-
-    return PANEL_LIMITS[highestTier] || 1;
-  }, [allPanels]);
+    return PANEL_LIMITS[resolvedTier] || 1;
+  }, [resolvedTier]);
 
   const canCreatePanel = useCallback(() => {
     return allPanels.length < getMaxPanels();
