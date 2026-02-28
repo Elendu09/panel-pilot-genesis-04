@@ -304,6 +304,7 @@ const PanelOnboarding = () => {
             secondary_color: finalSecondaryColor,
             onboarding_completed: true,
             custom_branding: customBranding,
+            subscription_tier: 'free',
           }
         ]);
 
