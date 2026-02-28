@@ -1,79 +1,66 @@
 
 
-# Plan: Transaction Redesign, Customer Mobile Fix, Panel Name Sync, Add Customer Validation
+# Plan: Transaction Colors, Payment Routes, Customer UI, Detail Sheet, Desktop Table, Domain Settings
 
-## 1. Transaction History — Remove Duplicate Title + Redesign Stats + Tabs
-
-**`src/pages/panel/TransactionHistoryPage.tsx`**
-- Remove the page-level `<h1>Transaction History</h1>` block (lines 21-27) since `TransactionHistory` component already has its own CardTitle "Transaction History" — this eliminates the duplicate
-
+## 1. Transaction Timeline Indicator Colors — Use Status-Based Colors
 **`src/components/billing/TransactionHistory.tsx`**
-- **Stats cards**: Replace "Total In / Total Out / Net" with "Total / Completed / Failed" using counts:
-  - Total = all transactions count
-  - Completed = transactions where `status === 'completed'` or `!status`, with green color
-  - Failed = transactions where `status === 'failed'`, with red color
-- **Tab redesign**: Replace the `TabsList` with pill-style filter buttons using colored dots/indicators:
-  - All (neutral), Deposits (green dot), Subs (blue dot), Commission (purple dot), Ads (amber dot)
-  - Use `Button` variants with colored left-border or dot indicators instead of generic Tabs
-- **Status colors**: Ensure consistent color coding: green = completed, yellow/amber = pending, red = failed
-- **Mobile responsiveness**: Ensure the summary stats grid uses `grid-cols-3` on mobile with smaller text
+- The timeline indicator line (left bar, line 190-191) currently uses `getIndicatorColor` which is based on transaction **type** (deposit=green, withdrawal=orange, etc.)
+- Change it to use **status-based** colors instead: green for completed, yellow for pending, red for failed
+- Add a `getStatusIndicatorColor` function: `completed/null → bg-green-500`, `pending → bg-yellow-500`, `failed → bg-red-500`
+- Replace `getIndicatorColor(tx.type)` with `getStatusIndicatorColor(tx.status)` on line 191
 
-## 2. Customer Page — Mobile List/Grid Toggle + Desktop Table Fix
+## 2. Payment Button Routes — Fix PanelOverview + Notifications
+**`src/pages/panel/PanelOverview.tsx`**
+- Lines 653, 1090: Change `navigate('/panel/payment-methods')` → `navigate('/panel/payments')` (the route is `/panel/payments`, not `/panel/payment-methods`)
 
+**Notifications** — Already correct. `use-notifications.tsx` routes payment to `/panel/payments?tab=transactions`. No change needed.
+
+## 3. Customer Empty State — Show "No Customers" Text
 **`src/pages/panel/CustomerManagement.tsx`**
-- **Mobile view toggle**: Add a List/Grid toggle visible only on mobile (`md:hidden`) near the search bar area (line ~882-892). On mobile:
-  - "List" mode = current table-style compact rows (lines 1182-1233)
-  - "Grid" mode = `CustomerMobileCard` grid layout
-- Add state `mobileViewMode: 'list' | 'grid'` (default: 'list')
-- **Desktop table fix**: The desktop table (line 984) has `hidden md:block` — this is correct. But when `viewMode === 'grid'`, the grid also has `hidden md:grid`. The issue is that on mobile, neither table nor grid shows when `viewMode === 'table'` because the mobile section (line 1182) always shows regardless of viewMode. This is actually correct — mobile always shows the mobile-specific view. The user wants a toggle on mobile to switch between list and grid.
-- **Desktop "all" filter unresponsiveness**: The stat cards set `statusFilter` which filters `filteredCustomers`. Verify the table renders all `filteredCustomers` — it does. The issue might be that buttons in dropdown actions don't work. Check `handleViewDetails` — it opens a Sheet. This should work. No code bug found here; the existing actions work.
+- Lines 1041-1046 (desktop table empty): Already shows "No customers found" — enhance to "No customers yet. Add your first customer to get started."
+- Lines 1178-1180 (desktop grid empty): Same enhancement
+- Lines 1261-1263 (mobile grid empty): Same
+- Mobile list view (line 1214): Add empty state check before the `<tbody>` — if `filteredCustomers.length === 0`, show text instead of empty table
 
-## 3. Panel Name Not Updating on Storefront — Initial Load Sync
+## 4. Customer List/Grid Toggle — Move Beside "All Customers"
+**`src/pages/panel/CustomerManagement.tsx`**
+- Remove the List/Grid toggle from the mobile search section (lines 893-912)
+- Move it inside the card header (line 943-944) next to "All Customers" title, visible on mobile too
+- Change the desktop Table/Grid toggle (line 945) to show on all screens but with different labels: List/Grid on mobile, Table/Grid on desktop
+- Unify: on mobile use `mobileViewMode`, on desktop use `viewMode`
 
-**`src/hooks/useTenant.tsx`** (line ~487-491)
-- The realtime handler (line 560-561) correctly syncs `companyName` with `panel.name`, but the **initial data fetch** at line 487-491 does NOT sync:
-  ```
-  custom_branding: branding && typeof branding === 'object' ? branding as DesignCustomization : undefined,
-  ```
-- Fix: When building `resolvedPanel`, also sync `companyName`:
-  ```
-  const syncedBranding = branding && typeof branding === 'object'
-    ? { ...branding, companyName: panelData.name } as DesignCustomization
-    : undefined;
-  ```
-- This ensures that even if `custom_branding.companyName` was set to an old name, the initial load always uses `panelData.name`
+## 5. Customer Detail Sheet — Reduce Padding, Compact UI
+**`src/components/customers/CustomerDetailPage.tsx`**
+- Reduce avatar size: `h-12 w-12` → `h-10 w-10` (line 342)
+- Reduce stats card padding: `p-4` → `p-3` (lines 377, 386, 395, 404)
+- Reduce stats text: `text-2xl` → `text-xl` (lines 382, 391, 400)
+- Reduce section header text: already `text-sm`, keep as-is
+- Reduce ScrollArea top padding: `py-4` → `py-3` (line 372)
+- Reduce `space-y-6` → `space-y-4` (line 373)
+- Reduce separator padding by using tighter spacing
 
-## 4. Add Customer Dialog — Enhanced Design
+## 6. Desktop Table Responsiveness
+**`src/pages/panel/CustomerManagement.tsx`**
+- Add `overflow-x-auto` to the table container (line 1005) — already has it? Check: it has `overflow-hidden`. Change to `overflow-x-auto`
+- Reduce table cell padding for tighter fit
+- Add `text-xs` or `text-sm` consistently to table cells
+- The "Joined" column shows raw ISO date (line 1100) — format it to short date
 
-**`src/components/customers/AddCustomerDialog.tsx`**
-- Make dialog responsive: change `sm:max-w-lg` to `sm:max-w-xl` for more breathing room
-- Add step indicator (1/2 dots) for form vs success states
-- Add avatar preview with initials next to the name field
-- Improve credential section: add a colored info banner explaining auto-generation
-- Better mobile layout: stack grid-cols-2 fields to grid-cols-1 on very small screens
-- Add input validation visual feedback (red border on invalid email)
-- The edge function `panel-customers` works correctly — it hashes passwords, checks duplicates, and creates the user. No backend fix needed.
-
-## 5. Buyer API URL — Custom Domain Support
-
-**`src/pages/panel/APIManagement.tsx`** (lines 114-119)
-- Current logic already handles custom domain:
-  ```
-  const buyerApiUrl = panel?.custom_domain
-    ? `https://${panel.custom_domain}/api/v2`
-    : panel?.subdomain
-      ? `https://${panel.subdomain}.smmpilot.online/api/v2`
-      : `https://yourpanel.smmpilot.online/api/v2`;
-  ```
-- This is correct. Custom domain takes priority, subdomain falls back to `.smmpilot.online`. No change needed here.
+## 7. Domain Settings — Fix UpgradePrompt for Basic Users
+**`src/pages/panel/DomainSettings.tsx`**
+- The issue: `panel?.subscription_tier === 'free'` check at line 344. If the user's panel has `subscription_tier` set correctly to 'basic', this should NOT show the prompt.
+- The real problem may be that the panel record has `subscription_tier = null` (not updated when subscribing via billing page). The `Billing.tsx` updates `panel_subscriptions` but may not update `panels.subscription_tier`.
+- Fix: In `DomainSettings.tsx`, also check the `panel_subscriptions` table for the actual plan. Fetch the active subscription and use `subscription.plan_type` instead of relying solely on `panel.subscription_tier`.
+- Add a `useEffect` to fetch the active subscription from `panel_subscriptions` where `panel_id = panel.id` and `status = 'active'`
+- Use the fetched plan_type for the tier check instead of `panel.subscription_tier`
 
 ## Files to Change
 
 | File | Change |
 |------|--------|
-| `src/pages/panel/TransactionHistoryPage.tsx` | Remove duplicate "Transaction History" heading |
-| `src/components/billing/TransactionHistory.tsx` | Replace stats with Total/Completed/Failed counts; redesign tabs with colored pill buttons; ensure mobile responsiveness |
-| `src/pages/panel/CustomerManagement.tsx` | Add mobile List/Grid toggle (`md:hidden`); use `mobileViewMode` state |
-| `src/hooks/useTenant.tsx` | Sync `companyName` with `panelData.name` on initial fetch (line ~487) |
-| `src/components/customers/AddCustomerDialog.tsx` | Enhanced responsive design with step indicator, avatar preview, better mobile layout |
+| `src/components/billing/TransactionHistory.tsx` | Change timeline indicator to status-based colors (green/yellow/red) |
+| `src/pages/panel/PanelOverview.tsx` | Fix payment button routes: `/panel/payment-methods` → `/panel/payments` |
+| `src/pages/panel/CustomerManagement.tsx` | Move List/Grid toggle beside "All Customers"; add empty state text; fix table overflow; format dates |
+| `src/components/customers/CustomerDetailPage.tsx` | Reduce padding, text sizes, spacing for compact UI |
+| `src/pages/panel/DomainSettings.tsx` | Fetch active subscription from `panel_subscriptions` to correctly determine tier; fix UpgradePrompt gating |
 
