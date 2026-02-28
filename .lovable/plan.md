@@ -1,66 +1,89 @@
 
 
-# Plan: Transaction Colors, Payment Routes, Customer UI, Detail Sheet, Desktop Table, Domain Settings
+# Plan: Design Customization Rendering, Domain TXT Verification, Announcement Dropdowns, Multi-Panel Architecture
 
-## 1. Transaction Timeline Indicator Colors — Use Status-Based Colors
-**`src/components/billing/TransactionHistory.tsx`**
-- The timeline indicator line (left bar, line 190-191) currently uses `getIndicatorColor` which is based on transaction **type** (deposit=green, withdrawal=orange, etc.)
-- Change it to use **status-based** colors instead: green for completed, yellow for pending, red for failed
-- Add a `getStatusIndicatorColor` function: `completed/null → bg-green-500`, `pending → bg-yellow-500`, `failed → bg-red-500`
-- Replace `getIndicatorColor(tx.type)` with `getStatusIndicatorColor(tx.status)` on line 191
+## 1. Design Customization — Ensure All Settings Render on Storefront
 
-## 2. Payment Button Routes — Fix PanelOverview + Notifications
-**`src/pages/panel/PanelOverview.tsx`**
-- Lines 653, 1090: Change `navigate('/panel/payment-methods')` → `navigate('/panel/payments')` (the route is `/panel/payments`, not `/panel/payment-methods`)
+**Problem**: The design customization UI for typography, layout/spacing, animations, backgrounds, and buttons all correctly save values to `custom_branding`, and `getButtonStyles` in `theme-utils.ts` correctly reads `buttonRadius`, `buttonStyle`, `buttonShadow`, and `buttonHoverEffect`. However:
+- **Background patterns**: `getBackgroundStyles` exists in `theme-utils.ts` but is **never imported or used** by any buyer theme. Patterns configured in the UI have zero effect.
+- **Typography**: Themes read `fontFamily` but only apply it as a CSS class (`font-inter`), not as an inline style. The `baseFontSize` slider is read but not applied as a root font size in most themes. `headingWeight`, `bodyWeight`, `lineHeight`, `letterSpacing` are saved but ignored by themes.
+- **Spacing**: `sectionPaddingY` and `containerMaxWidth` are read by some themes but `cardSpacing` and `elementGap` are not used anywhere.
+- **Animations**: `animationStyle` and `animationDuration` are saved but themes use hardcoded framer-motion variants, not the configurable values.
 
-**Notifications** — Already correct. `use-notifications.tsx` routes payment to `/panel/payments?tab=transactions`. No change needed.
+**Fix approach**: Rather than rewriting all 5+ themes, create a shared CSS variable injection in `Storefront.tsx` (where all themes render) that converts design customization into CSS custom properties. Themes already render inside this wrapper.
 
-## 3. Customer Empty State — Show "No Customers" Text
-**`src/pages/panel/CustomerManagement.tsx`**
-- Lines 1041-1046 (desktop table empty): Already shows "No customers found" — enhance to "No customers yet. Add your first customer to get started."
-- Lines 1178-1180 (desktop grid empty): Same enhancement
-- Lines 1261-1263 (mobile grid empty): Same
-- Mobile list view (line 1214): Add empty state check before the `<tbody>` — if `filteredCustomers.length === 0`, show text instead of empty table
+**Files**:
+- **`src/pages/Storefront.tsx`**: Add a `<style>` block that injects CSS custom properties from `customization`:
+  - `--font-family`, `--heading-font`, `--base-font-size`, `--heading-weight`, `--body-weight`, `--line-height`, `--letter-spacing`
+  - `--section-padding-y`, `--container-max-width`, `--card-spacing`, `--card-radius`, `--element-gap`
+  - `--button-radius`, `--animation-duration`
+  - Background pattern via `getBackgroundStyles()` applied to the main wrapper
+- **`src/lib/theme-utils.ts`**: Add a new `generateDesignCSSVariables(customization)` function that returns a CSS string with all the variables
+- **`src/components/buyer-themes/shared/ThemeNavigation.tsx`** and each theme's `<main>` tag: Add `style={{ fontFamily: 'var(--font-family, Inter)' }}` so typography propagates. Apply `fontSize: 'var(--base-font-size, 16px)'` to the root element.
 
-## 4. Customer List/Grid Toggle — Move Beside "All Customers"
-**`src/pages/panel/CustomerManagement.tsx`**
-- Remove the List/Grid toggle from the mobile search section (lines 893-912)
-- Move it inside the card header (line 943-944) next to "All Customers" title, visible on mobile too
-- Change the desktop Table/Grid toggle (line 945) to show on all screens but with different labels: List/Grid on mobile, Table/Grid on desktop
-- Unify: on mobile use `mobileViewMode`, on desktop use `viewMode`
+This ensures ALL saved settings actually render without rewriting each theme individually.
 
-## 5. Customer Detail Sheet — Reduce Padding, Compact UI
-**`src/components/customers/CustomerDetailPage.tsx`**
-- Reduce avatar size: `h-12 w-12` → `h-10 w-10` (line 342)
-- Reduce stats card padding: `p-4` → `p-3` (lines 377, 386, 395, 404)
-- Reduce stats text: `text-2xl` → `text-xl` (lines 382, 391, 400)
-- Reduce section header text: already `text-sm`, keep as-is
-- Reduce ScrollArea top padding: `py-4` → `py-3` (line 372)
-- Reduce `space-y-6` → `space-y-4` (line 373)
-- Reduce separator padding by using tighter spacing
+## 2. Domain Configuration — Strict TXT Verification Before DNS
 
-## 6. Desktop Table Responsiveness
-**`src/pages/panel/CustomerManagement.tsx`**
-- Add `overflow-x-auto` to the table container (line 1005) — already has it? Check: it has `overflow-hidden`. Change to `overflow-x-auto`
-- Reduce table cell padding for tighter fit
-- Add `text-xs` or `text-sm` consistently to table cells
-- The "Joined" column shows raw ISO date (line 1100) — format it to short date
+**Problem**: Currently, when a user clicks "Add Domain", the domain is immediately added to `panel_domains` with `verification_status: 'pending'` and `custom_domain` is set on the panel. DNS records (A, CNAME) are shown. There's no TXT verification step — the user could configure DNS without proving ownership.
 
-## 7. Domain Settings — Fix UpgradePrompt for Basic Users
-**`src/pages/panel/DomainSettings.tsx`**
-- The issue: `panel?.subscription_tier === 'free'` check at line 344. If the user's panel has `subscription_tier` set correctly to 'basic', this should NOT show the prompt.
-- The real problem may be that the panel record has `subscription_tier = null` (not updated when subscribing via billing page). The `Billing.tsx` updates `panel_subscriptions` but may not update `panels.subscription_tier`.
-- Fix: In `DomainSettings.tsx`, also check the `panel_subscriptions` table for the actual plan. Fetch the active subscription and use `subscription.plan_type` instead of relying solely on `panel.subscription_tier`.
-- Add a `useEffect` to fetch the active subscription from `panel_subscriptions` where `panel_id = panel.id` and `status = 'active'`
-- Use the fetched plan_type for the tier check instead of `panel.subscription_tier`
+**Fix**: Implement a 2-step flow:
+1. **Step 1 — TXT Verification**: After entering domain, show ONLY the TXT record (`_lovable TXT lovable_verify={token}`). The domain is inserted with `verification_status: 'txt_pending'`. The panel's `custom_domain` is NOT set yet.
+2. **Step 2 — DNS Configuration**: Only after TXT is verified (via `domain-health-check` edge function checking TXT record), show A and CNAME records. Update status to `pending` (DNS pending). Set `custom_domain` on panel only after DNS is also verified.
+
+**Files**:
+- **`src/pages/panel/DomainSettings.tsx`**:
+  - `handleAddDomain`: Insert with `verification_status: 'txt_pending'`, do NOT update `panels.custom_domain` yet
+  - Add a new `verifyTxtRecord` function that calls the edge function to check only TXT
+  - In the domain card UI: when `verification_status === 'txt_pending'`, show ONLY the TXT record with a "Verify TXT" button. Hide A/CNAME records
+  - When `verification_status === 'pending'` (TXT verified, DNS pending), show A/CNAME records and the "Verify DNS" button
+  - Only set `panels.custom_domain` when full verification (`verified`) succeeds
+  - Update `getStatusBadge` to handle `txt_pending` status
+  - In `handleAddDomain`, use `activePlan` instead of `panel?.subscription_tier` for the tier check (line 198)
+
+## 3. Announcement Integration — Replace Text Inputs with Dropdowns
+
+**Problem**: The announcement configuration dialog uses plain text inputs for `icon` and `displayMode` fields, requiring users to type values like "megaphone" or "header" manually.
+
+**Fix**: Add a `select` field type to the dynamic field renderer.
+
+**Files**:
+- **`src/pages/panel/Integrations.tsx`**:
+  - Change the `icon` field definition (line 391) from `type: 'input'` to `type: 'select'` with options array: `[{value: 'megaphone', label: 'Megaphone'}, {value: 'sparkles', label: 'Sparkles'}, {value: 'gift', label: 'Gift'}, {value: 'bell', label: 'Bell'}, {value: 'info', label: 'Info'}, {value: 'star', label: 'Star'}, {value: 'zap', label: 'Zap'}, {value: 'alert', label: 'Alert'}]`
+  - Change the `displayMode` field (line 392) from `type: 'input'` to `type: 'select'` with options: `[{value: 'header', label: 'Header Bar (top)'}, {value: 'popup', label: 'Popup (modal dialog)'}]`
+  - Change the `backgroundColor` field to `type: 'color'`
+  - Change the `textColor` field to `type: 'color'`
+  - Update the `ServiceIntegration` field type to include `'select' | 'color'`
+  - Add `options?: {value: string; label: string}[]` to the field interface
+  - In the dynamic fields renderer (line 1121-1143), add handlers for `select` (render a `<select>`) and `color` (render a color picker with hex input)
+
+## 4. Multi-Panel Architecture — Planning Only
+
+This is a significant architectural change. The current system assumes 1 profile = 1 panel (enforced by `owner_id` single panel queries). Multi-panel requires:
+
+```text
+Current:  User → Profile → 1 Panel
+Proposed: User → Profile → N Panels (gated by plan)
+          Free: 1 panel
+          Basic: 2 panels (1 registered + 1 free)
+          Pro: 5 panels (1 registered + 4 free, 1 of which gets Basic plan)
+```
+
+**Key changes needed** (for future implementation):
+1. Panel switcher UI in sidebar (like Facebook page switching)
+2. Remove `.single()` from all panel queries, add `active_panel_id` to profiles
+3. "Create New Panel" flow that reuses onboarding but skips billing
+4. Panel creation gating based on subscription tier count limits
+5. Auto-assign plans to bonus panels (Pro gets 1 Basic + 3 Free)
+
+**This will NOT be implemented now** — it requires database schema changes and careful migration. This plan item is documented for future reference.
 
 ## Files to Change
 
 | File | Change |
 |------|--------|
-| `src/components/billing/TransactionHistory.tsx` | Change timeline indicator to status-based colors (green/yellow/red) |
-| `src/pages/panel/PanelOverview.tsx` | Fix payment button routes: `/panel/payment-methods` → `/panel/payments` |
-| `src/pages/panel/CustomerManagement.tsx` | Move List/Grid toggle beside "All Customers"; add empty state text; fix table overflow; format dates |
-| `src/components/customers/CustomerDetailPage.tsx` | Reduce padding, text sizes, spacing for compact UI |
-| `src/pages/panel/DomainSettings.tsx` | Fetch active subscription from `panel_subscriptions` to correctly determine tier; fix UpgradePrompt gating |
+| `src/pages/Storefront.tsx` | Inject CSS variables for all design customization settings |
+| `src/lib/theme-utils.ts` | Add `generateDesignCSSVariables()` function |
+| `src/pages/panel/DomainSettings.tsx` | Implement 2-step TXT→DNS verification flow; use `activePlan` for tier check |
+| `src/pages/panel/Integrations.tsx` | Add `select` and `color` field types; convert announcement icon/displayMode to dropdowns |
 
