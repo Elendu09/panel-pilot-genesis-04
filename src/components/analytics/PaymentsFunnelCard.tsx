@@ -1,8 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { formatCompactNumber } from '@/lib/analytics-utils';
-import { MoreHorizontal, ArrowRight, FileText, CheckCircle, CircleCheck, AlertCircle, CheckCheck } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { ArrowRight, FileText, CheckCircle, CircleCheck, AlertCircle, CheckCheck } from 'lucide-react';
+
 import { cn } from '@/lib/utils';
 
 interface FunnelStage {
@@ -43,9 +43,6 @@ export function PaymentsFunnelCard({
           <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
           Payments Funnel
         </CardTitle>
-        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted">
-          <MoreHorizontal className="h-4 w-4" />
-        </Button>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Kanban-Style Funnel Stages - Horizontal scroll on mobile, grid on desktop */}
@@ -152,18 +149,6 @@ export function PaymentsFunnelCard({
           </div>
         </div>
 
-        {/* AI Prompt Section */}
-        <div className="bg-gradient-to-r from-primary/5 to-primary/10 rounded-lg p-4 border border-primary/20">
-          <p className="text-sm text-muted-foreground mb-2 flex items-center gap-2">
-            <span className="text-lg">💬</span>
-            What would you like to explore?
-          </p>
-          <div className="flex items-center gap-2 text-sm bg-background/80 backdrop-blur-sm rounded-md px-3 py-2 border border-border/50">
-            <span className="text-muted-foreground text-xs md:text-sm">Analyze drop-off from</span>
-            <span className="text-primary font-medium text-xs md:text-sm">Authorized → Successful</span>
-            <ArrowRight className="w-4 h-4 text-primary ml-auto flex-shrink-0" />
-          </div>
-        </div>
       </CardContent>
     </Card>
   );

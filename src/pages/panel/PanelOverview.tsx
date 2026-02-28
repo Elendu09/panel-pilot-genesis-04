@@ -216,14 +216,15 @@ const PanelOverview = () => {
     fetchPanelData();
   }, [profile?.id]);
 
-  // Realtime subscription for orders
+  // Realtime subscription for orders AND panel balance
   useEffect(() => {
     if (!panelData?.id) return;
 
-    let channel: RealtimeChannel;
+    let ordersChannel: RealtimeChannel;
+    let panelChannel: RealtimeChannel;
 
     const setupRealtime = () => {
-      channel = supabase
+      ordersChannel = supabase
         .channel('live-orders')
         .on(
           'postgres_changes',
@@ -254,14 +255,33 @@ const PanelOverview = () => {
         .subscribe((status) => {
           setIsLive(status === 'SUBSCRIBED');
         });
+
+      // Realtime balance updates from panels table
+      panelChannel = supabase
+        .channel('panel-balance')
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'panels',
+            filter: `id=eq.${panelData.id}`
+          },
+          (payload) => {
+            const newBalance = (payload.new as any)?.balance;
+            if (newBalance !== undefined) {
+              setPanelData((prev: any) => prev ? { ...prev, balance: Number(newBalance) } : prev);
+            }
+          }
+        )
+        .subscribe();
     };
 
     setupRealtime();
 
     return () => {
-      if (channel) {
-        supabase.removeChannel(channel);
-      }
+      if (ordersChannel) supabase.removeChannel(ordersChannel);
+      if (panelChannel) supabase.removeChannel(panelChannel);
     };
   }, [panelData?.id]);
 
