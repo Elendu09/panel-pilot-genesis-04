@@ -86,10 +86,50 @@ serve(async (req) => {
 
   try {
     const body = await req.json().catch(() => ({}));
-    const { domain, expectedTarget, hostingProvider = 'vercel' } = body;
+    const { domain, expectedTarget, hostingProvider = 'vercel', check_type, verification_token } = body;
 
     if (!domain || typeof domain !== "string") {
       return json({ error: "domain is required" }, { status: 400 });
+    }
+
+    // TXT-only verification mode
+    if (check_type === 'txt') {
+      console.log("[domain-health-check] TXT verification mode", { domain, verification_token });
+      
+      // Check _smmpilot subdomain first, then root domain
+      let txtRecords: string[] = [];
+      const subdomains = [`_smmpilot.${domain}`, domain];
+      
+      for (const sub of subdomains) {
+        try {
+          const records = await Deno.resolveDns(sub, "TXT") as string[][];
+          txtRecords = records.flat();
+          if (txtRecords.length > 0) {
+            console.log(`[domain-health-check] Found TXT records on ${sub}:`, txtRecords);
+            break;
+          }
+        } catch (e) {
+          console.log(`[domain-health-check] No TXT on ${sub}`);
+        }
+      }
+      
+      // Check if any TXT record matches our verification token
+      let txtOk = false;
+      if (verification_token) {
+        const expectedValue = `smmpilot-verify=${verification_token}`;
+        txtOk = txtRecords.some(r => r.includes(expectedValue));
+      } else {
+        // Fallback: check for any smmpilot-verify record
+        txtOk = txtRecords.some(r => r.includes('smmpilot-verify='));
+      }
+      
+      return json({
+        domain,
+        txt_ok: txtOk,
+        txt_records: txtRecords,
+        checked_at: new Date().toISOString(),
+        duration_ms: Date.now() - startedAt,
+      });
     }
 
     console.log("[domain-health-check] start", { domain, expectedTarget, hostingProvider });

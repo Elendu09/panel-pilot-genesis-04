@@ -88,6 +88,40 @@ const APIManagement = () => {
 
   const { sending, deliveries, testWebhook: sendTestWebhook } = useWebhooks();
 
+  // Load webhook config from panel_settings
+  const [webhookLoaded, setWebhookLoaded] = useState(false);
+
+  useEffect(() => {
+    if (panel?.id && !webhookLoaded) {
+      loadWebhookConfig();
+    }
+  }, [panel?.id]);
+
+  const loadWebhookConfig = async () => {
+    if (!panel?.id) return;
+    try {
+      const { data } = await supabase
+        .from('panel_settings')
+        .select('integrations')
+        .eq('panel_id', panel.id)
+        .maybeSingle();
+      
+      if (data?.integrations) {
+        const integrations = data.integrations as Record<string, any>;
+        const wc = integrations?.webhook_config;
+        if (wc) {
+          setWebhookUrl(wc.url || '');
+          setWebhookEnabled(wc.enabled ?? true);
+          setSelectedEvents(wc.events || ["order.created", "order.completed", "gateway.approved", "dns.propagated"]);
+        }
+      }
+    } catch (e) {
+      console.error('Error loading webhook config:', e);
+    } finally {
+      setWebhookLoaded(true);
+    }
+  };
+
   // Detect current platform domain dynamically
   const getPlatformDomain = () => {
     if (typeof window !== 'undefined') {
@@ -377,11 +411,43 @@ axios.post(apiUrl, data)
     );
   };
 
-  const saveWebhookConfig = () => {
-    toast({ 
-      title: "Webhook configuration saved", 
-      description: `${selectedEvents.length} events enabled` 
-    });
+  const saveWebhookConfig = async () => {
+    if (!panel?.id) return;
+    try {
+      // First fetch existing integrations to merge
+      const { data: existing } = await supabase
+        .from('panel_settings')
+        .select('integrations')
+        .eq('panel_id', panel.id)
+        .maybeSingle();
+
+      const existingIntegrations = (existing?.integrations as Record<string, any>) || {};
+      const updatedIntegrations = {
+        ...existingIntegrations,
+        webhook_config: {
+          url: webhookUrl,
+          enabled: webhookEnabled,
+          events: selectedEvents,
+        }
+      };
+
+      const { error } = await supabase
+        .from('panel_settings')
+        .upsert({
+          panel_id: panel.id,
+          integrations: updatedIntegrations,
+        }, { onConflict: 'panel_id' });
+
+      if (error) throw error;
+
+      toast({ 
+        title: "Webhook configuration saved", 
+        description: `${selectedEvents.length} events enabled` 
+      });
+    } catch (error) {
+      console.error('Error saving webhook config:', error);
+      toast({ variant: "destructive", title: "Failed to save webhook configuration" });
+    }
   };
 
   if (panelLoading || loading) {
@@ -738,6 +804,45 @@ axios.post(apiUrl, data)
               </Card>
             </motion.div>
           </div>
+
+          {/* Webhook FAQ / Setup Guide */}
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+            <Card className="glass-card">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BookOpen className="w-5 h-5 text-primary" />
+                  How to Configure Webhooks
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {[
+                  { step: 1, title: "Create a Webhook Endpoint", desc: "Set up a URL on your server (e.g., https://yoursite.com/webhook) that accepts POST requests with JSON body." },
+                  { step: 2, title: "Enter Your URL Above", desc: "Paste your endpoint URL in the Webhook URL field and make sure 'Enable Webhooks' is turned on." },
+                  { step: 3, title: "Select Events", desc: "Choose which events you want to receive. For example, 'Order Created' fires when a customer places a new order." },
+                  { step: 4, title: "Save & Test", desc: "Click 'Save Configuration' to persist your settings. Use the test button (paper plane icon) to send a test payload to your endpoint." },
+                  { step: 5, title: "Handle the Payload", desc: "Your endpoint will receive a JSON POST with { event, payload, timestamp }. Return HTTP 200 to acknowledge receipt." },
+                ].map((item) => (
+                  <div key={item.step} className="flex gap-3">
+                    <div className="w-7 h-7 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0 text-sm font-bold">
+                      {item.step}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">{item.title}</p>
+                      <p className="text-xs text-muted-foreground">{item.desc}</p>
+                    </div>
+                  </div>
+                ))}
+                <div className="p-3 rounded-lg bg-muted/50 text-xs text-muted-foreground">
+                  <strong>Example payload:</strong>
+                  <pre className="mt-1 font-mono whitespace-pre-wrap">{`{
+  "event": "order.created",
+  "payload": { "order_id": "abc-123", "amount": 2.50, "service": "Instagram Followers" },
+  "timestamp": "2026-02-28T12:00:00Z"
+}`}</pre>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
         </TabsContent>
 
         {/* Logs Tab - Real Data */}

@@ -14,7 +14,8 @@ export interface Notification {
   actionUrl?: string;
 }
 
-const mapDbTypeToNotificationType = (dbType: string | null): NotificationType => {
+const mapDbTypeToNotificationType = (dbType: string | null, title?: string): NotificationType => {
+  // If DB type is specific, use it
   switch (dbType) {
     case 'order': return 'order';
     case 'payment': return 'payment';
@@ -22,8 +23,17 @@ const mapDbTypeToNotificationType = (dbType: string | null): NotificationType =>
     case 'provider': return 'provider';
     case 'warning': return 'warning';
     case 'error': return 'error';
-    default: return 'info';
   }
+  
+  // For 'info' or null, try to infer from title
+  if (title) {
+    const low = title.toLowerCase();
+    if (low.includes('payment') || low.includes('deposit') || low.includes('transfer') || low.includes('transaction') || low.includes('ad purchase')) return 'payment';
+    if (low.includes('order')) return 'order';
+    if (low.includes('provider') || low.includes('sync')) return 'provider';
+  }
+  
+  return 'info';
 };
 
 const getActionUrlFromType = (type: string | null, title: string): string | undefined => {
@@ -31,6 +41,11 @@ const getActionUrlFromType = (type: string | null, title: string): string | unde
   
   // Orders
   if (type === 'order' || lowTitle.includes('order')) return '/panel/orders';
+  
+  // Ad purchases / promotions -> Promote page
+  if (lowTitle.includes('ad purchase') || lowTitle.includes('promotion') || lowTitle.includes('advertis') || lowTitle.includes('promote') || lowTitle.includes('ad campaign')) {
+    return '/panel/promote';
+  }
   
   // Deposit from tenants -> Payments (Transactions tab)
   if (lowTitle.includes('deposit') || lowTitle.includes('pending verification') || lowTitle.includes('manual transfer') || lowTitle.includes('buyer payment')) {
@@ -42,8 +57,8 @@ const getActionUrlFromType = (type: string | null, title: string): string | unde
     return '/panel/billing';
   }
   
-  // Generic payment type -> Payments
-  if (type === 'payment') return '/panel/payments?tab=transactions';
+  // Generic payment type -> Transactions
+  if (type === 'payment') return '/panel/transactions';
   
   if (type === 'provider' || lowTitle.includes('provider') || lowTitle.includes('sync')) return '/panel/providers';
   if (lowTitle.includes('domain') || lowTitle.includes('dns') || lowTitle.includes('ssl')) return '/panel/domain';
@@ -79,7 +94,7 @@ export const useNotifications = () => {
 
       const mappedNotifications: Notification[] = (data || []).map(n => ({
         id: n.id,
-        type: mapDbTypeToNotificationType(n.type),
+        type: mapDbTypeToNotificationType(n.type, n.title),
         title: n.title,
         message: n.message,
         timestamp: new Date(n.created_at),
@@ -119,7 +134,7 @@ export const useNotifications = () => {
           const newNotif = payload.new as any;
           const notification: Notification = {
             id: newNotif.id,
-            type: mapDbTypeToNotificationType(newNotif.type),
+            type: mapDbTypeToNotificationType(newNotif.type, newNotif.title),
             title: newNotif.title,
             message: newNotif.message,
             timestamp: new Date(newNotif.created_at),

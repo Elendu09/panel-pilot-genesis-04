@@ -68,13 +68,15 @@ export function DNSVerificationProgress({
 
       const dnsOk = !!data?.dns_ok;
       const httpsOk = !!data?.https_ok;
+      const txtOk = !!data?.txt_ok;
 
-      // Update record statuses based on response
-      setRecords(prev => prev.map(r => ({
-        ...r,
-        status: dnsOk ? 'verified' : 'pending',
-        found: dnsOk ? r.expected : undefined
-      })));
+      // Update record statuses — TXT is verified independently from A/CNAME
+      setRecords(prev => prev.map(r => {
+        if (r.type === 'TXT') {
+          return { ...r, status: txtOk ? 'verified' : 'pending', found: txtOk ? r.expected : undefined };
+        }
+        return { ...r, status: dnsOk ? 'verified' : 'pending', found: dnsOk ? r.expected : undefined };
+      }));
 
       setSslStatus(httpsOk ? 'active' : dnsOk ? 'provisioning' : 'pending');
       setLastCheck(new Date());

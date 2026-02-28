@@ -127,13 +127,17 @@ const DomainSettings = () => {
   const verifyTxtRecord = async (domainId: string, domainName: string) => {
     setVerifyingDomains(prev => new Set(prev).add(domainId));
     try {
+      // Get the verification token for this domain
+      const domainRecord = domains.find(d => d.id === domainId);
+      const verificationToken = domainRecord?.verification_token;
+      
       const { data: health, error: healthError } = await supabase.functions.invoke("domain-health-check", {
-        body: { domain: domainName, check_type: 'txt' },
+        body: { domain: domainName, check_type: 'txt', verification_token: verificationToken },
       });
 
       if (healthError) throw healthError;
 
-      const txtOk = !!health?.txt_ok || !!health?.dns_ok;
+      const txtOk = !!health?.txt_ok;
 
       if (txtOk) {
         await supabase
