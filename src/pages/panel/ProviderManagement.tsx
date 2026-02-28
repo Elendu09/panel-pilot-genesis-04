@@ -49,6 +49,7 @@ import { ProviderLimitBanner } from "@/components/providers/ProviderLimitBanner"
 import { DirectProviderCard } from "@/components/providers/DirectProviderCard";
 import { ProviderListItem } from "@/components/providers/ProviderListItem";
 import { SponsoredProviderSlider } from "@/components/providers/SponsoredProviderSlider";
+import { trackAdImpression, trackAdClick } from "@/lib/ad-tracking";
 
 interface Provider {
   id: string;
@@ -270,6 +271,13 @@ const ProviderManagement = () => {
       });
 
       setDirectProviders(directPanels);
+
+      // Track impressions for displayed ad providers (debounced via ad-tracking)
+      directPanels.forEach(p => {
+        if (p.ad_type) {
+          trackAdImpression(p.id, p.ad_type);
+        }
+      });
     } catch (error) {
       console.error('Error fetching direct providers:', error);
     } finally {
@@ -415,6 +423,10 @@ const ProviderManagement = () => {
   const handleEnableDirectProvider = async (directPanel: DirectPanel) => {
     if (!panel?.id) return;
 
+    // Track click for ad-bearing providers
+    if (directPanel.ad_type) {
+      trackAdClick(directPanel.id, directPanel.ad_type);
+    }
     if (!canAddProvider) {
       toast({ 
         variant: "destructive", 

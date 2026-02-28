@@ -277,12 +277,12 @@ const BlogManagement = () => {
   if (loading) {
     return (
       <div className="space-y-6">
-        <Skeleton className="h-10 w-64" />
+        <Skeleton themed className="h-10 w-64" />
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-24 rounded-xl" />)}
+          {[1, 2, 3, 4].map(i => <Skeleton themed key={i} className="h-24 rounded-xl" />)}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {[1, 2, 3].map(i => <Skeleton key={i} className="h-64 rounded-xl" />)}
+          {[1, 2, 3].map(i => <Skeleton themed key={i} className="h-64 rounded-xl" />)}
         </div>
       </div>
     );

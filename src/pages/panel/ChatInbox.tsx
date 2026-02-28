@@ -56,6 +56,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { SponsoredPromotionCard } from '@/components/chat/SponsoredPromotionCard';
+import { trackAdImpression, trackAdClick } from '@/lib/ad-tracking';
 
 interface ChatSession {
   id: string;
@@ -123,6 +124,7 @@ const ChatInbox = ({ embedded = false }: ChatInboxProps) => {
     logo_url: string | null;
     subdomain: string | null;
     custom_domain: string | null;
+    service_count?: number;
   }[]>([]);
 
   // Get panel ID
@@ -163,43 +165,55 @@ const ChatInbox = ({ embedded = false }: ChatInboxProps) => {
     fetchCannedResponses();
   }, [panelId]);
 
-  // Fetch sponsored panels for promotional placements
+  // Fetch featured ad panels for promotional placements (featured only for Chat Inbox)
   useEffect(() => {
     if (!panelId) return;
 
     const fetchSponsoredPanels = async () => {
       try {
-        // Get active sponsored/featured ads, ranked by total_spent so highest spender appears first
+        // Only featured ads show in Chat Inbox, ranked by total_spent
         const { data: ads } = await supabase
           .from('provider_ads')
           .select('panel_id, total_spent')
           .eq('is_active', true)
-          .in('ad_type', ['sponsored', 'featured'])
+          .eq('ad_type', 'featured')
           .gt('expires_at', new Date().toISOString())
           .order('total_spent', { ascending: false })
           .limit(5);
 
         if (!ads || ads.length === 0) return;
 
-        // Get panel details for the ads
         const panelIds = ads.map(a => a.panel_id).filter(Boolean);
         const { data: panels } = await supabase
           .from('panels')
           .select('id, name, subdomain, custom_domain, logo_url')
           .in('id', panelIds)
-          .neq('id', panelId); // Exclude own panel
+          .neq('id', panelId);
 
-        if (panels) {
-          setSponsoredPanels(panels.map(p => ({
-            panel_id: p.id,
-            panel_name: p.name,
-            logo_url: p.logo_url,
-            subdomain: p.subdomain,
-            custom_domain: p.custom_domain
-          })));
-        }
+        if (!panels || panels.length === 0) return;
+
+        // Fetch service counts
+        const { data: services } = await supabase
+          .from('services')
+          .select('panel_id')
+          .in('panel_id', panels.map(p => p.id))
+          .eq('is_active', true);
+
+        const serviceCounts = (services || []).reduce((acc, s) => {
+          acc[s.panel_id] = (acc[s.panel_id] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+
+        setSponsoredPanels(panels.map(p => ({
+          panel_id: p.id,
+          panel_name: p.name,
+          logo_url: p.logo_url,
+          subdomain: p.subdomain,
+          custom_domain: p.custom_domain,
+          service_count: serviceCounts[p.id] || 0
+        })));
       } catch (error) {
-        console.error('Error fetching sponsored panels:', error);
+        console.error('Error fetching featured panels:', error);
       }
     };
 
@@ -829,6 +843,8 @@ const ChatInbox = ({ embedded = false }: ChatInboxProps) => {
                     <SponsoredPromotionCard 
                       promotion={sponsoredPanels[(Math.floor(index / 5)) % sponsoredPanels.length]}
                       className="rounded-xl border border-amber-500/20"
+                      onImpression={(pid) => trackAdImpression(pid, 'featured')}
+                      onClickAd={(pid) => trackAdClick(pid, 'featured')}
                     />
                   </div>
                 )}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Crown, ExternalLink, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+import { trackAdImpression, trackAdClick } from '@/lib/ad-tracking';
 
 interface RecommendedProvider {
   panel_id: string;
@@ -23,10 +24,10 @@ interface RecommendedProviderWidgetProps {
 
 export function RecommendedProviderWidget({ currentPanelId }: RecommendedProviderWidgetProps) {
   const [provider, setProvider] = useState<RecommendedProvider | null>(null);
+  const impressionTracked = useRef(false);
 
   useEffect(() => {
     const fetch = async () => {
-      // Get highest-spending active sponsored ad (not own panel)
       const { data: ads } = await supabase
         .from('provider_ads')
         .select('panel_id, ad_type, total_spent')
@@ -49,7 +50,6 @@ export function RecommendedProviderWidget({ currentPanelId }: RecommendedProvide
 
       if (!panel) return;
 
-      // Get service count
       const { count } = await supabase
         .from('services')
         .select('*', { count: 'exact', head: true })
@@ -65,18 +65,18 @@ export function RecommendedProviderWidget({ currentPanelId }: RecommendedProvide
         ad_type: ad.ad_type,
         service_count: count || 0,
       });
-
-      // Track impression
-      await supabase
-        .from('provider_ads')
-        .update({ impressions: (ads[0] as any).impressions + 1 })
-        .eq('panel_id', ad.panel_id)
-        .eq('ad_type', ad.ad_type)
-        .eq('is_active', true);
     };
 
     if (currentPanelId) fetch();
   }, [currentPanelId]);
+
+  // Track impression once provider loads
+  useEffect(() => {
+    if (provider && !impressionTracked.current) {
+      trackAdImpression(provider.panel_id, provider.ad_type);
+      impressionTracked.current = true;
+    }
+  }, [provider]);
 
   if (!provider) return null;
 
@@ -85,6 +85,11 @@ export function RecommendedProviderWidget({ currentPanelId }: RecommendedProvide
     : `https://${provider.subdomain}.smmpilot.online`;
 
   const isSponsored = provider.ad_type === 'sponsored';
+
+  const handleClick = () => {
+    trackAdClick(provider.panel_id, provider.ad_type);
+    window.open(url, '_blank');
+  };
 
   return (
     <Card className={cn(
@@ -140,7 +145,7 @@ export function RecommendedProviderWidget({ currentPanelId }: RecommendedProvide
                 ? "border-amber-500/30 text-amber-600 hover:bg-amber-500/10"
                 : "border-purple-500/30 text-purple-600 hover:bg-purple-500/10"
             )}
-            onClick={() => window.open(url, '_blank')}
+            onClick={handleClick}
           >
             Visit
             <ExternalLink className="w-3 h-3" />
