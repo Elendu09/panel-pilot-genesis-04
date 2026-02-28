@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Check, Zap, Crown, Sparkles } from "lucide-react";
+import { Check, Zap, Crown, Sparkles, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 
@@ -13,9 +13,11 @@ interface Plan {
   description: string;
   icon: React.ElementType;
   color: string;
+  glowColor: string;
   features: string[];
   highlighted: boolean;
   domainType: 'subdomain' | 'custom';
+  hasTrial: boolean;
 }
 
 const plans: Plan[] = [
@@ -27,6 +29,7 @@ const plans: Plan[] = [
     description: 'Get started with basic features',
     icon: Zap,
     color: 'from-slate-500 to-slate-600',
+    glowColor: '',
     features: [
       'Subdomain only',
       '1 Active Service',
@@ -35,7 +38,8 @@ const plans: Plan[] = [
       'Email Support'
     ],
     highlighted: false,
-    domainType: 'subdomain'
+    domainType: 'subdomain',
+    hasTrial: false
   },
   {
     id: 'basic',
@@ -45,6 +49,7 @@ const plans: Plan[] = [
     description: 'Perfect for growing panels',
     icon: Sparkles,
     color: 'from-blue-500 to-blue-600',
+    glowColor: 'shadow-[0_0_30px_rgba(59,130,246,0.3)]',
     features: [
       '10 Active Services',
       'Full Analytics Dashboard',
@@ -54,7 +59,8 @@ const plans: Plan[] = [
       'API Access'
     ],
     highlighted: false,
-    domainType: 'custom'
+    domainType: 'custom',
+    hasTrial: true
   },
   {
     id: 'pro',
@@ -64,6 +70,7 @@ const plans: Plan[] = [
     description: 'For serious SMM businesses',
     icon: Crown,
     color: 'from-amber-500 to-amber-600',
+    glowColor: 'shadow-[0_0_30px_rgba(245,158,11,0.3)]',
     features: [
       'Unlimited Services',
       'Advanced Analytics + Reports',
@@ -75,7 +82,8 @@ const plans: Plan[] = [
       'Custom Integrations'
     ],
     highlighted: true,
-    domainType: 'custom'
+    domainType: 'custom',
+    hasTrial: true
   }
 ];
 
@@ -117,7 +125,8 @@ export const OnboardingPlanSelector = ({ selectedPlan, onSelectPlan }: Onboardin
                   "bg-card/60 backdrop-blur-xl border-2 h-full cursor-pointer transition-all duration-300",
                   plan.highlighted && "border-primary/50 shadow-lg shadow-primary/10",
                   isSelected && "ring-2 ring-primary border-primary",
-                  !isSelected && "border-border/50 hover:border-primary/30"
+                  !isSelected && "border-border/50 hover:border-primary/30",
+                  plan.glowColor
                 )}
                 onClick={() => onSelectPlan(plan.id)}
               >
@@ -135,6 +144,12 @@ export const OnboardingPlanSelector = ({ selectedPlan, onSelectPlan }: Onboardin
                   </div>
                   <CardTitle className="text-lg">{plan.name}</CardTitle>
                   <CardDescription className="text-xs">{plan.description}</CardDescription>
+                  {plan.hasTrial && (
+                    <Badge variant="outline" className="mx-auto mt-1 gap-1 text-[10px] border-emerald-500/30 text-emerald-500 bg-emerald-500/10">
+                      <Clock className="w-3 h-3" />
+                      3-day free trial
+                    </Badge>
+                  )}
                 </CardHeader>
                 
                 <CardContent className="space-y-4">
@@ -177,7 +192,7 @@ export const OnboardingPlanSelector = ({ selectedPlan, onSelectPlan }: Onboardin
       {selectedPlan !== 'free' && (
         <div className="p-4 rounded-xl border border-primary/20 bg-primary/5">
           <p className="text-sm text-center text-muted-foreground">
-            💳 You'll be redirected to payment after completing basic setup
+            🎉 Start with a <strong>3-day free trial</strong> — payment required after trial ends
           </p>
         </div>
       )}

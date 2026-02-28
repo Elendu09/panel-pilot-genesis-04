@@ -2034,6 +2034,7 @@ export type Database = {
           price: number
           started_at: string
           status: Database["public"]["Enums"]["subscription_status"]
+          trial_ends_at: string | null
           updated_at: string
         }
         Insert: {
@@ -2046,6 +2047,7 @@ export type Database = {
           price?: number
           started_at?: string
           status?: Database["public"]["Enums"]["subscription_status"]
+          trial_ends_at?: string | null
           updated_at?: string
         }
         Update: {
@@ -2058,6 +2060,7 @@ export type Database = {
           price?: number
           started_at?: string
           status?: Database["public"]["Enums"]["subscription_status"]
+          trial_ends_at?: string | null
           updated_at?: string
         }
         Relationships: [

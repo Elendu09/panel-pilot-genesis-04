@@ -578,6 +578,14 @@ const PanelOverview = () => {
             
             {/* Right side - Action Buttons */}
             <div className="flex flex-wrap items-center gap-2 sm:gap-3 self-start lg:self-center">
+              {/* Panel Balance */}
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                <Wallet className="w-4 h-4 text-emerald-500" />
+                <div className="text-right">
+                  <p className="text-[10px] text-muted-foreground leading-none">Panel Balance</p>
+                  <p className="text-sm font-bold text-emerald-500">${panelData?.balance?.toFixed(2) || '0.00'}</p>
+                </div>
+              </div>
               {/* Plan Badge */}
               <Badge 
                 variant="outline" 

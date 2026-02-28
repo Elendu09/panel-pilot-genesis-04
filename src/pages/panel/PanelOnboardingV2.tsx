@@ -110,8 +110,11 @@ const PanelOnboardingV2 = () => {
   const currentStepData = allSteps[currentStep];
   const currentStepKey = currentStepData?.key;
   
-  // Progress based on visible steps
-  const visibleStepIndex = Math.max(0, visibleSteps.findIndex(s => s.id === currentStep));
+  // Progress based on visible steps — handle case where current step is hidden (e.g. payment step removed after success)
+  const rawVisibleStepIndex = visibleSteps.findIndex(s => s.id === currentStep);
+  const visibleStepIndex = rawVisibleStepIndex >= 0 
+    ? rawVisibleStepIndex 
+    : Math.max(0, visibleSteps.findIndex(s => s.id > currentStep));
   const progress = ((visibleStepIndex + 1) / visibleSteps.length) * 100;
 
   useEffect(() => {
