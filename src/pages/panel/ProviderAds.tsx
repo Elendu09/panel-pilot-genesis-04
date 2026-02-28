@@ -36,6 +36,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { usePanel } from "@/hooks/usePanel";
+import { deactivateExpiredAds } from "@/lib/ad-tracking";
 import { format, addDays, addWeeks, addMonths, differenceInDays } from "date-fns";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -191,6 +192,8 @@ const ProviderAds = () => {
 
   useEffect(() => {
     if (panel?.id) {
+      // Auto-deactivate expired ads on mount
+      deactivateExpiredAds(panel.id);
       fetchData();
     }
   }, [panel?.id]);
