@@ -1,105 +1,96 @@
 
 
-# Plan: Verify Payment Flow, Update Dashboard Stats Cards
+# Plan: Webhook URL, Panel Balance Display, Deposit Flow, Onboarding Fixes & Enhancements
 
-## Analysis
+## Issue 1: Webhook URL should use homeofsmm.com instead of Supabase URL
 
-### Balance Update & Payment Flow
-The webhook (`payment-webhook/index.ts`) and metadata fix (`process-payment/index.ts`) are already in place from prior edits. The critical chain is:
-1. `process-payment` creates transaction with `metadata: { type: 'panel_deposit', ... }` -- **fixed in last edit**
-2. Webhook receives callback, finds transaction, updates status to `completed`
-3. Webhook checks `txMetadata.type` -- for deposits, credits `panels.balance` for owner, `client_users.balance` for buyers
-4. Webhook checks `txMetadata.type === 'subscription'` -- updates `panels.subscription_tier` and `panel_subscriptions`
+The Flutterwave/Paystack webhook URL is configured externally in gateway dashboards. The `process-payment` edge function doesn't set a webhook URL in the API calls — gateways rely on dashboard-configured webhook URLs. Since you want `homeofsmm.com` as the webhook endpoint, we need to **proxy** the webhook through your domain.
 
-This flow is correctly implemented. If it's still not working, the issue is likely that the **webhook URL is not configured in the payment gateway dashboard** (e.g., Flutterwave, Paystack). The gateway needs to POST to:
-```
-https://tooudgubuhxjbbvzjcgx.supabase.co/functions/v1/payment-webhook?gateway=flutterwave
-```
-This is a gateway-side configuration, not a code issue.
+**However**, Lovable projects can't run custom backend routes at `homeofsmm.com/api/...`. The practical solution is to add the webhook URL explicitly in the `process-payment` function for gateways that support it (Flutterwave supports `webhook_url` in the payment initialization payload).
 
-### Domain Configuration on Plan Upgrade
-Already handled: `DomainSettings.tsx` shows `UpgradePrompt` when `panel.subscription_tier === 'free'`. When a subscription payment succeeds, the webhook updates `panels.subscription_tier` to `basic` or `pro`, which removes the upgrade prompt. No code changes needed.
-
-### Dashboard Stats Cards (from screenshot)
-The user's screenshot shows: **Total Revenue, Total Orders, Active Users, Conversion Rate** with colored icons. Current code shows: Total Revenue, Total Orders, **Active Services**, **Total Customers**. Need to update to match the screenshot.
-
-## Changes
-
-### 1. Update PanelOverview stats to match screenshot
-
-**File: `src/pages/panel/PanelOverview.tsx`**
-
-- Change `activeServices` stat card to **"Active Users"** (use `totalCustomers` count, which already queries `client_users`)
-- Change `totalCustomers` stat card to **"Conversion Rate"** (calculated as `completedOrders / totalOrders * 100`)
-- Update icons: Active Users gets `Users` icon with green gradient, Conversion Rate gets `Percent` icon with orange/amber gradient
-- Keep the data sources the same (already querying real data)
-
-Specific changes to `statsData` array (around line 364):
+**Fix in `supabase/functions/process-payment/index.ts`**:
+- For Flutterwave (line ~402): Add `webhook_url` field pointing to the Supabase edge function URL (since homeofsmm.com can't handle POST webhooks). The correct webhook URL remains the Supabase function URL but we'll construct it dynamically:
 ```typescript
-const completedOrders = liveOrders.filter(o => o.status === 'completed').length;
-const conversionRate = stats.totalOrders > 0 
-  ? ((completedOrders / stats.totalOrders) * 100) 
-  : 0;
+webhook_url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/payment-webhook?gateway=flutterwave`
+```
+- For Paystack (line ~455): Paystack doesn't support per-transaction webhook URLs — it must be configured in the Paystack dashboard. No code change, but I'll add a comment.
 
-const statsData = [
-  {
-    title: "Total Revenue",
-    value: `$${stats.totalRevenue.toFixed(2)}`,
-    change: changes.revenue.value,
-    trend: changes.revenue.trend,
-    icon: DollarSign,
-    gradient: "from-blue-500 to-blue-600",
-    bgColor: "bg-blue-500/10",
-    textColor: "text-blue-500",
-    href: "/panel/analytics"
-  },
-  {
-    title: "Total Orders",
-    value: stats.totalOrders.toLocaleString(),
-    change: changes.orders.value,
-    trend: changes.orders.trend,
-    icon: ShoppingCart,
-    gradient: "from-pink-500 to-pink-600",
-    bgColor: "bg-pink-500/10",
-    textColor: "text-pink-500",
-    href: "/panel/orders"
-  },
-  {
-    title: "Active Users",
-    value: stats.totalCustomers.toLocaleString(),
-    change: changes.customers.value,
-    trend: changes.customers.trend,
-    icon: Users,
-    gradient: "from-emerald-500 to-emerald-600",
-    bgColor: "bg-emerald-500/10",
-    textColor: "text-emerald-500",
-    href: "/panel/customers"
-  },
-  {
-    title: "Conversion Rate",
-    value: `${conversionRate.toFixed(0)}%`,
-    change: changes.orders.value,
-    trend: changes.orders.trend,
-    icon: Percent,
-    gradient: "from-amber-500 to-amber-600",
-    bgColor: "bg-amber-500/10",
-    textColor: "text-amber-500",
-    href: "/panel/analytics"
-  },
-];
+## Issue 2: Add "Panel Balance" display to dashboard header
+
+**Fix in `src/pages/panel/PanelOverview.tsx`** (around line 580-606):
+Add a Panel Balance badge/display next to the existing Plan Badge and action buttons in the welcome header's right side:
+```tsx
+<div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+  <Wallet className="w-4 h-4 text-emerald-500" />
+  <div className="text-right">
+    <p className="text-[10px] text-muted-foreground leading-none">Panel Balance</p>
+    <p className="text-sm font-bold text-emerald-500">${panelData?.balance?.toFixed(2) || '0.00'}</p>
+  </div>
+</div>
 ```
 
-Also add `Percent` to the imports from `lucide-react`.
+## Issue 3: Deposit stays "pending" — webhook not firing
 
-### 2. Add `Percent` icon import
+The gateway webhook URLs must be configured in Flutterwave/Paystack dashboard. But we can also improve the flow:
 
-**File: `src/pages/panel/PanelOverview.tsx`** -- Add `Percent` to the lucide-react import line.
+**Fix in `supabase/functions/process-payment/index.ts`**: Add explicit `webhook_url` for Flutterwave so the webhook auto-fires without manual dashboard configuration.
 
-## Summary
+**Fix in `supabase/functions/payment-webhook/index.ts`**: The existing code at lines 541-565 correctly handles panel owner deposits. The issue is likely that the webhook never arrives. Adding `webhook_url` to the Flutterwave init call should fix this.
+
+## Issue 4: "Step 1 of 6" counter bug on payment step
+
+**Root cause**: The `?payment=success` URL param detection (line 197) sets `paymentCompleted = true` immediately. This removes the payment step from `visibleSteps`, so `visibleSteps.findIndex(s => s.id === 2)` returns -1, and `Math.max(0, -1)` = 0, showing "Step 1 of 6" even though the user is on step 2.
+
+**Fix in `src/pages/panel/PanelOnboardingV2.tsx`**: In the progress calculation (line 114), handle the case where the current step is not in `visibleSteps`:
+```typescript
+const visibleStepIndex = visibleSteps.findIndex(s => s.id === currentStep);
+const safeVisibleIndex = visibleStepIndex >= 0 ? visibleStepIndex : Math.max(0, visibleSteps.findIndex(s => s.id > currentStep));
+const progress = ((safeVisibleIndex + 1) / visibleSteps.length) * 100;
+```
+
+Also, move the `setPaymentCompleted(true)` + `setCurrentStep(3)` to happen atomically together BEFORE the filter logic re-evaluates.
+
+## Issue 5: Enhance OnboardingPaymentStep with glow effects for Basic/Pro
+
+**Fix in `src/components/onboarding/OnboardingPaymentStep.tsx`**:
+- Add animated glow border around the payment card
+- Add gradient shimmer on the "Pay" button
+- Add a "3-day free trial" badge/notice for Basic and Pro plans
+- Update the order summary to mention "3-day free trial, then $X/mo"
+
+**Fix in `src/components/onboarding/OnboardingPlanSelector.tsx`**:
+- Add glow effect (`shadow-[0_0_30px_rgba(59,130,246,0.3)]`) to Basic card
+- Add gold glow (`shadow-[0_0_30px_rgba(245,158,11,0.3)]`) to Pro card
+- Add "3-day free trial" badge on both Basic and Pro cards
+
+## Issue 6: Implement 3-day trial logic
+
+**Fix in `supabase/functions/payment-webhook/index.ts`**: When subscription payment completes, set `trial_ends_at` to 3 days from now in `panel_subscriptions`. If payment isn't confirmed within 3 days, subscription reverts to free.
+
+**Fix in `src/pages/panel/PanelOnboardingV2.tsx`**: When user selects Basic/Pro but skips payment, still set subscription_tier with `trial` status and `trial_ends_at = now + 3 days`. This allows them to proceed with the trial.
+
+**Database migration**: Add `trial_ends_at` column to `panel_subscriptions` if not exists.
+
+## Issue 7: Enhance Free Subdomain UI in onboarding
+
+**Fix in `src/components/onboarding/OnboardingDomainStep.tsx`** (lines 176-260):
+- Reduce padding on the currency selector and subdomain preview cards
+- Make the subdomain preview box more compact with tighter spacing
+- Improve the "Your panel will be available at" preview box with better contained styling
+- Reduce overall `space-y-6` to `space-y-4` for tighter layout
+
+## Summary of All Changes
 
 | File | Change |
 |------|--------|
-| `src/pages/panel/PanelOverview.tsx` | Update stats cards to show Total Revenue, Total Orders, Active Users, Conversion Rate with matching icons/colors from screenshot |
-
-**No webhook or edge function changes needed** -- the payment flow code is already correct. If balance still doesn't update after a successful gateway payment, the webhook URL must be configured in the payment provider's dashboard settings.
+| `supabase/functions/process-payment/index.ts` | Add `webhook_url` for Flutterwave gateway |
+| `supabase/functions/payment-webhook/index.ts` | Add trial logic for subscriptions |
+| `src/pages/panel/PanelOverview.tsx` | Add Panel Balance display in header |
+| `src/pages/panel/PanelOnboardingV2.tsx` | Fix step counter bug, add trial skip logic |
+| `src/components/onboarding/OnboardingPaymentStep.tsx` | Add glow effects, trial notice |
+| `src/components/onboarding/OnboardingPlanSelector.tsx` | Add glow to Basic/Pro cards, trial badges |
+| `src/components/onboarding/OnboardingDomainStep.tsx` | Tighten UI spacing, enhance subdomain preview |
+| `src/components/onboarding/OnboardingCurrencySelector.tsx` | Reduce padding for compact layout |
+| Database migration | Add `trial_ends_at` to `panel_subscriptions` |
+| Edge function redeployment | Redeploy `process-payment` and `payment-webhook` |
 
