@@ -42,6 +42,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { calculateChange, getPreviousPeriodRange } from '@/lib/analytics-utils';
 import SubdomainPreview from '@/components/panel/SubdomainPreview';
+import { RecommendedProviderWidget } from '@/components/dashboard/RecommendedProviderWidget';
 
 interface LiveOrder {
   id: string;
@@ -1040,6 +1041,13 @@ const PanelOverview = () => {
           </CardContent>
         </Card>
       </motion.div>
+
+      {/* Recommended Provider Ad Widget */}
+      {panelData?.id && (
+        <motion.div variants={itemVariants}>
+          <RecommendedProviderWidget currentPanelId={panelData.id} />
+        </motion.div>
+      )}
 
       {/* Subdomain Preview */}
       {panelData?.subdomain && (
