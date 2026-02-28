@@ -443,17 +443,16 @@ serve(async (req) => {
               message: `Your payment of $${depositAmount.toFixed(2)} was successful. Your order is now being processed.`,
             });
         } else {
-          // Handle subscription payments first
+          // Route by metadata type to prevent fall-through and double-crediting
           if (txMetadata?.type === 'subscription' && txPanelId) {
+            // === SUBSCRIPTION PAYMENT ===
             const planName = txMetadata.plan || 'basic';
             
-            // Update panel subscription tier
             await supabase.from('panels').update({
               subscription_tier: planName,
               subscription_status: 'active',
             }).eq('id', txPanelId);
             
-            // Upsert panel_subscriptions record
             const expiresAt = new Date();
             expiresAt.setMonth(expiresAt.getMonth() + 1);
             
@@ -468,7 +467,6 @@ serve(async (req) => {
             
             console.log(`[payment-webhook] Subscription updated: ${planName} for panel ${txPanelId}`);
 
-            // Notify panel owner
             const { data: subPanel } = await supabase
               .from('panels')
               .select('owner_id')
@@ -484,69 +482,16 @@ serve(async (req) => {
                 message: `Your ${planName} plan subscription has been activated successfully.`,
               });
             }
-          }
-
-          // This is a regular deposit - credit balance
-          const { data: buyer } = await supabase
-            .from('client_users')
-            .select('balance, total_spent')
-            .eq('id', userId)
-            .single();
-
-          if (buyer) {
-            // Buyer (client_user) deposit
-            const newBalance = (buyer.balance || 0) + depositAmount;
-            
-            await supabase
-              .from('client_users')
-              .update({ 
-                balance: newBalance,
-                total_spent: (buyer.total_spent || 0) + depositAmount
-              })
-              .eq('id', userId);
-
-            console.log(`[payment-webhook] Credited $${depositAmount} to buyer ${userId}, new balance: ${newBalance}`);
-
-            // Create buyer notification for deposit
-            await supabase
-              .from('buyer_notifications')
-              .insert({
-                buyer_id: userId,
-                panel_id: txPanelId,
-                type: 'deposit',
-                title: 'Deposit Successful',
-                message: `$${depositAmount.toFixed(2)} has been added to your account via ${gateway}`,
-              });
-
-            // Also create panel notification for panel owner
-            if (txPanelId) {
-              const { data: panelOwner } = await supabase
-                .from('panels')
-                .select('owner_id')
-                .eq('id', txPanelId)
-                .single();
-
-              if (panelOwner?.owner_id) {
-                await supabase
-                  .from('panel_notifications')
-                  .insert({
-                    panel_id: txPanelId,
-                    user_id: panelOwner.owner_id,
-                    type: 'payment',
-                    title: 'Payment Received',
-                    message: `A deposit of $${depositAmount.toFixed(2)} was completed via ${gateway}.`,
-                  });
-              }
-            }
-          } else if (txPanelId) {
-            // Not a client_user — check if this is a panel owner deposit
+            // STOP — don't fall through to deposit logic
+          } else if (txMetadata?.type === 'panel_deposit' && txPanelId) {
+            // === PANEL OWNER DEPOSIT — credit panels.balance directly ===
             const { data: panelData } = await supabase
               .from('panels')
               .select('balance, owner_id')
               .eq('id', txPanelId)
               .single();
 
-            if (panelData && panelData.owner_id === userId) {
+            if (panelData) {
               const newBalance = (panelData.balance || 0) + depositAmount;
               await supabase
                 .from('panels')
@@ -554,14 +499,101 @@ serve(async (req) => {
                 .eq('id', txPanelId);
               console.log(`[payment-webhook] Credited $${depositAmount} to panel ${txPanelId}, new balance: ${newBalance}`);
 
-              // Notify panel owner
               await supabase.from('panel_notifications').insert({
                 panel_id: txPanelId,
-                user_id: userId,
+                user_id: panelData.owner_id || userId,
                 type: 'payment',
                 title: 'Deposit Successful',
                 message: `$${depositAmount.toFixed(2)} has been added to your panel balance via ${gateway}.`,
               });
+            }
+            // STOP — don't fall through to buyer deposit logic
+          } else if (txMetadata?.type === 'commission_payment' && txPanelId) {
+            // === COMMISSION PAYMENT — just mark as paid, don't credit balance ===
+            console.log(`[payment-webhook] Commission payment of $${depositAmount} received for panel ${txPanelId}`);
+            
+            await supabase.from('panel_notifications').insert({
+              panel_id: txPanelId,
+              user_id: userId,
+              type: 'payment',
+              title: 'Commission Paid',
+              message: `Commission payment of $${depositAmount.toFixed(2)} has been processed.`,
+            });
+            // STOP
+          } else {
+            // === REGULAR BUYER DEPOSIT — credit client_users.balance ===
+            const { data: buyer } = await supabase
+              .from('client_users')
+              .select('balance, total_spent')
+              .eq('id', userId)
+              .single();
+
+            if (buyer) {
+              const newBalance = (buyer.balance || 0) + depositAmount;
+              
+              await supabase
+                .from('client_users')
+                .update({ 
+                  balance: newBalance,
+                  total_spent: (buyer.total_spent || 0) + depositAmount
+                })
+                .eq('id', userId);
+
+              console.log(`[payment-webhook] Credited $${depositAmount} to buyer ${userId}, new balance: ${newBalance}`);
+
+              await supabase
+                .from('buyer_notifications')
+                .insert({
+                  buyer_id: userId,
+                  panel_id: txPanelId,
+                  type: 'deposit',
+                  title: 'Deposit Successful',
+                  message: `$${depositAmount.toFixed(2)} has been added to your account via ${gateway}`,
+                });
+
+              if (txPanelId) {
+                const { data: panelOwner } = await supabase
+                  .from('panels')
+                  .select('owner_id')
+                  .eq('id', txPanelId)
+                  .single();
+
+                if (panelOwner?.owner_id) {
+                  await supabase
+                    .from('panel_notifications')
+                    .insert({
+                      panel_id: txPanelId,
+                      user_id: panelOwner.owner_id,
+                      type: 'payment',
+                      title: 'Payment Received',
+                      message: `A deposit of $${depositAmount.toFixed(2)} was completed via ${gateway}.`,
+                    });
+                }
+              }
+            } else if (txPanelId) {
+              // Fallback: no client_user found, check if panel owner deposit without metadata
+              const { data: panelData } = await supabase
+                .from('panels')
+                .select('balance, owner_id')
+                .eq('id', txPanelId)
+                .single();
+
+              if (panelData && panelData.owner_id === userId) {
+                const newBalance = (panelData.balance || 0) + depositAmount;
+                await supabase
+                  .from('panels')
+                  .update({ balance: newBalance })
+                  .eq('id', txPanelId);
+                console.log(`[payment-webhook] Fallback: Credited $${depositAmount} to panel ${txPanelId}`);
+
+                await supabase.from('panel_notifications').insert({
+                  panel_id: txPanelId,
+                  user_id: userId,
+                  type: 'payment',
+                  title: 'Deposit Successful',
+                  message: `$${depositAmount.toFixed(2)} has been added to your panel balance via ${gateway}.`,
+                });
+              }
             }
           }
         }
