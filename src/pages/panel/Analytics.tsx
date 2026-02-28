@@ -211,6 +211,7 @@ const Analytics = () => {
       const { data: transactions } = await supabase
         .from('transactions')
         .select('*')
+        .eq('panel_id', panel.id)
         .gte('created_at', startDate.toISOString())
         .lte('created_at', endDate.toISOString())
         .order('created_at', { ascending: false });
@@ -249,6 +250,7 @@ const Analytics = () => {
       const { data: prevTransactions } = await supabase
         .from('transactions')
         .select('*')
+        .eq('panel_id', panel.id)
         .gte('created_at', prevStart.toISOString())
         .lt('created_at', prevEnd.toISOString());
 
