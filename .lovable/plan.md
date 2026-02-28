@@ -1,44 +1,68 @@
 
 
-# Plan: Remove FAQ Tracking, Improve Balance Card UI, Fix Panel Name on Tenant Storefront
+# Plan: Customer List View Redesign + Grid View Toggle + Ads Maximization Strategy
 
-## 3 Changes
+## 1. Customer List — Redesign Table View + Add Grid/Card View Toggle
 
-### 1. Remove FAQ click tracking (revert unwanted feature)
+**Current issues with the customer table view (lines 946-1101 in CustomerManagement.tsx):**
+- Plain table with no visual hierarchy
+- No view toggle — only table on desktop, cards only on mobile
+- The existing `CustomerOverview` (kanban) is hidden behind a toggle and is a separate concept, not a switchable view
 
-**Files:**
-- `src/components/storefront/StorefrontFAQSection.tsx`: Remove `useAnalyticsTracking` import and `trackFaqClick` call from the onClick handler (lines 7, 56, 226-228). Keep the accordion functionality intact.
-- `src/hooks/use-analytics-tracking.tsx`: Remove `trackFaqClick` method (lines 91-93) and its export (line 102).
-- `src/components/themes/ThemeOne.tsx` through `ThemeFive.tsx`: Remove `panelId` prop being passed to `StorefrontFAQSection` (revert what was added in last build).
+**Changes:**
 
-### 2. Improve Panel Balance card UI in PanelOverview header
+### A. Add a View Toggle to `CustomerManagement.tsx`
+- Add a `viewMode` state: `'table' | 'grid'`
+- Place a toggle (Table/Grid icons) next to the search bar in the card header (line ~918)
+- Table view = improved version of current table
+- Grid view = responsive card grid (2-col on tablet, 3-col on desktop) using a new `CustomerGridCard` component
 
-Current balance display (lines 601-608) is a small inline element that's easy to miss. Enhance it:
-- Make it a proper mini-card with larger font size for the amount
-- Add a subtle animated pulse dot to indicate real-time connection
-- Increase padding and make the balance amount more prominent (text-lg font-bold)
-- Add a "Live" indicator to show it auto-updates
+### B. Improve the Table View
+- Add avatar online indicator dot (already on mobile cards, missing from table)
+- Add "Orders" column (currently missing from table but data exists as `totalOrders`)
+- Add "Joined" column with relative time (e.g. "2 months ago")
+- Alternating row colors already exist, keep them
 
-### 3. Fix panel name not updating on tenant storefront (CRITICAL)
+### C. Create `CustomerGridCard` component
+- New file: `src/components/customers/CustomerGridCard.tsx`
+- Each card shows: avatar with online dot, name, email, VIP badge, status badge, balance, total spent, orders count, last active, and a "..." dropdown menu for actions
+- More visual than table — gradient border for VIP, subtle hover effects
 
-**Root cause**: `useTenant` hook fetches panel data once and caches it with a 30-second TTL in a module-level `Map`. When the panel owner changes the name in GeneralSettings, the storefront's cached `panel.name` and `custom_branding.companyName` are stale. There's no realtime subscription or cache invalidation.
-
-**Fix** in `src/hooks/useTenant.tsx`:
-- After initial panel detection succeeds, set up a Supabase realtime subscription on `panels_public` (or `panels` table) filtered by `id=eq.${panel.id}` listening for UPDATE events
-- On UPDATE, refresh the panel state with `payload.new` data (name, logo_url, custom_branding, etc.)
-- Also clear the `tenantCache` entry for the current hostname so navigation doesn't revert to stale data
-- This ensures when panel owner saves a new name, the storefront header/footer updates within seconds
-
-**Files:**
+### Files:
 | File | Change |
 |------|--------|
-| `src/hooks/useTenant.tsx` | Add realtime subscription on panels table after panel detection; update panel state and clear cache on UPDATE |
-| `src/components/storefront/StorefrontFAQSection.tsx` | Remove analytics tracking import and trackFaqClick call |
-| `src/hooks/use-analytics-tracking.tsx` | Remove trackFaqClick method |
-| `src/components/themes/ThemeOne.tsx` | Remove panelId prop to FAQ section |
-| `src/components/themes/ThemeTwo.tsx` | Remove panelId prop to FAQ section |
-| `src/components/themes/ThemeThree.tsx` | Remove panelId prop to FAQ section |
-| `src/components/themes/ThemeFour.tsx` | Remove panelId prop to FAQ section |
-| `src/components/themes/ThemeFive.tsx` | Remove panelId prop to FAQ section |
-| `src/pages/panel/PanelOverview.tsx` | Enhance balance card UI with larger display, live indicator |
+| `src/pages/panel/CustomerManagement.tsx` | Add `viewMode` state + toggle UI in card header; render grid view when `viewMode === 'grid'` with responsive grid of `CustomerGridCard` |
+| `src/components/customers/CustomerGridCard.tsx` | **New file** — desktop card component with avatar, stats, status, actions dropdown |
+
+---
+
+## 2. Ads Maximization — Current State & Improvements
+
+**Current ads system already has:**
+- 4 ad types: `sponsored`, `top`, `best`, `featured` (stored in `provider_ads` table)
+- Placement in marketplace ProviderManagement page (sponsored slider, top grid, best list)
+- Placement in ChatInbox (sponsored promotion cards every 5 sessions)
+- Purchase flow with balance deduction, duration selection (daily/weekly/monthly)
+- "My Ads" tab with live countdown timers and performance metrics (impressions, clicks, CTR, spent)
+- Preview dialog showing how ad appears in marketplace
+
+**What's missing / can be improved:**
+
+### A. Ad Reach Visibility — Show WHERE ads appear
+- In the "My Ads" tab, add a "Reach" section below each ad's metrics showing which placements are active for that ad type (e.g. "Marketplace Providers tab", "Chat Inbox recommendations", "Storefront widget")
+- This is informational — no DB changes needed, just map ad_type to known placement locations
+
+### B. Ad Statistics Enhancement
+- Add a mini sparkline or daily breakdown showing impressions/clicks over the ad's lifetime (data already in `provider_ads` table — impressions/clicks are aggregated totals but we can show daily rate)
+- Add "Cost per Click" (CPC) metric: `total_spent / clicks`
+- Add "Cost per 1000 Views" (CPM): `(total_spent / impressions) * 1000`
+
+### C. Cross-Panel Reach Indicator
+- In the Purchase tab, show "Active across X panels" to indicate the ad reaches all panels in the marketplace, not just yours
+- Fetch count of active panels to display this number
+
+### Files:
+| File | Change |
+|------|--------|
+| `src/pages/panel/ProviderAds.tsx` | Add reach placement info per ad type in "My Ads" cards; add CPC/CPM metrics; add "reaches X panels" count in purchase tab |
 
