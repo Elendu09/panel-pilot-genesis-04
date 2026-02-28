@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, CreditCard, ExternalLink, CheckCircle2, Shield } from "lucide-react";
+import { Loader2, CreditCard, ExternalLink, CheckCircle2, Shield, Clock, Sparkles } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
 
 interface PaymentProvider {
   id: string;
@@ -24,16 +25,18 @@ interface OnboardingPaymentStepProps {
   onSkip?: () => void;
 }
 
-const planPrices = {
-  basic: 5,
-  pro: 15
+const planPrices = { basic: 5, pro: 15 };
+const planGlow = {
+  basic: 'shadow-[0_0_40px_rgba(59,130,246,0.2)]',
+  pro: 'shadow-[0_0_40px_rgba(245,158,11,0.2)]',
+};
+const planGradient = {
+  basic: 'from-blue-500 to-blue-600',
+  pro: 'from-amber-500 to-amber-600',
 };
 
 export const OnboardingPaymentStep = ({ 
-  selectedPlan, 
-  panelId,
-  onPaymentSuccess,
-  onSkip 
+  selectedPlan, panelId, onPaymentSuccess, onSkip 
 }: OnboardingPaymentStepProps) => {
   const { toast } = useToast();
   const [providers, setProviders] = useState<PaymentProvider[]>([]);
@@ -41,9 +44,7 @@ export const OnboardingPaymentStep = ({
   const [processing, setProcessing] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchPaymentProviders();
-  }, []);
+  useEffect(() => { fetchPaymentProviders(); }, []);
 
   const fetchPaymentProviders = async () => {
     try {
@@ -52,14 +53,9 @@ export const OnboardingPaymentStep = ({
         .select('*')
         .eq('is_enabled', true)
         .eq('supports_subscriptions', true);
-
       if (error) throw error;
       setProviders(data || []);
-      
-      // Auto-select first provider
-      if (data && data.length > 0) {
-        setSelectedProvider(data[0].provider_name);
-      }
+      if (data && data.length > 0) setSelectedProvider(data[0].provider_name);
     } catch (error) {
       console.error('Error fetching providers:', error);
     } finally {
@@ -76,51 +72,28 @@ export const OnboardingPaymentStep = ({
       toast({ variant: 'destructive', title: 'Please select a payment method' });
       return;
     }
-
     setProcessing(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast({ variant: 'destructive', title: 'Please sign in first' });
-        return;
-      }
-
+      if (!user) { toast({ variant: 'destructive', title: 'Please sign in first' }); return; }
       const returnUrl = `${window.location.origin}/panel/onboarding?payment=success`;
-
       const { data, error: fnError } = await supabase.functions.invoke('process-payment', {
         body: {
-          gateway: selectedProvider,
-          amount: planPrices[selectedPlan],
-          panelId,
-          buyerId: user.id,
-          returnUrl,
-          currency: 'usd',
-          isOwnerDeposit: true,
+          gateway: selectedProvider, amount: planPrices[selectedPlan], panelId,
+          buyerId: user.id, returnUrl, currency: 'usd', isOwnerDeposit: true,
           metadata: { type: 'subscription', plan: selectedPlan },
         }
       });
-
       if (fnError) throw fnError;
-
       if (data?.success && (data?.redirectUrl || data?.url)) {
-        // Update panel subscription status to pending before redirect
         if (panelId) {
-          await supabase
-            .from('panels')
-            .update({ 
-              subscription_tier: selectedPlan,
-              subscription_status: 'pending'
-            })
-            .eq('id', panelId);
+          await supabase.from('panels').update({ 
+            subscription_tier: selectedPlan, subscription_status: 'pending'
+          }).eq('id', panelId);
         }
-        // Redirect to payment gateway
         window.location.href = data.redirectUrl || data.url;
       } else {
-        toast({
-          variant: 'destructive',
-          title: 'Payment Error',
-          description: data?.error || 'Could not initialize payment. Please try again.'
-        });
+        toast({ variant: 'destructive', title: 'Payment Error', description: data?.error || 'Could not initialize payment.' });
       }
     } catch (error: any) {
       console.error('Payment error:', error);
@@ -130,10 +103,29 @@ export const OnboardingPaymentStep = ({
     }
   };
 
-  const getProviderIcon = (providerName: string, logoUrl: string | null) => {
-    if (logoUrl) {
-      return <img src={logoUrl} alt={providerName} className="w-6 h-6 object-contain" />;
+  const handleSkipWithTrial = async () => {
+    if (panelId) {
+      const trialEndsAt = new Date();
+      trialEndsAt.setDate(trialEndsAt.getDate() + 3);
+      await supabase.from('panels').update({
+        subscription_tier: selectedPlan,
+        subscription_status: 'trial',
+      }).eq('id', panelId);
+      await supabase.from('panel_subscriptions').upsert({
+        panel_id: panelId,
+        plan_type: selectedPlan,
+        price: planPrices[selectedPlan],
+        status: 'active' as any,
+        started_at: new Date().toISOString(),
+        expires_at: trialEndsAt.toISOString(),
+        trial_ends_at: trialEndsAt.toISOString(),
+      }, { onConflict: 'panel_id' });
     }
+    onSkip?.();
+  };
+
+  const getProviderIcon = (providerName: string, logoUrl: string | null) => {
+    if (logoUrl) return <img src={logoUrl} alt={providerName} className="w-6 h-6 object-contain" />;
     return <CreditCard className="w-6 h-6" />;
   };
 
@@ -150,12 +142,10 @@ export const OnboardingPaymentStep = ({
       <div className="space-y-6">
         <Card className="border-amber-500/30 bg-amber-500/5">
           <CardContent className="p-6 text-center">
-            <p className="text-amber-600 mb-4">
-              No payment providers are currently configured. Please contact the platform administrator.
-            </p>
+            <p className="text-amber-600 mb-4">No payment providers configured. Contact the platform administrator.</p>
             {onSkip && (
-              <Button variant="outline" onClick={onSkip}>
-                Continue with Free Plan
+              <Button variant="outline" onClick={handleSkipWithTrial}>
+                Start 3-Day Free Trial Instead
               </Button>
             )}
           </CardContent>
@@ -169,22 +159,47 @@ export const OnboardingPaymentStep = ({
       <div className="text-center">
         <h2 className="text-2xl font-bold mb-2">Complete Payment</h2>
         <p className="text-muted-foreground">
-          Subscribe to {selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)} plan for ${planPrices[selectedPlan]}/month
+          Subscribe to {selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)} plan
         </p>
       </div>
 
-      {/* Order Summary */}
-      <Card className="bg-card/60 backdrop-blur-xl border-border/50">
+      {/* Trial Notice */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/5 flex items-center gap-3"
+      >
+        <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0">
+          <Clock className="w-5 h-5 text-emerald-500" />
+        </div>
+        <div>
+          <p className="text-sm font-medium">3-Day Free Trial Included</p>
+          <p className="text-xs text-muted-foreground">Try all features free. You'll only be charged after the trial ends.</p>
+        </div>
+      </motion.div>
+
+      {/* Order Summary with glow */}
+      <Card className={cn(
+        "bg-card/60 backdrop-blur-xl border-border/50 transition-shadow duration-500",
+        planGlow[selectedPlan]
+      )}>
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg">Order Summary</CardTitle>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Sparkles className="w-4 h-4" />
+            Order Summary
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between py-3 border-b border-border/50">
             <span className="text-muted-foreground">{selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)} Plan</span>
             <span className="font-medium">${planPrices[selectedPlan]}/mo</span>
           </div>
+          <div className="flex items-center justify-between py-3 border-b border-border/50">
+            <span className="text-muted-foreground">3-Day Trial</span>
+            <Badge variant="outline" className="text-emerald-500 border-emerald-500/30">Free</Badge>
+          </div>
           <div className="flex items-center justify-between py-3">
-            <span className="font-bold">Total</span>
+            <span className="font-bold">Due Today</span>
             <span className="text-xl font-bold text-primary">${planPrices[selectedPlan]}/mo</span>
           </div>
         </CardContent>
@@ -209,9 +224,7 @@ export const OnboardingPaymentStep = ({
                 {getProviderIcon(provider.provider_name, provider.logo_url)}
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm truncate">{provider.display_name}</p>
-                  <Badge variant="outline" className="text-xs capitalize mt-1">
-                    {provider.category}
-                  </Badge>
+                  <Badge variant="outline" className="text-xs capitalize mt-1">{provider.category}</Badge>
                 </div>
                 {selectedProvider === provider.provider_name && (
                   <CheckCircle2 className="w-5 h-5 text-primary shrink-0" />
@@ -222,35 +235,38 @@ export const OnboardingPaymentStep = ({
         </div>
       </div>
 
-      {/* Security Note */}
+      {/* Security */}
       <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 text-sm text-muted-foreground">
         <Shield className="w-4 h-4 shrink-0" />
         <span>Your payment is secured with 256-bit SSL encryption</span>
       </div>
 
-      {/* Action Buttons */}
+      {/* Actions */}
       <div className="flex gap-3">
         {onSkip && (
-          <Button variant="outline" onClick={onSkip} className="flex-1">
-            Use Free Plan Instead
+          <Button variant="outline" onClick={handleSkipWithTrial} className="flex-1">
+            Start Free Trial
           </Button>
         )}
         <Button 
-          className="flex-1 gap-2"
+          className={cn(
+            "flex-1 gap-2 relative overflow-hidden bg-gradient-to-r",
+            planGradient[selectedPlan]
+          )}
           onClick={handlePayment}
           disabled={!selectedProvider || processing}
         >
-          {processing ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Processing...
-            </>
-          ) : (
-            <>
-              Pay ${planPrices[selectedPlan]}/mo
-              <ExternalLink className="w-4 h-4" />
-            </>
-          )}
+          {/* Shimmer effect */}
+          <span className="absolute inset-0 overflow-hidden">
+            <span className="absolute inset-0 -translate-x-full animate-shimmer-slide bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+          </span>
+          <span className="relative z-10 flex items-center gap-2">
+            {processing ? (
+              <><Loader2 className="w-4 h-4 animate-spin" /> Processing...</>
+            ) : (
+              <>Pay ${planPrices[selectedPlan]}/mo <ExternalLink className="w-4 h-4" /></>
+            )}
+          </span>
         </Button>
       </div>
     </div>

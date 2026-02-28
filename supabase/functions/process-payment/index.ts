@@ -404,6 +404,8 @@ serve(async (req) => {
             amount: amount,
             currency: currency.toUpperCase(),
             redirect_url: `${returnUrl}?success=true&transaction_id=${transactionIdToUse}`,
+            // Explicitly set webhook URL so Flutterwave sends callbacks without manual dashboard config
+            webhook_url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/payment-webhook?gateway=flutterwave`,
             customer: {
               email: buyerEmail,
             },
@@ -458,6 +460,9 @@ serve(async (req) => {
             currency: currency.toUpperCase(),
             callback_url: `${returnUrl}?success=true&transaction_id=${transactionIdToUse}`,
             reference: transactionIdToUse,
+            // Note: Paystack does NOT support per-transaction webhook URLs.
+            // You must configure the webhook URL in your Paystack dashboard:
+            // https://tooudgubuhxjbbvzjcgx.supabase.co/functions/v1/payment-webhook?gateway=paystack
             metadata: {
               panelId,
               buyerId,

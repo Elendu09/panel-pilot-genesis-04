@@ -174,61 +174,59 @@ export const OnboardingDomainStep = ({
   // If free plan, show subdomain option only
   if (selectedPlan === 'free') {
     return (
-      <div className="space-y-6">
-        <div className="text-center space-y-2">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-500 text-sm font-medium mb-2">
-            <Sparkles className="w-4 h-4" />
+      <div className="space-y-4">
+        <div className="text-center space-y-1">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 text-xs font-medium mb-1">
+            <Sparkles className="w-3.5 h-3.5" />
             <span>Free Forever</span>
           </div>
           <h2 className="text-2xl font-bold">Set Up Your Domain</h2>
-          <p className="text-muted-foreground">Your panel will be available on a free subdomain</p>
+          <p className="text-sm text-muted-foreground">Your panel will be available on a free subdomain</p>
         </div>
 
-        <Card className="border-2 border-primary/30 bg-gradient-to-br from-primary/5 to-transparent overflow-hidden">
-          <CardContent className="p-6 space-y-5">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-primary/20 flex items-center justify-center">
-                <Globe className="w-7 h-7 text-primary" />
+        <Card className="border border-primary/30 bg-gradient-to-br from-primary/5 to-transparent overflow-hidden">
+          <CardContent className="p-4 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">
+                <Globe className="w-5 h-5 text-primary" />
               </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold">Free Subdomain</h3>
-                <p className="text-sm text-muted-foreground">Included with your plan • SSL Included</p>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-base font-semibold">Free Subdomain</h3>
+                <p className="text-xs text-muted-foreground">SSL Included</p>
               </div>
-              <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20">Free</Badge>
+              <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 text-xs">Free</Badge>
             </div>
 
-            <div className="space-y-3">
-              <Label className="text-sm font-medium">Choose Your Subdomain</Label>
-              <div className="flex items-center gap-2">
-                <div className="relative flex-1">
-                  <Input
-                    value={subdomain}
-                    onChange={(e) => onSubdomainChange(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ''))}
-                    placeholder="mysmm"
-                    className="pr-4 bg-background/50 h-12 text-lg"
-                  />
-                </div>
-                <div className="px-4 h-12 flex items-center bg-muted/50 rounded-lg border border-border">
-                  <span className="text-muted-foreground font-medium">.{PRIMARY_PLATFORM_DOMAIN}</span>
+            <div className="space-y-2">
+              <Label className="text-xs font-medium">Choose Your Subdomain</Label>
+              <div className="flex items-center gap-1.5">
+                <Input
+                  value={subdomain}
+                  onChange={(e) => onSubdomainChange(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ''))}
+                  placeholder="mysmm"
+                  className="bg-background/50 h-10"
+                />
+                <div className="px-3 h-10 flex items-center bg-muted/50 rounded-md border border-border shrink-0">
+                  <span className="text-xs text-muted-foreground font-medium">.{PRIMARY_PLATFORM_DOMAIN}</span>
                 </div>
               </div>
               
               {checkingSubdomain && (
-                <p className="text-sm text-muted-foreground flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Checking availability...
+                <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  Checking...
                 </p>
               )}
               {subdomainAvailable === true && subdomain.length >= 3 && (
-                <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-500/10 text-emerald-600">
-                  <CheckCircle className="w-5 h-5" />
-                  <span className="font-medium">Subdomain available!</span>
+                <div className="flex items-center gap-1.5 p-2 rounded-lg bg-emerald-500/10 text-emerald-600 text-xs">
+                  <CheckCircle className="w-4 h-4" />
+                  <span className="font-medium">Available!</span>
                 </div>
               )}
               {subdomainAvailable === false && (
-                <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 text-destructive">
-                  <XCircle className="w-5 h-5" />
-                  <span className="font-medium">Subdomain already taken</span>
+                <div className="flex items-center gap-1.5 p-2 rounded-lg bg-destructive/10 text-destructive text-xs">
+                  <XCircle className="w-4 h-4" />
+                  <span className="font-medium">Already taken</span>
                 </div>
               )}
             </div>
@@ -241,15 +239,15 @@ export const OnboardingDomainStep = ({
         )}
 
         {/* Preview */}
-        <Card className="bg-gradient-to-r from-primary/5 via-primary/10 to-secondary/5 border-primary/20">
-          <CardContent className="p-5">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
-                <Globe className="w-6 h-6 text-primary" />
+        <Card className="border border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10">
+          <CardContent className="px-4 py-3">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-primary/20 flex items-center justify-center shrink-0">
+                <Globe className="w-4 h-4 text-primary" />
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Your panel will be available at:</p>
-                <p className="text-lg font-semibold text-primary">
+              <div className="min-w-0">
+                <p className="text-[11px] text-muted-foreground leading-tight">Your panel URL:</p>
+                <p className="text-sm font-semibold text-primary truncate">
                   https://{subdomain || 'yourname'}.{PRIMARY_PLATFORM_DOMAIN}
                 </p>
               </div>
