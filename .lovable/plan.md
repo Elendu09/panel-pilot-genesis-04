@@ -1,103 +1,78 @@
 
 
-# Plan: Ads Tracking, Chat Inbox Ads Redesign, Skeleton-to-Shimmer
+# Plan: 7 Fixes — Notifications, Customers, Storefront Name, Transactions, API, Shimmer, Balance Layout
 
-## 1. Impression & Click Tracking for Ads
+## 1. Notification Clear — Add Warning Dialog
+**File: `src/components/notifications/NotificationCenter.tsx`**
+- Wrap the `clearAll` call (line 150) in an `AlertDialog` confirmation
+- Import `AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger` from radix
+- Add state `showClearConfirm` and show a destructive warning: "This will permanently delete all notifications. Are you sure?"
+- The "Clear" button becomes the trigger; confirm calls `clearAll()`
 
-### Problem
-- `RecommendedProviderWidget` has a broken impression tracker (uses `(ads[0] as any).impressions + 1` but `impressions` isn't selected)
-- Marketplace (`ProviderManagement`) and Chat Inbox have zero impression/click tracking
-- No click tracking anywhere
+## 2. Customer Page — Mobile Table View + Remove Card Stroke + Visual Effects
+**File: `src/components/customers/CustomerMobileCard.tsx`**
+- Remove `border-border/50` from the Card class (removes stroke)
+- Add subtle gradient background: `bg-gradient-to-br from-card/80 to-card/40` with `shadow-lg shadow-primary/5`
+- Add hover effect and slight scale transform
 
-### Changes
+**File: `src/pages/panel/CustomerManagement.tsx`**
+- The table is hidden on mobile (`hidden md:block` at line 984) and grid is also hidden on mobile (`hidden md:grid` at line 1156)
+- Mobile only shows `CustomerMobileCard` (line 1182)
+- Change mobile section to show a simplified scrollable table instead of cards, matching the screenshot: avatar + name/email, status badge, balance/spent/orders row, last active timestamp
+- Keep the card-based approach but redesign to match screenshot layout (name prominent, email below, stats row)
+- Remove border stroke from the stats grid divs (`bg-muted/30` → gradient-based)
 
-**`src/components/dashboard/RecommendedProviderWidget.tsx`**
-- Fix impression tracking: use `.rpc` or raw increment instead of reading stale value. Use SQL increment: `impressions: supabase.rpc` or simply fetch impressions first, or use a raw update with `impressions + 1` via a simple approach — select `impressions` in the initial query then increment correctly
+## 3. Tenant Storefront — Panel Name Not Updating
+**Issue**: The `useTenant` realtime subscription correctly updates `panel.name` and `custom_branding`, but the 30s cache can serve stale data on initial load. More critically, some theme components read `customization.companyName` from `custom_branding` which may not have been updated if the user changed the panel name from a place other than GeneralSettings (e.g., onboarding).
 
-**`src/pages/panel/ProviderManagement.tsx`**
-- After marketplace loads sponsored/top/best providers, batch-increment `impressions` on their `provider_ads` rows (debounced, once on mount)
-- On "Enable" or "Visit" click for an ad-bearing provider, increment `clicks` on that provider's active ad
+**File: `src/hooks/useTenant.tsx`** (line ~553-566)
+- In the realtime update handler, also explicitly update `custom_branding.companyName` from `updated.name` to ensure sync:
+```
+custom_branding: {
+  ...(prev.custom_branding || {}),
+  ...(updated.custom_branding ? updated.custom_branding : {}),
+  companyName: updated.name ?? prev.name, // Always sync
+}
+```
+- This ensures that even if `custom_branding` wasn't updated in the DB, the storefront still shows the new panel name
 
-**`src/pages/panel/ChatInbox.tsx`**
-- When sponsored promotion cards render, increment `impressions` for those ads
-- When "Visit" is clicked on a promotion card, increment `clicks`
+## 4. Transaction History — Redesign
+**File: `src/components/billing/TransactionHistory.tsx`**
+- Add summary stats row at top: Total In, Total Out, Net Balance change (calculated from transactions)
+- Redesign mobile `TransactionCard`: remove card border, use a timeline-style layout with a colored left indicator line, icon circle, amount right-aligned
+- Redesign desktop table: add alternating row colors, row hover gradient effect, type icon in badge
+- Add shimmer loading (`<Skeleton themed />`) instead of plain `Loader2` spinner
+- Better empty state with illustration-style icon
 
-**`src/components/chat/SponsoredPromotionCard.tsx`**
-- Add `onImpression` and `onClick` callback props to track events
+## 5. API Management — Tenant API Hardcoded Domain
+**File: `src/pages/panel/APIManagement.tsx`** (line 115-119)
+- The `buyerApiUrl` uses `apiBaseUrl` which resolves to `homeofsmm.com` or `smmpilot.online` depending on current domain
+- But the buyer API should use the panel's actual subdomain domain, not the platform root
+- Fix: `buyerApiUrl` should be `https://{subdomain}.smmpilot.online/api/v2` using the panel's subdomain directly, not referencing `apiBaseUrl`
+- Change line 118 from `${panel.subdomain}.${apiBaseUrl.replace('https://', '')}` to `${panel.subdomain}.smmpilot.online` — actually the logic is correct but the `getPlatformDomain` returns `homeofsmm.com` on production which is wrong for subdomains (subdomains are on `smmpilot.online`)
+- Fix: hardcode subdomain suffix to `smmpilot.online` for buyer API since that's where tenant subdomains live
 
-## 2. Chat Inbox Ads Redesign
+## 6. Panel Dashboard — Replace Spinner with Shimmer Loading
+**File: `src/pages/panel/PanelOverview.tsx`** (lines 460-466)
+- Replace the `Loader2` spinner with a full shimmer skeleton layout matching the dashboard structure
+- Import `Skeleton` component, render themed shimmer blocks for: welcome header card, 4 stats cards grid, quick actions grid, kanban placeholder
 
-### Which ad types show in Chat Inbox?
-Currently: `sponsored` and `featured`. Per the placement map, only **`featured`** should show in Chat Inbox. Sponsored belongs to Marketplace/Dashboard. Update the query to filter `ad_type = 'featured'` only.
-
-### Replace email with panel name
-- In the session list, the `SponsoredPromotionCard` currently shows email-related text "Check out their services". Replace with the actual **panel name** prominently displayed and a short auto-generated description like "{panelName} — {serviceCount} services available"
-
-### Sponsored chat engagement concept
-- When a `featured` ad promotion card appears in Chat Inbox, add a "Chat with Provider" button instead of just "Visit"
-- Clicking "Chat with Provider" creates a special chat session between the two panel owners (using `chat_sessions` with a marker like `visitor_id = panel_owner_id` and a `is_ad_chat` flag or metadata)
-- When the ad expires (`expires_at < now()`), the chat session auto-archives and messages are disabled
-- Add logic: when rendering ad chat sessions, check if the linked ad is still active. If expired, show "Ad expired — chat archived" banner and disable the input
-
-### Implementation
-**`src/components/chat/SponsoredPromotionCard.tsx`**
-- Replace "Check out their services" with `{panelName} — {serviceCount} services`
-- Show panel name prominently, remove email reference
-- Add "Chat" button alongside "Visit"
-- Add `onChat` callback prop
-- Add `serviceCount` to the interface
-
-**`src/pages/panel/ChatInbox.tsx`**
-- Change ad query from `in('ad_type', ['sponsored', 'featured'])` to `eq('ad_type', 'featured')`
-- Fetch `service_count` for each promoted panel
-- Handle "Chat with Provider" — create a chat session tagged as ad-sourced
-- When loading sessions, detect ad-sourced sessions and check if the ad is still active
-- For expired ad chats: move to archived, show "Ad expired" indicator, disable message input
-
-## 3. Ad Expiry Auto-Close
-
-### Problem
-When ads expire, they remain `is_active = true` in the DB. Currently only the UI checks `expires_at > now()`.
-
-### Changes
-- In `ProviderAds.tsx` fetch (line 202), after loading ads, auto-deactivate expired ones: for any ad where `expires_at < now()` and `is_active = true`, update `is_active = false`
-- In `RecommendedProviderWidget` and `ProviderManagement`, the queries already filter `gt('expires_at', now)` — this is correct
-- Add a cleanup effect in `ProviderAds.tsx` that runs on mount to deactivate expired ads for the current panel
-
-## 4. Replace Skeleton with Shimmer Loading in /panel
-
-### Current state
-- Only 2 panel pages use `Skeleton`: `BlogManagement.tsx` and `Analytics.tsx` (via `AnalyticsSkeleton`)
-- `AnalyticsSkeleton` already uses shimmer overlay pattern with `themed` style
-- `BlogManagement.tsx` uses plain `Skeleton` without shimmer
-
-### Changes
-**`src/pages/panel/BlogManagement.tsx`**
-- Replace plain `<Skeleton>` with `<Skeleton themed />` to use the primary-color shimmer variant (the `themed` prop already exists in `skeleton.tsx`)
-
-**`src/components/ui/skeleton.tsx`**
-- Add a CSS shimmer animation overlay when `themed` is true — actually the AnalyticsSkeleton already has a `ShimmerOverlay` component. Export it or add the shimmer effect directly to the `themed` variant
-
-Actually, a simpler approach: update all `Skeleton` usage in `/panel` pages to pass `themed` prop. The skeleton component already supports it. But the shimmer animation (the moving gradient) isn't part of the `Skeleton` component — it's only in `AnalyticsSkeleton`. 
-
-**Better approach**: Add a shimmer animation to the `Skeleton` component's `themed` variant directly, so all themed skeletons get the moving shimmer effect without needing a separate overlay.
-
-**`src/components/ui/skeleton.tsx`**
-- When `themed = true`, add `relative overflow-hidden` and include an `::after` pseudo-element shimmer via a Tailwind animation class (add `animate-shimmer` to tailwind config) or use inline approach with a child div
-
-**`src/pages/panel/BlogManagement.tsx`**
-- Change `<Skeleton className="...">` to `<Skeleton themed className="...">`
+## 7. Panel Balance — Reposition Above Subdomain Preview
+**File: `src/pages/panel/PanelOverview.tsx`**
+- Currently the balance is inside the welcome header card (line 602-614) as part of the right-side action buttons
+- Move the balance display OUT of the welcome card and place it as a standalone element BELOW the quick actions and ABOVE the SubdomainPreview section (currently at line 1052)
+- Remove the card wrapper (the green gradient border container) — display as a prominent standalone section with just the wallet icon, "Live Balance" indicator, and the dollar amount, without being enclosed in a bordered card
+- Position: after quick actions grid, before kanban orders section
 
 ## Files to Change
 
 | File | Change |
 |------|--------|
-| `src/components/ui/skeleton.tsx` | Add shimmer animation to themed variant |
-| `tailwind.config.ts` | Add `shimmer` keyframe animation |
-| `src/pages/panel/BlogManagement.tsx` | Use `themed` prop on all Skeletons |
-| `src/components/chat/SponsoredPromotionCard.tsx` | Redesign: show panel name, service count, add Chat button, add tracking callbacks |
-| `src/pages/panel/ChatInbox.tsx` | Filter `featured` only, add service counts, handle ad-chat sessions, auto-archive expired ad chats, add impression/click tracking |
-| `src/components/dashboard/RecommendedProviderWidget.tsx` | Fix impression tracking (select impressions in query), add click tracking |
-| `src/pages/panel/ProviderManagement.tsx` | Add impression tracking on mount for displayed ad providers, click tracking on enable/visit |
-| `src/pages/panel/ProviderAds.tsx` | Auto-deactivate expired ads on mount |
+| `src/components/notifications/NotificationCenter.tsx` | Add AlertDialog confirmation before clearing all notifications |
+| `src/components/customers/CustomerMobileCard.tsx` | Remove border stroke, add gradient/shadow visual effects |
+| `src/pages/panel/CustomerManagement.tsx` | Update mobile view to match screenshot design |
+| `src/hooks/useTenant.tsx` | Force-sync `companyName` in realtime handler from `updated.name` |
+| `src/components/billing/TransactionHistory.tsx` | Redesign with summary stats, timeline mobile cards, shimmer loading |
+| `src/pages/panel/APIManagement.tsx` | Fix buyer API URL to use `smmpilot.online` for subdomain resolution |
+| `src/pages/panel/PanelOverview.tsx` | Replace loading spinner with shimmer skeleton; move balance above subdomain preview as standalone element |
 
