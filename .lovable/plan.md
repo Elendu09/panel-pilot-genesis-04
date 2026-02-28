@@ -1,76 +1,103 @@
 
 
-# Plan: Ads Placement Strategy — Panel-Owner-Only, Priority-Based, No Storefront Leakage
+# Plan: Ads Tracking, Chat Inbox Ads Redesign, Skeleton-to-Shimmer
 
-## Critical Fix: Remove Storefront from Ad Placements
+## 1. Impression & Click Tracking for Ads
 
-The current `adReachMap` in `ProviderAds.tsx` incorrectly lists "Storefront Widget — Featured" and "Homepage Carousel" as placements for the `featured` ad type. This is wrong — **panel owner ads must NEVER appear on another panel's storefront**. Storefronts are buyer-facing. Ads are panel-owner-to-panel-owner promotions only.
+### Problem
+- `RecommendedProviderWidget` has a broken impression tracker (uses `(ads[0] as any).impressions + 1` but `impressions` isn't selected)
+- Marketplace (`ProviderManagement`) and Chat Inbox have zero impression/click tracking
+- No click tracking anywhere
 
-## Where Each Ad Type Actually Appears (Panel-Owner-Only Contexts)
+### Changes
 
-```text
-┌─────────────┬──────────────────────────────────────────────────────┬───────────┐
-│ Ad Type     │ Placement (all panel-owner-only screens)            │ Priority  │
-├─────────────┼──────────────────────────────────────────────────────┼───────────┤
-│ Sponsored   │ 1. Marketplace — Premium Slider (auto-rotating)     │ Highest   │
-│ ($$$)       │ 2. Provider Search — Pinned top results             │           │
-│             │ 3. Dashboard Overview — "Recommended Provider" card │           │
-├─────────────┼──────────────────────────────────────────────────────┼───────────┤
-│ Top         │ 1. Marketplace — "Top Providers" grid section       │ High      │
-│ ($$)        │ 2. Provider Rankings — Blue highlight badge         │           │
-├─────────────┼──────────────────────────────────────────────────────┼───────────┤
-│ Best        │ 1. Marketplace — "Best Choice" list section         │ Medium    │
-│ ($)         │ 2. Provider Details — "Editor's Pick" badge         │           │
-├─────────────┼──────────────────────────────────────────────────────┼───────────┤
-│ Featured    │ 1. Chat Inbox — Promotion cards every 5 sessions    │ Standard  │
-│ ($)         │ 2. Dashboard Overview — "Featured Provider" widget  │           │
-└─────────────┴──────────────────────────────────────────────────────┴───────────┘
-```
+**`src/components/dashboard/RecommendedProviderWidget.tsx`**
+- Fix impression tracking: use `.rpc` or raw increment instead of reading stale value. Use SQL increment: `impressions: supabase.rpc` or simply fetch impressions first, or use a raw update with `impressions + 1` via a simple approach — select `impressions` in the initial query then increment correctly
 
-## How "Top Price Wins" Works
+**`src/pages/panel/ProviderManagement.tsx`**
+- After marketplace loads sponsored/top/best providers, batch-increment `impressions` on their `provider_ads` rows (debounced, once on mount)
+- On "Enable" or "Visit" click for an ad-bearing provider, increment `clicks` on that provider's active ad
 
-When multiple panels buy the same ad type, they compete for position. The ranking within each tier uses this priority formula:
+**`src/pages/panel/ChatInbox.tsx`**
+- When sponsored promotion cards render, increment `impressions` for those ads
+- When "Visit" is clicked on a promotion card, increment `clicks`
 
-1. **Higher `total_spent`** = better position (the panel that paid more gets slot #1)
-2. **Tie-breaker**: longer remaining duration (`expires_at - now()`) wins
-3. The existing `position` column in `provider_ads` is currently unused — we will populate it based on this ranking
+**`src/components/chat/SponsoredPromotionCard.tsx`**
+- Add `onImpression` and `onClick` callback props to track events
 
-In the Marketplace query (`ProviderManagement.tsx`), instead of using a simple `Map` (which only keeps ONE ad per panel), fetch `total_spent` and sort within each ad type group by `total_spent DESC`.
+## 2. Chat Inbox Ads Redesign
 
-## Implementation Changes
+### Which ad types show in Chat Inbox?
+Currently: `sponsored` and `featured`. Per the placement map, only **`featured`** should show in Chat Inbox. Sponsored belongs to Marketplace/Dashboard. Update the query to filter `ad_type = 'featured'` only.
 
-### 1. Fix `adReachMap` in `ProviderAds.tsx`
-- Remove "Storefront Widget — Featured" and "Homepage Carousel" from `featured` placements
-- Replace with "Dashboard Overview — Featured Widget" and "Chat Inbox — Promotion Cards"
-- Update `sponsored` to add "Dashboard Overview — Recommended Provider"
-- These are informational-only labels, no DB changes needed
+### Replace email with panel name
+- In the session list, the `SponsoredPromotionCard` currently shows email-related text "Check out their services". Replace with the actual **panel name** prominently displayed and a short auto-generated description like "{panelName} — {serviceCount} services available"
 
-### 2. Fix Marketplace ranking to use `total_spent` for priority (`ProviderManagement.tsx`)
-- Change the ads query from `select('panel_id, ad_type')` to `select('panel_id, ad_type, total_spent')`
-- When multiple ads exist for same type, sort by `total_spent DESC` so highest spender gets position #1 in slider/grid
-- Fix the `adMap` to handle multiple ads per panel (currently a simple Map that overwrites)
+### Sponsored chat engagement concept
+- When a `featured` ad promotion card appears in Chat Inbox, add a "Chat with Provider" button instead of just "Visit"
+- Clicking "Chat with Provider" creates a special chat session between the two panel owners (using `chat_sessions` with a marker like `visitor_id = panel_owner_id` and a `is_ad_chat` flag or metadata)
+- When the ad expires (`expires_at < now()`), the chat session auto-archives and messages are disabled
+- Add logic: when rendering ad chat sessions, check if the linked ad is still active. If expired, show "Ad expired — chat archived" banner and disable the input
 
-### 3. Add "Recommended Provider" widget to Dashboard Overview (`PanelOverview.tsx`)
-- Small card in the overview showing a single `sponsored` or `featured` provider
-- Fetches one active ad (highest `total_spent`) from `provider_ads` where `ad_type = 'sponsored'` and `panel_id != current panel`
-- Shows panel name, logo, service count, "Sponsored" badge, and "Connect" CTA
-- Tracks impression increment on render
+### Implementation
+**`src/components/chat/SponsoredPromotionCard.tsx`**
+- Replace "Check out their services" with `{panelName} — {serviceCount} services`
+- Show panel name prominently, remove email reference
+- Add "Chat" button alongside "Visit"
+- Add `onChat` callback prop
+- Add `serviceCount` to the interface
 
-### 4. Update ChatInbox sponsored query to also rank by `total_spent` (`ChatInbox.tsx`)
-- Current query fetches sponsored/featured ads but doesn't sort by spend
-- Add `.order('total_spent', { ascending: false })` so higher-paying ads appear first in rotation
+**`src/pages/panel/ChatInbox.tsx`**
+- Change ad query from `in('ad_type', ['sponsored', 'featured'])` to `eq('ad_type', 'featured')`
+- Fetch `service_count` for each promoted panel
+- Handle "Chat with Provider" — create a chat session tagged as ad-sourced
+- When loading sessions, detect ad-sourced sessions and check if the ad is still active
+- For expired ad chats: move to archived, show "Ad expired" indicator, disable message input
 
-### 5. Track impressions properly
-- When a promoted panel renders in Marketplace slider/grid/list, increment `impressions` on `provider_ads`
-- When clicked (user clicks to view/connect), increment `clicks`
-- Use a debounced approach: batch increment on component unmount or after 3-second visibility
+## 3. Ad Expiry Auto-Close
+
+### Problem
+When ads expire, they remain `is_active = true` in the DB. Currently only the UI checks `expires_at > now()`.
+
+### Changes
+- In `ProviderAds.tsx` fetch (line 202), after loading ads, auto-deactivate expired ones: for any ad where `expires_at < now()` and `is_active = true`, update `is_active = false`
+- In `RecommendedProviderWidget` and `ProviderManagement`, the queries already filter `gt('expires_at', now)` — this is correct
+- Add a cleanup effect in `ProviderAds.tsx` that runs on mount to deactivate expired ads for the current panel
+
+## 4. Replace Skeleton with Shimmer Loading in /panel
+
+### Current state
+- Only 2 panel pages use `Skeleton`: `BlogManagement.tsx` and `Analytics.tsx` (via `AnalyticsSkeleton`)
+- `AnalyticsSkeleton` already uses shimmer overlay pattern with `themed` style
+- `BlogManagement.tsx` uses plain `Skeleton` without shimmer
+
+### Changes
+**`src/pages/panel/BlogManagement.tsx`**
+- Replace plain `<Skeleton>` with `<Skeleton themed />` to use the primary-color shimmer variant (the `themed` prop already exists in `skeleton.tsx`)
+
+**`src/components/ui/skeleton.tsx`**
+- Add a CSS shimmer animation overlay when `themed` is true — actually the AnalyticsSkeleton already has a `ShimmerOverlay` component. Export it or add the shimmer effect directly to the `themed` variant
+
+Actually, a simpler approach: update all `Skeleton` usage in `/panel` pages to pass `themed` prop. The skeleton component already supports it. But the shimmer animation (the moving gradient) isn't part of the `Skeleton` component — it's only in `AnalyticsSkeleton`. 
+
+**Better approach**: Add a shimmer animation to the `Skeleton` component's `themed` variant directly, so all themed skeletons get the moving shimmer effect without needing a separate overlay.
+
+**`src/components/ui/skeleton.tsx`**
+- When `themed = true`, add `relative overflow-hidden` and include an `::after` pseudo-element shimmer via a Tailwind animation class (add `animate-shimmer` to tailwind config) or use inline approach with a child div
+
+**`src/pages/panel/BlogManagement.tsx`**
+- Change `<Skeleton className="...">` to `<Skeleton themed className="...">`
 
 ## Files to Change
 
 | File | Change |
 |------|--------|
-| `src/pages/panel/ProviderAds.tsx` | Fix `adReachMap` — remove storefront placements, add dashboard placements |
-| `src/pages/panel/ProviderManagement.tsx` | Fetch `total_spent` in ads query; sort within ad type groups by spend; fix `adMap` for multi-ad support |
-| `src/pages/panel/PanelOverview.tsx` | Add "Recommended Provider" card widget fetching top sponsored ad |
-| `src/pages/panel/ChatInbox.tsx` | Add `total_spent` ordering to sponsored panels query |
+| `src/components/ui/skeleton.tsx` | Add shimmer animation to themed variant |
+| `tailwind.config.ts` | Add `shimmer` keyframe animation |
+| `src/pages/panel/BlogManagement.tsx` | Use `themed` prop on all Skeletons |
+| `src/components/chat/SponsoredPromotionCard.tsx` | Redesign: show panel name, service count, add Chat button, add tracking callbacks |
+| `src/pages/panel/ChatInbox.tsx` | Filter `featured` only, add service counts, handle ad-chat sessions, auto-archive expired ad chats, add impression/click tracking |
+| `src/components/dashboard/RecommendedProviderWidget.tsx` | Fix impression tracking (select impressions in query), add click tracking |
+| `src/pages/panel/ProviderManagement.tsx` | Add impression tracking on mount for displayed ad providers, click tracking on enable/visit |
+| `src/pages/panel/ProviderAds.tsx` | Auto-deactivate expired ads on mount |
 
