@@ -160,8 +160,13 @@ const Billing = () => {
     if (!panel?.id) return;
 
     try {
-      // Fetch panel balance
-      setPanelBalance(panel.balance || 0);
+      // Fetch fresh panel balance from DB (not cached hook value)
+      const { data: freshPanel } = await supabase
+        .from('panels')
+        .select('balance')
+        .eq('id', panel.id)
+        .single();
+      setPanelBalance(freshPanel?.balance || 0);
 
       // Fetch subscription
       const { data: sub } = await supabase

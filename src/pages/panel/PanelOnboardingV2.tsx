@@ -643,9 +643,10 @@ const PanelOnboardingV2 = () => {
               panelId={createdPanelId || undefined}
               onPaymentSuccess={handlePaymentSuccess}
               onSkip={() => {
-                setSelectedPlan('free');
+                // Keep selectedPlan as-is (trial logic preserves the plan choice)
                 setPaymentCompleted(true);
-                handleNext();
+                markStepComplete(currentStep);
+                setCurrentStep(currentStep + 1);
               }}
             />
           </motion.div>
