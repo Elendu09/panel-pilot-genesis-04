@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -70,6 +70,7 @@ const PanelOnboardingV2 = () => {
   const [primaryColor, setPrimaryColor] = useState('#6366F1');
   const [secondaryColor, setSecondaryColor] = useState('#8B5CF6');
   const [createdPanelId, setCreatedPanelId] = useState<string | null>(null);
+  const createdPanelIdRef = useRef<string | null>(null);
   const [paymentCompleted, setPaymentCompleted] = useState(false);
   const [currency, setCurrency] = useState('USD');
   
@@ -112,9 +113,12 @@ const PanelOnboardingV2 = () => {
   
   // Progress based on visible steps — handle case where current step is hidden (e.g. payment step removed after success)
   const rawVisibleStepIndex = visibleSteps.findIndex(s => s.id === currentStep);
+  const fallbackIndex = visibleSteps.findIndex(s => s.id > currentStep);
   const visibleStepIndex = rawVisibleStepIndex >= 0 
     ? rawVisibleStepIndex 
-    : Math.max(0, visibleSteps.findIndex(s => s.id > currentStep));
+    : fallbackIndex >= 0 
+      ? fallbackIndex 
+      : visibleSteps.length - 1; // If on last step and it's hidden, show last visible
   const progress = ((visibleStepIndex + 1) / visibleSteps.length) * 100;
 
   useEffect(() => {
@@ -153,6 +157,7 @@ const PanelOnboardingV2 = () => {
 
         if (incompletePanel) {
           setCreatedPanelId(incompletePanel.id);
+          createdPanelIdRef.current = incompletePanel.id;
           const savedStep = incompletePanel.onboarding_step || 0;
           const savedData = incompletePanel.onboarding_data as Record<string, any> | null;
           
@@ -278,15 +283,19 @@ const PanelOnboardingV2 = () => {
     }
   };
 
+  const subdomainTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
   const handleSubdomainChange = (value: string) => {
     const cleanValue = value.toLowerCase().replace(/[^a-zA-Z0-9]/g, '');
     setSubdomain(cleanValue);
     
+    // Clear previous timeout to debounce properly
+    if (subdomainTimeoutRef.current) clearTimeout(subdomainTimeoutRef.current);
+    
     if (cleanValue.length >= 3) {
-      const timeoutId = setTimeout(() => {
+      subdomainTimeoutRef.current = setTimeout(() => {
         checkSubdomainAvailability(cleanValue);
       }, 500);
-      return () => clearTimeout(timeoutId);
     } else {
       setSubdomainAvailable(null);
     }
@@ -310,7 +319,7 @@ const PanelOnboardingV2 = () => {
     };
 
     try {
-      if (createdPanelId) {
+      if (createdPanelIdRef.current) {
         // UPDATE existing panel
         await supabase.from('panels')
           .update({
@@ -320,7 +329,7 @@ const PanelOnboardingV2 = () => {
             onboarding_data: progressData,
             default_currency: currency,
           })
-          .eq('id', createdPanelId);
+          .eq('id', createdPanelIdRef.current);
       } else {
         // INSERT new panel and capture ID
         const { data: newPanel } = await supabase.from('panels')
@@ -338,6 +347,7 @@ const PanelOnboardingV2 = () => {
           .single();
 
         if (newPanel?.id) {
+          createdPanelIdRef.current = newPanel.id;
           setCreatedPanelId(newPanel.id);
         }
       }
@@ -353,9 +363,15 @@ const PanelOnboardingV2 = () => {
       return;
     }
     
-    if (currentStepKey === STEP_KEYS.DOMAIN && domainType === 'subdomain' && !subdomainAvailable) {
-      toast({ variant: "destructive", title: "Please choose an available subdomain" });
-      return;
+    if (currentStepKey === STEP_KEYS.DOMAIN && domainType === 'subdomain') {
+      if (checkingSubdomain) {
+        toast({ variant: "destructive", title: "Please wait", description: "Checking subdomain availability..." });
+        return;
+      }
+      if (!subdomainAvailable) {
+        toast({ variant: "destructive", title: "Please choose an available subdomain" });
+        return;
+      }
     }
 
     // Validate SEO before leaving SEO step
@@ -387,8 +403,10 @@ const PanelOnboardingV2 = () => {
     }
     
     if (nextStep <= 6) {
-      setCurrentStep(nextStep);
+      // Save progress first and wait for panel creation before advancing
+      // This ensures createdPanelId is set before reaching payment step
       await saveProgress(nextStep);
+      setCurrentStep(nextStep);
     }
   };
 
@@ -495,12 +513,12 @@ const PanelOnboardingV2 = () => {
 
       let panelData: any = null;
       
-      if (createdPanelId) {
+      if (createdPanelIdRef.current) {
         // UPDATE existing panel
         const { data, error: updateError } = await supabase
           .from('panels')
           .update(panelPayload)
-          .eq('id', createdPanelId)
+          .eq('id', createdPanelIdRef.current)
           .select()
           .single();
         if (updateError) throw updateError;
