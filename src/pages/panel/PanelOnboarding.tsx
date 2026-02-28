@@ -99,14 +99,14 @@ const PanelOnboarding = () => {
           return;
         }
 
-        const { data: existingPanel } = await supabase
+        const { data: existingPanels } = await supabase
           .from('panels')
-          .select('*')
+          .select('id')
           .eq('owner_id', profile.id)
           .eq('onboarding_completed', true)
-          .maybeSingle();
+          .limit(1);
           
-        if (existingPanel) {
+        if (existingPanels && existingPanels.length > 0) {
           navigate('/panel');
           return;
         }
