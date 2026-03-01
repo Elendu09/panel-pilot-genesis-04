@@ -975,6 +975,9 @@ export type Database = {
           is_banned: boolean | null
           is_vip: boolean | null
           last_login_at: string | null
+          last_login_device: string | null
+          last_login_ip: string | null
+          last_login_location: string | null
           low_balance_threshold: number | null
           oauth_provider: string | null
           oauth_provider_id: string | null
@@ -1009,6 +1012,9 @@ export type Database = {
           is_banned?: boolean | null
           is_vip?: boolean | null
           last_login_at?: string | null
+          last_login_device?: string | null
+          last_login_ip?: string | null
+          last_login_location?: string | null
           low_balance_threshold?: number | null
           oauth_provider?: string | null
           oauth_provider_id?: string | null
@@ -1043,6 +1049,9 @@ export type Database = {
           is_banned?: boolean | null
           is_vip?: boolean | null
           last_login_at?: string | null
+          last_login_device?: string | null
+          last_login_ip?: string | null
+          last_login_location?: string | null
           low_balance_threshold?: number | null
           oauth_provider?: string | null
           oauth_provider_id?: string | null

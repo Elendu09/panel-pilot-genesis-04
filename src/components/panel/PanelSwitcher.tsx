@@ -25,6 +25,15 @@ export function PanelSwitcher({ collapsed = false }: PanelSwitcherProps) {
   const navigate = useNavigate();
   const [switching, setSwitching] = useState(false);
 
+  // Sort panels by created_at ascending for panel numbering
+  const sortedPanels = [...allPanels].sort(
+    (a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime()
+  );
+  const getPanelNumber = (panelId: string) => {
+    const idx = sortedPanels.findIndex(p => p.id === panelId);
+    return idx >= 0 ? idx + 1 : 1;
+  };
+
   const handleSwitch = async (panelId: string) => {
     if (panelId === panel?.id || isPanelLocked(panelId)) return;
     setSwitching(true);
@@ -42,7 +51,7 @@ export function PanelSwitcher({ collapsed = false }: PanelSwitcherProps) {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon" className="w-10 h-10 relative">
-            <Avatar className="w-7 h-7">
+            <Avatar className="w-7 h-7 ring-2 ring-muted-foreground/40 ring-offset-1 ring-offset-background">
               {panel?.logo_url ? (
                 <AvatarImage src={panel.logo_url} alt={panel.name} />
               ) : null}
@@ -61,7 +70,7 @@ export function PanelSwitcher({ collapsed = false }: PanelSwitcherProps) {
           <DropdownMenuLabel className="text-xs text-muted-foreground">
             Switch Panel ({allPanels.length}/{getMaxPanels()})
           </DropdownMenuLabel>
-          {allPanels.map((p) => {
+          {sortedPanels.map((p, idx) => {
             const locked = isPanelLocked(p.id);
             return (
               <DropdownMenuItem
@@ -74,7 +83,10 @@ export function PanelSwitcher({ collapsed = false }: PanelSwitcherProps) {
                   {p.logo_url ? <AvatarImage src={p.logo_url} /> : null}
                   <AvatarFallback className="text-[8px]">{p.name?.charAt(0)}</AvatarFallback>
                 </Avatar>
-                <span className="text-sm truncate flex-1">{p.name}</span>
+                <div className="flex flex-col flex-1 min-w-0">
+                  <span className="text-sm truncate">{p.name}</span>
+                  <span className="text-[9px] text-muted-foreground">Panel {idx + 1}</span>
+                </div>
                 {locked ? (
                   <Lock className="w-3.5 h-3.5 text-muted-foreground" />
                 ) : p.id === panel?.id ? (
@@ -101,7 +113,7 @@ export function PanelSwitcher({ collapsed = false }: PanelSwitcherProps) {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button className="w-full flex items-center gap-2 p-2 rounded-lg bg-sidebar-accent/30 hover:bg-sidebar-accent/50 transition-colors text-left">
-          <Avatar className="w-7 h-7 shrink-0">
+          <Avatar className="w-7 h-7 shrink-0 ring-2 ring-muted-foreground/40 ring-offset-1 ring-offset-background">
             {panel?.logo_url ? (
               <AvatarImage src={panel.logo_url} alt={panel.name} />
             ) : null}
@@ -126,7 +138,7 @@ export function PanelSwitcher({ collapsed = false }: PanelSwitcherProps) {
         <DropdownMenuLabel className="text-[10px] text-muted-foreground uppercase tracking-wider">
           Your Panels ({allPanels.length}/{getMaxPanels()})
         </DropdownMenuLabel>
-        {allPanels.map((p) => {
+        {sortedPanels.map((p, idx) => {
           const locked = isPanelLocked(p.id);
           return (
             <DropdownMenuItem
@@ -146,7 +158,10 @@ export function PanelSwitcher({ collapsed = false }: PanelSwitcherProps) {
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium truncate">{p.name}</p>
+                <div className="flex items-center gap-1">
+                  <p className="text-xs font-medium truncate">{p.name}</p>
+                  <span className="text-[9px] text-muted-foreground shrink-0">#{idx + 1}</span>
+                </div>
                 {locked && (
                   <Badge variant="outline" className="text-[8px] px-1 py-0 h-3.5 text-destructive border-destructive/30">Locked</Badge>
                 )}

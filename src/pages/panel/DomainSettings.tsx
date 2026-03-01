@@ -87,11 +87,22 @@ const DomainSettings = () => {
     if (!profile?.id) return;
     
     try {
-      const { data: panelData, error: panelError } = await supabase
+      // Resolve active panel
+      const { data: profileFull } = await supabase
+        .from('profiles')
+        .select('active_panel_id')
+        .eq('id', profile.id)
+        .maybeSingle();
+
+      let panelQuery = supabase
         .from('panels')
         .select('*')
-        .eq('owner_id', profile.id)
-        .maybeSingle();
+        .eq('owner_id', profile.id);
+      if (profileFull?.active_panel_id) {
+        panelQuery = panelQuery.eq('id', profileFull.active_panel_id);
+      }
+      const { data: panels, error: panelError } = await panelQuery.order('created_at', { ascending: true }).limit(1);
+      const panelData = panels?.[0] || null;
 
       if (panelError) throw panelError;
       setPanel(panelData);

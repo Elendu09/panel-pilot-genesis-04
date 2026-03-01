@@ -449,17 +449,21 @@ const Integrations = () => {
 
         const { data: profile } = await supabase
           .from('profiles')
-          .select('id')
+          .select('id, active_panel_id')
           .eq('user_id', user.id)
           .single();
 
         if (!profile) return;
 
-        const { data: panel } = await supabase
+        let panelQuery = supabase
           .from('panels')
           .select('id, subdomain, custom_domain')
-          .eq('owner_id', profile.id)
-          .single();
+          .eq('owner_id', profile.id);
+        if ((profile as any).active_panel_id) {
+          panelQuery = panelQuery.eq('id', (profile as any).active_panel_id);
+        }
+        const { data: panels } = await panelQuery.order('created_at', { ascending: true }).limit(1);
+        const panel = panels?.[0];
 
         if (!panel) return;
         setPanelId(panel.id);

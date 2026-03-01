@@ -134,3 +134,7 @@ verify_jwt = false
 
 [functions.oauth-callback]
 verify_jwt = false
+
+[functions.security-audit]
+verify_jwt = false
+
