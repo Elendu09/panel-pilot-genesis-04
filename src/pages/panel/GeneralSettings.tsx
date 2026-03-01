@@ -145,13 +145,28 @@ const GeneralSettings = () => {
 
         if (!profile) return;
 
-        const { data: panel, error: panelError } = await supabase
+        // Get active_panel_id from profile for multi-panel support
+        const { data: profileFull } = await supabase
+          .from('profiles')
+          .select('active_panel_id')
+          .eq('id', profile.id)
+          .maybeSingle();
+
+        let panelQuery = supabase
           .from('panels')
           .select('id, name, description, subdomain, logo_url, settings, custom_branding')
-          .eq('owner_id', profile.id)
-          .single();
+          .eq('owner_id', profile.id);
+        
+        if (profileFull?.active_panel_id) {
+          panelQuery = panelQuery.eq('id', profileFull.active_panel_id);
+        }
+
+        const { data: panels, error: panelError } = await panelQuery
+          .order('created_at', { ascending: true })
+          .limit(1);
 
         if (panelError) throw panelError;
+        const panel = panels?.[0];
         if (!panel) return;
 
         setPanelId(panel.id);
@@ -161,7 +176,7 @@ const GeneralSettings = () => {
           .from('panel_settings')
           .select('*')
           .eq('panel_id', panel.id)
-          .single();
+          .maybeSingle();
 
         const panelSettingsData = panel.settings as Record<string, any> || {};
         const generalSettings = panelSettingsData.general || {};

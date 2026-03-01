@@ -441,17 +441,25 @@ const PanelOwnerDashboard = () => {
         <header className="md:hidden glass border-b border-border/50 p-3 flex items-center justify-between sticky top-0 z-10">
           <div className="flex items-center gap-2">
             <PanelSwitcher collapsed />
-            <span 
-              className="font-luckiest tracking-wide text-base"
-              style={{
-                background: 'linear-gradient(135deg, #3B82F6, #60A5FA, #2563EB)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-              }}
-            >
-              HOME OF SMM
-            </span>
+            <div className="h-6 w-px bg-border mx-1" />
+            <div className="flex flex-col">
+              <span 
+                className="font-luckiest tracking-wide text-base leading-tight"
+                style={{
+                  background: 'linear-gradient(135deg, #3B82F6, #60A5FA, #2563EB)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                }}
+              >
+                HOME OF SMM
+              </span>
+              {panel?.name && (
+                <span className="text-[9px] text-muted-foreground truncate max-w-[120px] leading-tight">
+                  {panel.name}
+                </span>
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-1.5">
             <NotificationCenter variant="sheet" />

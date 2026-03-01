@@ -109,11 +109,21 @@ Sitemap: https://example.com/sitemap.xml`,
 
       if (!profile) return;
 
-      const { data: panel } = await supabase
+      const { data: profileFull } = await supabase
+        .from('profiles')
+        .select('active_panel_id')
+        .eq('id', profile.id)
+        .maybeSingle();
+
+      let panelQuery = supabase
         .from('panels')
         .select('id, subdomain, custom_branding')
-        .eq('owner_id', profile.id)
-        .single();
+        .eq('owner_id', profile.id);
+      if (profileFull?.active_panel_id) {
+        panelQuery = panelQuery.eq('id', profileFull.active_panel_id);
+      }
+      const { data: panels } = await panelQuery.order('created_at', { ascending: true }).limit(1);
+      const panel = panels?.[0];
 
       if (!panel) return;
 
