@@ -2857,6 +2857,9 @@ export type Database = {
           full_name: string | null
           id: string
           is_active: boolean | null
+          mfa_backup_codes: Json | null
+          mfa_secret: string | null
+          mfa_verified: boolean | null
           onboarding_completed_at: string | null
           onboarding_step: number | null
           role: Database["public"]["Enums"]["user_role"]
@@ -2876,6 +2879,9 @@ export type Database = {
           full_name?: string | null
           id?: string
           is_active?: boolean | null
+          mfa_backup_codes?: Json | null
+          mfa_secret?: string | null
+          mfa_verified?: boolean | null
           onboarding_completed_at?: string | null
           onboarding_step?: number | null
           role?: Database["public"]["Enums"]["user_role"]
@@ -2895,6 +2901,9 @@ export type Database = {
           full_name?: string | null
           id?: string
           is_active?: boolean | null
+          mfa_backup_codes?: Json | null
+          mfa_secret?: string | null
+          mfa_verified?: boolean | null
           onboarding_completed_at?: string | null
           onboarding_step?: number | null
           role?: Database["public"]["Enums"]["user_role"]

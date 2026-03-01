@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useNavigate } from 'react-router-dom';
+import { TwoFactorChallenge } from '@/components/auth/TwoFactorChallenge';
 
 interface AuthContextType {
   user: User | null;
@@ -22,6 +22,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+  const [needsMfaChallenge, setNeedsMfaChallenge] = useState(false);
   const { toast } = useToast();
 
   const fetchProfile = async (userId: string) => {
@@ -44,8 +45,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           localStorage.removeItem('pendingPanelCreation');
         }
       }
+
+      return data;
     } catch (error) {
       console.error('Error fetching profile:', error);
+      return null;
     }
   };
 
@@ -57,7 +61,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           {
             name: panelName,
             owner_id: ownerId,
-            // Make subdomains live immediately; custom domains still require DNS verification.
             status: 'active' as const,
             is_approved: true,
             theme_type: 'dark_gradient' as const,
@@ -88,7 +91,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         setSession(session);
@@ -105,7 +107,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     );
 
-    // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -138,8 +139,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           title: "Sign Up Error",
           description: error.message
         });
-    } else {
-      // Username is now captured by the handle_new_user trigger from raw_user_meta_data
+      } else {
         toast({
           title: "Success",
           description: "Please check your email to confirm your account."
@@ -161,9 +161,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       let loginEmail = identifier.trim();
       
-      // Check if identifier is a username (no @ symbol)
       if (!identifier.includes('@')) {
-        // Use SECURITY DEFINER function to bypass RLS for username lookup
         const { data: email, error: lookupError } = await supabase
           .rpc('lookup_email_by_username', { p_username: identifier.trim() });
         
@@ -185,13 +183,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       
       if (error) {
-        // Check if error is about email not confirmed
         if (error.message?.toLowerCase().includes('email not confirmed') || 
             error.message?.toLowerCase().includes('email_not_confirmed')) {
           return { error, emailNotVerified: true, email: loginEmail };
         }
         
-        // Normalize Supabase error messages to user-friendly text
         let friendlyMessage = error.message;
         const lowerMsg = error.message?.toLowerCase() || '';
         
@@ -210,6 +206,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           title: "Sign In Failed",
           description: friendlyMessage
         });
+        return { error };
+      }
+
+      // Check MFA status after successful login
+      if (data?.user) {
+        try {
+          const { data: mfaStatus } = await supabase.functions.invoke('mfa-setup', {
+            body: { action: 'status' }
+          });
+          if (mfaStatus?.enabled) {
+            setNeedsMfaChallenge(true);
+          }
+        } catch (e) {
+          console.error('MFA status check failed:', e);
+        }
       }
       
       return { error };
@@ -229,6 +240,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
       setSession(null);
       setProfile(null);
+      setNeedsMfaChallenge(false);
       toast({
         title: "Signed out successfully"
       });
@@ -239,6 +251,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         description: error.message
       });
     }
+  };
+
+  const handleMfaVerified = () => {
+    setNeedsMfaChallenge(false);
+  };
+
+  const handleMfaCancelled = () => {
+    setNeedsMfaChallenge(false);
+    setUser(null);
+    setSession(null);
+    setProfile(null);
   };
 
   const value = {
@@ -255,6 +278,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthContext.Provider value={value}>
       {children}
+      <TwoFactorChallenge 
+        open={needsMfaChallenge} 
+        onVerified={handleMfaVerified}
+        onCancel={handleMfaCancelled}
+      />
     </AuthContext.Provider>
   );
 }
