@@ -1,101 +1,71 @@
 
 
-# Plan: Fix Multi-Panel Bugs, Account-Level Billing, Mobile Responsiveness, and Panel Isolation
+# Plan: Panel Switcher Stroke, Multi-Panel `.single()` Audit Fix, Security Hardening
 
-## Issues Identified
-
-1. **PanelSwitcher mobile header**: Shows "Switch Panel (2/1)" — tier detection shows max 1 even on Basic plan. The switcher trigger is just an avatar icon with no separator stroke or active panel name below header text.
-2. **Account-Level Billing Model**: Currently tier is per-panel (`subscription_tier` on panels table). Need to shift to account-level: account has one plan, all panels inherit features, downgrade locks excess panels.
-3. **SubdomainPreview**: Hardcodes `subdomain.smmpilot.online` — ignores `custom_domain`.
-4. **OnboardingDomainStep mobile**: "Register new domain" section has width overflow (search input + TLD select don't wrap).
-5. **OnboardingDomainStep**: No TXT verification in the onboarding flow — only A/CNAME shown, no TXT step enforced.
-6. **Complete step**: Only shows subdomain in summary, not custom domain properly.
-7. **GeneralSettings**: Uses `.single()` on line 152 (`panels` query by `owner_id`) — breaks for multi-panel users. Shows "Failed to load settings" error.
-8. **New panel data isolation**: When creating a second panel, GeneralSettings and other pages that use `.single()` will fetch wrong panel or crash.
-
-## Changes
-
-### 1. PanelSwitcher — Facebook-style with divider stroke + active panel name
-
-**`src/pages/PanelOwnerDashboard.tsx`** (lines 441-455):
-- Add a thin vertical divider (1px border-right, gray) between PanelSwitcher and "HOME OF SMM" text
-- Below "HOME OF SMM", add active panel name in `text-[9px]` muted text
-
-**`src/components/panel/PanelSwitcher.tsx`** (line 29):
-- Remove early return when `allPanels.length <= 1 && !canCreatePanel()` — always show the switcher on mobile so users see which panel is active
-
-### 2. Account-Level Billing Model
-
-**`src/hooks/usePanel.tsx`**:
-- The tier resolution already queries `panel_subscriptions` for the highest tier — this is correct for account-level billing
-- Add `resolvedTier` to the return value so components can access it
-- Add `lockedPanels` computed property: panels beyond the tier limit (sorted by `created_at` desc) are "locked"
-- Expose `isPanel Locked(panelId)` helper
+## 1. PanelSwitcher — Round Stroke Ring + Panel Number Detection
 
 **`src/components/panel/PanelSwitcher.tsx`**:
-- Show locked panels with a lock icon and "Upgrade to reactivate" tooltip
-- Prevent switching to locked panels
+- Add a circular grey stroke ring around the avatar (like the uploaded image showing a round border/ring around the profile picture) using `ring-2 ring-gray-400` or a custom border
+- In the dropdown items, show panel number labels: "Panel 1", "Panel 2" etc., determined by sorting `allPanels` by `created_at` ascending and using the index + 1
+- In collapsed mode trigger, add a subtle rotate/switch icon indicator around the avatar ring
 
 **`src/pages/PanelOwnerDashboard.tsx`**:
-- If active panel is locked (after downgrade), show a banner: "This panel is locked. Upgrade your plan to reactivate."
+- Ensure the mobile header PanelSwitcher avatar also gets the round stroke ring styling
 
-### 3. SubdomainPreview — detect custom domain
+## 2. Fix Remaining `.single()` Queries for Multi-Panel Support
 
-**`src/components/panel/SubdomainPreview.tsx`**:
-- Accept optional `customDomain` prop
-- If `customDomain` is set and non-empty, use `https://{customDomain}` as `storefrontUrl` instead of subdomain URL
-- Update URL bar display and iframe src accordingly
+Files that still use `.single()` on `owner_id` queries (will break for multi-panel users):
 
-**`src/pages/panel/PanelOverview.tsx`**:
-- Pass `panel.custom_domain` to `SubdomainPreview`
+| File | Line | Fix |
+|------|------|-----|
+| `src/pages/panel/Integrations.tsx` | 462 | Replace `.single()` with active_panel_id resolution pattern |
+| `src/pages/panel/DomainSettings.tsx` | 94 | Uses `.maybeSingle()` — but doesn't filter by `active_panel_id`. Add filter. |
 
-### 4. OnboardingDomainStep mobile responsiveness
+All other panel pages (SecuritySettings, SEOSettings, DesignCustomization, GeneralSettings, PanelOverview, ChatInbox) were already fixed in the previous iteration.
 
-**`src/components/onboarding/OnboardingDomainStep.tsx`** (lines 448-469):
-- Change the domain search input + TLD select from `flex gap-2` to `flex flex-col sm:flex-row gap-2`
-- Make TLD select `w-full sm:w-[100px]`
-- Add `overflow-hidden` to the parent container
+## 3. Security Settings — Replace Fake Data with Real Data + Functional Features
 
-### 5. OnboardingDomainStep — add TXT verification display
+**`src/pages/panel/SecuritySettings.tsx`**:
 
-**`src/components/onboarding/OnboardingDomainStep.tsx`**:
-- The TXT record IS already shown (lines 369-385) when `verificationToken` is set
-- The issue is that `handleDomainSubmit` calls `add-vercel-domain` which may not always return a verification token
-- Add a fallback: if no token returned, generate one client-side (`crypto.randomUUID().slice(0,12)`) and display it
-- The "Check DNS" button already calls `verify-domain-dns` with the expected TXT value
+### Fake data to replace:
+- **Line 370**: `device` uses hardcoded array `['Chrome on Windows', 'Safari on macOS'...]` — extract from user-agent or store in client_users
+- **Line 373**: `location` uses hardcoded array `['United States', 'Germany'...]` — needs real IP geolocation or stored location
+- **Lines 380-397**: `securityAlerts` is entirely hardcoded sample data — replace with alerts from `audit_logs` filtered by failed actions
 
-### 6. Complete step — show custom domain in summary
+### Functional features to implement:
+- **Backup codes** (line 533-540): Currently generates codes with `Math.random()` but only stores in state. Fix: persist backup codes to `panels.settings.security.backupCodes` on generate, and also save on `handleSave`
+- **Download backup codes** (line 543-551): Already functional (creates blob download) — keep as-is
+- **Session revoke** (line 497-521): Currently just removes from local state array. Should call `supabase.auth.admin.signOut()` or at minimum log the action. The audit log insert IS there but the actual revocation is fake. Add a note that true session revocation requires admin API.
+- **Security alerts**: Derive from `audit_logs` — filter for failed logins, new device patterns, settings changes
+- **IP/Device/Location**: Store `last_login_ip`, `last_login_device`, `last_login_location` on `client_users` table (need migration). For panel owner sessions, use `navigator.userAgent` for device detection.
 
-**`src/pages/panel/PanelOnboardingV2.tsx`** (lines 1062-1076):
-- Already handles this correctly — shows `customDomain` when `domainType !== 'subdomain'`
-- No change needed here
+### Edge function for security scan:
+- Create `security-scan` edge function that checks: password policy compliance, 2FA status, session count, recent failed logins count, and returns a real-time score
+- The current score calculation is purely client-side from settings toggles — this is acceptable but should also factor in actual incident data
 
-### 7. GeneralSettings — fix `.single()` for multi-panel
+## 4. Database Migration
 
-**`src/pages/panel/GeneralSettings.tsx`** (lines 148-152):
-- Replace `.eq('owner_id', profile.id).single()` with active panel resolution:
-  - First get `active_panel_id` from profile
-  - Query panel by ID if available, otherwise get first completed panel
-- This ensures multi-panel users always load settings for the correct active panel
+Add columns to `client_users` for real device/location tracking:
+- `last_login_ip text`
+- `last_login_device text`  
+- `last_login_location text`
 
-### 8. Panel data isolation — audit other pages using `.single()` on panels
+## 5. Security Audit Log Enhancement
 
-Search for other pages that query `panels` with `owner_id` + `.single()` and fix them to use `active_panel_id` or the panel context.
-
-**Files to search and fix**:
-- `src/pages/panel/GeneralSettings.tsx` — confirmed broken (line 152)
-- Other panel pages that may have the same pattern
+Create `security-audit` edge function to:
+- Log login attempts with IP, device, location
+- Detect suspicious patterns (multiple failed attempts)
+- Generate real security alerts stored in a new `security_alerts` table or in `panel_notifications`
 
 ## Files to Change
 
 | File | Change |
 |------|--------|
-| `src/pages/PanelOwnerDashboard.tsx` | Add divider stroke + active panel name in mobile header; add locked panel banner |
-| `src/components/panel/PanelSwitcher.tsx` | Always show on mobile; show lock icon for locked panels; display active panel name in collapsed mode |
-| `src/hooks/usePanel.tsx` | Expose `resolvedTier`; add `lockedPanels` and `isPanelLocked` helpers |
-| `src/components/panel/SubdomainPreview.tsx` | Accept `customDomain` prop; use custom domain URL when available |
-| `src/pages/panel/PanelOverview.tsx` | Pass `custom_domain` to SubdomainPreview |
-| `src/components/onboarding/OnboardingDomainStep.tsx` | Fix mobile layout for "register new domain"; ensure TXT token fallback |
-| `src/pages/panel/GeneralSettings.tsx` | Replace `.single()` with active panel resolution |
-| Any other panel pages with `.single()` on `panels` | Same fix pattern |
+| `src/components/panel/PanelSwitcher.tsx` | Add ring stroke around avatar; show panel numbers (Panel 1, Panel 2) |
+| `src/pages/PanelOwnerDashboard.tsx` | Ring stroke on mobile header switcher avatar |
+| `src/pages/panel/Integrations.tsx` | Fix `.single()` → active_panel_id resolution |
+| `src/pages/panel/DomainSettings.tsx` | Add active_panel_id filter to panel query |
+| `src/pages/panel/SecuritySettings.tsx` | Replace fake sessions/alerts data with real audit_log-derived data; persist backup codes; real device detection via navigator.userAgent |
+| New migration | Add `last_login_ip`, `last_login_device`, `last_login_location` to `client_users` |
+| `supabase/functions/security-audit/index.ts` | New edge function for login event logging with IP/device/location |
 
