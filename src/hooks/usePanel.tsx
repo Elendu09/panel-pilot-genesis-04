@@ -20,6 +20,7 @@ interface Panel {
   settings?: any;
   subscription_tier?: string;
   custom_branding?: any;
+  created_at?: string;
 }
 
 // Panel limits by subscription tier
@@ -146,6 +147,24 @@ export function usePanel() {
     return allPanels.length < getMaxPanels();
   }, [allPanels, getMaxPanels]);
 
+  // Compute locked panels: panels beyond tier limit (newest first are locked)
+  const getLockedPanelIds = useCallback((): Set<string> => {
+    const max = PANEL_LIMITS[resolvedTier] || 1;
+    if (allPanels.length <= max) return new Set();
+    // Keep oldest panels active, lock newest ones beyond limit
+    const sortedByCreation = [...allPanels].sort(
+      (a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime()
+    );
+    const locked = sortedByCreation.slice(max);
+    return new Set(locked.map(p => p.id));
+  }, [allPanels, resolvedTier]);
+
+  const lockedPanelIds = getLockedPanelIds();
+
+  const isPanelLocked = useCallback((panelId: string) => {
+    return lockedPanelIds.has(panelId);
+  }, [lockedPanelIds]);
+
   return { 
     panel, 
     allPanels,
@@ -155,5 +174,8 @@ export function usePanel() {
     switchPanel,
     canCreatePanel,
     getMaxPanels,
+    resolvedTier,
+    isPanelLocked,
+    lockedPanelIds,
   };
 }

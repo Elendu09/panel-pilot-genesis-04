@@ -132,14 +132,23 @@ const ChatInbox = ({ embedded = false }: ChatInboxProps) => {
     const fetchPanelId = async () => {
       if (!profile?.id) return;
       
-      const { data } = await supabase
+      const { data: profileFull } = await supabase
+        .from('profiles')
+        .select('active_panel_id')
+        .eq('id', profile.id)
+        .maybeSingle();
+
+      let panelQuery = supabase
         .from('panels')
         .select('id')
-        .eq('owner_id', profile.id)
-        .single();
+        .eq('owner_id', profile.id);
+      if (profileFull?.active_panel_id) {
+        panelQuery = panelQuery.eq('id', profileFull.active_panel_id);
+      }
+      const { data: panels } = await panelQuery.order('created_at', { ascending: true }).limit(1);
       
-      if (data) {
-        setPanelId(data.id);
+      if (panels?.[0]) {
+        setPanelId(panels[0].id);
       }
     };
 

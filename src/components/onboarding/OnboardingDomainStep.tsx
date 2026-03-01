@@ -120,6 +120,9 @@ export const OnboardingDomainStep = ({
       }
       if (data.verification_token) {
         setVerificationToken(data.verification_token);
+      } else if (!verificationToken) {
+        // Generate a fallback TXT verification token
+        setVerificationToken(crypto.randomUUID().slice(0, 12));
       }
 
       toast({ title: 'Domain configured', description: data.message });
@@ -445,15 +448,15 @@ export const OnboardingDomainStep = ({
               {/* Domain Search */}
               <div className="space-y-2">
                 <Label>Search for a domain</Label>
-                <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                   <Input
                     value={searchDomain}
                     onChange={(e) => setSearchDomain(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
                     placeholder="mydomain"
-                    className="bg-background/50"
+                    className="bg-background/50 flex-1"
                   />
                   <Select value={selectedTld} onValueChange={setSelectedTld}>
-                    <SelectTrigger className="w-[100px]">
+                    <SelectTrigger className="w-full sm:w-[100px]">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>

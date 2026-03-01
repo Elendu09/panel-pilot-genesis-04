@@ -999,11 +999,21 @@ export default function DesignCustomization() {
         .single();
       if (!profile) throw new Error('No profile');
       
-      const { data: panel } = await supabase
+      const { data: profileFull } = await supabase
+        .from('profiles')
+        .select('active_panel_id')
+        .eq('id', profile.id)
+        .maybeSingle();
+
+      let panelQuery = supabase
         .from('panels')
         .select('id, name, custom_branding, theme_type, subdomain, custom_domain, buyer_theme')
-        .eq('owner_id', profile.id)
-        .single();
+        .eq('owner_id', profile.id);
+      if (profileFull?.active_panel_id) {
+        panelQuery = panelQuery.eq('id', profileFull.active_panel_id);
+      }
+      const { data: panels } = await panelQuery.order('created_at', { ascending: true }).limit(1);
+      const panel = panels?.[0];
       
       return panel;
     },

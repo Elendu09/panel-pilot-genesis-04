@@ -96,12 +96,27 @@ const PanelOverview = () => {
       }
 
       try {
-        const { data: panel } = await supabase
+        // Get active_panel_id for multi-panel support
+        const { data: profileFull } = await supabase
+          .from('profiles')
+          .select('active_panel_id')
+          .eq('id', profile.id)
+          .maybeSingle();
+
+        let panelQuery = supabase
           .from('panels')
           .select('*, panel_settings(*)')
-          .eq('owner_id', profile.id)
-          .single();
+          .eq('owner_id', profile.id);
+        
+        if (profileFull?.active_panel_id) {
+          panelQuery = panelQuery.eq('id', profileFull.active_panel_id);
+        }
 
+        const { data: panels } = await panelQuery
+          .order('created_at', { ascending: true })
+          .limit(1);
+
+        const panel = panels?.[0];
         setPanelData(panel);
 
         if (panel) {
@@ -1113,6 +1128,7 @@ const PanelOverview = () => {
             secondaryColor={panelData.secondary_color}
             panelStatus={panelData.status as 'active' | 'pending' | 'suspended'}
             onRefresh={handleManualRefresh}
+            customDomain={panelData.custom_domain}
           />
         </motion.div>
       )}

@@ -27,6 +27,7 @@ interface SubdomainPreviewProps {
   panelStatus?: 'active' | 'pending' | 'suspended';
   status?: 'active' | 'pending' | 'checking';
   onRefresh?: () => void;
+  customDomain?: string | null;
 }
 
 const SubdomainPreview = ({
@@ -36,7 +37,8 @@ const SubdomainPreview = ({
   secondaryColor = '#1e40af',
   panelStatus,
   status = 'checking',
-  onRefresh
+  onRefresh,
+  customDomain
 }: SubdomainPreviewProps) => {
   const [device, setDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [checking, setChecking] = useState(false);
@@ -45,7 +47,7 @@ const SubdomainPreview = ({
   const [iframeError, setIframeError] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  const storefrontUrl = `https://${subdomain}.smmpilot.online`;
+  const storefrontUrl = customDomain ? `https://${customDomain}` : `https://${subdomain}.smmpilot.online`;
 
   useEffect(() => {
     if (subdomain) {
