@@ -1,110 +1,73 @@
 
 
-# Plan: Provider API Fixes, Security Page Audit, Admin Pages Improvement
+# Plan: Panel Number Fix, Real 2FA Implementation, API Verification
 
-## Part 1: Buyer API — Critical Balance & Error Handling Gaps
+## Issue 1: Panel Number Badge Shows Total Count Instead of Current Panel Number
 
-### Issue 1: `handleAddOrder` skips balance check
-The `buyer-api` edge function's `handleAddOrder` (line 280-341) creates orders **without checking or deducting buyer balance**. The separate `buyer-order` function does this correctly, but the API endpoint does not. External panels calling via API get free orders.
+**Problem**: In `PanelSwitcher.tsx` line 63-64, the badge on the avatar shows `allPanels.length` (e.g., "2" for 2 panels). The user expects it to show the **current panel's number** (e.g., "1" for AiSoc which was created first).
 
-**Fix in `supabase/functions/buyer-api/index.ts`:**
-- After service lookup, if `buyerId` is set, check `client_users.balance >= price`
-- If insufficient, return `{"error": "Not enough funds"}` (standard SMM API error)
-- Deduct balance and increment `total_spent` after order creation
-- If `buyerId` is null (panel-level key), check `panels.balance` instead
+**Fix in `src/components/panel/PanelSwitcher.tsx`** (line 63-64):
+- Change `{allPanels.length}` to `{getPanelNumber(panel?.id || '')}` so it shows the active panel's position number (1 for oldest, 2 for second, etc.)
 
-### Issue 2: Provider forwarding errors not surfaced to API caller
-When `forwardOrderToProvider` fails, the order is created with status `pending` and a note, but the API response still returns `{ order: "ORD..." }` with no indication of failure. The caller assumes success.
+## Issue 2: Real 2FA (TOTP) Implementation
 
-**Fix:** After forwarding, if provider returns an error, include `provider_error` in the response alongside the order number so the caller knows the order needs attention.
+**Problem**: The "Require Two-Factor (2FA)" toggle in SecuritySettings is purely a UI toggle that saves a boolean to panel settings. It doesn't connect to actual authentication — no TOTP enrollment, no QR code, no verification on login.
 
-### Issue 3: Services response missing `service` ID consistency
-Line 198: `service: s.provider_service_id || String(index + 1)` — if `provider_service_id` is null, the ID becomes a sequential index which won't match on order placement. Should use the service's actual database `id` as fallback.
+**Approach**: Since the installed `@supabase/supabase-js@2.56.0` does **not** include the MFA API (`auth.mfa.enroll/challenge/verify` are absent), we implement TOTP via a custom edge function using a TOTP library (`otpauth`).
 
-**Fix:** Change to `service: s.provider_service_id || s.id`
+### Changes:
 
-### Issue 4: CORS headers incomplete
-Line 5-7: Missing `x-supabase-client-platform` headers required by Supabase client calls.
+**New edge function `supabase/functions/mfa-setup/index.ts`**:
+- `action: 'enroll'` — Generates a TOTP secret, returns the secret + otpauth URI (for QR code) + backup codes. Stores the secret encrypted in `profiles.mfa_secret` (new column).
+- `action: 'verify'` — Verifies a 6-digit TOTP code against the stored secret. On success, sets `profiles.mfa_verified = true`.
+- `action: 'validate'` — Called on login to validate a TOTP code (for the post-login 2FA challenge).
+- `action: 'disable'` — Disables MFA, clears `mfa_secret` and `mfa_verified`.
+- `action: 'use_backup'` — Validates a backup code, marks it as used.
 
-**Fix:** Update CORS headers to include full set per platform standards.
+**New migration**: Add `mfa_secret text`, `mfa_verified boolean default false`, `mfa_backup_codes jsonb` columns to `profiles` table.
 
----
+**New component `src/components/auth/TwoFactorSetup.tsx`**:
+- Shows QR code (using a simple SVG/URL-based QR generator or inline canvas)
+- 6-digit OTP input for verification
+- Displays backup codes after successful enrollment
+- Called from SecuritySettings when user enables 2FA for their own account
 
-## Part 2: Panel-API Edge Function Audit
+**New component `src/components/auth/TwoFactorChallenge.tsx`**:
+- Post-login TOTP challenge dialog
+- 6-digit input + "Use backup code" link
+- Blocks access until verified
 
-**`supabase/functions/panel-api/index.ts`** — verify same CORS header fix needed. Check that all actions return proper error messages.
+**Modified `src/contexts/AuthContext.tsx`**:
+- After successful `signIn`, check if user has `mfa_verified = true` in profile
+- If yes, set a `needsMfaChallenge` state instead of completing login
+- Render `TwoFactorChallenge` overlay until MFA is verified
 
----
+**Modified `src/pages/panel/SecuritySettings.tsx`**:
+- The "Require Two-Factor (2FA)" toggle remains for tenant enforcement
+- Add a separate "Enable 2FA for Your Account" section in the Recovery tab
+- This section uses `TwoFactorSetup` component to enroll the panel owner
+- Backup codes can only be generated when 2FA is enabled (linked together)
 
-## Part 3: Security Pages — Switch & UI Audit
+## Issue 3: API Verification
 
-### Panel Owner SecuritySettings (`src/pages/panel/SecuritySettings.tsx`)
-All switches already use real `<Switch>` components with proper `checked`/`onCheckedChange` bindings:
-- `enforce2FA`, `passwordMinLength`, `passwordNumbers`, `passwordSymbols`, `notifyNewDevice`, `blockTorVpn`, `rateLimitEnabled`, `captchaEnabled`, `alertOnFailedLogin`, `alertEmail`, `alertInApp`
-- All save correctly to `panels.settings.security`
-- **No fake data detected** — sessions, alerts, and audit logs derive from real `audit_logs` and `client_users` tables
+**Status**: Both `buyer-api` and `panel-api` edge functions are deployed and responding correctly. The buyer-api properly:
+- Returns `{"error": "Invalid API key"}` for bad keys
+- Has balance check/deduction before order creation
+- Surfaces provider errors in responses
+- Returns proper error messages for all actions
 
-### Admin SecuritySettings (`src/pages/admin/SecuritySettings.tsx`)
-- Uses `<Switch>` components for platform-level security toggles
-- Fetches/saves to `platform_settings` table
-- **Verify all switches render and save correctly** — need to confirm the save handler updates the right keys
-
-### Tenant Security (buyer-facing)
-- No separate tenant security settings page exists — tenant security is inherited from panel owner settings
-- This is correct behavior per the architecture
-
----
-
-## Part 4: Admin Pages — Improvement Plan
-
-### Current State Assessment
-All 22 admin pages exist and are functional with real data. Key observations:
-
-| Page | Status | Issues |
-|------|--------|--------|
-| AdminOverview | Working | Security Score hardcoded as "98.2%" (line 204) |
-| PanelManagement | Working | Full CRUD, kanban/table views, subscription display |
-| UserManagement | Working | Full CRUD, role management |
-| RevenueAnalytics | Working | Real charts from orders/transactions |
-| PaymentManagement | Working | 60+ payment methods, transaction history |
-| SecuritySettings | Working | Switches + audit logs |
-| SupportTickets | Working | Ticket CRUD with replies |
-| SubscriptionManagement | Working | Plan management with upgrade/downgrade |
-| PlatformSettings | Working | Platform config with Vercel integration |
-| SystemHealth | Working | Uses real Supabase metrics |
-| AuditLogs | Working | Real data from audit_logs table |
-| PlatformProviderManagement | Working | Provider ecosystem management |
-| AdsManagement | Working | Ad management |
-| DomainManagement | Working | Domain ops |
-| ReportsExport | Working | Export functionality |
-| BlogManagement | Working | Blog CMS |
-| DocsManagement | Working | Docs CMS |
-| AnnouncementsManagement | Working | Announcements |
-| WebhookManagement | Working | Webhook config |
-| BackupManagement | Working | Backup operations |
-| ReceiptManagement | Working | Receipt viewing |
-| AdminMoreMenu | Working | Navigation |
-
-### Improvements to implement:
-
-1. **AdminOverview — Fix hardcoded Security Score**: Replace `'98.2%'` with a real calculated score based on platform settings (2FA enforcement, password policies, etc.)
-
-2. **AdminOverview — Add quick action buttons**: Add "Approve All Pending", "Export Report", "View System Health" quick actions
-
-3. **Sidebar — Add missing routes**: `SystemHealth`, `SubscriptionManagement`, `AdsManagement`, `DomainManagement`, `BackupManagement` are not in the sidebar (`SuperAdminSidebar.tsx`) — users can't navigate to them
-
-4. **PanelManagement — Add bulk actions**: Select multiple panels for bulk approve/suspend/delete
-
-5. **UserManagement — Add role assignment via user_roles table**: Currently shows roles from `profiles.role` but doesn't use the `user_roles` table for proper role management per security guidelines
-
----
+No code changes needed for API — already functional.
 
 ## Files to Change
 
 | File | Change |
 |------|--------|
-| `supabase/functions/buyer-api/index.ts` | Add balance check/deduction in `handleAddOrder`; fix service ID fallback; improve provider error surfacing; update CORS headers |
-| `supabase/functions/panel-api/index.ts` | Update CORS headers |
-| `src/pages/admin/AdminOverview.tsx` | Replace hardcoded Security Score with real calculation |
-| `src/components/dashboard/SuperAdminSidebar.tsx` | Add missing admin page routes (System Health, Subscriptions, Ads, Domains, Backups) |
+| `src/components/panel/PanelSwitcher.tsx` | Line 64: Show current panel number instead of total count |
+| `supabase/functions/mfa-setup/index.ts` | New edge function for TOTP enroll/verify/validate/disable |
+| New migration | Add `mfa_secret`, `mfa_verified`, `mfa_backup_codes` to `profiles` |
+| `src/components/auth/TwoFactorSetup.tsx` | New: QR code + OTP enrollment UI |
+| `src/components/auth/TwoFactorChallenge.tsx` | New: Post-login 2FA challenge dialog |
+| `src/contexts/AuthContext.tsx` | Check MFA status after login, gate access with challenge |
+| `src/pages/panel/SecuritySettings.tsx` | Add "Enable 2FA for Your Account" section; link backup codes to 2FA status |
+| `src/integrations/supabase/types.ts` | Update profiles type with new columns |
 
