@@ -61,7 +61,7 @@ export function PanelSwitcher({ collapsed = false }: PanelSwitcherProps) {
             </Avatar>
             {allPanels.length > 1 && (
               <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-primary rounded-full text-[8px] text-primary-foreground flex items-center justify-center font-bold">
-                {allPanels.length}
+                {getPanelNumber(panel?.id || '')}
               </span>
             )}
           </Button>

@@ -51,6 +51,7 @@ import { toast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { TwoFactorSetup } from "@/components/auth/TwoFactorSetup";
 
 interface Session {
   id: string;
@@ -1446,19 +1447,26 @@ const SecuritySettings = () => {
         {/* Recovery Tab */}
         <TabsContent value="recovery" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* 2FA Setup for Panel Owner */}
+            <div className="lg:col-span-2">
+              <TwoFactorSetup onStatusChange={(enabled) => {
+                setEnforce2FA(enabled);
+              }} />
+            </div>
+
             {/* Backup Codes */}
             <Card className="glass-card">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Key className="w-5 h-5 text-primary" />
-                  Backup Codes
+                  Panel Backup Codes
                 </CardTitle>
-                <CardDescription>Generate one-time recovery codes</CardDescription>
+                <CardDescription>Additional recovery codes for your panel (separate from 2FA backup codes)</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  Backup codes can be used to access your account if you lose your 2FA device. 
-                  Each code can only be used once.
+                  These are panel-level recovery codes for emergency access.
+                  2FA backup codes are managed in the 2FA section above.
                 </p>
                 
                 {backupCodes.length === 0 ? (
