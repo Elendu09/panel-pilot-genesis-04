@@ -343,7 +343,7 @@ const SecuritySettings = () => {
           setLoginHistory(history);
         }
 
-        // Load active sessions
+        // Load active sessions — use real user-agent from audit_logs where available
         const { data: clients } = await supabase
           .from('client_users')
           .select('id, email, last_login_at')
@@ -353,6 +353,25 @@ const SecuritySettings = () => {
           .limit(5);
 
         if (clients && clients.length > 0) {
+          // Get recent login audit logs to extract real device/location info
+          const clientIds = clients.map(c => c.id);
+          const { data: loginLogs } = await supabase
+            .from('audit_logs')
+            .select('*')
+            .eq('panel_id', panel?.id)
+            .in('resource_id', clientIds)
+            .order('created_at', { ascending: false })
+            .limit(20);
+
+          const logsByUser: Record<string, any> = {};
+          if (loginLogs) {
+            for (const log of loginLogs) {
+              if (log.resource_id && !logsByUser[log.resource_id]) {
+                logsByUser[log.resource_id] = log;
+              }
+            }
+          }
+
           const sessions = clients.map((client, index) => {
             const now = new Date();
             const loginTime = new Date(client.last_login_at!);
@@ -363,38 +382,89 @@ const SecuritySettings = () => {
             else if (diffMins < 1440) timeStr = `${Math.floor(diffMins / 60)} hours ago`;
             else timeStr = `${Math.floor(diffMins / 1440)} days ago`;
 
+            const relatedLog = logsByUser[client.id];
+            const logDetails = (relatedLog?.details as Record<string, any>) || {};
+            const userAgent = relatedLog?.user_agent || logDetails.userAgent || '';
+
+            // Parse user-agent for device info
+            let device = 'Unknown Device';
+            if (userAgent) {
+              if (userAgent.includes('Chrome') && userAgent.includes('Windows')) device = 'Chrome on Windows';
+              else if (userAgent.includes('Chrome') && userAgent.includes('Mac')) device = 'Chrome on macOS';
+              else if (userAgent.includes('Chrome') && userAgent.includes('Android')) device = 'Chrome on Android';
+              else if (userAgent.includes('Safari') && userAgent.includes('Mac')) device = 'Safari on macOS';
+              else if (userAgent.includes('Firefox')) device = 'Firefox on ' + (userAgent.includes('Windows') ? 'Windows' : userAgent.includes('Linux') ? 'Linux' : 'Unknown');
+              else if (userAgent.includes('Edge')) device = 'Edge on Windows';
+              else device = userAgent.substring(0, 30);
+            }
+
             return {
               id: client.id,
               email: client.email,
-              ip: 'IP masked',
-              device: ['Chrome on Windows', 'Safari on macOS', 'Firefox on Linux', 'Chrome on Android'][index % 4],
+              ip: logDetails.ip || 'IP not tracked',
+              device,
               lastActive: timeStr,
               current: index === 0,
-              location: ['United States', 'Germany', 'UK', 'Canada'][index % 4]
+              location: logDetails.location || 'Location not tracked'
             };
           });
           setActiveSessions(sessions);
         }
         
-        // Generate sample security alerts
-        setSecurityAlerts([
-          {
-            id: '1',
-            type: 'failed_login',
-            message: '5 failed login attempts detected',
-            time: '2 hours ago',
-            severity: 'medium',
-            acknowledged: false
-          },
-          {
-            id: '2',
-            type: 'new_device',
-            message: 'New device login from Chrome on Windows',
-            time: '1 day ago',
-            severity: 'low',
-            acknowledged: true
+        // Derive security alerts from audit_logs (real data, not hardcoded)
+        const { data: alertLogs } = await supabase
+          .from('audit_logs')
+          .select('*')
+          .eq('panel_id', panel?.id)
+          .order('created_at', { ascending: false })
+          .limit(100);
+
+        if (alertLogs && alertLogs.length > 0) {
+          const alerts: SecurityAlert[] = [];
+          
+          // Count failed logins
+          const failedLogins = alertLogs.filter(l => {
+            const d = l.details as Record<string, any> || {};
+            return d.status === 'failed' || l.action.toLowerCase().includes('failed');
+          });
+          if (failedLogins.length > 0) {
+            const now = new Date();
+            const logTime = new Date(failedLogins[0].created_at);
+            const diffMins = Math.floor((now.getTime() - logTime.getTime()) / 60000);
+            let timeStr = diffMins < 60 ? `${diffMins} min ago` : diffMins < 1440 ? `${Math.floor(diffMins / 60)} hours ago` : `${Math.floor(diffMins / 1440)} days ago`;
+            
+            alerts.push({
+              id: 'failed-logins',
+              type: 'failed_login',
+              message: `${failedLogins.length} failed login attempt${failedLogins.length > 1 ? 's' : ''} detected`,
+              time: timeStr,
+              severity: failedLogins.length >= 5 ? 'high' : failedLogins.length >= 2 ? 'medium' : 'low',
+              acknowledged: false
+            });
           }
-        ]);
+
+          // Detect settings changes
+          const settingsChanges = alertLogs.filter(l => l.action.toLowerCase().includes('settings'));
+          if (settingsChanges.length > 0) {
+            const now = new Date();
+            const logTime = new Date(settingsChanges[0].created_at);
+            const diffMins = Math.floor((now.getTime() - logTime.getTime()) / 60000);
+            let timeStr = diffMins < 60 ? `${diffMins} min ago` : diffMins < 1440 ? `${Math.floor(diffMins / 60)} hours ago` : `${Math.floor(diffMins / 1440)} days ago`;
+            
+            alerts.push({
+              id: 'settings-change',
+              type: 'settings_change',
+              message: `Security settings modified`,
+              time: timeStr,
+              severity: 'low',
+              acknowledged: true
+            });
+          }
+
+          setSecurityAlerts(alerts.length > 0 ? alerts : []);
+        } else {
+          setSecurityAlerts([]);
+        }
 
       } catch (err) {
         console.error('Error loading security settings:', err);
@@ -530,14 +600,39 @@ const SecuritySettings = () => {
     });
   };
 
-  const generateBackupCodes = () => {
+  const generateBackupCodes = async () => {
     const codes = Array.from({ length: 10 }, () => 
       Math.random().toString(36).substring(2, 6).toUpperCase() + '-' +
       Math.random().toString(36).substring(2, 6).toUpperCase()
     );
     setBackupCodes(codes);
     setShowBackupCodes(true);
-    toast({ title: "Backup codes generated", description: "Save these codes securely!" });
+
+    // Persist backup codes to panel settings immediately
+    if (panelId) {
+      try {
+        const { data: panel } = await supabase
+          .from('panels')
+          .select('settings')
+          .eq('id', panelId)
+          .maybeSingle();
+
+        const currentSettings = (panel?.settings as Record<string, any>) || {};
+        const updatedSettings = {
+          ...currentSettings,
+          security: {
+            ...(currentSettings.security || {}),
+            backupCodes: codes,
+          }
+        };
+
+        await supabase.from('panels').update({ settings: updatedSettings }).eq('id', panelId);
+      } catch (err) {
+        console.error('Failed to persist backup codes:', err);
+      }
+    }
+
+    toast({ title: "Backup codes generated & saved", description: "Save these codes securely!" });
   };
 
   const downloadBackupCodes = () => {
