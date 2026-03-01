@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 interface BuyerApiRequest {
@@ -27,18 +27,13 @@ interface BuyerApiRequest {
   interval?: number;
 }
 
-// Consistent JSON response helper - matches standard SMM panel API format
 function jsonResponse(data: any, statusCode = 200) {
   return new Response(
     JSON.stringify(data),
-    { 
-      status: statusCode, 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-    }
+    { status: statusCode, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
   );
 }
 
-// Error response in standard SMM format
 function errorResponse(message: string) {
   return jsonResponse({ error: message });
 }
@@ -55,7 +50,6 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Parse request - support JSON, form-data, and raw body
     let params: BuyerApiRequest;
     const contentType = req.headers.get('content-type') || '';
     
@@ -66,7 +60,6 @@ serve(async (req) => {
         const formData = await req.formData();
         params = Object.fromEntries(formData) as unknown as BuyerApiRequest;
       } else {
-        // Try to parse as JSON anyway (common for API calls without proper content-type)
         const bodyText = await req.text();
         if (bodyText) {
           params = JSON.parse(bodyText);
@@ -81,22 +74,16 @@ serve(async (req) => {
 
     const { key, action } = params;
 
-    if (!key) {
-      return errorResponse("Invalid API key");
-    }
-
-    if (!action) {
-      return errorResponse("Action is required");
-    }
+    if (!key) return errorResponse("Invalid API key");
+    if (!action) return errorResponse("Action is required");
 
     console.log(`[buyer-api] action=${action}`);
 
-    // Validate API key - check both panel_api_keys and client_users tables
+    // Validate API key
     let panelId: string | null = null;
     let buyerId: string | null = null;
     
-    // First try panel_api_keys (panel owner keys)
-    const { data: panelKeyData, error: panelKeyError } = await supabase
+    const { data: panelKeyData } = await supabase
       .from('panel_api_keys')
       .select('panel_id, is_active')
       .eq('api_key', key)
@@ -104,64 +91,49 @@ serve(async (req) => {
       .maybeSingle();
 
     if (panelKeyData) {
-      console.log('[buyer-api] Valid panel API key found');
       panelId = panelKeyData.panel_id;
     } else {
-      // Try client_users for buyer-level API keys
-      const { data: buyerKeyData, error: buyerKeyError } = await supabase
+      const { data: buyerKeyData } = await supabase
         .from('client_users')
         .select('id, panel_id, api_key')
         .eq('api_key', key)
         .maybeSingle();
 
       if (buyerKeyData) {
-        console.log('[buyer-api] Valid buyer API key found for buyer:', buyerKeyData.id);
         panelId = buyerKeyData.panel_id;
         buyerId = buyerKeyData.id;
       }
     }
 
-    if (!panelId) {
-      console.log('[buyer-api] Invalid API key attempt');
-      return errorResponse("Invalid API key");
-    }
+    if (!panelId) return errorResponse("Invalid API key");
 
-    // Route to appropriate handler
     let response: Response;
     switch (action.toLowerCase()) {
       case 'services':
         response = await handleServices(supabase, panelId);
         break;
-      
       case 'add':
-        response = await handleAddOrder(supabase, panelId, params);
+        response = await handleAddOrder(supabase, panelId, buyerId, params);
         break;
-      
       case 'status':
         response = await handleStatus(supabase, panelId, params);
         break;
-      
       case 'balance':
         response = await handleBalance(supabase, panelId, key, buyerId);
         break;
-      
       case 'refill':
         response = await handleRefill(supabase, panelId, params);
         break;
-      
       case 'refill_status':
         response = await handleRefillStatus(supabase, panelId, params);
         break;
-      
       case 'cancel':
         response = await handleCancel(supabase, panelId, params);
         break;
-      
       default:
         response = errorResponse(`Unknown action: ${action}`);
     }
 
-    // Log the API call with actual response time
     const responseTime = Date.now() - startTime;
     await supabase.from('api_logs').insert({
       panel_id: panelId,
@@ -193,9 +165,8 @@ async function handleServices(supabase: any, panelId: string) {
     return errorResponse('Failed to fetch services');
   }
 
-  // Format response like standard SMM panel API
-  const formattedServices = services.map((s: any, index: number) => ({
-    service: s.provider_service_id || String(index + 1),
+  const formattedServices = services.map((s: any) => ({
+    service: s.provider_service_id || s.id,
     name: s.name,
     type: s.service_type || 'Default',
     category: formatCategory(s.category),
@@ -276,17 +247,12 @@ async function forwardOrderToProvider(
   }
 }
 
-// Add new order
-async function handleAddOrder(supabase: any, panelId: string, params: BuyerApiRequest) {
-  const { service, link, quantity, comments, username, min, max, posts, delay, expiry, runs, interval } = params;
+// Add new order — with balance check & deduction
+async function handleAddOrder(supabase: any, panelId: string, buyerId: string | null, params: BuyerApiRequest) {
+  const { service, link, quantity, comments } = params;
 
-  if (!service) {
-    return errorResponse("Service ID is required");
-  }
-
-  if (!link) {
-    return errorResponse("Link is required");
-  }
+  if (!service) return errorResponse("Service ID is required");
+  if (!link) return errorResponse("Link is required");
 
   // Find the service
   const { data: serviceData, error: serviceError } = await supabase
@@ -297,9 +263,7 @@ async function handleAddOrder(supabase: any, panelId: string, params: BuyerApiRe
     .or(`provider_service_id.eq.${service},id.eq.${service}`)
     .maybeSingle();
 
-  if (serviceError || !serviceData) {
-    return errorResponse("Service not found");
-  }
+  if (serviceError || !serviceData) return errorResponse("Service not found");
 
   const orderQuantity = quantity || serviceData.min_quantity;
   
@@ -311,6 +275,62 @@ async function handleAddOrder(supabase: any, panelId: string, params: BuyerApiRe
   }
 
   const price = (serviceData.price / 1000) * orderQuantity;
+
+  // ── Balance check & deduction ──
+  if (buyerId) {
+    // Buyer-level API key: check buyer balance
+    const { data: buyer, error: buyerErr } = await supabase
+      .from('client_users')
+      .select('balance')
+      .eq('id', buyerId)
+      .single();
+
+    if (buyerErr || !buyer) return errorResponse("Failed to fetch balance");
+
+    const currentBalance = parseFloat(buyer.balance || 0);
+    if (currentBalance < price) {
+      return errorResponse("Not enough funds");
+    }
+
+    // Deduct balance atomically
+    const { error: deductErr } = await supabase
+      .from('client_users')
+      .update({
+        balance: currentBalance - price,
+        total_spent: (buyer.total_spent || 0) + price
+      })
+      .eq('id', buyerId);
+
+    if (deductErr) {
+      console.error('[buyer-api] Balance deduction error:', deductErr);
+      return errorResponse("Failed to process payment");
+    }
+  } else {
+    // Panel-level API key: check panel balance
+    const { data: panel, error: panelErr } = await supabase
+      .from('panels')
+      .select('balance')
+      .eq('id', panelId)
+      .single();
+
+    if (panelErr || !panel) return errorResponse("Failed to fetch panel balance");
+
+    const panelBalance = parseFloat(panel.balance || 0);
+    if (panelBalance < price) {
+      return errorResponse("Not enough funds");
+    }
+
+    const { error: deductErr } = await supabase
+      .from('panels')
+      .update({ balance: panelBalance - price })
+      .eq('id', panelId);
+
+    if (deductErr) {
+      console.error('[buyer-api] Panel balance deduction error:', deductErr);
+      return errorResponse("Failed to process payment");
+    }
+  }
+
   const orderNumber = 'ORD' + Date.now().toString().slice(-10) + Math.random().toString(36).slice(-4).toUpperCase();
 
   // Create order
@@ -324,6 +344,7 @@ async function handleAddOrder(supabase: any, panelId: string, params: BuyerApiRe
       quantity: orderQuantity,
       price: price,
       status: 'pending',
+      buyer_id: buyerId || null,
       notes: comments || null
     })
     .select('id, order_number')
@@ -331,12 +352,27 @@ async function handleAddOrder(supabase: any, panelId: string, params: BuyerApiRe
 
   if (orderError) {
     console.error('[buyer-api] Order creation error:', orderError);
+    // Refund balance on order creation failure
+    if (buyerId) {
+      await supabase.rpc('increment_balance', { user_id: buyerId, amount: price }).catch(() => {});
+      // Fallback: direct update
+      const { data: b } = await supabase.from('client_users').select('balance').eq('id', buyerId).single();
+      if (b) await supabase.from('client_users').update({ balance: parseFloat(b.balance || 0) + price }).eq('id', buyerId);
+    }
     return errorResponse("Failed to create order");
   }
 
   // Forward to upstream provider
   const providerResult = await forwardOrderToProvider(supabase, serviceData.id, link, orderQuantity, order.id);
   console.log(`[buyer-api] Order ${order.order_number} forwarding result:`, providerResult);
+
+  // Surface provider errors alongside order number
+  if (!providerResult.success) {
+    return jsonResponse({ 
+      order: order.order_number, 
+      provider_error: providerResult.error || 'Provider forwarding failed'
+    });
+  }
 
   return jsonResponse({ order: order.order_number });
 }
@@ -345,7 +381,6 @@ async function handleAddOrder(supabase: any, panelId: string, params: BuyerApiRe
 async function handleStatus(supabase: any, panelId: string, params: BuyerApiRequest) {
   const { order, orders } = params;
 
-  // Multiple orders
   if (orders) {
     const orderIds = orders.split(',').map(o => o.trim());
     const { data: orderData, error } = await supabase
@@ -354,10 +389,7 @@ async function handleStatus(supabase: any, panelId: string, params: BuyerApiRequ
       .eq('panel_id', panelId)
       .in('order_number', orderIds);
 
-    if (error) {
-      console.error('[buyer-api] Status fetch error:', error);
-      return errorResponse("Failed to fetch orders");
-    }
+    if (error) return errorResponse("Failed to fetch orders");
 
     const result: Record<string, any> = {};
     orderIds.forEach(id => {
@@ -374,14 +406,10 @@ async function handleStatus(supabase: any, panelId: string, params: BuyerApiRequ
         result[id] = { error: "Incorrect order ID" };
       }
     });
-
     return jsonResponse(result);
   }
 
-  // Single order
-  if (!order) {
-    return errorResponse("Order ID is required");
-  }
+  if (!order) return errorResponse("Order ID is required");
 
   const { data: orderData, error } = await supabase
     .from('orders')
@@ -390,9 +418,7 @@ async function handleStatus(supabase: any, panelId: string, params: BuyerApiRequ
     .eq('order_number', String(order))
     .maybeSingle();
 
-  if (error || !orderData) {
-    return errorResponse("Incorrect order ID");
-  }
+  if (error || !orderData) return errorResponse("Incorrect order ID");
 
   return jsonResponse({
     charge: parseFloat(orderData.price).toFixed(4),
@@ -403,9 +429,8 @@ async function handleStatus(supabase: any, panelId: string, params: BuyerApiRequ
   });
 }
 
-// Get buyer balance - returns customer-specific balance if using customer API key
+// Get buyer balance
 async function handleBalance(supabase: any, panelId: string, apiKey: string, buyerId: string | null) {
-  // If this is a buyer-specific API key, return the buyer's balance
   if (buyerId) {
     const { data: buyer, error } = await supabase
       .from('client_users')
@@ -413,28 +438,21 @@ async function handleBalance(supabase: any, panelId: string, apiKey: string, buy
       .eq('id', buyerId)
       .single();
     
-    if (error || !buyer) {
-      console.error('[buyer-api] Buyer balance fetch error:', error);
-      return errorResponse("Failed to fetch balance");
-    }
+    if (error || !buyer) return errorResponse("Failed to fetch balance");
     
-    console.log(`[buyer-api] Returning buyer balance for ${buyerId}: ${buyer.balance}`);
     return jsonResponse({
       balance: parseFloat(buyer.balance || 0).toFixed(4),
       currency: "USD"
     });
   }
   
-  // Otherwise return panel balance (for panel-level API keys)
   const { data: panel, error } = await supabase
     .from('panels')
     .select('balance, default_currency')
     .eq('id', panelId)
     .maybeSingle();
 
-  if (error || !panel) {
-    return errorResponse("Failed to fetch balance");
-  }
+  if (error || !panel) return errorResponse("Failed to fetch balance");
 
   return jsonResponse({
     balance: parseFloat(panel.balance || 0).toFixed(4),
@@ -445,16 +463,12 @@ async function handleBalance(supabase: any, panelId: string, apiKey: string, buy
 // Request order refill
 async function handleRefill(supabase: any, panelId: string, params: BuyerApiRequest) {
   const { order, orders } = params;
-
-  if (!order && !orders) {
-    return errorResponse("Order ID is required");
-  }
+  if (!order && !orders) return errorResponse("Order ID is required");
 
   const orderIds = orders ? orders.split(',').map(o => o.trim()) : [String(order)];
   const results: any[] = [];
 
   for (const orderId of orderIds) {
-    // Check order exists and is refillable
     const { data: orderData, error } = await supabase
       .from('orders')
       .select('id, status, service_id, services(refill_available)')
@@ -472,26 +486,19 @@ async function handleRefill(supabase: any, panelId: string, params: BuyerApiRequ
       continue;
     }
 
-    // Create refill request
     const { data: refill, error: refillError } = await supabase
       .from('order_refills')
-      .insert({
-        order_id: orderData.id,
-        panel_id: panelId,
-        status: 'pending'
-      })
+      .insert({ order_id: orderData.id, panel_id: panelId, status: 'pending' })
       .select('id')
       .single();
 
     if (refillError) {
-      console.error('[buyer-api] Refill creation error:', refillError);
       results.push({ order: orderId, refill: { error: "Failed to create refill" } });
     } else {
       results.push({ order: orderId, refill: refill.id });
     }
   }
 
-  // Return single or array based on request
   if (!orders && results.length === 1) {
     return jsonResponse(
       results[0].refill.error 
@@ -499,17 +506,13 @@ async function handleRefill(supabase: any, panelId: string, params: BuyerApiRequ
         : { refill: results[0].refill }
     );
   }
-
   return jsonResponse(results);
 }
 
 // Get refill status
 async function handleRefillStatus(supabase: any, panelId: string, params: BuyerApiRequest) {
   const { refill, refills } = params;
-
-  if (!refill && !refills) {
-    return errorResponse("Refill ID is required");
-  }
+  if (!refill && !refills) return errorResponse("Refill ID is required");
 
   const refillIds = refills ? refills.split(',').map(r => r.trim()) : [String(refill)];
 
@@ -519,16 +522,11 @@ async function handleRefillStatus(supabase: any, panelId: string, params: BuyerA
     .eq('panel_id', panelId)
     .in('id', refillIds);
 
-  if (error) {
-    console.error('[buyer-api] Refill status fetch error:', error);
-    return errorResponse("Failed to fetch refill status");
-  }
+  if (error) return errorResponse("Failed to fetch refill status");
 
   if (refillIds.length === 1) {
     const found = refillData?.find((r: any) => r.id === refillIds[0]);
-    if (!found) {
-      return errorResponse("Incorrect refill ID");
-    }
+    if (!found) return errorResponse("Incorrect refill ID");
     return jsonResponse({ status: formatStatus(found.status) });
   }
 
@@ -537,17 +535,13 @@ async function handleRefillStatus(supabase: any, panelId: string, params: BuyerA
     const found = refillData?.find((r: any) => r.id === id);
     result[id] = found ? { status: formatStatus(found.status) } : { error: "Incorrect refill ID" };
   });
-
   return jsonResponse(result);
 }
 
 // Cancel orders
 async function handleCancel(supabase: any, panelId: string, params: BuyerApiRequest) {
   const { orders } = params;
-
-  if (!orders) {
-    return errorResponse("Order IDs are required");
-  }
+  if (!orders) return errorResponse("Order IDs are required");
 
   const orderIds = orders.split(',').map(o => o.trim());
   const results: any[] = [];
@@ -555,7 +549,7 @@ async function handleCancel(supabase: any, panelId: string, params: BuyerApiRequ
   for (const orderId of orderIds) {
     const { data: orderData, error } = await supabase
       .from('orders')
-      .select('id, status, service_id, services(cancel_available)')
+      .select('id, status, price, buyer_id')
       .eq('panel_id', panelId)
       .eq('order_number', orderId)
       .maybeSingle();
@@ -570,53 +564,45 @@ async function handleCancel(supabase: any, panelId: string, params: BuyerApiRequ
       continue;
     }
 
-    // Update order status
     const { error: updateError } = await supabase
       .from('orders')
       .update({ status: 'cancelled' })
       .eq('id', orderData.id);
 
     if (updateError) {
-      console.error('[buyer-api] Cancel error:', updateError);
       results.push({ order: orderId, cancel: { error: "Failed to cancel order" } });
     } else {
+      // Refund balance on cancellation
+      if (orderData.buyer_id && orderData.price) {
+        const { data: buyer } = await supabase.from('client_users').select('balance').eq('id', orderData.buyer_id).single();
+        if (buyer) {
+          await supabase.from('client_users').update({ 
+            balance: parseFloat(buyer.balance || 0) + parseFloat(orderData.price) 
+          }).eq('id', orderData.buyer_id);
+        }
+      }
       results.push({ order: orderId, cancel: true });
     }
   }
-
   return jsonResponse(results);
 }
 
 // Helper functions
 function formatCategory(category: string): string {
   const categoryMap: Record<string, string> = {
-    instagram: 'Instagram',
-    facebook: 'Facebook', 
-    twitter: 'Twitter / X',
-    youtube: 'YouTube',
-    tiktok: 'TikTok',
-    telegram: 'Telegram',
-    linkedin: 'LinkedIn',
-    spotify: 'Spotify',
-    twitch: 'Twitch',
-    discord: 'Discord',
-    threads: 'Threads',
-    other: 'Other Services'
+    instagram: 'Instagram', facebook: 'Facebook', twitter: 'Twitter / X',
+    youtube: 'YouTube', tiktok: 'TikTok', telegram: 'Telegram',
+    linkedin: 'LinkedIn', spotify: 'Spotify', twitch: 'Twitch',
+    discord: 'Discord', threads: 'Threads', other: 'Other Services'
   };
   return categoryMap[category?.toLowerCase()] || category || 'Other';
 }
 
 function formatStatus(status: string): string {
   const statusMap: Record<string, string> = {
-    pending: 'Pending',
-    processing: 'In progress',
-    in_progress: 'In progress',
-    completed: 'Completed',
-    partial: 'Partial',
-    cancelled: 'Canceled',
-    canceled: 'Canceled',
-    refunded: 'Refunded',
-    failed: 'Failed'
+    pending: 'Pending', processing: 'In progress', in_progress: 'In progress',
+    completed: 'Completed', partial: 'Partial', cancelled: 'Canceled',
+    canceled: 'Canceled', refunded: 'Refunded', failed: 'Failed'
   };
   return statusMap[status?.toLowerCase()] || status || 'Pending';
 }
