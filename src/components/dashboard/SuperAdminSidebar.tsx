@@ -22,7 +22,12 @@ import {
   Database,
   Bell,
   FileText,
-  Crown
+  Crown,
+  Activity,
+  CreditCard,
+  Megaphone,
+  Globe,
+  HardDrive
 } from "lucide-react";
 
 const menuItems = [
@@ -32,8 +37,13 @@ const menuItems = [
   { title: "Revenue Analytics", url: "/admin/revenue", icon: DollarSign },
   { title: "Platform Settings", url: "/admin/settings", icon: Settings },
   { title: "Payment Gateways", url: "/admin/payments", icon: Database },
+  { title: "Subscriptions", url: "/admin/subscriptions", icon: CreditCard },
   { title: "Support System", url: "/admin/support", icon: MessageSquare },
   { title: "Security & Access", url: "/admin/security", icon: Shield },
+  { title: "System Health", url: "/admin/system-health", icon: Activity },
+  { title: "Domain Management", url: "/admin/domains", icon: Globe },
+  { title: "Ads Management", url: "/admin/ads", icon: Megaphone },
+  { title: "Backups", url: "/admin/backups", icon: HardDrive },
   { title: "Reports", url: "/admin/reports", icon: FileText },
   { title: "Notifications", url: "/admin/notifications", icon: Bell },
 ];

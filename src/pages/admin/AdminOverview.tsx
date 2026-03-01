@@ -80,6 +80,7 @@ const AdminOverview = () => {
   const [recentActivity, setRecentActivity] = useState<AuditLog[]>([]);
   const [topPanels, setTopPanels] = useState<Panel[]>([]);
   const [recentDeposits, setRecentDeposits] = useState<RecentDeposit[]>([]);
+  const [securityScore, setSecurityScore] = useState(0);
 
   useEffect(() => {
     fetchData();
@@ -167,6 +168,25 @@ const AdminOverview = () => {
       setTopPanels((topPerformers || []) as unknown as Panel[]);
       setRecentDeposits((deposits || []) as unknown as RecentDeposit[]);
 
+      // Calculate real security score from platform settings
+      const { data: platformSettings } = await supabase
+        .from('platform_settings')
+        .select('setting_key, setting_value')
+        .in('setting_key', ['enforce_2fa', 'password_min_length', 'rate_limit_enabled', 'block_tor_vpn', 'captcha_enabled']);
+      
+      let score = 60;
+      if (platformSettings) {
+        for (const s of platformSettings) {
+          const val = String(s.setting_value ?? '');
+          if (s.setting_key === 'enforce_2fa' && val === 'true') score += 10;
+          if (s.setting_key === 'password_min_length' && parseInt(val) >= 10) score += 8;
+          if (s.setting_key === 'rate_limit_enabled' && val === 'true') score += 8;
+          if (s.setting_key === 'block_tor_vpn' && val === 'true') score += 7;
+          if (s.setting_key === 'captcha_enabled' && val === 'true') score += 7;
+        }
+      }
+      setSecurityScore(Math.min(score, 100));
+
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -201,7 +221,7 @@ const AdminOverview = () => {
     { title: 'Total Panels', value: stats.totalPanels, icon: BarChart3, change: statsChanges.panels.value, trend: statsChanges.panels.trend, color: 'from-blue-500 to-blue-600', bg: 'bg-blue-500/10' },
     { title: 'Active Users', value: stats.activeUsers, icon: Users, change: statsChanges.users.value, trend: statsChanges.users.trend, color: 'from-emerald-500 to-emerald-600', bg: 'bg-emerald-500/10' },
     { title: 'Platform Revenue', value: `$${stats.platformRevenue.toFixed(0)}`, icon: DollarSign, change: statsChanges.revenue.value, trend: statsChanges.revenue.trend, color: 'from-violet-500 to-violet-600', bg: 'bg-violet-500/10' },
-    { title: 'Security Score', value: '98.2%', icon: Shield, change: 'Secure', trend: 'up' as const, color: 'from-amber-500 to-amber-600', bg: 'bg-amber-500/10' }
+    { title: 'Security Score', value: loading ? '...' : `${securityScore}%`, icon: Shield, change: securityScore >= 90 ? 'Secure' : securityScore >= 70 ? 'Fair' : 'At Risk', trend: securityScore >= 80 ? 'up' : 'down', color: 'from-amber-500 to-amber-600', bg: 'bg-amber-500/10' }
   ];
 
   const kanbanColumns = [
