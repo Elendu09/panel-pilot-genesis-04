@@ -390,9 +390,9 @@ export const VercelIntegrationSettings = () => {
             </div>
             <div className="flex flex-wrap items-center gap-2 md:gap-4 text-sm">
               <Badge variant="outline" className="shrink-0">TXT</Badge>
-              <code className="text-xs">_homeofsmm</code>
+              <code className="text-xs">_smmpilot</code>
               <span className="text-muted-foreground">→</span>
-              <code className="text-xs break-all">homeofsmm-verify=xxxxx</code>
+              <code className="text-xs break-all">smmpilot-verify=xxxxx</code>
             </div>
           </div>
           <p className="text-xs text-muted-foreground mt-3">

@@ -39,7 +39,7 @@ interface Order {
   target_url: string;
   quantity: number;
   price: number;
-  status: 'pending' | 'in_progress' | 'completed' | 'cancelled' | 'partial';
+  status: 'pending' | 'in_progress' | 'completed' | 'cancelled' | 'partial' | 'processing' | 'awaiting_payment';
   start_count: number;
   remains: number;
   progress: number;

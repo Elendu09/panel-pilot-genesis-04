@@ -253,11 +253,11 @@ export function TwoFactorSetup({ onStatusChange }: TwoFactorSetupProps) {
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         exit={{ opacity: 0, height: 0 }}
-                        className="grid grid-cols-2 gap-2"
+                        className="grid grid-cols-1 sm:grid-cols-2 gap-2 overflow-x-auto"
                       >
                         {backupCodes.map((code, idx) => (
-                          <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-muted/50 font-mono text-sm">
-                            <span>{code}</span>
+                          <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-muted/50 font-mono text-xs sm:text-sm min-w-0">
+                            <span className="truncate">{code}</span>
                             <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => copyToClipboard(code)}>
                               <Copy className="w-3 h-3" />
                             </Button>

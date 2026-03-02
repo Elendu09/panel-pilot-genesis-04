@@ -24,6 +24,9 @@ const Auth = () => {
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [showVerification, setShowVerification] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isRecoveryMode, setIsRecoveryMode] = useState(false);
   
   const { signIn, signUp, user, profile } = useAuth();
   const navigate = useNavigate();
@@ -51,9 +54,17 @@ const Auth = () => {
     return null;
   };
 
+  // Detect recovery mode from URL
   useEffect(() => {
+    const type = searchParams.get('type');
+    if (type === 'recovery') {
+      setIsRecoveryMode(true);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (isRecoveryMode) return; // Don't redirect during password reset
     if (user && profile) {
-      // If this is a fresh verification, ALWAYS check onboarding first
       if (isVerificationCallback) {
         checkOnboardingAndRedirect(null);
         return;
@@ -64,11 +75,10 @@ const Auth = () => {
       if (profile.role === 'admin') {
         navigate(intendedPath?.startsWith('/admin') ? intendedPath : '/admin', { replace: true });
       } else {
-        // For panel owners, check onboarding status
         checkOnboardingAndRedirect(intendedPath);
       }
     }
-  }, [user, profile, isVerificationCallback]);
+  }, [user, profile, isVerificationCallback, isRecoveryMode]);
 
   const checkOnboardingAndRedirect = async (intendedPath: string | null) => {
     if (!profile?.id) return;
@@ -217,6 +227,79 @@ const Auth = () => {
       setLoading(false);
     }
   };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword !== confirmPassword) {
+      toast({ variant: 'destructive', title: 'Passwords do not match' });
+      return;
+    }
+    if (newPassword.length < 6) {
+      toast({ variant: 'destructive', title: 'Password too short', description: 'Minimum 6 characters.' });
+      return;
+    }
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      toast({ title: 'Password Updated', description: 'Your password has been reset successfully.' });
+      setIsRecoveryMode(false);
+      setNewPassword('');
+      setConfirmPassword('');
+      navigate('/auth', { replace: true });
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Reset Failed', description: error.message });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Show recovery password form
+  if (isRecoveryMode) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-secondary/10 flex items-center justify-center p-4">
+        <Helmet>
+          <title>Reset Password - HOME OF SMM</title>
+          <meta name="robots" content="noindex,nofollow" />
+        </Helmet>
+        <Card className="w-full max-w-md bg-card/80 backdrop-blur-sm border-border shadow-card">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+              Set New Password
+            </CardTitle>
+            <CardDescription>
+              Enter your new password below
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleResetPassword} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="newPassword">New Password</Label>
+                <PasswordInput
+                  id="newPassword"
+                  value={newPassword}
+                  onChange={setNewPassword}
+                  placeholder="Enter new password"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <PasswordInput
+                  id="confirmPassword"
+                  value={confirmPassword}
+                  onChange={setConfirmPassword}
+                  placeholder="Confirm new password"
+                />
+              </div>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? 'Updating...' : 'Update Password'}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   // Show verification UI after successful sign-up or for unverified users
   if (showVerification) {
