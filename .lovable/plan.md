@@ -1,73 +1,92 @@
 
 
-# Plan: Panel Number Fix, Real 2FA Implementation, API Verification
+# Plan: Onboarding Edit, Domain Sync, 2FA Backup Fix, Password Reset, Order Creation Fix
 
-## Issue 1: Panel Number Badge Shows Total Count Instead of Current Panel Number
+## 1. Order Creation Fix — ROOT CAUSE FOUND (Critical)
 
-**Problem**: In `PanelSwitcher.tsx` line 63-64, the badge on the avatar shows `allPanels.length` (e.g., "2" for 2 panels). The user expects it to show the **current panel's number** (e.g., "1" for AiSoc which was created first).
+The `order_status` database enum only contains: `pending`, `in_progress`, `completed`, `cancelled`, `partial`.
 
-**Fix in `src/components/panel/PanelSwitcher.tsx`** (line 63-64):
-- Change `{allPanels.length}` to `{getPanelNumber(panel?.id || '')}` so it shows the active panel's position number (1 for oldest, 2 for second, etc.)
+The `buyer-order` edge function uses two statuses that **don't exist in the enum**:
+- Line 190: `status: 'awaiting_payment'` — fails the INSERT, causing "Failed to create order"
+- Line 79: `status: 'processing'` — fails the UPDATE after provider forwarding
 
-## Issue 2: Real 2FA (TOTP) Implementation
+This affects both **New Order** and **Fast Order** for tenants.
 
-**Problem**: The "Require Two-Factor (2FA)" toggle in SecuritySettings is purely a UI toggle that saves a boolean to panel settings. It doesn't connect to actual authentication — no TOTP enrollment, no QR code, no verification on login.
+**Fix:**
+- Add `processing` and `awaiting_payment` to the `order_status` enum via migration
+- Also update CORS headers in `buyer-order` to match the platform standard
 
-**Approach**: Since the installed `@supabase/supabase-js@2.56.0` does **not** include the MFA API (`auth.mfa.enroll/challenge/verify` are absent), we implement TOTP via a custom edge function using a TOTP library (`otpauth`).
+**Files:** Database migration, `supabase/functions/buyer-order/index.ts` (CORS headers)
 
-### Changes:
+---
 
-**New edge function `supabase/functions/mfa-setup/index.ts`**:
-- `action: 'enroll'` — Generates a TOTP secret, returns the secret + otpauth URI (for QR code) + backup codes. Stores the secret encrypted in `profiles.mfa_secret` (new column).
-- `action: 'verify'` — Verifies a 6-digit TOTP code against the stored secret. On success, sets `profiles.mfa_verified = true`.
-- `action: 'validate'` — Called on login to validate a TOTP code (for the post-login 2FA challenge).
-- `action: 'disable'` — Disables MFA, clears `mfa_secret` and `mfa_verified`.
-- `action: 'use_backup'` — Validates a backup code, marks it as used.
+## 2. Forgot Password — Missing Reset Page
 
-**New migration**: Add `mfa_secret text`, `mfa_verified boolean default false`, `mfa_backup_codes jsonb` columns to `profiles` table.
+The `resetPasswordForEmail` redirects to `/auth?type=recovery`, but `Auth.tsx` has **no code to handle `type=recovery`**. When Supabase redirects back with recovery tokens, the Auth page just auto-logs the user in without showing a "set new password" form.
 
-**New component `src/components/auth/TwoFactorSetup.tsx`**:
-- Shows QR code (using a simple SVG/URL-based QR generator or inline canvas)
-- 6-digit OTP input for verification
-- Displays backup codes after successful enrollment
-- Called from SecuritySettings when user enables 2FA for their own account
+**Fix:**
+- In `Auth.tsx`, detect `type=recovery` from search params
+- Show a "Set New Password" form with a password input and confirm
+- Call `supabase.auth.updateUser({ password })` to actually update the password
+- Show this form instead of the normal login/signup tabs
 
-**New component `src/components/auth/TwoFactorChallenge.tsx`**:
-- Post-login TOTP challenge dialog
-- 6-digit input + "Use backup code" link
-- Blocks access until verified
+**Files:** `src/pages/Auth.tsx`
 
-**Modified `src/contexts/AuthContext.tsx`**:
-- After successful `signIn`, check if user has `mfa_verified = true` in profile
-- If yes, set a `needsMfaChallenge` state instead of completing login
-- Render `TwoFactorChallenge` overlay until MFA is verified
+---
 
-**Modified `src/pages/panel/SecuritySettings.tsx`**:
-- The "Require Two-Factor (2FA)" toggle remains for tenant enforcement
-- Add a separate "Enable 2FA for Your Account" section in the Recovery tab
-- This section uses `TwoFactorSetup` component to enroll the panel owner
-- Backup codes can only be generated when 2FA is enabled (linked together)
+## 3. Onboarding Last Step — Add Edit/Review Buttons
 
-## Issue 3: API Verification
+The "Ready to Launch" step shows a configuration summary (Panel Name, Plan, Domain, Theme, Currency, SEO) but has no way to go back and edit individual items.
 
-**Status**: Both `buyer-api` and `panel-api` edge functions are deployed and responding correctly. The buyer-api properly:
-- Returns `{"error": "Invalid API key"}` for bad keys
-- Has balance check/deduction before order creation
-- Surfaces provider errors in responses
-- Returns proper error messages for all actions
+**Fix:**
+- Add a small "Edit" button/icon on each summary card item
+- Clicking it navigates back to the corresponding step (e.g., clicking Edit on "Domain" goes to step 3)
+- The step stepper already supports `setCurrentStep()` so this is straightforward
 
-No code changes needed for API — already functional.
+**Files:** `src/pages/panel/PanelOnboardingV2.tsx` (lines 1039-1110)
 
-## Files to Change
+---
+
+## 4. Onboarding Domain → Domain Management Sync
+
+When a user sets up a custom domain during onboarding and DNS is verified, the domain is NOT synced to `panel_domains`. The `handleComplete` function only saves `custom_domain` on the `panels` table but never creates a `panel_domains` record.
+
+**Fix:**
+- In `handleComplete` (line 573), after panel creation/update, if `domainType === 'custom'` and `customDomain` is set, insert a record into `panel_domains` with the domain, verification token, and status
+- Add a unique constraint on `panel_domains.domain` (currently unique is only on `panel_id + domain`) to prevent the same domain from being added to multiple panels
+
+**Two TXT records issue (`_homeofsmm` and `_smmpilot`):**
+- `_homeofsmm` comes from `VercelIntegrationSettings.tsx` (admin Vercel config, legacy reference)
+- `_smmpilot` is the correct platform TXT record used in `DomainSettings.tsx` and `OnboardingDomainStep.tsx`
+- The `_homeofsmm` reference in admin settings is a leftover from a previous project name and should be updated to `_smmpilot` for consistency
+
+**Files:** `src/pages/panel/PanelOnboardingV2.tsx`, `src/components/admin/VercelIntegrationSettings.tsx`, database migration for unique domain constraint
+
+---
+
+## 5. 2FA Backup Codes — Gate Behind 2FA Enablement
+
+Currently, the "Panel Backup Codes" section in SecuritySettings Recovery tab lets users generate codes regardless of 2FA status.
+
+**Fix:**
+- In SecuritySettings Recovery tab, disable/hide the "Generate Backup Codes" button if `enforce2FA` is false AND MFA is not active on the user's account
+- Show a message: "Enable 2FA first to generate backup codes"
+- The backup codes in `TwoFactorSetup.tsx` are already properly gated (only shown after MFA enrollment) — this is correct
+- Fix mobile width issue: the backup code grid (`grid grid-cols-2`) overflows on small screens. Add `overflow-x-auto` and `min-w-0` to the container, and use `break-all` or `text-xs` on the code text
+
+**Files:** `src/pages/panel/SecuritySettings.tsx` (lines 1457-1533), `src/components/auth/TwoFactorSetup.tsx`
+
+---
+
+## Summary of Files to Change
 
 | File | Change |
 |------|--------|
-| `src/components/panel/PanelSwitcher.tsx` | Line 64: Show current panel number instead of total count |
-| `supabase/functions/mfa-setup/index.ts` | New edge function for TOTP enroll/verify/validate/disable |
-| New migration | Add `mfa_secret`, `mfa_verified`, `mfa_backup_codes` to `profiles` |
-| `src/components/auth/TwoFactorSetup.tsx` | New: QR code + OTP enrollment UI |
-| `src/components/auth/TwoFactorChallenge.tsx` | New: Post-login 2FA challenge dialog |
-| `src/contexts/AuthContext.tsx` | Check MFA status after login, gate access with challenge |
-| `src/pages/panel/SecuritySettings.tsx` | Add "Enable 2FA for Your Account" section; link backup codes to 2FA status |
-| `src/integrations/supabase/types.ts` | Update profiles type with new columns |
+| Database migration | Add `processing`, `awaiting_payment` to `order_status` enum; add unique index on `panel_domains.domain` |
+| `supabase/functions/buyer-order/index.ts` | Update CORS headers |
+| `src/pages/Auth.tsx` | Add password recovery form when `type=recovery` |
+| `src/pages/panel/PanelOnboardingV2.tsx` | Add Edit buttons on summary step; sync domain to `panel_domains` on complete |
+| `src/pages/panel/SecuritySettings.tsx` | Gate backup codes behind 2FA; fix mobile width overflow |
+| `src/components/auth/TwoFactorSetup.tsx` | Fix mobile backup code grid overflow |
+| `src/components/admin/VercelIntegrationSettings.tsx` | Change `_homeofsmm` to `_smmpilot` |
 
