@@ -4420,6 +4420,8 @@ export type Database = {
         | "completed"
         | "cancelled"
         | "partial"
+        | "processing"
+        | "awaiting_payment"
       panel_role: "panel_admin" | "manager" | "agent"
       panel_status: "pending" | "active" | "suspended" | "rejected"
       payment_status: "pending" | "completed" | "failed" | "refunded"
@@ -4638,6 +4640,8 @@ export const Constants = {
         "completed",
         "cancelled",
         "partial",
+        "processing",
+        "awaiting_payment",
       ],
       panel_role: ["panel_admin", "manager", "agent"],
       panel_status: ["pending", "active", "suspended", "rejected"],

@@ -1461,72 +1461,84 @@ const SecuritySettings = () => {
                   <Key className="w-5 h-5 text-primary" />
                   Panel Backup Codes
                 </CardTitle>
-                <CardDescription>Additional recovery codes for your panel (separate from 2FA backup codes)</CardDescription>
+               <CardDescription>Additional recovery codes for your panel (separate from 2FA backup codes)</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  These are panel-level recovery codes for emergency access.
-                  2FA backup codes are managed in the 2FA section above.
-                </p>
-                
-                {backupCodes.length === 0 ? (
-                  <Button onClick={generateBackupCodes} className="w-full">
-                    <Zap className="w-4 h-4 mr-2" />
-                    Generate Backup Codes
-                  </Button>
+                {!enforce2FA ? (
+                  <div className="flex items-center gap-3 p-4 rounded-xl bg-muted/30 border border-border/40">
+                    <AlertCircle className="w-5 h-5 text-muted-foreground shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium">2FA Required</p>
+                      <p className="text-xs text-muted-foreground">Enable Two-Factor Authentication above first to generate backup codes.</p>
+                    </div>
+                  </div>
                 ) : (
                   <>
-                    <div className="flex items-center gap-2 mb-4">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => setShowBackupCodes(!showBackupCodes)}
-                      >
-                        {showBackupCodes ? <EyeOff className="w-4 h-4 mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
-                        {showBackupCodes ? "Hide" : "Show"} Codes
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={downloadBackupCodes}>
-                        <Download className="w-4 h-4 mr-2" />
-                        Download
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={generateBackupCodes}
-                        className="ml-auto"
-                      >
-                        <RotateCcw className="w-4 h-4 mr-2" />
-                        Regenerate
-                      </Button>
-                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      These are panel-level recovery codes for emergency access.
+                      2FA backup codes are managed in the 2FA section above.
+                    </p>
                     
-                    <AnimatePresence>
-                      {showBackupCodes && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: "auto" }}
-                          exit={{ opacity: 0, height: 0 }}
-                          className="grid grid-cols-2 gap-2"
-                        >
-                          {backupCodes.map((code, idx) => (
-                            <div 
-                              key={idx}
-                              className="flex items-center justify-between p-2 rounded-lg bg-muted/50 font-mono text-sm"
+                    {backupCodes.length === 0 ? (
+                      <Button onClick={generateBackupCodes} className="w-full">
+                        <Zap className="w-4 h-4 mr-2" />
+                        Generate Backup Codes
+                      </Button>
+                    ) : (
+                      <>
+                        <div className="flex flex-wrap items-center gap-2 mb-4">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => setShowBackupCodes(!showBackupCodes)}
+                          >
+                            {showBackupCodes ? <EyeOff className="w-4 h-4 mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
+                            {showBackupCodes ? "Hide" : "Show"} Codes
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={downloadBackupCodes}>
+                            <Download className="w-4 h-4 mr-2" />
+                            Download
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={generateBackupCodes}
+                            className="ml-auto"
+                          >
+                            <RotateCcw className="w-4 h-4 mr-2" />
+                            Regenerate
+                          </Button>
+                        </div>
+                        
+                        <AnimatePresence>
+                          {showBackupCodes && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: "auto" }}
+                              exit={{ opacity: 0, height: 0 }}
+                              className="grid grid-cols-1 sm:grid-cols-2 gap-2 overflow-x-auto"
                             >
-                              <span>{code}</span>
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-6 w-6"
-                                onClick={() => copyToClipboard(code)}
-                              >
-                                <Copy className="w-3 h-3" />
-                              </Button>
-                            </div>
-                          ))}
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+                              {backupCodes.map((code, idx) => (
+                                <div 
+                                  key={idx}
+                                  className="flex items-center justify-between p-2 rounded-lg bg-muted/50 font-mono text-xs sm:text-sm min-w-0"
+                                >
+                                  <span className="truncate">{code}</span>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-6 w-6 shrink-0"
+                                    onClick={() => copyToClipboard(code)}
+                                  >
+                                    <Copy className="w-3 h-3" />
+                                  </Button>
+                                </div>
+                              ))}
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </>
+                    )}
                   </>
                 )}
               </CardContent>

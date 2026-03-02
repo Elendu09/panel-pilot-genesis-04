@@ -579,6 +579,24 @@ const PanelOnboardingV2 = () => {
               seo_description: seoDescription || description || `Professional SMM services from ${panelName}`,
               seo_keywords: seoKeywords || 'SMM, social media marketing, services'
           }, { onConflict: 'panel_id' });
+
+        // Sync custom domain to panel_domains if configured
+        if (domainType === 'custom' && customDomain) {
+          const verificationToken = `smmpilot-verify=${crypto.randomUUID()}`;
+          await supabase
+            .from('panel_domains')
+            .upsert({
+              panel_id: panelData.id,
+              domain: customDomain,
+              is_primary: true,
+              verification_status: 'verified',
+              dns_configured: true,
+              verified_at: new Date().toISOString(),
+              txt_verification_record: verificationToken,
+              txt_verified_at: new Date().toISOString(),
+              hosting_provider: 'lovable',
+            }, { onConflict: 'domain' });
+        }
       }
 
       toast({
@@ -1038,33 +1056,35 @@ const PanelOnboardingV2 = () => {
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Panel Name */}
-                  <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/30 border border-border/40">
+                  <div className="group flex items-start gap-3 p-3 rounded-xl bg-muted/30 border border-border/40 cursor-pointer hover:border-primary/40 transition-colors" onClick={() => setCurrentStep(0)}>
                     <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
                       <FileText className="w-4 h-4 text-primary" />
                     </div>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p className="text-xs text-muted-foreground">Panel Name</p>
                       <p className="text-sm font-semibold truncate">{panelName}</p>
                     </div>
+                    <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity mt-1">Edit</span>
                   </div>
 
                   {/* Plan */}
-                  <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/30 border border-border/40">
+                  <div className="group flex items-start gap-3 p-3 rounded-xl bg-muted/30 border border-border/40 cursor-pointer hover:border-primary/40 transition-colors" onClick={() => setCurrentStep(1)}>
                     <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
                       <CreditCard className="w-4 h-4 text-primary" />
                     </div>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p className="text-xs text-muted-foreground">Plan</p>
                       <p className="text-sm font-semibold capitalize">{selectedPlan}</p>
                     </div>
+                    <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity mt-1">Edit</span>
                   </div>
 
                   {/* Domain */}
-                  <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/30 border border-border/40">
+                  <div className="group flex items-start gap-3 p-3 rounded-xl bg-muted/30 border border-border/40 cursor-pointer hover:border-primary/40 transition-colors" onClick={() => setCurrentStep(3)}>
                     <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
                       <Globe className="w-4 h-4 text-primary" />
                     </div>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p className="text-xs text-muted-foreground">Domain</p>
                       <p className="text-sm font-semibold truncate">
                         {domainType === 'subdomain' 
@@ -1073,39 +1093,43 @@ const PanelOnboardingV2 = () => {
                         }
                       </p>
                     </div>
+                    <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity mt-1">Edit</span>
                   </div>
 
                   {/* Theme */}
-                  <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/30 border border-border/40">
+                  <div className="group flex items-start gap-3 p-3 rounded-xl bg-muted/30 border border-border/40 cursor-pointer hover:border-primary/40 transition-colors" onClick={() => setCurrentStep(4)}>
                     <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
                       <Palette className="w-4 h-4 text-primary" />
                     </div>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p className="text-xs text-muted-foreground">Theme</p>
                       <p className="text-sm font-semibold">{themePresets.find(t => t.key === selectedTheme)?.name || 'Custom'}</p>
                     </div>
+                    <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity mt-1">Edit</span>
                   </div>
 
                   {/* Currency */}
-                  <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/30 border border-border/40">
+                  <div className="group flex items-start gap-3 p-3 rounded-xl bg-muted/30 border border-border/40 cursor-pointer hover:border-primary/40 transition-colors" onClick={() => setCurrentStep(4)}>
                     <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
                       <Settings className="w-4 h-4 text-primary" />
                     </div>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p className="text-xs text-muted-foreground">Currency</p>
                       <p className="text-sm font-semibold">{currency}</p>
                     </div>
+                    <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity mt-1">Edit</span>
                   </div>
 
                   {/* SEO */}
-                  <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/30 border border-border/40">
+                  <div className="group flex items-start gap-3 p-3 rounded-xl bg-muted/30 border border-border/40 cursor-pointer hover:border-primary/40 transition-colors" onClick={() => setCurrentStep(5)}>
                     <div className="w-9 h-9 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0 mt-0.5">
                       <CheckCircle className="w-4 h-4 text-emerald-500" />
                     </div>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p className="text-xs text-muted-foreground">SEO</p>
                       <p className="text-sm font-semibold text-emerald-500">Configured</p>
                     </div>
+                    <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity mt-1">Edit</span>
                   </div>
                 </div>
               </div>
