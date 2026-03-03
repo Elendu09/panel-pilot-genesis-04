@@ -123,12 +123,61 @@ const Billing = () => {
     if (panel?.id) {
       fetchBillingData();
 
-      // Detect return from payment gateway
+      // Detect return from payment gateway and verify payment
       const params = new URLSearchParams(window.location.search);
-      if (params.get('deposit') === 'success' || params.get('upgrade') === 'success' || params.get('commission') === 'success') {
-        toast({ title: 'Payment Processing', description: 'Your payment is being confirmed. Balance will update shortly.' });
-        setTimeout(() => fetchBillingData(), 3000);
+      const transactionId = params.get('transaction_id');
+      const isSuccess = params.get('deposit') === 'success' || params.get('upgrade') === 'success' || params.get('commission') === 'success' || params.get('success') === 'true';
+      const isCancelled = params.get('cancelled') === 'true';
+
+      if (isSuccess || isCancelled || transactionId) {
+        // Clean URL
         window.history.replaceState({}, '', '/panel/billing');
+
+        if (isCancelled) {
+          toast({ variant: 'destructive', title: 'Payment Cancelled', description: 'Your payment was not completed.' });
+        } else if (transactionId) {
+          // Actively verify the payment with the gateway
+          toast({ title: 'Verifying Payment...', description: 'Please wait while we confirm your payment.' });
+          
+          const verifyPayment = async () => {
+            try {
+              const { data } = await supabase.functions.invoke('process-payment', {
+                body: { action: 'verify-payment', transactionId }
+              });
+              if (data?.status === 'completed') {
+                toast({ title: 'Payment Successful!', description: `$${Number(data.amount).toFixed(2)} has been added to your balance.` });
+                fetchBillingData();
+              } else if (data?.status === 'failed') {
+                toast({ variant: 'destructive', title: 'Payment Failed', description: 'Your payment could not be processed.' });
+              } else {
+                // Still pending — poll briefly
+                let attempts = 0;
+                const poll = setInterval(async () => {
+                  attempts++;
+                  const { data: txData } = await supabase.from('transactions').select('status, amount').eq('id', transactionId).single();
+                  if (txData?.status === 'completed') {
+                    clearInterval(poll);
+                    toast({ title: 'Payment Successful!', description: `$${Number(txData.amount).toFixed(2)} added to balance.` });
+                    fetchBillingData();
+                  } else if (txData?.status === 'failed' || attempts >= 10) {
+                    clearInterval(poll);
+                    if (txData?.status !== 'failed') {
+                      toast({ title: 'Payment Processing', description: 'Your payment is still being verified. Balance will update shortly.' });
+                    }
+                  }
+                }, 2000);
+              }
+            } catch (err) {
+              console.error('Verify error:', err);
+              toast({ title: 'Payment Processing', description: 'Balance will update shortly.' });
+              setTimeout(() => fetchBillingData(), 3000);
+            }
+          };
+          verifyPayment();
+        } else {
+          toast({ title: 'Payment Processing', description: 'Your payment is being confirmed. Balance will update shortly.' });
+          setTimeout(() => fetchBillingData(), 3000);
+        }
       }
 
       // Subscribe to transaction updates for real-time balance
@@ -317,8 +366,8 @@ const Billing = () => {
           panelId: panel.id,
           buyerId: profile.id, // Edge function expects 'buyerId'
           isOwnerDeposit: true, // Flag for panel owner deposit
-          returnUrl: `${window.location.origin}/panel/billing?deposit=success`,
-          cancelUrl: `${window.location.origin}/panel/billing?deposit=cancelled`,
+          returnUrl: `${window.location.origin}/panel/billing`,
+          cancelUrl: `${window.location.origin}/panel/billing?cancelled=true`,
           metadata: {
             type: 'panel_deposit',
             panelId: panel.id,

@@ -419,7 +419,34 @@ const BuyerDeposit = () => {
           description: "Please wait while we confirm your payment." 
         });
         
-        // Poll for status update (webhooks may take a moment)
+        // Actively verify with the gateway first
+        try {
+          const { data: verifyResult } = await supabase.functions.invoke('process-payment', {
+            body: { action: 'verify-payment', transactionId }
+          });
+          
+          if (verifyResult?.status === 'completed') {
+            toast({ 
+              title: "Payment Successful!", 
+              description: `$${Number(verifyResult.amount).toFixed(2)} has been added to your balance.` 
+            });
+            refreshBuyer();
+            fetchTransactions();
+            return;
+          } else if (verifyResult?.status === 'failed') {
+            toast({ 
+              variant: "destructive",
+              title: "Payment Failed", 
+              description: "Your payment could not be processed." 
+            });
+            fetchTransactions();
+            return;
+          }
+        } catch (err) {
+          console.error('Verify error:', err);
+        }
+        
+        // Fallback: poll for status update (webhooks may take a moment)
         let attempts = 0;
         const maxAttempts = 10;
         
@@ -450,10 +477,8 @@ const BuyerDeposit = () => {
           
           attempts++;
           if (attempts < maxAttempts) {
-            // Check every 2 seconds
             setTimeout(checkStatus, 2000);
           } else {
-            // After 20 seconds, show pending message
             toast({ 
               title: "Payment Processing", 
               description: "Your payment is still being verified. Check back shortly." 

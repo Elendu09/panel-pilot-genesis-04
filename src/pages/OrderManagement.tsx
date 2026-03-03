@@ -72,10 +72,10 @@ const OrderManagement = () => {
 
   const fetchOrders = async () => {
     try {
-      let query = supabase.from('orders').select(`
+      let query = (supabase as any).from('orders').select(`
         *,
         service:services(name, category),
-        buyer:profiles!orders_buyer_id_fkey(email, full_name)
+        buyer:client_users!orders_buyer_id_fkey(email, full_name)
       `);
 
       // If panel owner, only show orders for their panel
