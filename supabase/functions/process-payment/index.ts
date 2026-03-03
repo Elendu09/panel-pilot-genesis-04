@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 interface PaymentRequest {
@@ -31,8 +31,157 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const body: PaymentRequest = await req.json();
-    const { gateway, amount, panelId, buyerId, transactionId, returnUrl, currency = 'usd', orderId, isOwnerDeposit, metadata } = body;
+    const body = await req.json();
+
+    // === VERIFY-PAYMENT ACTION: allows client to verify & finalize a payment on return ===
+    if (body.action === 'verify-payment') {
+      const { transactionId, gateway: verifyGateway } = body;
+      if (!transactionId) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Missing transactionId' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Look up the transaction
+      const { data: tx, error: txLookupError } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('id', transactionId)
+        .single();
+
+      if (txLookupError || !tx) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Transaction not found' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Already completed or failed — just return current status
+      if (tx.status === 'completed' || tx.status === 'failed') {
+        return new Response(
+          JSON.stringify({ success: true, status: tx.status, amount: tx.amount }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Try to verify with the gateway
+      const gw = verifyGateway || tx.payment_method;
+      let verified = false;
+      let verifiedAmount = tx.amount;
+
+      try {
+        if (gw === 'stripe' && tx.external_id) {
+          // Fetch admin or panel gateway config for stripe secret
+          const { data: adminProvider } = await supabase
+            .from('platform_payment_providers')
+            .select('config')
+            .eq('provider_name', 'stripe')
+            .eq('is_enabled', true)
+            .maybeSingle();
+          const stripeKey = (adminProvider?.config as any)?.secret_key || (adminProvider?.config as any)?.secretKey || Deno.env.get('STRIPE_SECRET_KEY');
+          if (stripeKey) {
+            const sessionRes = await fetch(`https://api.stripe.com/v1/checkout/sessions/${tx.external_id}`, {
+              headers: { 'Authorization': `Bearer ${stripeKey}` },
+            });
+            const session = await sessionRes.json();
+            if (session.payment_status === 'paid') {
+              verified = true;
+              verifiedAmount = (session.amount_total || 0) / 100;
+            }
+          }
+        } else if (gw === 'flutterwave' && tx.external_id) {
+          const { data: adminProvider } = await supabase
+            .from('platform_payment_providers')
+            .select('config')
+            .eq('provider_name', 'flutterwave')
+            .eq('is_enabled', true)
+            .maybeSingle();
+          const flwKey = (adminProvider?.config as any)?.secret_key || (adminProvider?.config as any)?.secretKey;
+          if (flwKey) {
+            const flwRes = await fetch(`https://api.flutterwave.com/v3/transactions/${tx.external_id}/verify`, {
+              headers: { 'Authorization': `Bearer ${flwKey}` },
+            });
+            const flwData = await flwRes.json();
+            if (flwData.status === 'success' && flwData.data?.status === 'successful') {
+              verified = true;
+              verifiedAmount = flwData.data.amount;
+            }
+          }
+        } else if (gw === 'paystack') {
+          const { data: adminProvider } = await supabase
+            .from('platform_payment_providers')
+            .select('config')
+            .eq('provider_name', 'paystack')
+            .eq('is_enabled', true)
+            .maybeSingle();
+          const psKey = (adminProvider?.config as any)?.secret_key || (adminProvider?.config as any)?.secretKey;
+          if (psKey) {
+            const psRes = await fetch(`https://api.paystack.co/transaction/verify/${transactionId}`, {
+              headers: { 'Authorization': `Bearer ${psKey}` },
+            });
+            const psData = await psRes.json();
+            if (psData.status && psData.data?.status === 'success') {
+              verified = true;
+              verifiedAmount = (psData.data.amount || 0) / 100;
+            }
+          }
+        }
+      } catch (verifyErr) {
+        console.error('[process-payment] Gateway verification error:', verifyErr);
+      }
+
+      if (verified) {
+        // Update transaction to completed
+        await supabase
+          .from('transactions')
+          .update({ status: 'completed', updated_at: new Date().toISOString() })
+          .eq('id', transactionId);
+
+        // Credit balance based on metadata type
+        const txMeta = (tx.metadata as Record<string, any>) || {};
+        if (txMeta.type === 'panel_deposit' && tx.panel_id) {
+          const { data: panelData } = await supabase
+            .from('panels')
+            .select('balance')
+            .eq('id', tx.panel_id)
+            .single();
+          if (panelData) {
+            await supabase
+              .from('panels')
+              .update({ balance: (panelData.balance || 0) + verifiedAmount })
+              .eq('id', tx.panel_id);
+          }
+        } else if (tx.buyer_id) {
+          const { data: buyerData } = await supabase
+            .from('client_users')
+            .select('balance')
+            .eq('id', tx.buyer_id)
+            .single();
+          if (buyerData) {
+            await supabase
+              .from('client_users')
+              .update({ balance: (buyerData.balance || 0) + verifiedAmount })
+              .eq('id', tx.buyer_id);
+          }
+        }
+
+        console.log(`[process-payment] Verified & completed transaction ${transactionId}, amount: ${verifiedAmount}`);
+        return new Response(
+          JSON.stringify({ success: true, status: 'completed', amount: verifiedAmount }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Not verified yet — return current status
+      return new Response(
+        JSON.stringify({ success: true, status: tx.status, amount: tx.amount }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // === STANDARD PAYMENT FLOW ===
+    const { gateway, amount, panelId, buyerId, transactionId, returnUrl, currency = 'usd', orderId, isOwnerDeposit, metadata } = body as PaymentRequest;
 
     console.log(`[process-payment] Processing ${gateway} payment: $${amount} for panel ${panelId}${orderId ? `, order: ${orderId}` : ''}`);
 

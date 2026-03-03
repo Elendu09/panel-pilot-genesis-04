@@ -1693,7 +1693,7 @@ export type Database = {
             foreignKeyName: "orders_buyer_id_fkey"
             columns: ["buyer_id"]
             isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "client_users"
             referencedColumns: ["id"]
           },
           {
