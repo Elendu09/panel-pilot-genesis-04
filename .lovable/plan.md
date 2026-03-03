@@ -1,92 +1,77 @@
 
 
-# Plan: Onboarding Edit, Domain Sync, 2FA Backup Fix, Password Reset, Order Creation Fix
+# Plan: Fix Order Creation, Deposit Balance, Direct Provider, and CORS Issues
 
-## 1. Order Creation Fix — ROOT CAUSE FOUND (Critical)
+## Root Cause Analysis
 
-The `order_status` database enum only contains: `pending`, `in_progress`, `completed`, `cancelled`, `partial`.
+### Issue 1: "Order Failed — Failed to create order" (CRITICAL)
+**Root cause**: The `orders.buyer_id` column has a foreign key constraint referencing `profiles(id)`. But the `buyer-order` edge function inserts `client_users.id` as `buyer_id`. Since `client_users.id` is not a `profiles.id`, the FK constraint rejects the INSERT every time a tenant places an order.
 
-The `buyer-order` edge function uses two statuses that **don't exist in the enum**:
-- Line 190: `status: 'awaiting_payment'` — fails the INSERT, causing "Failed to create order"
-- Line 79: `status: 'processing'` — fails the UPDATE after provider forwarding
+**Evidence**: `orders_buyer_id_fkey: FOREIGN KEY (buyer_id) REFERENCES profiles(id) ON DELETE CASCADE` — but tenant buyers are `client_users`, not `profiles`.
 
-This affects both **New Order** and **Fast Order** for tenants.
+**Fix**: Drop the incorrect FK and re-create it pointing to `client_users(id)`. The orders table is empty so no data migration needed.
 
-**Fix:**
-- Add `processing` and `awaiting_payment` to the `order_status` enum via migration
-- Also update CORS headers in `buyer-order` to match the platform standard
+### Issue 2: Tenant Deposit — Records Not Created
+**Root cause**: The `process-payment` edge function has **incomplete CORS headers** (line 7: only `authorization, x-client-info, apikey, content-type`). The Supabase JS client sends additional headers (`x-supabase-client-platform`, etc.) causing CORS preflight failures. The browser blocks the request before it reaches the function.
 
-**Files:** Database migration, `supabase/functions/buyer-order/index.ts` (CORS headers)
+**Fix**: Update CORS headers in `process-payment` to include all platform headers.
 
----
+### Issue 3: Panel Owner Balance Not Updated After Deposit
+**Root cause**: Two compounding issues:
+1. Same CORS problem on `payment-webhook` (line 7) — though webhooks from payment servers shouldn't need CORS, the function's transaction update logic is correct
+2. The real issue: all owner deposits show `status: pending` in the database. Payment gateways like Cryptomus, Flutterwave require their webhook URL to be configured in their dashboards pointing to `https://tooudgubuhxjbbvzjcgx.supabase.co/functions/v1/payment-webhook?gateway=<name>`. Without this, the webhook never fires and the balance never updates
+3. Additionally, the `process-payment` function doesn't handle the **return URL callback** — when a user is redirected back with `?success=true&transaction_id=...`, nothing in the client code verifies the payment and updates the status
 
-## 2. Forgot Password — Missing Reset Page
+**Fix**: 
+- Fix CORS on all three functions
+- Add client-side payment verification on return (call a new verify endpoint or update status client-side)
+- In `Billing.tsx` and `BuyerDeposit.tsx`, detect `?success=true&transaction_id=...` in URL params, then call a verification edge function to confirm and finalize the payment
 
-The `resetPasswordForEmail` redirects to `/auth?type=recovery`, but `Auth.tsx` has **no code to handle `type=recovery`**. When Supabase redirects back with recovery tokens, the Auth page just auto-logs the user in without showing a "set new password" form.
+### Issue 4: Direct Provider Edge Error
+**Root cause**: `enable-direct-provider` has incomplete CORS headers (line 7: `authorization, x-client-info, apikey, content-type`), same issue.
 
-**Fix:**
-- In `Auth.tsx`, detect `type=recovery` from search params
-- Show a "Set New Password" form with a password input and confirm
-- Call `supabase.auth.updateUser({ password })` to actually update the password
-- Show this form instead of the normal login/signup tabs
+**Fix**: Update CORS headers.
 
-**Files:** `src/pages/Auth.tsx`
+## Changes
 
----
+### 1. Database Migration
+```sql
+-- Fix orders.buyer_id to reference client_users instead of profiles
+ALTER TABLE orders DROP CONSTRAINT orders_buyer_id_fkey;
+ALTER TABLE orders ADD CONSTRAINT orders_buyer_id_fkey 
+  FOREIGN KEY (buyer_id) REFERENCES client_users(id) ON DELETE CASCADE;
+```
 
-## 3. Onboarding Last Step — Add Edit/Review Buttons
+### 2. CORS Header Fixes (3 edge functions)
+Update CORS headers in:
+- `supabase/functions/process-payment/index.ts` (line 7)
+- `supabase/functions/payment-webhook/index.ts` (line 7)  
+- `supabase/functions/enable-direct-provider/index.ts` (line 7)
 
-The "Ready to Launch" step shows a configuration summary (Panel Name, Plan, Domain, Theme, Currency, SEO) but has no way to go back and edit individual items.
+All to: `'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version'`
 
-**Fix:**
-- Add a small "Edit" button/icon on each summary card item
-- Clicking it navigates back to the corresponding step (e.g., clicking Edit on "Domain" goes to step 3)
-- The step stepper already supports `setCurrentStep()` so this is straightforward
+### 3. Payment Return Verification
+Add a `verify-payment` action to `process-payment` (or create a new lightweight function) that:
+- Takes `transactionId` and `gateway`
+- For Stripe: calls `GET /v1/checkout/sessions/{id}` to check status
+- For Flutterwave: calls `GET /v3/transactions/{id}/verify`
+- For Paystack: calls `GET /transaction/verify/{reference}`
+- Updates transaction status + credits balance (same logic as webhook)
 
-**Files:** `src/pages/panel/PanelOnboardingV2.tsx` (lines 1039-1110)
+Then in `BuyerDeposit.tsx` and `Billing.tsx`, on mount check for `?success=true&transaction_id=...` in the URL and call this verification function to finalize the payment immediately (don't rely solely on webhooks).
 
----
+### 4. Order Management RLS Fix
+The `OrderManagement.tsx` page queries orders with `buyer:profiles!orders_buyer_id_fkey(email, full_name)`. After changing the FK to `client_users`, update this join to `buyer:client_users!orders_buyer_id_fkey(email, full_name)`.
 
-## 4. Onboarding Domain → Domain Management Sync
-
-When a user sets up a custom domain during onboarding and DNS is verified, the domain is NOT synced to `panel_domains`. The `handleComplete` function only saves `custom_domain` on the `panels` table but never creates a `panel_domains` record.
-
-**Fix:**
-- In `handleComplete` (line 573), after panel creation/update, if `domainType === 'custom'` and `customDomain` is set, insert a record into `panel_domains` with the domain, verification token, and status
-- Add a unique constraint on `panel_domains.domain` (currently unique is only on `panel_id + domain`) to prevent the same domain from being added to multiple panels
-
-**Two TXT records issue (`_homeofsmm` and `_smmpilot`):**
-- `_homeofsmm` comes from `VercelIntegrationSettings.tsx` (admin Vercel config, legacy reference)
-- `_smmpilot` is the correct platform TXT record used in `DomainSettings.tsx` and `OnboardingDomainStep.tsx`
-- The `_homeofsmm` reference in admin settings is a leftover from a previous project name and should be updated to `_smmpilot` for consistency
-
-**Files:** `src/pages/panel/PanelOnboardingV2.tsx`, `src/components/admin/VercelIntegrationSettings.tsx`, database migration for unique domain constraint
-
----
-
-## 5. 2FA Backup Codes — Gate Behind 2FA Enablement
-
-Currently, the "Panel Backup Codes" section in SecuritySettings Recovery tab lets users generate codes regardless of 2FA status.
-
-**Fix:**
-- In SecuritySettings Recovery tab, disable/hide the "Generate Backup Codes" button if `enforce2FA` is false AND MFA is not active on the user's account
-- Show a message: "Enable 2FA first to generate backup codes"
-- The backup codes in `TwoFactorSetup.tsx` are already properly gated (only shown after MFA enrollment) — this is correct
-- Fix mobile width issue: the backup code grid (`grid grid-cols-2`) overflows on small screens. Add `overflow-x-auto` and `min-w-0` to the container, and use `break-all` or `text-xs` on the code text
-
-**Files:** `src/pages/panel/SecuritySettings.tsx` (lines 1457-1533), `src/components/auth/TwoFactorSetup.tsx`
-
----
-
-## Summary of Files to Change
+## Files to Change
 
 | File | Change |
 |------|--------|
-| Database migration | Add `processing`, `awaiting_payment` to `order_status` enum; add unique index on `panel_domains.domain` |
-| `supabase/functions/buyer-order/index.ts` | Update CORS headers |
-| `src/pages/Auth.tsx` | Add password recovery form when `type=recovery` |
-| `src/pages/panel/PanelOnboardingV2.tsx` | Add Edit buttons on summary step; sync domain to `panel_domains` on complete |
-| `src/pages/panel/SecuritySettings.tsx` | Gate backup codes behind 2FA; fix mobile width overflow |
-| `src/components/auth/TwoFactorSetup.tsx` | Fix mobile backup code grid overflow |
-| `src/components/admin/VercelIntegrationSettings.tsx` | Change `_homeofsmm` to `_smmpilot` |
+| Database migration | Change `orders.buyer_id` FK from `profiles` to `client_users` |
+| `supabase/functions/process-payment/index.ts` | Fix CORS headers; add payment verification action |
+| `supabase/functions/payment-webhook/index.ts` | Fix CORS headers |
+| `supabase/functions/enable-direct-provider/index.ts` | Fix CORS headers |
+| `src/pages/buyer/BuyerDeposit.tsx` | Add payment return verification on mount |
+| `src/pages/panel/Billing.tsx` | Add payment return verification on mount |
+| `src/pages/OrderManagement.tsx` | Update buyer join from profiles to client_users |
 
