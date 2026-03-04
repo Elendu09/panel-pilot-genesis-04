@@ -48,6 +48,10 @@ interface Order {
   service?: {
     name: string;
     category: string;
+    provider_cost?: number;
+    provider?: {
+      name: string;
+    } | null;
   };
   buyer?: {
     email: string;
@@ -74,7 +78,7 @@ const OrderManagement = () => {
     try {
       let query = (supabase as any).from('orders').select(`
         *,
-        service:services(name, category),
+        service:services(name, category, provider_cost, provider:providers(name)),
         buyer:client_users!orders_buyer_id_fkey(email, full_name)
       `);
 
@@ -141,7 +145,11 @@ const OrderManagement = () => {
   const totalOrders = orders.length;
   const completedOrders = orders.filter(o => o.status === 'completed').length;
   const pendingOrders = orders.filter(o => o.status === 'pending').length;
-  const totalRevenue = orders.reduce((sum, order) => sum + (order.price || 0), 0);
+  const totalSpent = orders.reduce((sum, order) => sum + (order.price || 0), 0);
+  const totalRevenue = orders.reduce((sum, order) => {
+    const cost = order.service?.provider_cost || 0;
+    return sum + ((order.price || 0) - cost);
+  }, 0);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -229,7 +237,7 @@ const OrderManagement = () => {
             </div>
 
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 md:gap-6">
               <Card className="bg-gradient-card border-border shadow-card">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
@@ -270,10 +278,22 @@ const OrderManagement = () => {
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-muted-foreground">Total Revenue</p>
-                      <p className="text-2xl font-bold text-primary">${totalRevenue.toFixed(2)}</p>
+                      <p className="text-sm font-medium text-muted-foreground">Total Spent</p>
+                      <p className="text-2xl font-bold text-primary">${totalSpent.toFixed(2)}</p>
                     </div>
                     <DollarSign className="w-8 h-8 text-primary" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gradient-card border-border shadow-card">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Revenue (Profit)</p>
+                      <p className="text-2xl font-bold text-primary">${totalRevenue.toFixed(2)}</p>
+                    </div>
+                    <TrendingUp className="w-8 h-8 text-primary" />
                   </div>
                 </CardContent>
               </Card>
@@ -321,6 +341,7 @@ const OrderManagement = () => {
                       <TableRow>
                         <TableHead>Order #</TableHead>
                         <TableHead>Service</TableHead>
+                        <TableHead>Provider</TableHead>
                         <TableHead>Customer</TableHead>
                         <TableHead>Target URL</TableHead>
                         <TableHead>Quantity</TableHead>
@@ -351,9 +372,14 @@ const OrderManagement = () => {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <div>
-                              <p className="font-medium">{order.buyer?.full_name || 'No Name'}</p>
-                              <p className="text-sm text-muted-foreground">{order.buyer?.email}</p>
+                            <span className="text-sm text-muted-foreground">
+                              {order.service?.provider?.name || '—'}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <div className="max-w-[120px]">
+                              <p className="font-medium truncate">{order.buyer?.full_name || 'No Name'}</p>
+                              <p className="text-sm text-muted-foreground truncate">{order.buyer?.email}</p>
                             </div>
                           </TableCell>
                           <TableCell>

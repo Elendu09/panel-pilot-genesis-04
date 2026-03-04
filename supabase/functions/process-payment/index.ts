@@ -90,7 +90,7 @@ serve(async (req) => {
               verifiedAmount = (session.amount_total || 0) / 100;
             }
           }
-        } else if (gw === 'flutterwave' && tx.external_id) {
+        } else if (gw === 'flutterwave') {
           const { data: adminProvider } = await supabase
             .from('platform_payment_providers')
             .select('config')
@@ -99,13 +99,55 @@ serve(async (req) => {
             .maybeSingle();
           const flwKey = (adminProvider?.config as any)?.secret_key || (adminProvider?.config as any)?.secretKey;
           if (flwKey) {
-            const flwRes = await fetch(`https://api.flutterwave.com/v3/transactions/${tx.external_id}/verify`, {
+            // Use tx_ref (our transaction UUID) for verification, not the payment link ID
+            const flwRes = await fetch(`https://api.flutterwave.com/v3/transactions/verify_by_reference?tx_ref=${transactionId}`, {
               headers: { 'Authorization': `Bearer ${flwKey}` },
             });
             const flwData = await flwRes.json();
+            console.log('[process-payment] Flutterwave verify response:', JSON.stringify(flwData));
             if (flwData.status === 'success' && flwData.data?.status === 'successful') {
               verified = true;
               verifiedAmount = flwData.data.amount;
+              // Store Flutterwave's transaction ID for future lookups
+              await supabase.from('transactions').update({ external_id: String(flwData.data.id) }).eq('id', transactionId);
+            }
+          }
+        } else if (gw === 'cryptomus') {
+          // Cryptomus verification
+          const { data: adminProvider } = await supabase
+            .from('platform_payment_providers')
+            .select('config')
+            .eq('provider_name', 'cryptomus')
+            .eq('is_enabled', true)
+            .maybeSingle();
+          const cryptomusApiKey = (adminProvider?.config as any)?.api_key || (adminProvider?.config as any)?.apiKey;
+          const cryptomusMerchant = (adminProvider?.config as any)?.merchant_id || (adminProvider?.config as any)?.merchantId || (adminProvider?.config as any)?.store_id || (adminProvider?.config as any)?.storeId;
+          if (cryptomusApiKey && cryptomusMerchant) {
+            const cryptoBody = JSON.stringify({ order_id: transactionId });
+            // Cryptomus requires md5(base64(body) + apiKey) as sign header
+            const encoder = new TextEncoder();
+            const bodyBase64 = btoa(cryptoBody);
+            const signData = encoder.encode(bodyBase64 + cryptomusApiKey);
+            const hashBuffer = await crypto.subtle.digest('MD5', signData).catch(() => null);
+            let sign = '';
+            if (hashBuffer) {
+              sign = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+            }
+            const cryptoRes = await fetch('https://api.cryptomus.com/v1/payment/info', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'merchant': cryptomusMerchant,
+                'sign': sign,
+              },
+              body: cryptoBody,
+            });
+            const cryptoData = await cryptoRes.json();
+            console.log('[process-payment] Cryptomus verify response:', JSON.stringify(cryptoData));
+            if (cryptoData.result?.status === 'paid' || cryptoData.result?.status === 'paid_over') {
+              verified = true;
+              verifiedAmount = parseFloat(cryptoData.result?.amount || tx.amount);
+              await supabase.from('transactions').update({ external_id: cryptoData.result?.uuid || null }).eq('id', transactionId);
             }
           }
         } else if (gw === 'paystack') {

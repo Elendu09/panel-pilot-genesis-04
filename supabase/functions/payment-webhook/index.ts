@@ -382,8 +382,8 @@ serve(async (req) => {
       .single();
 
     if (txError) {
-      console.error('[payment-webhook] Error updating transaction:', txError);
-      // Try to find by external_id if direct ID lookup fails
+      console.error('[payment-webhook] Error updating transaction by id:', txError);
+      // Try to find by external_id
       const { data: txByExternal } = await supabase
         .from('transactions')
         .update({ 
@@ -395,10 +395,31 @@ serve(async (req) => {
         .single();
       
       if (!txByExternal) {
-        return new Response(
-          JSON.stringify({ error: 'Transaction not found' }),
-          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        // Secondary fallback: search by metadata->transactionId
+        console.log('[payment-webhook] Trying metadata lookup for:', transactionId);
+        const { data: allPending } = await supabase
+          .from('transactions')
+          .select('*')
+          .eq('status', 'pending')
+          .order('created_at', { ascending: false })
+          .limit(50);
+        
+        const matchedTx = allPending?.find((t: any) => {
+          const meta = t.metadata as Record<string, any> || {};
+          return meta.transactionId === transactionId || t.external_id === transactionId;
+        });
+
+        if (matchedTx) {
+          await supabase.from('transactions').update({ status, updated_at: new Date().toISOString() }).eq('id', matchedTx.id);
+          console.log(`[payment-webhook] Found via metadata fallback: ${matchedTx.id}`);
+          // Use matched tx for balance updates below
+          Object.assign(transaction || {}, matchedTx);
+        } else {
+          return new Response(
+            JSON.stringify({ error: 'Transaction not found' }),
+            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
       }
     }
 
