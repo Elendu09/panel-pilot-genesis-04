@@ -83,11 +83,16 @@ async function forwardToProvider(
       return { success: true, externalOrderId: String(result.order) };
     } else {
       const errorMsg = result.error || 'Unknown provider error';
-      // Keep order as pending with error note for manual retry
+      // Mark order with appropriate error status
+      const isServiceError = errorMsg.toLowerCase().includes('incorrect service') || 
+                             errorMsg.toLowerCase().includes('invalid service') ||
+                             errorMsg.toLowerCase().includes('service not found');
       await supabase
         .from('orders')
         .update({
+          status: isServiceError ? 'cancelled' : 'partial',
           notes: `Provider error: ${errorMsg}`,
+          provider_order_id: null,
         })
         .eq('id', orderId);
 
