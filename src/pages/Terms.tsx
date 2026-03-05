@@ -62,19 +62,10 @@ const Terms = () => {
       </Helmet>
       <Navigation />
       <div className="container mx-auto px-4 py-12">
+        <h1 className="text-4xl font-bold mb-8 text-center py-4">Terms of Service</h1>
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Main Content */}
-          <div className="flex-1 min-w-0">
-            <h1 className="text-4xl font-bold mb-8 text-center py-4">Terms of Service</h1>
-            
-            {/* Mobile TOC */}
-            <div className="lg:hidden mb-8">
-              <LegalTableOfContents
-                sections={sections}
-                activeSection={activeSection}
-                onSectionClick={scrollToSection}
-              />
-            </div>
+          <div className="flex-1 min-w-0 order-2 lg:order-1">
             
             <div className="prose prose-lg max-w-none space-y-8">
               <section id="acceptance" className="scroll-mt-[100px]">
@@ -144,12 +135,13 @@ const Terms = () => {
             </div>
           </div>
 
-          {/* Desktop TOC Sidebar */}
-          <LegalTableOfContents
-            sections={sections}
-            activeSection={activeSection}
-            onSectionClick={scrollToSection}
-          />
+          <div className="order-1 lg:order-2">
+            <LegalTableOfContents
+              sections={sections}
+              activeSection={activeSection}
+              onSectionClick={scrollToSection}
+            />
+          </div>
         </div>
       </div>
       <Footer />

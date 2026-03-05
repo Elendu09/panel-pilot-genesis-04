@@ -343,6 +343,42 @@ const serviceIntegrations: ServiceIntegration[] = [
       { type: 'textarea', name: 'code', label: 'Or Insert Code', placeholder: '<!-- Yandex.Metrika counter -->' }
     ]
   },
+  {
+    id: 'facebook_pixel',
+    name: 'Facebook Pixel',
+    description: 'Track conversions & retargeting',
+    icon: <FacebookIcon className="w-5 h-5" />,
+    color: 'bg-[#1877F2]',
+    category: 'analytics',
+    fields: [
+      { type: 'input', name: 'pixel_id', label: 'Pixel ID', placeholder: '123456789012345', helper: 'Your Facebook Pixel ID' },
+      { type: 'textarea', name: 'code', label: 'Or Insert Code', placeholder: '<!-- Facebook Pixel Code -->', helper: 'Or paste the full pixel installation code' }
+    ]
+  },
+  {
+    id: 'hotjar',
+    name: 'Hotjar',
+    description: 'Heatmaps & session recordings',
+    icon: <MousePointer2 className="w-5 h-5" />,
+    color: 'bg-[#FF3C00]',
+    category: 'analytics',
+    fields: [
+      { type: 'input', name: 'site_id', label: 'Site ID', placeholder: '1234567', helper: 'Your Hotjar Site ID' },
+      { type: 'textarea', name: 'code', label: 'Or Insert Code', placeholder: '<!-- Hotjar Tracking Code -->', helper: 'Or paste the full Hotjar installation code' }
+    ]
+  },
+  {
+    id: 'clarity',
+    name: 'Microsoft Clarity',
+    description: 'Free heatmaps & session recordings',
+    icon: <MousePointer2 className="w-5 h-5" />,
+    color: 'bg-[#5C2D91]',
+    category: 'analytics',
+    fields: [
+      { type: 'input', name: 'project_id', label: 'Project ID', placeholder: 'xxxxxxxxxx', helper: 'Your Clarity project ID' },
+      { type: 'textarea', name: 'code', label: 'Or Insert Code', placeholder: '<!-- Clarity Code -->', helper: 'Or paste the full Clarity installation code' }
+    ]
+  },
   // Notifications
   {
     id: 'onesignal',

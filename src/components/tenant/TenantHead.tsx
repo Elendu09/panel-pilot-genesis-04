@@ -132,15 +132,108 @@ export const TenantHead = ({ title, description }: TenantHeadProps) => {
           }
         }
         
-        // Yandex.Metrika - inject counter code
-        if (integrations.yandex_metrika?.enabled && integrations.yandex_metrika?.code) {
+        // Google Tag Manager - inject via container_id if no raw code
+        if (integrations.google_tag_manager?.enabled && !integrations.google_tag_manager?.code && integrations.google_tag_manager?.container_id) {
           try {
-            const code = integrations.yandex_metrika.code;
-            const range = document.createRange();
-            const fragment = range.createContextualFragment(code);
-            document.head.appendChild(fragment);
+            const gtmId = integrations.google_tag_manager.container_id;
+            const script = document.createElement('script');
+            script.innerHTML = `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','${gtmId}');`;
+            document.head.appendChild(script);
+            const noscript = document.createElement('noscript');
+            noscript.innerHTML = `<iframe src="https://www.googletagmanager.com/ns.html?id=${gtmId}" height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
+            document.body.insertBefore(noscript, document.body.firstChild);
+          } catch (e) {
+            console.error('Failed to inject GTM via container_id:', e);
+          }
+        }
+        
+        // Yandex.Metrika - inject counter code or counter_id
+        if (integrations.yandex_metrika?.enabled) {
+          try {
+            if (integrations.yandex_metrika.code) {
+              const code = integrations.yandex_metrika.code;
+              const range = document.createRange();
+              const fragment = range.createContextualFragment(code);
+              document.head.appendChild(fragment);
+            } else if (integrations.yandex_metrika.counter_id) {
+              const counterId = integrations.yandex_metrika.counter_id;
+              const script = document.createElement('script');
+              script.innerHTML = `(function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};m[i].l=1*new Date();for(var j=0;j<document.scripts.length;j++){if(document.scripts[j].src===r)return;}k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})(window,document,"script","https://mc.yandex.ru/metrika/tag.js","ym");ym(${counterId},"init",{clickmap:true,trackLinks:true,accurateTrackBounce:true,webvisor:true});`;
+              document.head.appendChild(script);
+            }
           } catch (e) {
             console.error('Failed to inject Yandex.Metrika:', e);
+          }
+        }
+        
+        // Facebook Pixel - inject pixel code or pixel_id
+        if (integrations.facebook_pixel?.enabled) {
+          try {
+            if (integrations.facebook_pixel.code) {
+              const code = integrations.facebook_pixel.code;
+              const range = document.createRange();
+              const fragment = range.createContextualFragment(code);
+              document.head.appendChild(fragment);
+            } else if (integrations.facebook_pixel.pixel_id) {
+              const pixelId = integrations.facebook_pixel.pixel_id;
+              const script = document.createElement('script');
+              script.innerHTML = `!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','${pixelId}');fbq('track','PageView');`;
+              document.head.appendChild(script);
+            }
+          } catch (e) {
+            console.error('Failed to inject Facebook Pixel:', e);
+          }
+        }
+        
+        // Hotjar - inject tracking code or site_id
+        if (integrations.hotjar?.enabled) {
+          try {
+            if (integrations.hotjar.code) {
+              const code = integrations.hotjar.code;
+              const range = document.createRange();
+              const fragment = range.createContextualFragment(code);
+              document.head.appendChild(fragment);
+            } else if (integrations.hotjar.site_id) {
+              const siteId = integrations.hotjar.site_id;
+              const script = document.createElement('script');
+              script.innerHTML = `(function(h,o,t,j,a,r){h.hj=h.hj||function(){(h.hj.q=h.hj.q||[]).push(arguments)};h._hjSettings={hjid:${siteId},hjsv:6};a=o.getElementsByTagName('head')[0];r=o.createElement('script');r.async=1;r.src=t+h._hjSettings.hjid+j+h._hjSettings.hjsv;a.appendChild(r);})(window,document,'https://static.hotjar.com/c/hotjar-','.js?sv=');`;
+              document.head.appendChild(script);
+            }
+          } catch (e) {
+            console.error('Failed to inject Hotjar:', e);
+          }
+        }
+        
+        // Microsoft Clarity - inject tracking code or project_id
+        if (integrations.clarity?.enabled) {
+          try {
+            if (integrations.clarity.code) {
+              const code = integrations.clarity.code;
+              const range = document.createRange();
+              const fragment = range.createContextualFragment(code);
+              document.head.appendChild(fragment);
+            } else if (integrations.clarity.project_id) {
+              const projectId = integrations.clarity.project_id;
+              const script = document.createElement('script');
+              script.innerHTML = `(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window,document,"clarity","script","${projectId}");`;
+              document.head.appendChild(script);
+            }
+          } catch (e) {
+            console.error('Failed to inject Clarity:', e);
+          }
+        }
+        
+        // WhatsApp floating button
+        if (integrations.whatsapp?.enabled && integrations.whatsapp?.phone) {
+          try {
+            const phone = integrations.whatsapp.phone.replace(/[^0-9+]/g, '');
+            const message = encodeURIComponent(integrations.whatsapp.message || 'Hello!');
+            const waDiv = document.createElement('div');
+            waDiv.id = 'wa-float-btn';
+            waDiv.innerHTML = `<a href="https://wa.me/${phone}?text=${message}" target="_blank" rel="noopener noreferrer" style="position:fixed;bottom:24px;right:24px;z-index:9999;width:56px;height:56px;border-radius:50%;background:#25D366;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,0.25);cursor:pointer;transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.025.507 3.932 1.395 5.608L.054 23.88l6.447-1.29A11.935 11.935 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.6c-1.883 0-3.651-.508-5.168-1.39l-.37-.22-3.834.767.812-3.72-.24-.382A9.56 9.56 0 012.4 12c0-5.302 4.298-9.6 9.6-9.6 5.302 0 9.6 4.298 9.6 9.6 0 5.302-4.298 9.6-9.6 9.6z"/></svg></a>`;
+            document.body.appendChild(waDiv);
+          } catch (e) {
+            console.error('Failed to inject WhatsApp button:', e);
           }
         }
         

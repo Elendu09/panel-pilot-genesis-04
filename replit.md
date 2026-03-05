@@ -110,6 +110,17 @@ Admin pages use the `/functions/v1/admin-data` Express endpoint (service role ke
 - **Domain DNS Verification**: Onboarding domain step has multi-step verification flow (TXT → DNS → Live) with auto-polling every 30s; auto-updates panels.custom_domain on success; fixed TXT record naming to `smmpilot-verify`
 - **Startup Migration**: server/index.ts runs migration on startup to add service_name column and fix FK constraint
 
+## Session: Auth UI, Google OAuth, TOC Fix, Integration Injection
+
+- **Auth Page Redesign**: `/auth` page now has glassmorphic dark UI with gradient background, icon-prefixed inputs, and indigo/purple gradient CTA buttons
+- **Full Name on Sign Up**: Added required `fullName` field to sign-up form; passed as `full_name` in Supabase auth metadata; DB trigger extracts it into `profiles.full_name`
+- **Google OAuth**: Added Google sign-in/sign-up buttons using Supabase native `signInWithOAuth({ provider: 'google' })`; AuthContext `fetchProfile` now auto-populates `role`, `username`, `full_name`, and `avatar_url` for OAuth users if not set
+- **Duplicate TOC Fix**: Removed duplicate `LegalTableOfContents` from Terms.tsx and Privacy.tsx; single component now rendered as flex sibling with order classes for mobile-first/desktop-sidebar layout
+- **Integration Definitions Added**: Facebook Pixel, Hotjar, Microsoft Clarity now defined in Integrations.tsx with proper fields (pixel_id, site_id, project_id)
+- **Integration Injection Fixed**: TenantHead.tsx now injects Facebook Pixel (via pixel_id or raw code), Hotjar (via site_id or code), Clarity (via project_id or code), WhatsApp floating button, GTM container_id fallback, Yandex.Metrika counter_id fallback
+- **Custom Domain Verified**: End-to-end flow confirmed — DomainSettings verifies TXT → DNS → sets panels.custom_domain → useTenant resolves hostname → TenantHead sets canonical URLs and SEO for custom domains
+- **react-icons package**: Added `react-icons` dependency for Google logo icon
+
 ## Replit-Specific Changes Made
 
 1. **index.html** — Added Replit domains to `isDev` check to prevent visibility hiding

@@ -9,7 +9,7 @@ interface AuthContextType {
   session: Session | null;
   profile: any | null;
   loading: boolean;
-  signUp: (email: string, password: string, username?: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, username?: string, fullName?: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any; emailNotVerified?: boolean; email?: string }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -34,6 +34,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single();
       
       if (error) throw error;
+      
+      // For OAuth users: ensure role is set and username is populated
+      if (data && (!data.role || !data.username)) {
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        const metadata = authUser?.user_metadata || {};
+        const updates: Record<string, any> = {};
+        
+        if (!data.role) {
+          updates.role = metadata.role || 'panel_owner';
+        }
+        if (!data.username) {
+          // Generate username from email prefix or full name
+          const emailPrefix = (data.email || '').split('@')[0].replace(/[^a-zA-Z0-9_]/g, '').slice(0, 20);
+          const namePrefix = (metadata.full_name || '').replace(/\s+/g, '').replace(/[^a-zA-Z0-9_]/g, '').slice(0, 20);
+          updates.username = namePrefix || emailPrefix || `user_${Date.now().toString(36)}`;
+        }
+        if (!data.full_name && metadata.full_name) {
+          updates.full_name = metadata.full_name;
+        }
+        if (!data.avatar_url && metadata.avatar_url) {
+          updates.avatar_url = metadata.avatar_url;
+        }
+        
+        if (Object.keys(updates).length > 0) {
+          const { data: updated } = await supabase
+            .from('profiles')
+            .update(updates)
+            .eq('user_id', userId)
+            .select('*')
+            .single();
+          
+          if (updated) {
+            setProfile(updated);
+            return updated;
+          }
+        }
+      }
+      
       setProfile(data);
 
       // Check for pending panel creation
@@ -119,7 +157,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signUp = async (email: string, password: string, username?: string) => {
+  const signUp = async (email: string, password: string, username?: string, fullName?: string) => {
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -128,6 +166,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           emailRedirectTo: `${window.location.origin}/auth?verified=true`,
           data: {
             username: username,
+            full_name: fullName || '',
             role: 'panel_owner'
           }
         }
