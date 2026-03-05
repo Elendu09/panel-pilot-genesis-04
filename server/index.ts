@@ -1283,6 +1283,43 @@ fnRouter.post('/admin-data', async (req, res) => {
       });
     }
 
+    if (action === 'get_users') {
+      const { data: usersData } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+      return res.json({ success: true, data: usersData || [] });
+    }
+
+    if (action === 'get_user_details') {
+      const { userId, profileId } = req.body;
+      if (!userId && !profileId) return res.json({ success: false, error: 'userId or profileId required' });
+
+      const [rolesRes, panelsRes] = await Promise.all([
+        supabase.from('user_roles').select('*').eq('user_id', userId),
+        supabase.from('panels').select('*').eq('owner_id', profileId)
+      ]);
+      return res.json({
+        success: true,
+        data: { roles: rolesRes.data || [], panels: panelsRes.data || [] }
+      });
+    }
+
+    if (action === 'update_user') {
+      const { profileId, updates } = req.body;
+      if (!profileId || !updates) return res.json({ success: false, error: 'profileId and updates required' });
+
+      const allowedFields = ['full_name', 'balance', 'is_active'];
+      const safeUpdates: Record<string, any> = {};
+      for (const key of allowedFields) {
+        if (updates[key] !== undefined) safeUpdates[key] = updates[key];
+      }
+
+      const { error } = await supabase.from('profiles').update(safeUpdates).eq('id', profileId);
+      if (error) return res.json({ success: false, error: error.message });
+      return res.json({ success: true });
+    }
+
     if (action === 'get_panel_finance') {
       const { panelId } = req.body;
       if (!panelId) return res.json({ success: false, error: 'panelId required' });

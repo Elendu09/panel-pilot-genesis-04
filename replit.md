@@ -55,10 +55,17 @@ Admin pages use the `/functions/v1/admin-data` Express endpoint (service role ke
 
 **Admin pages updated to use admin-data:**
 - `AdminOverview.tsx` — Dashboard stats and activity
-- `PanelManagement.tsx` — Panel listing and stats
+- `PanelManagement.tsx` — Panel listing, stats, and finance metrics
 - `SystemHealth.tsx` — Real service health checks (no more mock data)
 - `PaymentManagement.tsx` — Transactions and panel data
 - `SupportTickets.tsx` — Tickets and quick replies
+- `UserManagement.tsx` — All users listing, details, status toggle, editing
+
+**Admin-data endpoint actions (additional):**
+- `get_users` — All profiles (bypasses RLS)
+- `get_user_details` — User roles and panels by userId/profileId
+- `update_user` — Update profile fields (full_name, balance, is_active)
+- `get_panel_finance` — Panel deposits, order amounts, profit
 
 **Pages still using direct Supabase client (no RLS issues):**
 - `SecuritySettings.tsx` — Uses supabase.functions.invoke('update-security-settings')
