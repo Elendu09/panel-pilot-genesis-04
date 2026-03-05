@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 // =====================================================
@@ -348,7 +348,7 @@ serve(async (req) => {
           raw_currency: providerCurrency,   // Track original currency
           cost_usd: costUsd,                // Normalized USD cost
           min_quantity: parseInt(String(svc.min)) || 10,
-          max_quantity: parseInt(String(svc.max)) || 1000000,
+          max_quantity: parseInt(String(svc.max)) || 100000,
           raw_description: svc.desc || svc.description || '',
           refill_available: parseBoolean(svc.refill),
           cancel_available: parseBoolean(svc.cancel),
@@ -442,8 +442,8 @@ serve(async (req) => {
             provider_cost: rawRate,                            // Keep original for reference
             cost_usd: costUsd,                                 // Normalized USD cost
             markup_percent: markupPercent,
-            min_quantity: 10,
-            max_quantity: 1000000,
+            min_quantity: parseInt(String(batch[idx]?.min)) || 10,
+            max_quantity: parseInt(String(batch[idx]?.max)) || 100000,
             refill_available: raw.refill_available,
             cancel_available: raw.cancel_available,
             is_active: true,
@@ -471,7 +471,60 @@ serve(async (req) => {
       console.log(`[IMPORT] Processed ${Math.min(i + BATCH_SIZE, rawServices.length)}/${rawServices.length}`);
     }
 
-    // 4. Sync categories to service_categories table for persistent ordering
+    // 4. Deactivate stale services no longer available from the provider
+    const importedExternalIds = rawServices.map(svc => String(svc.service));
+    
+    if (importedExternalIds.length > 0) {
+      // Get all active services for this provider+panel
+      const { data: existingServices } = await supabase
+        .from('services')
+        .select('id, provider_service_id')
+        .eq('panel_id', panelId)
+        .eq('provider_id', providerId)
+        .eq('is_active', true);
+
+      if (existingServices) {
+        const staleServices = existingServices.filter(
+          (svc: any) => !importedExternalIds.includes(svc.provider_service_id)
+        );
+        
+        if (staleServices.length > 0) {
+          const staleIds = staleServices.map((s: any) => s.id);
+          await supabase
+            .from('services')
+            .update({ is_active: false })
+            .in('id', staleIds);
+          
+          console.log(`[IMPORT] Deactivated ${staleServices.length} stale services`);
+        }
+      }
+      
+      // Also deactivate stale provider_services
+      const { data: existingProviderServices } = await supabase
+        .from('provider_services')
+        .select('id, external_service_id')
+        .eq('panel_id', panelId)
+        .eq('provider_id', providerId)
+        .eq('sync_status', 'active');
+
+      if (existingProviderServices) {
+        const staleProviderServices = existingProviderServices.filter(
+          (svc: any) => !importedExternalIds.includes(svc.external_service_id)
+        );
+        
+        if (staleProviderServices.length > 0) {
+          const staleProvIds = staleProviderServices.map((s: any) => s.id);
+          await supabase
+            .from('provider_services')
+            .update({ sync_status: 'inactive' })
+            .in('id', staleProvIds);
+          
+          console.log(`[IMPORT] Marked ${staleProviderServices.length} provider_services as inactive`);
+        }
+      }
+    }
+
+    // 5. Sync categories to service_categories table for persistent ordering
     console.log(`[IMPORT] Syncing categories to service_categories table...`);
     
     // Get unique categories from the imported services

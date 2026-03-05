@@ -1636,6 +1636,8 @@ export type Database = {
           panel_id: string | null
           price: number
           progress: number | null
+          provider_cost: number | null
+          provider_id: string | null
           provider_order_id: string | null
           quantity: number
           remains: number | null
@@ -1657,6 +1659,8 @@ export type Database = {
           panel_id?: string | null
           price: number
           progress?: number | null
+          provider_cost?: number | null
+          provider_id?: string | null
           provider_order_id?: string | null
           quantity: number
           remains?: number | null
@@ -1678,6 +1682,8 @@ export type Database = {
           panel_id?: string | null
           price?: number
           progress?: number | null
+          provider_cost?: number | null
+          provider_id?: string | null
           provider_order_id?: string | null
           quantity?: number
           remains?: number | null
@@ -3338,9 +3344,11 @@ export type Database = {
           id: string
           is_active: boolean | null
           is_direct: boolean | null
+          last_sync_at: string | null
           name: string
           panel_id: string | null
           source_panel_id: string | null
+          sync_status: string | null
           updated_at: string
         }
         Insert: {
@@ -3355,9 +3363,11 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_direct?: boolean | null
+          last_sync_at?: string | null
           name: string
           panel_id?: string | null
           source_panel_id?: string | null
+          sync_status?: string | null
           updated_at?: string
         }
         Update: {
@@ -3372,9 +3382,11 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_direct?: boolean | null
+          last_sync_at?: string | null
           name?: string
           panel_id?: string | null
           source_panel_id?: string | null
+          sync_status?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -3852,6 +3864,13 @@ export type Database = {
             columns: ["pricing_rule_id"]
             isOneToOne: false
             referencedRelation: "pricing_rules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "services_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
             referencedColumns: ["id"]
           },
           {
