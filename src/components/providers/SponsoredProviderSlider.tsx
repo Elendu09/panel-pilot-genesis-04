@@ -37,14 +37,18 @@ export function SponsoredProviderSlider({
 
   const [canScrollPrev, setCanScrollPrev] = useState(false);
   const [canScrollNext, setCanScrollNext] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [autoplayPaused, setAutoplayPaused] = useState(false);
 
   const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi]);
   const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi]);
+  const scrollTo = useCallback((index: number) => emblaApi?.scrollTo(index), [emblaApi]);
 
   const onSelect = useCallback(() => {
     if (!emblaApi) return;
     setCanScrollPrev(emblaApi.canScrollPrev());
     setCanScrollNext(emblaApi.canScrollNext());
+    setSelectedIndex(emblaApi.selectedScrollSnap());
   }, [emblaApi]);
 
   useEffect(() => {
@@ -58,25 +62,31 @@ export function SponsoredProviderSlider({
     };
   }, [emblaApi, onSelect]);
 
-  // Auto-scroll every 5 seconds
   useEffect(() => {
-    if (!emblaApi || providers.length <= 1) return;
+    if (!emblaApi || providers.length <= 1 || autoplayPaused) return;
     const interval = setInterval(() => {
       emblaApi.scrollNext();
-    }, 5000);
+    }, 4000);
     return () => clearInterval(interval);
-  }, [emblaApi, providers.length]);
+  }, [emblaApi, providers.length, autoplayPaused]);
 
   if (providers.length === 0) return null;
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
+    <div
+      className="space-y-4"
+      onMouseEnter={() => setAutoplayPaused(true)}
+      onMouseLeave={() => setAutoplayPaused(false)}
+    >
+      <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <div className="p-2 rounded-lg bg-gradient-to-br from-amber-500/20 to-yellow-500/10">
             <Crown className="w-5 h-5 text-amber-500" />
           </div>
-          <h3 className="font-semibold text-lg">Sponsored Providers</h3>
+          <div>
+            <h3 className="font-semibold text-lg" data-testid="text-sponsored-title">Sponsored Providers</h3>
+            <p className="text-xs text-muted-foreground">{providers.length} promoted panels</p>
+          </div>
         </div>
         
         {providers.length > 1 && (
@@ -84,18 +94,18 @@ export function SponsoredProviderSlider({
             <Button 
               variant="outline" 
               size="icon" 
-              className="h-8 w-8"
               onClick={scrollPrev}
               disabled={!canScrollPrev}
+              data-testid="button-slider-prev"
             >
               <ChevronLeft className="w-4 h-4" />
             </Button>
             <Button 
               variant="outline" 
               size="icon" 
-              className="h-8 w-8"
               onClick={scrollNext}
               disabled={!canScrollNext}
+              data-testid="button-slider-next"
             >
               <ChevronRight className="w-4 h-4" />
             </Button>
@@ -104,11 +114,9 @@ export function SponsoredProviderSlider({
       </div>
 
       <div className="relative">
-        {/* Gradient fade edges */}
         <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
         <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
         
-        {/* Glow effect */}
         <div className="absolute inset-0 bg-gradient-to-r from-amber-500/10 via-transparent to-amber-500/10 rounded-xl blur-xl -z-10" />
 
         <div className="overflow-hidden rounded-xl" ref={emblaRef}>
@@ -133,6 +141,24 @@ export function SponsoredProviderSlider({
           </div>
         </div>
       </div>
+
+      {providers.length > 1 && (
+        <div className="flex items-center justify-center gap-1.5" data-testid="slider-dots">
+          {providers.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => scrollTo(index)}
+              className={cn(
+                "rounded-full transition-all duration-300",
+                selectedIndex === index
+                  ? "w-6 h-2 bg-amber-500"
+                  : "w-2 h-2 bg-muted-foreground/30 hover:bg-muted-foreground/50"
+              )}
+              data-testid={`button-dot-${index}`}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -43,6 +43,7 @@ import { useBuyerCart } from "@/hooks/use-buyer-cart";
 import { ServiceInfoPanel } from "@/components/buyer/ServiceInfoPanel";
 import { useUnifiedServices } from "@/hooks/useUnifiedServices";
 import { SpeedGauge } from "@/components/buyer/SpeedGauge";
+import { InterstitialAdCard } from "@/components/buyer/SponsoredProviderBanner";
 import {
   Carousel,
   CarouselContent,
@@ -539,12 +540,11 @@ const BuyerServices = () => {
             </div>
           ) : (
             <AnimatePresence mode="wait">
-              {Object.entries(groupedServices).map(([category, categoryData]) => {
+              {Object.entries(groupedServices).map(([category, categoryData], categoryIndex) => {
                 const categoryInfo = getCategoryData(category);
                 const CategoryIcon = categoryInfo.icon;
                 const totalServices = getTotalServicesInCategory(categoryData);
                 
-                // Flatten all services in this category for the carousel
                 const allCategoryServices = Object.values(categoryData.subCategories).flat();
 
                 return (
@@ -709,6 +709,10 @@ const BuyerServices = () => {
                       <CarouselPrevious className="hidden md:flex -left-4" />
                       <CarouselNext className="hidden md:flex -right-4" />
                     </Carousel>
+
+                    {categoryIndex === 1 && (
+                      <InterstitialAdCard currentPanelId={panel?.id} className="mt-4" />
+                    )}
                   </motion.div>
                 );
               })}

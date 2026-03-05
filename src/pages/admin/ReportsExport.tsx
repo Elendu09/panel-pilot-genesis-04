@@ -141,7 +141,7 @@ const ReportsExport = () => {
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="space-y-6"
+      className="space-y-4 md:space-y-6"
     >
       <Helmet>
         <title>Reports & Export - Admin</title>
@@ -296,22 +296,23 @@ const ReportsExport = () => {
                   const TypeIcon = typeInfo?.icon || FileText;
                   return (
                     <KanbanCard key={report.id}>
-                      <div className="flex items-center justify-between gap-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div className="flex items-center gap-3 min-w-0 flex-1">
-                          <div className={`p-2 rounded-lg bg-${typeInfo?.color.split('-')[1]}-500/10`}>
-                            <TypeIcon className={`w-5 h-5 ${typeInfo?.color}`} />
+                          <div className={`p-2 rounded-lg bg-${typeInfo?.color.split('-')[1]}-500/10 shrink-0`}>
+                            <TypeIcon className={`w-4 h-4 md:w-5 md:h-5 ${typeInfo?.color}`} />
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p className="font-medium truncate">{report.name}</p>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <p className="font-medium truncate text-sm md:text-base">{report.name}</p>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
                               <Calendar className="w-3 h-3" />
-                              {new Date(report.created_at).toLocaleString()}
+                              <span className="hidden sm:inline">{new Date(report.created_at).toLocaleString()}</span>
+                              <span className="sm:hidden">{new Date(report.created_at).toLocaleDateString()}</span>
                               <span className="uppercase">{report.format}</span>
                               {report.file_size && <span>{report.file_size}</span>}
                             </div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 self-end sm:self-center">
                           <Badge className={getStatusBadge(report.status)}>
                             {report.status === 'processing' && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
                             {report.status === 'completed' && <CheckCircle className="w-3 h-3 mr-1" />}
@@ -325,7 +326,7 @@ const ReportsExport = () => {
                               onClick={() => downloadReport(report)}
                             >
                               <Download className="w-4 h-4" />
-                              Download
+                              <span className="hidden sm:inline">Download</span>
                             </Button>
                           )}
                         </div>

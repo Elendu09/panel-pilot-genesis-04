@@ -1217,6 +1217,13 @@ const CustomerManagement = () => {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border/30 text-left text-xs text-muted-foreground">
+                  <th className="py-2 px-2 w-8 font-medium">
+                    <Checkbox
+                      checked={selectedCustomers.length === filteredCustomers.length && filteredCustomers.length > 0}
+                      onCheckedChange={toggleSelectAll}
+                      data-testid="checkbox-select-all-mobile-list"
+                    />
+                  </th>
                   <th className="py-2 px-2 font-medium">Customer</th>
                   <th className="py-2 px-2 font-medium">Status</th>
                   <th className="py-2 px-2 font-medium text-right">Balance</th>
@@ -1225,14 +1232,20 @@ const CustomerManagement = () => {
               </thead>
               <tbody className="divide-y divide-border/20">
                 {filteredCustomers.length === 0 ? (
-                  <tr><td colSpan={4} className="text-center py-8 text-muted-foreground text-sm">No customers yet. Add your first customer to get started.</td></tr>
+                  <tr><td colSpan={5} className="text-center py-8 text-muted-foreground text-sm">No customers yet. Add your first customer to get started.</td></tr>
                 ) : filteredCustomers.map((customer) => (
                   <tr 
                     key={customer.id} 
                     className="hover:bg-muted/20 transition-colors cursor-pointer"
-                    onClick={() => handleViewDetails(customer)}
                   >
-                    <td className="py-2.5 px-2">
+                    <td className="py-2.5 px-2" onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={selectedCustomers.includes(customer.id)}
+                        onCheckedChange={() => toggleSelectCustomer(customer.id)}
+                        data-testid={`checkbox-customer-${customer.id}`}
+                      />
+                    </td>
+                    <td className="py-2.5 px-2" onClick={() => handleViewDetails(customer)}>
                       <div className="flex items-center gap-2 min-w-0">
                         <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-xs shrink-0">
                           {(customer.name || customer.email).split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
@@ -1243,7 +1256,7 @@ const CustomerManagement = () => {
                         </div>
                       </div>
                     </td>
-                    <td className="py-2.5 px-2">
+                    <td className="py-2.5 px-2" onClick={() => handleViewDetails(customer)}>
                       <Badge 
                         variant="outline" 
                         className={cn(
@@ -1256,10 +1269,10 @@ const CustomerManagement = () => {
                         {customer.isBanned ? 'Banned' : customer.status === 'active' ? 'Active' : 'Inactive'}
                       </Badge>
                     </td>
-                    <td className="py-2.5 px-2 text-right font-mono text-xs font-semibold text-primary">
+                    <td className="py-2.5 px-2 text-right font-mono text-xs font-semibold text-primary" onClick={() => handleViewDetails(customer)}>
                       ${Number(customer.balance || 0).toFixed(2)}
                     </td>
-                    <td className="py-2.5 px-2 text-right font-mono text-xs text-muted-foreground">
+                    <td className="py-2.5 px-2 text-right font-mono text-xs text-muted-foreground" onClick={() => handleViewDetails(customer)}>
                       ${Number(customer.totalSpent || 0).toFixed(0)}
                     </td>
                   </tr>
@@ -1271,21 +1284,37 @@ const CustomerManagement = () => {
 
           {/* Mobile Grid View */}
           {mobileViewMode === 'grid' && (
-          <div className="md:hidden grid grid-cols-1 gap-3">
-            {filteredCustomers.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">No customers yet. Add your first customer to get started.</div>
-            ) : (
-              filteredCustomers.map((customer) => (
-                <CustomerMobileCard
-                  key={customer.id}
-                  customer={customer}
-                  onView={handleViewDetails}
-                  onEdit={handleEditCustomer}
-                  onAdjustBalance={(c) => { setSelectedCustomer(c); setShowBalanceModal(true); }}
-                  onSuspend={(c) => handleSingleSuspend(c.id)}
+          <div className="md:hidden space-y-3">
+            {filteredCustomers.length > 0 && (
+              <div className="flex items-center gap-3 px-1">
+                <Checkbox
+                  checked={selectedCustomers.length === filteredCustomers.length && filteredCustomers.length > 0}
+                  onCheckedChange={toggleSelectAll}
+                  data-testid="checkbox-select-all-mobile-grid"
                 />
-              ))
+                <span className="text-sm text-muted-foreground">
+                  {selectedCustomers.length > 0 ? `${selectedCustomers.length} of ${filteredCustomers.length} selected` : "Select all"}
+                </span>
+              </div>
             )}
+            <div className="grid grid-cols-1 gap-3">
+              {filteredCustomers.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">No customers yet. Add your first customer to get started.</div>
+              ) : (
+                filteredCustomers.map((customer) => (
+                  <CustomerMobileCard
+                    key={customer.id}
+                    customer={customer}
+                    selected={selectedCustomers.includes(customer.id)}
+                    onToggleSelect={() => toggleSelectCustomer(customer.id)}
+                    onView={handleViewDetails}
+                    onEdit={handleEditCustomer}
+                    onAdjustBalance={(c) => { setSelectedCustomer(c); setShowBalanceModal(true); }}
+                    onSuspend={(c) => handleSingleSuspend(c.id)}
+                  />
+                ))
+              )}
+            </div>
           </div>
           )}
         </CardContent>

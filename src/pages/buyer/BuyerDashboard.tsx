@@ -37,6 +37,7 @@ import { supabase } from "@/integrations/supabase/client";
 import BuyerLayout from "./BuyerLayout";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { SponsoredProviderBanner } from "@/components/buyer/SponsoredProviderBanner";
 
 interface Order {
   id: string;
@@ -461,6 +462,11 @@ const BuyerDashboard = () => {
               );
             })}
           </div>
+        </motion.div>
+
+        {/* Sponsored Providers Banner */}
+        <motion.div variants={itemVariants}>
+          <SponsoredProviderBanner currentPanelId={panel?.id} />
         </motion.div>
 
         {/* Orders Kanban Board */}

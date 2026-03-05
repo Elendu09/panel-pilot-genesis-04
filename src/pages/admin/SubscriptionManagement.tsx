@@ -197,7 +197,7 @@ const SubscriptionManagement = () => {
       </motion.div>
 
       {/* Enhanced Stats Grid */}
-      <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-7 gap-4">
+      <motion.div variants={itemVariants} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3 md:gap-4">
         <Card className="glass-card-hover">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -425,7 +425,7 @@ const SubscriptionManagement = () => {
                       </div>
                       
                       {/* Quick action */}
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity pt-2">
+                      <div className="invisible group-hover:visible transition-[visibility] pt-2">
                         <Button 
                           size="sm" 
                           variant="outline" 

@@ -51,18 +51,23 @@ const adReachMap: Record<string, { label: string; icon: typeof Globe }[]> = {
     { label: "Marketplace — Premium Slider (auto-rotating)", icon: Globe },
     { label: "Provider Search — Pinned Top Results", icon: Target },
     { label: "Dashboard Overview — Recommended Provider Card", icon: Radio },
+    { label: "Buyer Storefront — Featured Providers Banner", icon: Globe },
+    { label: "Buyer Services — Interstitial Ad Card", icon: Target },
   ],
   top: [
     { label: "Marketplace — Top Providers Grid Section", icon: Globe },
     { label: "Provider Rankings — Blue Highlight Badge", icon: Target },
+    { label: "Buyer Services — Interstitial Ad Card", icon: Globe },
   ],
   best: [
     { label: "Marketplace — Best Choice List Section", icon: Globe },
     { label: "Provider Details — Editor's Pick Badge", icon: Target },
+    { label: "Buyer Services — Interstitial Ad Card", icon: Globe },
   ],
   featured: [
     { label: "Chat Inbox — Promotion Cards (every 5 sessions)", icon: MessageSquare },
     { label: "Dashboard Overview — Featured Provider Widget", icon: Radio },
+    { label: "Buyer Storefront — Featured Providers Banner", icon: Globe },
   ],
 };
 

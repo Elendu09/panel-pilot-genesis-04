@@ -260,7 +260,7 @@ const AdminOverview = () => {
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="space-y-6"
+      className="space-y-4 md:space-y-6"
     >
       <Helmet>
         <title>Admin Overview - SMMPilot Platform</title>
@@ -311,7 +311,7 @@ const AdminOverview = () => {
           </Button>
         </div>
         
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
           {kanbanColumns.map((column) => {
             const columnPanels = recentPanels.filter(p => p.status === column.status);
             const Icon = column.icon;
@@ -378,7 +378,7 @@ const AdminOverview = () => {
                           </div>
                         </div>
                         
-                        <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="invisible group-hover:visible transition-[visibility]">
                           <Button 
                             size="sm" 
                             variant="outline" 
@@ -400,7 +400,7 @@ const AdminOverview = () => {
         </div>
       </motion.div>
 
-      <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         <Card className="glass-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">

@@ -111,7 +111,7 @@ export default function Pricing() {
       popular: false,
       color: "from-slate-500 to-slate-600",
       features: [
-        "1 Active Service",
+        "Up to 50 Services",
         "Basic Analytics",
         "Email Support",
         "Subdomain Only",
@@ -129,7 +129,7 @@ export default function Pricing() {
       popular: true,
       color: "from-primary to-primary-glow",
       features: [
-        "10 Active Services",
+        "Up to 5,000 Services",
         "Full Analytics Dashboard",
         "Priority Email Support",
         "Custom Domain",
@@ -149,7 +149,7 @@ export default function Pricing() {
       popular: false,
       color: "from-amber-500 to-orange-500",
       features: [
-        "Unlimited Services",
+        "Up to 10,000 Services",
         "Advanced Analytics + Reports",
         "24/7 Priority Support",
         "Multiple Custom Domains",

@@ -127,16 +127,16 @@ const DomainManagement = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col md:flex-row justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Domain Management</h1>
-          <p className="text-muted-foreground">Manage subdomains and custom domains for all panels</p>
+          <h1 className="text-xl md:text-2xl lg:text-3xl font-bold">Domain Management</h1>
+          <p className="text-sm text-muted-foreground">Manage subdomains and custom domains for all panels</p>
         </div>
-        <Button variant="outline" onClick={fetchData}><RefreshCw className="w-4 h-4 mr-2" /> Refresh</Button>
+        <Button variant="outline" onClick={fetchData} className="w-full sm:w-auto"><RefreshCw className="w-4 h-4 mr-2" /> Refresh</Button>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
         {[
           { label: "Total Panels", value: totalPanels, color: "text-primary" },
           { label: "Active Panels", value: activePanels, color: "text-green-500" },
@@ -198,6 +198,7 @@ const DomainManagement = () => {
               <CardDescription>All panels with their {PLATFORM_DOMAIN} subdomains</CardDescription>
             </CardHeader>
             <CardContent>
+              <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -226,6 +227,7 @@ const DomainManagement = () => {
                   ))}
                 </TableBody>
               </Table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -233,6 +235,7 @@ const DomainManagement = () => {
         <TabsContent value="custom" className="space-y-6">
           <Card className="glass-card">
             <CardContent className="p-0">
+              <div className="overflow-x-auto">
               <Table>
                 <TableHeader><TableRow><TableHead>Domain</TableHead><TableHead>Verification</TableHead><TableHead>SSL</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
                 <TableBody>
@@ -250,6 +253,7 @@ const DomainManagement = () => {
                   ))}
                 </TableBody>
               </Table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

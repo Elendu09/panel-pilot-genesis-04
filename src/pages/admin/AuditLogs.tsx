@@ -295,7 +295,7 @@ const AuditLogs = () => {
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="space-y-6"
+      className="space-y-4 md:space-y-6"
     >
       <Helmet>
         <title>Audit Logs - Admin</title>
@@ -308,15 +308,15 @@ const AuditLogs = () => {
           <h1 className="text-2xl md:text-3xl font-bold">Audit Logs</h1>
           <p className="text-muted-foreground">Track all system activities and changes</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 md:gap-3 flex-wrap">
           <AdminViewToggle view={view} onViewChange={setView} />
-          <Button onClick={exportToCSV} variant="outline" className="gap-2">
+          <Button onClick={exportToCSV} variant="outline" className="gap-2" size="sm">
             <Download className="w-4 h-4" />
-            Export
+            <span className="hidden sm:inline">Export</span>
           </Button>
-          <Button onClick={fetchLogs} variant="outline" className="gap-2">
+          <Button onClick={fetchLogs} variant="outline" className="gap-2" size="sm">
             <RefreshCw className="w-4 h-4" />
-            Refresh
+            <span className="hidden sm:inline">Refresh</span>
           </Button>
         </div>
       </motion.div>
@@ -564,7 +564,7 @@ const AuditLogs = () => {
                       <motion.div
                         key={log.id}
                         variants={itemVariants}
-                        className="flex items-start gap-4 p-4 rounded-xl hover:bg-accent/30 transition-colors group border border-transparent hover:border-border cursor-pointer"
+                        className="flex items-start gap-3 md:gap-4 p-3 md:p-4 rounded-xl hover:bg-accent/30 transition-colors group border border-transparent hover:border-border cursor-pointer"
                         onClick={() => {
                           setSelectedLog(log);
                           setDetailsOpen(true);
@@ -572,8 +572,8 @@ const AuditLogs = () => {
                       >
                         {/* Timeline indicator */}
                         <div className="relative flex flex-col items-center">
-                          <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center", getActionColor(log.action).replace('text-', 'bg-').split(' ')[0])}>
-                            <ActionIcon className="w-5 h-5" />
+                          <div className={cn("w-8 h-8 md:w-10 md:h-10 rounded-lg flex items-center justify-center", getActionColor(log.action).replace('text-', 'bg-').split(' ')[0])}>
+                            <ActionIcon className="w-4 h-4 md:w-5 md:h-5" />
                           </div>
                           {index < paginatedLogs.length - 1 && (
                             <div className="w-0.5 h-full bg-border absolute top-12" />
@@ -614,7 +614,7 @@ const AuditLogs = () => {
                           </div>
                         </div>
 
-                        <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button variant="ghost" size="icon" className="invisible group-hover:visible shrink-0">
                           <Eye className="w-4 h-4" />
                         </Button>
                       </motion.div>

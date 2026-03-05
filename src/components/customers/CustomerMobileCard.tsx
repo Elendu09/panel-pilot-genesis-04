@@ -2,6 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,6 +21,7 @@ import {
   ShoppingCart,
   Clock
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface Customer {
   id: string;
@@ -37,6 +39,8 @@ interface Customer {
 
 interface CustomerMobileCardProps {
   customer: Customer;
+  selected?: boolean;
+  onToggleSelect?: () => void;
   onView: (customer: Customer) => void;
   onEdit: (customer: Customer) => void;
   onAdjustBalance: (customer: Customer) => void;
@@ -45,6 +49,8 @@ interface CustomerMobileCardProps {
 
 export function CustomerMobileCard({ 
   customer, 
+  selected,
+  onToggleSelect,
   onView, 
   onEdit, 
   onAdjustBalance, 
@@ -68,11 +74,22 @@ export function CustomerMobileCard({
   };
 
   return (
-    <Card className="bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-xl border-0 shadow-lg shadow-primary/5 hover:shadow-xl hover:shadow-primary/10 transition-all duration-300 hover:scale-[1.01]">
+    <Card className={cn(
+      "bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-xl border-0 shadow-lg shadow-primary/5 transition-all duration-300",
+      selected && "ring-2 ring-primary/50"
+    )}>
       <CardContent className="p-4">
         {/* Header with avatar and actions */}
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-3">
+            {onToggleSelect && (
+              <Checkbox
+                checked={selected}
+                onCheckedChange={onToggleSelect}
+                className="shrink-0"
+                data-testid={`checkbox-customer-mobile-${customer.id}`}
+              />
+            )}
             <Avatar className="h-12 w-12">
               <AvatarImage src={customer.avatar} />
               <AvatarFallback className="bg-primary/10 text-primary font-medium">

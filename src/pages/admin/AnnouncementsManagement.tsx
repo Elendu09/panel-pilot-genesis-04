@@ -367,7 +367,7 @@ const AnnouncementsManagement = () => {
                         {new Date(announcement.created_at).toLocaleDateString()}
                       </div>
 
-                      <div className="flex items-center gap-2 pt-2 border-t border-border opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-2 pt-2 border-t border-border invisible group-hover:visible transition-[visibility]">
                         {announcement.status === 'draft' && (
                           <Button
                             size="sm"

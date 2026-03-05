@@ -265,68 +265,68 @@ export default function DocsManagement() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Documentation Management</h1>
-          <p className="text-muted-foreground">Manage platform documentation articles</p>
+          <h1 className="text-xl md:text-2xl lg:text-3xl font-bold">Documentation Management</h1>
+          <p className="text-sm text-muted-foreground">Manage platform documentation articles</p>
         </div>
-        <Button onClick={openCreateDialog} className="bg-gradient-primary">
+        <Button onClick={openCreateDialog} className="bg-gradient-primary w-full sm:w-auto">
           <Plus className="h-4 w-4 mr-2" />
           Add Article
         </Button>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-primary/10 rounded-lg">
-                <FileText className="h-6 w-6 text-primary" />
+          <CardContent className="p-3 md:p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 md:p-3 bg-primary/10 rounded-lg">
+                <FileText className="h-4 w-4 md:h-5 md:w-5 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{docs.length}</p>
-                <p className="text-sm text-muted-foreground">Total Articles</p>
+                <p className="text-xl md:text-2xl font-bold">{docs.length}</p>
+                <p className="text-xs text-muted-foreground">Total Articles</p>
               </div>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-green-500/10 rounded-lg">
-                <Eye className="h-6 w-6 text-green-500" />
+          <CardContent className="p-3 md:p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 md:p-3 bg-green-500/10 rounded-lg">
+                <Eye className="h-4 w-4 md:h-5 md:w-5 text-green-500" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{docs.filter(d => d.status === 'published').length}</p>
-                <p className="text-sm text-muted-foreground">Published</p>
+                <p className="text-xl md:text-2xl font-bold">{docs.filter(d => d.status === 'published').length}</p>
+                <p className="text-xs text-muted-foreground">Published</p>
               </div>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-yellow-500/10 rounded-lg">
-                <Star className="h-6 w-6 text-yellow-500" />
+          <CardContent className="p-3 md:p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 md:p-3 bg-yellow-500/10 rounded-lg">
+                <Star className="h-4 w-4 md:h-5 md:w-5 text-yellow-500" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{docs.filter(d => d.is_popular).length}</p>
-                <p className="text-sm text-muted-foreground">Popular</p>
+                <p className="text-xl md:text-2xl font-bold">{docs.filter(d => d.is_popular).length}</p>
+                <p className="text-xs text-muted-foreground">Popular</p>
               </div>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-blue-500/10 rounded-lg">
-                <BookOpen className="h-6 w-6 text-blue-500" />
+          <CardContent className="p-3 md:p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 md:p-3 bg-blue-500/10 rounded-lg">
+                <BookOpen className="h-4 w-4 md:h-5 md:w-5 text-blue-500" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{new Set(docs.map(d => d.category)).size}</p>
-                <p className="text-sm text-muted-foreground">Categories</p>
+                <p className="text-xl md:text-2xl font-bold">{new Set(docs.map(d => d.category)).size}</p>
+                <p className="text-xs text-muted-foreground">Categories</p>
               </div>
             </div>
           </CardContent>
@@ -335,8 +335,8 @@ export default function DocsManagement() {
 
       {/* Filters */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col sm:flex-row gap-4">
+        <CardContent className="p-3 md:p-4">
+          <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -363,12 +363,13 @@ export default function DocsManagement() {
 
       {/* Articles Table */}
       <Card>
-        <CardContent className="pt-6">
+        <CardContent className="p-3 md:p-4">
           {loading ? (
             <div className="flex justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : (
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -441,13 +442,14 @@ export default function DocsManagement() {
                 )}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>
 
       {/* Create/Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl mx-4 sm:mx-auto max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{selectedDoc ? 'Edit Article' : 'Create Article'}</DialogTitle>
           </DialogHeader>
@@ -596,11 +598,11 @@ export default function DocsManagement() {
             </div>
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)} className="w-full sm:w-auto">
               Cancel
             </Button>
-            <Button onClick={handleSave} disabled={saving} className="bg-gradient-primary">
+            <Button onClick={handleSave} disabled={saving} className="bg-gradient-primary w-full sm:w-auto">
               {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               {selectedDoc ? 'Update' : 'Create'}
             </Button>

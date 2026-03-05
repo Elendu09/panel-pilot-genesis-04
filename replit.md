@@ -88,7 +88,17 @@ Admin pages use the `/functions/v1/admin-data` Express endpoint (service role ke
 - **Duplicate Notifications Fixed**: Removed direct `panel_notifications.insert` from manual payment handler in `process-payment`; `send-notification` already creates the in-app notification
 - **Manual Payment Image Upload**: Upload proof section in `BuyerDeposit.tsx` only shown after user clicks "I've Made the Transfer"
 - **Trial/Onboarding Subscription**: `PanelOnboarding.tsx` now creates a `panel_subscriptions` row (free plan) when panel is created
-- **Service Tier Limits**: `ServicesManagement.tsx` enforces service count limits based on subscription tier (free:1, basic:10, pro:unlimited) using DB count query
+- **Service Tier Limits**: `ServicesManagement.tsx` enforces service count limits based on subscription tier (free:50, basic:5000, pro:10000) using DB count query
+
+## Session: Multi-Feature Update
+
+- **Service Tier Limits Updated**: free=50, basic=5,000, pro=10,000 (in ServicesManagement, Billing, Pricing)
+- **Deposit Auto-Status**: Billing page handles `success=true` without `transaction_id` by looking up most recent pending transaction; failed deposits show toast; realtime listener handles `failed` status
+- **Order Provider Forwarding**: `buyer-order` and `buyer-api` resolve `external_service_id` via `provider_service_ref` → UUID lookup → direct ID; status set to `in_progress` consistently
+- **Order Status Tracking**: `track-order` polls provider API for live status, maps to internal statuses (`in_progress`, `completed`, `partial`, `failed`), updates DB
+- **Ad Placements**: New `SponsoredProviderBanner` and `InterstitialAdCard` on buyer dashboard/services; slider has auto-rotate with dot indicators and pause-on-hover
+- **Admin Responsive**: All admin pages mobile-friendly (responsive grids, overflow-x-auto tables, reduced padding, mobile dialogs, hover→visible)
+- **Bulk Selection Mobile**: OrdersManagement and CustomerManagement have checkboxes in mobile card views; bulk action toolbar positioned above bottom nav
 
 ## Replit-Specific Changes Made
 

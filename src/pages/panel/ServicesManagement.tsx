@@ -215,9 +215,9 @@ const ServicesManagement = () => {
   const { panel, resolvedTier, loading: panelLoading } = usePanel();
 
   const SERVICE_LIMITS: Record<string, number> = {
-    free: 1,
-    basic: 10,
-    pro: Infinity,
+    free: 50,
+    basic: 5000,
+    pro: 10000,
   };
   const serviceLimit = SERVICE_LIMITS[resolvedTier] || 1;
   const [searchParams, setSearchParams] = useSearchParams();

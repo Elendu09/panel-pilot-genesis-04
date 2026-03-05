@@ -52,7 +52,7 @@ const plans = [
     icon: Zap,
     color: 'from-slate-500 to-slate-600',
     features: [
-      '1 Active Service',
+      'Up to 50 Services',
       'Basic Analytics',
       'Email Support',
       'Subdomain Only',
@@ -68,7 +68,7 @@ const plans = [
     color: 'from-blue-500 to-blue-600',
     popular: true,
     features: [
-      '10 Active Services',
+      'Up to 5,000 Services',
       'Full Analytics Dashboard',
       'Priority Email Support',
       'Custom Domain',
@@ -85,7 +85,7 @@ const plans = [
     icon: Crown,
     color: 'from-amber-500 to-amber-600',
     features: [
-      'Unlimited Services',
+      'Up to 10,000 Services',
       'Advanced Analytics + Reports',
       '24/7 Priority Support',
       'Multiple Custom Domains',
@@ -123,20 +123,20 @@ const Billing = () => {
     if (panel?.id) {
       fetchBillingData();
 
-      // Detect return from payment gateway and verify payment
       const params = new URLSearchParams(window.location.search);
-      const transactionId = params.get('transaction_id');
+      let transactionId = params.get('transaction_id');
       const isSuccess = params.get('deposit') === 'success' || params.get('upgrade') === 'success' || params.get('commission') === 'success' || params.get('success') === 'true';
       const isCancelled = params.get('cancelled') === 'true';
 
       if (isSuccess || isCancelled || transactionId) {
-        // Clean URL
         window.history.replaceState({}, '', '/panel/billing');
 
         if (isCancelled) {
           toast({ variant: 'destructive', title: 'Payment Cancelled', description: 'Your payment was not completed.' });
+          if (transactionId) {
+            fetchBillingData();
+          }
         } else if (transactionId) {
-          // Actively verify the payment with the gateway
           toast({ title: 'Verifying Payment...', description: 'Please wait while we confirm your payment.' });
           
           const verifyPayment = async () => {
@@ -152,9 +152,9 @@ const Billing = () => {
                 }
                 fetchBillingData();
               } else if (data?.status === 'failed') {
-                toast({ variant: 'destructive', title: 'Payment Failed', description: 'Your payment could not be processed.' });
+                toast({ variant: 'destructive', title: 'Payment Failed', description: 'Your payment could not be processed. Please try again.' });
+                fetchBillingData();
               } else {
-                // Still pending — poll briefly
                 let attempts = 0;
                 const poll = setInterval(async () => {
                   attempts++;
@@ -163,11 +163,13 @@ const Billing = () => {
                     clearInterval(poll);
                     toast({ title: 'Payment Successful!', description: `$${Number(txData.amount).toFixed(2)} added to balance.` });
                     fetchBillingData();
-                  } else if (txData?.status === 'failed' || attempts >= 10) {
+                  } else if (txData?.status === 'failed') {
                     clearInterval(poll);
-                    if (txData?.status !== 'failed') {
-                      toast({ title: 'Payment Processing', description: 'Your payment is still being verified. Balance will update shortly.' });
-                    }
+                    toast({ variant: 'destructive', title: 'Payment Failed', description: 'Your deposit could not be processed. Please try again.' });
+                    fetchBillingData();
+                  } else if (attempts >= 10) {
+                    clearInterval(poll);
+                    toast({ title: 'Payment Processing', description: 'Your payment is still being verified. Balance will update shortly.' });
                   }
                 }, 2000);
               }
@@ -178,9 +180,49 @@ const Billing = () => {
             }
           };
           verifyPayment();
-        } else {
-          toast({ title: 'Payment Processing', description: 'Your payment is being confirmed. Balance will update shortly.' });
-          setTimeout(() => fetchBillingData(), 3000);
+        } else if (isSuccess) {
+          const lookupAndVerify = async () => {
+            try {
+              const { data: recentTx } = await supabase
+                .from('transactions')
+                .select('id')
+                .eq('panel_id', panel.id)
+                .eq('status', 'pending')
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+              
+              if (recentTx?.id) {
+                transactionId = recentTx.id;
+                toast({ title: 'Verifying Payment...', description: 'Please wait while we confirm your payment.' });
+                const { data } = await supabase.functions.invoke('process-payment', {
+                  body: { action: 'verify-payment', transactionId: recentTx.id }
+                });
+                if (data?.status === 'completed') {
+                  if (data?.subscriptionUpdated) {
+                    toast({ title: 'Subscription Activated!', description: 'Your plan has been upgraded successfully.' });
+                  } else {
+                    toast({ title: 'Payment Successful!', description: `$${Number(data.amount).toFixed(2)} has been added to your balance.` });
+                  }
+                  fetchBillingData();
+                } else if (data?.status === 'failed') {
+                  toast({ variant: 'destructive', title: 'Payment Failed', description: 'Your payment could not be processed.' });
+                  fetchBillingData();
+                } else {
+                  toast({ title: 'Payment Processing', description: 'Your payment is being confirmed. Balance will update shortly.' });
+                  setTimeout(() => fetchBillingData(), 3000);
+                }
+              } else {
+                toast({ title: 'Payment Processing', description: 'Your payment is being confirmed. Balance will update shortly.' });
+                setTimeout(() => fetchBillingData(), 3000);
+              }
+            } catch (err) {
+              console.error('Lookup verify error:', err);
+              toast({ title: 'Payment Processing', description: 'Balance will update shortly.' });
+              setTimeout(() => fetchBillingData(), 3000);
+            }
+          };
+          lookupAndVerify();
         }
       }
 
@@ -193,7 +235,8 @@ const Billing = () => {
           table: 'transactions',
           filter: `panel_id=eq.${panel.id}`
         }, (payload) => {
-          if (payload.new && (payload.new as any).status === 'completed') {
+          const newStatus = (payload.new as any)?.status;
+          if (newStatus === 'completed') {
             const meta = (payload.new as any).metadata;
             if (meta?.type === 'subscription') {
               toast({ 
@@ -206,6 +249,13 @@ const Billing = () => {
                 description: `$${(payload.new as any).amount?.toFixed(2) || '0.00'} has been added to your balance.` 
               });
             }
+            fetchBillingData();
+          } else if (newStatus === 'failed') {
+            toast({ 
+              variant: 'destructive',
+              title: 'Payment Failed', 
+              description: 'Your payment could not be processed. Please try again or use a different payment method.' 
+            });
             fetchBillingData();
           }
         })
@@ -317,8 +367,8 @@ const Billing = () => {
           panelId: panel.id,
           buyerId: profile.id,
           isOwnerDeposit: true,
-          returnUrl: `${window.location.origin}/panel/billing?upgrade=success`,
-          cancelUrl: `${window.location.origin}/panel/billing?upgrade=cancelled`,
+          returnUrl: `${window.location.origin}/panel/billing`,
+          cancelUrl: `${window.location.origin}/panel/billing?cancelled=true`,
           metadata: {
             type: 'subscription',
             plan: planName.toLowerCase(),
@@ -431,8 +481,8 @@ const Billing = () => {
           panelId: panel.id,
           buyerId: profile.id,
           isOwnerDeposit: true,
-          returnUrl: `${window.location.origin}/panel/billing?commission=success`,
-          cancelUrl: `${window.location.origin}/panel/billing?commission=cancelled`,
+          returnUrl: `${window.location.origin}/panel/billing`,
+          cancelUrl: `${window.location.origin}/panel/billing?cancelled=true`,
           metadata: {
             type: 'commission_payment',
             panelId: panel.id

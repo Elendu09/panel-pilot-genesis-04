@@ -183,6 +183,43 @@ async function handleServices(supabase: any, panelId: string) {
   return jsonResponse(formattedServices);
 }
 
+// Resolve the external service ID that the provider API expects
+async function resolveExternalServiceId(
+  supabase: any,
+  service: { provider_service_id?: string; provider_service_ref?: string }
+): Promise<string | null> {
+  if (service.provider_service_ref) {
+    const { data: providerService } = await supabase
+      .from('provider_services')
+      .select('external_service_id')
+      .eq('id', service.provider_service_ref)
+      .single();
+
+    if (providerService?.external_service_id) {
+      return providerService.external_service_id;
+    }
+  }
+
+  if (service.provider_service_id) {
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(service.provider_service_id);
+    if (!isUUID) {
+      return service.provider_service_id;
+    }
+
+    const { data: providerService } = await supabase
+      .from('provider_services')
+      .select('external_service_id')
+      .eq('id', service.provider_service_id)
+      .single();
+
+    if (providerService?.external_service_id) {
+      return providerService.external_service_id;
+    }
+  }
+
+  return null;
+}
+
 // Forward order to upstream provider
 async function forwardOrderToProvider(
   supabase: any,
@@ -194,12 +231,17 @@ async function forwardOrderToProvider(
   try {
     const { data: service } = await supabase
       .from('services')
-      .select('provider_id, provider_service_id')
+      .select('provider_id, provider_service_id, provider_service_ref')
       .eq('id', serviceId)
       .single();
 
-    if (!service?.provider_id || !service?.provider_service_id) {
+    if (!service?.provider_id) {
       return { success: false, error: 'No provider linked' };
+    }
+
+    const externalServiceId = await resolveExternalServiceId(supabase, service);
+    if (!externalServiceId) {
+      return { success: false, error: 'No external service ID found' };
     }
 
     const { data: provider } = await supabase
@@ -215,7 +257,7 @@ async function forwardOrderToProvider(
     const formData = new URLSearchParams();
     formData.append('key', provider.api_key);
     formData.append('action', 'add');
-    formData.append('service', service.provider_service_id);
+    formData.append('service', externalServiceId);
     formData.append('link', targetUrl);
     formData.append('quantity', String(quantity));
 
@@ -231,7 +273,7 @@ async function forwardOrderToProvider(
     if (result.order) {
       await supabase
         .from('orders')
-        .update({ provider_order_id: String(result.order), status: 'processing' })
+        .update({ provider_order_id: String(result.order), status: 'in_progress' })
         .eq('id', orderId);
       return { success: true, externalOrderId: String(result.order) };
     } else {

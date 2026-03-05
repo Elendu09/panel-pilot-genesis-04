@@ -252,7 +252,7 @@ const SupportTickets = () => {
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="space-y-6"
+      className="space-y-4 md:space-y-6"
     >
       <Helmet>
         <title>Support Tickets - Admin</title>
@@ -313,7 +313,7 @@ const SupportTickets = () => {
           />
         </div>
         <Select value={ticketTypeFilter} onValueChange={(value: 'all' | 'user_to_panel' | 'panel_to_admin') => setTicketTypeFilter(value)}>
-          <SelectTrigger className="w-[200px]">
+          <SelectTrigger className="w-full md:w-[200px]">
             <SelectValue placeholder="Filter by type" />
           </SelectTrigger>
           <SelectContent>
@@ -400,7 +400,7 @@ const SupportTickets = () => {
                         )}
                       </div>
                       
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="invisible group-hover:visible transition-[visibility]">
                         <Button size="sm" variant="outline" className="w-full text-xs gap-1">
                           View & Reply <ArrowUpRight className="w-3 h-3" />
                         </Button>
@@ -416,7 +416,7 @@ const SupportTickets = () => {
 
       {/* Ticket Details Dialog */}
       <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl mx-4 sm:mx-auto max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <MessageSquare className="w-5 h-5" />
@@ -525,9 +525,9 @@ const SupportTickets = () => {
               </div>
             </div>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDetailsDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSendReply} disabled={!replyText.trim()}>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setDetailsDialogOpen(false)} className="w-full sm:w-auto">Cancel</Button>
+            <Button onClick={handleSendReply} disabled={!replyText.trim()} className="w-full sm:w-auto">
               <Send className="w-4 h-4 mr-2" />
               Send Reply
             </Button>

@@ -53,7 +53,9 @@ serve(async (req) => {
         completed_at,
         estimated_completion,
         service_id,
-        panel_id
+        panel_id,
+        provider_order_id,
+        provider_id
       `)
       .eq("order_number", sanitizedOrderNumber)
       .maybeSingle();
@@ -98,6 +100,84 @@ serve(async (req) => {
       
       if (panel) {
         panelName = panel.name;
+      }
+    }
+
+    // If order has a provider_order_id and is in an active state, poll the provider for live status
+    if (order.provider_order_id && order.provider_id && ['pending', 'processing', 'in_progress'].includes(order.status)) {
+      try {
+        const { data: provider } = await supabase
+          .from("providers")
+          .select("api_endpoint, api_key, is_active")
+          .eq("id", order.provider_id)
+          .single();
+
+        if (provider?.is_active && provider.api_endpoint && provider.api_key) {
+          const formData = new URLSearchParams();
+          formData.append('key', provider.api_key);
+          formData.append('action', 'status');
+          formData.append('order', order.provider_order_id);
+
+          const providerResponse = await fetch(provider.api_endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: formData.toString(),
+          });
+
+          const providerResult = await providerResponse.json();
+          console.log('[track-order] Provider status response:', JSON.stringify(providerResult));
+
+          if (providerResult.status) {
+            const statusMap: Record<string, string> = {
+              'Pending': 'pending',
+              'In progress': 'in_progress',
+              'Processing': 'in_progress',
+              'Completed': 'completed',
+              'Partial': 'partial',
+              'Canceled': 'cancelled',
+              'Cancelled': 'cancelled',
+              'Refunded': 'refunded',
+              'Failed': 'failed',
+            };
+
+            const mappedStatus = statusMap[providerResult.status] || order.status;
+            const startCount = providerResult.start_count ? parseInt(providerResult.start_count, 10) : order.start_count;
+            const remains = providerResult.remains ? parseInt(providerResult.remains, 10) : order.remains;
+
+            const updateData: Record<string, any> = {};
+            if (mappedStatus !== order.status) updateData.status = mappedStatus;
+            if (startCount !== order.start_count) updateData.start_count = startCount;
+            if (remains !== order.remains) updateData.remains = remains;
+
+            if (mappedStatus === 'completed' && !order.completed_at) {
+              updateData.completed_at = new Date().toISOString();
+              updateData.progress = 100;
+            } else if (mappedStatus === 'in_progress' && !order.started_at) {
+              updateData.started_at = new Date().toISOString();
+            }
+
+            if (remains !== null && remains !== undefined && order.quantity) {
+              const delivered = order.quantity - remains;
+              updateData.progress = Math.min(100, Math.max(0, Math.round((delivered / order.quantity) * 100)));
+            }
+
+            if (Object.keys(updateData).length > 0) {
+              await supabase
+                .from("orders")
+                .update(updateData)
+                .eq("id", order.id);
+
+              if (updateData.status) order.status = updateData.status;
+              if (updateData.start_count !== undefined) order.start_count = updateData.start_count;
+              if (updateData.remains !== undefined) order.remains = updateData.remains;
+              if (updateData.progress !== undefined) order.progress = updateData.progress;
+              if (updateData.started_at) order.started_at = updateData.started_at;
+              if (updateData.completed_at) order.completed_at = updateData.completed_at;
+            }
+          }
+        }
+      } catch (providerError) {
+        console.error('[track-order] Provider polling error (non-fatal):', providerError);
       }
     }
 

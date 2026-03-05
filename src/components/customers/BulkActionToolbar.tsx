@@ -42,7 +42,7 @@ export const BulkActionToolbar = ({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 20 }}
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50"
+          className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-50"
         >
           <div className="flex items-center gap-2 px-3 md:px-4 py-3 bg-background/95 backdrop-blur-xl border border-border/50 rounded-full shadow-2xl max-w-[calc(100vw-2rem)] overflow-x-auto scrollbar-hide">
             <Badge className="bg-primary text-primary-foreground px-3 py-1">

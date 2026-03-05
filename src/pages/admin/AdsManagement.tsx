@@ -248,6 +248,7 @@ const AdsManagement = () => {
               <CardDescription>Configure rates and limits for each ad type</CardDescription>
             </CardHeader>
             <CardContent>
+              <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -298,6 +299,7 @@ const AdsManagement = () => {
                   })}
                 </TableBody>
               </Table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -316,6 +318,7 @@ const AdsManagement = () => {
                   <p>No active advertisements</p>
                 </div>
               ) : (
+                <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -390,6 +393,7 @@ const AdsManagement = () => {
                     })}
                   </TableBody>
                 </Table>
+                </div>
               )}
             </CardContent>
           </Card>

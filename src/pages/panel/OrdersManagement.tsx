@@ -574,43 +574,47 @@ const OrdersManagement = () => {
         ))}
       </div>
 
-      {/* Bulk Actions Bar */}
+      {/* Bulk Actions Bar - Fixed at bottom on mobile */}
       <AnimatePresence>
         {selectedOrders.size > 0 && (
           <motion.div
-            initial={{ opacity: 0, y: -10 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="flex items-center gap-4 p-4 glass-card rounded-xl border border-primary/30"
+            exit={{ opacity: 0, y: 20 }}
+            className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-50 w-[calc(100vw-2rem)] max-w-2xl"
           >
-            <div className="flex items-center gap-2">
-              <CheckSquare className="w-5 h-5 text-primary" />
-              <span className="font-medium">{selectedOrders.size} selected</span>
+            <div className="flex items-center gap-2 sm:gap-4 p-3 sm:p-4 bg-background/95 backdrop-blur-xl rounded-xl border border-primary/30 shadow-2xl">
+              <div className="flex items-center gap-2 shrink-0">
+                <CheckSquare className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+                <span className="font-medium text-sm sm:text-base">{selectedOrders.size} selected</span>
+              </div>
+              <div className="flex-1 min-w-0" />
+              <Select value={bulkAction} onValueChange={setBulkAction}>
+                <SelectTrigger className="w-[130px] sm:w-[180px]" data-testid="select-bulk-action">
+                  <SelectValue placeholder="Action..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cancel">Cancel Orders</SelectItem>
+                  <SelectItem value="complete">Mark Complete</SelectItem>
+                  <SelectItem value="in_progress">Set In Progress</SelectItem>
+                  <SelectItem value="pause">Pause Orders</SelectItem>
+                  <SelectItem value="resume">Resume Orders</SelectItem>
+                  <SelectItem value="refund">Process Refund</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button 
+                onClick={() => setIsBulkActionOpen(true)} 
+                disabled={!bulkAction}
+                className="bg-primary"
+                size="sm"
+                data-testid="button-apply-bulk"
+              >
+                Apply
+              </Button>
+              <Button variant="ghost" size="icon" onClick={() => setSelectedOrders(new Set())} data-testid="button-clear-selection">
+                <XCircle className="w-4 h-4" />
+              </Button>
             </div>
-            <div className="flex-1" />
-            <Select value={bulkAction} onValueChange={setBulkAction}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Bulk action..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="cancel">Cancel Orders</SelectItem>
-                <SelectItem value="complete">Mark Complete</SelectItem>
-                <SelectItem value="in_progress">Set In Progress</SelectItem>
-                <SelectItem value="pause">Pause Orders</SelectItem>
-                <SelectItem value="resume">Resume Orders</SelectItem>
-                <SelectItem value="refund">Process Refund</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button 
-              onClick={() => setIsBulkActionOpen(true)} 
-              disabled={!bulkAction}
-              className="bg-primary"
-            >
-              Apply
-            </Button>
-            <Button variant="ghost" onClick={() => setSelectedOrders(new Set())}>
-              Clear Selection
-            </Button>
           </motion.div>
         )}
       </AnimatePresence>
@@ -665,149 +669,257 @@ const OrdersManagement = () => {
         transition={{ delay: 0.4 }}
       >
         {viewMode === "kanban" ? renderKanbanView() : (
-          <Card className="glass-card overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-border/50 bg-muted/30">
-                    <th className="text-left p-4">
-                      <Checkbox
-                        checked={selectedOrders.size === filteredOrders.length && filteredOrders.length > 0}
-                        onCheckedChange={toggleSelectAll}
-                      />
-                    </th>
-                    <th className="text-left p-4 font-medium text-muted-foreground">Order</th>
-                    <th className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell">Customer</th>
-                    <th className="text-left p-4 font-medium text-muted-foreground hidden lg:table-cell">Quantity</th>
-                    <th className="text-left p-4 font-medium text-muted-foreground">Status</th>
-                    <th className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell">Progress</th>
-                    <th className="text-left p-4 font-medium text-muted-foreground">Price</th>
-                    <th className="text-left p-4 font-medium text-muted-foreground"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredOrders.length === 0 ? (
-                    <tr>
-                      <td colSpan={8} className="p-12 text-center">
-                        <div className="flex flex-col items-center gap-4">
-                          <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center">
-                            <ShoppingCart className="w-8 h-8 text-muted-foreground/50" />
-                          </div>
-                          <div>
-                            <h3 className="font-medium text-lg mb-1">No Orders Yet</h3>
-                            <p className="text-sm text-muted-foreground">
-                              Orders will appear here once customers place them.
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : (
-                    <AnimatePresence>
-                      {filteredOrders.map((order, index) => {
-                        const statusInfo = statusConfig[order.status] || statusConfig.pending;
-                        const StatusIcon = statusInfo.icon;
-                        const isExpanded = expandedOrder === order.id;
-
-                        return (
-                          <motion.tr
-                            key={order.id}
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: index * 0.05 }}
-                            className="border-b border-border/30 hover:bg-accent/30 transition-colors group"
-                          >
-                            <td className="p-4">
-                              <Checkbox
-                                checked={selectedOrders.has(order.id)}
-                                onCheckedChange={() => toggleSelectOrder(order.id)}
-                              />
-                            </td>
-                            <td className="p-4">
-                              <div className="flex items-center gap-3">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-6 w-6 shrink-0"
-                                  onClick={() => setExpandedOrder(isExpanded ? null : order.id)}
-                                >
-                                  {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                                </Button>
-                                <div>
-                                  <p className="font-medium group-hover:text-primary transition-colors">{order.order_number}</p>
-                                  <p className="text-xs text-muted-foreground">{order.service?.name || 'Unknown Service'}</p>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="p-4 hidden md:table-cell">
-                              <span className="text-sm">{order.buyer?.email || 'Unknown'}</span>
-                            </td>
-                            <td className="p-4 hidden lg:table-cell">
-                              <span className="text-sm">{order.quantity.toLocaleString()}</span>
-                            </td>
-                            <td className="p-4">
-                              <Badge variant="outline" className={cn(statusInfo.color, "shadow-sm", statusInfo.glow)}>
+          <>
+            {/* Mobile Card View */}
+            <div className="md:hidden space-y-3">
+              {/* Mobile Select All */}
+              {filteredOrders.length > 0 && (
+                <div className="flex items-center gap-3 px-1">
+                  <Checkbox
+                    checked={selectedOrders.size === filteredOrders.length && filteredOrders.length > 0}
+                    onCheckedChange={toggleSelectAll}
+                    data-testid="checkbox-select-all-mobile"
+                  />
+                  <span className="text-sm text-muted-foreground">
+                    {selectedOrders.size > 0 ? `${selectedOrders.size} of ${filteredOrders.length} selected` : "Select all"}
+                  </span>
+                </div>
+              )}
+              {filteredOrders.length === 0 ? (
+                <Card className="glass-card">
+                  <div className="flex flex-col items-center gap-4 p-8">
+                    <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center">
+                      <ShoppingCart className="w-8 h-8 text-muted-foreground/50" />
+                    </div>
+                    <div className="text-center">
+                      <h3 className="font-medium text-lg mb-1">No Orders Yet</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Orders will appear here once customers place them.
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+              ) : (
+                filteredOrders.map((order) => {
+                  const statusInfo = statusConfig[order.status] || statusConfig.pending;
+                  const StatusIcon = statusInfo.icon;
+                  return (
+                    <Card key={order.id} className="glass-card-hover" data-testid={`card-order-${order.id}`}>
+                      <CardContent className="p-3">
+                        <div className="flex items-start gap-3">
+                          <Checkbox
+                            checked={selectedOrders.has(order.id)}
+                            onCheckedChange={() => toggleSelectOrder(order.id)}
+                            className="mt-1 shrink-0"
+                            data-testid={`checkbox-order-${order.id}`}
+                          />
+                          <div className="flex-1 min-w-0" onClick={() => viewOrderDetails(order)}>
+                            <div className="flex items-center justify-between gap-2 mb-1">
+                              <p className="font-medium text-sm truncate">{order.order_number}</p>
+                              <Badge variant="outline" className={cn(statusInfo.color, "text-xs shrink-0")}>
                                 <StatusIcon className={cn("w-3 h-3 mr-1", order.status === "in_progress" && "animate-spin")} />
                                 {statusInfo.label}
                               </Badge>
-                            </td>
-                            <td className="p-4 hidden md:table-cell">
-                              <div className="flex items-center gap-2 min-w-32">
-                                <Progress 
-                                  value={order.progress || 0} 
-                                  className={cn(
-                                    "h-2",
-                                    order.status === "completed" && "[&>div]:bg-green-500",
-                                    order.status === "in_progress" && "[&>div]:bg-blue-500",
-                                    order.status === "pending" && "[&>div]:bg-yellow-500"
-                                  )}
-                                />
-                                <span className="text-xs text-muted-foreground w-12">{order.progress || 0}%</span>
-                              </div>
-                            </td>
-                            <td className="p-4">
-                              <span className="font-semibold">${order.price.toFixed(2)}</span>
-                            </td>
-                            <td className="p-4">
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                                    <MoreVertical className="w-4 h-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="glass">
-                                  <DropdownMenuItem onClick={() => viewOrderDetails(order)}>
-                                    <Eye className="w-4 h-4 mr-2" /> View Details
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => window.open(order.target_url, '_blank')}>
-                                    <ExternalLink className="w-4 h-4 mr-2" /> Open Link
-                                  </DropdownMenuItem>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem onClick={() => updateOrderStatus(order.id, 'in_progress')}>
-                                    <Loader2 className="w-4 h-4 mr-2" /> Start Processing
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => updateOrderStatus(order.id, 'completed')}>
-                                    <CheckCircle className="w-4 h-4 mr-2" /> Mark Completed
-                                  </DropdownMenuItem>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem onClick={() => cancelOrder(order.id)} className="text-destructive">
-                                    <XCircle className="w-4 h-4 mr-2" /> Cancel Order
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => openRefundDialog(order)} className="text-destructive">
-                                    <RefreshCw className="w-4 h-4 mr-2" /> Process Refund
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </td>
-                          </motion.tr>
-                        );
-                      })}
-                    </AnimatePresence>
-                  )}
-                </tbody>
-              </table>
+                            </div>
+                            <p className="text-xs text-muted-foreground truncate mb-1">{order.service?.name || 'Unknown Service'}</p>
+                            <div className="flex items-center justify-between gap-2 text-xs">
+                              <span className="text-muted-foreground truncate">{order.buyer?.email || 'Unknown'}</span>
+                              <span className="font-semibold shrink-0">${order.price.toFixed(2)}</span>
+                            </div>
+                            {order.progress > 0 && order.status === 'in_progress' && (
+                              <Progress value={order.progress} className="h-1 mt-2" />
+                            )}
+                          </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="shrink-0">
+                                <MoreVertical className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="glass">
+                              <DropdownMenuItem onClick={() => viewOrderDetails(order)}>
+                                <Eye className="w-4 h-4 mr-2" /> View Details
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => updateOrderStatus(order.id, 'in_progress')}>
+                                <Loader2 className="w-4 h-4 mr-2" /> Start Processing
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => updateOrderStatus(order.id, 'completed')}>
+                                <CheckCircle className="w-4 h-4 mr-2" /> Mark Completed
+                              </DropdownMenuItem>
+                              {order.status === 'in_progress' && (
+                                <DropdownMenuItem onClick={() => pauseOrder(order.id)}>
+                                  <Pause className="w-4 h-4 mr-2" /> Pause
+                                </DropdownMenuItem>
+                              )}
+                              {order.status === 'paused' && (
+                                <DropdownMenuItem onClick={() => resumeOrder(order.id)}>
+                                  <Play className="w-4 h-4 mr-2" /> Resume
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => cancelOrder(order.id)} className="text-destructive">
+                                <XCircle className="w-4 h-4 mr-2" /> Cancel
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => openRefundDialog(order)} className="text-destructive">
+                                <RefreshCw className="w-4 h-4 mr-2" /> Refund
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })
+              )}
             </div>
-          </Card>
+
+            {/* Desktop Table View */}
+            <Card className="glass-card overflow-hidden hidden md:block">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-border/50 bg-muted/30">
+                      <th className="text-left p-4">
+                        <Checkbox
+                          checked={selectedOrders.size === filteredOrders.length && filteredOrders.length > 0}
+                          onCheckedChange={toggleSelectAll}
+                          data-testid="checkbox-select-all-desktop"
+                        />
+                      </th>
+                      <th className="text-left p-4 font-medium text-muted-foreground">Order</th>
+                      <th className="text-left p-4 font-medium text-muted-foreground">Customer</th>
+                      <th className="text-left p-4 font-medium text-muted-foreground hidden lg:table-cell">Quantity</th>
+                      <th className="text-left p-4 font-medium text-muted-foreground">Status</th>
+                      <th className="text-left p-4 font-medium text-muted-foreground">Progress</th>
+                      <th className="text-left p-4 font-medium text-muted-foreground">Price</th>
+                      <th className="text-left p-4 font-medium text-muted-foreground"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredOrders.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="p-12 text-center">
+                          <div className="flex flex-col items-center gap-4">
+                            <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center">
+                              <ShoppingCart className="w-8 h-8 text-muted-foreground/50" />
+                            </div>
+                            <div>
+                              <h3 className="font-medium text-lg mb-1">No Orders Yet</h3>
+                              <p className="text-sm text-muted-foreground">
+                                Orders will appear here once customers place them.
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      <AnimatePresence>
+                        {filteredOrders.map((order, index) => {
+                          const statusInfo = statusConfig[order.status] || statusConfig.pending;
+                          const StatusIcon = statusInfo.icon;
+                          const isExpanded = expandedOrder === order.id;
+
+                          return (
+                            <motion.tr
+                              key={order.id}
+                              initial={{ opacity: 0, x: -20 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: index * 0.05 }}
+                              className="border-b border-border/30 hover:bg-accent/30 transition-colors group"
+                            >
+                              <td className="p-4">
+                                <Checkbox
+                                  checked={selectedOrders.has(order.id)}
+                                  onCheckedChange={() => toggleSelectOrder(order.id)}
+                                />
+                              </td>
+                              <td className="p-4">
+                                <div className="flex items-center gap-3">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 shrink-0"
+                                    onClick={() => setExpandedOrder(isExpanded ? null : order.id)}
+                                  >
+                                    {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                  </Button>
+                                  <div>
+                                    <p className="font-medium group-hover:text-primary transition-colors">{order.order_number}</p>
+                                    <p className="text-xs text-muted-foreground">{order.service?.name || 'Unknown Service'}</p>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="p-4">
+                                <span className="text-sm">{order.buyer?.email || 'Unknown'}</span>
+                              </td>
+                              <td className="p-4 hidden lg:table-cell">
+                                <span className="text-sm">{order.quantity.toLocaleString()}</span>
+                              </td>
+                              <td className="p-4">
+                                <Badge variant="outline" className={cn(statusInfo.color, "shadow-sm", statusInfo.glow)}>
+                                  <StatusIcon className={cn("w-3 h-3 mr-1", order.status === "in_progress" && "animate-spin")} />
+                                  {statusInfo.label}
+                                </Badge>
+                              </td>
+                              <td className="p-4">
+                                <div className="flex items-center gap-2 min-w-32">
+                                  <Progress 
+                                    value={order.progress || 0} 
+                                    className={cn(
+                                      "h-2",
+                                      order.status === "completed" && "[&>div]:bg-green-500",
+                                      order.status === "in_progress" && "[&>div]:bg-blue-500",
+                                      order.status === "pending" && "[&>div]:bg-yellow-500"
+                                    )}
+                                  />
+                                  <span className="text-xs text-muted-foreground w-12">{order.progress || 0}%</span>
+                                </div>
+                              </td>
+                              <td className="p-4">
+                                <span className="font-semibold">${order.price.toFixed(2)}</span>
+                              </td>
+                              <td className="p-4">
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                                      <MoreVertical className="w-4 h-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end" className="glass">
+                                    <DropdownMenuItem onClick={() => viewOrderDetails(order)}>
+                                      <Eye className="w-4 h-4 mr-2" /> View Details
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => window.open(order.target_url, '_blank')}>
+                                      <ExternalLink className="w-4 h-4 mr-2" /> Open Link
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem onClick={() => updateOrderStatus(order.id, 'in_progress')}>
+                                      <Loader2 className="w-4 h-4 mr-2" /> Start Processing
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => updateOrderStatus(order.id, 'completed')}>
+                                      <CheckCircle className="w-4 h-4 mr-2" /> Mark Completed
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem onClick={() => cancelOrder(order.id)} className="text-destructive">
+                                      <XCircle className="w-4 h-4 mr-2" /> Cancel Order
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => openRefundDialog(order)} className="text-destructive">
+                                      <RefreshCw className="w-4 h-4 mr-2" /> Process Refund
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </td>
+                            </motion.tr>
+                          );
+                        })}
+                      </AnimatePresence>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          </>
         )}
       </motion.div>
 

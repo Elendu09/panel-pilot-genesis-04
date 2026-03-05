@@ -18,6 +18,49 @@ interface OrderRequest {
   paymentType?: 'balance' | 'direct';
 }
 
+// Resolve the external service ID that the provider API expects
+async function resolveExternalServiceId(
+  supabase: any,
+  service: { provider_service_id?: string; provider_service_ref?: string }
+): Promise<string | null> {
+  // If provider_service_ref exists, look up the external_service_id from provider_services table
+  if (service.provider_service_ref) {
+    const { data: providerService } = await supabase
+      .from('provider_services')
+      .select('external_service_id')
+      .eq('id', service.provider_service_ref)
+      .single();
+
+    if (providerService?.external_service_id) {
+      console.log(`[buyer-order] Resolved external_service_id via provider_service_ref: ${providerService.external_service_id}`);
+      return providerService.external_service_id;
+    }
+  }
+
+  // Fall back to provider_service_id if it looks like an external ID (numeric or short string, not a UUID)
+  if (service.provider_service_id) {
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(service.provider_service_id);
+    if (!isUUID) {
+      console.log(`[buyer-order] Using provider_service_id directly: ${service.provider_service_id}`);
+      return service.provider_service_id;
+    }
+
+    // If provider_service_id is a UUID, try to look it up in provider_services table
+    const { data: providerService } = await supabase
+      .from('provider_services')
+      .select('external_service_id')
+      .eq('id', service.provider_service_id)
+      .single();
+
+    if (providerService?.external_service_id) {
+      console.log(`[buyer-order] Resolved external_service_id from UUID provider_service_id: ${providerService.external_service_id}`);
+      return providerService.external_service_id;
+    }
+  }
+
+  return null;
+}
+
 // Forward order to upstream provider API
 async function forwardToProvider(
   supabase: any,
@@ -30,13 +73,20 @@ async function forwardToProvider(
     // Get service's provider info
     const { data: service } = await supabase
       .from('services')
-      .select('provider_id, provider_service_id')
+      .select('provider_id, provider_service_id, provider_service_ref')
       .eq('id', serviceId)
       .single();
 
-    if (!service?.provider_id || !service?.provider_service_id) {
+    if (!service?.provider_id) {
       console.log('[buyer-order] No provider linked to service, skipping forwarding');
       return { success: false, error: 'No provider linked' };
+    }
+
+    // Resolve the correct external service ID for the provider API
+    const externalServiceId = await resolveExternalServiceId(supabase, service);
+    if (!externalServiceId) {
+      console.log('[buyer-order] Could not resolve external service ID');
+      return { success: false, error: 'No external service ID found' };
     }
 
     // Get provider API credentials
@@ -51,13 +101,13 @@ async function forwardToProvider(
       return { success: false, error: 'Provider inactive' };
     }
 
-    console.log(`[buyer-order] Forwarding to provider: ${provider.api_endpoint}`);
+    console.log(`[buyer-order] Forwarding to provider: ${provider.api_endpoint}, service=${externalServiceId}`);
 
     // Call provider's API (standard SMM panel API format)
     const formData = new URLSearchParams();
     formData.append('key', provider.api_key);
     formData.append('action', 'add');
-    formData.append('service', service.provider_service_id);
+    formData.append('service', externalServiceId);
     formData.append('link', targetUrl);
     formData.append('quantity', String(quantity));
 
@@ -76,7 +126,7 @@ async function forwardToProvider(
         .from('orders')
         .update({
           provider_order_id: String(result.order),
-          status: 'processing',
+          status: 'in_progress',
         })
         .eq('id', orderId);
 
