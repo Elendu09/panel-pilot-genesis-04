@@ -159,7 +159,7 @@ serve(async (req) => {
     // Verify service exists and is active
     const { data: service, error: serviceError } = await supabase
       .from('services')
-      .select('id, name, price, min_quantity, max_quantity, is_active, panel_id')
+      .select('id, name, price, min_quantity, max_quantity, is_active, panel_id, provider_id, provider_cost, cost_usd')
       .eq('id', serviceId)
       .eq('panel_id', panelId)
       .single();
@@ -193,6 +193,7 @@ serve(async (req) => {
 
     // Create the order
     const orderStatus = paymentType === 'direct' ? 'awaiting_payment' : 'pending';
+    const providerCostAtOrder = service.provider_cost || service.cost_usd || 0;
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .insert({
@@ -206,6 +207,8 @@ serve(async (req) => {
         status: orderStatus,
         progress: 0,
         notes: notes || (promoCode ? `Promo: ${promoCode}` : null),
+        provider_cost: providerCostAtOrder,
+        provider_id: service.provider_id || null,
       })
       .select()
       .single();

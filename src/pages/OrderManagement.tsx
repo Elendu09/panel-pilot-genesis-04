@@ -39,6 +39,10 @@ interface Order {
   target_url: string;
   quantity: number;
   price: number;
+  provider_cost?: number;
+  provider_id?: string;
+  provider_order_id?: string;
+  notes?: string;
   status: 'pending' | 'in_progress' | 'completed' | 'cancelled' | 'partial' | 'processing' | 'awaiting_payment';
   start_count: number;
   remains: number;
@@ -77,7 +81,7 @@ const OrderManagement = () => {
   const fetchOrders = async () => {
     try {
       let query = (supabase as any).from('orders').select(`
-        *,
+        *, provider_cost, provider_id, provider_order_id, notes,
         service:services(name, category, provider_cost, provider:providers(name)),
         buyer:client_users!orders_buyer_id_fkey(email, full_name)
       `);
@@ -145,11 +149,12 @@ const OrderManagement = () => {
   const totalOrders = orders.length;
   const completedOrders = orders.filter(o => o.status === 'completed').length;
   const pendingOrders = orders.filter(o => o.status === 'pending').length;
-  const totalSpent = orders.reduce((sum, order) => sum + (order.price || 0), 0);
-  const totalRevenue = orders.reduce((sum, order) => {
-    const cost = order.service?.provider_cost || 0;
+  const totalOrderAmount = orders.reduce((sum, order) => sum + (order.price || 0), 0);
+  const profitFromOrders = orders.reduce((sum, order) => {
+    const cost = order.provider_cost || order.service?.provider_cost || 0;
     return sum + ((order.price || 0) - cost);
   }, 0);
+  const conversionRate = totalOrders > 0 ? ((completedOrders / totalOrders) * 100) : 0;
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -237,63 +242,75 @@ const OrderManagement = () => {
             </div>
 
             {/* Stats Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 md:gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
               <Card className="bg-gradient-card border-border shadow-card">
-                <CardContent className="p-6">
+                <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-muted-foreground">Total Orders</p>
-                      <p className="text-2xl font-bold text-primary">{totalOrders}</p>
+                      <p className="text-xs font-medium text-muted-foreground">Total Orders</p>
+                      <p className="text-xl font-bold text-primary">{totalOrders}</p>
                     </div>
-                    <ShoppingCart className="w-8 h-8 text-primary" />
+                    <ShoppingCart className="w-6 h-6 text-primary" />
                   </div>
                 </CardContent>
               </Card>
 
               <Card className="bg-gradient-card border-border shadow-card">
-                <CardContent className="p-6">
+                <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-muted-foreground">Completed</p>
-                      <p className="text-2xl font-bold text-primary">{completedOrders}</p>
+                      <p className="text-xs font-medium text-muted-foreground">Completed</p>
+                      <p className="text-xl font-bold text-primary">{completedOrders}</p>
                     </div>
-                    <CheckCircle className="w-8 h-8 text-primary" />
+                    <CheckCircle className="w-6 h-6 text-primary" />
                   </div>
                 </CardContent>
               </Card>
 
               <Card className="bg-gradient-card border-border shadow-card">
-                <CardContent className="p-6">
+                <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-muted-foreground">Pending</p>
-                      <p className="text-2xl font-bold text-primary">{pendingOrders}</p>
+                      <p className="text-xs font-medium text-muted-foreground">Pending</p>
+                      <p className="text-xl font-bold text-primary">{pendingOrders}</p>
                     </div>
-                    <Clock className="w-8 h-8 text-primary" />
+                    <Clock className="w-6 h-6 text-primary" />
                   </div>
                 </CardContent>
               </Card>
 
               <Card className="bg-gradient-card border-border shadow-card">
-                <CardContent className="p-6">
+                <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-muted-foreground">Total Spent</p>
-                      <p className="text-2xl font-bold text-primary">${totalSpent.toFixed(2)}</p>
+                      <p className="text-xs font-medium text-muted-foreground">Total Order Amount</p>
+                      <p className="text-xl font-bold text-primary">${totalOrderAmount.toFixed(2)}</p>
                     </div>
-                    <DollarSign className="w-8 h-8 text-primary" />
+                    <DollarSign className="w-6 h-6 text-primary" />
                   </div>
                 </CardContent>
               </Card>
 
               <Card className="bg-gradient-card border-border shadow-card">
-                <CardContent className="p-6">
+                <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-muted-foreground">Revenue (Profit)</p>
-                      <p className="text-2xl font-bold text-primary">${totalRevenue.toFixed(2)}</p>
+                      <p className="text-xs font-medium text-muted-foreground">Profit from Orders</p>
+                      <p className="text-xl font-bold text-primary">${profitFromOrders.toFixed(2)}</p>
                     </div>
-                    <TrendingUp className="w-8 h-8 text-primary" />
+                    <TrendingUp className="w-6 h-6 text-primary" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gradient-card border-border shadow-card">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground">Conversion Rate</p>
+                      <p className="text-xl font-bold text-primary">{conversionRate.toFixed(1)}%</p>
+                    </div>
+                    <Activity className="w-6 h-6 text-primary" />
                   </div>
                 </CardContent>
               </Card>
@@ -456,6 +473,90 @@ const OrderManagement = () => {
           </div>
         </div>
       </section>
+
+      {/* Order Detail Dialog */}
+      <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
+        <DialogContent className="max-w-lg p-4 sm:p-6">
+          <DialogHeader>
+            <DialogTitle>Order Details</DialogTitle>
+          </DialogHeader>
+          {selectedOrder && (
+            <div className="space-y-3 text-sm">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <p className="text-muted-foreground text-xs">Order #</p>
+                  <p className="font-mono text-xs break-all">{selectedOrder.order_number}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">Status</p>
+                  <Badge className={getStatusColor(selectedOrder.status)}>
+                    {getStatusIcon(selectedOrder.status)}
+                    <span className="ml-1 capitalize">{selectedOrder.status.replace('_', ' ')}</span>
+                  </Badge>
+                </div>
+              </div>
+              <div>
+                <p className="text-muted-foreground text-xs">Service</p>
+                <p className="font-medium">{selectedOrder.service?.name || 'Deleted service'}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground text-xs">Provider</p>
+                <p>{selectedOrder.service?.provider?.name || '—'}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground text-xs">Customer</p>
+                <p className="font-medium">{selectedOrder.buyer?.full_name || 'N/A'}</p>
+                <p className="text-muted-foreground text-xs break-all">{selectedOrder.buyer?.email}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground text-xs">Target URL</p>
+                <p className="break-all text-xs">{selectedOrder.target_url}</p>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <p className="text-muted-foreground text-xs">Quantity</p>
+                  <p className="font-medium">{selectedOrder.quantity?.toLocaleString()}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">Price</p>
+                  <p className="font-medium">${selectedOrder.price?.toFixed(2)}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">Cost</p>
+                  <p className="font-medium">${(selectedOrder.provider_cost || 0).toFixed(2)}</p>
+                </div>
+              </div>
+              <div>
+                <p className="text-muted-foreground text-xs">Progress</p>
+                <Progress value={selectedOrder.progress || 0} className="h-2 mt-1" />
+                <span className="text-xs text-muted-foreground">{Math.round(selectedOrder.progress || 0)}%</span>
+              </div>
+              {selectedOrder.provider_order_id && (
+                <div>
+                  <p className="text-muted-foreground text-xs">Provider Order ID</p>
+                  <p className="font-mono text-xs">{selectedOrder.provider_order_id}</p>
+                </div>
+              )}
+              {selectedOrder.notes && (
+                <div>
+                  <p className="text-muted-foreground text-xs">Notes</p>
+                  <p className="text-xs">{selectedOrder.notes}</p>
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <p className="text-muted-foreground text-xs">Created</p>
+                  <p className="text-xs">{new Date(selectedOrder.created_at).toLocaleString()}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">Updated</p>
+                  <p className="text-xs">{new Date(selectedOrder.updated_at).toLocaleString()}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Footer />
     </div>
