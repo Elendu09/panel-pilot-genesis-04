@@ -145,7 +145,11 @@ const Billing = () => {
                 body: { action: 'verify-payment', transactionId }
               });
               if (data?.status === 'completed') {
-                toast({ title: 'Payment Successful!', description: `$${Number(data.amount).toFixed(2)} has been added to your balance.` });
+                if (data?.subscriptionUpdated) {
+                  toast({ title: 'Subscription Activated!', description: 'Your plan has been upgraded successfully.' });
+                } else {
+                  toast({ title: 'Payment Successful!', description: `$${Number(data.amount).toFixed(2)} has been added to your balance.` });
+                }
                 fetchBillingData();
               } else if (data?.status === 'failed') {
                 toast({ variant: 'destructive', title: 'Payment Failed', description: 'Your payment could not be processed.' });
@@ -190,10 +194,18 @@ const Billing = () => {
           filter: `panel_id=eq.${panel.id}`
         }, (payload) => {
           if (payload.new && (payload.new as any).status === 'completed') {
-            toast({ 
-              title: 'Payment Completed!', 
-              description: `$${(payload.new as any).amount?.toFixed(2) || '0.00'} has been added to your balance.` 
-            });
+            const meta = (payload.new as any).metadata;
+            if (meta?.type === 'subscription') {
+              toast({ 
+                title: 'Subscription Activated!', 
+                description: `Your ${meta.plan || 'new'} plan has been activated successfully.` 
+              });
+            } else {
+              toast({ 
+                title: 'Payment Completed!', 
+                description: `$${(payload.new as any).amount?.toFixed(2) || '0.00'} has been added to your balance.` 
+              });
+            }
             fetchBillingData();
           }
         })

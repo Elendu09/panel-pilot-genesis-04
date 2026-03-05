@@ -57,10 +57,11 @@ serve(async (req) => {
         );
       }
 
-      // Already completed or failed — just return current status
+      // Already completed or failed — return current status with metadata
       if (tx.status === 'completed' || tx.status === 'failed') {
+        const txMeta = (tx.metadata as Record<string, any>) || {};
         return new Response(
-          JSON.stringify({ success: true, status: tx.status, amount: tx.amount }),
+          JSON.stringify({ success: true, status: tx.status, amount: tx.amount, subscriptionUpdated: tx.status === 'completed' && txMeta.type === 'subscription' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -180,9 +181,31 @@ serve(async (req) => {
           .update({ status: 'completed', updated_at: new Date().toISOString() })
           .eq('id', transactionId);
 
-        // Credit balance based on metadata type
+        // Credit balance or update subscription based on metadata type
         const txMeta = (tx.metadata as Record<string, any>) || {};
-        if (txMeta.type === 'panel_deposit' && tx.panel_id) {
+        if (txMeta.type === 'subscription' && tx.panel_id) {
+          // === SUBSCRIPTION PAYMENT — update panel tier and subscription record ===
+          const planName = txMeta.plan || 'basic';
+          
+          await supabase.from('panels').update({
+            subscription_tier: planName,
+            subscription_status: 'active',
+          }).eq('id', tx.panel_id);
+          
+          const expiresAt = new Date();
+          expiresAt.setMonth(expiresAt.getMonth() + 1);
+          
+          await supabase.from('panel_subscriptions').upsert({
+            panel_id: tx.panel_id,
+            plan_type: planName,
+            price: verifiedAmount,
+            status: 'active',
+            started_at: new Date().toISOString(),
+            expires_at: expiresAt.toISOString(),
+          }, { onConflict: 'panel_id' });
+          
+          console.log(`[process-payment] Subscription verified: ${planName} for panel ${tx.panel_id}`);
+        } else if (txMeta.type === 'panel_deposit' && tx.panel_id) {
           const { data: panelData } = await supabase
             .from('panels')
             .select('balance')
@@ -210,7 +233,7 @@ serve(async (req) => {
 
         console.log(`[process-payment] Verified & completed transaction ${transactionId}, amount: ${verifiedAmount}`);
         return new Response(
-          JSON.stringify({ success: true, status: 'completed', amount: verifiedAmount }),
+          JSON.stringify({ success: true, status: 'completed', amount: verifiedAmount, subscriptionUpdated: txMeta.type === 'subscription' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -1364,19 +1387,7 @@ serve(async (req) => {
               const buyerName = buyerData?.full_name || buyerData?.email || 'A customer';
               const gatewayDisplayName = gateway.replace('manual_', '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
               
-              // Create in-app notification for panel owner
-              await supabase.from('panel_notifications').insert({
-                panel_id: panelId,
-                user_id: panelOwnerData.owner_id,
-                type: 'warning',
-                title: 'New Deposit Pending Verification',
-                message: `${buyerName} submitted a manual deposit of $${amount.toFixed(2)} via ${gatewayDisplayName}. Please verify and approve in Transactions.`,
-                is_read: false,
-              });
-              
-              console.log(`[process-payment] Panel owner notification created for pending deposit ${transactionIdToUse}`);
-              
-              // Get owner email for email notification
+              // Get owner email for email notification (send-notification creates the in-app notification)
               const { data: ownerProfile } = await supabase
                 .from('profiles')
                 .select('email')

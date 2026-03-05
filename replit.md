@@ -82,6 +82,14 @@ Admin pages use the `/functions/v1/admin-data` Express endpoint (service role ke
 - **Email Width (T006)**: Order details dialog responsive grid + `break-all` on email
 - **Admin Finance Metrics (T007)**: Admin PanelManagement finance tab shows Total Revenue (Deposits), Total Order Amount, Profit from Orders via `get_panel_finance` admin-data action
 
+## Payment & Subscription Fixes (Session)
+
+- **Subscription Verification**: `process-payment` verify-payment now handles `subscription` type — updates `panels.subscription_tier` and upserts `panel_subscriptions` when payment is verified
+- **Duplicate Notifications Fixed**: Removed direct `panel_notifications.insert` from manual payment handler in `process-payment`; `send-notification` already creates the in-app notification
+- **Manual Payment Image Upload**: Upload proof section in `BuyerDeposit.tsx` only shown after user clicks "I've Made the Transfer"
+- **Trial/Onboarding Subscription**: `PanelOnboarding.tsx` now creates a `panel_subscriptions` row (free plan) when panel is created
+- **Service Tier Limits**: `ServicesManagement.tsx` enforces service count limits based on subscription tier (free:1, basic:10, pro:unlimited) using DB count query
+
 ## Replit-Specific Changes Made
 
 1. **index.html** — Added Replit domains to `isDev` check to prevent visibility hiding

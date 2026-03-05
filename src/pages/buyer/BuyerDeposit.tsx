@@ -157,6 +157,7 @@ const BuyerDeposit = () => {
   // Proof of payment upload state
   const [proofUploading, setProofUploading] = useState(false);
   const [proofUrl, setProofUrl] = useState<string | null>(null);
+  const [showProofUpload, setShowProofUpload] = useState(false);
   const proofInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch enabled payment methods from panel settings + sync with platform providers
@@ -951,7 +952,13 @@ const BuyerDeposit = () => {
       </motion.div>
 
       {/* Manual Payment Instructions Dialog */}
-      <Dialog open={manualDialogOpen} onOpenChange={setManualDialogOpen}>
+      <Dialog open={manualDialogOpen} onOpenChange={(open) => {
+        setManualDialogOpen(open);
+        if (!open) {
+          setShowProofUpload(false);
+          setProofUrl(null);
+        }
+      }}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3">
@@ -1018,60 +1025,70 @@ const BuyerDeposit = () => {
               </div>
             )}
 
-            {/* Payment Proof Upload */}
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold">Upload Payment Proof</Label>
-              <input
-                ref={proofInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) handleProofUpload(file);
-                }}
-              />
-              {proofUrl ? (
-                <div className="relative rounded-lg border overflow-hidden">
-                  <img src={proofUrl} alt="Payment proof" className="w-full max-h-[200px] object-contain bg-muted/30" />
-                  <Button
-                    variant="destructive"
-                    size="icon"
-                    className="absolute top-2 right-2 h-7 w-7"
-                    onClick={() => setProofUrl(null)}
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </Button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => proofInputRef.current?.click()}
-                  disabled={proofUploading}
-                  className={cn(
-                    "w-full p-4 rounded-lg border-2 border-dashed transition-all flex flex-col items-center gap-2",
-                    proofUploading
-                      ? "opacity-60 pointer-events-none border-border/50"
-                      : "border-border/50 hover:border-primary/50 cursor-pointer"
-                  )}
-                >
-                  {proofUploading ? (
-                    <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                  ) : (
-                    <Upload className="w-6 h-6 text-muted-foreground" />
-                  )}
-                  <span className="text-sm text-muted-foreground">
-                    {proofUploading ? "Uploading..." : "Click to upload screenshot"}
-                  </span>
-                  <span className="text-xs text-muted-foreground">Max 2MB • PNG, JPG, GIF, WebP</span>
-                </button>
-              )}
-            </div>
+            {!showProofUpload && (
+              <div className="flex items-center gap-2 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg text-sm">
+                <CheckCircle className="w-4 h-4 text-blue-500 shrink-0" />
+                <p>After completing your transfer, click the button below to upload payment proof.</p>
+              </div>
+            )}
 
-            <div className="flex items-center gap-2 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg text-sm">
-              <CheckCircle className="w-4 h-4 text-blue-500 shrink-0" />
-              <p>Your balance will be credited once payment is verified by our team.</p>
-            </div>
+            {/* Payment Proof Upload — only shown after clicking "I've Made the Transfer" */}
+            {showProofUpload && (
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold" data-testid="label-upload-proof">Upload Payment Proof</Label>
+                <input
+                  ref={proofInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleProofUpload(file);
+                  }}
+                />
+                {proofUrl ? (
+                  <div className="relative rounded-lg border overflow-hidden">
+                    <img src={proofUrl} alt="Payment proof" className="w-full max-h-[200px] object-contain bg-muted/30" />
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-2 right-2 h-7 w-7"
+                      onClick={() => setProofUrl(null)}
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => proofInputRef.current?.click()}
+                    disabled={proofUploading}
+                    data-testid="button-upload-proof"
+                    className={cn(
+                      "w-full p-4 rounded-lg border-2 border-dashed transition-all flex flex-col items-center gap-2",
+                      proofUploading
+                        ? "opacity-60 pointer-events-none border-border/50"
+                        : "border-border/50 hover:border-primary/50 cursor-pointer"
+                    )}
+                  >
+                    {proofUploading ? (
+                      <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                    ) : (
+                      <Upload className="w-6 h-6 text-muted-foreground" />
+                    )}
+                    <span className="text-sm text-muted-foreground">
+                      {proofUploading ? "Uploading..." : "Click to upload screenshot"}
+                    </span>
+                    <span className="text-xs text-muted-foreground">Max 2MB • PNG, JPG, GIF, WebP</span>
+                  </button>
+                )}
+
+                <div className="flex items-center gap-2 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg text-sm">
+                  <CheckCircle className="w-4 h-4 text-blue-500 shrink-0" />
+                  <p>Your balance will be credited once payment is verified by our team.</p>
+                </div>
+              </div>
+            )}
           </div>
 
           <DialogFooter className="mt-4">
@@ -1081,29 +1098,43 @@ const BuyerDeposit = () => {
                 setManualDialogOpen(false);
                 setManualPaymentDetails(null);
                 setProofUrl(null);
+                setShowProofUpload(false);
                 setAmount("");
                 setSelectedMethod(null);
               }}
             >
               Close
             </Button>
-            <Button 
-              onClick={() => {
-                setManualDialogOpen(false);
-                setManualPaymentDetails(null);
-                setProofUrl(null);
-                setAmount("");
-                setSelectedMethod(null);
-                toast({ 
-                  title: "Payment Pending", 
-                  description: "Complete the transfer and your balance will be updated." 
-                });
-              }}
-              className="gap-2"
-            >
-              <CheckCircle className="w-4 h-4" />
-              I've Made the Transfer
-            </Button>
+            {!showProofUpload ? (
+              <Button 
+                onClick={() => setShowProofUpload(true)}
+                className="gap-2"
+                data-testid="button-ive-made-transfer"
+              >
+                <CheckCircle className="w-4 h-4" />
+                I've Made the Transfer
+              </Button>
+            ) : (
+              <Button 
+                onClick={() => {
+                  setManualDialogOpen(false);
+                  setManualPaymentDetails(null);
+                  setProofUrl(null);
+                  setShowProofUpload(false);
+                  setAmount("");
+                  setSelectedMethod(null);
+                  toast({ 
+                    title: "Payment Pending", 
+                    description: "Your payment proof has been submitted. Balance will update once verified." 
+                  });
+                }}
+                className="gap-2"
+                data-testid="button-done-transfer"
+              >
+                <CheckCircle className="w-4 h-4" />
+                Done
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

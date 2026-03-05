@@ -212,7 +212,14 @@ const ITEMS_PER_PAGE_OPTIONS = [25, 50, 100, 200];
 
 const ServicesManagement = () => {
   const isMobile = useIsMobile();
-  const { panel, loading: panelLoading } = usePanel();
+  const { panel, resolvedTier, loading: panelLoading } = usePanel();
+
+  const SERVICE_LIMITS: Record<string, number> = {
+    free: 1,
+    basic: 10,
+    pro: Infinity,
+  };
+  const serviceLimit = SERVICE_LIMITS[resolvedTier] || 1;
   const [searchParams, setSearchParams] = useSearchParams();
   const [services, setServices] = useState<ServiceItem[]>([]);
   
@@ -1353,8 +1360,28 @@ const ServicesManagement = () => {
   };
 
   // Create service
+  const checkServiceLimit = async (): Promise<boolean> => {
+    if (serviceLimit === Infinity) return true;
+    const { count } = await supabase
+      .from('services')
+      .select('id', { count: 'exact', head: true })
+      .eq('panel_id', panel!.id)
+      .eq('is_active', true);
+    if ((count || 0) >= serviceLimit) {
+      toast({
+        variant: 'destructive',
+        title: 'Service Limit Reached',
+        description: `Your ${resolvedTier} plan allows up to ${serviceLimit} active service${serviceLimit !== 1 ? 's' : ''}. Upgrade your plan to add more.`
+      });
+      return false;
+    }
+    return true;
+  };
+
   const handleCreateService = async () => {
     if (!panel?.id) return;
+
+    if (!(await checkServiceLimit())) return;
     
     try {
       const { data, error } = await supabase
@@ -1582,10 +1609,36 @@ const ServicesManagement = () => {
   // Following the professional 3-tier architecture: raw → normalized → buyer-visible
   const handleImport = async (importedServices: any[], markups: Record<number, number>, providerId?: string, providerName?: string) => {
     if (!panel?.id) return;
+
+    let servicesToImport = importedServices;
+    if (serviceLimit !== Infinity) {
+      const { count } = await supabase
+        .from('services')
+        .select('id', { count: 'exact', head: true })
+        .eq('panel_id', panel.id)
+        .eq('is_active', true);
+      const activeCount = count || 0;
+      const remaining = serviceLimit - activeCount;
+      if (remaining <= 0) {
+        toast({
+          variant: 'destructive',
+          title: 'Service Limit Reached',
+          description: `Your ${resolvedTier} plan allows up to ${serviceLimit} active service${serviceLimit !== 1 ? 's' : ''}. Upgrade your plan to import more.`
+        });
+        return;
+      }
+      servicesToImport = importedServices.slice(0, remaining);
+      if (servicesToImport.length < importedServices.length) {
+        toast({
+          title: 'Import Limited',
+          description: `Only importing ${servicesToImport.length} of ${importedServices.length} services due to your ${resolvedTier} plan limit.`
+        });
+      }
+    }
     
     try {
       // Process each service through the 3-tier architecture
-      for (const service of importedServices) {
+      for (const service of servicesToImport) {
         const markupPercent = markups[service.id] ?? 25;
         const providerRate = Number(service.price) || 0;
         const finalPrice = providerRate * (1 + markupPercent / 100);

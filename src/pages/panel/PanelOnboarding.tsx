@@ -335,6 +335,17 @@ const PanelOnboarding = () => {
               seo_keywords: seoKeywords || 'SMM, social media marketing, services'
             }
           ]);
+
+        await supabase
+          .from('panel_subscriptions')
+          .upsert({
+            panel_id: panelData.id,
+            plan_type: 'free',
+            price: 0,
+            status: 'active',
+            started_at: new Date().toISOString(),
+            expires_at: null,
+          }, { onConflict: 'panel_id' });
       }
 
       toast({
