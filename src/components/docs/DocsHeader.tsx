@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
   Menu, 
+  X,
   Search, 
   Zap,
   Code,
@@ -11,11 +13,13 @@ import {
   HelpCircle,
   Command,
   Users,
-  Shield
+  Shield,
+  LogOut
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface DocsHeaderProps {
   onMenuClick: () => void;
@@ -32,107 +36,179 @@ const navTabs = [
   { name: "Troubleshooting", slug: "troubleshooting", defaultArticle: "common-issues", icon: HelpCircle, color: "from-amber-500 to-yellow-500" },
 ];
 
+const siteLinks = [
+  { name: "Features", href: "/features" },
+  { name: "Pricing", href: "/pricing" },
+  { name: "Blog", href: "/blog" },
+  { name: "Documentation", href: "/docs" },
+  { name: "Contact", href: "/contact" },
+];
+
 export function DocsHeader({ onMenuClick, onSearchClick }: DocsHeaderProps) {
   const location = useLocation();
   const currentCategory = location.pathname.split("/")[2] || "";
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { user, profile, signOut } = useAuth();
+
+  const getDashboardPath = () => {
+    switch (profile?.role) {
+      case 'admin':
+        return '/admin';
+      case 'panel_owner':
+        return '/panel';
+      case 'buyer':
+        return '/client';
+      default:
+        return '/';
+    }
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full">
-      {/* Row 1: Brand + Search + Theme */}
-      <div className="border-b bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-14 items-center gap-4">
-
-          {/* Brand Logo + Name */}
-          <Link to="/" className="flex items-center gap-2 shrink-0">
-            <img 
-              src="/favicon.ico" 
-              alt="HOME OF SMM" 
-              className="w-8 h-8 rounded-lg"
-            />
-            {/* Show brand name on all screens */}
-            <div className="flex flex-col">
-              <span className="text-sm font-bold leading-tight">HOME OF SMM</span>
-              <span className="hidden sm:block text-[10px] text-muted-foreground leading-tight">Documentation</span>
-            </div>
-          </Link>
-
-          <Badge variant="secondary" className="hidden sm:flex bg-primary/10 text-primary border-primary/20">
-            Docs
-          </Badge>
-
-          {/* Desktop Main Site Navigation */}
-          <nav className="hidden lg:flex items-center gap-1 ml-4">
-            {[
-              { name: "Features", href: "/features" },
-              { name: "Pricing", href: "/pricing" },
-              { name: "Blog", href: "/blog" },
-              { name: "Documentation", href: "/docs" },
-              { name: "Contact", href: "/contact" },
-            ].map((link) => (
-              <Link
-                key={link.name}
-                to={link.href}
-                className="px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                {link.name}
-              </Link>
-            ))}
-            <Link to="/auth">
-              <Button size="sm" className="ml-2">
-                Get Started
-              </Button>
+      <div className="border-b bg-background/95 backdrop-blur-sm">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-between h-16 gap-4">
+            <Link to="/" className="flex items-center space-x-2 shrink-0" data-testid="link-docs-home">
+              <img 
+                src="/favicon.ico" 
+                alt="HOME OF SMM logo" 
+                className="w-8 h-8 rounded-lg object-cover"
+              />
+              <span className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+                HOME OF SMM
+              </span>
             </Link>
-          </nav>
 
-          {/* Spacer */}
-          <div className="flex-1" />
+            <Badge variant="secondary" className="hidden sm:flex shrink-0" data-testid="badge-docs">
+              Docs
+            </Badge>
 
-          {/* Search Button - Desktop */}
-          <Button
-            variant="outline"
-            className="hidden md:flex items-center gap-2 text-muted-foreground w-64 lg:w-80 justify-start bg-muted/30 border-border/50 hover:bg-muted/50 hover:border-primary/30 transition-all"
-            onClick={onSearchClick}
-          >
-            <Search className="h-4 w-4 text-muted-foreground" />
-            <span className="flex-1 text-left text-sm">Search docs...</span>
-            <kbd className="pointer-events-none hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border bg-background/80 px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
-              <Command className="h-3 w-3" />K
-            </kbd>
-          </Button>
+            <nav className="hidden lg:flex items-center gap-1 ml-2" aria-label="Main navigation">
+              {siteLinks.map((link) => (
+                <Link
+                  key={link.name}
+                  to={link.href}
+                  className="px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  data-testid={`link-nav-${link.name.toLowerCase()}`}
+                >
+                  {link.name}
+                </Link>
+              ))}
+            </nav>
 
-          {/* Mobile Search */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden shrink-0"
-            onClick={onSearchClick}
-          >
-            <Search className="h-5 w-5" />
-            <span className="sr-only">Search</span>
-          </Button>
+            <div className="flex-1" />
 
-          {/* Theme Toggle - Fixed Width */}
-          <div className="w-9 h-9 shrink-0 flex items-center justify-center">
-            <ThemeToggle />
+            <Button
+              variant="outline"
+              className="hidden md:flex items-center gap-2 text-muted-foreground w-56 lg:w-72 justify-start"
+              onClick={onSearchClick}
+              data-testid="button-search-docs"
+            >
+              <Search className="h-4 w-4 text-muted-foreground" />
+              <span className="flex-1 text-left text-sm">Search docs...</span>
+              <kbd className="pointer-events-none hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+                <Command className="h-3 w-3" />K
+              </kbd>
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              className="md:hidden shrink-0"
+              onClick={onSearchClick}
+              data-testid="button-search-mobile"
+            >
+              <Search className="h-5 w-5" />
+              <span className="sr-only">Search</span>
+            </Button>
+
+            <div className="hidden lg:flex items-center gap-3">
+              <ThemeToggle />
+              {user ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground truncate max-w-[120px]" data-testid="text-user-name">
+                    {profile?.full_name || user.email?.split('@')[0]}
+                  </span>
+                  <Button asChild variant="outline" size="sm" data-testid="link-dashboard">
+                    <Link to={getDashboardPath()}>Dashboard</Link>
+                  </Button>
+                  <Button variant="destructive" size="sm" onClick={signOut} data-testid="button-logout">
+                    <LogOut className="h-4 w-4 mr-1" />
+                    Logout
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Button asChild variant="ghost" data-testid="link-signin">
+                    <Link to="/auth">Sign In</Link>
+                  </Button>
+                  <Button asChild className="bg-gradient-primary hover:shadow-glow" data-testid="link-getstarted">
+                    <Link to="/auth">Get Started</Link>
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            <div className="lg:hidden flex items-center gap-1.5">
+              <ThemeToggle />
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="p-1.5"
+                data-testid="button-mobile-menu"
+              >
+                {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              </button>
+            </div>
           </div>
 
-          {/* Mobile Menu Button - Right Side */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="lg:hidden shrink-0"
-            onClick={onMenuClick}
-          >
-            <Menu className="h-5 w-5" />
-            <span className="sr-only">Toggle menu</span>
-          </Button>
+          {mobileMenuOpen && (
+            <div className="lg:hidden py-4 border-t border-border">
+              <div className="flex flex-col space-y-4">
+                {siteLinks.map((link) => (
+                  <Link
+                    key={link.name}
+                    to={link.href}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
+                    data-testid={`link-mobile-${link.name.toLowerCase()}`}
+                  >
+                    {link.name}
+                  </Link>
+                ))}
+                <div className="flex flex-col space-y-2 pt-4 border-t border-border">
+                  {user ? (
+                    <>
+                      <div className="px-4 py-2 text-sm text-muted-foreground" data-testid="text-mobile-user">
+                        {profile?.full_name || user.email}
+                      </div>
+                      <Button asChild variant="outline" className="w-full justify-start" data-testid="link-mobile-dashboard">
+                        <Link to={getDashboardPath()} onClick={() => setMobileMenuOpen(false)}>Dashboard</Link>
+                      </Button>
+                      <Button variant="ghost" onClick={() => { signOut(); setMobileMenuOpen(false); }} className="w-full justify-start" data-testid="button-mobile-logout">
+                        <LogOut className="h-4 w-4 mr-2" />
+                        Sign Out
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button asChild variant="ghost" className="w-full justify-start" data-testid="link-mobile-signin">
+                        <Link to="/auth" onClick={() => setMobileMenuOpen(false)}>Sign In</Link>
+                      </Button>
+                      <Button asChild className="bg-gradient-primary w-full justify-start" data-testid="link-mobile-getstarted">
+                        <Link to="/auth" onClick={() => setMobileMenuOpen(false)}>Get Started</Link>
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Row 2: Desktop Navigation Tabs */}
       <div className="hidden lg:block border-b bg-background/60 backdrop-blur-sm">
-        <div className="container">
-          <nav className="flex items-center gap-1 py-2 overflow-x-auto">
+        <div className="container mx-auto px-4">
+          <nav className="flex items-center gap-1 py-2 overflow-x-auto" aria-label="Documentation categories">
             {navTabs.map((tab) => {
               const isActive = currentCategory === tab.slug;
               return (
@@ -140,18 +216,17 @@ export function DocsHeader({ onMenuClick, onSearchClick }: DocsHeaderProps) {
                   key={tab.slug}
                   to={`/docs/${tab.slug}/${tab.defaultArticle}`}
                   className={cn(
-                    "relative flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap",
+                    "relative flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 whitespace-nowrap",
                     isActive
                       ? "text-foreground"
                       : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                   )}
+                  data-testid={`link-docs-tab-${tab.slug}`}
                 >
-                  {/* Active tab background */}
                   {isActive && (
-                    <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-primary/15 to-primary-glow/10 border border-primary/20" />
+                    <div className="absolute inset-0 rounded-md bg-gradient-to-r from-primary/15 to-primary-glow/10 border border-primary/20" />
                   )}
                   
-                  {/* Icon with gradient background when active */}
                   <div className={cn(
                     "relative w-6 h-6 rounded-md flex items-center justify-center transition-all",
                     isActive 
@@ -172,7 +247,6 @@ export function DocsHeader({ onMenuClick, onSearchClick }: DocsHeaderProps) {
         </div>
       </div>
 
-      {/* Mobile Category Tabs - Scrollable */}
       <div className="lg:hidden border-b bg-background/80 backdrop-blur-xl">
         <ScrollArea className="w-full">
           <div className="flex items-center gap-1 px-4 py-2">
@@ -183,11 +257,12 @@ export function DocsHeader({ onMenuClick, onSearchClick }: DocsHeaderProps) {
                   key={tab.slug}
                   to={`/docs/${tab.slug}/${tab.defaultArticle}`}
                   className={cn(
-                    "relative flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg transition-all whitespace-nowrap",
+                    "relative flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-md transition-all whitespace-nowrap",
                     isActive
                       ? "text-foreground bg-primary/10 border border-primary/20"
                       : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                   )}
+                  data-testid={`link-docs-tab-mobile-${tab.slug}`}
                 >
                   <div className={cn(
                     "w-5 h-5 rounded flex items-center justify-center",

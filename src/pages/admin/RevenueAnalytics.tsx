@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { 
   DollarSign, 
   TrendingUp, 
@@ -8,7 +10,8 @@ import {
   PieChart,
   Calendar,
   Users,
-  Activity
+  Activity,
+  RefreshCw
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { supabase } from '@/integrations/supabase/client';
@@ -234,18 +237,54 @@ const RevenueAnalytics = () => {
         <meta name="robots" content="noindex,nofollow" />
       </Helmet>
 
-      {/* Header */}
-      <motion.div variants={itemVariants}>
-        <h1 className="text-xl md:text-2xl lg:text-3xl font-bold">Revenue Analytics</h1>
-        <p className="text-sm text-muted-foreground">Track platform revenue and financial performance</p>
+      <motion.div variants={itemVariants} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 data-testid="text-page-title" className="text-2xl md:text-3xl font-bold">Revenue Analytics</h1>
+          <p className="text-sm text-muted-foreground">Track platform revenue and financial performance</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => { setLoading(true); fetchAnalytics(); }} disabled={loading} data-testid="button-refresh-analytics">
+          <RefreshCw className={cn("w-4 h-4 mr-2", loading && "animate-spin")} />
+          Refresh
+        </Button>
       </motion.div>
 
-      {/* Revenue Stats */}
+      {loading ? (
+        <motion.div variants={itemVariants} className="space-y-4 md:space-y-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Card key={i} className="glass-card">
+                <CardContent className="p-3 md:p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Skeleton className="h-8 w-8 rounded-lg" />
+                    <Skeleton className="h-4 w-16" />
+                  </div>
+                  <Skeleton className="h-7 w-24" />
+                  <Skeleton className="h-3 w-20" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+            {Array.from({ length: 2 }).map((_, i) => (
+              <Card key={i} className="glass-card">
+                <CardHeader className="pb-2">
+                  <Skeleton className="h-5 w-32" />
+                  <Skeleton className="h-3 w-48" />
+                </CardHeader>
+                <CardContent>
+                  <Skeleton className="h-[250px] md:h-[300px] rounded-lg" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </motion.div>
+      ) : (
+      <>
       <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         {revenueCards.map((card) => {
           const Icon = card.icon;
           return (
-            <Card key={card.title} className="glass-card-hover relative overflow-hidden">
+            <Card key={card.title} className="glass-card-hover relative overflow-hidden" data-testid={`stat-card-${card.title.toLowerCase().replace(/['\s]/g, '-')}`}>
               <div className={cn("absolute top-0 right-0 w-20 h-20 md:w-24 md:h-24 rounded-full blur-2xl opacity-20", card.bg)} />
               <CardContent className="p-3 md:p-4 relative">
                 <div className="flex items-center justify-between mb-2 md:mb-3">
@@ -458,6 +497,8 @@ const RevenueAnalytics = () => {
           </CardContent>
         </Card>
       </motion.div>
+      </>
+      )}
     </motion.div>
   );
 };

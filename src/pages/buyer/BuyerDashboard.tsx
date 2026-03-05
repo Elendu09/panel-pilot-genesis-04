@@ -241,10 +241,10 @@ const BuyerDashboard = () => {
   ];
 
   const quickActions = [
-    { name: t('nav.orders'), icon: ClipboardList, href: '/orders', gradient: 'from-primary to-primary/80' },
-    { name: t('nav.new_order'), icon: Package, href: '/services', gradient: 'from-violet-500 to-violet-600' },
+    { name: t('nav.services') || 'Services', icon: Package, href: '/services', gradient: 'from-violet-500 to-violet-600' },
+    { name: t('nav.new_order'), icon: ShoppingCart, href: '/new-order', gradient: 'from-primary to-primary/80' },
+    { name: t('nav.orders'), icon: ClipboardList, href: '/orders', gradient: 'from-blue-500 to-blue-600' },
     { name: t('nav.deposit'), icon: CreditCard, href: '/deposit', gradient: 'from-emerald-500 to-emerald-600' },
-    { name: t('nav.support'), icon: Zap, href: '/support', gradient: 'from-amber-500 to-amber-600' },
   ];
 
   // Show loading state while auth/panel is being determined - uses themed skeletons

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
@@ -12,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { Helmet } from "react-helmet-async";
 import { motion } from "framer-motion";
 import AdminViewToggle from "@/components/admin/AdminViewToggle";
 import KanbanColumn from "@/components/admin/KanbanColumn";
@@ -43,7 +45,8 @@ import {
   ArrowUpDown,
   Crown,
   Sparkles,
-  Zap
+  Zap,
+  RefreshCw
 } from "lucide-react";
 
 interface Panel {
@@ -514,21 +517,30 @@ const PanelManagement = () => {
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="space-y-6"
+      className="space-y-4 md:space-y-6"
     >
-      <motion.div variants={itemVariants} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+      <Helmet>
+        <title>Panel Management - Admin</title>
+        <meta name="robots" content="noindex,nofollow" />
+      </Helmet>
+
+      <motion.div variants={itemVariants} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold">Panel Management</h1>
+          <h1 data-testid="text-page-title" className="text-2xl md:text-3xl font-bold">Panel Management</h1>
           <p className="text-sm text-muted-foreground">Monitor and manage all SMM panels on the platform</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button variant="outline" size="sm" onClick={fetchPanels} disabled={loading} data-testid="button-refresh-panels">
+            <RefreshCw className={cn("w-4 h-4 mr-2", loading && "animate-spin")} />
+            Refresh
+          </Button>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="hidden sm:block">
             <TabsList className="bg-muted/50">
-              <TabsTrigger value="panels" className="gap-2">
+              <TabsTrigger value="panels" className="gap-2" data-testid="tab-panels">
                 <Monitor className="w-4 h-4" />
                 Panels
               </TabsTrigger>
-              <TabsTrigger value="dns" className="gap-2">
+              <TabsTrigger value="dns" className="gap-2" data-testid="tab-dns">
                 <Server className="w-4 h-4" />
                 DNS Setup
               </TabsTrigger>
@@ -538,10 +550,9 @@ const PanelManagement = () => {
         </div>
       </motion.div>
 
-      {/* Mobile Tab Selector */}
       <div className="sm:hidden">
         <Select value={activeTab} onValueChange={setActiveTab}>
-          <SelectTrigger>
+          <SelectTrigger data-testid="select-mobile-tab">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -558,108 +569,93 @@ const PanelManagement = () => {
       ) : (
         <>
 
-      {/* Stats Cards */}
-      <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-6">
-        <Card className="glass-card-hover">
-          <CardContent className="p-4 md:p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5">
-                <Monitor className="w-6 h-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-xl md:text-2xl font-bold">{totalPanels}</p>
-                <p className="text-xs md:text-sm text-muted-foreground">Total Panels</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
+        {[
+          { label: 'Total Panels', value: totalPanels, icon: Monitor, bg: 'bg-primary/10' },
+          { label: 'Active', value: totalActivePanels, icon: CheckCircle, bg: 'bg-emerald-500/10' },
+          { label: 'Pending', value: totalPendingPanels, icon: Clock, bg: 'bg-amber-500/10' },
+          { label: 'Revenue', value: `$${totalRevenue.toFixed(0)}`, icon: DollarSign, bg: 'bg-blue-500/10' },
+          { label: 'Balance', value: `$${totalBalance.toFixed(0)}`, icon: Wallet, bg: 'bg-violet-500/10' },
+        ].map((stat) => {
+          const Icon = stat.icon;
+          return (
+            <Card key={stat.label} className="glass-card-hover relative overflow-hidden" data-testid={`stat-card-${stat.label.toLowerCase().replace(/\s/g, '-')}`}>
+              <div className={cn("absolute top-0 right-0 w-20 h-20 rounded-full blur-2xl opacity-20", stat.bg)} />
+              <CardContent className="p-3 md:p-4 relative">
+                <div className="flex items-center justify-between mb-2">
+                  <div className={cn("p-1.5 md:p-2 rounded-lg", stat.bg)}>
+                    <Icon className="w-4 h-4 md:w-5 md:h-5" />
+                  </div>
+                </div>
+                <p className="text-lg md:text-2xl font-bold" data-testid={`text-stat-${stat.label.toLowerCase().replace(/\s/g, '-')}`}>
+                  {loading ? '...' : stat.value}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">{stat.label}</p>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </motion.div>
 
-        <Card className="glass-card-hover">
-          <CardContent className="p-4 md:p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-500/20 to-emerald-500/5">
-                <CheckCircle className="w-6 h-6 text-emerald-500" />
+      <motion.div variants={itemVariants}>
+        <Card className="glass-card">
+          <CardContent className="p-3 md:p-4">
+            <div className="flex flex-col md:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search panels by name or subdomain..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                  data-testid="input-search-panels"
+                />
               </div>
-              <div>
-                <p className="text-xl md:text-2xl font-bold">{totalActivePanels}</p>
-                <p className="text-xs md:text-sm text-muted-foreground">Active Panels</p>
-              </div>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full md:w-[180px]" data-testid="select-status-filter">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="suspended">Suspended</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card className="glass-card-hover">
-          <CardContent className="p-4 md:p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-gradient-to-br from-amber-500/20 to-amber-500/5">
-                <Clock className="w-6 h-6 text-amber-500" />
-              </div>
-              <div>
-                <p className="text-xl md:text-2xl font-bold">{totalPendingPanels}</p>
-                <p className="text-xs md:text-sm text-muted-foreground">Pending</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="glass-card-hover">
-          <CardContent className="p-4 md:p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-500/5">
-                <DollarSign className="w-6 h-6 text-blue-500" />
-              </div>
-              <div>
-                <p className="text-xl md:text-2xl font-bold">${totalRevenue.toFixed(0)}</p>
-                <p className="text-xs md:text-sm text-muted-foreground">Revenue</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="glass-card-hover">
-          <CardContent className="p-4 md:p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-gradient-to-br from-violet-500/20 to-violet-500/5">
-                <Wallet className="w-6 h-6 text-violet-500" />
-              </div>
-              <div>
-                <p className="text-xl md:text-2xl font-bold">${totalBalance.toFixed(0)}</p>
-                <p className="text-xs md:text-sm text-muted-foreground">Total Balance</p>
-              </div>
-            </div>
+            {filteredPanels.length > 0 && (
+              <p className="text-xs text-muted-foreground mt-2">
+                Showing {filteredPanels.length} of {panels.length} panels
+              </p>
+            )}
           </CardContent>
         </Card>
       </motion.div>
 
-      {/* Filters */}
-      <motion.div variants={itemVariants} className="flex flex-col md:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search panels by name or subdomain..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full md:w-[180px]">
-            <SelectValue placeholder="Filter by status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="suspended">Suspended</SelectItem>
-          </SelectContent>
-        </Select>
-      </motion.div>
-
-      {/* Content */}
       {loading ? (
-        <motion.div variants={itemVariants} className="text-center py-8">
-          <Monitor className="w-8 h-8 animate-pulse mx-auto mb-4 text-muted-foreground" />
-          <p className="text-muted-foreground">Loading panels...</p>
+        <motion.div variants={itemVariants} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Card key={i} className="glass-card">
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Skeleton className="h-5 w-32" />
+                    <Skeleton className="h-5 w-16" />
+                  </div>
+                  <Skeleton className="h-4 w-48" />
+                  <div className="grid grid-cols-4 gap-2">
+                    {Array.from({ length: 4 }).map((_, j) => (
+                      <Skeleton key={j} className="h-12 rounded-lg" />
+                    ))}
+                  </div>
+                  <div className="flex justify-between">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-6 w-20" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </motion.div>
       ) : view === 'kanban' ? (
         /* Kanban View */
@@ -761,14 +757,14 @@ const PanelManagement = () => {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1">
-                            <Button onClick={() => openAddFundsDialog(panel)} variant="ghost" size="sm" className="h-8 w-8 p-0 text-emerald-500" title="Add Funds"><Wallet className="w-4 h-4" /></Button>
-                            <Button onClick={() => openDetailsDialog(panel)} variant="ghost" size="sm" className="h-8 w-8 p-0" title="View Details"><Eye className="w-4 h-4" /></Button>
-                            <Button onClick={() => openEditDialog(panel)} variant="ghost" size="sm" className="h-8 w-8 p-0" title="Edit Panel"><Edit className="w-4 h-4" /></Button>
+                            <Button onClick={() => openAddFundsDialog(panel)} variant="ghost" size="icon" title="Add Funds" data-testid={`button-add-funds-${panel.id}`}><Wallet className="w-4 h-4 text-emerald-500" /></Button>
+                            <Button onClick={() => openDetailsDialog(panel)} variant="ghost" size="icon" title="View Details" data-testid={`button-view-panel-${panel.id}`}><Eye className="w-4 h-4" /></Button>
+                            <Button onClick={() => openEditDialog(panel)} variant="ghost" size="icon" title="Edit Panel" data-testid={`button-edit-panel-${panel.id}`}><Edit className="w-4 h-4" /></Button>
                             {panel.status === 'pending' && (
-                              <Button onClick={() => updatePanelStatus(panel.id, 'active')} variant="ghost" size="sm" className="h-8 w-8 p-0 text-emerald-500 hover:text-emerald-600" title="Approve"><CheckCircle className="w-4 h-4" /></Button>
+                              <Button onClick={() => updatePanelStatus(panel.id, 'active')} variant="ghost" size="icon" title="Approve" data-testid={`button-approve-panel-${panel.id}`}><CheckCircle className="w-4 h-4 text-emerald-500" /></Button>
                             )}
                             {panel.status === 'active' && (
-                              <Button onClick={() => updatePanelStatus(panel.id, 'suspended')} variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-500 hover:text-red-600" title="Suspend"><Ban className="w-4 h-4" /></Button>
+                              <Button onClick={() => updatePanelStatus(panel.id, 'suspended')} variant="ghost" size="icon" title="Suspend" data-testid={`button-suspend-panel-${panel.id}`}><Ban className="w-4 h-4 text-red-500" /></Button>
                             )}
                           </div>
                         </TableCell>
@@ -811,9 +807,9 @@ const PanelManagement = () => {
                         <Calendar className="w-3 h-3" />{new Date(panel.created_at).toLocaleDateString()}
                       </div>
                       <div className="flex items-center gap-1">
-                        <Button onClick={() => openAddFundsDialog(panel)} variant="ghost" size="sm" className="h-8 w-8 p-0 text-emerald-500"><Wallet className="w-4 h-4" /></Button>
-                        <Button onClick={() => openDetailsDialog(panel)} variant="ghost" size="sm" className="h-8 w-8 p-0"><Eye className="w-4 h-4" /></Button>
-                        <Button onClick={() => openEditDialog(panel)} variant="ghost" size="sm" className="h-8 w-8 p-0"><Edit className="w-4 h-4" /></Button>
+                        <Button onClick={() => openAddFundsDialog(panel)} variant="ghost" size="icon" data-testid={`button-mobile-funds-${panel.id}`}><Wallet className="w-4 h-4 text-emerald-500" /></Button>
+                        <Button onClick={() => openDetailsDialog(panel)} variant="ghost" size="icon" data-testid={`button-mobile-view-${panel.id}`}><Eye className="w-4 h-4" /></Button>
+                        <Button onClick={() => openEditDialog(panel)} variant="ghost" size="icon" data-testid={`button-mobile-edit-${panel.id}`}><Edit className="w-4 h-4" /></Button>
                       </div>
                     </div>
                   </div>

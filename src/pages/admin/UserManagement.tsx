@@ -1,15 +1,18 @@
 import { useState, useEffect } from "react";
+import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { Helmet } from "react-helmet-async";
 import { motion } from "framer-motion";
 import AdminViewToggle from "@/components/admin/AdminViewToggle";
 import KanbanColumn from "@/components/admin/KanbanColumn";
@@ -29,7 +32,8 @@ import {
   CreditCard,
   Activity,
   Crown,
-  Eye
+  Eye,
+  RefreshCw
 } from "lucide-react";
 
 interface User {
@@ -322,103 +326,113 @@ const UserManagement = () => {
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="space-y-6"
+      className="space-y-4 md:space-y-6"
     >
-      <motion.div variants={itemVariants} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+      <Helmet>
+        <title>User Management - Admin</title>
+        <meta name="robots" content="noindex,nofollow" />
+      </Helmet>
+
+      <motion.div variants={itemVariants} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold">User Management</h1>
+          <h1 data-testid="text-page-title" className="text-2xl md:text-3xl font-bold">User Management</h1>
           <p className="text-sm text-muted-foreground">Manage all platform users, roles, and permissions</p>
         </div>
-        <AdminViewToggle view={view} onViewChange={setView} />
-      </motion.div>
-
-      {/* Stats Cards */}
-      <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
-        <Card className="glass-card-hover">
-          <CardContent className="p-4 md:p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5">
-                <Users className="w-6 h-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-xl md:text-2xl font-bold">{totalUsers}</p>
-                <p className="text-xs md:text-sm text-muted-foreground">Total Users</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="glass-card-hover">
-          <CardContent className="p-4 md:p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-500/20 to-emerald-500/5">
-                <UserCheck className="w-6 h-6 text-emerald-500" />
-              </div>
-              <div>
-                <p className="text-xl md:text-2xl font-bold">{totalActiveUsers}</p>
-                <p className="text-xs md:text-sm text-muted-foreground">Active Users</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="glass-card-hover">
-          <CardContent className="p-4 md:p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-gradient-to-br from-violet-500/20 to-violet-500/5">
-                <Shield className="w-6 h-6 text-violet-500" />
-              </div>
-              <div>
-                <p className="text-xl md:text-2xl font-bold">{panelOwners}</p>
-                <p className="text-xs md:text-sm text-muted-foreground">Panel Owners</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="glass-card-hover">
-          <CardContent className="p-4 md:p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-500/5">
-                <DollarSign className="w-6 h-6 text-blue-500" />
-              </div>
-              <div>
-                <p className="text-xl md:text-2xl font-bold">${totalRevenue.toFixed(2)}</p>
-                <p className="text-xs md:text-sm text-muted-foreground">Total Revenue</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
-
-      {/* Filters */}
-      <motion.div variants={itemVariants} className="flex flex-col md:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search users by email or name..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9"
-          />
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button variant="outline" size="sm" onClick={fetchUsers} disabled={loading} data-testid="button-refresh-users">
+            <RefreshCw className={cn("w-4 h-4 mr-2", loading && "animate-spin")} />
+            Refresh
+          </Button>
+          <AdminViewToggle view={view} onViewChange={setView} />
         </div>
-        <Select value={roleFilter} onValueChange={setRoleFilter}>
-          <SelectTrigger className="w-full md:w-[180px]">
-            <SelectValue placeholder="Filter by role" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Roles</SelectItem>
-            <SelectItem value="admin">Admin</SelectItem>
-            <SelectItem value="panel_owner">Panel Owner</SelectItem>
-          </SelectContent>
-        </Select>
       </motion.div>
 
-      {/* Content */}
+      <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+        {[
+          { label: 'Total Users', value: totalUsers, icon: Users, bg: 'bg-primary/10' },
+          { label: 'Active Users', value: totalActiveUsers, icon: UserCheck, bg: 'bg-emerald-500/10' },
+          { label: 'Panel Owners', value: panelOwners, icon: Shield, bg: 'bg-violet-500/10' },
+          { label: 'Total Revenue', value: `$${totalRevenue.toFixed(2)}`, icon: DollarSign, bg: 'bg-blue-500/10' },
+        ].map((stat) => {
+          const Icon = stat.icon;
+          return (
+            <Card key={stat.label} className="glass-card-hover relative overflow-hidden" data-testid={`stat-card-${stat.label.toLowerCase().replace(/\s/g, '-')}`}>
+              <div className={cn("absolute top-0 right-0 w-20 h-20 rounded-full blur-2xl opacity-20", stat.bg)} />
+              <CardContent className="p-3 md:p-4 relative">
+                <div className="flex items-center justify-between mb-2">
+                  <div className={cn("p-1.5 md:p-2 rounded-lg", stat.bg)}>
+                    <Icon className="w-4 h-4 md:w-5 md:h-5" />
+                  </div>
+                </div>
+                <p className="text-lg md:text-2xl font-bold" data-testid={`text-stat-${stat.label.toLowerCase().replace(/\s/g, '-')}`}>
+                  {loading ? '...' : stat.value}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">{stat.label}</p>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </motion.div>
+
+      <motion.div variants={itemVariants}>
+        <Card className="glass-card">
+          <CardContent className="p-3 md:p-4">
+            <div className="flex flex-col md:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search users by email or name..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                  data-testid="input-search-users"
+                />
+              </div>
+              <Select value={roleFilter} onValueChange={setRoleFilter}>
+                <SelectTrigger className="w-full md:w-[180px]" data-testid="select-role-filter">
+                  <SelectValue placeholder="Filter by role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Roles</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="panel_owner">Panel Owner</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {filteredUsers.length > 0 && (
+              <p className="text-xs text-muted-foreground mt-2">
+                Showing {filteredUsers.length} of {users.length} users
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
+
       {loading ? (
-        <motion.div variants={itemVariants} className="text-center py-8">
-          <Users className="w-8 h-8 animate-pulse mx-auto mb-4 text-muted-foreground" />
-          <p className="text-muted-foreground">Loading users...</p>
+        <motion.div variants={itemVariants} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Card key={i} className="glass-card">
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="h-10 w-10 rounded-full" />
+                    <div className="flex-1 space-y-1">
+                      <Skeleton className="h-4 w-28" />
+                      <Skeleton className="h-3 w-40" />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Skeleton className="h-5 w-20" />
+                    <Skeleton className="h-5 w-16" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Skeleton className="h-12 rounded-lg" />
+                    <Skeleton className="h-12 rounded-lg" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </motion.div>
       ) : view === 'kanban' ? (
         /* Kanban View */
@@ -524,10 +538,10 @@ const UserManagement = () => {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
-                            <Button onClick={() => openDetailsDialog(user)} variant="ghost" size="sm" className="h-8 w-8 p-0" title="View Details"><Eye className="w-4 h-4" /></Button>
-                            <Button onClick={() => openEditDialog(user)} variant="ghost" size="sm" className="h-8 w-8 p-0" title="Edit User"><Edit className="w-4 h-4" /></Button>
-                            <Button onClick={() => toggleUserStatus(user)} variant="ghost" size="sm" className={`h-8 w-8 p-0 ${!user.is_active ? 'text-emerald-500 hover:text-emerald-600' : 'text-red-500 hover:text-red-600'}`} title={user.is_active ? 'Deactivate' : 'Activate'}>
-                              {user.is_active ? <Ban className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+                            <Button onClick={() => openDetailsDialog(user)} variant="ghost" size="icon" title="View Details" data-testid={`button-view-user-${user.id}`}><Eye className="w-4 h-4" /></Button>
+                            <Button onClick={() => openEditDialog(user)} variant="ghost" size="icon" title="Edit User" data-testid={`button-edit-user-${user.id}`}><Edit className="w-4 h-4" /></Button>
+                            <Button onClick={() => toggleUserStatus(user)} variant="ghost" size="icon" title={user.is_active ? 'Deactivate' : 'Activate'} data-testid={`button-toggle-user-${user.id}`}>
+                              {user.is_active ? <Ban className="w-4 h-4 text-red-500" /> : <UserCheck className="w-4 h-4 text-emerald-500" />}
                             </Button>
                           </div>
                         </TableCell>
@@ -578,10 +592,10 @@ const UserManagement = () => {
                         <Calendar className="w-3 h-3" />{new Date(user.created_at).toLocaleDateString()}
                       </div>
                       <div className="flex items-center gap-1">
-                        <Button onClick={() => openDetailsDialog(user)} variant="ghost" size="sm" className="h-8 w-8 p-0"><Eye className="w-4 h-4" /></Button>
-                        <Button onClick={() => openEditDialog(user)} variant="ghost" size="sm" className="h-8 w-8 p-0"><Edit className="w-4 h-4" /></Button>
-                        <Button onClick={() => toggleUserStatus(user)} variant="ghost" size="sm" className={`h-8 w-8 p-0 ${!user.is_active ? 'text-emerald-500' : 'text-red-500'}`}>
-                          {user.is_active ? <Ban className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+                        <Button onClick={() => openDetailsDialog(user)} variant="ghost" size="icon" data-testid={`button-mobile-view-user-${user.id}`}><Eye className="w-4 h-4" /></Button>
+                        <Button onClick={() => openEditDialog(user)} variant="ghost" size="icon" data-testid={`button-mobile-edit-user-${user.id}`}><Edit className="w-4 h-4" /></Button>
+                        <Button onClick={() => toggleUserStatus(user)} variant="ghost" size="icon" data-testid={`button-mobile-toggle-user-${user.id}`}>
+                          {user.is_active ? <Ban className="w-4 h-4 text-red-500" /> : <UserCheck className="w-4 h-4 text-emerald-500" />}
                         </Button>
                       </div>
                     </div>

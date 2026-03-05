@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { 
   BarChart3, 
   Users, 
@@ -160,7 +161,6 @@ const AdminOverview = () => {
 
       const recentUserCount = overviewStats.recentUsers || 0;
       const prevUserCount = overviewStats.prevUsers || 0;
-      const userChange = calculateChange(recentUserCount, prevUserCount);
 
       setStatsChanges({
         panels: { value: `+${recentPanelCount}`, trend: recentPanelCount > 0 ? 'up' : 'neutral' },
@@ -205,25 +205,25 @@ const AdminOverview = () => {
 
   const containerVariants = {
     hidden: { opacity: 0 },
-    visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
+    visible: { opacity: 1, transition: { staggerChildren: 0.08 } }
   };
 
   const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0 }
+    hidden: { opacity: 0, y: 16 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.4 } }
   };
 
   const statsCards = [
-    { title: 'Total Panels', value: stats.totalPanels, icon: BarChart3, change: statsChanges.panels.value, trend: statsChanges.panels.trend, color: 'from-blue-500 to-blue-600', bg: 'bg-blue-500/10' },
-    { title: 'Active Users', value: stats.activeUsers, icon: Users, change: statsChanges.users.value, trend: statsChanges.users.trend, color: 'from-emerald-500 to-emerald-600', bg: 'bg-emerald-500/10' },
-    { title: 'Platform Revenue', value: `$${stats.platformRevenue.toFixed(0)}`, icon: DollarSign, change: statsChanges.revenue.value, trend: statsChanges.revenue.trend, color: 'from-violet-500 to-violet-600', bg: 'bg-violet-500/10' },
-    { title: 'Security Score', value: loading ? '...' : `${securityScore}%`, icon: Shield, change: securityScore >= 90 ? 'Secure' : securityScore >= 70 ? 'Fair' : 'At Risk', trend: securityScore >= 80 ? 'up' : 'down', color: 'from-amber-500 to-amber-600', bg: 'bg-amber-500/10' }
+    { title: 'Total Panels', value: stats.totalPanels, icon: BarChart3, change: statsChanges.panels.value, trend: statsChanges.panels.trend, iconBg: 'bg-blue-500/10 dark:bg-blue-500/20', iconColor: 'text-blue-600 dark:text-blue-400' },
+    { title: 'Active Users', value: stats.activeUsers, icon: Users, change: statsChanges.users.value, trend: statsChanges.users.trend, iconBg: 'bg-emerald-500/10 dark:bg-emerald-500/20', iconColor: 'text-emerald-600 dark:text-emerald-400' },
+    { title: 'Platform Revenue', value: `$${stats.platformRevenue.toFixed(0)}`, icon: DollarSign, change: statsChanges.revenue.value, trend: statsChanges.revenue.trend, iconBg: 'bg-violet-500/10 dark:bg-violet-500/20', iconColor: 'text-violet-600 dark:text-violet-400' },
+    { title: 'Security Score', value: loading ? '...' : `${securityScore}%`, icon: Shield, change: securityScore >= 90 ? 'Secure' : securityScore >= 70 ? 'Fair' : 'At Risk', trend: securityScore >= 80 ? 'up' : 'down', iconBg: 'bg-amber-500/10 dark:bg-amber-500/20', iconColor: 'text-amber-600 dark:text-amber-400' }
   ];
 
   const kanbanColumns = [
-    { title: 'Pending Approval', status: 'pending', icon: Clock, color: 'from-amber-500 to-amber-600', bg: 'bg-amber-500/10', textColor: 'text-amber-500' },
-    { title: 'Active', status: 'active', icon: CheckCircle, color: 'from-emerald-500 to-emerald-600', bg: 'bg-emerald-500/10', textColor: 'text-emerald-500' },
-    { title: 'Suspended', status: 'suspended', icon: AlertCircle, color: 'from-red-500 to-red-600', bg: 'bg-red-500/10', textColor: 'text-red-500' }
+    { title: 'Pending Approval', status: 'pending', icon: Clock, iconBg: 'bg-amber-500/10 dark:bg-amber-500/20', iconColor: 'text-amber-600 dark:text-amber-400', badgeBg: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' },
+    { title: 'Active', status: 'active', icon: CheckCircle, iconBg: 'bg-emerald-500/10 dark:bg-emerald-500/20', iconColor: 'text-emerald-600 dark:text-emerald-400', badgeBg: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' },
+    { title: 'Suspended', status: 'suspended', icon: AlertCircle, iconBg: 'bg-red-500/10 dark:bg-red-500/20', iconColor: 'text-red-600 dark:text-red-400', badgeBg: 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20' }
   ];
 
   if (error) {
@@ -235,8 +235,10 @@ const AdminOverview = () => {
           <meta name="robots" content="noindex,nofollow" />
         </Helmet>
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold">Super Admin Dashboard</h1>
-          <p className="text-muted-foreground">Platform overview and management</p>
+          <h1 className="text-2xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70" data-testid="text-page-title">
+            Super Admin Dashboard
+          </h1>
+          <p className="text-muted-foreground mt-1">Platform overview and management</p>
         </div>
         <Card data-testid="error-card">
           <CardContent className="p-8 text-center space-y-4">
@@ -260,7 +262,7 @@ const AdminOverview = () => {
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="space-y-4 md:space-y-6"
+      className="space-y-6"
     >
       <Helmet>
         <title>Admin Overview - SMMPilot Platform</title>
@@ -268,35 +270,63 @@ const AdminOverview = () => {
         <meta name="robots" content="noindex,nofollow" />
       </Helmet>
       
-      <motion.div variants={itemVariants}>
-        <h1 className="text-2xl md:text-3xl font-bold">Super Admin Dashboard</h1>
-        <p className="text-muted-foreground">Platform overview and management</p>
+      <motion.div variants={itemVariants} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70" data-testid="text-page-title">
+            Super Admin Dashboard
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">Platform overview and management</p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={fetchData}
+          disabled={loading}
+          data-testid="button-refresh"
+        >
+          <RefreshCw className={cn("w-4 h-4 mr-2", loading && "animate-spin")} />
+          Refresh
+        </Button>
       </motion.div>
 
-      <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {statsCards.map((stat, index) => {
+      <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+        {statsCards.map((stat) => {
           const Icon = stat.icon;
           return (
-            <Card key={stat.title} className="glass-card-hover relative overflow-hidden">
-              <div className={cn("absolute top-0 right-0 w-24 h-24 rounded-full blur-2xl opacity-20", stat.bg)} />
-              <CardContent className="p-4 md:p-6 relative">
-                  <div className="flex items-center justify-between mb-3">
-                  <div className={cn("p-2 rounded-lg", stat.bg)}>
-                    <Icon className="w-5 h-5" />
+            <Card key={stat.title} className="hover-elevate" data-testid={`card-stat-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
+              <CardContent className="p-4 md:p-5">
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <div className={cn("p-2 rounded-md", stat.iconBg)}>
+                    <Icon className={cn("w-4 h-4 md:w-5 md:h-5", stat.iconColor)} />
                   </div>
-                  <Badge variant="outline" className={cn(
-                    "text-xs",
-                    stat.trend === 'up' ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" :
-                    stat.trend === 'down' ? "bg-red-500/10 text-red-500 border-red-500/20" :
-                    "bg-muted text-muted-foreground"
-                  )}>
-                    {stat.trend === 'up' ? <TrendingUp className="w-3 h-3 mr-1" /> : 
-                     stat.trend === 'down' ? <TrendingDown className="w-3 h-3 mr-1" /> : null}
-                    {stat.change}
-                  </Badge>
+                  {loading ? (
+                    <Skeleton className="h-5 w-12" />
+                  ) : (
+                    <Badge variant="outline" className={cn(
+                      "text-xs no-default-hover-elevate no-default-active-elevate",
+                      stat.trend === 'up' ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20" :
+                      stat.trend === 'down' ? "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20" :
+                      "bg-muted text-muted-foreground"
+                    )} data-testid={`badge-trend-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                      {stat.trend === 'up' ? <TrendingUp className="w-3 h-3 mr-1" /> : 
+                       stat.trend === 'down' ? <TrendingDown className="w-3 h-3 mr-1" /> : null}
+                      {stat.change}
+                    </Badge>
+                  )}
                 </div>
-                <p className="text-2xl md:text-3xl font-bold">{loading ? '...' : stat.value}</p>
-                <p className="text-xs text-muted-foreground mt-1">{stat.title}</p>
+                {loading ? (
+                  <>
+                    <Skeleton className="h-8 w-20 mb-1" />
+                    <Skeleton className="h-3 w-16" />
+                  </>
+                ) : (
+                  <>
+                    <p className="text-2xl md:text-3xl font-bold tracking-tight" data-testid={`text-stat-value-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                      {stat.value}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">{stat.title}</p>
+                  </>
+                )}
               </CardContent>
             </Card>
           );
@@ -304,14 +334,17 @@ const AdminOverview = () => {
       </motion.div>
 
       <motion.div variants={itemVariants}>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold">Panels by Status</h2>
-          <Button variant="outline" size="sm" asChild>
-            <Link to="/admin/panels">View All</Link>
+        <div className="flex items-center justify-between gap-2 mb-4 flex-wrap">
+          <h2 className="text-lg md:text-xl font-semibold">Panels by Status</h2>
+          <Button variant="outline" size="sm" asChild data-testid="link-view-all-panels">
+            <Link to="/admin/panels">
+              View All
+              <ArrowUpRight className="w-3.5 h-3.5 ml-1" />
+            </Link>
           </Button>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {kanbanColumns.map((column) => {
             const columnPanels = recentPanels.filter(p => p.status === column.status);
             const Icon = column.icon;
@@ -319,78 +352,97 @@ const AdminOverview = () => {
                           column.status === 'active' ? stats.activePanels : stats.suspendedPanels;
             
             return (
-              <div key={column.status} className="space-y-4">
-                <div className="glass-card p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={cn("p-2 rounded-lg bg-gradient-to-br", column.color)}>
-                        <Icon className="w-5 h-5 text-white" />
+              <div key={column.status} className="space-y-3" data-testid={`kanban-column-${column.status}`}>
+                <Card>
+                  <CardContent className="p-3 md:p-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2.5">
+                        <div className={cn("p-2 rounded-md", column.iconBg)}>
+                          <Icon className={cn("w-4 h-4", column.iconColor)} />
+                        </div>
+                        <div>
+                          <h3 className="font-medium text-sm">{column.title}</h3>
+                          <p className="text-xs text-muted-foreground">{count} panels</p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="font-semibold">{column.title}</h3>
-                        <p className="text-xs text-muted-foreground">{count} panels</p>
-                      </div>
+                      <Badge variant="outline" className={cn("text-xs", column.badgeBg)}>
+                        {loading ? '...' : count}
+                      </Badge>
                     </div>
-                    <Badge variant="outline" className={column.bg}>
-                      {count}
-                    </Badge>
-                  </div>
-                </div>
+                  </CardContent>
+                </Card>
 
-                <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
+                <div className="space-y-2.5 max-h-[360px] overflow-y-auto pr-0.5">
                   {loading ? (
                     [1, 2].map(i => (
-                      <div key={i} className="h-24 bg-muted rounded-xl animate-pulse" />
-                    ))
-                  ) : columnPanels.length === 0 ? (
-                    <div className="glass-card p-6 text-center">
-                      <Icon className={cn("w-8 h-8 mx-auto mb-2", column.textColor)} />
-                      <p className="text-sm text-muted-foreground">No {column.title.toLowerCase()} panels</p>
-                    </div>
-                  ) : (
-                    columnPanels.map((panel) => (
-                      <motion.div
-                        key={panel.id}
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="glass-card-hover p-3 md:p-4 space-y-3 cursor-pointer group"
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="min-w-0">
-                            <p className="font-medium group-hover:text-primary transition-colors text-sm md:text-base truncate">
-                              {panel.name}
-                            </p>
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                              <Globe className="w-3 h-3" />
-                              <span className="truncate">{panel.subdomain}.smmpilot.online</span>
+                      <Card key={i}>
+                        <CardContent className="p-3 md:p-4 space-y-3">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <Skeleton className="h-4 w-3/4 mb-2" />
+                              <Skeleton className="h-3 w-1/2" />
                             </div>
                           </div>
-                        </div>
-                        
-                        <div className="flex items-center justify-between text-xs">
-                          <div className="flex items-center gap-1 text-muted-foreground">
-                            <Calendar className="w-3 h-3" />
-                            {new Date(panel.created_at).toLocaleDateString()}
+                          <div className="flex items-center justify-between">
+                            <Skeleton className="h-3 w-20" />
+                            <Skeleton className="h-3 w-12" />
                           </div>
-                          <div className="flex items-center gap-1 text-emerald-500">
-                            <DollarSign className="w-3 h-3" />
-                            ${panel.monthly_revenue?.toFixed(0) || 0}
+                        </CardContent>
+                      </Card>
+                    ))
+                  ) : columnPanels.length === 0 ? (
+                    <Card>
+                      <CardContent className="p-6 text-center">
+                        <Icon className={cn("w-8 h-8 mx-auto mb-2 opacity-40", column.iconColor)} />
+                        <p className="text-sm text-muted-foreground">No {column.title.toLowerCase()} panels</p>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    columnPanels.map((panel) => (
+                      <Card
+                        key={panel.id}
+                        className="hover-elevate group cursor-pointer"
+                        data-testid={`card-panel-${panel.id}`}
+                      >
+                        <CardContent className="p-3 md:p-4 space-y-2.5">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                              <p className="font-medium text-sm truncate" data-testid={`text-panel-name-${panel.id}`}>
+                                {panel.name}
+                              </p>
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                                <Globe className="w-3 h-3 flex-shrink-0" />
+                                <span className="truncate">{panel.subdomain}.smmpilot.online</span>
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                        
-                        <div className="invisible group-hover:visible transition-[visibility]">
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
-                            className="w-full text-xs gap-1"
-                            asChild
-                          >
-                            <Link to={`/admin/panels?id=${panel.id}`}>
-                              Manage <ArrowUpRight className="w-3 h-3" />
-                            </Link>
-                          </Button>
-                        </div>
-                      </motion.div>
+                          
+                          <div className="flex items-center justify-between gap-2 text-xs">
+                            <div className="flex items-center gap-1 text-muted-foreground">
+                              <Calendar className="w-3 h-3" />
+                              {new Date(panel.created_at).toLocaleDateString()}
+                            </div>
+                            <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
+                              <DollarSign className="w-3 h-3" />
+                              ${panel.monthly_revenue?.toFixed(0) || 0}
+                            </div>
+                          </div>
+                          
+                          <div className="invisible group-hover:visible transition-[visibility]">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="w-full text-xs gap-1"
+                              asChild
+                              data-testid={`button-manage-panel-${panel.id}`}
+                            >
+                              <Link to={`/admin/panels?id=${panel.id}`}>
+                                Manage <ArrowUpRight className="w-3 h-3" />
+                              </Link>
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
                     ))
                   )}
                 </div>
@@ -400,34 +452,42 @@ const AdminOverview = () => {
         </div>
       </motion.div>
 
-      <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-        <Card className="glass-card">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Activity className="w-5 h-5 text-primary" />
+      <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <Card data-testid="card-recent-activity">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <div className="p-1.5 rounded-md bg-primary/10">
+                <Activity className="w-4 h-4 text-primary" />
+              </div>
               Recent Activity
             </CardTitle>
             <CardDescription>Latest platform activities</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="space-y-1">
               {loading ? (
                 [1, 2, 3].map(i => (
-                  <div key={i} className="h-16 bg-muted/50 rounded-xl animate-pulse" />
+                  <div key={i} className="flex items-center justify-between p-3 gap-3">
+                    <div className="flex-1 min-w-0 space-y-2">
+                      <Skeleton className="h-4 w-3/4" />
+                      <Skeleton className="h-3 w-1/2" />
+                    </div>
+                    <Skeleton className="h-3 w-16 flex-shrink-0" />
+                  </div>
                 ))
               ) : recentActivity.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  <Activity className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <Activity className="w-8 h-8 mx-auto mb-2 opacity-30" />
                   <p className="text-sm">No recent activity</p>
                 </div>
               ) : (
                 recentActivity.map((log) => (
-                  <div key={log.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-accent/30 transition-colors">
-                    <div>
-                      <p className="font-medium text-sm">{formatActivityTitle(log)}</p>
-                      <p className="text-xs text-muted-foreground">{formatActivitySub(log)}</p>
+                  <div key={log.id} className="flex items-center justify-between gap-3 p-2.5 rounded-md hover-elevate" data-testid={`activity-item-${log.id}`}>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-sm truncate">{formatActivityTitle(log)}</p>
+                      <p className="text-xs text-muted-foreground truncate">{formatActivitySub(log)}</p>
                     </div>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
                       {formatDistanceToNow(new Date(log.created_at), { addSuffix: true })}
                     </span>
                   </div>
@@ -437,84 +497,106 @@ const AdminOverview = () => {
           </CardContent>
         </Card>
 
-        <Card className="glass-card">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <DollarSign className="w-5 h-5 text-emerald-500" />
+        <Card data-testid="card-recent-deposits">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <div className="p-1.5 rounded-md bg-emerald-500/10 dark:bg-emerald-500/20">
+                <DollarSign className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              </div>
               Recent Deposits
             </CardTitle>
             <CardDescription>Latest deposits across all panels</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="space-y-1">
               {loading ? (
                 [1, 2, 3].map(i => (
-                  <div key={i} className="h-16 bg-muted/50 rounded-xl animate-pulse" />
+                  <div key={i} className="flex items-center justify-between p-3 gap-3">
+                    <div className="flex-1 min-w-0 space-y-2">
+                      <Skeleton className="h-4 w-2/3" />
+                      <div className="flex items-center gap-2">
+                        <Skeleton className="h-5 w-14" />
+                        <Skeleton className="h-3 w-16" />
+                      </div>
+                    </div>
+                    <Skeleton className="h-4 w-14 flex-shrink-0" />
+                  </div>
                 ))
               ) : recentDeposits.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  <DollarSign className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <DollarSign className="w-8 h-8 mx-auto mb-2 opacity-30" />
                   <p className="text-sm">No recent deposits</p>
                 </div>
               ) : (
                 recentDeposits.map((deposit) => (
-                  <div key={deposit.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-accent/30 transition-colors">
+                  <div key={deposit.id} className="flex items-center justify-between gap-3 p-2.5 rounded-md hover-elevate" data-testid={`deposit-item-${deposit.id}`}>
                     <div className="min-w-0 flex-1">
                       <p className="font-medium text-sm truncate">{deposit.panel?.name || 'Unknown Panel'}</p>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                        <Badge variant="outline" className="text-xs capitalize">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5 flex-wrap">
+                        <Badge variant="outline" className="text-xs capitalize no-default-hover-elevate no-default-active-elevate">
                           {deposit.payment_method?.replace('_', ' ') || 'N/A'}
                         </Badge>
                         <span>{formatDistanceToNow(new Date(deposit.created_at), { addSuffix: true })}</span>
                       </div>
                     </div>
-                    <span className="font-semibold text-emerald-500 ml-2">
+                    <span className="font-semibold text-emerald-600 dark:text-emerald-400 ml-2 flex-shrink-0" data-testid={`text-deposit-amount-${deposit.id}`}>
                       +${deposit.amount.toFixed(2)}
                     </span>
                   </div>
                 ))
               )}
             </div>
-            <Button variant="outline" size="sm" className="w-full mt-4" asChild>
+            <Button variant="outline" size="sm" className="w-full mt-4" asChild data-testid="link-view-all-transactions">
               <Link to="/admin/payments">View All Transactions</Link>
             </Button>
           </CardContent>
         </Card>
 
-        <Card className="glass-card">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-primary" />
+        <Card data-testid="card-top-panels">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <div className="p-1.5 rounded-md bg-primary/10">
+                <TrendingUp className="w-4 h-4 text-primary" />
+              </div>
               Top Performing Panels
             </CardTitle>
             <CardDescription>Highest revenue this month</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="space-y-1">
               {loading ? (
                 [1, 2, 3].map(i => (
-                  <div key={i} className="h-16 bg-muted/50 rounded-xl animate-pulse" />
+                  <div key={i} className="flex items-center gap-3 p-3">
+                    <Skeleton className="w-8 h-8 rounded-md flex-shrink-0" />
+                    <div className="flex-1 min-w-0 space-y-2">
+                      <Skeleton className="h-4 w-2/3" />
+                      <Skeleton className="h-3 w-1/2" />
+                    </div>
+                    <Skeleton className="h-4 w-10 flex-shrink-0" />
+                  </div>
                 ))
               ) : topPanels.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  <TrendingUp className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <TrendingUp className="w-8 h-8 mx-auto mb-2 opacity-30" />
                   <p className="text-sm">No active panels yet</p>
                 </div>
               ) : (
                 topPanels.map((panel, i) => (
-                  <div key={panel.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-accent/30 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center font-semibold text-primary">
+                  <div key={panel.id} className="flex items-center justify-between gap-3 p-2.5 rounded-md hover-elevate" data-testid={`top-panel-${panel.id}`}>
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center font-semibold text-sm text-primary flex-shrink-0">
                         {i + 1}
                       </div>
-                      <div>
-                        <p className="font-medium text-sm">{panel.name}</p>
-                        <p className="text-xs text-muted-foreground">
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm truncate">{panel.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">
                           {panel.subdomain}.smmpilot.online
                         </p>
                       </div>
                     </div>
-                    <span className="font-semibold text-primary">${(panel.monthly_revenue || 0).toFixed(0)}</span>
+                    <span className="font-semibold text-primary flex-shrink-0" data-testid={`text-top-panel-revenue-${panel.id}`}>
+                      ${(panel.monthly_revenue || 0).toFixed(0)}
+                    </span>
                   </div>
                 ))
               )}
