@@ -1606,7 +1606,6 @@ const ServicesManagement = () => {
   };
 
   // Import handler - stores to provider_services, normalized_services, and services tables
-  // Following the professional 3-tier architecture: raw → normalized → buyer-visible
   const handleImport = async (importedServices: any[], markups: Record<number, number>, providerId?: string, providerName?: string) => {
     if (!panel?.id) return;
 
@@ -1637,75 +1636,75 @@ const ServicesManagement = () => {
     }
     
     try {
-      // Process each service through the 3-tier architecture
-      for (const service of servicesToImport) {
+      const rawInserts = servicesToImport.map(service => ({
+        panel_id: panel.id,
+        provider_id: providerId || null,
+        external_service_id: String(service.id),
+        raw_name: service.name,
+        raw_category: service.category || 'other',
+        provider_rate: Number(service.price) || 0,
+        min_quantity: service.minQty || 100,
+        max_quantity: service.maxQty || 10000,
+        description: service.description || null,
+        is_active: true,
+        raw_data: service as any
+      }));
+
+      const { error: rawError } = await supabase
+        .from('provider_services')
+        .upsert(rawInserts, {
+          onConflict: 'panel_id,provider_id,external_service_id',
+          ignoreDuplicates: false
+        });
+
+      if (rawError) {
+        console.error('Batch raw service upsert error:', rawError);
+      }
+
+      const extIds = servicesToImport.map(s => String(s.id));
+      const refMap = new Map<string, string>();
+      const lookupQuery = supabase
+        .from('provider_services')
+        .select('id, external_service_id')
+        .eq('panel_id', panel.id)
+        .in('external_service_id', extIds);
+      if (providerId) {
+        lookupQuery.eq('provider_id', providerId);
+      } else {
+        lookupQuery.is('provider_id', null);
+      }
+      const { data: provServiceRows } = await lookupQuery;
+      (provServiceRows || []).forEach(r => refMap.set(r.external_service_id, r.id));
+
+      const normalizedInserts = servicesToImport
+        .filter(s => refMap.has(String(s.id)))
+        .map(s => ({
+          provider_service_id: refMap.get(String(s.id))!,
+          normalized_name: s.name,
+          detected_platform: s.category || 'other',
+          detected_service_type: 'other',
+          detected_delivery_type: 'instant',
+          buyer_friendly_category: s.category || 'other',
+          confidence_score: 0.8,
+          is_ai_processed: false
+        }));
+
+      if (normalizedInserts.length > 0) {
+        const { error: normError } = await supabase
+          .from('normalized_services')
+          .upsert(normalizedInserts, { onConflict: 'provider_service_id', ignoreDuplicates: false });
+        if (normError) console.error('Batch normalized upsert error:', normError);
+      }
+
+      const buyerInserts = servicesToImport.map((service, idx) => {
         const markupPercent = markups[service.id] ?? 25;
         const providerRate = Number(service.price) || 0;
         const finalPrice = providerRate * (1 + markupPercent / 100);
         const detectedCategory = service.category || 'other';
         const iconUrl = service.iconUrl || `icon:${detectedCategory}`;
-        
-        // 1. Store raw provider service
-        let providerServiceId: string | null = null;
-        
-        const { data: rawService, error: rawError } = await supabase
-          .from('provider_services')
-          .upsert({
-            panel_id: panel.id,
-            provider_id: providerId || null,
-            external_service_id: String(service.id),
-            raw_name: service.name,
-            raw_category: service.category || 'other',
-            provider_rate: providerRate,
-            min_quantity: service.minQty || 100,
-            max_quantity: service.maxQty || 10000,
-            description: service.description || null,
-            is_active: true,
-            raw_data: service as any
-          }, {
-            onConflict: 'panel_id,provider_id,external_service_id'
-          })
-          .select('id')
-          .single();
+        const provServiceRef = refMap.get(String(service.id)) || null;
 
-        if (rawError) {
-          console.error('Raw service insert error:', rawError);
-          const lookupQuery = supabase
-            .from('provider_services')
-            .select('id')
-            .eq('panel_id', panel.id)
-            .eq('external_service_id', String(service.id));
-          if (providerId) {
-            lookupQuery.eq('provider_id', providerId);
-          } else {
-            lookupQuery.is('provider_id', null);
-          }
-          const { data: existingRaw } = await lookupQuery.maybeSingle();
-          providerServiceId = existingRaw?.id || null;
-        } else {
-          providerServiceId = rawService?.id || null;
-        }
-
-        // 2. Create normalized entry (if raw service was created)
-        if (providerServiceId) {
-          await supabase
-            .from('normalized_services')
-            .upsert({
-              provider_service_id: providerServiceId,
-              normalized_name: service.name,
-              detected_platform: detectedCategory,
-              detected_service_type: 'other',
-              detected_delivery_type: 'instant',
-              buyer_friendly_category: detectedCategory,
-              confidence_score: 0.8,
-              is_ai_processed: false
-            }, {
-              onConflict: 'provider_service_id'
-            });
-        }
-
-        // 3. Create buyer-visible service
-        const serviceData: Record<string, any> = {
+        const data: Record<string, any> = {
           panel_id: panel.id,
           provider_id: providerId || null,
           provider_service_id: String(service.id),
@@ -1719,48 +1718,31 @@ const ServicesManagement = () => {
           min_quantity: service.minQty || 100,
           max_quantity: service.maxQty || 10000,
           is_active: true,
-          display_order: services.length + importedServices.indexOf(service) + 1,
+          display_order: services.length + idx + 1,
           features: JSON.stringify({ 
             original_service_id: service.id, 
             provider_name: providerName || 'Direct',
             provider_rate: providerRate,
           }),
         };
+        if (provServiceRef) data.provider_service_ref = provServiceRef;
+        return data;
+      });
 
-        if (providerServiceId) {
-          serviceData.provider_service_ref = providerServiceId;
-          await supabase
-            .from('services')
-            .upsert(serviceData as any, {
-              onConflict: 'panel_id,provider_service_ref'
-            });
-        } else {
-          const fallbackQuery = supabase
-            .from('services')
-            .select('id')
-            .eq('panel_id', panel.id)
-            .eq('provider_service_id', String(service.id));
-          if (providerId) {
-            fallbackQuery.eq('provider_id', providerId);
-          } else {
-            fallbackQuery.is('provider_id', null);
-          }
-          const { data: existingService } = await fallbackQuery.maybeSingle();
+      const { error: buyerError } = await supabase
+        .from('services')
+        .upsert(buyerInserts as any[], {
+          onConflict: 'panel_id,provider_service_id,provider_id',
+          ignoreDuplicates: false
+        });
 
-          if (existingService) {
-            await supabase
-              .from('services')
-              .update(serviceData as any)
-              .eq('id', existingService.id);
-          } else {
-            await supabase
-              .from('services')
-              .insert(serviceData as any);
-          }
-        }
+      if (buyerError) {
+        console.error('Batch service upsert error:', buyerError);
+        toast({ title: 'Some services may not have imported correctly', variant: 'destructive' });
+      } else {
+        toast({ title: `${servicesToImport.length} services imported successfully` });
       }
 
-      toast({ title: `${importedServices.length} services imported successfully` });
       fetchServices();
       fetchCategoryCounts();
     } catch (error) {

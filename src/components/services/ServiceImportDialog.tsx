@@ -256,16 +256,19 @@ export const ServiceImportDialog = ({
       });
       console.log(platformCounts);
       
-      // Check which services are already imported by matching provider_id
-      const providerIds = mappedServices.map(s => String(s.id));
-      const { data: existingServices } = await supabase
+      const providerServiceIds = mappedServices.map(s => String(s.id));
+      const existingQuery = supabase
         .from('services')
-        .select('provider_id')
-        .in('provider_id', providerIds);
+        .select('provider_service_id')
+        .in('provider_service_id', providerServiceIds);
+      if (selectedProvider) {
+        existingQuery.eq('provider_id', selectedProvider);
+      }
+      const { data: existingServices } = await existingQuery;
       
       const existingIds = new Set<number>(
         (existingServices || [])
-          .map(s => parseInt(s.provider_id || '0'))
+          .map(s => parseInt(s.provider_service_id || '0'))
           .filter(id => id > 0)
       );
       setExistingServiceIds(existingIds);
@@ -325,11 +328,8 @@ export const ServiceImportDialog = ({
   };
 
   const handleImport = async () => {
-    // For selected services import, we still use the old flow via onImport
-    // But for "Import All" we use the new edge function
     let selectedServiceData = fetchedServices.filter(s => selectedServices.includes(s.id));
     
-    // Enforce limit
     if (selectedServiceData.length > remainingSlots) {
       selectedServiceData = selectedServiceData.slice(0, remainingSlots);
       toast({ 
@@ -348,23 +348,18 @@ export const ServiceImportDialog = ({
     setImportProgress({ importing: true, current: 0, total });
     
     try {
-      // Get provider info for storing with services
       const provider = providers.find(p => p.id === selectedProvider);
       const providerId = selectedProvider;
       const providerName = provider?.name || 'Unknown';
       
-      // Import in chunks with progress
-      const chunkSize = 50;
-      for (let i = 0; i < total; i += chunkSize) {
-        const chunk = selectedServiceData.slice(i, i + chunkSize);
-        const chunkMarkups: Record<number, number> = {};
-        chunk.forEach(s => {
-          chunkMarkups[s.id] = serviceMarkups[s.id] ?? globalMarkup;
-        });
-        
-        await onImport(chunk, chunkMarkups, providerId, providerName);
-        setImportProgress({ importing: true, current: Math.min(i + chunkSize, total), total });
-      }
+      const allMarkups: Record<number, number> = {};
+      selectedServiceData.forEach(s => {
+        allMarkups[s.id] = serviceMarkups[s.id] ?? globalMarkup;
+      });
+      
+      setImportProgress({ importing: true, current: Math.round(total * 0.1), total });
+      await onImport(selectedServiceData, allMarkups, providerId, providerName);
+      setImportProgress({ importing: true, current: total, total });
       
       toast({ title: `${total} services imported successfully!` });
     } catch (error) {

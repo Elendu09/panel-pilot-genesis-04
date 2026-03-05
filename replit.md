@@ -99,6 +99,7 @@ Admin pages use the `/functions/v1/admin-data` Express endpoint (service role ke
 - **Ad Placements**: New `SponsoredProviderBanner` and `InterstitialAdCard` on buyer dashboard/services; slider has auto-rotate with dot indicators and pause-on-hover
 - **Admin Responsive**: All admin pages mobile-friendly (responsive grids, overflow-x-auto tables, reduced padding, mobile dialogs, hover→visible)
 - **Bulk Selection Mobile**: OrdersManagement and CustomerManagement have checkboxes in mobile card views; bulk action toolbar positioned above bottom nav
+- **Import Performance**: Batch import handler — 3 DB calls total instead of 3 per service; "already imported" detection fixed to check `provider_service_id` (was wrongly checking `provider_id` UUID column); refMap always queried after upsert for completeness
 
 ## Replit-Specific Changes Made
 
