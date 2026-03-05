@@ -77,6 +77,10 @@ const DEV_PATTERNS = [
   /^127\.0\.0\.1$/,
   /\.local$/,
   /\.test$/,
+  /\.replit\.dev$/,
+  /\.repl\.co$/,
+  /\.replit\.app$/,
+  /\.replit\.com$/,
 ];
 
 // External hosting platforms

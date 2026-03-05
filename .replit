@@ -1,0 +1,50 @@
+modules = ["nodejs-20", "web"]
+[agent]
+expertMode = true
+integrations = ["javascript_database:1.0.0"]
+
+[nix]
+channel = "stable-25_05"
+
+[deployment]
+deploymentTarget = "autoscale"
+run = ["node", "./dist/index.cjs"]
+build = ["npm", "run", "build"]
+
+[userenv]
+
+[userenv.shared]
+SUPABASE_URL = "https://tooudgubuhxjbbvzjcgx.supabase.co"
+SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRvb3VkZ3VidWh4amJidnpqY2d4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIzNDM2MzEsImV4cCI6MjA2NzkxOTYzMX0.gNJfMqhjHxDnCU86kFYeGWrGn4BeYDu_BUv-Jm7wkn4"
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Start application"
+
+[[workflows.workflow]]
+name = "Start application"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
+waitForPort = 5000
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
+[[ports]]
+localPort = 3001
+externalPort = 3001
+
+[[ports]]
+localPort = 5000
+externalPort = 80

@@ -33,7 +33,11 @@ const App = lazy(() => import('../App'));
   const isDevDomain = hostname.includes('lovableproject.com') || 
                        hostname.includes('lovable.app') || 
                        hostname === 'localhost' ||
-                       hostname.startsWith('localhost:');
+                       hostname.startsWith('localhost:') ||
+                       hostname.includes('replit.dev') ||
+                       hostname.includes('repl.co') ||
+                       hostname.includes('replit.app') ||
+                       hostname.includes('replit.com');
   
   if (isPlatform) {
     document.title = 'HOME OF SMM - Advanced SMM Panel Platform';
@@ -155,6 +159,11 @@ const TenantRouter = () => {
   // If we know synchronously it's the platform domain, render App immediately
   // This prevents the main website from briefly showing on subdomain loads
   if (isImmediatelyPlatform) {
+    // Restore visibility in case index.html hid it (shouldn't happen for dev domains, but safety net)
+    if (typeof document !== 'undefined') {
+      document.documentElement.style.visibility = 'visible';
+      document.documentElement.style.opacity = '1';
+    }
     return (
       <Suspense fallback={<PageLoader />}>
         <App />

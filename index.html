@@ -9,7 +9,7 @@
       (function() {
         var h = location.hostname.toLowerCase().replace(/^www\./, '');
         var isPlatform = h === 'homeofsmm.com' || h === 'smmpilot.online';
-        var isDev = h.includes('lovable.app') || h.includes('lovableproject.com') || h === 'localhost' || h === '127.0.0.1';
+        var isDev = h.includes('lovable.app') || h.includes('lovableproject.com') || h === 'localhost' || h === '127.0.0.1' || h.includes('replit.dev') || h.includes('repl.co') || h.includes('replit.app');
         
         if (!isPlatform && !isDev) {
           // TENANT DOMAIN - Neutralize all platform branding immediately
