@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { 
   Wallet, 
@@ -19,7 +19,10 @@ import {
   Bitcoin,
   Copy,
   ExternalLink,
-  XCircle
+  XCircle,
+  Upload,
+  Image as ImageIcon,
+  X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -150,6 +153,11 @@ const BuyerDeposit = () => {
   // Multiple manual methods selector state
   const [showManualSelector, setShowManualSelector] = useState(false);
   const [allManualMethods, setAllManualMethods] = useState<PaymentMethod[]>([]);
+  
+  // Proof of payment upload state
+  const [proofUploading, setProofUploading] = useState(false);
+  const [proofUrl, setProofUrl] = useState<string | null>(null);
+  const proofInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch enabled payment methods from panel settings + sync with platform providers
   useEffect(() => {
@@ -602,6 +610,49 @@ const BuyerDeposit = () => {
     toast({ title: "Copied to clipboard" });
   };
 
+  const handleProofUpload = async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast({ variant: "destructive", title: "Invalid file", description: "Please upload an image file (PNG, JPG, GIF, WebP)" });
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast({ variant: "destructive", title: "File too large", description: "Maximum file size is 2MB" });
+      return;
+    }
+    setProofUploading(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const fileName = `proof-${Date.now()}.${ext}`;
+      const txId = manualPaymentDetails?.transactionId || "unknown";
+      const filePath = `${txId}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("payment-proofs")
+        .upload(filePath, file, { cacheControl: "3600", upsert: true });
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from("payment-proofs")
+        .getPublicUrl(filePath);
+      
+      setProofUrl(urlData.publicUrl);
+
+      // Save proof URL to transaction metadata
+      if (txId !== "unknown") {
+        await supabase.from("transactions").update({
+          metadata: { proof_url: urlData.publicUrl }
+        }).eq("id", txId);
+      }
+
+      toast({ title: "Proof uploaded", description: "Your payment proof has been attached." });
+    } catch (err) {
+      console.error("Proof upload error:", err);
+      toast({ variant: "destructive", title: "Upload failed", description: "Please try again." });
+    } finally {
+      setProofUploading(false);
+    }
+  };
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: { opacity: 1, transition: { staggerChildren: 0.08 } }
@@ -967,6 +1018,56 @@ const BuyerDeposit = () => {
               </div>
             )}
 
+            {/* Payment Proof Upload */}
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold">Upload Payment Proof</Label>
+              <input
+                ref={proofInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleProofUpload(file);
+                }}
+              />
+              {proofUrl ? (
+                <div className="relative rounded-lg border overflow-hidden">
+                  <img src={proofUrl} alt="Payment proof" className="w-full max-h-[200px] object-contain bg-muted/30" />
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    className="absolute top-2 right-2 h-7 w-7"
+                    onClick={() => setProofUrl(null)}
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => proofInputRef.current?.click()}
+                  disabled={proofUploading}
+                  className={cn(
+                    "w-full p-4 rounded-lg border-2 border-dashed transition-all flex flex-col items-center gap-2",
+                    proofUploading
+                      ? "opacity-60 pointer-events-none border-border/50"
+                      : "border-border/50 hover:border-primary/50 cursor-pointer"
+                  )}
+                >
+                  {proofUploading ? (
+                    <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                  ) : (
+                    <Upload className="w-6 h-6 text-muted-foreground" />
+                  )}
+                  <span className="text-sm text-muted-foreground">
+                    {proofUploading ? "Uploading..." : "Click to upload screenshot"}
+                  </span>
+                  <span className="text-xs text-muted-foreground">Max 2MB • PNG, JPG, GIF, WebP</span>
+                </button>
+              )}
+            </div>
+
             <div className="flex items-center gap-2 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg text-sm">
               <CheckCircle className="w-4 h-4 text-blue-500 shrink-0" />
               <p>Your balance will be credited once payment is verified by our team.</p>
@@ -979,6 +1080,7 @@ const BuyerDeposit = () => {
               onClick={() => {
                 setManualDialogOpen(false);
                 setManualPaymentDetails(null);
+                setProofUrl(null);
                 setAmount("");
                 setSelectedMethod(null);
               }}
@@ -989,6 +1091,7 @@ const BuyerDeposit = () => {
               onClick={() => {
                 setManualDialogOpen(false);
                 setManualPaymentDetails(null);
+                setProofUrl(null);
                 setAmount("");
                 setSelectedMethod(null);
                 toast({ 
