@@ -251,6 +251,7 @@ serve(async (req) => {
         panel_id: panelId,
         buyer_id: buyerId,
         service_id: serviceId,
+        service_name: service.name || null,
         target_url: targetUrl,
         quantity,
         price,

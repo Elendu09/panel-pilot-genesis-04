@@ -81,7 +81,7 @@ serve(async (req) => {
           domain,
           verification_status: 'pending',
           verification_token: verificationToken,
-          txt_verification_record: `homeofsmm-verify=${verificationToken}`,
+          txt_verification_record: `smmpilot-verify=${verificationToken}`,
           expected_target: '76.76.21.21',
           dns_configured: false,
           created_at: new Date().toISOString(),
@@ -97,7 +97,7 @@ serve(async (req) => {
           dns_records: [
             { type: 'A', name: '@', value: '76.76.21.21', ttl: 3600 },
             { type: 'CNAME', name: 'www', value: 'cname.vercel-dns.com', ttl: 3600 },
-            { type: 'TXT', name: '_homeofsmm', value: `homeofsmm-verify=${verificationToken}`, ttl: 3600 },
+            { type: 'TXT', name: '_smmpilot', value: `smmpilot-verify=${verificationToken}`, ttl: 3600 },
           ],
           message: "Add these DNS records at your domain registrar. Do NOT change your nameservers.",
         }),
@@ -150,7 +150,7 @@ serve(async (req) => {
         domain,
         verification_status: 'pending',
         verification_token: verificationToken,
-        txt_verification_record: `homeofsmm-verify=${verificationToken}`,
+        txt_verification_record: `smmpilot-verify=${verificationToken}`,
         expected_target: '76.76.21.21',
         dns_configured: false,
         created_at: new Date().toISOString(),
@@ -161,7 +161,6 @@ serve(async (req) => {
       console.error("Error storing domain:", insertError);
     }
 
-    // Also add www subdomain to Vercel if root was successful
     if (vercelResponse.ok) {
       try {
         await fetch(vercelUrl, {
@@ -172,7 +171,7 @@ serve(async (req) => {
           },
           body: JSON.stringify({ 
             name: `www.${domain}`,
-            redirect: domain, // Redirect www to apex
+            redirect: domain,
             redirectStatusCode: 308,
           }),
         });
@@ -190,7 +189,7 @@ serve(async (req) => {
         dns_records: [
           { type: 'A', name: '@', value: '76.76.21.21', ttl: 3600 },
           { type: 'CNAME', name: 'www', value: 'cname.vercel-dns.com', ttl: 3600 },
-          { type: 'TXT', name: '_homeofsmm', value: `homeofsmm-verify=${verificationToken}`, ttl: 3600 },
+          { type: 'TXT', name: '_smmpilot', value: `smmpilot-verify=${verificationToken}`, ttl: 3600 },
         ],
         message: vercelResponse.ok 
           ? "Domain added to Vercel! Add these DNS records at your registrar." 

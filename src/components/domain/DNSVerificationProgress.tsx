@@ -42,7 +42,7 @@ export function DNSVerificationProgress({
   const [records, setRecords] = useState<DNSRecord[]>([
     { type: 'A', status: 'pending', expected: VERCEL_IP },
     { type: 'CNAME', status: 'pending', expected: VERCEL_CNAME },
-    { type: 'TXT', status: 'pending', expected: verificationToken ? `homeofsmm-verify=${verificationToken}` : '' }
+    { type: 'TXT', status: 'pending', expected: verificationToken ? `smmpilot-verify=${verificationToken}` : '' }
   ]);
   const [sslStatus, setSslStatus] = useState<'pending' | 'provisioning' | 'active' | 'error'>('pending');
   const [checking, setChecking] = useState(false);

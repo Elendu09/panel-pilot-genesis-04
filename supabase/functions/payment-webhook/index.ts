@@ -555,8 +555,7 @@ serve(async (req) => {
               await supabase
                 .from('client_users')
                 .update({ 
-                  balance: newBalance,
-                  total_spent: (buyer.total_spent || 0) + depositAmount
+                  balance: newBalance
                 })
                 .eq('id', userId);
 

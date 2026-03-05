@@ -101,6 +101,15 @@ Admin pages use the `/functions/v1/admin-data` Express endpoint (service role ke
 - **Bulk Selection Mobile**: OrdersManagement and CustomerManagement have checkboxes in mobile card views; bulk action toolbar positioned above bottom nav
 - **Import Performance**: Batch import handler — 3 DB calls total instead of 3 per service; "already imported" detection fixed to check `provider_service_id` (was wrongly checking `provider_id` UUID column); refMap always queried after upsert for completeness
 
+## Session: Orders Preservation, Deposit Fixes, Domain DNS
+
+- **Orders ON DELETE SET NULL**: Changed `orders.service_id` FK from ON DELETE CASCADE to ON DELETE SET NULL; orders now persist when services are deleted. Added `service_name` column to orders table, backfilled from services. All display locations use fallback: `order.service?.name || order.service_name || 'Unknown Service'`
+- **Order Status Sync**: New `/functions/v1/sync-orders` endpoint batch-polls provider APIs for all active orders; "Sync Orders" button in OrdersManagement; BuyerOrders has realtime subscription for live status updates
+- **Buyer Deposit Fix**: Transaction history now fetches via `buyer-auth` server endpoint (bypasses RLS); polling runs every 8s for pending, 30s otherwise; balance auto-updates on completed; proof upload routes through server
+- **Payment Webhook Fix**: Removed erroneous `total_spent` increment on deposits (should only track order spending)
+- **Domain DNS Verification**: Onboarding domain step has multi-step verification flow (TXT → DNS → Live) with auto-polling every 30s; auto-updates panels.custom_domain on success; fixed TXT record naming to `smmpilot-verify`
+- **Startup Migration**: server/index.ts runs migration on startup to add service_name column and fix FK constraint
+
 ## Replit-Specific Changes Made
 
 1. **index.html** — Added Replit domains to `isDev` check to prevent visibility hiding

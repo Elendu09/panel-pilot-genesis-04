@@ -260,6 +260,53 @@ fnRouter.post('/buyer-auth', async (req, res) => {
         return res.json({ success: true, api_key: apiKey });
       }
 
+      case 'transactions': {
+        const { buyerId, token } = body;
+        if (!token) return res.json({ error: 'Authentication required' });
+        const v = await verifyJWT(token);
+        if (!v.valid) return res.json({ error: 'Session expired', tokenExpired: true });
+        if (v.payload?.sub !== buyerId || v.payload?.panelId !== panelId) return res.json({ error: 'Invalid session', tokenInvalid: true });
+        if (!buyerId) return res.json({ error: 'Buyer ID required' });
+
+        const { data: txData, error: txErr } = await supabase
+          .from('transactions')
+          .select('id, amount, status, payment_method, created_at, type, description')
+          .or(`user_id.eq.${buyerId},buyer_id.eq.${buyerId}`)
+          .in('type', ['deposit', 'credit', 'admin_credit'])
+          .order('created_at', { ascending: false })
+          .limit(30);
+
+        if (txErr) {
+          console.error('[buyer-auth] transactions fetch error:', txErr);
+          return res.json({ error: 'Failed to fetch transactions' });
+        }
+        return res.json({ success: true, transactions: txData || [] });
+      }
+
+      case 'update-transaction-proof': {
+        const { buyerId, token, transactionId: proofTxId, proofUrl } = body;
+        if (!token) return res.json({ error: 'Authentication required' });
+        const v = await verifyJWT(token);
+        if (!v.valid) return res.json({ error: 'Session expired', tokenExpired: true });
+        if (v.payload?.sub !== buyerId) return res.json({ error: 'Invalid session' });
+        if (!proofTxId || !proofUrl) return res.json({ error: 'Missing transaction ID or proof URL' });
+
+        const { data: txCheck } = await supabase.from('transactions')
+          .select('id, buyer_id, user_id')
+          .eq('id', proofTxId)
+          .single();
+        if (!txCheck || (txCheck.buyer_id !== buyerId && txCheck.user_id !== buyerId)) {
+          return res.json({ error: 'Transaction not found' });
+        }
+
+        await supabase.from('transactions').update({
+          metadata: { proof_url: proofUrl },
+          status: 'pending_verification'
+        }).eq('id', proofTxId);
+
+        return res.json({ success: true });
+      }
+
       case 'resend-verification':
         return res.json({ success: true, message: 'Verification email sent' });
 
@@ -349,7 +396,7 @@ fnRouter.post('/buyer-api', async (req, res) => {
           await supabase.from('client_users').update({ balance: parseFloat(buyer.balance) - price }).eq('id', buyerId);
         }
         const orderNum = 'ORD' + Date.now().toString().slice(-10) + Math.random().toString(36).slice(-4).toUpperCase();
-        const { data: order, error: oErr } = await supabase.from('orders').insert({ panel_id: panelId, service_id: serviceData.id, order_number: orderNum, target_url: link, quantity: qty, price, status: 'pending', buyer_id: buyerId || null, notes: comments || null }).select('id,order_number').single();
+        const { data: order, error: oErr } = await supabase.from('orders').insert({ panel_id: panelId, service_id: serviceData.id, order_number: orderNum, target_url: link, quantity: qty, price, status: 'pending', buyer_id: buyerId || null, notes: comments || null, service_name: serviceData.name || null }).select('id,order_number').single();
         if (oErr) return res.json({ error: 'Failed to create order' });
         return res.json({ order: order.order_number });
       }
@@ -398,6 +445,7 @@ fnRouter.post('/buyer-order', async (req, res) => {
     const { data: order, error: orderErr } = await supabase.from('orders').insert({
       panel_id: panelId, service_id: serviceId, buyer_id: buyerId || null,
       order_number: orderNumber, target_url: targetUrl, quantity, price: orderPrice, status: 'pending', notes: notes || null,
+      service_name: service.name || null,
     }).select('id,order_number').single();
 
     if (orderErr) return res.json({ success: false, error: 'Failed to create order' });
@@ -1530,14 +1578,163 @@ fnRouter.post('/admin-data', async (req, res) => {
   }
 });
 
+// ─── sync-orders (batch provider status check) ───────────────────────────────
+fnRouter.post('/sync-orders', async (req, res) => {
+  try {
+    const supabase = getSupabaseAdmin();
+    const { panelId } = req.body;
+    if (!panelId) return res.json({ success: false, error: 'Missing panelId' });
+
+    const { data: activeOrders, error: fetchErr } = await supabase
+      .from('orders')
+      .select('id, order_number, status, quantity, start_count, remains, progress, provider_order_id, provider_id, started_at, completed_at')
+      .eq('panel_id', panelId)
+      .in('status', ['pending', 'processing', 'in_progress'])
+      .not('provider_order_id', 'is', null);
+
+    if (fetchErr) return res.json({ success: false, error: 'Failed to fetch orders' });
+    if (!activeOrders || activeOrders.length === 0) return res.json({ success: true, updated: 0, total: 0 });
+
+    const providerIds = [...new Set(activeOrders.filter(o => o.provider_id).map(o => o.provider_id))];
+    const { data: providers } = await supabase
+      .from('providers')
+      .select('id, api_endpoint, api_key, is_active')
+      .in('id', providerIds);
+
+    const providerMap = new Map((providers || []).map(p => [p.id, p]));
+
+    const statusMap: Record<string, string> = {
+      'Pending': 'pending',
+      'In progress': 'in_progress',
+      'Processing': 'in_progress',
+      'Completed': 'completed',
+      'Partial': 'partial',
+      'Canceled': 'cancelled',
+      'Cancelled': 'cancelled',
+      'Refunded': 'refunded',
+      'Failed': 'failed',
+    };
+
+    let updatedCount = 0;
+
+    const ordersByProvider = new Map<string, typeof activeOrders>();
+    for (const order of activeOrders) {
+      if (!order.provider_id || !order.provider_order_id) continue;
+      const list = ordersByProvider.get(order.provider_id) || [];
+      list.push(order);
+      ordersByProvider.set(order.provider_id, list);
+    }
+
+    for (const [providerId, providerOrders] of ordersByProvider) {
+      const provider = providerMap.get(providerId);
+      if (!provider?.is_active || !provider.api_endpoint || !provider.api_key) continue;
+
+      const providerOrderIds = providerOrders.map(o => o.provider_order_id).join(',');
+
+      try {
+        const fd = new URLSearchParams({
+          key: provider.api_key,
+          action: 'status',
+          orders: providerOrderIds,
+        });
+
+        const provRes = await fetch(provider.api_endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: fd.toString(),
+        });
+        const provData = await provRes.json();
+
+        for (const order of providerOrders) {
+          const result = provData[order.provider_order_id];
+          if (!result || result.error) continue;
+
+          const mappedStatus = statusMap[result.status] || order.status;
+          const startCount = result.start_count ? parseInt(result.start_count, 10) : order.start_count;
+          const remains = result.remains ? parseInt(result.remains, 10) : order.remains;
+
+          const updateData: Record<string, any> = {};
+          if (mappedStatus !== order.status) updateData.status = mappedStatus;
+          if (startCount !== order.start_count) updateData.start_count = startCount;
+          if (remains !== order.remains) updateData.remains = remains;
+
+          if (mappedStatus === 'completed' && !order.completed_at) {
+            updateData.completed_at = new Date().toISOString();
+            updateData.progress = 100;
+          } else if (mappedStatus === 'in_progress' && !order.started_at) {
+            updateData.started_at = new Date().toISOString();
+          }
+
+          if (remains !== null && remains !== undefined && order.quantity) {
+            const delivered = order.quantity - remains;
+            updateData.progress = Math.min(100, Math.max(0, Math.round((delivered / order.quantity) * 100)));
+          }
+
+          if (Object.keys(updateData).length > 0) {
+            updateData.updated_at = new Date().toISOString();
+            await supabase.from('orders').update(updateData).eq('id', order.id);
+            updatedCount++;
+          }
+        }
+      } catch (provErr) {
+        console.error(`[sync-orders] Provider ${providerId} error:`, provErr);
+      }
+    }
+
+    return res.json({ success: true, updated: updatedCount, total: activeOrders.length });
+  } catch (err: any) {
+    console.error('[sync-orders]', err);
+    return res.json({ success: false, error: err.message });
+  }
+});
+
 // Mount the functions router
 app.use('/functions/v1', fnRouter);
 
 // ─── Also support old supabase function URL pattern for compatibility ──────────
 app.use('/rest/v1', (_req, res) => res.status(404).json({ error: 'Use Supabase client for REST API' }));
 
+async function runStartupMigrations() {
+  try {
+    const supabase = getSupabaseAdmin();
+    await supabase.rpc('exec_sql', {
+      sql_text: `
+        ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS service_name TEXT;
+        DO $$ BEGIN
+          UPDATE public.orders o SET service_name = s.name
+          FROM public.services s WHERE o.service_id = s.id AND o.service_name IS NULL;
+        EXCEPTION WHEN OTHERS THEN NULL;
+        END $$;
+        ALTER TABLE public.orders DROP CONSTRAINT IF EXISTS orders_service_id_fkey;
+        ALTER TABLE public.orders ADD CONSTRAINT orders_service_id_fkey
+          FOREIGN KEY (service_id) REFERENCES public.services(id) ON DELETE SET NULL;
+      `
+    }).then(() => {
+      console.log('[server] Startup migration: orders ON DELETE SET NULL applied');
+    }).catch(async () => {
+      const statements = [
+        'ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS service_name TEXT',
+        `DO $$ BEGIN UPDATE public.orders o SET service_name = s.name FROM public.services s WHERE o.service_id = s.id AND o.service_name IS NULL; EXCEPTION WHEN OTHERS THEN NULL; END $$`,
+        'ALTER TABLE public.orders DROP CONSTRAINT IF EXISTS orders_service_id_fkey',
+        'ALTER TABLE public.orders ADD CONSTRAINT orders_service_id_fkey FOREIGN KEY (service_id) REFERENCES public.services(id) ON DELETE SET NULL'
+      ];
+      for (const sql of statements) {
+        try {
+          await supabase.rpc('exec_sql', { sql_text: sql });
+        } catch (e: any) {
+          console.log(`[server] Migration step skipped: ${e.message?.slice(0, 80)}`);
+        }
+      }
+      console.log('[server] Startup migration: attempted individual statements');
+    });
+  } catch (e: any) {
+    console.log(`[server] Migration warning (non-fatal): ${e.message?.slice(0, 100)}`);
+  }
+}
+
 app.listen(PORT, () => {
   console.log(`[server] Express API running on port ${PORT}`);
+  runStartupMigrations();
 });
 
 export default app;

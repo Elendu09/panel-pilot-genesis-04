@@ -43,6 +43,7 @@ interface Order {
   status: string;
   progress: number;
   created_at: string;
+  service_name?: string | null;
   service?: { name: string; provider_service_id?: string } | null;
 }
 
@@ -63,6 +64,47 @@ const BuyerOrders = () => {
     }
   }, [buyer?.id]);
 
+  useEffect(() => {
+    if (!buyer?.id) return;
+
+    const channel = supabase
+      .channel(`buyer-orders-${buyer.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'orders',
+          filter: `buyer_id=eq.${buyer.id}`,
+        },
+        (payload: any) => {
+          const updated = payload.new;
+          setOrders(prev => prev.map(o =>
+            o.id === updated.id
+              ? { ...o, status: updated.status, progress: updated.progress || o.progress }
+              : o
+          ));
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'orders',
+          filter: `buyer_id=eq.${buyer.id}`,
+        },
+        () => {
+          fetchOrders();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [buyer?.id]);
+
   const fetchOrders = async () => {
     if (!buyer?.id) return;
 
@@ -80,7 +122,7 @@ const BuyerOrders = () => {
 
       if (error) throw error;
 
-      const formattedOrders: Order[] = (data || []).map(o => ({
+      const formattedOrders: Order[] = (data || []).map((o: any) => ({
         id: o.id,
         order_number: o.order_number,
         target_url: o.target_url,
@@ -89,6 +131,7 @@ const BuyerOrders = () => {
         status: o.status || 'pending',
         progress: o.progress || 0,
         created_at: o.created_at,
+        service_name: o.service_name,
         service: o.service,
       }));
 
@@ -113,7 +156,7 @@ const BuyerOrders = () => {
 
   const filteredOrders = orders.filter(order => {
     const matchesSearch = order.order_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (order.service?.name || '').toLowerCase().includes(searchQuery.toLowerCase());
+      (order.service?.name || order.service_name || '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -399,7 +442,7 @@ const BuyerOrders = () => {
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">{t('orders.service')}</span>
                 <div className="flex items-center gap-2">
-                  <span className="font-medium">{selectedOrder.service?.name || 'Unknown'}</span>
+                  <span className="font-medium">{selectedOrder.service?.name || selectedOrder.service_name || 'Unknown'}</span>
                   {selectedOrder.service?.provider_service_id && (
                     <Badge variant="secondary" className="text-xs font-mono">
                       ID: {selectedOrder.service.provider_service_id}
@@ -484,7 +527,7 @@ const OrderCard = ({
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <p className="font-medium text-sm truncate">{order.service?.name || 'Unknown'}</p>
+            <p className="font-medium text-sm truncate">{order.service?.name || order.service_name || 'Unknown'}</p>
             {order.service?.provider_service_id && (
               <Badge variant="secondary" className="text-[10px] font-mono px-1 py-0 h-4 shrink-0">
                 ID: {order.service.provider_service_id}

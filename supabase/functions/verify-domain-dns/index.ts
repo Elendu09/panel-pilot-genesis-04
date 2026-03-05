@@ -142,13 +142,12 @@ serve(async (req) => {
     let txtRecordFound = false;
     let txtValue: string | null = null;
     if (expected_txt_value) {
-      const txtRecords = await fetchDnsRecords(`_homeofsmm.${domain}`, "TXT");
-      txtValue = txtRecords.find(r => r.includes('homeofsmm-verify')) || null;
+      const txtRecords = await fetchDnsRecords(`_smmpilot.${domain}`, "TXT");
+      txtValue = txtRecords.find(r => r.includes('smmpilot-verify')) || null;
       txtRecordFound = txtRecords.some(r => r.includes(expected_txt_value));
     } else {
-      // Just check if any homeofsmm verification TXT exists
-      const txtRecords = await fetchDnsRecords(`_homeofsmm.${domain}`, "TXT");
-      txtValue = txtRecords.find(r => r.includes('homeofsmm-verify')) || null;
+      const txtRecords = await fetchDnsRecords(`_smmpilot.${domain}`, "TXT");
+      txtValue = txtRecords.find(r => r.includes('smmpilot-verify')) || null;
       txtRecordFound = txtValue !== null;
     }
 
@@ -196,7 +195,7 @@ serve(async (req) => {
       txt_record: {
         found: txtRecordFound,
         value: txtValue,
-        expected: expected_txt_value || 'homeofsmm-verify=...',
+        expected: expected_txt_value || 'smmpilot-verify=...',
       },
       overall_status: overallStatus,
       vercel_configured: vercelStatus.configured,

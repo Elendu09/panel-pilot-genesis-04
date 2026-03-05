@@ -52,6 +52,7 @@ interface LiveOrder {
   price: number;
   created_at: string;
   target_url: string;
+  service_name?: string | null;
   service?: { name: string };
 }
 

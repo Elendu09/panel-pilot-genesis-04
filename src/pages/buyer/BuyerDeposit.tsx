@@ -128,7 +128,7 @@ interface Transaction {
 }
 
 const BuyerDeposit = () => {
-  const { buyer, refreshBuyer, loading: authLoading } = useBuyerAuth();
+  const { buyer, refreshBuyer, loading: authLoading, getToken } = useBuyerAuth();
   const { panel, loading: panelLoading } = useTenant();
   const { generateInvoice } = useInvoiceGeneration();
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
@@ -274,22 +274,33 @@ const BuyerDeposit = () => {
     fetchPaymentMethods();
   }, [panel?.id]);
 
-  // Fetch transaction history on mount
-  // Fetch all transactions (pending, completed, failed)
   const fetchTransactions = async () => {
-    if (!buyer?.id) return;
+    if (!buyer?.id || !panel?.id) return;
     
     try {
-      // Fetch using both user_id and buyer_id columns
-      const { data } = await supabase
-        .from('transactions')
-        .select('*')
-        .or(`user_id.eq.${buyer.id},buyer_id.eq.${buyer.id}`)
-        .in('type', ['deposit', 'credit', 'admin_credit'])
-        .order('created_at', { ascending: false })
-        .limit(20);
+      const token = getToken();
+      const { data, error } = await supabase.functions.invoke('buyer-auth', {
+        body: {
+          panelId: panel.id,
+          action: 'transactions',
+          buyerId: buyer.id,
+          token
+        }
+      });
       
-      setTransactions(data || []);
+      if (error) {
+        console.error('Error fetching transactions:', error);
+        return;
+      }
+      
+      if (data?.error) {
+        console.error('Transaction fetch error:', data.error);
+        return;
+      }
+      
+      if (data?.transactions) {
+        setTransactions(data.transactions);
+      }
     } catch (error) {
       console.error('Error fetching transactions:', error);
     } finally {
@@ -299,97 +310,54 @@ const BuyerDeposit = () => {
 
   useEffect(() => {
     fetchTransactions();
-  }, [buyer?.id]);
+  }, [buyer?.id, panel?.id]);
 
-  // Real-time subscription for transaction updates and balance sync
-  // Subscribe to all transactions and filter client-side (more reliable)
+  const previousTransactionsRef = useRef<Transaction[]>([]);
+
   useEffect(() => {
-    if (!buyer?.id) return;
+    if (!buyer?.id || !panel?.id) return;
 
-    // Subscribe to transaction changes - listen to all events and filter by buyer
-    const channel = supabase
-      .channel(`buyer-transactions-realtime-${buyer.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'transactions'
-        },
-        async (payload) => {
-          // Check if this transaction belongs to this buyer (user_id or buyer_id)
-          const newRecord = payload.new as any;
-          const oldRecord = payload.old as any;
-          const recordUserId = newRecord?.user_id || oldRecord?.user_id;
-          const recordBuyerId = newRecord?.buyer_id || oldRecord?.buyer_id;
-          
-          // Only process if this transaction belongs to this buyer
-          if (recordUserId !== buyer.id && recordBuyerId !== buyer.id) {
-            return;
-          }
-          
-          console.log('Transaction update for buyer:', payload.eventType, payload);
-          
-          // Always refresh transactions list immediately
-          fetchTransactions();
-          
-          // Handle status changes
-          if (payload.eventType === 'UPDATE') {
-            const previousStatus = oldRecord?.status;
-            const newStatus = newRecord?.status;
-            
-            // Status changed to completed - update balance
-            if (newStatus === 'completed' && previousStatus !== 'completed') {
-              refreshBuyer();
-              toast({
-                title: "Payment Successful!",
-                description: `$${Number(newRecord.amount).toFixed(2)} has been added to your balance.`
-              });
-            }
-            
-            // Status changed to failed
-            if (newStatus === 'failed' && previousStatus !== 'failed') {
-              toast({
-                variant: "destructive",
-                title: "Payment Failed",
-                description: "Your payment could not be processed."
-              });
-            }
-          }
-          
-          // Handle new transactions with completed status (rare but possible)
-          if (payload.eventType === 'INSERT' && newRecord?.status === 'completed') {
-            refreshBuyer();
-          }
-        }
-      )
-      .subscribe((status) => {
-        console.log('Transaction subscription status:', status);
-      });
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [buyer?.id, refreshBuyer]);
-
-  // Poll fallback for transaction updates (catches updates that real-time may miss)
-  useEffect(() => {
-    if (!buyer?.id) return;
+    const hasPending = transactions.some(t => 
+      t.status === 'pending' || t.status === 'pending_verification' || t.status === 'processing'
+    );
+    const interval = hasPending ? 8000 : 30000;
     
-    // Poll every 10 seconds for any pending transactions (including pending_verification for manual transfers)
-    const pollInterval = setInterval(() => {
-      // Only poll if there are pending or pending_verification transactions
-      const hasPending = transactions.some(t => 
-        t.status === 'pending' || t.status === 'pending_verification'
-      );
-      if (hasPending) {
-        console.log('Polling for transaction updates...');
-        fetchTransactions();
-      }
-    }, 10000);
-    
+    const pollInterval = setInterval(async () => {
+      await fetchTransactions();
+    }, interval);
+
     return () => clearInterval(pollInterval);
-  }, [buyer?.id, transactions]);
+  }, [buyer?.id, panel?.id, transactions]);
+
+  useEffect(() => {
+    const prev = previousTransactionsRef.current;
+    if (prev.length === 0 && transactions.length > 0) {
+      previousTransactionsRef.current = transactions;
+      return;
+    }
+
+    for (const tx of transactions) {
+      const prevTx = prev.find(p => p.id === tx.id);
+      if (prevTx && prevTx.status !== tx.status) {
+        if (tx.status === 'completed' && prevTx.status !== 'completed') {
+          refreshBuyer();
+          toast({
+            title: "Payment Successful!",
+            description: `$${Number(tx.amount).toFixed(2)} has been added to your balance.`
+          });
+        }
+        if (tx.status === 'failed' && prevTx.status !== 'failed') {
+          toast({
+            variant: "destructive",
+            title: "Payment Failed",
+            description: "Your payment could not be processed."
+          });
+        }
+      }
+    }
+
+    previousTransactionsRef.current = transactions;
+  }, [transactions, refreshBuyer]);
 
   // Check for payment success/cancel URL params on mount - VERIFY actual status from DB
   useEffect(() => {
@@ -404,18 +372,20 @@ const BuyerDeposit = () => {
         window.history.replaceState({}, document.title, window.location.pathname);
       }
       
-      // If cancelled explicitly, show error and update transaction
       if (cancelledParam === 'true') {
         toast({ 
           variant: "destructive",
           title: "Payment Cancelled", 
           description: "Your deposit was not completed." 
         });
-        // Update transaction to failed if we have ID
         if (transactionId) {
-          await supabase.from('transactions')
-            .update({ status: 'failed' })
-            .eq('id', transactionId);
+          try {
+            await supabase.functions.invoke('process-payment', {
+              body: { action: 'verify-payment', transactionId }
+            });
+          } catch (e) {
+            console.error('Cancel verify error:', e);
+          }
         }
         fetchTransactions();
         return;
@@ -455,38 +425,39 @@ const BuyerDeposit = () => {
           console.error('Verify error:', err);
         }
         
-        // Fallback: poll for status update (webhooks may take a moment)
         let attempts = 0;
         const maxAttempts = 10;
         
         const checkStatus = async (): Promise<void> => {
-          const { data: tx } = await supabase
-            .from('transactions')
-            .select('status, amount')
-            .eq('id', transactionId)
-            .single();
-          
-          if (tx?.status === 'completed') {
-            toast({ 
-              title: "Payment Successful!", 
-              description: `$${Number(tx.amount).toFixed(2)} has been added to your balance.` 
+          try {
+            const { data: verifyRetry } = await supabase.functions.invoke('process-payment', {
+              body: { action: 'verify-payment', transactionId }
             });
-            refreshBuyer();
-            fetchTransactions();
-            return;
-          } else if (tx?.status === 'failed') {
-            toast({ 
-              variant: "destructive",
-              title: "Payment Failed", 
-              description: "Your payment could not be processed." 
-            });
-            fetchTransactions();
-            return;
+            
+            if (verifyRetry?.status === 'completed') {
+              toast({ 
+                title: "Payment Successful!", 
+                description: `$${Number(verifyRetry.amount).toFixed(2)} has been added to your balance.` 
+              });
+              refreshBuyer();
+              fetchTransactions();
+              return;
+            } else if (verifyRetry?.status === 'failed') {
+              toast({ 
+                variant: "destructive",
+                title: "Payment Failed", 
+                description: "Your payment could not be processed." 
+              });
+              fetchTransactions();
+              return;
+            }
+          } catch (err) {
+            console.error('Status check error:', err);
           }
           
           attempts++;
           if (attempts < maxAttempts) {
-            setTimeout(checkStatus, 2000);
+            setTimeout(checkStatus, 3000);
           } else {
             toast({ 
               title: "Payment Processing", 
@@ -638,11 +609,19 @@ const BuyerDeposit = () => {
       
       setProofUrl(urlData.publicUrl);
 
-      // Save proof URL to transaction metadata
-      if (txId !== "unknown") {
-        await supabase.from("transactions").update({
-          metadata: { proof_url: urlData.publicUrl }
-        }).eq("id", txId);
+      if (txId !== "unknown" && buyer?.id && panel?.id) {
+        const token = getToken();
+        await supabase.functions.invoke('buyer-auth', {
+          body: {
+            panelId: panel.id,
+            action: 'update-transaction-proof',
+            buyerId: buyer.id,
+            token,
+            transactionId: txId,
+            proofUrl: urlData.publicUrl
+          }
+        });
+        fetchTransactions();
       }
 
       toast({ title: "Proof uploaded", description: "Your payment proof has been attached." });
@@ -718,7 +697,7 @@ const BuyerDeposit = () => {
                   </div>
                   <div>
                     <p className="text-xs md:text-sm text-muted-foreground">Current Balance</p>
-                    <p className="text-2xl md:text-3xl font-bold">${(buyer?.balance || 0).toFixed(2)}</p>
+                    <p className="text-2xl md:text-3xl font-bold" data-testid="text-current-balance">${(buyer?.balance || 0).toFixed(2)}</p>
                   </div>
                 </div>
                 <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-xs md:text-sm">
@@ -846,6 +825,7 @@ const BuyerDeposit = () => {
           <Button
             size="lg"
             className="w-full h-12 md:h-14 text-base md:text-lg gap-2 md:gap-3 bg-gradient-to-r from-primary to-primary/80 shadow-lg shadow-primary/20"
+            data-testid="button-deposit"
             disabled={!selectedMethod || !amount || parseFloat(amount) <= 0 || processing}
             onClick={() => handleDeposit()}
           >
@@ -873,7 +853,7 @@ const BuyerDeposit = () => {
 
         {/* Recent Deposits */}
         <motion.div variants={itemVariants} className="space-y-3 md:space-y-4">
-          <h2 className="text-base md:text-lg font-semibold">Recent Deposits</h2>
+          <h2 className="text-base md:text-lg font-semibold" data-testid="text-recent-deposits">Recent Deposits</h2>
           <Card className="glass-card">
             <CardContent className="p-0">
               {loadingHistory ? (

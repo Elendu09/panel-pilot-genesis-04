@@ -381,6 +381,7 @@ async function handleAddOrder(supabase: any, panelId: string, buyerId: string | 
     .insert({
       panel_id: panelId,
       service_id: serviceData.id,
+      service_name: serviceData.name || null,
       order_number: orderNumber,
       target_url: link,
       quantity: orderQuantity,

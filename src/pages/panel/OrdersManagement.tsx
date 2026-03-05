@@ -79,6 +79,7 @@ interface Order {
   provider_cost: number | null;
   notes: string | null;
   created_at: string;
+  service_name?: string | null;
   service?: { name: string; category: string } | null;
   buyer?: { email: string; full_name: string | null } | null;
 }
@@ -120,6 +121,7 @@ const OrdersManagement = () => {
   const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
   const [bulkAction, setBulkAction] = useState("");
   const [bulkProcessing, setBulkProcessing] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     if (panel?.id) {
@@ -141,6 +143,7 @@ const OrdersManagement = () => {
         `)
         .eq('panel_id', panel.id)
         .order('created_at', { ascending: false });
+      
 
       if (error) throw error;
       const transformedOrders = (data || []).map(order => ({
@@ -161,7 +164,7 @@ const OrdersManagement = () => {
     const matchesSearch = 
       order.order_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (order.buyer?.email || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (order.service?.name || '').toLowerCase().includes(searchQuery.toLowerCase());
+      (order.service?.name || order.service_name || '').toLowerCase().includes(searchQuery.toLowerCase());
     return matchesStatus && matchesSearch;
   });
 
@@ -354,12 +357,36 @@ const OrdersManagement = () => {
     }
   };
 
+  const syncOrders = async () => {
+    if (!panel?.id) return;
+    setSyncing(true);
+    try {
+      const response = await fetch('/functions/v1/sync-orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ panelId: panel.id }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        toast({ title: "Orders synced", description: `${data.updated} of ${data.total} active orders updated from providers` });
+        if (data.updated > 0) await fetchOrders();
+      } else {
+        toast({ variant: 'destructive', title: 'Sync failed', description: data.error || 'Failed to sync orders' });
+      }
+    } catch (error) {
+      console.error('Sync error:', error);
+      toast({ variant: 'destructive', title: 'Sync failed', description: 'Could not reach the server' });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const exportOrders = () => {
     const csv = [
       ["Order ID", "Service", "Customer", "Link", "Quantity", "Price", "Status", "Progress", "Date"],
       ...filteredOrders.map(o => [
         o.order_number, 
-        o.service?.name || '', 
+        o.service?.name || o.service_name || '', 
         o.buyer?.email || '', 
         o.target_url, 
         o.quantity, 
@@ -421,7 +448,7 @@ const OrdersManagement = () => {
                             <div>
                               <p className="font-medium text-sm">{order.order_number}</p>
                               <p className="text-xs text-muted-foreground mt-0.5">
-                                {order.service?.name || 'Unknown Service'}
+                                {order.service?.name || order.service_name || 'Unknown Service'}
                               </p>
                             </div>
                             <Checkbox
@@ -505,6 +532,10 @@ const OrdersManagement = () => {
               <LayoutGrid className="w-4 h-4" />
             </Button>
           </div>
+          <Button variant="outline" size="sm" onClick={syncOrders} disabled={syncing} className="glass-card border-border/50" data-testid="button-sync-orders">
+            {syncing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Zap className="w-4 h-4 mr-2" />}
+            {syncing ? "Syncing..." : "Sync Orders"}
+          </Button>
           <Button variant="outline" size="sm" onClick={fetchOrders} className="glass-card border-border/50">
             <RefreshCw className="w-4 h-4 mr-2" />
             Refresh
@@ -721,7 +752,7 @@ const OrdersManagement = () => {
                                 {statusInfo.label}
                               </Badge>
                             </div>
-                            <p className="text-xs text-muted-foreground truncate mb-1">{order.service?.name || 'Unknown Service'}</p>
+                            <p className="text-xs text-muted-foreground truncate mb-1">{order.service?.name || order.service_name || 'Unknown Service'}</p>
                             <div className="flex items-center justify-between gap-2 text-xs">
                               <span className="text-muted-foreground truncate">{order.buyer?.email || 'Unknown'}</span>
                               <span className="font-semibold shrink-0">${order.price.toFixed(2)}</span>
@@ -846,7 +877,7 @@ const OrdersManagement = () => {
                                   </Button>
                                   <div>
                                     <p className="font-medium group-hover:text-primary transition-colors">{order.order_number}</p>
-                                    <p className="text-xs text-muted-foreground">{order.service?.name || 'Unknown Service'}</p>
+                                    <p className="text-xs text-muted-foreground">{order.service?.name || order.service_name || 'Unknown Service'}</p>
                                   </div>
                                 </div>
                               </td>
@@ -935,7 +966,7 @@ const OrdersManagement = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Service</p>
-                  <p className="font-medium">{selectedOrder.service?.name || 'Unknown'}</p>
+                  <p className="font-medium">{selectedOrder.service?.name || selectedOrder.service_name || 'Unknown'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Customer</p>
