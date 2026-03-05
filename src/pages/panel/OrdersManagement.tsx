@@ -10,6 +10,7 @@ import {
   Clock,
   AlertCircle,
   DollarSign,
+  Wallet,
   ChevronDown,
   ChevronUp,
   MessageSquare,
@@ -75,6 +76,7 @@ interface Order {
   progress: number;
   start_count: number;
   remains: number;
+  provider_cost: number | null;
   notes: string | null;
   created_at: string;
   service?: { name: string; category: string } | null;
@@ -165,8 +167,8 @@ const OrdersManagement = () => {
 
   const todayOrders = orders.length;
   const pendingOrdersLocal = orders.filter(o => o.status === "pending").length;
-  const inProgressOrders = orders.filter(o => o.status === "in_progress").length;
-  const todayRevenue = orders.reduce((acc, o) => acc + (o.price || 0), 0);
+  const totalOrderAmount = orders.reduce((acc, o) => acc + (o.price || 0), 0);
+  const profitFromOrders = orders.reduce((acc, o) => acc + ((o.price || 0) - (o.provider_cost || 0)), 0);
 
   const toggleSelectOrder = (orderId: string) => {
     const newSelected = new Set(selectedOrders);
@@ -529,16 +531,17 @@ const OrdersManagement = () => {
       {/* Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         {[
-          { label: "Total Orders", value: todayOrders, icon: ShoppingCart, color: "primary" },
-          { label: "Pending", value: pendingOrders, icon: Clock, color: "yellow-500" },
-          { label: "In Progress", value: inProgressOrders, icon: Zap, color: "blue-500" },
-          { label: "Revenue", value: `$${todayRevenue.toFixed(2)}`, icon: DollarSign, color: "green-500" },
+          { label: "Total Orders", value: todayOrders, icon: ShoppingCart, color: "primary", testId: "stat-total-orders" },
+          { label: "Pending", value: pendingOrders, icon: Clock, color: "yellow-500", testId: "stat-pending-orders" },
+          { label: "Total Order Amount", value: `$${totalOrderAmount.toFixed(2)}`, icon: Wallet, color: "blue-500", testId: "stat-total-order-amount" },
+          { label: "Profit from Orders", value: `$${profitFromOrders.toFixed(2)}`, icon: DollarSign, color: "green-500", testId: "stat-profit-from-orders" },
         ].map((stat, index) => (
           <motion.div
             key={stat.label}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
+            data-testid={stat.testId}
           >
             <Card className="glass-card-hover overflow-hidden">
               <CardContent className="p-4 relative">
@@ -560,8 +563,8 @@ const OrdersManagement = () => {
                       )} />
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">{stat.label}</p>
-                      <p className="text-2xl font-bold">{stat.value}</p>
+                      <p className="text-sm text-muted-foreground" data-testid={`${stat.testId}-label`}>{stat.label}</p>
+                      <p className="text-2xl font-bold" data-testid={`${stat.testId}-value`}>{stat.value}</p>
                     </div>
                   </div>
                 </div>
@@ -810,21 +813,21 @@ const OrdersManagement = () => {
 
       {/* Order Details Dialog */}
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <DialogContent className="glass max-w-lg">
+        <DialogContent className="glass max-w-lg overflow-hidden">
           <DialogHeader>
             <DialogTitle>Order Details</DialogTitle>
             <DialogDescription>{selectedOrder?.order_number}</DialogDescription>
           </DialogHeader>
           {selectedOrder && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Service</p>
                   <p className="font-medium">{selectedOrder.service?.name || 'Unknown'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Customer</p>
-                  <p className="font-medium">{selectedOrder.buyer?.email || 'Unknown'}</p>
+                  <p className="font-medium break-all text-sm" data-testid="text-customer-email">{selectedOrder.buyer?.email || 'Unknown'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Quantity</p>

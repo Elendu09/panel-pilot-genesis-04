@@ -191,25 +191,34 @@ const PanelManagement = () => {
     }
   };
 
+  const [panelFinanceStats, setPanelFinanceStats] = useState<{
+    totalDeposits: number;
+    totalOrderAmount: number;
+    profitFromOrders: number;
+  }>({ totalDeposits: 0, totalOrderAmount: 0, profitFromOrders: 0 });
+
   const fetchPanelFinanceData = async (panelId: string) => {
     setLoadingFinance(true);
     try {
-      const [txRes, subRes] = await Promise.all([
-        supabase
-          .from('transactions')
-          .select('*')
-          .eq('panel_id', panelId)
-          .order('created_at', { ascending: false })
-          .limit(10),
-        supabase
-          .from('panel_subscriptions')
-          .select('*')
-          .eq('panel_id', panelId)
-          .single()
-      ]);
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      if (!token) return;
 
-      setPanelTransactions(txRes.data || []);
-      setPanelSubscription(subRes.data as Subscription || null);
+      const response = await fetch('/functions/v1/admin-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ action: 'get_panel_finance', panelId }),
+      });
+      const result = await response.json();
+      if (result.success) {
+        setPanelTransactions(result.data.transactions || []);
+        setPanelSubscription(result.data.subscription as Subscription || null);
+        setPanelFinanceStats({
+          totalDeposits: result.data.totalDeposits || 0,
+          totalOrderAmount: result.data.totalOrderAmount || 0,
+          profitFromOrders: result.data.profitFromOrders || 0,
+        });
+      }
     } catch (error) {
       console.error('Error fetching finance data:', error);
     } finally {
@@ -1065,10 +1074,34 @@ const PanelManagement = () => {
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm text-muted-foreground">Monthly Revenue</p>
-                          <p className="text-3xl font-bold">${selectedPanel.monthly_revenue?.toFixed(2) || '0.00'}</p>
+                          <p className="text-sm text-muted-foreground">Total Revenue (Deposits)</p>
+                          <p className="text-3xl font-bold text-blue-500">${panelFinanceStats.totalDeposits.toFixed(2)}</p>
                         </div>
-                        <TrendingUp className="w-10 h-10 text-primary" />
+                        <CreditCard className="w-10 h-10 text-blue-500" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <Card className="glass-card-hover">
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Total Order Amount</p>
+                          <p className="text-3xl font-bold">${panelFinanceStats.totalOrderAmount.toFixed(2)}</p>
+                        </div>
+                        <DollarSign className="w-10 h-10 text-primary" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card className="glass-card-hover">
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Profit from Orders</p>
+                          <p className="text-3xl font-bold text-amber-500">${panelFinanceStats.profitFromOrders.toFixed(2)}</p>
+                        </div>
+                        <TrendingUp className="w-10 h-10 text-amber-500" />
                       </div>
                     </CardContent>
                   </Card>

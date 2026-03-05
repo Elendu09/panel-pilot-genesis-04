@@ -1283,6 +1283,33 @@ fnRouter.post('/admin-data', async (req, res) => {
       });
     }
 
+    if (action === 'get_panel_finance') {
+      const { panelId } = req.body;
+      if (!panelId) return res.json({ success: false, error: 'panelId required' });
+
+      const [depositsRes, ordersRes, txRes, subRes] = await Promise.all([
+        supabase.from('transactions').select('amount').eq('panel_id', panelId).eq('type', 'deposit').eq('status', 'completed'),
+        supabase.from('orders').select('price, provider_cost').eq('panel_id', panelId),
+        supabase.from('transactions').select('*').eq('panel_id', panelId).order('created_at', { ascending: false }).limit(10),
+        supabase.from('panel_subscriptions').select('*').eq('panel_id', panelId).maybeSingle()
+      ]);
+
+      const totalDeposits = (depositsRes.data || []).reduce((sum: number, d: any) => sum + (Number(d.amount) || 0), 0);
+      const totalOrderAmount = (ordersRes.data || []).reduce((sum: number, o: any) => sum + (Number(o.price) || 0), 0);
+      const profitFromOrders = (ordersRes.data || []).reduce((sum: number, o: any) => sum + ((Number(o.price) || 0) - (Number(o.provider_cost) || 0)), 0);
+
+      return res.json({
+        success: true,
+        data: {
+          totalDeposits,
+          totalOrderAmount,
+          profitFromOrders,
+          transactions: txRes.data || [],
+          subscription: subRes.data || null
+        }
+      });
+    }
+
     if (action === 'get_overview_stats') {
       const [panelsRes, usersRes, settingsRes, activityRes, depositsRes] = await Promise.all([
         supabase.from('panels').select('*, owner:profiles!panels_owner_id_fkey(email, full_name)').order('created_at', { ascending: false }),

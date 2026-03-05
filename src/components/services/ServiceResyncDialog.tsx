@@ -45,6 +45,7 @@ interface ResyncProgress {
   skipped: number;
   newDetected: number;
   priceAdjusted: number;
+  disabled: number;
 }
 
 interface ServiceResyncDialogProps {
@@ -73,6 +74,7 @@ export const ServiceResyncDialog = ({
     skipped: 0,
     newDetected: 0,
     priceAdjusted: 0,
+    disabled: 0,
   });
   const [isResyncing, setIsResyncing] = useState(false);
   const [providerBalance, setProviderBalance] = useState<number | null>(null);
@@ -106,7 +108,7 @@ export const ServiceResyncDialog = ({
 
   const handleProviderChange = (providerId: string) => {
     setSelectedProvider(providerId);
-    setProgress({ phase: 'idle', current: 0, total: 0, updated: 0, skipped: 0, newDetected: 0, priceAdjusted: 0 });
+    setProgress({ phase: 'idle', current: 0, total: 0, updated: 0, skipped: 0, newDetected: 0, priceAdjusted: 0, disabled: 0 });
     checkProviderBalance(providerId);
   };
 
@@ -123,7 +125,7 @@ export const ServiceResyncDialog = ({
     }
 
     setIsResyncing(true);
-    setProgress({ phase: 'fetching', current: 0, total: 0, updated: 0, skipped: 0, newDetected: 0, priceAdjusted: 0 });
+    setProgress({ phase: 'fetching', current: 0, total: 0, updated: 0, skipped: 0, newDetected: 0, priceAdjusted: 0, disabled: 0 });
 
     try {
       // Step 1: Fetch services from provider
@@ -144,7 +146,7 @@ export const ServiceResyncDialog = ({
       // Step 2: Get existing services from this provider in the database
       const { data: existingServices, error: dbError } = await supabase
         .from('services')
-        .select('id, name, category, image_url, provider_id, provider_service_id, features, price, provider_price, markup_percent')
+        .select('id, name, category, image_url, provider_id, provider_service_id, features, price, provider_price, markup_percent, is_active')
         .eq('panel_id', panelId);
 
       if (dbError) throw dbError;
@@ -247,6 +249,27 @@ export const ServiceResyncDialog = ({
         }));
       }
 
+      const providerServiceIds = new Set(providerServices.map((ps: any) => String(ps.service || ps.id)));
+      const toDisable = (existingServices || []).filter(s => 
+        (s.provider_id === selectedProvider || (s.provider_id === 'direct' && selectedProvider === null) || (s.provider_id === null && selectedProvider === 'direct')) &&
+        s.provider_service_id && 
+        !providerServiceIds.has(s.provider_service_id)
+      );
+
+      let disabled = 0;
+      if (toDisable.length > 0) {
+        const idsToDisable = toDisable.map(s => s.id);
+        const { error: disableError } = await supabase
+          .from('services')
+          .update({ is_active: false })
+          .in('id', idsToDisable);
+        if (!disableError) {
+          disabled = idsToDisable.length;
+        }
+      }
+
+      setProgress(prev => ({ ...prev, disabled }));
+
       // Step 4: Apply updates in batches
       const batchSize = 50;
       for (let i = 0; i < updates.length; i += batchSize) {
@@ -276,9 +299,10 @@ export const ServiceResyncDialog = ({
       setProgress(prev => ({ ...prev, phase: 'complete' }));
       
       const priceMsg = priceAdjusted > 0 ? `, ${priceAdjusted} prices adjusted` : '';
+      const disabledMsg = disabled > 0 ? `, ${disabled} disabled` : '';
       toast({ 
         title: "Re-sync Complete!", 
-        description: `Updated ${updated} services${priceMsg}, ${skipped} unchanged, ${newDetected} new available`,
+        description: `Updated ${updated} services${priceMsg}, ${skipped} unchanged, ${newDetected} new available${disabledMsg}`,
       });
 
     } catch (error: any) {
@@ -297,7 +321,7 @@ export const ServiceResyncDialog = ({
   const handleClose = () => {
     if (!isResyncing) {
       setSelectedProvider("");
-      setProgress({ phase: 'idle', current: 0, total: 0, updated: 0, skipped: 0, newDetected: 0, priceAdjusted: 0 });
+      setProgress({ phase: 'idle', current: 0, total: 0, updated: 0, skipped: 0, newDetected: 0, priceAdjusted: 0, disabled: 0 });
       setProviderBalance(null);
       onOpenChange(false);
       if (progress.phase === 'complete') {
@@ -390,22 +414,26 @@ export const ServiceResyncDialog = ({
 
               {/* Results Summary */}
               {(progress.phase === 'updating' || progress.phase === 'complete') && (
-                <div className="grid grid-cols-4 gap-2 pt-2">
+                <div className="grid grid-cols-5 gap-2 pt-2">
                   <div className="text-center p-2 rounded-lg bg-green-500/10 border border-green-500/20">
                     <div className="text-lg font-bold text-green-500">{progress.updated}</div>
                     <div className="text-xs text-muted-foreground">Updated</div>
                   </div>
                   <div className="text-center p-2 rounded-lg bg-orange-500/10 border border-orange-500/20">
                     <div className="text-lg font-bold text-orange-500">{progress.priceAdjusted}</div>
-                    <div className="text-xs text-muted-foreground">Prices Adjusted</div>
+                    <div className="text-xs text-muted-foreground">Prices</div>
                   </div>
                   <div className="text-center p-2 rounded-lg bg-muted/50 border border-border/50">
                     <div className="text-lg font-bold">{progress.skipped}</div>
                     <div className="text-xs text-muted-foreground">Unchanged</div>
                   </div>
+                  <div className="text-center p-2 rounded-lg bg-red-500/10 border border-red-500/20">
+                    <div className="text-lg font-bold text-red-500">{progress.disabled}</div>
+                    <div className="text-xs text-muted-foreground">Disabled</div>
+                  </div>
                   <div className="text-center p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
                     <div className="text-lg font-bold text-blue-500">{progress.newDetected}</div>
-                    <div className="text-xs text-muted-foreground">New Available</div>
+                    <div className="text-xs text-muted-foreground">New</div>
                   </div>
                 </div>
               )}
@@ -423,6 +451,7 @@ export const ServiceResyncDialog = ({
                     <li>• Re-fetches service list from provider API</li>
                     <li>• Updates categories & icons using enhanced detection</li>
                     <li>• <span className="text-orange-500 font-medium">Auto-adjusts prices</span> when provider rates change</li>
+                    <li>• <span className="text-red-500 font-medium">Disables services</span> no longer available from provider</li>
                     <li>• Does NOT duplicate or re-import existing services</li>
                     <li>• Shows count of new services available to import</li>
                   </ul>

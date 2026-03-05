@@ -65,6 +65,16 @@ Admin pages use the `/functions/v1/admin-data` Express endpoint (service role ke
 - `PlatformSettings.tsx` — Reads platform_settings table (admin RLS)
 - Other admin pages with admin-accessible tables
 
+## Panel Owner Dashboard Fixes (Session)
+
+- **Service Import (T001)**: Fixed `provider_id` storing 'direct' string (now `null`); added fallback lookup when `provider_service_ref` is null during upsert
+- **Service Sync/Disable (T002)**: Resync flow auto-disables services no longer available from provider; uses batch `update...in()` query
+- **Revenue Stats (T003)**: PanelOverview calculates orders/revenue from full orders table (paginated sum), unaffected by service deletion
+- **Conversion Rate (T004)**: Uses completed order count from ALL orders (not just last 20 realtime)
+- **Order Stat Cards (T005)**: OrdersManagement shows Total Orders, Pending, Total Order Amount, Profit from Orders
+- **Email Width (T006)**: Order details dialog responsive grid + `break-all` on email
+- **Admin Finance Metrics (T007)**: Admin PanelManagement finance tab shows Total Revenue (Deposits), Total Order Amount, Profit from Orders via `get_panel_finance` admin-data action
+
 ## Replit-Specific Changes Made
 
 1. **index.html** — Added Replit domains to `isDev` check to prevent visibility hiding

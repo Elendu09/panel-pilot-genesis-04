@@ -64,6 +64,7 @@ const PanelOverview = () => {
   const [stats, setStats] = useState({
     totalOrders: 0,
     totalRevenue: 0,
+    completedOrders: 0,
     activeServices: 0,
     totalCustomers: 0,
     todayOrders: 0,
@@ -128,25 +129,44 @@ const PanelOverview = () => {
             .eq('status', 'active')
             .single();
           setSubscription(sub);
-          const { data: orders } = await supabase
+
+          const { count: totalOrdersCount } = await supabase
             .from('orders')
-            .select('*')
+            .select('*', { count: 'exact', head: true })
             .eq('panel_id', panel.id);
 
-          // Use count query for accurate active services count (avoids 1000 row limit)
+          const { count: completedOrdersTotal } = await supabase
+            .from('orders')
+            .select('*', { count: 'exact', head: true })
+            .eq('panel_id', panel.id)
+            .eq('status', 'completed');
+
+          let allOrderPrices: { price: number }[] = [];
+          let offset = 0;
+          const batchSize = 1000;
+          while (true) {
+            const { data: batch } = await supabase
+              .from('orders')
+              .select('price')
+              .eq('panel_id', panel.id)
+              .range(offset, offset + batchSize - 1);
+            if (!batch || batch.length === 0) break;
+            allOrderPrices = allOrderPrices.concat(batch as { price: number }[]);
+            if (batch.length < batchSize) break;
+            offset += batchSize;
+          }
+
           const { count: activeServicesCount } = await supabase
             .from('services')
             .select('*', { count: 'exact', head: true })
             .eq('panel_id', panel.id)
             .eq('is_active', true);
 
-          // Fetch actual customer count from client_users table
           const { count: totalCustomersCount } = await supabase
             .from('client_users')
             .select('*', { count: 'exact', head: true })
             .eq('panel_id', panel.id);
 
-          // Fetch recent orders for live widget
           const { data: recentOrders } = await supabase
             .from('orders')
             .select('id, order_number, status, price, created_at, target_url')
@@ -157,7 +177,8 @@ const PanelOverview = () => {
           setLiveOrders((recentOrders || []) as LiveOrder[]);
 
           const totalCustomers = totalCustomersCount || 0;
-          const totalRevenue = orders?.reduce((sum, order) => sum + Number(order.price), 0) || 0;
+          const totalRevenue = allOrderPrices.reduce((sum, order) => sum + Number(order.price), 0);
+          const completedOrdersCount = completedOrdersTotal || 0;
 
           // Fetch today's orders
           const today = new Date();
@@ -203,7 +224,8 @@ const PanelOverview = () => {
           const prevRevenue = prevOrders?.reduce((sum, o) => sum + Number(o.price), 0) || 0;
           const prevOrderCount = prevOrders?.length || 0;
 
-          const orderChange = calculateChange(orders?.length || 0, prevOrderCount);
+          const totalOrders = totalOrdersCount || 0;
+          const orderChange = calculateChange(totalOrders, prevOrderCount);
           const revenueChange = calculateChange(totalRevenue, prevRevenue);
 
           setChanges({
@@ -214,8 +236,9 @@ const PanelOverview = () => {
           });
 
           setStats({
-            totalOrders: orders?.length || 0,
+            totalOrders,
             totalRevenue,
+            completedOrders: completedOrdersCount,
             activeServices: activeServicesCount || 0,
             totalCustomers,
             todayOrders: todayOrderCount,
@@ -260,12 +283,26 @@ const PanelOverview = () => {
               setStats(prev => ({
                 ...prev,
                 totalOrders: prev.totalOrders + 1,
-                totalRevenue: prev.totalRevenue + Number(newOrder.price)
+                totalRevenue: prev.totalRevenue + Number(newOrder.price),
+                completedOrders: newOrder.status === 'completed' ? prev.completedOrders + 1 : prev.completedOrders
               }));
             } else if (payload.eventType === 'UPDATE') {
+              const updatedOrder = payload.new as LiveOrder;
+              const oldOrder = payload.old as Partial<LiveOrder>;
               setLiveOrders(prev => prev.map(o => 
-                o.id === (payload.new as LiveOrder).id ? payload.new as LiveOrder : o
+                o.id === updatedOrder.id ? updatedOrder : o
               ));
+              if (updatedOrder.status === 'completed' && oldOrder.status !== 'completed') {
+                setStats(prev => ({
+                  ...prev,
+                  completedOrders: prev.completedOrders + 1
+                }));
+              } else if (updatedOrder.status !== 'completed' && oldOrder.status === 'completed') {
+                setStats(prev => ({
+                  ...prev,
+                  completedOrders: Math.max(0, prev.completedOrders - 1)
+                }));
+              }
             }
           }
         )
@@ -399,9 +436,8 @@ const PanelOverview = () => {
     visible: { opacity: 1, y: 0, transition: { duration: 0.4 } }
   };
 
-  const completedOrders = liveOrders.filter(o => o.status === 'completed').length;
   const conversionRate = stats.totalOrders > 0 
-    ? ((completedOrders / stats.totalOrders) * 100) 
+    ? ((stats.completedOrders / stats.totalOrders) * 100) 
     : 0;
 
   const statsData = [
@@ -1046,13 +1082,13 @@ const PanelOverview = () => {
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm text-muted-foreground">Order Completion Rate</span>
                 <span className="text-sm font-semibold">
-                  {stats.totalOrders > 0 ? Math.round((liveOrders.filter(o => o.status === 'completed').length / Math.max(liveOrders.length, 1)) * 100) : 0}%
+                  {Math.round(conversionRate)}%
                 </span>
               </div>
               <div className="h-2 bg-accent rounded-full overflow-hidden">
                 <div 
                   className="h-full bg-gradient-to-r from-primary to-primary/70 rounded-full transition-all" 
-                  style={{ width: `${stats.totalOrders > 0 ? Math.round((liveOrders.filter(o => o.status === 'completed').length / Math.max(liveOrders.length, 1)) * 100) : 0}%` }} 
+                  style={{ width: `${Math.round(conversionRate)}%` }} 
                 />
               </div>
             </div>

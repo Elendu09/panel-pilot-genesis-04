@@ -1593,6 +1593,8 @@ const ServicesManagement = () => {
         const iconUrl = service.iconUrl || `icon:${detectedCategory}`;
         
         // 1. Store raw provider service
+        let providerServiceId: string | null = null;
+        
         const { data: rawService, error: rawError } = await supabase
           .from('provider_services')
           .upsert({
@@ -1615,10 +1617,21 @@ const ServicesManagement = () => {
 
         if (rawError) {
           console.error('Raw service insert error:', rawError);
-          // Continue anyway - might be duplicate
+          const lookupQuery = supabase
+            .from('provider_services')
+            .select('id')
+            .eq('panel_id', panel.id)
+            .eq('external_service_id', String(service.id));
+          if (providerId) {
+            lookupQuery.eq('provider_id', providerId);
+          } else {
+            lookupQuery.is('provider_id', null);
+          }
+          const { data: existingRaw } = await lookupQuery.maybeSingle();
+          providerServiceId = existingRaw?.id || null;
+        } else {
+          providerServiceId = rawService?.id || null;
         }
-
-        const providerServiceId = rawService?.id;
 
         // 2. Create normalized entry (if raw service was created)
         if (providerServiceId) {
@@ -1639,32 +1652,59 @@ const ServicesManagement = () => {
         }
 
         // 3. Create buyer-visible service
-        await supabase
-          .from('services')
-          .upsert({
-            panel_id: panel.id,
-            provider_service_ref: providerServiceId || null,
-            provider_id: providerId || 'direct',
-            provider_service_id: String(service.id),
-            name: service.name,
-            category: detectedCategory,
-            image_url: iconUrl,
-            price: finalPrice,
-            provider_price: providerRate,
-            provider_cost: providerRate,
-            markup_percent: markupPercent,
-            min_quantity: service.minQty || 100,
-            max_quantity: service.maxQty || 10000,
-            is_active: true,
-            display_order: services.length + importedServices.indexOf(service) + 1,
-            features: JSON.stringify({ 
-              original_service_id: service.id, 
-              provider_name: providerName || 'Direct',
-              provider_rate: providerRate,
-            }),
-          }, {
-            onConflict: 'panel_id,provider_service_ref'
-          });
+        const serviceData: Record<string, any> = {
+          panel_id: panel.id,
+          provider_id: providerId || null,
+          provider_service_id: String(service.id),
+          name: service.name,
+          category: detectedCategory,
+          image_url: iconUrl,
+          price: finalPrice,
+          provider_price: providerRate,
+          provider_cost: providerRate,
+          markup_percent: markupPercent,
+          min_quantity: service.minQty || 100,
+          max_quantity: service.maxQty || 10000,
+          is_active: true,
+          display_order: services.length + importedServices.indexOf(service) + 1,
+          features: JSON.stringify({ 
+            original_service_id: service.id, 
+            provider_name: providerName || 'Direct',
+            provider_rate: providerRate,
+          }),
+        };
+
+        if (providerServiceId) {
+          serviceData.provider_service_ref = providerServiceId;
+          await supabase
+            .from('services')
+            .upsert(serviceData as any, {
+              onConflict: 'panel_id,provider_service_ref'
+            });
+        } else {
+          const fallbackQuery = supabase
+            .from('services')
+            .select('id')
+            .eq('panel_id', panel.id)
+            .eq('provider_service_id', String(service.id));
+          if (providerId) {
+            fallbackQuery.eq('provider_id', providerId);
+          } else {
+            fallbackQuery.is('provider_id', null);
+          }
+          const { data: existingService } = await fallbackQuery.maybeSingle();
+
+          if (existingService) {
+            await supabase
+              .from('services')
+              .update(serviceData as any)
+              .eq('id', existingService.id);
+          } else {
+            await supabase
+              .from('services')
+              .insert(serviceData as any);
+          }
+        }
       }
 
       toast({ title: `${importedServices.length} services imported successfully` });
