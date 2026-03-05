@@ -14,6 +14,8 @@ import { BuyerProtectedRoute } from '@/components/buyer/BuyerProtectedRoute';
 import { CurrencyProvider } from '@/contexts/CurrencyContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import { Rocket, Sparkles } from 'lucide-react';
+import { TenantNotFound } from '@/components/tenant/TenantNotFound';
+import { MaintenancePage } from '@/components/tenant/MaintenancePage';
 
 // Lazy load App to reduce initial bundle for tenant domains
 const App = lazy(() => import('../App'));
@@ -328,11 +330,40 @@ const TenantContent = () => {
 
   // If this is a tenant domain and we found a panel, show PUBLIC storefront first
   if (isTenantDomain && panel) {
-    // Favicon is handled globally by the useEffect above
-    
-    // Get panel owner's default theme mode from custom_branding
     const customBranding = panel.custom_branding as any;
     const panelDefaultTheme: 'light' | 'dark' = customBranding?.themeMode === 'light' ? 'light' : 'dark';
+
+    const panelSettings = panel.settings as any;
+    const isMaintenanceMode = panelSettings?.maintenance_mode === true;
+    const maintenanceMessage = panelSettings?.maintenance_message || '';
+    const panelLogoUrl = customBranding?.logoUrl || panel.logo_url;
+    const panelPrimaryColor = customBranding?.primaryColor || panel.primary_color || '#6366F1';
+
+    if (isMaintenanceMode) {
+      const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
+      const isAuthPath = currentPath === '/auth' || currentPath.startsWith('/auth/') || currentPath === '/team-login';
+
+      if (!isAuthPath) {
+        return (
+          <QueryClientProvider client={queryClient}>
+            <HelmetProvider>
+              <ThemeProvider defaultTheme="dark" storageKey={`smm-tenant-theme-${panel.id}`}>
+                <Helmet>
+                  <title>{panel.name} - Under Maintenance</title>
+                  <meta name="robots" content="noindex,nofollow" />
+                </Helmet>
+                <MaintenancePage
+                  panelName={panel.name}
+                  logoUrl={panelLogoUrl}
+                  primaryColor={panelPrimaryColor}
+                  message={maintenanceMessage}
+                />
+              </ThemeProvider>
+            </HelmetProvider>
+          </QueryClientProvider>
+        );
+      }
+    }
 
     return (
       <QueryClientProvider client={queryClient}>
@@ -422,8 +453,8 @@ const TenantContent = () => {
                             <Route path="/team-login" element={<TeamAuth />} />
                             <Route path="/team-dashboard" element={<TeamDashboard />} />
                             
-                            {/* Catch all - redirect to storefront */}
-                            <Route path="*" element={<Navigate to="/" replace />} />
+                            {/* Catch all - show tenant 404 page */}
+                            <Route path="*" element={<TenantNotFound />} />
                           </Routes>
                         </Suspense>
                       </BrowserRouter>

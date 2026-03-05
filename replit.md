@@ -121,6 +121,15 @@ Admin pages use the `/functions/v1/admin-data` Express endpoint (service role ke
 - **Custom Domain Verified**: End-to-end flow confirmed — DomainSettings verifies TXT → DNS → sets panels.custom_domain → useTenant resolves hostname → TenantHead sets canonical URLs and SEO for custom domains
 - **react-icons package**: Added `react-icons` dependency for Google logo icon
 
+## Session: SEO Fix, Settings Redesign, Security Enforcement, Maintenance Mode, Tenant 404
+
+- **Duplicate SEO Fix**: Removed duplicate `<meta name="robots">`, `<meta property="og:image">`, `<meta name="twitter:image">`, and `<link rel="canonical">` from `index.html`
+- **GeneralSettings Redesign**: Replaced Accordion layout with modern Tabs layout (General, SEO, Branding, Orders, Legal); added Google Search Preview card in SEO tab; all save logic preserved
+- **Security Enforcement on Server**: `server/index.ts` buyer-auth now reads panel security settings from DB: IP allowlist blocks disallowed IPs; rate limit uses panel-configured maxAttempts and lockoutDuration; password policy enforces panel's symbol requirement on signup; registration is blocked when panel.settings.general.allowRegistration=false
+- **Maintenance Mode Implemented**: When `panel_settings.maintenance_mode=true`, TenantRouter shows MaintenancePage with panel branding and custom message; buyer-auth login/signup returns error during maintenance; auth page remains accessible for panel owner
+- **Tenant 404 Page**: New `TenantNotFound.tsx` component replaces catch-all `<Navigate to="/" />` in TenantRouter; shows branded 404 with panel logo, colors, and back/home navigation
+- **New Components**: `src/components/tenant/TenantNotFound.tsx`, `src/components/tenant/MaintenancePage.tsx`
+
 ## Replit-Specific Changes Made
 
 1. **index.html** — Added Replit domains to `isDev` check to prevent visibility hiding

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Helmet } from "react-helmet-async";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,16 +8,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ImageUpload } from "@/components/panel/ImageUpload";
 import { LegalContentEditor } from "@/components/settings/LegalContentEditor";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
 import {
   Select,
   SelectContent,
@@ -43,6 +39,7 @@ import {
   Megaphone,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 interface CustomMetaTag {
   id: string;
@@ -63,74 +60,56 @@ const GeneralSettings = () => {
   const [saving, setSaving] = useState(false);
   const [panelId, setPanelId] = useState<string | null>(null);
   const [subdomain, setSubdomain] = useState("");
+  const [activeTab, setActiveTab] = useState("general");
 
   const [settings, setSettings] = useState({
-    // Panel Information
     panelName: "",
     description: "",
     supportEmail: "",
-    
-    // Panel Status
     maintenanceMode: false,
     maintenanceMessage: "",
     allowRegistration: true,
     requireEmailVerification: false,
-    
-    // Order Settings
     defaultCurrency: "USD",
     minOrderAmount: "1.00",
     maxOrderAmount: "100000.00",
-    
-    // Legal Pages
     termsOfService: "",
     privacyPolicy: "",
-    
-    // SEO & Meta Tags
     seoTitle: "",
     seoDescription: "",
     seoKeywords: "",
     canonicalUrl: "",
-    
-    // Verification Meta Tags
     googleVerification: "",
     bingVerification: "",
     yandexVerification: "",
     pinterestVerification: "",
     facebookVerification: "",
-    
-    // Branding Images
     faviconUrl: "",
     appleTouchIconUrl: "",
     ogImageUrl: "",
     logoUrl: "",
     heroImageUrl: "",
-    
-    // Advertising
     showFreeTierBanner: true,
   });
 
   const [customMetaTags, setCustomMetaTags] = useState<CustomMetaTag[]>([]);
 
-  // Calculate SEO score
   const calculateSEOScore = () => {
     let score = 0;
     if (settings.seoTitle && settings.seoTitle.length >= 30 && settings.seoTitle.length <= 60) score += 20;
     else if (settings.seoTitle) score += 10;
-    
     if (settings.seoDescription && settings.seoDescription.length >= 120 && settings.seoDescription.length <= 160) score += 20;
     else if (settings.seoDescription) score += 10;
-    
     if (settings.seoKeywords) score += 15;
     if (settings.ogImageUrl) score += 20;
     if (settings.faviconUrl) score += 10;
     if (settings.canonicalUrl) score += 15;
-    
     return Math.min(score, 100);
   };
 
   const seoScore = calculateSEOScore();
+  const canonicalUrl = typeof window !== 'undefined' ? `${window.location.origin}/panel/settings` : '';
 
-  // Load settings from database
   useEffect(() => {
     const loadSettings = async () => {
       try {
@@ -145,7 +124,6 @@ const GeneralSettings = () => {
 
         if (!profile) return;
 
-        // Get active_panel_id from profile for multi-panel support
         const { data: profileFull } = await supabase
           .from('profiles')
           .select('active_panel_id')
@@ -184,7 +162,6 @@ const GeneralSettings = () => {
         
         const contactInfo = panelSettings?.contact_info as Record<string, any> || {};
         const customBranding = panel.custom_branding as Record<string, any> || {};
-
         const advertisingSettings = panelSettingsData.advertising || {};
 
         setSettings({
@@ -200,32 +177,23 @@ const GeneralSettings = () => {
           supportEmail: contactInfo.email || "",
           termsOfService: panelSettings?.terms_of_service || generalSettings.termsOfService || "",
           privacyPolicy: panelSettings?.privacy_policy || generalSettings.privacyPolicy || "",
-          
-          // SEO Settings
           seoTitle: panelSettings?.seo_title || seoSettings.title || "",
           seoDescription: panelSettings?.seo_description || seoSettings.description || "",
           seoKeywords: panelSettings?.seo_keywords || seoSettings.keywords || "",
           canonicalUrl: seoSettings.canonicalUrl || "",
-          
-          // Verification tags
           googleVerification: seoSettings.googleVerification || "",
           bingVerification: seoSettings.bingVerification || "",
           yandexVerification: seoSettings.yandexVerification || "",
           pinterestVerification: seoSettings.pinterestVerification || "",
           facebookVerification: seoSettings.facebookVerification || "",
-          
-          // Branding
           faviconUrl: customBranding.faviconUrl || "",
           appleTouchIconUrl: customBranding.appleTouchIconUrl || "",
           ogImageUrl: customBranding.ogImageUrl || seoSettings.ogImage || "",
           logoUrl: panel.logo_url || customBranding.logoUrl || "",
           heroImageUrl: customBranding.heroImageUrl || "",
-          
-          // Advertising
           showFreeTierBanner: advertisingSettings.showFreeTierBanner ?? true,
         });
 
-        // Load custom meta tags
         if (seoSettings.customMetaTags) {
           setCustomMetaTags(seoSettings.customMetaTags);
         }
@@ -252,7 +220,6 @@ const GeneralSettings = () => {
 
     setSaving(true);
     try {
-      // CRITICAL: First fetch existing data to preserve unrelated settings
       const { data: existingPanel } = await supabase
         .from('panels')
         .select('settings, custom_branding')
@@ -262,7 +229,6 @@ const GeneralSettings = () => {
       const existingSettings = (existingPanel?.settings as Record<string, any>) || {};
       const existingBranding = (existingPanel?.custom_branding as Record<string, any>) || {};
 
-      // Update panel with MERGED settings (preserves theme, payment methods, etc.)
       const { error: panelError } = await supabase
         .from('panels')
         .update({
@@ -270,8 +236,8 @@ const GeneralSettings = () => {
           description: settings.description,
           logo_url: settings.logoUrl,
           custom_branding: {
-            ...existingBranding,  // PRESERVE existing branding (selectedTheme, colors, etc.)
-            companyName: settings.panelName, // Sync company name with panel name for storefront
+            ...existingBranding,
+            companyName: settings.panelName,
             faviconUrl: settings.faviconUrl,
             appleTouchIconUrl: settings.appleTouchIconUrl,
             ogImageUrl: settings.ogImageUrl,
@@ -279,7 +245,7 @@ const GeneralSettings = () => {
             heroImageUrl: settings.heroImageUrl,
           },
           settings: {
-            ...existingSettings,  // PRESERVE existing settings (buyer_theme, payment configs, etc.)
+            ...existingSettings,
             general: {
               allowRegistration: settings.allowRegistration,
               requireEmailVerification: settings.requireEmailVerification,
@@ -318,7 +284,6 @@ const GeneralSettings = () => {
 
       if (panelError) throw panelError;
 
-      // Upsert panel_settings
       const { error: settingsError } = await supabase
         .from('panel_settings')
         .upsert({
@@ -377,7 +342,6 @@ const GeneralSettings = () => {
     toast({ title: "Copied to clipboard" });
   };
 
-  // Get all uploaded images for gallery
   const uploadedImages: UploadedImage[] = [
     { key: "logoUrl", label: "Logo", url: settings.logoUrl },
     { key: "faviconUrl", label: "Favicon", url: settings.faviconUrl },
@@ -396,14 +360,24 @@ const GeneralSettings = () => {
 
   return (
     <div className="space-y-6">
-      {/* Enhanced Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 bg-gradient-to-r from-card via-card/95 to-card rounded-xl border border-border/50 shadow-lg">
+      <Helmet>
+        <title>Panel Settings | SMMPilot</title>
+        <meta name="description" content="Configure your panel settings, SEO, branding, and order preferences." />
+        <meta name="robots" content="noindex,nofollow" />
+        <link rel="canonical" href={canonicalUrl} />
+      </Helmet>
+
+      <motion.header
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col md:flex-row md:items-center justify-between gap-4"
+      >
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
-            General Settings
+          <h1 className="text-2xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">
+            Panel Settings
           </h1>
           <p className="text-muted-foreground text-sm md:text-base mt-1">
-            Configure your panel's settings, SEO, branding, and advertising
+            Configure your panel's settings, SEO, branding, and more
           </p>
         </div>
         <Button
@@ -411,6 +385,7 @@ const GeneralSettings = () => {
           disabled={saving}
           size="lg"
           className="bg-gradient-to-r from-primary to-primary/80 hover:shadow-lg hover:shadow-primary/25 transition-all gap-2"
+          data-testid="button-save-settings"
         >
           {saving ? (
             <RefreshCw className="w-4 h-4 animate-spin" />
@@ -419,68 +394,56 @@ const GeneralSettings = () => {
           )}
           {saving ? 'Saving...' : 'Save All Settings'}
         </Button>
-      </div>
+      </motion.header>
 
-      {/* SEO Score Card */}
-      <Card className="bg-gradient-card border-border shadow-card">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                <Search className="w-6 h-6 text-primary" />
-              </div>
-              <div>
-                <h3 className="font-semibold">SEO Score</h3>
-                <p className="text-sm text-muted-foreground">
-                  {seoScore >= 80
-                    ? "Excellent! Your SEO is well optimized"
-                    : seoScore >= 50
-                    ? "Good progress, but there's room for improvement"
-                    : "Add more SEO elements to improve visibility"}
-                </p>
-              </div>
-            </div>
-            <div className="text-3xl font-bold text-primary">{seoScore}%</div>
-          </div>
-          <Progress value={seoScore} className="h-2" />
-        </CardContent>
-      </Card>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="bg-muted/50 p-1 flex-wrap h-auto">
+          <TabsTrigger value="general" className="gap-2" data-testid="tab-general">
+            <Settings className="w-4 h-4" />
+            <span className="hidden sm:inline">General</span>
+          </TabsTrigger>
+          <TabsTrigger value="seo" className="gap-2" data-testid="tab-seo">
+            <Search className="w-4 h-4" />
+            <span className="hidden sm:inline">SEO</span>
+            {seoScore < 50 && (
+              <Badge variant="outline" className="ml-1 h-5 px-1.5 text-xs bg-yellow-500/10 text-yellow-500 border-yellow-500/20">
+                {seoScore}%
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="branding" className="gap-2" data-testid="tab-branding">
+            <Image className="w-4 h-4" />
+            <span className="hidden sm:inline">Branding</span>
+          </TabsTrigger>
+          <TabsTrigger value="orders" className="gap-2" data-testid="tab-orders">
+            <DollarSign className="w-4 h-4" />
+            <span className="hidden sm:inline">Orders</span>
+          </TabsTrigger>
+          <TabsTrigger value="legal" className="gap-2" data-testid="tab-legal">
+            <FileText className="w-4 h-4" />
+            <span className="hidden sm:inline">Legal</span>
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Accordion Sections */}
-      <Accordion
-        type="multiple"
-        defaultValue={["panel-info"]}
-        className="space-y-4"
-      >
-        {/* Panel Information */}
-        <AccordionItem
-          value="panel-info"
-          className="border border-border rounded-xl bg-gradient-card overflow-hidden"
-        >
-          <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-accent/30">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Settings className="w-5 h-5 text-primary" />
-              </div>
-              <div className="text-left">
-                <h3 className="font-semibold">Panel Information</h3>
-                <p className="text-sm text-muted-foreground">
-                  Basic panel details and contact info
-                </p>
-              </div>
-            </div>
-          </AccordionTrigger>
-          <AccordionContent className="px-6 pb-6">
-            <div className="space-y-4 pt-2">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* General Tab */}
+        <TabsContent value="general" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="glass-card">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="w-5 h-5 text-primary" />
+                  Panel Information
+                </CardTitle>
+                <CardDescription>Basic panel details and contact info</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="panelName">Panel Name</Label>
                   <Input
                     id="panelName"
                     value={settings.panelName}
-                    onChange={(e) =>
-                      setSettings({ ...settings, panelName: e.target.value })
-                    }
+                    onChange={(e) => setSettings({ ...settings, panelName: e.target.value })}
+                    data-testid="input-panel-name"
                   />
                 </div>
                 <div className="space-y-2">
@@ -489,250 +452,210 @@ const GeneralSettings = () => {
                     id="supportEmail"
                     type="email"
                     value={settings.supportEmail}
-                    onChange={(e) =>
-                      setSettings({ ...settings, supportEmail: e.target.value })
-                    }
+                    onChange={(e) => setSettings({ ...settings, supportEmail: e.target.value })}
+                    data-testid="input-support-email"
                   />
                 </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">Panel Description</Label>
-                <Textarea
-                  id="description"
-                  value={settings.description}
-                  onChange={(e) =>
-                    setSettings({ ...settings, description: e.target.value })
-                  }
-                  rows={3}
-                />
-              </div>
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-
-        {/* Panel Status */}
-        <AccordionItem
-          value="panel-status"
-          className="border border-border rounded-xl bg-gradient-card overflow-hidden"
-        >
-          <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-accent/30">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-warning/10 flex items-center justify-center">
-                <Shield className="w-5 h-5 text-warning" />
-              </div>
-              <div className="text-left">
-                <h3 className="font-semibold">Panel Status</h3>
-                <p className="text-sm text-muted-foreground">
-                  Maintenance mode and registration settings
-                </p>
-              </div>
-            </div>
-          </AccordionTrigger>
-          <AccordionContent className="px-6 pb-6">
-            <div className="space-y-4 pt-2">
-              <div className="flex items-center justify-between p-4 bg-accent/20 rounded-lg">
-                <div className="space-y-0.5">
-                  <Label>Maintenance Mode</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Temporarily disable panel access
-                  </p>
-                </div>
-                <Switch
-                  checked={settings.maintenanceMode}
-                  onCheckedChange={(checked) =>
-                    setSettings({ ...settings, maintenanceMode: checked })
-                  }
-                />
-              </div>
-              {settings.maintenanceMode && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  className="space-y-2"
-                >
-                  <Label htmlFor="maintenanceMessage">Maintenance Message</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="description">Panel Description</Label>
                   <Textarea
-                    id="maintenanceMessage"
-                    value={settings.maintenanceMessage}
-                    onChange={(e) =>
-                      setSettings({
-                        ...settings,
-                        maintenanceMessage: e.target.value,
-                      })
-                    }
-                    placeholder="We're currently performing scheduled maintenance..."
-                    rows={2}
+                    id="description"
+                    value={settings.description}
+                    onChange={(e) => setSettings({ ...settings, description: e.target.value })}
+                    rows={3}
+                    data-testid="input-description"
                   />
-                </motion.div>
-              )}
-              <div className="flex items-center justify-between p-4 bg-accent/20 rounded-lg">
-                <div className="space-y-0.5">
-                  <Label>Allow Registration</Label>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="glass-card">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="w-5 h-5 text-primary" />
+                  Panel Status
+                </CardTitle>
+                <CardDescription>Control access and registration</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30 border border-border/50">
+                  <div>
+                    <Label className="font-medium">Maintenance Mode</Label>
+                    <p className="text-sm text-muted-foreground">Temporarily disable buyer access</p>
+                  </div>
+                  <Switch
+                    checked={settings.maintenanceMode}
+                    onCheckedChange={(checked) => setSettings({ ...settings, maintenanceMode: checked })}
+                    data-testid="switch-maintenance"
+                  />
+                </div>
+                <AnimatePresence>
+                  {settings.maintenanceMode && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="space-y-2"
+                    >
+                      <Label htmlFor="maintenanceMessage">Maintenance Message</Label>
+                      <Textarea
+                        id="maintenanceMessage"
+                        value={settings.maintenanceMessage}
+                        onChange={(e) => setSettings({ ...settings, maintenanceMessage: e.target.value })}
+                        placeholder="We're currently performing scheduled maintenance..."
+                        rows={2}
+                        data-testid="input-maintenance-message"
+                      />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+                <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30 border border-border/50">
+                  <div>
+                    <Label className="font-medium">Allow Registration</Label>
+                    <p className="text-sm text-muted-foreground">Allow new buyers to sign up</p>
+                  </div>
+                  <Switch
+                    checked={settings.allowRegistration}
+                    onCheckedChange={(checked) => setSettings({ ...settings, allowRegistration: checked })}
+                    data-testid="switch-registration"
+                  />
+                </div>
+                <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30 border border-border/50">
+                  <div>
+                    <Label className="font-medium">Require Email Verification</Label>
+                    <p className="text-sm text-muted-foreground">Users must verify email before ordering</p>
+                  </div>
+                  <Switch
+                    checked={settings.requireEmailVerification}
+                    onCheckedChange={(checked) => setSettings({ ...settings, requireEmailVerification: checked })}
+                    data-testid="switch-email-verification"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Megaphone className="w-5 h-5 text-amber-500" />
+                Advertising
+              </CardTitle>
+              <CardDescription>Control promotional banners on your storefront</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30 border border-border/50">
+                <div>
+                  <Label className="font-medium flex items-center gap-2">
+                    Free Tier Banner
+                    <Badge variant="outline" className="text-xs">Platform</Badge>
+                  </Label>
                   <p className="text-sm text-muted-foreground">
-                    Allow new users to register
+                    Show promotional banner on subdomain storefronts (not on custom domains)
                   </p>
                 </div>
                 <Switch
-                  checked={settings.allowRegistration}
-                  onCheckedChange={(checked) =>
-                    setSettings({ ...settings, allowRegistration: checked })
-                  }
+                  checked={settings.showFreeTierBanner}
+                  onCheckedChange={(checked) => setSettings({ ...settings, showFreeTierBanner: checked })}
+                  data-testid="switch-free-tier-banner"
                 />
               </div>
-              <div className="flex items-center justify-between p-4 bg-accent/20 rounded-lg">
-                <div className="space-y-0.5">
-                  <Label>Require Email Verification</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Users must verify email before ordering
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* SEO Tab */}
+        <TabsContent value="seo" className="space-y-6">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+            <Card className="glass-card overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-primary/5" />
+              <CardContent className="relative p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <Search className="w-6 h-6 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold">SEO Score</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {seoScore >= 80 ? "Excellent! Well optimized" : seoScore >= 50 ? "Good, room for improvement" : "Add more SEO elements"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className={cn("text-3xl font-bold", seoScore >= 80 ? "text-green-500" : seoScore >= 50 ? "text-yellow-500" : "text-red-500")}>
+                    {seoScore}%
+                  </div>
+                </div>
+                <Progress value={seoScore} className="h-2" />
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Google Search Preview */}
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Globe className="w-5 h-5 text-primary" />
+                Google Search Preview
+              </CardTitle>
+              <CardDescription>How your panel appears in search results</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="bg-white dark:bg-slate-900 rounded-xl p-6 border border-border/30">
+                <div className="max-w-xl">
+                  <p className="text-sm text-green-700 dark:text-green-400 font-mono mb-1 truncate" data-testid="text-preview-url">
+                    {settings.canonicalUrl || `https://${subdomain}.smmpilot.online`}
+                  </p>
+                  <h3 className="text-lg font-medium text-blue-700 dark:text-blue-400 mb-1 line-clamp-1 hover:underline cursor-default" data-testid="text-preview-title">
+                    {settings.seoTitle || `${settings.panelName || 'Your Panel'} - Social Media Marketing`}
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2" data-testid="text-preview-description">
+                    {settings.seoDescription || `Professional social media marketing services from ${settings.panelName || 'your panel'}. Buy followers, likes, and views.`}
                   </p>
                 </div>
-                <Switch
-                  checked={settings.requireEmailVerification}
-                  onCheckedChange={(checked) =>
-                    setSettings({
-                      ...settings,
-                      requireEmailVerification: checked,
-                    })
-                  }
-                />
               </div>
-            </div>
-          </AccordionContent>
-        </AccordionItem>
+            </CardContent>
+          </Card>
 
-        {/* Order Settings */}
-        <AccordionItem
-          value="order-settings"
-          className="border border-border rounded-xl bg-gradient-card overflow-hidden"
-        >
-          <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-accent/30">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-success/10 flex items-center justify-center">
-                <DollarSign className="w-5 h-5 text-success" />
-              </div>
-              <div className="text-left">
-                <h3 className="font-semibold">Order Settings</h3>
-                <p className="text-sm text-muted-foreground">
-                  Currency and order limits
-                </p>
-              </div>
-            </div>
-          </AccordionTrigger>
-          <AccordionContent className="px-6 pb-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-              <div className="space-y-2">
-                <Label htmlFor="defaultCurrency">Default Currency</Label>
-                <Input
-                  id="defaultCurrency"
-                  value={settings.defaultCurrency}
-                  onChange={(e) =>
-                    setSettings({ ...settings, defaultCurrency: e.target.value })
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="minOrderAmount">Min Order Amount</Label>
-                <Input
-                  id="minOrderAmount"
-                  type="number"
-                  step="0.01"
-                  value={settings.minOrderAmount}
-                  onChange={(e) =>
-                    setSettings({ ...settings, minOrderAmount: e.target.value })
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="maxOrderAmount">Max Order Amount</Label>
-                <Input
-                  id="maxOrderAmount"
-                  type="number"
-                  step="0.01"
-                  value={settings.maxOrderAmount}
-                  onChange={(e) =>
-                    setSettings({ ...settings, maxOrderAmount: e.target.value })
-                  }
-                />
-              </div>
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-
-        {/* SEO & Meta Tags */}
-        <AccordionItem
-          value="seo-settings"
-          className="border border-border rounded-xl bg-gradient-card overflow-hidden"
-        >
-          <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-accent/30">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-info/10 flex items-center justify-center">
-                <Search className="w-5 h-5 text-info" />
-              </div>
-              <div className="text-left">
-                <h3 className="font-semibold">SEO & Meta Tags</h3>
-                <p className="text-sm text-muted-foreground">
-                  Search engine optimization and verification
-                </p>
-              </div>
-            </div>
-          </AccordionTrigger>
-          <AccordionContent className="px-6 pb-6">
-            <div className="space-y-6 pt-2">
-              {/* Basic SEO */}
-              <div className="space-y-4">
-                <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="glass-card">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Search className="w-5 h-5 text-primary" />
                   Basic SEO
-                </h4>
+                </CardTitle>
+                <CardDescription>Title, description, and keywords</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label htmlFor="seoTitle">Page Title</Label>
-                    <span
-                      className={`text-xs ${
-                        settings.seoTitle.length > 60
-                          ? "text-destructive"
-                          : settings.seoTitle.length >= 30
-                          ? "text-success"
-                          : "text-muted-foreground"
-                      }`}
-                    >
-                      {settings.seoTitle.length}/60 characters
+                    <span className={cn("text-xs", settings.seoTitle.length > 60 ? "text-destructive" : settings.seoTitle.length >= 30 ? "text-green-500" : "text-muted-foreground")}>
+                      {settings.seoTitle.length}/60
                     </span>
                   </div>
                   <Input
                     id="seoTitle"
                     value={settings.seoTitle}
-                    onChange={(e) =>
-                      setSettings({ ...settings, seoTitle: e.target.value })
-                    }
+                    onChange={(e) => setSettings({ ...settings, seoTitle: e.target.value })}
                     placeholder="Your Panel Name - Best SMM Services"
+                    data-testid="input-seo-title"
                   />
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label htmlFor="seoDescription">Meta Description</Label>
-                    <span
-                      className={`text-xs ${
-                        settings.seoDescription.length > 160
-                          ? "text-destructive"
-                          : settings.seoDescription.length >= 120
-                          ? "text-success"
-                          : "text-muted-foreground"
-                      }`}
-                    >
-                      {settings.seoDescription.length}/160 characters
+                    <span className={cn("text-xs", settings.seoDescription.length > 160 ? "text-destructive" : settings.seoDescription.length >= 120 ? "text-green-500" : "text-muted-foreground")}>
+                      {settings.seoDescription.length}/160
                     </span>
                   </div>
                   <Textarea
                     id="seoDescription"
                     value={settings.seoDescription}
-                    onChange={(e) =>
-                      setSettings({
-                        ...settings,
-                        seoDescription: e.target.value,
-                      })
-                    }
+                    onChange={(e) => setSettings({ ...settings, seoDescription: e.target.value })}
                     placeholder="Get the best SMM services for Instagram, TikTok, YouTube and more..."
                     rows={3}
+                    data-testid="input-seo-description"
                   />
                 </div>
                 <div className="space-y-2">
@@ -740,24 +663,14 @@ const GeneralSettings = () => {
                   <Input
                     id="seoKeywords"
                     value={settings.seoKeywords}
-                    onChange={(e) =>
-                      setSettings({ ...settings, seoKeywords: e.target.value })
-                    }
+                    onChange={(e) => setSettings({ ...settings, seoKeywords: e.target.value })}
                     placeholder="smm panel, social media marketing, buy followers"
+                    data-testid="input-seo-keywords"
                   />
                   <div className="flex flex-wrap gap-1.5 mt-2">
-                    {settings.seoKeywords
-                      .split(",")
-                      .filter((k) => k.trim())
-                      .map((keyword, i) => (
-                        <Badge
-                          key={i}
-                          variant="secondary"
-                          className="text-xs"
-                        >
-                          {keyword.trim()}
-                        </Badge>
-                      ))}
+                    {settings.seoKeywords.split(",").filter((k) => k.trim()).map((keyword, i) => (
+                      <Badge key={i} variant="secondary" className="text-xs">{keyword.trim()}</Badge>
+                    ))}
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -765,208 +678,150 @@ const GeneralSettings = () => {
                   <Input
                     id="canonicalUrl"
                     value={settings.canonicalUrl}
-                    onChange={(e) =>
-                      setSettings({ ...settings, canonicalUrl: e.target.value })
-                    }
+                    onChange={(e) => setSettings({ ...settings, canonicalUrl: e.target.value })}
                     placeholder={`https://${subdomain}.smmpilot.online`}
+                    data-testid="input-canonical-url"
                   />
                 </div>
-              </div>
+              </CardContent>
+            </Card>
 
-              {/* Verification Tags */}
-              <div className="space-y-4">
-                <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">
-                  Verification Meta Tags
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2">
-                      <Globe className="w-4 h-4" />
-                      Google Search Console
-                    </Label>
-                    <Input
-                      value={settings.googleVerification}
-                      onChange={(e) =>
-                        setSettings({
-                          ...settings,
-                          googleVerification: e.target.value,
-                        })
-                      }
-                      placeholder="google-site-verification content value"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2">
-                      <Globe className="w-4 h-4" />
-                      Bing Webmaster
-                    </Label>
-                    <Input
-                      value={settings.bingVerification}
-                      onChange={(e) =>
-                        setSettings({
-                          ...settings,
-                          bingVerification: e.target.value,
-                        })
-                      }
-                      placeholder="msvalidate.01 content value"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2">
-                      <Globe className="w-4 h-4" />
-                      Yandex
-                    </Label>
-                    <Input
-                      value={settings.yandexVerification}
-                      onChange={(e) =>
-                        setSettings({
-                          ...settings,
-                          yandexVerification: e.target.value,
-                        })
-                      }
-                      placeholder="yandex-verification content value"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2">
-                      <Globe className="w-4 h-4" />
-                      Pinterest
-                    </Label>
-                    <Input
-                      value={settings.pinterestVerification}
-                      onChange={(e) =>
-                        setSettings({
-                          ...settings,
-                          pinterestVerification: e.target.value,
-                        })
-                      }
-                      placeholder="p:domain_verify content value"
-                    />
-                  </div>
-                  <div className="space-y-2 md:col-span-2">
-                    <Label className="flex items-center gap-2">
-                      <Globe className="w-4 h-4" />
-                      Facebook Domain Verification
-                    </Label>
-                    <Input
-                      value={settings.facebookVerification}
-                      onChange={(e) =>
-                        setSettings({
-                          ...settings,
-                          facebookVerification: e.target.value,
-                        })
-                      }
-                      placeholder="facebook-domain-verification content value"
-                    />
-                  </div>
+            <Card className="glass-card">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Check className="w-5 h-5 text-primary" />
+                  Verification Tags
+                </CardTitle>
+                <CardDescription>Search engine and social platform verification</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Globe className="w-4 h-4" /> Google Search Console
+                  </Label>
+                  <Input
+                    value={settings.googleVerification}
+                    onChange={(e) => setSettings({ ...settings, googleVerification: e.target.value })}
+                    placeholder="google-site-verification content"
+                    data-testid="input-google-verification"
+                  />
                 </div>
-              </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Globe className="w-4 h-4" /> Bing Webmaster
+                  </Label>
+                  <Input
+                    value={settings.bingVerification}
+                    onChange={(e) => setSettings({ ...settings, bingVerification: e.target.value })}
+                    placeholder="msvalidate.01 content"
+                    data-testid="input-bing-verification"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Globe className="w-4 h-4" /> Yandex
+                  </Label>
+                  <Input
+                    value={settings.yandexVerification}
+                    onChange={(e) => setSettings({ ...settings, yandexVerification: e.target.value })}
+                    placeholder="yandex-verification content"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Globe className="w-4 h-4" /> Pinterest
+                  </Label>
+                  <Input
+                    value={settings.pinterestVerification}
+                    onChange={(e) => setSettings({ ...settings, pinterestVerification: e.target.value })}
+                    placeholder="p:domain_verify content"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Globe className="w-4 h-4" /> Facebook Domain
+                  </Label>
+                  <Input
+                    value={settings.facebookVerification}
+                    onChange={(e) => setSettings({ ...settings, facebookVerification: e.target.value })}
+                    placeholder="facebook-domain-verification content"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
-              {/* Custom Meta Tags */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">
+          <Card className="glass-card">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Plus className="w-5 h-5 text-primary" />
                     Custom Meta Tags
-                  </h4>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={addCustomMetaTag}
-                  >
-                    <Plus className="w-4 h-4 mr-1" />
-                    Add Tag
-                  </Button>
+                  </CardTitle>
+                  <CardDescription>Add custom meta tags to your storefront</CardDescription>
                 </div>
-                <AnimatePresence>
-                  {customMetaTags.map((tag) => (
-                    <motion.div
-                      key={tag.id}
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      className="grid grid-cols-1 md:grid-cols-4 gap-3 p-4 bg-accent/20 rounded-lg"
-                    >
-                      <Input
-                        placeholder="name (e.g., author)"
-                        value={tag.name}
-                        onChange={(e) =>
-                          updateCustomMetaTag(tag.id, "name", e.target.value)
-                        }
-                      />
-                      <Input
-                        placeholder="content"
-                        value={tag.content}
-                        onChange={(e) =>
-                          updateCustomMetaTag(tag.id, "content", e.target.value)
-                        }
-                        className="md:col-span-2"
-                      />
-                      <div className="flex gap-2">
-                        <Select
-                          value={tag.placement}
-                          onValueChange={(v) =>
-                            updateCustomMetaTag(
-                              tag.id,
-                              "placement",
-                              v as "head" | "body"
-                            )
-                          }
-                        >
-                          <SelectTrigger className="flex-1">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="head">&lt;head&gt;</SelectItem>
-                            <SelectItem value="body">&lt;body&gt;</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => removeCustomMetaTag(tag.id)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
+                <Button size="sm" variant="outline" onClick={addCustomMetaTag} data-testid="button-add-meta-tag">
+                  <Plus className="w-4 h-4 mr-1" />
+                  Add Tag
+                </Button>
               </div>
-            </div>
-          </AccordionContent>
-        </AccordionItem>
+            </CardHeader>
+            <CardContent>
+              {customMetaTags.length === 0 ? (
+                <p className="text-muted-foreground text-center py-4">No custom meta tags added yet</p>
+              ) : (
+                <div className="space-y-3">
+                  <AnimatePresence>
+                    {customMetaTags.map((tag) => (
+                      <motion.div
+                        key={tag.id}
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="grid grid-cols-1 md:grid-cols-4 gap-3 p-4 bg-muted/30 rounded-xl border border-border/50"
+                      >
+                        <Input placeholder="name (e.g., author)" value={tag.name} onChange={(e) => updateCustomMetaTag(tag.id, "name", e.target.value)} />
+                        <Input placeholder="content" value={tag.content} onChange={(e) => updateCustomMetaTag(tag.id, "content", e.target.value)} className="md:col-span-2" />
+                        <div className="flex gap-2">
+                          <Select value={tag.placement} onValueChange={(v) => updateCustomMetaTag(tag.id, "placement", v as "head" | "body")}>
+                            <SelectTrigger className="flex-1"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="head">&lt;head&gt;</SelectItem>
+                              <SelectItem value="body">&lt;body&gt;</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Button size="icon" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => removeCustomMetaTag(tag.id)}>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-        {/* Branding & Images */}
-        <AccordionItem
-          value="branding"
-          className="border border-border rounded-xl bg-gradient-card overflow-hidden"
-        >
-          <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-accent/30">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+        {/* Branding Tab */}
+        <TabsContent value="branding" className="space-y-6">
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
                 <Image className="w-5 h-5 text-primary" />
-              </div>
-              <div className="text-left">
-                <h3 className="font-semibold">Branding & Images</h3>
-                <p className="text-sm text-muted-foreground">
-                  Favicon, icons, and image gallery
-                </p>
-              </div>
-            </div>
-          </AccordionTrigger>
-          <AccordionContent className="px-6 pb-6">
-            <div className="space-y-6 pt-2">
-              {/* Image Uploads */}
+                Panel Images
+              </CardTitle>
+              <CardDescription>Upload your panel's favicon, logo, and images</CardDescription>
+            </CardHeader>
+            <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {panelId && (
                   <>
                     <ImageUpload
                       label="Favicon (32x32 or 64x64)"
                       value={settings.faviconUrl}
-                      onChange={(url) =>
-                        setSettings({ ...settings, faviconUrl: url })
-                      }
+                      onChange={(url) => setSettings({ ...settings, faviconUrl: url })}
                       panelId={panelId}
                       folder="favicon"
                       aspectRatio="square"
@@ -975,9 +830,7 @@ const GeneralSettings = () => {
                     <ImageUpload
                       label="Apple Touch Icon (180x180)"
                       value={settings.appleTouchIconUrl}
-                      onChange={(url) =>
-                        setSettings({ ...settings, appleTouchIconUrl: url })
-                      }
+                      onChange={(url) => setSettings({ ...settings, appleTouchIconUrl: url })}
                       panelId={panelId}
                       folder="favicon"
                       aspectRatio="square"
@@ -986,9 +839,7 @@ const GeneralSettings = () => {
                     <ImageUpload
                       label="Open Graph Image (1200x630)"
                       value={settings.ogImageUrl}
-                      onChange={(url) =>
-                        setSettings({ ...settings, ogImageUrl: url })
-                      }
+                      onChange={(url) => setSettings({ ...settings, ogImageUrl: url })}
                       panelId={panelId}
                       folder="og"
                       aspectRatio="wide"
@@ -997,9 +848,7 @@ const GeneralSettings = () => {
                     <ImageUpload
                       label="Logo"
                       value={settings.logoUrl}
-                      onChange={(url) =>
-                        setSettings({ ...settings, logoUrl: url })
-                      }
+                      onChange={(url) => setSettings({ ...settings, logoUrl: url })}
                       panelId={panelId}
                       folder="logos"
                       aspectRatio="auto"
@@ -1008,9 +857,7 @@ const GeneralSettings = () => {
                     <ImageUpload
                       label="Hero Image"
                       value={settings.heroImageUrl}
-                      onChange={(url) =>
-                        setSettings({ ...settings, heroImageUrl: url })
-                      }
+                      onChange={(url) => setSettings({ ...settings, heroImageUrl: url })}
                       panelId={panelId}
                       folder="hero"
                       aspectRatio="wide"
@@ -1019,128 +866,107 @@ const GeneralSettings = () => {
                   </>
                 )}
               </div>
+            </CardContent>
+          </Card>
 
-              {/* Image Gallery */}
-              {uploadedImages.length > 0 && (
-                <div className="space-y-3">
-                  <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">
-                    Uploaded Images Gallery
-                  </h4>
-                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                    {uploadedImages.map((img) => (
-                      <div
-                        key={img.key}
-                        className="group relative aspect-square rounded-xl overflow-hidden border border-border bg-accent/20"
-                      >
-                        <img
-                          src={img.url}
-                          alt={img.label}
-                          className="w-full h-full object-contain p-2"
-                        />
-                        <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
-                          <p className="text-xs text-white font-medium">
-                            {img.label}
-                          </p>
-                          <div className="flex gap-1">
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-8 w-8 text-white hover:bg-white/20"
-                              onClick={() => window.open(img.url, "_blank")}
-                            >
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-8 w-8 text-white hover:bg-white/20"
-                              onClick={() => copyToClipboard(img.url)}
-                            >
-                              <Copy className="w-4 h-4" />
-                            </Button>
-                          </div>
+          {uploadedImages.length > 0 && (
+            <Card className="glass-card">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Eye className="w-5 h-5 text-primary" />
+                  Image Gallery
+                </CardTitle>
+                <CardDescription>Preview of all uploaded images</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                  {uploadedImages.map((img) => (
+                    <div
+                      key={img.key}
+                      className="group relative aspect-square rounded-xl overflow-hidden border border-border bg-muted/20"
+                    >
+                      <img src={img.url} alt={img.label} className="w-full h-full object-contain p-2" />
+                      <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
+                        <p className="text-xs text-white font-medium">{img.label}</p>
+                        <div className="flex gap-1">
+                          <Button size="icon" variant="ghost" className="h-8 w-8 text-white hover:bg-white/20" onClick={() => window.open(img.url, "_blank")}>
+                            <ExternalLink className="w-4 h-4" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-8 w-8 text-white hover:bg-white/20" onClick={() => copyToClipboard(img.url)}>
+                            <Copy className="w-4 h-4" />
+                          </Button>
                         </div>
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  ))}
                 </div>
-              )}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
 
-        {/* Advertising Settings */}
-        <AccordionItem
-          value="advertising"
-          className="border border-border rounded-xl bg-gradient-card overflow-hidden"
-        >
-          <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-accent/30">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
-                <Megaphone className="w-5 h-5 text-amber-500" />
-              </div>
-              <div className="text-left">
-                <h3 className="font-semibold">Advertising</h3>
-                <p className="text-sm text-muted-foreground">
-                  Control promotional banners on your storefront
-                </p>
-              </div>
-            </div>
-          </AccordionTrigger>
-          <AccordionContent className="px-6 pb-6">
-            <div className="space-y-4 pt-2">
-              <div className="flex items-center justify-between p-4 bg-accent/20 rounded-lg">
-                <div className="space-y-0.5">
-                  <Label className="flex items-center gap-2">
-                    Free Tier Banner
-                    <Badge variant="outline" className="text-xs">Platform</Badge>
-                  </Label>
-                  <p className="text-sm text-muted-foreground">
-                    Show promotional banner to buyers on subdomain storefronts
-                  </p>
+        {/* Orders Tab */}
+        <TabsContent value="orders" className="space-y-6">
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <DollarSign className="w-5 h-5 text-primary" />
+                Order Settings
+              </CardTitle>
+              <CardDescription>Configure currency and order limits for your panel</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="defaultCurrency">Default Currency</Label>
+                  <Input
+                    id="defaultCurrency"
+                    value={settings.defaultCurrency}
+                    onChange={(e) => setSettings({ ...settings, defaultCurrency: e.target.value })}
+                    data-testid="input-currency"
+                  />
                 </div>
-                <Switch
-                  checked={settings.showFreeTierBanner}
-                  onCheckedChange={(checked) =>
-                    setSettings({ ...settings, showFreeTierBanner: checked })
-                  }
-                />
+                <div className="space-y-2">
+                  <Label htmlFor="minOrderAmount">Minimum Order Amount</Label>
+                  <Input
+                    id="minOrderAmount"
+                    type="number"
+                    step="0.01"
+                    value={settings.minOrderAmount}
+                    onChange={(e) => setSettings({ ...settings, minOrderAmount: e.target.value })}
+                    data-testid="input-min-order"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="maxOrderAmount">Maximum Order Amount</Label>
+                  <Input
+                    id="maxOrderAmount"
+                    type="number"
+                    step="0.01"
+                    value={settings.maxOrderAmount}
+                    onChange={(e) => setSettings({ ...settings, maxOrderAmount: e.target.value })}
+                    data-testid="input-max-order"
+                  />
+                </div>
               </div>
-              
-              <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
-                <p className="text-sm text-muted-foreground">
-                  When enabled, a promotional banner will be displayed on your 
-                  storefront for buyers using subdomain URLs. Custom domain 
-                  storefronts do not display this banner.
-                </p>
-              </div>
-            </div>
-          </AccordionContent>
-        </AccordionItem>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-        {/* Legal Pages */}
-        <AccordionItem
-          value="legal"
-          className="border border-border rounded-xl bg-gradient-card overflow-hidden"
-        >
-          <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-accent/30">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
-                <FileText className="w-5 h-5 text-muted-foreground" />
-              </div>
-              <div className="text-left">
-                <h3 className="font-semibold">Legal Pages</h3>
+        {/* Legal Tab */}
+        <TabsContent value="legal" className="space-y-6">
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-primary" />
+                Legal Pages
+              </CardTitle>
+              <CardDescription>Terms of service and privacy policy for your buyers</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
                 <p className="text-sm text-muted-foreground">
-                  Terms of service and privacy policy
-                </p>
-              </div>
-            </div>
-          </AccordionTrigger>
-          <AccordionContent className="px-6 pb-6">
-            <div className="space-y-4 pt-2">
-              <div className="p-4 rounded-lg bg-info/10 border border-info/20">
-                <p className="text-sm text-info">
-                  These pages are displayed to your customers. Use clear, professional language. 
+                  These pages are displayed to your customers. Use clear, professional language.
                   Click "Use Template" to load compliant default content that you can customize.
                 </p>
               </div>
@@ -1152,10 +978,10 @@ const GeneralSettings = () => {
                 onTermsChange={(value) => setSettings({ ...settings, termsOfService: value })}
                 onPrivacyChange={(value) => setSettings({ ...settings, privacyPolicy: value })}
               />
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

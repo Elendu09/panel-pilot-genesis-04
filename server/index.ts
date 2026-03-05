@@ -130,13 +130,61 @@ fnRouter.post('/buyer-auth', async (req, res) => {
     const { panelId, action } = body;
     if (!panelId) return res.json({ error: 'Missing panel ID' });
 
+    // Fetch panel security settings and maintenance mode for enforcement
+    const { data: panelData } = await supabase
+      .from('panels')
+      .select('settings')
+      .eq('id', panelId)
+      .maybeSingle();
+    const panelSettings = (panelData?.settings as Record<string, any>) || {};
+    const security = panelSettings.security || {};
+    const { data: psData } = await supabase
+      .from('panel_settings')
+      .select('maintenance_mode')
+      .eq('panel_id', panelId)
+      .maybeSingle();
+    const isMaintenanceMode = psData?.maintenance_mode === true || panelSettings.maintenance_mode === true;
+
+    // Helper: get panel-configured rate limit values
+    const panelMaxAttempts = parseInt(security.maxAttempts) || MAX_ATTEMPTS;
+    const panelLockoutMs = (parseInt(security.lockoutDuration) || 15) * 60 * 1000;
+
+    // Helper: check rate limit with panel-configured values
+    function checkPanelRateLimit(key: string) {
+      const k = key.toLowerCase();
+      const now = Date.now();
+      const record = failedAttempts.get(k);
+      if (!record) return { allowed: true };
+      if (now - record.lastAttempt > panelLockoutMs) { failedAttempts.delete(k); return { allowed: true }; }
+      if (record.count >= panelMaxAttempts) {
+        return { allowed: false, remainingTime: Math.ceil((panelLockoutMs - (now - record.lastAttempt)) / 1000) };
+      }
+      return { allowed: true };
+    }
+
+    // Helper: check IP allowlist
+    function checkIpAllowlist(clientIP: string): boolean {
+      const allowlist = (security.ipAllowlist || '').trim();
+      if (!allowlist) return true;
+      const allowedIps = allowlist.split(',').map((ip: string) => ip.trim()).filter(Boolean);
+      if (allowedIps.length === 0) return true;
+      return allowedIps.includes(clientIP);
+    }
+
     switch (action) {
       case 'login': {
+        if (isMaintenanceMode) return res.json({ error: 'This panel is currently under maintenance. Please try again later.', maintenance: true });
+
         const { identifier, password } = body;
         if (!identifier || !password) return res.json({ error: 'Email/username and password are required' });
         const clientIP = (req.headers['x-forwarded-for'] as string || 'unknown').split(',')[0].trim();
+
+        if (!checkIpAllowlist(clientIP)) {
+          return res.json({ error: 'Access denied from your location' });
+        }
+
         const rlKey = `${clientIP}:${identifier}`;
-        const rl = checkRateLimit(rlKey);
+        const rl = checkPanelRateLimit(rlKey);
         if (!rl.allowed) return res.json({ error: `Too many failed attempts. Try again in ${rl.remainingTime}s`, rateLimited: true });
 
         const norm = identifier.trim().toLowerCase();
@@ -163,13 +211,31 @@ fnRouter.post('/buyer-auth', async (req, res) => {
       }
 
       case 'signup': {
+        if (isMaintenanceMode) return res.json({ error: 'This panel is currently under maintenance. Registration is temporarily disabled.', maintenance: true });
+
+        const generalSettings = panelSettings.general || {};
+        if (generalSettings.allowRegistration === false) {
+          return res.json({ error: 'Registration is currently disabled for this panel' });
+        }
+
+        const signupClientIP = (req.headers['x-forwarded-for'] as string || 'unknown').split(',')[0].trim();
+        if (!checkIpAllowlist(signupClientIP)) {
+          return res.json({ error: 'Access denied from your location' });
+        }
+
         const { email, password, fullName, username, referralCode } = body;
         if (!email || !password) return res.json({ error: 'Email and password are required' });
         const norm = email.trim().toLowerCase();
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(norm)) return res.json({ error: 'Invalid email format' });
-        if (password.length < 8) return res.json({ error: 'Password must be at least 8 characters' });
+
+        // Enforce panel password policy
+        const minLen = security.passwordMinLength !== false ? 8 : 6;
+        if (password.length < minLen) return res.json({ error: `Password must be at least ${minLen} characters` });
         if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/\d/.test(password)) {
           return res.json({ error: 'Password must contain uppercase, lowercase, and a number' });
+        }
+        if (security.passwordSymbols && !/[!@#$%^&*()_+\-=\[\]{}|;:',.<>?/`~]/.test(password)) {
+          return res.json({ error: 'Password must contain at least one special character (!@#$%...)' });
         }
         const { data: existing } = await supabase.from('client_users').select('id').eq('email', norm).eq('panel_id', panelId).maybeSingle();
         if (existing) return res.json({ error: 'Email already registered', needsLogin: true });
