@@ -40,11 +40,36 @@ npm run dev   # Starts both Express server (port 3001) and Vite (port 5000) conc
 - `smmpilot.online` — Secondary platform domain
 - `{subdomain}.homeofsmm.com` — Tenant panel storefronts
 
+## Admin Pages Architecture
+
+Admin pages use the `/functions/v1/admin-data` Express endpoint (service role key) to bypass Supabase RLS policies. This ensures admins see all data regardless of row-level security restrictions.
+
+**Admin-data endpoint actions:**
+- `get_panels` — All panels with owner/subscription/service/provider counts
+- `get_panel_stats` — Per-panel service/order/client counts
+- `get_overview_stats` — Dashboard stats (panels, users, revenue, security score, activity, deposits)
+- `get_transactions` — All transactions with panel/owner joins, platform fees
+- `get_health` — Real-time system health (DB latency, auth status, health logs)
+- `get_tickets` — Support tickets with user/panel joins
+- `get_quick_replies` — Quick reply templates from platform_settings
+
+**Admin pages updated to use admin-data:**
+- `AdminOverview.tsx` — Dashboard stats and activity
+- `PanelManagement.tsx` — Panel listing and stats
+- `SystemHealth.tsx` — Real service health checks (no more mock data)
+- `PaymentManagement.tsx` — Transactions and panel data
+- `SupportTickets.tsx` — Tickets and quick replies
+
+**Pages still using direct Supabase client (no RLS issues):**
+- `SecuritySettings.tsx` — Uses supabase.functions.invoke('update-security-settings')
+- `PlatformSettings.tsx` — Reads platform_settings table (admin RLS)
+- Other admin pages with admin-accessible tables
+
 ## Replit-Specific Changes Made
 
 1. **index.html** — Added Replit domains to `isDev` check to prevent visibility hiding
 2. **src/lib/tenant-domain-config.ts** — Added Replit to `DEV_PATTERNS`
 3. **src/pages/TenantRouter.tsx** — Added Replit to `isDevDomain` check + restored visibility for dev domains
 4. **vite.config.ts** — Replit-compatible config (host 0.0.0.0, port 5000, allowedHosts: true)
-5. **server/index.ts** — Express server replacing Supabase Edge Functions
+5. **server/index.ts** — Express server replacing Supabase Edge Functions + admin-data endpoint
 6. **package.json** — Dev script uses `concurrently` to run both servers

@@ -136,49 +136,28 @@ const PanelManagement = () => {
 
   const fetchPanels = async () => {
     try {
-      const { data: panelsData } = await supabase
-        .from('panels')
-        .select(`
-          *,
-          owner:profiles!panels_owner_id_fkey(email, full_name),
-          subscription:panel_subscriptions(plan_type, status)
-        `)
-        .order('created_at', { ascending: false });
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Not authenticated');
 
-      if (panelsData) {
-        // Fetch service counts and provider counts for all panels
-        const panelIds = panelsData.map(p => p.id);
-        
-        const [servicesRes, providersRes] = await Promise.all([
-          supabase.from('services').select('panel_id').in('panel_id', panelIds),
-          supabase.from('providers').select('panel_id').in('panel_id', panelIds)
-        ]);
+      const response = await fetch('/functions/v1/admin-data', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ action: 'get_panels' })
+      });
 
-        const serviceCounts = (servicesRes.data || []).reduce((acc, s) => {
-          acc[s.panel_id] = (acc[s.panel_id] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>);
+      const result = await response.json();
+      if (!result.success) throw new Error(result.error || 'Failed to fetch panels');
 
-        const providerCounts = (providersRes.data || []).reduce((acc, p) => {
-          acc[p.panel_id] = (acc[p.panel_id] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>);
-
-        const enrichedPanels = panelsData.map(p => ({
-          ...p,
-          subscription: Array.isArray(p.subscription) ? p.subscription[0] : p.subscription,
-          _serviceCount: serviceCounts[p.id] || 0,
-          _providerCount: providerCounts[p.id] || 0
-        }));
-
-        setPanels(enrichedPanels);
-      }
-    } catch (error) {
+      setPanels(result.data || []);
+    } catch (error: any) {
       console.error('Error fetching panels:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to load panels"
+        description: error.message || "Failed to load panels"
       });
     } finally {
       setLoading(false);
@@ -187,17 +166,26 @@ const PanelManagement = () => {
 
   const fetchPanelStats = async (panelId: string) => {
     try {
-      const [servicesRes, ordersRes, clientsRes] = await Promise.all([
-        supabase.from('services').select('id', { count: 'exact' }).eq('panel_id', panelId),
-        supabase.from('orders').select('id', { count: 'exact' }).eq('panel_id', panelId),
-        supabase.from('client_users').select('id', { count: 'exact' }).eq('panel_id', panelId)
-      ]);
-      
-      setPanelStats({
-        services: servicesRes.count || 0,
-        orders: ordersRes.count || 0,
-        clients: clientsRes.count || 0
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Not authenticated');
+
+      const response = await fetch('/functions/v1/admin-data', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ action: 'get_panel_stats', panelId })
       });
+
+      const result = await response.json();
+      if (result.success && result.data) {
+        setPanelStats({
+          services: result.data.services || 0,
+          orders: result.data.orders || 0,
+          clients: result.data.clients || 0
+        });
+      }
     } catch (error) {
       console.error('Error fetching panel stats:', error);
     }

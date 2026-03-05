@@ -53,6 +53,13 @@ interface Ticket {
   };
 }
 
+const defaultQuickReplies = [
+  "Thank you for contacting support. We're looking into your issue.",
+  "Your issue has been resolved. Please let us know if you need further assistance.",
+  "We need more information to help you. Please provide additional details.",
+  "This has been escalated to our technical team."
+];
+
 const SupportTickets = () => {
   const { toast } = useToast();
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -64,23 +71,50 @@ const SupportTickets = () => {
   const [replyText, setReplyText] = useState('');
   const [newStatus, setNewStatus] = useState('');
   const [newPriority, setNewPriority] = useState('');
+  const [quickReplies, setQuickReplies] = useState<string[]>(defaultQuickReplies);
 
   useEffect(() => {
     fetchTickets();
+    fetchQuickReplies();
   }, []);
+
+  const getAuthToken = async () => {
+    const { data } = await supabase.auth.getSession();
+    return data?.session?.access_token || '';
+  };
+
+  const fetchQuickReplies = async () => {
+    try {
+      const token = await getAuthToken();
+      const response = await fetch('/functions/v1/admin-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ action: 'get_quick_replies' }),
+      });
+      const result = await response.json();
+      if (result.success && result.data) {
+        const parsed = typeof result.data === 'string' ? JSON.parse(result.data) : result.data;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setQuickReplies(parsed);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching quick replies:', error);
+    }
+  };
 
   const fetchTickets = async () => {
     try {
-      const { data } = await supabase
-        .from('support_tickets')
-        .select(`
-          *,
-          user:profiles!support_tickets_user_id_fkey(email, full_name),
-          panel:panels(name)
-        `)
-        .order('created_at', { ascending: false });
-
-      setTickets((data || []) as unknown as Ticket[]);
+      const token = await getAuthToken();
+      const response = await fetch('/functions/v1/admin-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ action: 'get_tickets' }),
+      });
+      const result = await response.json();
+      if (result.success) {
+        setTickets((result.data || []) as unknown as Ticket[]);
+      }
     } catch (error) {
       console.error('Error fetching tickets:', error);
     } finally {
@@ -212,13 +246,6 @@ const SupportTickets = () => {
     inProgress: tickets.filter(t => t.status === 'in_progress').length,
     resolved: tickets.filter(t => t.status === 'resolved').length
   };
-
-  const quickReplies = [
-    "Thank you for contacting support. We're looking into your issue.",
-    "Your issue has been resolved. Please let us know if you need further assistance.",
-    "We need more information to help you. Please provide additional details.",
-    "This has been escalated to our technical team."
-  ];
 
   return (
     <motion.div

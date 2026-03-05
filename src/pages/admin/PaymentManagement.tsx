@@ -131,41 +131,26 @@ const PaymentManagement = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch transactions with more data
-      const { data: txData } = await supabase
-        .from('transactions')
-        .select(`
-          *,
-          panel:panels(
-            id,
-            name,
-            subdomain,
-            owner:profiles!panels_owner_id_fkey(email, full_name)
-          )
-        `)
-        .order('created_at', { ascending: false })
-        .limit(500);
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
 
-      if (txData) setTransactions(txData);
+      if (token) {
+        const response = await fetch('/functions/v1/admin-data', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ action: 'get_transactions' }),
+        });
+        const result = await response.json();
+        if (result.success && result.data) {
+          setTransactions(result.data.transactions || []);
+          setPanels(result.data.panels || []);
+          setPlatformFees(result.data.platformFees || []);
+        }
+      }
 
-      // Fetch platform fees
-      const { data: feeData } = await supabase
-        .from('platform_fees')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(50);
-
-      if (feeData) setPlatformFees(feeData);
-
-      // Fetch panels for funding
-      const { data: panelData } = await supabase
-        .from('panels')
-        .select('id, name, balance')
-        .order('name');
-
-      if (panelData) setPanels(panelData);
-
-      // Fetch platform settings
       const { data: settings } = await supabase
         .from('platform_settings')
         .select('*')

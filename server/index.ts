@@ -1192,6 +1192,280 @@ fnRouter.post('/panel-api', async (req, res) => {
   }
 });
 
+// ─── admin-data ──────────────────────────────────────────────────────────────
+fnRouter.post('/admin-data', async (req, res) => {
+  try {
+    const supabase = getSupabaseAdmin();
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, error: 'Authorization required' });
+    }
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user) {
+      return res.status(401).json({ success: false, error: 'Invalid token' });
+    }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id, role')
+      .eq('user_id', user.id)
+      .single();
+
+    if (!profile || (profile.role !== 'admin' && profile.role !== 'super_admin')) {
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .in('role', ['admin', 'super_admin'])
+        .limit(1);
+      if (!roleData || roleData.length === 0) {
+        return res.status(403).json({ success: false, error: 'Admin access required' });
+      }
+    }
+
+    const { action } = req.body;
+
+    if (action === 'get_panels') {
+      const { data: panelsData } = await supabase
+        .from('panels')
+        .select(`
+          *,
+          owner:profiles!panels_owner_id_fkey(email, full_name),
+          subscription:panel_subscriptions(plan_type, status)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (panelsData) {
+        const panelIds = panelsData.map((p: any) => p.id);
+        const [servicesRes, providersRes] = await Promise.all([
+          supabase.from('services').select('panel_id').in('panel_id', panelIds),
+          supabase.from('providers').select('panel_id').in('panel_id', panelIds)
+        ]);
+
+        const serviceCounts = (servicesRes.data || []).reduce((acc: Record<string, number>, s: any) => {
+          acc[s.panel_id] = (acc[s.panel_id] || 0) + 1;
+          return acc;
+        }, {});
+
+        const providerCounts = (providersRes.data || []).reduce((acc: Record<string, number>, p: any) => {
+          acc[p.panel_id] = (acc[p.panel_id] || 0) + 1;
+          return acc;
+        }, {});
+
+        const enrichedPanels = panelsData.map((p: any) => ({
+          ...p,
+          subscription: Array.isArray(p.subscription) ? p.subscription[0] : p.subscription,
+          _serviceCount: serviceCounts[p.id] || 0,
+          _providerCount: providerCounts[p.id] || 0
+        }));
+
+        return res.json({ success: true, data: enrichedPanels });
+      }
+      return res.json({ success: true, data: [] });
+    }
+
+    if (action === 'get_panel_stats') {
+      const { panelId } = req.body;
+      if (!panelId) return res.json({ success: false, error: 'panelId required' });
+      const [servicesRes, ordersRes, clientsRes] = await Promise.all([
+        supabase.from('services').select('id', { count: 'exact' }).eq('panel_id', panelId),
+        supabase.from('orders').select('id', { count: 'exact' }).eq('panel_id', panelId),
+        supabase.from('client_users').select('id', { count: 'exact' }).eq('panel_id', panelId)
+      ]);
+      return res.json({
+        success: true,
+        data: {
+          services: servicesRes.count || 0,
+          orders: ordersRes.count || 0,
+          clients: clientsRes.count || 0
+        }
+      });
+    }
+
+    if (action === 'get_overview_stats') {
+      const [panelsRes, usersRes, settingsRes, activityRes, depositsRes] = await Promise.all([
+        supabase.from('panels').select('*, owner:profiles!panels_owner_id_fkey(email, full_name)').order('created_at', { ascending: false }),
+        supabase.from('profiles').select('id, is_active, created_at'),
+        supabase.from('platform_settings').select('*'),
+        supabase.from('audit_logs').select('*').order('created_at', { ascending: false }).limit(10),
+        supabase.from('transactions').select('*, panel:panels(id, name, subdomain)').eq('type', 'deposit').order('created_at', { ascending: false }).limit(10)
+      ]);
+
+      const panels = panelsRes.data || [];
+      const activeUsers = (usersRes.data || []).filter((u: any) => u.is_active).length;
+      const totalRevenue = panels.reduce((sum: number, p: any) => sum + (p.monthly_revenue || 0), 0);
+
+      let securityScore = 60;
+      const allSettings = settingsRes.data || [];
+      const securitySetting = allSettings.find((s: any) => s.setting_key === 'security');
+      if (securitySetting?.setting_value) {
+        const sv = securitySetting.setting_value;
+        if (sv.enforce_2fa) securityScore += 10;
+        if (sv.password_min_length >= 12) securityScore += 10;
+        if (sv.rate_limit_enabled) securityScore += 10;
+        if (sv.ip_whitelist_enabled) securityScore += 10;
+      } else {
+        allSettings.forEach((s: any) => {
+          const v = s.setting_value;
+          if (s.setting_key === 'enforce_2fa' && v === true) securityScore += 10;
+          if (s.setting_key === 'password_min_length' && typeof v === 'number' && v >= 12) securityScore += 10;
+          if (s.setting_key === 'rate_limit_enabled' && v === true) securityScore += 10;
+          if (s.setting_key === 'ip_whitelist_enabled' && v === true) securityScore += 10;
+        });
+      }
+
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const sixtyDaysAgo = new Date();
+      sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+
+      const allUsers = usersRes.data || [];
+      const totalUsers = allUsers.length;
+      const recentUsers = allUsers.filter((u: any) => u.created_at && new Date(u.created_at) >= thirtyDaysAgo).length;
+      const prevUsers = allUsers.filter((u: any) => u.created_at && new Date(u.created_at) >= sixtyDaysAgo && new Date(u.created_at) < thirtyDaysAgo).length;
+
+      return res.json({
+        success: true,
+        data: {
+          stats: {
+            totalPanels: panels.length,
+            activeUsers,
+            totalUsers,
+            recentUsers,
+            prevUsers,
+            platformRevenue: totalRevenue,
+            pendingPanels: panels.filter((p: any) => p.status === 'pending').length,
+            activePanels: panels.filter((p: any) => p.status === 'active').length,
+            suspendedPanels: panels.filter((p: any) => p.status === 'suspended').length,
+            securityScore
+          },
+          recentPanels: panels.slice(0, 20),
+          recentActivity: activityRes.data || [],
+          recentDeposits: depositsRes.data || []
+        }
+      });
+    }
+
+    if (action === 'get_transactions') {
+      const { data: txData } = await supabase
+        .from('transactions')
+        .select(`
+          *,
+          panel:panels(
+            id, name, subdomain,
+            owner:profiles!panels_owner_id_fkey(email, full_name)
+          )
+        `)
+        .order('created_at', { ascending: false })
+        .limit(500);
+
+      const { data: panelData } = await supabase
+        .from('panels')
+        .select('id, name, balance')
+        .order('name');
+
+      const { data: feeData } = await supabase
+        .from('platform_fees')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      return res.json({
+        success: true,
+        data: {
+          transactions: txData || [],
+          panels: panelData || [],
+          platformFees: feeData || []
+        }
+      });
+    }
+
+    if (action === 'get_health') {
+      const startTime = performance.now();
+      const [panelResult, userResult, orderResult] = await Promise.all([
+        supabase.from('panels').select('*', { count: 'exact', head: true }),
+        supabase.from('profiles').select('*', { count: 'exact', head: true }),
+        supabase.from('orders').select('*', { count: 'exact', head: true })
+      ]);
+      const dbResponseTime = performance.now() - startTime;
+
+      const { data: logs } = await supabase
+        .from('system_health_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      let authStatus: 'healthy' | 'warning' | 'critical' = 'healthy';
+      let authResponseTime = 0;
+      try {
+        const authStart = performance.now();
+        await supabase.auth.getSession();
+        authResponseTime = performance.now() - authStart;
+        authStatus = authResponseTime < 300 ? 'healthy' : authResponseTime < 600 ? 'warning' : 'critical';
+      } catch {
+        authStatus = 'critical';
+        authResponseTime = 9999;
+      }
+
+      const dbStatus = panelResult.error || userResult.error || orderResult.error ? 'critical' :
+        dbResponseTime < 200 ? 'healthy' : dbResponseTime < 500 ? 'warning' : 'critical';
+
+      const totalLogs = (logs || []).length;
+      const healthyLogs = (logs || []).filter((l: any) => l.status === 'healthy').length;
+      const dbUptime = totalLogs > 0 ? ((healthyLogs / totalLogs) * 100).toFixed(2) + '%' : '99.9%';
+
+      return res.json({
+        success: true,
+        data: {
+          dbResponseTime: Math.round(dbResponseTime),
+          dbStatus,
+          authStatus,
+          authResponseTime: Math.round(authResponseTime),
+          panelCount: panelResult.count || 0,
+          userCount: userResult.count || 0,
+          orderCount: orderResult.count || 0,
+          dbUptime,
+          healthLogs: logs || [],
+          errors: {
+            panels: panelResult.error?.message || null,
+            users: userResult.error?.message || null,
+            orders: orderResult.error?.message || null
+          }
+        }
+      });
+    }
+
+    if (action === 'get_tickets') {
+      const { data: ticketsData } = await supabase
+        .from('support_tickets')
+        .select(`
+          *,
+          user:profiles!support_tickets_user_id_fkey(email, full_name),
+          panel:panels(name)
+        `)
+        .order('created_at', { ascending: false });
+
+      return res.json({ success: true, data: ticketsData || [] });
+    }
+
+    if (action === 'get_quick_replies') {
+      const { data } = await supabase
+        .from('platform_settings')
+        .select('setting_value')
+        .eq('setting_key', 'quick_replies')
+        .maybeSingle();
+
+      return res.json({ success: true, data: data?.setting_value || null });
+    }
+
+    return res.json({ success: false, error: 'Unknown action' });
+  } catch (err: any) {
+    console.error('[admin-data] Error:', err.message);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // Mount the functions router
 app.use('/functions/v1', fnRouter);
 

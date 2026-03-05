@@ -15,7 +15,8 @@ import {
   AlertCircle,
   Activity,
   Globe,
-  Calendar
+  Calendar,
+  RefreshCw
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { supabase } from "@/integrations/supabase/client";
@@ -59,6 +60,7 @@ interface RecentDeposit {
 
 const AdminOverview = () => {
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState({
     totalPanels: 0,
     activeUsers: 0,
@@ -87,108 +89,102 @@ const AdminOverview = () => {
   }, []);
 
   const fetchData = async () => {
+    setLoading(true);
+    setError(null);
     try {
-      // Fetch panels
-      const { data: panels } = await supabase
-        .from('panels')
-        .select('*, owner:profiles!panels_owner_id_fkey(email, full_name)')
-        .order('created_at', { ascending: false });
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
 
-      // Fetch users
-      const { data: users } = await supabase.from('profiles').select('id, is_active, created_at');
+      if (!token) {
+        setError('Authentication required. Please log in again.');
+        setLoading(false);
+        return;
+      }
 
-      // Fetch recent audit logs
-      const { data: auditLogs } = await supabase
-        .from('audit_logs')
-        .select('id, action, resource_type, created_at, details')
-        .order('created_at', { ascending: false })
-        .limit(5);
+      const response = await fetch('/functions/v1/admin-data', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ action: 'get_overview_stats' }),
+      });
 
-      // Fetch top performing panels by revenue
-      const { data: topPerformers } = await supabase
-        .from('panels')
-        .select('id, name, subdomain, custom_domain, monthly_revenue, status')
-        .eq('status', 'active')
-        .order('monthly_revenue', { ascending: false })
-        .limit(3);
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => ({}));
+        if (response.status === 401) {
+          setError('Session expired. Please log in again.');
+        } else if (response.status === 403) {
+          setError('Admin access required. You do not have permission to view this page.');
+        } else {
+          setError(errorBody.error || `Failed to load dashboard data (HTTP ${response.status})`);
+        }
+        setLoading(false);
+        return;
+      }
 
-      // Fetch recent deposits across all panels
-      const { data: deposits } = await supabase
-        .from('transactions')
-        .select(`
-          id,
-          amount,
-          payment_method,
-          created_at,
-          status,
-          panel:panels(id, name, subdomain)
-        `)
-        .eq('type', 'deposit')
-        .order('created_at', { ascending: false })
-        .limit(5);
+      const result = await response.json();
 
-      // Calculate changes
-      const { startDate: prevStart, endDate: prevEnd } = getPreviousPeriodRange(30);
+      if (!result.success) {
+        setError(result.error || 'Failed to load dashboard data');
+        setLoading(false);
+        return;
+      }
+
+      const { stats: overviewStats, recentPanels: panels, recentActivity: activity, recentDeposits: deposits } = result.data;
+
+      setStats({
+        totalPanels: overviewStats.totalPanels || 0,
+        activeUsers: overviewStats.activeUsers || 0,
+        platformRevenue: overviewStats.platformRevenue || 0,
+        pendingPanels: overviewStats.pendingPanels || 0,
+        activePanels: overviewStats.activePanels || 0,
+        suspendedPanels: overviewStats.suspendedPanels || 0,
+      });
+
+      setSecurityScore(Math.min(overviewStats.securityScore || 60, 100));
+
+      const allPanels = (panels || []) as Panel[];
+      setRecentPanels(allPanels.slice(0, 6));
+
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const { startDate: prevStart, endDate: prevEnd } = getPreviousPeriodRange(30);
 
-      const recentPanelCount = panels?.filter(p => new Date(p.created_at) >= thirtyDaysAgo).length || 0;
-      const prevPanelCount = panels?.filter(p => 
+      const recentPanelCount = allPanels.filter(p => new Date(p.created_at) >= thirtyDaysAgo).length;
+      const prevPanelCount = allPanels.filter(p =>
         new Date(p.created_at) >= prevStart && new Date(p.created_at) < prevEnd
-      ).length || 0;
-
-      const recentUserCount = users?.filter(u => new Date(u.created_at) >= thirtyDaysAgo).length || 0;
-      const prevUserCount = users?.filter(u => 
-        new Date(u.created_at) >= prevStart && new Date(u.created_at) < prevEnd
-      ).length || 0;
+      ).length;
 
       const panelChange = calculateChange(recentPanelCount, prevPanelCount);
-      const userChange = calculateChange(recentUserCount, prevUserCount);
 
-      if (panels) {
-        const totalRevenue = panels.reduce((sum, p) => sum + (p.monthly_revenue || 0), 0);
-        setStats({
-          totalPanels: panels.length,
-          activeUsers: users?.filter(u => u.is_active).length || 0,
-          platformRevenue: totalRevenue,
-          pendingPanels: panels.filter(p => p.status === 'pending').length,
-          activePanels: panels.filter(p => p.status === 'active').length,
-          suspendedPanels: panels.filter(p => p.status === 'suspended').length
-        });
-        setRecentPanels(panels.slice(0, 6) as Panel[]);
-      }
+      const recentUserCount = overviewStats.recentUsers || 0;
+      const prevUserCount = overviewStats.prevUsers || 0;
+      const userChange = calculateChange(recentUserCount, prevUserCount);
 
       setStatsChanges({
         panels: { value: `+${recentPanelCount}`, trend: recentPanelCount > 0 ? 'up' : 'neutral' },
-        users: { value: `+${recentUserCount}`, trend: recentUserCount > 0 ? 'up' : 'neutral' },
+        users: { value: `+${recentUserCount}`, trend: recentUserCount > prevUserCount ? 'up' : recentUserCount < prevUserCount ? 'down' : 'neutral' },
         revenue: { value: panelChange.value, trend: panelChange.trend },
       });
 
-      setRecentActivity((auditLogs || []) as AuditLog[]);
-      setTopPanels((topPerformers || []) as unknown as Panel[]);
-      setRecentDeposits((deposits || []) as unknown as RecentDeposit[]);
+      setRecentActivity((activity || []) as AuditLog[]);
 
-      // Calculate real security score from platform settings
-      const { data: platformSettings } = await supabase
-        .from('platform_settings')
-        .select('setting_key, setting_value')
-        .in('setting_key', ['enforce_2fa', 'password_min_length', 'rate_limit_enabled', 'block_tor_vpn', 'captcha_enabled']);
-      
-      let score = 60;
-      if (platformSettings) {
-        for (const s of platformSettings) {
-          const val = String(s.setting_value ?? '');
-          if (s.setting_key === 'enforce_2fa' && val === 'true') score += 10;
-          if (s.setting_key === 'password_min_length' && parseInt(val) >= 10) score += 8;
-          if (s.setting_key === 'rate_limit_enabled' && val === 'true') score += 8;
-          if (s.setting_key === 'block_tor_vpn' && val === 'true') score += 7;
-          if (s.setting_key === 'captcha_enabled' && val === 'true') score += 7;
-        }
+      const activePerformers = allPanels
+        .filter(p => p.status === 'active')
+        .sort((a, b) => (b.monthly_revenue || 0) - (a.monthly_revenue || 0))
+        .slice(0, 3);
+      setTopPanels(activePerformers);
+
+      setRecentDeposits((deposits || []) as RecentDeposit[]);
+
+    } catch (err: any) {
+      console.error('Error fetching admin overview data:', err);
+      if (err.message?.includes('fetch') || err.message?.includes('network') || err.message?.includes('Failed to fetch')) {
+        setError('Unable to connect to the server. Please check your network connection and try again.');
+      } else {
+        setError(err.message || 'An unexpected error occurred while loading the dashboard.');
       }
-      setSecurityScore(Math.min(score, 100));
-
-    } catch (error) {
-      console.error('Error fetching data:', error);
     } finally {
       setLoading(false);
     }
@@ -230,6 +226,35 @@ const AdminOverview = () => {
     { title: 'Suspended', status: 'suspended', icon: AlertCircle, color: 'from-red-500 to-red-600', bg: 'bg-red-500/10', textColor: 'text-red-500' }
   ];
 
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <Helmet>
+          <title>Admin Overview - SMMPilot Platform</title>
+          <meta name="description" content="Platform overview and management dashboard for super administrators." />
+          <meta name="robots" content="noindex,nofollow" />
+        </Helmet>
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold">Super Admin Dashboard</h1>
+          <p className="text-muted-foreground">Platform overview and management</p>
+        </div>
+        <Card data-testid="error-card">
+          <CardContent className="p-8 text-center space-y-4">
+            <AlertCircle className="w-12 h-12 mx-auto text-destructive" />
+            <div>
+              <p className="text-lg font-semibold" data-testid="text-error-title">Failed to Load Dashboard</p>
+              <p className="text-sm text-muted-foreground mt-1" data-testid="text-error-message">{error}</p>
+            </div>
+            <Button onClick={fetchData} variant="outline" data-testid="button-retry">
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <motion.div
       variants={containerVariants}
@@ -243,13 +268,11 @@ const AdminOverview = () => {
         <meta name="robots" content="noindex,nofollow" />
       </Helmet>
       
-      {/* Header */}
       <motion.div variants={itemVariants}>
         <h1 className="text-2xl md:text-3xl font-bold">Super Admin Dashboard</h1>
         <p className="text-muted-foreground">Platform overview and management</p>
       </motion.div>
 
-      {/* Stats Grid */}
       <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {statsCards.map((stat, index) => {
           const Icon = stat.icon;
@@ -280,7 +303,6 @@ const AdminOverview = () => {
         })}
       </motion.div>
 
-      {/* Kanban-style Panel Status */}
       <motion.div variants={itemVariants}>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold">Panels by Status</h2>
@@ -298,7 +320,6 @@ const AdminOverview = () => {
             
             return (
               <div key={column.status} className="space-y-4">
-                {/* Column Header */}
                 <div className="glass-card p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -316,7 +337,6 @@ const AdminOverview = () => {
                   </div>
                 </div>
 
-                {/* Column Items */}
                 <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
                   {loading ? (
                     [1, 2].map(i => (
@@ -380,7 +400,6 @@ const AdminOverview = () => {
         </div>
       </motion.div>
 
-      {/* Recent Activity, Recent Deposits & Top Panels */}
       <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="glass-card">
           <CardHeader>
@@ -418,7 +437,6 @@ const AdminOverview = () => {
           </CardContent>
         </Card>
 
-        {/* Recent Deposits Widget */}
         <Card className="glass-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">

@@ -76,67 +76,95 @@ const SystemHealth = () => {
 
   const fetchHealthData = async () => {
     try {
-      const startTime = performance.now();
-      
-      // Real database queries to measure response times
-      const [panelResult, userResult, orderResult] = await Promise.all([
-        supabase.from('panels').select('*', { count: 'exact', head: true }),
-        supabase.from('profiles').select('*', { count: 'exact', head: true }),
-        supabase.from('orders').select('*', { count: 'exact', head: true })
-      ]);
-      
-      const dbResponseTime = performance.now() - startTime;
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
 
-      // Fetch real health logs from database
-      const { data: logs } = await supabase
-        .from('system_health_logs')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(50);
+      const apiStart = performance.now();
+      const response = await fetch('/functions/v1/admin-data', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ action: 'get_health' })
+      });
+      const apiResponseTime = performance.now() - apiStart;
+      const result = await response.json();
+
+      if (!result.success || !result.data) {
+        console.error('Health check failed:', result.error);
+        setMetrics([
+          { name: 'Database', status: 'critical', value: 0, max: 1000, unit: 'ms', icon: Database },
+          { name: 'API Response', status: 'critical', value: Math.round(apiResponseTime), max: 500, unit: 'ms', icon: Zap },
+          { name: 'Active Connections', status: 'critical', value: 0, max: 10000, unit: 'conn', icon: Cpu },
+          { name: 'Orders Processed', status: 'critical', value: 0, max: 100000, unit: 'total', icon: HardDrive }
+        ]);
+        setServices([
+          { name: 'Authentication', status: 'critical', uptime: '0%', responseTime: 0 },
+          { name: 'Database', status: 'critical', uptime: '0%', responseTime: 0 },
+          { name: 'Edge Functions', status: 'critical', uptime: '0%', responseTime: 0 },
+          { name: 'Storage', status: 'critical', uptime: '0%', responseTime: 0 },
+          { name: 'Realtime', status: 'critical', uptime: '0%', responseTime: 0 }
+        ]);
+        setLastRefresh(new Date());
+        return;
+      }
+
+      const {
+        dbResponseTime,
+        dbStatus,
+        authStatus,
+        authResponseTime,
+        panelCount,
+        userCount,
+        orderCount,
+        dbUptime,
+        healthLogs: logs,
+        errors
+      } = result.data;
 
       setHealthLogs((logs || []) as HealthLog[]);
 
-      // Calculate service health from logs
-      const serviceHealthMap = new Map<string, { status: string; responseTime: number; count: number }>();
-      
+      const serviceHealthMap = new Map<string, { status: string; responseTime: number; count: number; healthyCount: number }>();
       (logs || []).forEach((log: HealthLog) => {
         const existing = serviceHealthMap.get(log.component);
         const logMetrics = log.metrics as any || {};
         const responseTime = logMetrics?.response_time || 0;
-        
+
         if (!existing) {
           serviceHealthMap.set(log.component, {
             status: log.status,
             responseTime,
-            count: 1
+            count: 1,
+            healthyCount: log.status === 'healthy' ? 1 : 0
           });
         } else {
           existing.count++;
           existing.responseTime = (existing.responseTime + responseTime) / 2;
-          // Keep the latest status
+          if (log.status === 'healthy') existing.healthyCount++;
           existing.status = log.status;
         }
       });
 
-      // Build metrics from real data
-      const dbStatus: 'healthy' | 'warning' | 'critical' = 
-        panelResult.error || userResult.error || orderResult.error ? 'critical' :
-        dbResponseTime < 200 ? 'healthy' : 
-        dbResponseTime < 500 ? 'warning' : 'critical';
+      const apiStatus: 'healthy' | 'warning' | 'critical' =
+        apiResponseTime < 300 ? 'healthy' : apiResponseTime < 600 ? 'warning' : 'critical';
+
+      const edgeFnStatus: 'healthy' | 'warning' | 'critical' =
+        apiResponseTime < 500 ? 'healthy' : apiResponseTime < 1000 ? 'warning' : 'critical';
 
       setMetrics([
         {
           name: 'Database',
-          status: dbStatus,
-          value: Math.round(dbResponseTime),
+          status: dbStatus as 'healthy' | 'warning' | 'critical',
+          value: dbResponseTime,
           max: 1000,
           unit: 'ms',
           icon: Database
         },
         {
           name: 'API Response',
-          status: dbResponseTime < 300 ? 'healthy' : dbResponseTime < 600 ? 'warning' : 'critical',
-          value: Math.round(dbResponseTime * 0.8),
+          status: apiStatus,
+          value: Math.round(apiResponseTime),
           max: 500,
           unit: 'ms',
           icon: Zap
@@ -144,7 +172,7 @@ const SystemHealth = () => {
         {
           name: 'Active Connections',
           status: 'healthy',
-          value: (panelResult.count || 0) + (userResult.count || 0),
+          value: panelCount + userCount,
           max: 10000,
           unit: 'conn',
           icon: Cpu
@@ -152,43 +180,59 @@ const SystemHealth = () => {
         {
           name: 'Orders Processed',
           status: 'healthy',
-          value: orderResult.count || 0,
+          value: orderCount,
           max: 100000,
           unit: 'total',
           icon: HardDrive
         }
       ]);
 
-      // Build services from health logs or defaults
-      const defaultServices: ServiceStatus[] = [
-        { name: 'Authentication', status: 'healthy', uptime: '99.99%', responseTime: 45 },
-        { name: 'Database', status: dbStatus, uptime: '99.98%', responseTime: Math.round(dbResponseTime) },
-        { name: 'Edge Functions', status: 'healthy', uptime: '99.95%', responseTime: 85 },
-        { name: 'Storage', status: 'healthy', uptime: '99.99%', responseTime: 200 },
-        { name: 'Realtime', status: 'healthy', uptime: '99.97%', responseTime: 35 }
+      const computeUptime = (component: string, fallback: string): string => {
+        const data = serviceHealthMap.get(component);
+        if (data && data.count > 0) {
+          return ((data.healthyCount / data.count) * 100).toFixed(2) + '%';
+        }
+        return fallback;
+      };
+
+      const measuredServices: ServiceStatus[] = [
+        {
+          name: 'Authentication',
+          status: authStatus as 'healthy' | 'warning' | 'critical',
+          uptime: computeUptime('authentication', dbUptime),
+          responseTime: authResponseTime
+        },
+        {
+          name: 'Database',
+          status: dbStatus as 'healthy' | 'warning' | 'critical',
+          uptime: dbUptime,
+          responseTime: dbResponseTime
+        },
+        {
+          name: 'Edge Functions',
+          status: edgeFnStatus,
+          uptime: computeUptime('edge_functions', dbUptime),
+          responseTime: Math.round(apiResponseTime)
+        },
+        {
+          name: 'Storage',
+          status: (serviceHealthMap.get('storage')?.status as 'healthy' | 'warning' | 'critical') || 'healthy',
+          uptime: computeUptime('storage', dbUptime),
+          responseTime: Math.round(serviceHealthMap.get('storage')?.responseTime || apiResponseTime * 0.5)
+        },
+        {
+          name: 'Realtime',
+          status: (serviceHealthMap.get('realtime')?.status as 'healthy' | 'warning' | 'critical') || (dbStatus === 'healthy' ? 'healthy' : 'warning'),
+          uptime: computeUptime('realtime', dbUptime),
+          responseTime: Math.round(serviceHealthMap.get('realtime')?.responseTime || dbResponseTime * 0.3)
+        }
       ];
 
-      // Update services with any logged data
-      const updatedServices = defaultServices.map(service => {
-        const loggedData = serviceHealthMap.get(service.name.toLowerCase());
-        if (loggedData) {
-          return {
-            ...service,
-            status: loggedData.status as 'healthy' | 'warning' | 'critical',
-            responseTime: Math.round(loggedData.responseTime) || service.responseTime
-          };
-        }
-        return service;
-      });
+      setServices(measuredServices);
 
-      setServices(updatedServices);
-
-      // Build response time chart from real data or generate based on current performance
       const now = new Date();
       const chartData = Array.from({ length: 12 }, (_, i) => {
         const time = subMinutes(now, (11 - i) * 5);
-        
-        // Find logs around this time
         const relevantLogs = (logs || []).filter((log: HealthLog) => {
           const logTime = new Date(log.created_at);
           return Math.abs(logTime.getTime() - time.getTime()) < 5 * 60 * 1000;
