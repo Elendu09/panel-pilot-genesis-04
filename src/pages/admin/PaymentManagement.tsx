@@ -131,26 +131,32 @@ const PaymentManagement = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
+      // Fetch transactions with panel info
+      const { data: txData } = await supabase
+        .from('transactions')
+        .select('*, panel:panels(id, name, subdomain)')
+        .order('created_at', { ascending: false })
+        .limit(200);
 
-      if (token) {
-        const response = await fetch('/functions/v1/admin-data', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify({ action: 'get_transactions' }),
-        });
-        const result = await response.json();
-        if (result.success && result.data) {
-          setTransactions(result.data.transactions || []);
-          setPanels(result.data.panels || []);
-          setPlatformFees(result.data.platformFees || []);
-        }
-      }
+      setTransactions((txData || []) as Transaction[]);
 
+      // Fetch panels for funding
+      const { data: panelData } = await supabase
+        .from('panels')
+        .select('id, name, balance');
+
+      setPanels((panelData || []) as Panel[]);
+
+      // Fetch platform fees
+      const { data: feeData } = await supabase
+        .from('platform_fees')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      setPlatformFees((feeData || []) as PlatformFee[]);
+
+      // Load payment settings
       const { data: settings } = await supabase
         .from('platform_settings')
         .select('*')

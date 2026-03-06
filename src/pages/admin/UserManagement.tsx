@@ -85,30 +85,15 @@ const UserManagement = () => {
     localStorage.setItem('userManagementView', view);
   }, [view]);
 
-  const getAuthToken = async () => {
-    const { data: sessionData } = await supabase.auth.getSession();
-    return sessionData?.session?.access_token || null;
-  };
-
-  const adminRequest = async (action: string, body: Record<string, any> = {}) => {
-    const token = await getAuthToken();
-    if (!token) throw new Error('Not authenticated');
-    const response = await fetch('/functions/v1/admin-data', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify({ action, ...body }),
-    });
-    return response.json();
-  };
-
   const fetchUsers = async () => {
     try {
-      const result = await adminRequest('get_users');
-      if (result.success) {
-        setUsers(result.data || []);
-      } else {
-        throw new Error(result.error);
-      }
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setUsers((data || []) as User[]);
     } catch (error) {
       console.error('Error fetching users:', error);
       toast({
@@ -123,14 +108,12 @@ const UserManagement = () => {
 
   const fetchUserDetails = async (user: User) => {
     try {
-      const result = await adminRequest('get_user_details', {
-        userId: user.user_id,
-        profileId: user.id
-      });
-      if (result.success) {
-        setUserRoles(result.data.roles || []);
-        setUserPanels(result.data.panels || []);
-      }
+      const [rolesRes, panelsRes] = await Promise.all([
+        supabase.from('user_roles').select('*').eq('user_id', user.user_id),
+        supabase.from('panels').select('id, name, subdomain, status').eq('owner_id', user.id),
+      ]);
+      setUserRoles((rolesRes.data || []) as UserRole[]);
+      setUserPanels(panelsRes.data || []);
     } catch (error) {
       console.error('Error fetching user details:', error);
     }
@@ -138,11 +121,12 @@ const UserManagement = () => {
 
   const toggleUserStatus = async (user: User) => {
     try {
-      const result = await adminRequest('update_user', {
-        profileId: user.id,
-        updates: { is_active: !user.is_active }
-      });
-      if (!result.success) throw new Error(result.error);
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_active: !user.is_active })
+        .eq('id', user.id);
+
+      if (error) throw error;
 
       fetchUsers();
       toast({
@@ -179,15 +163,16 @@ const UserManagement = () => {
     if (!selectedUser) return;
     
     try {
-      const result = await adminRequest('update_user', {
-        profileId: selectedUser.id,
-        updates: {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
           full_name: editForm.full_name,
           balance: editForm.balance,
           is_active: editForm.is_active
-        }
-      });
-      if (!result.success) throw new Error(result.error);
+        })
+        .eq('id', selectedUser.id);
+
+      if (error) throw error;
 
       toast({
         title: "User Updated",

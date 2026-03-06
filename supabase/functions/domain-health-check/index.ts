@@ -164,7 +164,7 @@ serve(async (req) => {
     // 4) DNS TXT record check
     let txtRecords: string[] = [];
     try {
-      txtRecords = (await Deno.resolveDns(domain, "TXT")) as string[];
+      txtRecords = (await Deno.resolveDns(domain, "TXT") as unknown as string[][]).flat();
     } catch (e) {
       console.log("[domain-health-check] TXT records not found", { domain });
       txtRecords = [];

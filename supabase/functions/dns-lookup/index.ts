@@ -207,7 +207,7 @@ serve(async (req) => {
             location: server.location,
             flag: server.flag,
             status: "error",
-            error: error.message,
+            error: (error as Error).message,
           };
         }
       })
@@ -292,7 +292,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message,
+        error: (error as Error).message,
       }),
       {
         status: 500,

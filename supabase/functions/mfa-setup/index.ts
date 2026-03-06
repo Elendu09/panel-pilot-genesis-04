@@ -56,8 +56,8 @@ async function generateTOTP(secret: string, timeStep = 30, digits = 6): Promise<
     tmp = Math.floor(tmp / 256);
   }
 
-  const cryptoKey = await crypto.subtle.importKey('raw', key, { name: 'HMAC', hash: 'SHA-1' }, false, ['sign']);
-  const signature = await crypto.subtle.sign('HMAC', cryptoKey, counterBytes);
+  const cryptoKey = await crypto.subtle.importKey('raw', key.buffer as ArrayBuffer, { name: 'HMAC', hash: 'SHA-1' }, false, ['sign']);
+  const signature = await crypto.subtle.sign('HMAC', cryptoKey, counterBytes.buffer as ArrayBuffer);
   const hmac = new Uint8Array(signature);
   
   const offset = hmac[hmac.length - 1] & 0x0f;
@@ -82,8 +82,8 @@ async function verifyTOTP(secret: string, token: string, window = 1): Promise<bo
       tmp = Math.floor(tmp / 256);
     }
     
-    const cryptoKey = await crypto.subtle.importKey('raw', key, { name: 'HMAC', hash: 'SHA-1' }, false, ['sign']);
-    const signature = await crypto.subtle.sign('HMAC', cryptoKey, counterBytes);
+    const cryptoKey = await crypto.subtle.importKey('raw', key.buffer as ArrayBuffer, { name: 'HMAC', hash: 'SHA-1' }, false, ['sign']);
+    const signature = await crypto.subtle.sign('HMAC', cryptoKey, counterBytes.buffer as ArrayBuffer);
     const hmac = new Uint8Array(signature);
     
     const offset = hmac[hmac.length - 1] & 0x0f;

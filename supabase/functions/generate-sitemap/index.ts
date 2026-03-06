@@ -46,17 +46,17 @@ Deno.serve(async (req) => {
     // Platform sitemap - for main homeofsmm.com
     if (type === 'platform') {
       const platformUrls: SitemapUrl[] = [
-        { loc: 'https://homeofsmm.com/', changefreq: 'daily', priority: '1.0' },
-        { loc: 'https://homeofsmm.com/features', changefreq: 'weekly', priority: '0.9' },
-        { loc: 'https://homeofsmm.com/pricing', changefreq: 'weekly', priority: '0.9' },
-        { loc: 'https://homeofsmm.com/services', changefreq: 'daily', priority: '0.8' },
-        { loc: 'https://homeofsmm.com/docs', changefreq: 'weekly', priority: '0.7' },
-        { loc: 'https://homeofsmm.com/blog', changefreq: 'daily', priority: '0.8' },
-        { loc: 'https://homeofsmm.com/contact', changefreq: 'monthly', priority: '0.6' },
-        { loc: 'https://homeofsmm.com/auth', changefreq: 'monthly', priority: '0.5' },
-        { loc: 'https://homeofsmm.com/terms', changefreq: 'yearly', priority: '0.3' },
-        { loc: 'https://homeofsmm.com/privacy', changefreq: 'yearly', priority: '0.3' },
-        { loc: 'https://homeofsmm.com/tutorial', changefreq: 'monthly', priority: '0.6' },
+        { loc: 'https://smmpilot.online/', changefreq: 'daily', priority: '1.0' },
+        { loc: 'https://smmpilot.online/features', changefreq: 'weekly', priority: '0.9' },
+        { loc: 'https://smmpilot.online/pricing', changefreq: 'weekly', priority: '0.9' },
+        { loc: 'https://smmpilot.online/services', changefreq: 'daily', priority: '0.8' },
+        { loc: 'https://smmpilot.online/docs', changefreq: 'weekly', priority: '0.7' },
+        { loc: 'https://smmpilot.online/blog', changefreq: 'daily', priority: '0.8' },
+        { loc: 'https://smmpilot.online/contact', changefreq: 'monthly', priority: '0.6' },
+        { loc: 'https://smmpilot.online/auth', changefreq: 'monthly', priority: '0.5' },
+        { loc: 'https://smmpilot.online/terms', changefreq: 'yearly', priority: '0.3' },
+        { loc: 'https://smmpilot.online/privacy', changefreq: 'yearly', priority: '0.3' },
+        { loc: 'https://smmpilot.online/tutorial', changefreq: 'monthly', priority: '0.6' },
       ];
 
       const xml = generateSitemapXML(platformUrls);
@@ -95,7 +95,7 @@ Deno.serve(async (req) => {
     } else if (panel.custom_domain) {
       baseUrl = `https://${panel.custom_domain}`;
     } else {
-      baseUrl = `https://${panel.subdomain}.homeofsmm.com`;
+      baseUrl = `https://${panel.subdomain}.smmpilot.online`;
     }
 
     // Build sitemap URLs

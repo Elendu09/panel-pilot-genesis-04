@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 interface WebhookPayload {
@@ -188,7 +188,7 @@ serve(async (req) => {
 
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        response = await fetch(webhookUrl, {
+        response = await fetch(webhookUrl!, {
           method: "POST",
           headers,
           body: bodyString,
@@ -229,9 +229,7 @@ serve(async (req) => {
         .update({ 
           last_triggered_at: new Date().toISOString(),
           last_status: response?.status || 0,
-          failure_count: supabaseAdmin.rpc ? 
-            supabaseAdmin.raw('failure_count + 1') : 
-            1
+          failure_count: 1
         })
         .eq('id', webhookId);
       

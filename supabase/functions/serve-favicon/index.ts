@@ -97,8 +97,9 @@ serve(async (req) => {
     }
     
     // Check if panel has custom favicon
-    if (panel?.custom_branding) {
-      const branding = panel.custom_branding as any;
+    const panelObj = Array.isArray(panel) ? panel[0] : panel;
+    if (panelObj?.custom_branding) {
+      const branding = panelObj.custom_branding as any;
       const customFaviconUrl = branding?.faviconIcoUrl || branding?.faviconUrl;
       
       if (customFaviconUrl && customFaviconUrl.startsWith('http')) {

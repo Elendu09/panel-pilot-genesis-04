@@ -78,25 +78,16 @@ const SupportTickets = () => {
     fetchQuickReplies();
   }, []);
 
-  const getAuthToken = async () => {
-    const { data } = await supabase.auth.getSession();
-    return data?.session?.access_token || '';
-  };
-
   const fetchQuickReplies = async () => {
     try {
-      const token = await getAuthToken();
-      const response = await fetch('/functions/v1/admin-data', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ action: 'get_quick_replies' }),
-      });
-      const result = await response.json();
-      if (result.success && result.data) {
-        const parsed = typeof result.data === 'string' ? JSON.parse(result.data) : result.data;
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setQuickReplies(parsed);
-        }
+      const { data } = await supabase
+        .from('platform_settings')
+        .select('setting_value')
+        .eq('setting_key', 'quick_replies')
+        .maybeSingle();
+      if (data?.setting_value) {
+        const parsed = Array.isArray(data.setting_value) ? data.setting_value : [];
+        if (parsed.length > 0) setQuickReplies(parsed as string[]);
       }
     } catch (error) {
       console.error('Error fetching quick replies:', error);
@@ -105,16 +96,13 @@ const SupportTickets = () => {
 
   const fetchTickets = async () => {
     try {
-      const token = await getAuthToken();
-      const response = await fetch('/functions/v1/admin-data', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ action: 'get_tickets' }),
-      });
-      const result = await response.json();
-      if (result.success) {
-        setTickets((result.data || []) as unknown as Ticket[]);
-      }
+      const { data, error } = await supabase
+        .from('support_tickets')
+        .select('*, user:profiles(email, full_name), panel:panels(name)')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setTickets((data || []) as unknown as Ticket[]);
     } catch (error) {
       console.error('Error fetching tickets:', error);
     } finally {

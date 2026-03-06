@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { 
@@ -19,16 +20,19 @@ import {
   Wrench,
   FileEdit,
   BookOpen,
-  HeadphonesIcon
+  HeadphonesIcon,
+  Menu
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOnboardingTour } from "@/contexts/OnboardingTourContext";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 import { BarChart3 } from "lucide-react";
 
@@ -89,6 +93,18 @@ const menuGroups = [
 const MoreMenu = () => {
   const { profile, signOut } = useAuth();
   const { restartTour } = useOnboardingTour();
+  const isMobile = useIsMobile();
+  
+  const [headerMenuVisible, setHeaderMenuVisible] = useState(() => {
+    return localStorage.getItem('header-menu-visible') === 'true';
+  });
+
+  const toggleHeaderMenu = (checked: boolean) => {
+    setHeaderMenuVisible(checked);
+    localStorage.setItem('header-menu-visible', String(checked));
+    // Dispatch storage event so PanelOwnerDashboard picks it up
+    window.dispatchEvent(new Event('storage'));
+  };
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -172,7 +188,17 @@ const MoreMenu = () => {
                 <h3 className="font-semibold text-base truncate">{profile?.full_name || 'Panel Owner'}</h3>
                 <p className="text-xs text-muted-foreground truncate">{profile?.email}</p>
               </div>
-              <ThemeToggle />
+              {isMobile ? (
+                <div className="flex items-center gap-2">
+                  <Menu className="w-4 h-4 text-muted-foreground" />
+                  <Label htmlFor="header-menu-switch" className="text-xs text-muted-foreground cursor-pointer">Menu Icon</Label>
+                  <Switch 
+                    id="header-menu-switch"
+                    checked={headerMenuVisible} 
+                    onCheckedChange={toggleHeaderMenu}
+                  />
+                </div>
+              ) : null}
             </div>
           </CardContent>
         </Card>

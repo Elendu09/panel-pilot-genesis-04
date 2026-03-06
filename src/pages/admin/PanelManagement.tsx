@@ -139,22 +139,24 @@ const PanelManagement = () => {
 
   const fetchPanels = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Not authenticated');
+      const { data, error } = await supabase
+        .from('panels')
+        .select('*, owner:profiles!panels_owner_id_fkey(email, full_name)')
+        .order('created_at', { ascending: false });
 
-      const response = await fetch('/functions/v1/admin-data', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({ action: 'get_panels' })
+      if (error) throw error;
+
+      // Fetch subscription data separately
+      const { data: subs } = await supabase
+        .from('panel_subscriptions')
+        .select('panel_id, plan_type, status');
+
+      const panelsWithSubs = (data || []).map((p: any) => {
+        const sub = subs?.find((s: any) => s.panel_id === p.id);
+        return { ...p, subscription: sub || null };
       });
 
-      const result = await response.json();
-      if (!result.success) throw new Error(result.error || 'Failed to fetch panels');
-
-      setPanels(result.data || []);
+      setPanels(panelsWithSubs);
     } catch (error: any) {
       console.error('Error fetching panels:', error);
       toast({
@@ -169,26 +171,16 @@ const PanelManagement = () => {
 
   const fetchPanelStats = async (panelId: string) => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Not authenticated');
-
-      const response = await fetch('/functions/v1/admin-data', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({ action: 'get_panel_stats', panelId })
+      const [servicesRes, ordersRes, clientsRes] = await Promise.all([
+        supabase.from('services').select('id', { count: 'exact', head: true }).eq('panel_id', panelId),
+        supabase.from('orders').select('id', { count: 'exact', head: true }).eq('panel_id', panelId),
+        supabase.from('client_users').select('id', { count: 'exact', head: true }).eq('panel_id', panelId),
+      ]);
+      setPanelStats({
+        services: servicesRes.count || 0,
+        orders: ordersRes.count || 0,
+        clients: clientsRes.count || 0
       });
-
-      const result = await response.json();
-      if (result.success && result.data) {
-        setPanelStats({
-          services: result.data.services || 0,
-          orders: result.data.orders || 0,
-          clients: result.data.clients || 0
-        });
-      }
     } catch (error) {
       console.error('Error fetching panel stats:', error);
     }
@@ -203,25 +195,21 @@ const PanelManagement = () => {
   const fetchPanelFinanceData = async (panelId: string) => {
     setLoadingFinance(true);
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token;
-      if (!token) return;
+      const [txRes, subRes, ordersRes] = await Promise.all([
+        supabase.from('transactions').select('*').eq('panel_id', panelId).order('created_at', { ascending: false }).limit(50),
+        supabase.from('panel_subscriptions').select('*').eq('panel_id', panelId).maybeSingle(),
+        supabase.from('orders').select('price, provider_cost').eq('panel_id', panelId),
+      ]);
 
-      const response = await fetch('/functions/v1/admin-data', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ action: 'get_panel_finance', panelId }),
-      });
-      const result = await response.json();
-      if (result.success) {
-        setPanelTransactions(result.data.transactions || []);
-        setPanelSubscription(result.data.subscription as Subscription || null);
-        setPanelFinanceStats({
-          totalDeposits: result.data.totalDeposits || 0,
-          totalOrderAmount: result.data.totalOrderAmount || 0,
-          profitFromOrders: result.data.profitFromOrders || 0,
-        });
-      }
+      setPanelTransactions((txRes.data || []) as Transaction[]);
+      setPanelSubscription(subRes.data as Subscription || null);
+
+      const deposits = (txRes.data || []).filter((t: any) => t.type === 'deposit' && t.status === 'completed');
+      const totalDeposits = deposits.reduce((s: number, t: any) => s + (t.amount || 0), 0);
+      const totalOrderAmount = (ordersRes.data || []).reduce((s: number, o: any) => s + (o.price || 0), 0);
+      const profitFromOrders = (ordersRes.data || []).reduce((s: number, o: any) => s + ((o.price || 0) - (o.provider_cost || 0)), 0);
+
+      setPanelFinanceStats({ totalDeposits, totalOrderAmount, profitFromOrders });
     } catch (error) {
       console.error('Error fetching finance data:', error);
     } finally {
