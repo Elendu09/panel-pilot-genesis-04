@@ -447,14 +447,16 @@ const PanelOwnerDashboard = () => {
       )}>
         <header className="md:hidden glass border-b border-border/50 px-3 h-14 flex items-center justify-between sticky top-0 z-30">
           <div className="flex items-center gap-2 min-w-0">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setMobileDrawerOpen(true)}
-              data-testid="button-mobile-menu"
-            >
-              <Menu className="w-5 h-5" />
-            </Button>
+            {localStorage.getItem('header-menu-visible') === 'true' && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setMobileDrawerOpen(true)}
+                data-testid="button-mobile-menu"
+              >
+                <Menu className="w-5 h-5" />
+              </Button>
+            )}
             <div className="h-6 w-px bg-border" />
             <div className="flex items-center gap-2 min-w-0">
               <PanelSwitcher collapsed />

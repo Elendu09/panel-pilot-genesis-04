@@ -36,7 +36,7 @@ const PLATFORM_DOMAINS = ['homeofsmm.com', 'smmpilot.online'];
  * Supports multiple platform domains and handles www properly
  */
 function detectPlatformDomain(): string {
-  if (typeof window === 'undefined') return 'homeofsmm.com';
+  if (typeof window === 'undefined') return 'smmpilot.online';
   
   const hostname = window.location.hostname.toLowerCase();
   
@@ -77,10 +77,6 @@ const DEV_PATTERNS = [
   /^127\.0\.0\.1$/,
   /\.local$/,
   /\.test$/,
-  /\.replit\.dev$/,
-  /\.repl\.co$/,
-  /\.replit\.app$/,
-  /\.replit\.com$/,
 ];
 
 // External hosting platforms

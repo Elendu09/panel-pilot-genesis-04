@@ -35,11 +35,7 @@ const App = lazy(() => import('../App'));
   const isDevDomain = hostname.includes('lovableproject.com') || 
                        hostname.includes('lovable.app') || 
                        hostname === 'localhost' ||
-                       hostname.startsWith('localhost:') ||
-                       hostname.includes('replit.dev') ||
-                       hostname.includes('repl.co') ||
-                       hostname.includes('replit.app') ||
-                       hostname.includes('replit.com');
+                       hostname.startsWith('localhost:');
   
   if (isPlatform) {
     document.title = 'HOME OF SMM - Advanced SMM Panel Platform';

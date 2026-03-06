@@ -94,58 +94,37 @@ const AdminOverview = () => {
     setError(null);
     try {
       const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token;
-
-      if (!token) {
+      if (!sessionData?.session) {
         setError('Authentication required. Please log in again.');
         setLoading(false);
         return;
       }
 
-      const response = await fetch('/functions/v1/admin-data', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ action: 'get_overview_stats' }),
-      });
+      // Fetch all data directly from Supabase tables
+      const [panelsRes, profilesRes, txRes, auditRes] = await Promise.all([
+        supabase.from('panels').select('*, owner:profiles!panels_owner_id_fkey(email, full_name)').order('created_at', { ascending: false }),
+        supabase.from('profiles').select('id, created_at', { count: 'exact', head: false }),
+        supabase.from('transactions').select('id, amount, payment_method, created_at, status, panel_id').eq('type', 'deposit').order('created_at', { ascending: false }).limit(10),
+        supabase.from('audit_logs').select('id, action, resource_type, created_at, details').order('created_at', { ascending: false }).limit(10),
+      ]);
 
-      if (!response.ok) {
-        const errorBody = await response.json().catch(() => ({}));
-        if (response.status === 401) {
-          setError('Session expired. Please log in again.');
-        } else if (response.status === 403) {
-          setError('Admin access required. You do not have permission to view this page.');
-        } else {
-          setError(errorBody.error || `Failed to load dashboard data (HTTP ${response.status})`);
-        }
-        setLoading(false);
-        return;
-      }
-
-      const result = await response.json();
-
-      if (!result.success) {
-        setError(result.error || 'Failed to load dashboard data');
-        setLoading(false);
-        return;
-      }
-
-      const { stats: overviewStats, recentPanels: panels, recentActivity: activity, recentDeposits: deposits } = result.data;
+      const allPanels = (panelsRes.data || []) as Panel[];
+      const totalPanels = allPanels.length;
+      const activePanels = allPanels.filter(p => p.status === 'active').length;
+      const pendingPanels = allPanels.filter(p => p.status === 'pending').length;
+      const suspendedPanels = allPanels.filter(p => p.status === 'suspended').length;
+      const platformRevenue = (txRes.data || []).filter((t: any) => t.status === 'completed').reduce((s: number, t: any) => s + (t.amount || 0), 0);
 
       setStats({
-        totalPanels: overviewStats.totalPanels || 0,
-        activeUsers: overviewStats.activeUsers || 0,
-        platformRevenue: overviewStats.platformRevenue || 0,
-        pendingPanels: overviewStats.pendingPanels || 0,
-        activePanels: overviewStats.activePanels || 0,
-        suspendedPanels: overviewStats.suspendedPanels || 0,
+        totalPanels,
+        activeUsers: profilesRes.count || 0,
+        platformRevenue,
+        pendingPanels,
+        activePanels,
+        suspendedPanels,
       });
 
-      setSecurityScore(Math.min(overviewStats.securityScore || 60, 100));
-
-      const allPanels = (panels || []) as Panel[];
+      setSecurityScore(Math.min(activePanels > 0 ? 85 : 60, 100));
       setRecentPanels(allPanels.slice(0, 6));
 
       const thirtyDaysAgo = new Date();
@@ -153,22 +132,14 @@ const AdminOverview = () => {
       const { startDate: prevStart, endDate: prevEnd } = getPreviousPeriodRange(30);
 
       const recentPanelCount = allPanels.filter(p => new Date(p.created_at) >= thirtyDaysAgo).length;
-      const prevPanelCount = allPanels.filter(p =>
-        new Date(p.created_at) >= prevStart && new Date(p.created_at) < prevEnd
-      ).length;
-
-      const panelChange = calculateChange(recentPanelCount, prevPanelCount);
-
-      const recentUserCount = overviewStats.recentUsers || 0;
-      const prevUserCount = overviewStats.prevUsers || 0;
 
       setStatsChanges({
         panels: { value: `+${recentPanelCount}`, trend: recentPanelCount > 0 ? 'up' : 'neutral' },
-        users: { value: `+${recentUserCount}`, trend: recentUserCount > prevUserCount ? 'up' : recentUserCount < prevUserCount ? 'down' : 'neutral' },
-        revenue: { value: panelChange.value, trend: panelChange.trend },
+        users: { value: `+0`, trend: 'neutral' },
+        revenue: { value: '+0%', trend: 'neutral' },
       });
 
-      setRecentActivity((activity || []) as AuditLog[]);
+      setRecentActivity((auditRes.data || []) as AuditLog[]);
 
       const activePerformers = allPanels
         .filter(p => p.status === 'active')
@@ -176,15 +147,19 @@ const AdminOverview = () => {
         .slice(0, 3);
       setTopPanels(activePerformers);
 
-      setRecentDeposits((deposits || []) as RecentDeposit[]);
+      // Map deposits with panel info
+      const depositsWithPanels = (txRes.data || []).map((tx: any) => {
+        const txPanel = allPanels.find(p => p.id === tx.panel_id);
+        return {
+          ...tx,
+          panel: txPanel ? { id: txPanel.id, name: txPanel.name, subdomain: txPanel.subdomain } : null,
+        };
+      });
+      setRecentDeposits(depositsWithPanels as RecentDeposit[]);
 
     } catch (err: any) {
       console.error('Error fetching admin overview data:', err);
-      if (err.message?.includes('fetch') || err.message?.includes('network') || err.message?.includes('Failed to fetch')) {
-        setError('Unable to connect to the server. Please check your network connection and try again.');
-      } else {
-        setError(err.message || 'An unexpected error occurred while loading the dashboard.');
-      }
+      setError(err.message || 'An unexpected error occurred while loading the dashboard.');
     } finally {
       setLoading(false);
     }
