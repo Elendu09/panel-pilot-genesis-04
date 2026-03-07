@@ -208,20 +208,27 @@ const PanelOnboardingV2 = () => {
     checkExistingPanel();
   }, [user, profile, navigate]);
 
-  // Detect payment=success return from gateway
+  // Detect payment=success return from gateway — runs immediately
+  const paymentDetectedRef = useRef(false);
   useEffect(() => {
-    if (restoringState) return; // Wait until state is restored
+    if (paymentDetectedRef.current) return;
     const params = new URLSearchParams(window.location.search);
     if (params.get('payment') === 'success') {
+      paymentDetectedRef.current = true;
       setPaymentCompleted(true);
-      // If currently on payment step, advance to domain step
-      if (currentStep === 2) {
-        markStepComplete(2);
+      markStepComplete(2);
+      if (!restoringState) {
         setCurrentStep(3);
       }
-      // Clean URL
       window.history.replaceState({}, '', '/panel/onboarding');
       toast({ title: 'Payment Successful', description: 'Your subscription payment has been confirmed.' });
+    }
+  }, [restoringState]);
+
+  // Advance after state restore if payment was detected
+  useEffect(() => {
+    if (!restoringState && paymentDetectedRef.current && currentStep === 2) {
+      setCurrentStep(3);
     }
   }, [restoringState]);
 
@@ -744,6 +751,7 @@ const PanelOnboardingV2 = () => {
               checkingSubdomain={checkingSubdomain}
               currency={currency}
               onCurrencyChange={setCurrency}
+              panelId={createdPanelIdRef.current || undefined}
             />
           </motion.div>
         );
@@ -1268,8 +1276,8 @@ const PanelOnboardingV2 = () => {
           </CardContent>
         </Card>
 
-        {/* Desktop Navigation Buttons - hidden on mobile, shown inline on desktop */}
-        {!isLastStep && !isPaymentStep && (
+        {/* Desktop Navigation Buttons - always show, label changes on payment step */}
+        {!isLastStep && (
           <div className="hidden sm:flex justify-between mt-6">
             <Button
               variant="outline"
@@ -1281,7 +1289,7 @@ const PanelOnboardingV2 = () => {
               Back
             </Button>
             <Button onClick={handleNext} className="gap-2">
-              Next
+              {isPaymentStep && !paymentCompleted ? 'Skip' : 'Next'}
               <ArrowRight className="w-4 h-4" />
             </Button>
           </div>
@@ -1289,7 +1297,7 @@ const PanelOnboardingV2 = () => {
       </div>
 
       {/* Mobile Sticky Navigation Buttons */}
-      {!isLastStep && !isPaymentStep && (
+      {!isLastStep && (
         <div className="fixed bottom-0 left-0 right-0 sm:hidden bg-background/95 backdrop-blur-md border-t border-border/50 p-4 pb-safe z-50">
           <div className="flex gap-3 max-w-3xl mx-auto">
             <Button
@@ -1302,7 +1310,7 @@ const PanelOnboardingV2 = () => {
               Back
             </Button>
             <Button onClick={handleNext} className="flex-1 h-12">
-              Next
+              {isPaymentStep && !paymentCompleted ? 'Skip' : 'Next'}
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </div>

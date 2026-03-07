@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from "react";
+import { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { Routes, Route, Link, useLocation, useNavigate } from "react-router-dom";
 import { 
   LayoutDashboard, 
@@ -78,6 +78,7 @@ const PanelOwnerDashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [sidebarStats, setSidebarStats] = useState({ todayRevenue: 0, activeOrders: 0 });
+  const [headerMenuVisible, setHeaderMenuVisible] = useState(() => localStorage.getItem('header-menu-visible') === 'true');
   const location = useLocation();
   const canonicalUrl = typeof window !== 'undefined' ? `${window.location.origin}${location.pathname}` : '';
   const { profile, signOut } = useAuth();
@@ -86,6 +87,15 @@ const PanelOwnerDashboard = () => {
   const { panel, loading: panelLoading } = usePanel();
   const { open: searchOpen, setOpen: setSearchOpen } = usePanelSearch();
   const navigate = useNavigate();
+
+  // Listen for storage events from MoreMenu toggle
+  useEffect(() => {
+    const onStorage = () => {
+      setHeaderMenuVisible(localStorage.getItem('header-menu-visible') === 'true');
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
 
   useEffect(() => {
     if (!panelLoading && (!panel || !panel.onboarding_completed)) {
@@ -447,7 +457,7 @@ const PanelOwnerDashboard = () => {
       )}>
         <header className="md:hidden glass border-b border-border/50 px-3 h-14 flex items-center justify-between sticky top-0 z-30">
           <div className="flex items-center gap-2 min-w-0">
-            {localStorage.getItem('header-menu-visible') === 'true' && (
+            {headerMenuVisible && (
               <Button
                 variant="ghost"
                 size="icon"
