@@ -208,20 +208,27 @@ const PanelOnboardingV2 = () => {
     checkExistingPanel();
   }, [user, profile, navigate]);
 
-  // Detect payment=success return from gateway
+  // Detect payment=success return from gateway — runs immediately
+  const paymentDetectedRef = useRef(false);
   useEffect(() => {
-    if (restoringState) return; // Wait until state is restored
+    if (paymentDetectedRef.current) return;
     const params = new URLSearchParams(window.location.search);
     if (params.get('payment') === 'success') {
+      paymentDetectedRef.current = true;
       setPaymentCompleted(true);
-      // If currently on payment step, advance to domain step
-      if (currentStep === 2) {
-        markStepComplete(2);
+      markStepComplete(2);
+      if (!restoringState) {
         setCurrentStep(3);
       }
-      // Clean URL
       window.history.replaceState({}, '', '/panel/onboarding');
       toast({ title: 'Payment Successful', description: 'Your subscription payment has been confirmed.' });
+    }
+  }, [restoringState]);
+
+  // Advance after state restore if payment was detected
+  useEffect(() => {
+    if (!restoringState && paymentDetectedRef.current && currentStep === 2) {
+      setCurrentStep(3);
     }
   }, [restoringState]);
 

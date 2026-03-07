@@ -78,6 +78,7 @@ const PanelOwnerDashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [sidebarStats, setSidebarStats] = useState({ todayRevenue: 0, activeOrders: 0 });
+  const [headerMenuVisible, setHeaderMenuVisible] = useState(() => localStorage.getItem('header-menu-visible') === 'true');
   const location = useLocation();
   const canonicalUrl = typeof window !== 'undefined' ? `${window.location.origin}${location.pathname}` : '';
   const { profile, signOut } = useAuth();
@@ -86,6 +87,15 @@ const PanelOwnerDashboard = () => {
   const { panel, loading: panelLoading } = usePanel();
   const { open: searchOpen, setOpen: setSearchOpen } = usePanelSearch();
   const navigate = useNavigate();
+
+  // Listen for storage events from MoreMenu toggle
+  useEffect(() => {
+    const onStorage = () => {
+      setHeaderMenuVisible(localStorage.getItem('header-menu-visible') === 'true');
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
 
   useEffect(() => {
     if (!panelLoading && (!panel || !panel.onboarding_completed)) {
