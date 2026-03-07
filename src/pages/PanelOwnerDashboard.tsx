@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from "react";
+import { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { Routes, Route, Link, useLocation, useNavigate } from "react-router-dom";
 import { 
   LayoutDashboard, 
@@ -447,7 +447,7 @@ const PanelOwnerDashboard = () => {
       )}>
         <header className="md:hidden glass border-b border-border/50 px-3 h-14 flex items-center justify-between sticky top-0 z-30">
           <div className="flex items-center gap-2 min-w-0">
-            {localStorage.getItem('header-menu-visible') === 'true' && (
+            {headerMenuVisible && (
               <Button
                 variant="ghost"
                 size="icon"

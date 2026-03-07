@@ -142,7 +142,8 @@ const PanelManagement = () => {
       const { data, error } = await supabase
         .from('panels')
         .select('*, owner:profiles!panels_owner_id_fkey(email, full_name)')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(5000);
 
       if (error) throw error;
 

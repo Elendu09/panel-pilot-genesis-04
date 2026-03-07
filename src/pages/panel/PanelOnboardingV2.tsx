@@ -744,6 +744,7 @@ const PanelOnboardingV2 = () => {
               checkingSubdomain={checkingSubdomain}
               currency={currency}
               onCurrencyChange={setCurrency}
+              panelId={createdPanelIdRef.current || undefined}
             />
           </motion.div>
         );
@@ -1268,8 +1269,8 @@ const PanelOnboardingV2 = () => {
           </CardContent>
         </Card>
 
-        {/* Desktop Navigation Buttons - hidden on mobile, shown inline on desktop */}
-        {!isLastStep && !isPaymentStep && (
+        {/* Desktop Navigation Buttons - always show, label changes on payment step */}
+        {!isLastStep && (
           <div className="hidden sm:flex justify-between mt-6">
             <Button
               variant="outline"
@@ -1281,7 +1282,7 @@ const PanelOnboardingV2 = () => {
               Back
             </Button>
             <Button onClick={handleNext} className="gap-2">
-              Next
+              {isPaymentStep && !paymentCompleted ? 'Skip' : 'Next'}
               <ArrowRight className="w-4 h-4" />
             </Button>
           </div>
@@ -1289,7 +1290,7 @@ const PanelOnboardingV2 = () => {
       </div>
 
       {/* Mobile Sticky Navigation Buttons */}
-      {!isLastStep && !isPaymentStep && (
+      {!isLastStep && (
         <div className="fixed bottom-0 left-0 right-0 sm:hidden bg-background/95 backdrop-blur-md border-t border-border/50 p-4 pb-safe z-50">
           <div className="flex gap-3 max-w-3xl mx-auto">
             <Button
@@ -1302,7 +1303,7 @@ const PanelOnboardingV2 = () => {
               Back
             </Button>
             <Button onClick={handleNext} className="flex-1 h-12">
-              Next
+              {isPaymentStep && !paymentCompleted ? 'Skip' : 'Next'}
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </div>
