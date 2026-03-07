@@ -11,10 +11,17 @@ import { Helmet } from 'react-helmet-async';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import EmailVerificationKanban from '@/components/auth/EmailVerificationKanban';
-import { Loader2, User, Mail, Lock, ArrowRight, Zap } from 'lucide-react';
+import { Loader2, User, Mail, Lock, ArrowRight, Zap, Shield, Globe, BarChart3, Sparkles } from 'lucide-react';
 import { SiGoogle } from 'react-icons/si';
 
 const LAST_PANEL_ROUTE_KEY = 'homeofsmm_last_panel_route';
+
+const features = [
+  { icon: Globe, title: 'Custom Domains', desc: 'Launch your own branded panel' },
+  { icon: BarChart3, title: 'Real-time Analytics', desc: 'Track orders, revenue & growth' },
+  { icon: Shield, title: 'Enterprise Security', desc: '2FA, audit logs & role-based access' },
+  { icon: Sparkles, title: '150+ Payment Methods', desc: 'Accept payments globally' },
+];
 
 const Auth = () => {
   const [identifier, setIdentifier] = useState('');
@@ -136,51 +143,31 @@ const Auth = () => {
     const trimmedFullName = fullName.trim();
     
     if (!trimmedFullName) {
-      toast({
-        variant: "destructive",
-        title: "Full Name Required",
-        description: "Please enter your full name."
-      });
+      toast({ variant: "destructive", title: "Full Name Required", description: "Please enter your full name." });
       setLoading(false);
       return;
     }
 
     if (trimmedFullName.length < 2) {
-      toast({
-        variant: "destructive",
-        title: "Name Too Short",
-        description: "Full name must be at least 2 characters."
-      });
+      toast({ variant: "destructive", title: "Name Too Short", description: "Full name must be at least 2 characters." });
       setLoading(false);
       return;
     }
     
     if (!trimmedUsername) {
-      toast({
-        variant: "destructive",
-        title: "Username Required",
-        description: "Please enter a username."
-      });
+      toast({ variant: "destructive", title: "Username Required", description: "Please enter a username." });
       setLoading(false);
       return;
     }
     
     if (trimmedUsername.length < 3) {
-      toast({
-        variant: "destructive",
-        title: "Username Too Short",
-        description: "Username must be at least 3 characters."
-      });
+      toast({ variant: "destructive", title: "Username Too Short", description: "Username must be at least 3 characters." });
       setLoading(false);
       return;
     }
     
     if (trimmedUsername.length > 20) {
-      toast({
-        variant: "destructive",
-        title: "Username Too Long",
-        description: "Username must be 20 characters or less."
-      });
+      toast({ variant: "destructive", title: "Username Too Long", description: "Username must be 20 characters or less." });
       setLoading(false);
       return;
     }
@@ -192,11 +179,7 @@ const Auth = () => {
       .maybeSingle();
     
     if (existingUser) {
-      toast({
-        variant: "destructive",
-        title: "Username Taken",
-        description: "This username is already in use. Please choose another."
-      });
+      toast({ variant: "destructive", title: "Username Taken", description: "This username is already in use. Please choose another." });
       setLoading(false);
       return;
     }
@@ -218,26 +201,15 @@ const Auth = () => {
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/auth?verified=true`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          }
+          queryParams: { access_type: 'offline', prompt: 'consent' }
         }
       });
       
       if (error) {
-        toast({
-          variant: "destructive",
-          title: "Google Sign In Failed",
-          description: error.message
-        });
+        toast({ variant: "destructive", title: "Google Sign In Failed", description: error.message });
       }
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Google Sign In Failed",
-        description: error.message || "An unexpected error occurred."
-      });
+      toast({ variant: "destructive", title: "Google Sign In Failed", description: error.message || "An unexpected error occurred." });
     } finally {
       setGoogleLoading(false);
     }
@@ -253,25 +225,14 @@ const Auth = () => {
       });
       
       if (error) {
-        toast({
-          variant: "destructive",
-          title: "Reset Failed",
-          description: error.message
-        });
+        toast({ variant: "destructive", title: "Reset Failed", description: error.message });
       } else {
-        toast({
-          title: "Reset Email Sent",
-          description: "Check your email for password reset instructions."
-        });
+        toast({ title: "Reset Email Sent", description: "Check your email for password reset instructions." });
         setShowForgotPassword(false);
         setResetEmail('');
       }
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Reset Failed", 
-        description: error.message
-      });
+      toast({ variant: "destructive", title: "Reset Failed", description: error.message });
     } finally {
       setLoading(false);
     }
@@ -332,6 +293,7 @@ const Auth = () => {
     </Button>
   );
 
+  // Recovery mode
   if (isRecoveryMode) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950/50 to-slate-950 flex items-center justify-center p-4">
@@ -353,21 +315,11 @@ const Auth = () => {
             <form onSubmit={handleResetPassword} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="newPassword">New Password</Label>
-                <PasswordInput
-                  id="newPassword"
-                  value={newPassword}
-                  onChange={setNewPassword}
-                  placeholder="Enter new password"
-                />
+                <PasswordInput id="newPassword" value={newPassword} onChange={setNewPassword} placeholder="Enter new password" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword">Confirm Password</Label>
-                <PasswordInput
-                  id="confirmPassword"
-                  value={confirmPassword}
-                  onChange={setConfirmPassword}
-                  placeholder="Confirm new password"
-                />
+                <PasswordInput id="confirmPassword" value={confirmPassword} onChange={setConfirmPassword} placeholder="Confirm new password" />
               </div>
               <Button type="submit" className="w-full h-11 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white shadow-lg shadow-indigo-500/25 transition-all" disabled={loading} data-testid="button-update-password">
                 {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
@@ -380,6 +332,7 @@ const Auth = () => {
     );
   }
 
+  // Email verification
   if (showVerification) {
     return (
       <EmailVerificationKanban 
@@ -397,207 +350,245 @@ const Auth = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950/50 to-slate-950 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-900/20 via-transparent to-transparent" />
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950/50 to-slate-950 flex">
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-900/20 via-transparent to-transparent pointer-events-none" />
+      
       <Helmet>
         <title>Sign In - HOME OF SMM Platform</title>
         <meta name="description" content="Sign in to your HOME OF SMM account or create a new panel to start your SMM business." />
         <meta name="robots" content="noindex,nofollow" />
       </Helmet>
-      
-      <Card className="relative w-full max-w-md bg-card/90 backdrop-blur-xl border-border/40 shadow-2xl shadow-indigo-500/5">
-        <CardHeader className="text-center pb-2">
-          <div className="mx-auto mb-3 w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
-            <Zap className="w-6 h-6 text-white" />
-          </div>
-          <CardTitle className="text-2xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
-            HOME OF SMM
-          </CardTitle>
-          <CardDescription className="text-muted-foreground/80">
-            Launch and manage your SMM panel business
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {showForgotPassword ? (
-            <div className="space-y-4">
-              <div className="text-center mb-4">
-                <h3 className="text-lg font-semibold">Reset Password</h3>
-                <p className="text-sm text-muted-foreground/80">
-                  Enter your email to receive reset instructions
-                </p>
-              </div>
-              
-              <form onSubmit={handleForgotPassword} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="resetEmail">Email Address</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      id="resetEmail"
-                      type="email"
-                      value={resetEmail}
-                      onChange={(e) => setResetEmail(e.target.value)}
-                      placeholder="Enter your email"
-                      className="pl-10 h-11"
-                      required
-                      data-testid="input-reset-email"
-                    />
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <Button type="submit" className="w-full h-11 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white shadow-lg shadow-indigo-500/25" disabled={loading} data-testid="button-send-reset">
-                    {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                    {loading ? 'Sending...' : 'Send Reset Email'}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="w-full"
-                    onClick={() => {
-                      setShowForgotPassword(false);
-                      setResetEmail('');
-                    }}
-                    data-testid="button-back-to-signin"
-                  >
-                    Back to Sign In
-                  </Button>
-                </div>
-              </form>
+
+      {/* Left Panel — Branding & Features (hidden on mobile) */}
+      <div className="hidden lg:flex lg:w-1/2 relative flex-col justify-center px-12 xl:px-20">
+        <div className="relative z-10 max-w-lg">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+              <Zap className="w-6 h-6 text-white" />
             </div>
-          ) : (
-            <Tabs defaultValue="signin" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-4 bg-muted/50">
-                <TabsTrigger value="signin" data-testid="tab-signin">Sign In</TabsTrigger>
-                <TabsTrigger value="signup" data-testid="tab-signup">Sign Up</TabsTrigger>
-              </TabsList>
-            
-            <TabsContent value="signin" className="space-y-0">
-              <GoogleButton label="Sign in with Google" />
-              <Divider />
-              <form onSubmit={handleSignIn} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="identifier">Email or Username</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      id="identifier"
-                      type="text"
-                      value={identifier}
-                      onChange={(e) => setIdentifier(e.target.value)}
-                      placeholder="Enter email or username"
-                      className="pl-10 h-11"
-                      required
-                      data-testid="input-identifier"
-                    />
-                  </div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+              HOME OF SMM
+            </h1>
+          </div>
+          
+          <h2 className="text-4xl xl:text-5xl font-extrabold text-foreground leading-tight mb-4">
+            Launch Your SMM
+            <br />
+            <span className="bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+              Empire Today
+            </span>
+          </h2>
+          <p className="text-lg text-muted-foreground mb-10">
+            The all-in-one platform to create, manage & scale your social media marketing panel business.
+          </p>
+
+          <div className="grid grid-cols-1 gap-4">
+            {features.map((f, i) => (
+              <div key={i} className="flex items-start gap-4 p-4 rounded-xl bg-card/30 backdrop-blur-sm border border-border/20">
+                <div className="p-2 rounded-lg bg-gradient-to-br from-indigo-600/20 to-purple-600/20">
+                  <f.icon className="w-5 h-5 text-indigo-400" />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <PasswordInput
-                    id="password"
-                    value={password}
-                    onChange={setPassword}
-                    placeholder="Enter your password"
-                  />
+                <div>
+                  <h3 className="font-semibold text-foreground text-sm">{f.title}</h3>
+                  <p className="text-xs text-muted-foreground">{f.desc}</p>
                 </div>
-                <Button type="submit" className="w-full h-11 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white shadow-lg shadow-indigo-500/25 transition-all" disabled={loading} data-testid="button-signin">
-                  {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <ArrowRight className="w-4 h-4 mr-2" />}
-                  {loading ? 'Signing In...' : 'Sign In'}
-                </Button>
-                
-                <div className="text-center">
-                  <Button
-                    type="button"
-                    variant="link"
-                    className="text-sm text-muted-foreground hover:text-primary"
-                    onClick={() => setShowForgotPassword(true)}
-                    data-testid="button-forgot-password"
-                  >
-                    Forgot your password?
-                  </Button>
-                </div>
-              </form>
-            </TabsContent>
-            
-            <TabsContent value="signup" className="space-y-0">
-              <GoogleButton label="Sign up with Google" />
-              <Divider />
-              <form onSubmit={handleSignUp} className="space-y-3.5">
-                <div className="space-y-2">
-                  <Label htmlFor="fullName">Full Name *</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      id="fullName"
-                      type="text"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      placeholder="Enter your full name"
-                      className="pl-10 h-11"
-                      required
-                      minLength={2}
-                      data-testid="input-fullname"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="username">Username * <span className="text-xs text-muted-foreground">(3-20 characters)</span></Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">@</span>
-                    <Input
-                      id="username"
-                      type="text"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 20))}
-                      placeholder="Choose a username"
-                      className="pl-8 h-11"
-                      required
-                      minLength={3}
-                      maxLength={20}
-                      data-testid="input-username"
-                    />
-                  </div>
-                  {username.length > 0 && username.length < 3 && (
-                    <p className="text-xs text-destructive">Username must be at least 3 characters</p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signupEmail">Email *</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      id="signupEmail"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="Enter your email"
-                      className="pl-10 h-11"
-                      required
-                      data-testid="input-signup-email"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signupPassword">Password *</Label>
-                  <PasswordInput
-                    id="signupPassword"
-                    value={password}
-                    onChange={setPassword}
-                    placeholder="Create a strong password"
-                  />
+              </div>
+            ))}
+          </div>
+        </div>
+        
+        {/* Decorative elements */}
+        <div className="absolute bottom-10 left-12 text-xs text-muted-foreground/50">
+          © {new Date().getFullYear()} HOME OF SMM. All rights reserved.
+        </div>
+      </div>
+
+      {/* Right Panel — Auth Form */}
+      <div className="flex-1 flex items-center justify-center p-4 sm:p-8 relative z-10">
+        <Card className="w-full max-w-md bg-card/90 backdrop-blur-xl border-border/40 shadow-2xl shadow-indigo-500/5">
+          <CardHeader className="text-center pb-2">
+            <div className="lg:hidden mx-auto mb-3 w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+              <Zap className="w-6 h-6 text-white" />
+            </div>
+            <CardTitle className="text-2xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+              <span className="lg:hidden">HOME OF SMM</span>
+              <span className="hidden lg:inline">Welcome Back</span>
+            </CardTitle>
+            <CardDescription className="text-muted-foreground/80">
+              <span className="lg:hidden">Launch and manage your SMM panel business</span>
+              <span className="hidden lg:inline">Sign in to your account to continue</span>
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {showForgotPassword ? (
+              <div className="space-y-4">
+                <div className="text-center mb-4">
+                  <h3 className="text-lg font-semibold">Reset Password</h3>
+                  <p className="text-sm text-muted-foreground/80">
+                    Enter your email to receive reset instructions
+                  </p>
                 </div>
                 
-                <Button type="submit" className="w-full h-11 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white shadow-lg shadow-indigo-500/25 transition-all" disabled={loading} data-testid="button-signup">
-                  {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <ArrowRight className="w-4 h-4 mr-2" />}
-                  {loading ? 'Creating Account...' : 'Create Account'}
-                </Button>
-              </form>
-            </TabsContent>
-          </Tabs>
-          )}
-        </CardContent>
-      </Card>
+                <form onSubmit={handleForgotPassword} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="resetEmail">Email Address</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        id="resetEmail"
+                        type="email"
+                        value={resetEmail}
+                        onChange={(e) => setResetEmail(e.target.value)}
+                        placeholder="Enter your email"
+                        className="pl-10 h-11"
+                        required
+                        data-testid="input-reset-email"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Button type="submit" className="w-full h-11 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white shadow-lg shadow-indigo-500/25" disabled={loading} data-testid="button-send-reset">
+                      {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                      {loading ? 'Sending...' : 'Send Reset Email'}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="w-full"
+                      onClick={() => { setShowForgotPassword(false); setResetEmail(''); }}
+                      data-testid="button-back-to-signin"
+                    >
+                      Back to Sign In
+                    </Button>
+                  </div>
+                </form>
+              </div>
+            ) : (
+              <Tabs defaultValue="signin" className="w-full">
+                <TabsList className="grid w-full grid-cols-2 mb-4 bg-muted/50">
+                  <TabsTrigger value="signin" data-testid="tab-signin">Sign In</TabsTrigger>
+                  <TabsTrigger value="signup" data-testid="tab-signup">Sign Up</TabsTrigger>
+                </TabsList>
+              
+                <TabsContent value="signin" className="space-y-0">
+                  <GoogleButton label="Sign in with Google" />
+                  <Divider />
+                  <form onSubmit={handleSignIn} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="identifier">Email or Username</Label>
+                      <div className="relative">
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                          id="identifier"
+                          type="text"
+                          value={identifier}
+                          onChange={(e) => setIdentifier(e.target.value)}
+                          placeholder="Enter email or username"
+                          className="pl-10 h-11"
+                          required
+                          data-testid="input-identifier"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <Label htmlFor="password">Password</Label>
+                        <button
+                          type="button"
+                          onClick={() => setShowForgotPassword(true)}
+                          className="text-xs text-primary hover:underline"
+                          data-testid="button-forgot-password"
+                        >
+                          Forgot password?
+                        </button>
+                      </div>
+                      <PasswordInput
+                        id="password"
+                        value={password}
+                        onChange={setPassword}
+                        placeholder="Enter your password"
+                      />
+                    </div>
+                    <Button type="submit" className="w-full h-11 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white shadow-lg shadow-indigo-500/25 transition-all gap-2" disabled={loading} data-testid="button-signin">
+                      {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
+                      {loading ? 'Signing in...' : 'Sign In'}
+                    </Button>
+                  </form>
+                </TabsContent>
+              
+                <TabsContent value="signup" className="space-y-0">
+                  <GoogleButton label="Sign up with Google" />
+                  <Divider />
+                  <form onSubmit={handleSignUp} className="space-y-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="fullName">Full Name</Label>
+                      <div className="relative">
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                          id="fullName"
+                          type="text"
+                          value={fullName}
+                          onChange={(e) => setFullName(e.target.value)}
+                          placeholder="Enter your full name"
+                          className="pl-10 h-11"
+                          required
+                          data-testid="input-fullname"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="username">Username</Label>
+                      <div className="relative">
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                          id="username"
+                          type="text"
+                          value={username}
+                          onChange={(e) => setUsername(e.target.value)}
+                          placeholder="Choose a username"
+                          className="pl-10 h-11"
+                          required
+                          data-testid="input-username"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email</Label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                          id="email"
+                          type="email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          placeholder="Enter your email"
+                          className="pl-10 h-11"
+                          required
+                          data-testid="input-email"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="signupPassword">Password</Label>
+                      <PasswordInput
+                        id="signupPassword"
+                        value={password}
+                        onChange={setPassword}
+                        placeholder="Create a password"
+                      />
+                    </div>
+                    <Button type="submit" className="w-full h-11 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white shadow-lg shadow-indigo-500/25 transition-all gap-2" disabled={loading} data-testid="button-signup">
+                      {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                      {loading ? 'Creating account...' : 'Create Account'}
+                    </Button>
+                  </form>
+                </TabsContent>
+              </Tabs>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };
