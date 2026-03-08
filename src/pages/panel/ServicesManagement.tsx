@@ -970,7 +970,7 @@ const ServicesManagement = () => {
         .from('orders')
         .select('*', { count: 'exact', head: true })
         .in('service_id', selectedServices)
-        .in('status', ['pending', 'in_progress', 'paused']);
+        .in('status', ['pending', 'in_progress'] as any[]);
 
       const hasActiveOrders = (activeOrderCount || 0) > 0;
 
