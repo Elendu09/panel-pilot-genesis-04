@@ -406,17 +406,15 @@ const OrdersManagement = () => {
     if (!panel?.id) return;
     setSyncing(true);
     try {
-      const response = await fetch('/functions/v1/sync-orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ panelId: panel.id }),
+      const { data, error } = await supabase.functions.invoke('sync-orders', {
+        body: { panelId: panel.id },
       });
-      const data = await response.json();
-      if (data.success) {
+      if (error) throw error;
+      if (data?.success) {
         toast({ title: "Orders synced", description: `${data.updated} of ${data.total} active orders updated from providers` });
         if (data.updated > 0) await fetchOrders();
       } else {
-        toast({ variant: 'destructive', title: 'Sync failed', description: data.error || 'Failed to sync orders' });
+        toast({ variant: 'destructive', title: 'Sync failed', description: data?.error || 'Failed to sync orders' });
       }
     } catch (error) {
       console.error('Sync error:', error);
