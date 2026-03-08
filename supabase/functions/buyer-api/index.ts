@@ -419,8 +419,34 @@ async function handleAddOrder(supabase: any, panelId: string, buyerId: string | 
   const providerResult = await forwardOrderToProvider(supabase, serviceData.id, link, orderQuantity, order.id);
   console.log(`[buyer-api] Order ${order.order_number} forwarding result:`, providerResult);
 
-  // Surface provider errors alongside order number
+  // Surface provider errors alongside order number + notify panel owner
   if (!providerResult.success) {
+    // Update order notes with failure info
+    await supabase
+      .from('orders')
+      .update({ notes: `Provider forwarding failed: ${providerResult.error || 'Unknown error'}` })
+      .eq('id', order.id);
+
+    // Notify panel owner
+    try {
+      const { data: panelOwner } = await supabase
+        .from('panels')
+        .select('owner_id')
+        .eq('id', panelId)
+        .single();
+      if (panelOwner?.owner_id) {
+        await supabase.from('panel_notifications').insert({
+          panel_id: panelId,
+          user_id: panelOwner.owner_id,
+          type: 'order',
+          title: 'Order Forwarding Failed',
+          message: `Order #${order.order_number} forwarding failed: ${providerResult.error || 'Unknown'}`,
+        });
+      }
+    } catch (notifErr) {
+      console.error('[buyer-api] Forwarding notification error:', (notifErr as Error).message);
+    }
+
     return jsonResponse({ 
       order: order.order_number, 
       provider_error: providerResult.error || 'Provider forwarding failed'

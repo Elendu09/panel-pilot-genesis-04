@@ -965,6 +965,15 @@ const ServicesManagement = () => {
     setBulkOperationLoading(true);
     
     try {
+      // Check if any selected services have active orders
+      const { count: activeOrderCount } = await supabase
+        .from('orders')
+        .select('*', { count: 'exact', head: true })
+        .in('service_id', selectedServices)
+        .in('status', ['pending', 'in_progress', 'paused']);
+
+      const hasActiveOrders = (activeOrderCount || 0) > 0;
+
       const { data: fullServices } = await supabase
         .from('services')
         .select('*')
@@ -975,10 +984,19 @@ const ServicesManagement = () => {
         [s.id]: s
       }), {});
       
-      setBulkProgressTitle("Deleting Services");
+      setBulkProgressTitle(hasActiveOrders ? "Deactivating Services (Active Orders Found)" : "Deleting Services");
       setShowBulkProgress(true);
       
-      await bulkDeleteServices(selectedServices, setBulkProgress, panel?.id);
+      if (hasActiveOrders) {
+        // Soft-delete: set is_active = false for services with active orders
+        await bulkUpdateStatus(selectedServices, false, setBulkProgress, panel?.id);
+        toast({ 
+          title: `${selectedServices.length} services deactivated`,
+          description: "Some services had active orders and were deactivated instead of deleted.",
+        });
+      } else {
+        await bulkDeleteServices(selectedServices, setBulkProgress, panel?.id);
+      }
       
       setServices(prev => prev.filter(s => !selectedServices.includes(s.id)));
       
