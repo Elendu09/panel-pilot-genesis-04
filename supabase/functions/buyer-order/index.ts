@@ -282,6 +282,36 @@ serve(async (req) => {
     if (paymentType === 'balance') {
       providerResult = await forwardToProvider(supabase, serviceId, targetUrl, quantity, order.id);
       console.log(`[buyer-order] Provider forwarding result:`, providerResult);
+
+      // Surface forwarding failures — notify panel owner
+      if (!providerResult.success) {
+        // Update order notes with failure reason
+        await supabase
+          .from('orders')
+          .update({ notes: `Provider forwarding failed: ${providerResult.error || 'Unknown error'}` })
+          .eq('id', order.id);
+
+        // Notify panel owner about forwarding failure
+        try {
+          const { data: panelOwner } = await supabase
+            .from('panels')
+            .select('owner_id')
+            .eq('id', panelId)
+            .single();
+
+          if (panelOwner?.owner_id) {
+            await supabase.from('panel_notifications').insert({
+              panel_id: panelId,
+              user_id: panelOwner.owner_id,
+              type: 'order',
+              title: 'Order Forwarding Failed',
+              message: `Order #${orderNumber} could not be forwarded to provider: ${providerResult.error || 'Unknown error'}`,
+            });
+          }
+        } catch (notifErr) {
+          console.error('[buyer-order] Forwarding failure notification error:', notifErr);
+        }
+      }
     }
 
     // Create buyer notification
