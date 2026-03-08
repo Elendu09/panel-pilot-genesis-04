@@ -1,73 +1,75 @@
 
 
-# Plan: Fix Build Errors, Header Toggle, Admin Functions, Subdomain, Payment & Import
+# Plan: Fix Onboarding Loop, Payment Flow, Auth Redesign & Domain Edge Error
 
-## Overview
+## Issues Found
 
-This plan addresses 5 areas: (1) fix all 12 build errors in edge functions, (2) replace ThemeToggle with a header visibility switch in MoreMenu, (3) fix admin pages that call non-existent `admin-data` function, (4) restore `smmpilot.online` as the subdomain suffix, and (5) fix payment verification status updates.
+### 1. Onboarding Loop When Creating New Panel
+**Root cause**: In `PanelOnboardingV2.tsx` line 148-158, it checks for ANY panel with `onboarding_completed: true`. If user already has a completed panel and navigates to `/panel/onboarding` (without `?new=true`), it redirects to `/panel`. But the dashboard or auth page redirects back to `/panel/onboarding` if a new incomplete panel exists. This creates a redirect loop.
+
+The same `checkOnboardingAndRedirect` in `Auth.tsx` (line 89-113) queries for completed panels — if it finds NONE completed but there IS an incomplete one, it sends to onboarding. But once there, the onboarding check finds a COMPLETED panel and sends back to `/panel`.
+
+**Fix**: Change onboarding to check for incomplete panels belonging to the current user FIRST. If an incomplete panel exists, resume it. If all panels are completed, only redirect to `/panel` — don't create the loop. Also ensure the "create new panel" flow always uses `?new=true`.
+
+### 2. Payment Gateway Email — Uses Wrong ID for Lookup
+**Root cause**: `OnboardingPaymentStep` sends `buyerId: user.id` (auth UID), but `process-payment` line 288-293 queries `profiles` by `WHERE id = buyerId`. Since `profiles.id` is a separate auto-generated UUID (not `user_id`), the email lookup fails silently, falling back to `user-xxx@platform.local`.
+
+**Fix**: In `process-payment`, change the email lookup to query `profiles` by `user_id` instead of `id`. Also fetch `full_name` for gateways that need it.
+
+### 3. Payment Step Button Logic
+**Current**: The payment step has "Start Free Trial" and "Pay $X" buttons inside `OnboardingPaymentStep`, plus "Back"/"Next" (or "Skip") buttons in the navigation bar below. The user wants:
+- Lock "Next" until either "Start Free Trial" or "Pay" is actioned
+- If "Start Free Trial" → unlock Next, let user click to proceed
+- If "Pay" → on successful return, auto-unlock Next and save payment status to DB
+- If payment fails → Next stays locked
+
+**Fix**: 
+- Remove the automatic `onSkip` behavior that auto-advances to next step
+- Instead, `onSkip` (trial) just sets `paymentCompleted = true` without advancing
+- The Next button becomes enabled only when `paymentCompleted === true`
+- On `?payment=success` return, set `paymentCompleted = true` and save to panel's `onboarding_data`
+
+### 4. Auth Page Redesign
+**Current**: Split-screen with gradient backgrounds. User wants: light/dark only (no gradient), Google button below the form, official Google logo SVG.
+
+**Fix**: Remove all gradient classes from Auth.tsx backgrounds. Use `bg-background` for the page and `bg-card` for the form. Move Google button below the form (after sign in/up button). Use the official Google "G" SVG inline instead of `SiGoogle` from react-icons.
+
+### 5. Domain Edge Error in Onboarding
+**Root cause**: `OnboardingDomainStep` line 124 uses `panelId || 'pending'` — if `panelId` is undefined, it sends `panel_id: 'pending'` to the edge function. The `panel_domains` table has a FK constraint on `panel_id` referencing `panels.id`, so `'pending'` (not a valid UUID) causes a DB error.
+
+The `panelId` prop IS now passed from `PanelOnboardingV2.tsx` (line 754), but only if `createdPanelIdRef.current` has been set. If the user skips straight to domain step before `saveProgress` creates the panel, it's still undefined.
+
+**Fix**: In `OnboardingDomainStep`, don't allow domain submission if `panelId` is undefined. Show a message like "Please complete previous steps first". Also ensure `saveProgress` is called before reaching the domain step.
 
 ---
 
-## 1. Fix Build Errors (12 TypeScript errors across 6 edge functions)
+## Changes
 
-| File | Error | Fix |
-|------|-------|-----|
-| `dns-lookup/index.ts` L210, L295 | `'error' is of type 'unknown'` | Cast to `(error as Error).message` |
-| `domain-health-check/index.ts` L167 | TXT returns `string[][]` not `string[]` | Cast: `as unknown as string[]` or flatten |
-| `import-provider-services/index.ts` L612 | `'error' is of type 'unknown'` | Cast to `(error as Error).message` |
-| `mfa-setup/index.ts` L59, L85 | `Uint8Array` not assignable to `BufferSource` | Cast: `key as unknown as ArrayBuffer` or use `.buffer` |
-| `security-audit/index.ts` L89 | `'err' is of type 'unknown'` | Cast to `(err as Error).message` |
-| `serve-favicon/index.ts` L100-101 | `custom_branding` not on array type | Add `.single()` type assertion or check `Array.isArray` |
-| `webhook-notify/index.ts` L191 | `string | null` not assignable to fetch | Add null guard before fetch |
-| `webhook-notify/index.ts` L232-233 | `supabaseAdmin.rpc` always truthy, `.raw` doesn't exist | Replace with simple `failure_count: 1` (increment via SQL or just set 1) |
+### `src/pages/panel/PanelOnboardingV2.tsx`
+- Fix the existing panel check: if user has a completed panel AND an incomplete panel, resume the incomplete one instead of redirecting
+- Change `onSkip` handler to NOT auto-advance — only set `paymentCompleted = true`
+- Change `handlePaymentSuccess` to set `paymentCompleted = true` without auto-advancing
+- Make Next button disabled on payment step when `!paymentCompleted`
+- On `?payment=success`, also persist `paymentCompleted: true` to `onboarding_data`
 
-## 2. MoreMenu: Replace ThemeToggle with Header Menu Icon Toggle
+### `src/components/onboarding/OnboardingPaymentStep.tsx`
+- Change `onSkip` callback to not navigate — just signal completion
+- `handleSkipWithTrial` should call `onSkip()` without navigating
 
-Replace `<ThemeToggle />` in the user profile card with a `<Switch>` component labeled "Show Menu Icon" that controls whether the hamburger/menu icon appears in the mobile header.
+### `supabase/functions/process-payment/index.ts`
+- Line 288-293: Change `.eq('id', buyerId)` to `.eq('user_id', buyerId)` for email lookup
+- Also select `full_name` and pass to gateways that need it
 
-- Store setting in `localStorage` key `header-menu-visible` (default: `false` = disabled = hidden)
-- Create a simple context or use localStorage directly; the header component reads this value
-- The switch is only rendered in mobile mode (use `useIsMobile()`)
-- When enabled → show the hamburger menu icon in the dashboard header
-- When disabled → hide it (current default behavior for clean mobile UI)
+### `src/pages/Auth.tsx`
+- Replace gradient backgrounds with solid `bg-background` / `bg-card`
+- Move GoogleButton to render AFTER the sign-in/sign-up form (below the submit button)
+- Replace `SiGoogle` with inline SVG of official Google "G" logo
+- Remove the `Divider` component (no longer needed between google and form)
+- Keep the left panel branding on desktop but remove gradient there too
 
-## 3. Fix Admin Pages — Replace `admin-data` with Direct Supabase Calls
-
-Six admin pages call `/functions/v1/admin-data` which **does not exist** as an edge function. The existing function is `admin-panel-ops` (handles add_funds, update_subscription, bulk_update only — not data fetching).
-
-**Fix**: Replace `fetch('/functions/v1/admin-data', ...)` calls with direct `supabase.from(...)` queries using the service role via RLS policies (admin already has `is_any_admin` policies on panels).
-
-Affected pages and their replacement queries:
-- **`PanelManagement.tsx`**: `get_panels` → `supabase.from('panels').select('*, owner:profiles!panels_owner_id_fkey(email, full_name), subscription:panel_subscriptions(plan_type, status)')` 
-- **`AdminOverview.tsx`**: `get_dashboard_stats` → aggregate from panels, orders, transactions, client_users tables
-- **`UserManagement.tsx`**: `get_users` → `supabase.from('profiles').select('*')`
-- **`PaymentManagement.tsx`**: `get_transactions` → `supabase.from('transactions').select('*')`
-- **`SystemHealth.tsx`**: `get_system_health` → compute from table counts
-- **`SupportTickets.tsx`**: `get_tickets` / `update_ticket` → `supabase.from('support_tickets').select/update`
-
-Also fix CORS on `admin-panel-ops/index.ts` (line 5 missing platform headers).
-
-## 4. Restore Subdomain Suffix to `smmpilot.online`
-
-Update references in:
-- `tenant-domain-config.ts`: Change default fallback from `homeofsmm.com` to `smmpilot.online` (line 39)
-- `generate-sitemap/index.ts`: Change `homeofsmm.com` URLs to `smmpilot.online`
-- `docs/DocsHub.tsx`: Change example URLs from `homeofsmm.com` to `smmpilot.online`
-- Remove Replit patterns from `DEV_PATTERNS` in `tenant-domain-config.ts` (lines 80-83) and `TenantRouter.tsx` (lines 39-42)
-- Keep `homeofsmm.com` in `PLATFORM_DOMAINS` array (it's the brand) but ensure `smmpilot.online` is primary for subdomains
-
-## 5. Fix Payment Verification & Subscription Upgrade Flow
-
-### Deposit status not updating in transaction history
-The verification flow in `Billing.tsx` (lines 183-226) already calls `verify-payment` on return. The issue is timing — if the gateway hasn't confirmed yet, verification returns `pending`. 
-
-**Fix**: Add a retry loop (poll 3 times with 5s intervals) when status comes back as `pending` after returning from payment.
-
-### Subscription upgrade from balance
-Currently `handleUpgrade` always goes through the payment gateway. Add an option to pay from panel balance:
-- Before calling `process-payment`, check if `panelBalance >= plan.price`
-- Show a dialog asking: "Pay from balance ($X available) or use payment gateway?"
-- If balance: directly deduct from `panels.balance`, create completed transaction, update subscription — all via a new `balance-payment` action in `process-payment`
+### `src/components/onboarding/OnboardingDomainStep.tsx`
+- Add guard: if `panelId` is falsy, show a notice instead of allowing domain submission
+- Remove `'pending'` fallback on line 124
 
 ---
 
@@ -75,25 +77,9 @@ Currently `handleUpgrade` always goes through the payment gateway. Add an option
 
 | File | Change |
 |------|--------|
-| `supabase/functions/dns-lookup/index.ts` | Cast error types |
-| `supabase/functions/domain-health-check/index.ts` | Fix TXT record type |
-| `supabase/functions/import-provider-services/index.ts` | Cast error type |
-| `supabase/functions/mfa-setup/index.ts` | Fix crypto key type |
-| `supabase/functions/security-audit/index.ts` | Cast error type |
-| `supabase/functions/serve-favicon/index.ts` | Fix panel type check |
-| `supabase/functions/webhook-notify/index.ts` | Fix null check + remove `.rpc`/`.raw` |
-| `supabase/functions/admin-panel-ops/index.ts` | Fix CORS headers |
-| `src/pages/panel/MoreMenu.tsx` | Replace ThemeToggle with header menu switch |
-| `src/pages/admin/PanelManagement.tsx` | Replace admin-data with direct Supabase |
-| `src/pages/admin/AdminOverview.tsx` | Replace admin-data with direct Supabase |
-| `src/pages/admin/UserManagement.tsx` | Replace admin-data with direct Supabase |
-| `src/pages/admin/PaymentManagement.tsx` | Replace admin-data with direct Supabase |
-| `src/pages/admin/SystemHealth.tsx` | Replace admin-data with direct Supabase |
-| `src/pages/admin/SupportTickets.tsx` | Replace admin-data with direct Supabase |
-| `src/lib/tenant-domain-config.ts` | Fix default domain, remove Replit |
-| `src/pages/TenantRouter.tsx` | Remove Replit patterns |
-| `supabase/functions/generate-sitemap/index.ts` | Fix URLs |
-| `src/pages/docs/DocsHub.tsx` | Fix example URLs |
-| `src/pages/panel/Billing.tsx` | Add retry polling, balance payment option |
-| `supabase/functions/process-payment/index.ts` | Add balance-payment action |
+| `src/pages/panel/PanelOnboardingV2.tsx` | Fix onboarding loop, payment step Next locking |
+| `src/components/onboarding/OnboardingPaymentStep.tsx` | Trial skip doesn't auto-advance |
+| `supabase/functions/process-payment/index.ts` | Fix email lookup to use `user_id` |
+| `src/pages/Auth.tsx` | Redesign: no gradients, Google below form, official SVG |
+| `src/components/onboarding/OnboardingDomainStep.tsx` | Guard against missing panelId |
 
