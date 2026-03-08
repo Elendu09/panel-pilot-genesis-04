@@ -881,7 +881,7 @@ const OrdersManagement = () => {
                   <tbody>
                     {filteredOrders.length === 0 ? (
                       <tr>
-                        <td colSpan={8} className="p-12 text-center">
+                        <td colSpan={10} className="p-12 text-center">
                           <div className="flex flex-col items-center gap-4">
                             <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center">
                               <ShoppingCart className="w-8 h-8 text-muted-foreground/50" />
