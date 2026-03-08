@@ -128,6 +128,46 @@ const knowledgeCategories: KnowledgeCategory[] = [
         answer: "Orders sync with provider status automatically. View real-time progress in Order Management. Customers can also track their orders on your storefront."
       }
     ]
+  },
+  {
+    id: "multi-panel",
+    title: "Multi-Panel & Scaling",
+    icon: Zap,
+    color: "text-indigo-500 bg-indigo-500/10",
+    faqs: [
+      {
+        question: "Can I run multiple panels?",
+        answer: "Yes! You can create and manage multiple panels from a single dashboard. Each panel has its own storefront, domain, branding, services, and customer base. Use the panel switcher in your dashboard to switch between them."
+      },
+      {
+        question: "Do multiple panels share the same providers?",
+        answer: "Each panel has independent provider connections. You can connect the same or different providers to each panel with separate API keys and pricing configurations."
+      },
+      {
+        question: "Can each panel have a different domain?",
+        answer: "Yes. Each panel can have its own custom domain or use a unique subdomain (e.g., panel1.smmpilot.online, panel2.smmpilot.online). Configure domains from each panel's settings."
+      }
+    ]
+  },
+  {
+    id: "storefront",
+    title: "Storefront & Design",
+    icon: Globe,
+    color: "text-teal-500 bg-teal-500/10",
+    faqs: [
+      {
+        question: "How do I customize my storefront?",
+        answer: "Use the Storefront Builder in your dashboard to choose from 7+ pre-built templates. Customize colors, fonts, logos, and layouts with a live preview before publishing."
+      },
+      {
+        question: "Can I add a blog to my panel?",
+        answer: "Yes! Go to Blog Management in your dashboard to create and publish blog posts. Blog posts are SEO-optimized and displayed on your storefront to attract organic traffic."
+      },
+      {
+        question: "How do promo codes work?",
+        answer: "Navigate to Promo & Coupons in your dashboard to create discount codes. Set percentage or fixed amount discounts, expiry dates, usage limits, and track redemptions."
+      }
+    ]
   }
 ];
 

@@ -174,6 +174,10 @@ const featureCategories = [
       { title: "Dark Mode", description: "Toggle between light and dark themes." },
       { title: "Maintenance Mode", description: "Put your panel in maintenance mode when needed." },
       { title: "Team Members", description: "Add team members with different permission levels." },
+      { title: "Chat Inbox", description: "Built-in live chat for real-time customer support from your dashboard." },
+      { title: "Blog Management", description: "Create and publish blog posts with SEO optimization to drive organic traffic." },
+      { title: "Promo & Coupons", description: "Create discount codes with percentage/fixed amounts, expiry dates, and usage limits." },
+      { title: "Provider Ads", description: "Display or manage provider advertisements to monetize your panel." },
     ]
   },
   {
