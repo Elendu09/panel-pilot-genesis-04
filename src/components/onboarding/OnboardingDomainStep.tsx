@@ -40,6 +40,7 @@ interface OnboardingDomainStepProps {
   currency?: string;
   onCurrencyChange?: (value: string) => void;
   panelId?: string;
+  onVerificationStateChange?: (state: { step: 'configure' | 'txt-pending' | 'dns-pending' | 'verified'; token: string | null }) => void;
 }
 
 type DomainOption = 'have-domain' | 'register-new' | 'free-subdomain';
