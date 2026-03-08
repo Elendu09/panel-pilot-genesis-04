@@ -271,7 +271,7 @@ const CustomerManagement = () => {
     try {
       const { data, error } = await supabase
         .from('client_users')
-        .select('*')
+        .select('id, panel_id, email, full_name, username, balance, total_spent, is_active, is_banned, banned_at, ban_reason, is_vip, vip_since, custom_discount, referral_code, referral_count, referred_by, created_at, updated_at, last_login_at, last_login_ip, last_login_device, last_login_location, preferred_language, timezone, low_balance_threshold, oauth_provider, avatar_url, invoice_address, invoice_company_name, invoice_vat_id')
         .eq('panel_id', panel.id)
         .order('created_at', { ascending: false });
 
