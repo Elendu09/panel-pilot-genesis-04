@@ -1,73 +1,72 @@
 
 
-# Plan: Fix Build Errors, Header Toggle, Admin Functions, Subdomain, Payment & Import
+# Plan: Update Outdated Docs, Features & Tutorial Pages
 
-## Overview
+## What's Outdated
 
-This plan addresses 5 areas: (1) fix all 12 build errors in edge functions, (2) replace ThemeToggle with a header visibility switch in MoreMenu, (3) fix admin pages that call non-existent `admin-data` function, (4) restore `smmpilot.online` as the subdomain suffix, and (5) fix payment verification status updates.
+After reviewing the codebase against actual panel capabilities, here are the gaps:
+
+### 1. `src/pages/docs/GettingStarted.tsx` — Empty placeholder
+Says "Quick start guide coming soon..." with no content.
+
+### 2. `src/pages/docs/APIReference.tsx` — Empty placeholder
+Says "Complete API documentation coming soon..." with no content.
+
+### 3. `src/pages/Tutorial.tsx` — Generic, doesn't reflect actual flows
+- "Getting Started" section says "Add Funds" as step 2 but actual onboarding is: create panel name → choose plan → payment → connect provider → set up domain → configure branding → launch
+- "Panel Owner Guide" is vague ("Panel Setup", "Service Management") — doesn't mention actual features like design customization, storefront builder, blog management, promo codes, team management
+- "Advanced Features" lists "White Label" and "Multi-Panel Management" generically without explaining the actual implementation (guided onboarding, panel switcher, etc.)
+
+### 4. `src/pages/Features.tsx` — Outdated counts and missing features
+- Says "150+ Payment Methods" but KnowledgeBase says "200+ payment systems"
+- Missing major implemented features: Guided Onboarding (6-step wizard), Storefront Builder/Design Customization, Blog Management, Promo/Coupon Management, Provider Advertising marketplace, Chat Inbox, Multi-Panel support, Payment Gateway Request system
+- "Hosting" section lists CDN, DDoS Protection, Backups — these are generic claims not tied to actual implementation
+
+### 5. `src/components/support/KnowledgeBase.tsx` — Outdated instructions
+- "Getting Started" FAQ says "go to General Settings" — actual path is through guided onboarding
+- Missing FAQ categories: Multi-Panel Management, Onboarding, Storefront/Design, Blog, Promotions
+- Payment section says "200+ payment systems" but Features page says "150+" — inconsistency
 
 ---
 
-## 1. Fix Build Errors (12 TypeScript errors across 6 edge functions)
+## Changes
 
-| File | Error | Fix |
-|------|-------|-----|
-| `dns-lookup/index.ts` L210, L295 | `'error' is of type 'unknown'` | Cast to `(error as Error).message` |
-| `domain-health-check/index.ts` L167 | TXT returns `string[][]` not `string[]` | Cast: `as unknown as string[]` or flatten |
-| `import-provider-services/index.ts` L612 | `'error' is of type 'unknown'` | Cast to `(error as Error).message` |
-| `mfa-setup/index.ts` L59, L85 | `Uint8Array` not assignable to `BufferSource` | Cast: `key as unknown as ArrayBuffer` or use `.buffer` |
-| `security-audit/index.ts` L89 | `'err' is of type 'unknown'` | Cast to `(err as Error).message` |
-| `serve-favicon/index.ts` L100-101 | `custom_branding` not on array type | Add `.single()` type assertion or check `Array.isArray` |
-| `webhook-notify/index.ts` L191 | `string | null` not assignable to fetch | Add null guard before fetch |
-| `webhook-notify/index.ts` L232-233 | `supabaseAdmin.rpc` always truthy, `.raw` doesn't exist | Replace with simple `failure_count: 1` (increment via SQL or just set 1) |
+### `src/pages/docs/GettingStarted.tsx`
+Replace placeholder with actual getting started content covering:
+- Account creation and verification
+- Panel onboarding wizard (6 steps: name, plan, payment, provider, domain, branding)
+- First order walkthrough
+- Link to `/docs` hub for deeper articles
 
-## 2. MoreMenu: Replace ThemeToggle with Header Menu Icon Toggle
+### `src/pages/docs/APIReference.tsx`
+Replace placeholder with actual API reference overview covering:
+- Buyer API endpoints (place order, check status, get services, get balance)
+- Panel Owner API endpoints (manage services, users, orders)
+- Authentication (API key)
+- Example request/response snippets
+- Link to detailed docs articles
 
-Replace `<ThemeToggle />` in the user profile card with a `<Switch>` component labeled "Show Menu Icon" that controls whether the hamburger/menu icon appears in the mobile header.
+### `src/pages/Tutorial.tsx`
+Rewrite all 4 sections to match actual platform:
+- **Getting Started**: Reflect actual onboarding (create account → panel name → choose plan → payment → connect provider → domain → branding → launch)
+- **Panel Owner Guide**: Mention actual pages (Design Customization, Services Management, Provider Management, Payment Methods, Blog Management, Team Management, Analytics)
+- **Order Management**: Keep statuses but add info about provider sync, refill, drip-feed
+- **Advanced Features**: Update to cover actual implementations (Multi-Panel from dashboard, Storefront Builder with 7+ templates, API with webhooks, Promo/Coupon system)
 
-- Store setting in `localStorage` key `header-menu-visible` (default: `false` = disabled = hidden)
-- Create a simple context or use localStorage directly; the header component reads this value
-- The switch is only rendered in mobile mode (use `useIsMobile()`)
-- When enabled → show the hamburger menu icon in the dashboard header
-- When disabled → hide it (current default behavior for clean mobile UI)
+### `src/pages/Features.tsx`
+- Update "150+ Payment Methods" → "200+ Payment Methods"
+- Add missing feature entries to relevant categories:
+  - **User Panel**: Add "Guided Onboarding", "Multi-Panel Support"
+  - **Services**: Add "Provider Advertising Marketplace"
+  - **Accept Payments**: Update count, add "Payment Gateway Requests"
+  - **Theme Editor**: Rename to "Storefront Builder", add "7+ Pre-built Templates", "Live Preview"
+  - **Admin Options**: Add "Chat Inbox", "Blog Management", "Promo & Coupons", "Provider Ads"
 
-## 3. Fix Admin Pages — Replace `admin-data` with Direct Supabase Calls
-
-Six admin pages call `/functions/v1/admin-data` which **does not exist** as an edge function. The existing function is `admin-panel-ops` (handles add_funds, update_subscription, bulk_update only — not data fetching).
-
-**Fix**: Replace `fetch('/functions/v1/admin-data', ...)` calls with direct `supabase.from(...)` queries using the service role via RLS policies (admin already has `is_any_admin` policies on panels).
-
-Affected pages and their replacement queries:
-- **`PanelManagement.tsx`**: `get_panels` → `supabase.from('panels').select('*, owner:profiles!panels_owner_id_fkey(email, full_name), subscription:panel_subscriptions(plan_type, status)')` 
-- **`AdminOverview.tsx`**: `get_dashboard_stats` → aggregate from panels, orders, transactions, client_users tables
-- **`UserManagement.tsx`**: `get_users` → `supabase.from('profiles').select('*')`
-- **`PaymentManagement.tsx`**: `get_transactions` → `supabase.from('transactions').select('*')`
-- **`SystemHealth.tsx`**: `get_system_health` → compute from table counts
-- **`SupportTickets.tsx`**: `get_tickets` / `update_ticket` → `supabase.from('support_tickets').select/update`
-
-Also fix CORS on `admin-panel-ops/index.ts` (line 5 missing platform headers).
-
-## 4. Restore Subdomain Suffix to `smmpilot.online`
-
-Update references in:
-- `tenant-domain-config.ts`: Change default fallback from `homeofsmm.com` to `smmpilot.online` (line 39)
-- `generate-sitemap/index.ts`: Change `homeofsmm.com` URLs to `smmpilot.online`
-- `docs/DocsHub.tsx`: Change example URLs from `homeofsmm.com` to `smmpilot.online`
-- Remove Replit patterns from `DEV_PATTERNS` in `tenant-domain-config.ts` (lines 80-83) and `TenantRouter.tsx` (lines 39-42)
-- Keep `homeofsmm.com` in `PLATFORM_DOMAINS` array (it's the brand) but ensure `smmpilot.online` is primary for subdomains
-
-## 5. Fix Payment Verification & Subscription Upgrade Flow
-
-### Deposit status not updating in transaction history
-The verification flow in `Billing.tsx` (lines 183-226) already calls `verify-payment` on return. The issue is timing — if the gateway hasn't confirmed yet, verification returns `pending`. 
-
-**Fix**: Add a retry loop (poll 3 times with 5s intervals) when status comes back as `pending` after returning from payment.
-
-### Subscription upgrade from balance
-Currently `handleUpgrade` always goes through the payment gateway. Add an option to pay from panel balance:
-- Before calling `process-payment`, check if `panelBalance >= plan.price`
-- Show a dialog asking: "Pay from balance ($X available) or use payment gateway?"
-- If balance: directly deduct from `panels.balance`, create completed transaction, update subscription — all via a new `balance-payment` action in `process-payment`
+### `src/components/support/KnowledgeBase.tsx`
+- Update "Getting Started" FAQs to reference onboarding wizard instead of manual setup
+- Add new category: "Multi-Panel & Scaling" with FAQs about managing multiple panels, switching panels, separate storefronts
+- Add new category: "Storefront & Design" with FAQs about templates, customization, live preview
+- Update payment FAQ answer for consistency ("200+ payment systems")
 
 ---
 
@@ -75,25 +74,9 @@ Currently `handleUpgrade` always goes through the payment gateway. Add an option
 
 | File | Change |
 |------|--------|
-| `supabase/functions/dns-lookup/index.ts` | Cast error types |
-| `supabase/functions/domain-health-check/index.ts` | Fix TXT record type |
-| `supabase/functions/import-provider-services/index.ts` | Cast error type |
-| `supabase/functions/mfa-setup/index.ts` | Fix crypto key type |
-| `supabase/functions/security-audit/index.ts` | Cast error type |
-| `supabase/functions/serve-favicon/index.ts` | Fix panel type check |
-| `supabase/functions/webhook-notify/index.ts` | Fix null check + remove `.rpc`/`.raw` |
-| `supabase/functions/admin-panel-ops/index.ts` | Fix CORS headers |
-| `src/pages/panel/MoreMenu.tsx` | Replace ThemeToggle with header menu switch |
-| `src/pages/admin/PanelManagement.tsx` | Replace admin-data with direct Supabase |
-| `src/pages/admin/AdminOverview.tsx` | Replace admin-data with direct Supabase |
-| `src/pages/admin/UserManagement.tsx` | Replace admin-data with direct Supabase |
-| `src/pages/admin/PaymentManagement.tsx` | Replace admin-data with direct Supabase |
-| `src/pages/admin/SystemHealth.tsx` | Replace admin-data with direct Supabase |
-| `src/pages/admin/SupportTickets.tsx` | Replace admin-data with direct Supabase |
-| `src/lib/tenant-domain-config.ts` | Fix default domain, remove Replit |
-| `src/pages/TenantRouter.tsx` | Remove Replit patterns |
-| `supabase/functions/generate-sitemap/index.ts` | Fix URLs |
-| `src/pages/docs/DocsHub.tsx` | Fix example URLs |
-| `src/pages/panel/Billing.tsx` | Add retry polling, balance payment option |
-| `supabase/functions/process-payment/index.ts` | Add balance-payment action |
+| `src/pages/docs/GettingStarted.tsx` | Replace placeholder with real getting started guide |
+| `src/pages/docs/APIReference.tsx` | Replace placeholder with API overview + examples |
+| `src/pages/Tutorial.tsx` | Rewrite all sections to match actual platform |
+| `src/pages/Features.tsx` | Update counts, add missing features |
+| `src/components/support/KnowledgeBase.tsx` | Update FAQs, add new categories |
 
