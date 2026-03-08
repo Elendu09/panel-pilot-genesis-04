@@ -77,7 +77,7 @@ const featureCategories = [
     title: "Accept Payments",
     icon: CreditCard,
     features: [
-      { title: "150+ Payment Methods", description: "Many already integrated payment methods with new ones added constantly." },
+      { title: "200+ Payment Methods", description: "Integrated payment methods including Paystack, Korapay, Flutterwave, Stripe, crypto, and more." },
       { title: "Method Instructions", description: "Add multilingual instructions for each payment method." },
       { title: "Extra Fee", description: "Set an additional fee for selected methods when adding funds." },
       { title: "Currency Conversion", description: "Payment options available for conversion from other currencies." },
