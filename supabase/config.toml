@@ -141,3 +141,9 @@ verify_jwt = false
 [functions.mfa-setup]
 verify_jwt = false
 
+[functions.enable-direct-provider]
+verify_jwt = false
+
+[functions.transfer-provider-balance]
+verify_jwt = false
+
