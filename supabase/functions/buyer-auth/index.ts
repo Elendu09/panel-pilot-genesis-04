@@ -598,7 +598,7 @@ async function handleLogin(supabaseAdmin: any, body: any, req: Request) {
   });
 
   // Return user data (exclude sensitive fields)
-  const { password_hash, password_temp, ...safeUser } = user;
+  const { password_hash, password_temp, api_key: _ak, ...safeUser } = user;
   
   return jsonResponse({ 
     success: true, 
@@ -664,7 +664,7 @@ async function handleFetch(supabaseAdmin: any, body: any) {
   console.log('Fetch successful for user:', user.id);
 
   // Return user data (exclude sensitive fields)
-  const { password_hash, password_temp, ...safeUser } = user;
+  const { password_hash, password_temp, api_key: _ak2, ...safeUser } = user;
   
   return jsonResponse({ 
     success: true, 
@@ -824,7 +824,7 @@ async function handleSignup(supabaseAdmin: any, body: any, req: Request) {
   });
 
   // Return user data (exclude sensitive fields)
-  const { password_hash, password_temp, ...safeUser } = newUser;
+  const { password_hash, password_temp, api_key: _ak3, ...safeUser } = newUser;
   
   return jsonResponse({ 
     success: true, 

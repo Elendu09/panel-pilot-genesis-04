@@ -206,7 +206,7 @@ fnRouter.post('/buyer-auth', async (req, res) => {
         clearFailedAttempts(rlKey);
         await supabase.from('client_users').update({ last_login_at: new Date().toISOString() }).eq('id', user.id);
         const token = await createJWT({ sub: user.id, email: user.email, panelId, type: 'buyer' });
-        const { password_hash, password_temp, ...safeUser } = user;
+        const { password_hash, password_temp, api_key: _ak, ...safeUser } = user;
         return res.json({ success: true, user: safeUser, token, expiresIn: JWT_EXPIRY });
       }
 
@@ -252,7 +252,7 @@ fnRouter.post('/buyer-auth', async (req, res) => {
         }).select().single();
         if (insertErr || !newUser) return res.json({ error: insertErr?.message || 'Registration failed' });
         const token = await createJWT({ sub: newUser.id, email: newUser.email, panelId, type: 'buyer' });
-        const { password_hash, password_temp, ...safeUser } = newUser;
+        const { password_hash, password_temp, api_key: _ak2, ...safeUser } = newUser;
         return res.json({ success: true, user: safeUser, token, expiresIn: JWT_EXPIRY });
       }
 
@@ -268,7 +268,7 @@ fnRouter.post('/buyer-auth', async (req, res) => {
         if (!user) return res.json({ error: 'User not found' });
         if (user.is_banned) return res.json({ error: 'Account banned', reason: user.ban_reason });
         if (!user.is_active) return res.json({ error: 'Account suspended' });
-        const { password_hash, password_temp, ...safeUser } = user;
+        const { password_hash, password_temp, api_key: _ak3, ...safeUser } = user;
         return res.json({ success: true, user: safeUser });
       }
 
