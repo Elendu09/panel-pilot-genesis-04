@@ -790,6 +790,7 @@ const PanelOnboardingV2 = () => {
               currency={currency}
               onCurrencyChange={setCurrency}
               panelId={createdPanelIdRef.current || undefined}
+              onVerificationStateChange={setDomainVerificationState}
             />
           </motion.div>
         );
