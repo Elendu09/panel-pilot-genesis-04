@@ -49,6 +49,20 @@ serve(async (req) => {
       );
     }
 
+    // Check if domain is already used by a different panel
+    const { data: existingDomain } = await supabase
+      .from('panel_domains')
+      .select('panel_id')
+      .eq('domain', domain.toLowerCase())
+      .maybeSingle();
+
+    if (existingDomain && existingDomain.panel_id !== panel_id) {
+      return new Response(
+        JSON.stringify({ error: "This domain is already connected to another panel." }),
+        { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Get Vercel credentials from platform_config
     const { data: configData, error: configError } = await supabase
       .from('platform_config')
