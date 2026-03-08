@@ -123,6 +123,12 @@ export const ServiceImportDialog = ({
     total: number;
   }>({ importing: false, current: 0, total: 0 });
   
+  // Stepper state for fetch + import flow
+  const [importStep, setImportStep] = useState<ImportStep>("connecting");
+  const [importStepProgress, setImportStepProgress] = useState(0);
+  const [fetchedServiceCount, setFetchedServiceCount] = useState(0);
+  const [showStepper, setShowStepper] = useState(false);
+  
   // Provider balance state
   const [providerBalance, setProviderBalance] = useState<number | null>(null);
   const [isCheckingBalance, setIsCheckingBalance] = useState(false);
