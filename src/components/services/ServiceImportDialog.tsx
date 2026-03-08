@@ -444,6 +444,10 @@ export const ServiceImportDialog = ({
     setExistingServiceIds(new Set());
     setHideAlreadyImported(true);
     setImportProgress({ importing: false, current: 0, total: 0 });
+    setShowStepper(false);
+    setImportStep("connecting");
+    setImportStepProgress(0);
+    setFetchedServiceCount(0);
   };
 
   // Calculate import percentage
