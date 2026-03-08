@@ -77,11 +77,13 @@ interface Order {
   start_count: number;
   remains: number;
   provider_cost: number | null;
+  provider_order_id: string | null;
   notes: string | null;
   created_at: string;
   service_name?: string | null;
   service?: { name: string; category: string } | null;
   buyer?: { email: string; full_name: string | null } | null;
+  buyer_id?: string | null;
 }
 
 const statusConfig: Record<string, { label: string; color: string; icon: any; glow: string }> = {
