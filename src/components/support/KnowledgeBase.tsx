@@ -37,15 +37,15 @@ const knowledgeCategories: KnowledgeCategory[] = [
     faqs: [
       {
         question: "How do I set up my SMM panel?",
-        answer: "After creating your account, go to General Settings to configure your panel name, description, and branding. Then set up your services by going to Services Management and adding services from your connected providers."
+        answer: "After creating your account, the platform guides you through a 6-step onboarding wizard: name your panel, choose a plan, complete payment, connect a provider, set up your domain, and configure branding. Each step can also be completed later from your dashboard."
       },
       {
         question: "How do I connect a provider API?",
-        answer: "Navigate to Provider Management, click 'Add Provider', and enter your provider's API endpoint and API key. The system will automatically verify the connection and sync available services."
+        answer: "During onboarding (step 5) or from Provider Management in your dashboard, click 'Add Provider', enter your provider's API URL and API key. The system verifies the connection and syncs available services automatically."
       },
       {
         question: "What's the difference between provider and panel prices?",
-        answer: "Provider price is what you pay to the upstream provider for each service. Panel price is what you charge your customers. The difference is your profit margin."
+        answer: "Provider price is what you pay to the upstream provider for each service. Panel price is what you charge your customers. The difference is your profit margin. You can set custom markup when importing services."
       }
     ]
   },
