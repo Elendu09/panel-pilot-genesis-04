@@ -85,6 +85,7 @@ const featureCategories = [
       { title: "Payment Bonuses", description: "Reward customers for using certain payment methods." },
       { title: "Manage Payments", description: "Add payments manually and cut balances when needed." },
       { title: "Export Payments", description: "Export payment data in CSV format with customizable columns." },
+      { title: "Gateway Requests", description: "Request new payment gateways to be added — the team reviews and integrates popular requests." },
     ]
   },
   {
