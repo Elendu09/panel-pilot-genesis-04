@@ -47,6 +47,49 @@ export const OnboardingPaymentStep = ({
 
   useEffect(() => { fetchPaymentProviders(); }, []);
 
+  // Realtime subscription + polling for payment status sync
+  useEffect(() => {
+    if (!panelId || paymentCompleted) return;
+
+    // Realtime subscription
+    const channel = supabase
+      .channel(`panel-payment-${panelId}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'panels',
+        filter: `id=eq.${panelId}`
+      }, (payload: any) => {
+        const status = payload.new?.subscription_status;
+        if (status === 'active' || status === 'trial') {
+          onPaymentSuccess();
+        }
+      })
+      .subscribe();
+
+    // Polling fallback (3 attempts, 5s intervals) for gateway return
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('payment') === 'success') {
+      let attempts = 0;
+      const poll = setInterval(async () => {
+        attempts++;
+        const { data } = await supabase
+          .from('panels')
+          .select('subscription_status')
+          .eq('id', panelId)
+          .single();
+        if (data?.subscription_status === 'active' || data?.subscription_status === 'trial') {
+          clearInterval(poll);
+          onPaymentSuccess();
+        }
+        if (attempts >= 3) clearInterval(poll);
+      }, 5000);
+      return () => { clearInterval(poll); supabase.removeChannel(channel); };
+    }
+
+    return () => { supabase.removeChannel(channel); };
+  }, [panelId, paymentCompleted, onPaymentSuccess]);
+
   const fetchPaymentProviders = async () => {
     try {
       const { data, error } = await supabase
