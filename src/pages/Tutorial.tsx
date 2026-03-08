@@ -23,41 +23,29 @@ const Tutorial = () => {
               <div className="flex items-center gap-3">
                 <PlayCircle className="h-8 w-8 text-primary" />
                 <div>
-                  <CardTitle>Getting Started</CardTitle>
-                  <CardDescription>Set up your account and make your first order</CardDescription>
+                  <CardTitle>Getting Started — Onboarding Wizard</CardTitle>
+                  <CardDescription>Set up your panel in 6 guided steps</CardDescription>
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent>
               <div className="grid gap-4">
-                <div className="flex items-start gap-3">
-                  <Badge variant="outline" className="mt-1">1</Badge>
-                  <div>
-                    <h4 className="font-semibold">Create Your Account</h4>
-                    <p className="text-muted-foreground">Sign up with your email address and verify your account</p>
+                {[
+                  { step: "1", title: "Create Your Account", desc: "Sign up with your email and verify your account to access the onboarding wizard" },
+                  { step: "2", title: "Name Your Panel", desc: "Choose a unique name for your panel — this becomes your brand and subdomain" },
+                  { step: "3", title: "Choose a Plan", desc: "Select a subscription plan (trial available) that matches your business needs" },
+                  { step: "4", title: "Complete Payment", desc: "Pay via Paystack, Korapay, Flutterwave, crypto, or 200+ other methods" },
+                  { step: "5", title: "Connect a Provider", desc: "Enter your provider's API URL and key — services sync automatically" },
+                  { step: "6", title: "Set Up Domain & Branding", desc: "Connect your custom domain and customize your storefront design" },
+                ].map((item) => (
+                  <div key={item.step} className="flex items-start gap-3">
+                    <Badge variant="outline" className="mt-1">{item.step}</Badge>
+                    <div>
+                      <h4 className="font-semibold">{item.title}</h4>
+                      <p className="text-muted-foreground">{item.desc}</p>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <Badge variant="outline" className="mt-1">2</Badge>
-                  <div>
-                    <h4 className="font-semibold">Add Funds</h4>
-                    <p className="text-muted-foreground">Deposit money to your account using secure payment methods</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <Badge variant="outline" className="mt-1">3</Badge>
-                  <div>
-                    <h4 className="font-semibold">Browse Services</h4>
-                    <p className="text-muted-foreground">Explore our wide range of social media marketing services</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <Badge variant="outline" className="mt-1">4</Badge>
-                  <div>
-                    <h4 className="font-semibold">Place Your Order</h4>
-                    <p className="text-muted-foreground">Select a service, enter your details, and submit your order</p>
-                  </div>
-                </div>
+                ))}
               </div>
             </CardContent>
           </Card>
@@ -69,40 +57,30 @@ const Tutorial = () => {
                 <Users className="h-8 w-8 text-primary" />
                 <div>
                   <CardTitle>Panel Owner Guide</CardTitle>
-                  <CardDescription>Learn how to manage your own SMM panel</CardDescription>
+                  <CardDescription>Master every tool in your dashboard</CardDescription>
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent>
               <div className="grid gap-4">
-                <div className="flex items-start gap-3">
-                  <Badge variant="outline" className="mt-1">1</Badge>
-                  <div>
-                    <h4 className="font-semibold">Panel Setup</h4>
-                    <p className="text-muted-foreground">Configure your panel settings, branding, and domain</p>
+                {[
+                  { step: "1", title: "Storefront Builder", desc: "Choose from 7+ templates, set colors, fonts, logo, and preview your store live" },
+                  { step: "2", title: "Services Management", desc: "Import services from providers, set custom markup pricing, enable/disable services" },
+                  { step: "3", title: "Provider Management", desc: "Connect unlimited providers, check balances, sync rates and statuses" },
+                  { step: "4", title: "Payment Methods", desc: "Configure 200+ payment gateways, set fees, min/max amounts, and bonuses" },
+                  { step: "5", title: "Blog Management", desc: "Create and publish blog posts with SEO optimization to attract organic traffic" },
+                  { step: "6", title: "Promo & Coupons", desc: "Create discount codes, percentage or fixed amount, with expiry dates and usage limits" },
+                  { step: "7", title: "Team Management", desc: "Invite team members with role-based permissions (admin, support, viewer)" },
+                  { step: "8", title: "Analytics & Reports", desc: "Track revenue, orders, user growth, and export data in CSV format" },
+                ].map((item) => (
+                  <div key={item.step} className="flex items-start gap-3">
+                    <Badge variant="outline" className="mt-1">{item.step}</Badge>
+                    <div>
+                      <h4 className="font-semibold">{item.title}</h4>
+                      <p className="text-muted-foreground">{item.desc}</p>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <Badge variant="outline" className="mt-1">2</Badge>
-                  <div>
-                    <h4 className="font-semibold">Service Management</h4>
-                    <p className="text-muted-foreground">Add services, set pricing, and manage your catalog</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <Badge variant="outline" className="mt-1">3</Badge>
-                  <div>
-                    <h4 className="font-semibold">User Management</h4>
-                    <p className="text-muted-foreground">Manage your customers, view orders, and handle support</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <Badge variant="outline" className="mt-1">4</Badge>
-                  <div>
-                    <h4 className="font-semibold">Analytics & Reports</h4>
-                    <p className="text-muted-foreground">Track your panel performance and revenue</p>
-                  </div>
-                </div>
+                ))}
               </div>
             </CardContent>
           </Card>
@@ -114,40 +92,30 @@ const Tutorial = () => {
                 <ShoppingCart className="h-8 w-8 text-primary" />
                 <div>
                   <CardTitle>Order Management</CardTitle>
-                  <CardDescription>Understanding order statuses and tracking</CardDescription>
+                  <CardDescription>Understanding order lifecycle, statuses, and advanced options</CardDescription>
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent>
               <div className="grid gap-4">
-                <div className="flex items-start gap-3">
-                  <Badge variant="secondary">Pending</Badge>
-                  <div>
-                    <h4 className="font-semibold">Order Pending</h4>
-                    <p className="text-muted-foreground">Your order has been received and is being processed</p>
+                {[
+                  { badge: "Pending", variant: "secondary" as const, title: "Order Pending", desc: "Order received and queued for processing by the provider" },
+                  { badge: "In Progress", variant: "default" as const, title: "In Progress", desc: "Provider is actively delivering the service — progress syncs in real-time" },
+                  { badge: "Completed", variant: "outline" as const, title: "Completed", desc: "Service fully delivered. Auto-complete triggers when provider confirms" },
+                  { badge: "Cancelled", variant: "destructive" as const, title: "Cancelled / Refunded", desc: "Order cancelled — funds automatically refunded to customer balance" },
+                  { badge: "Refill", variant: "outline" as const, title: "Refill Support", desc: "If a service drops, customers can request a refill within the guarantee period" },
+                  { badge: "Drip-feed", variant: "outline" as const, title: "Drip-feed Orders", desc: "Split large orders into smaller intervals for natural, gradual engagement growth" },
+                ].map((item, i) => (
+                  <div key={i} className="flex items-start gap-3">
+                    <Badge variant={item.variant} className={item.badge === "Completed" ? "border-green-500 text-green-500" : ""}>
+                      {item.badge}
+                    </Badge>
+                    <div>
+                      <h4 className="font-semibold">{item.title}</h4>
+                      <p className="text-muted-foreground">{item.desc}</p>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <Badge variant="default">In Progress</Badge>
-                  <div>
-                    <h4 className="font-semibold">Order In Progress</h4>
-                    <p className="text-muted-foreground">The service is being delivered to your account</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <Badge variant="outline" className="border-green-500 text-green-500">Completed</Badge>
-                  <div>
-                    <h4 className="font-semibold">Order Completed</h4>
-                    <p className="text-muted-foreground">The service has been successfully delivered</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <Badge variant="destructive">Cancelled</Badge>
-                  <div>
-                    <h4 className="font-semibold">Order Cancelled</h4>
-                    <p className="text-muted-foreground">The order was cancelled and funds were refunded</p>
-                  </div>
-                </div>
+                ))}
               </div>
             </CardContent>
           </Card>
@@ -159,40 +127,28 @@ const Tutorial = () => {
                 <Settings className="h-8 w-8 text-primary" />
                 <div>
                   <CardTitle>Advanced Features</CardTitle>
-                  <CardDescription>Maximize your platform usage with advanced features</CardDescription>
+                  <CardDescription>Scale your business with powerful tools</CardDescription>
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent>
               <div className="grid gap-4">
-                <div className="flex items-start gap-3">
-                  <Badge variant="outline" className="mt-1">API</Badge>
-                  <div>
-                    <h4 className="font-semibold">API Integration</h4>
-                    <p className="text-muted-foreground">Connect your applications using our RESTful API</p>
+                {[
+                  { badge: "Multi", title: "Multi-Panel Management", desc: "Create and manage multiple panels from one dashboard with a panel switcher — each with its own storefront, domain, and branding" },
+                  { badge: "Design", title: "Storefront Builder", desc: "7+ pre-built templates with full customization — colors, fonts, layouts, custom CSS — with live preview before publishing" },
+                  { badge: "API", title: "API & Webhooks", desc: "Full REST API for placing orders, checking statuses, and managing services. Webhook support for real-time event notifications" },
+                  { badge: "Promo", title: "Promo & Coupon System", desc: "Create discount codes with percentage or fixed amount off, set expiry dates, usage limits, and track redemptions" },
+                  { badge: "Chat", title: "Chat Inbox", desc: "Built-in live chat system for real-time customer support directly from your panel dashboard" },
+                  { badge: "Ads", title: "Provider Advertising", desc: "Monetize your panel by displaying provider ads, or advertise your services on other panels in the marketplace" },
+                ].map((item, i) => (
+                  <div key={i} className="flex items-start gap-3">
+                    <Badge variant="outline" className="mt-1">{item.badge}</Badge>
+                    <div>
+                      <h4 className="font-semibold">{item.title}</h4>
+                      <p className="text-muted-foreground">{item.desc}</p>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <Badge variant="outline" className="mt-1">Auto</Badge>
-                  <div>
-                    <h4 className="font-semibold">Automation</h4>
-                    <p className="text-muted-foreground">Set up automated ordering and management workflows</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <Badge variant="outline" className="mt-1">White</Badge>
-                  <div>
-                    <h4 className="font-semibold">White Label</h4>
-                    <p className="text-muted-foreground">Customize your panel with your own branding</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <Badge variant="outline" className="mt-1">Multi</Badge>
-                  <div>
-                    <h4 className="font-semibold">Multi-Panel Management</h4>
-                    <p className="text-muted-foreground">Manage multiple panels from a single dashboard</p>
-                  </div>
-                </div>
+                ))}
               </div>
             </CardContent>
           </Card>

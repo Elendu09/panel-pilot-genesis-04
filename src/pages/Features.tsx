@@ -34,6 +34,8 @@ const featureCategories = [
     title: "User Panel",
     icon: Users,
     features: [
+      { title: "Guided Onboarding", description: "6-step wizard walks new panel owners through setup: name, plan, payment, provider, domain, branding." },
+      { title: "Multi-Panel Support", description: "Create and manage multiple panels from one dashboard with a built-in panel switcher." },
       { title: "Mass Orders", description: "Let users set up mass orders for bulk delivery to save time." },
       { title: "User API", description: "Methods that allow your resellers to work with your panel via API." },
       { title: "Multi-currency", description: "Display service rates, user balance, and order charges based on selected currency." },
@@ -67,6 +69,7 @@ const featureCategories = [
       { title: "Cancel Services", description: "Easily cancel services you don't plan to offer anymore." },
       { title: "Bulk Actions", description: "Perform various actions related to user, order, and service management in bulk." },
       { title: "Auto Complete", description: "The system automatically changes the order status once complete." },
+      { title: "Provider Ad Marketplace", description: "Browse and display provider advertisements on your panel to earn extra revenue." },
     ]
   },
   {
@@ -74,7 +77,7 @@ const featureCategories = [
     title: "Accept Payments",
     icon: CreditCard,
     features: [
-      { title: "150+ Payment Methods", description: "Many already integrated payment methods with new ones added constantly." },
+      { title: "200+ Payment Methods", description: "Integrated payment methods including Paystack, Korapay, Flutterwave, Stripe, crypto, and more." },
       { title: "Method Instructions", description: "Add multilingual instructions for each payment method." },
       { title: "Extra Fee", description: "Set an additional fee for selected methods when adding funds." },
       { title: "Currency Conversion", description: "Payment options available for conversion from other currencies." },
@@ -82,6 +85,7 @@ const featureCategories = [
       { title: "Payment Bonuses", description: "Reward customers for using certain payment methods." },
       { title: "Manage Payments", description: "Add payments manually and cut balances when needed." },
       { title: "Export Payments", description: "Export payment data in CSV format with customizable columns." },
+      { title: "Gateway Requests", description: "Request new payment gateways to be added — the team reviews and integrates popular requests." },
     ]
   },
   {
@@ -118,9 +122,11 @@ const featureCategories = [
   },
   {
     id: "theme-editor",
-    title: "Visual Theme Editor",
+    title: "Storefront Builder",
     icon: Palette,
     features: [
+      { title: "7+ Pre-built Templates", description: "Choose from professionally designed templates and customize them to match your brand." },
+      { title: "Live Preview", description: "See exactly how your storefront looks to customers before publishing changes." },
       { title: "Create Pages", description: "Create public & internal pages with customizable blocks." },
       { title: "Block Types", description: "A variety of block types (media, text, etc) for different purposes." },
       { title: "Block Styles", description: "Edit block styles and components to transform your panel's look." },
@@ -168,6 +174,10 @@ const featureCategories = [
       { title: "Dark Mode", description: "Toggle between light and dark themes." },
       { title: "Maintenance Mode", description: "Put your panel in maintenance mode when needed." },
       { title: "Team Members", description: "Add team members with different permission levels." },
+      { title: "Chat Inbox", description: "Built-in live chat for real-time customer support from your dashboard." },
+      { title: "Blog Management", description: "Create and publish blog posts with SEO optimization to drive organic traffic." },
+      { title: "Promo & Coupons", description: "Create discount codes with percentage/fixed amounts, expiry dates, and usage limits." },
+      { title: "Provider Ads", description: "Display or manage provider advertisements to monetize your panel." },
     ]
   },
   {
