@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, CreditCard, ExternalLink, CheckCircle2, Shield, Clock, Sparkles } from "lucide-react";
+import { Loader2, CreditCard, ExternalLink, CheckCircle2, Shield, Clock, Sparkles, Lock } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from "@/lib/utils";
@@ -23,6 +23,7 @@ interface OnboardingPaymentStepProps {
   panelId?: string;
   onPaymentSuccess: () => void;
   onSkip?: () => void;
+  paymentCompleted?: boolean;
 }
 
 const planPrices = { basic: 5, pro: 15 };
@@ -36,7 +37,7 @@ const planGradient = {
 };
 
 export const OnboardingPaymentStep = ({ 
-  selectedPlan, panelId, onPaymentSuccess, onSkip 
+  selectedPlan, panelId, onPaymentSuccess, onSkip, paymentCompleted = false
 }: OnboardingPaymentStepProps) => {
   const { toast } = useToast();
   const [providers, setProviders] = useState<PaymentProvider[]>([]);
@@ -143,7 +144,7 @@ export const OnboardingPaymentStep = ({
         <Card className="border-amber-500/30 bg-amber-500/5">
           <CardContent className="p-6 text-center">
             <p className="text-amber-600 mb-4">No payment providers configured. Contact the platform administrator.</p>
-            {onSkip && (
+            {onSkip && !paymentCompleted && (
               <Button variant="outline" onClick={handleSkipWithTrial}>
                 Start 3-Day Free Trial Instead
               </Button>
@@ -157,26 +158,50 @@ export const OnboardingPaymentStep = ({
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <h2 className="text-2xl font-bold mb-2">Complete Payment</h2>
+        <h2 className="text-2xl font-bold mb-2">
+          {paymentCompleted ? 'Payment Confirmed' : 'Complete Payment'}
+        </h2>
         <p className="text-muted-foreground">
-          Subscribe to {selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)} plan
+          {paymentCompleted 
+            ? `Your ${selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)} plan is active. Click Next to continue.`
+            : `Subscribe to ${selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)} plan`
+          }
         </p>
       </div>
 
-      {/* Trial Notice */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/5 flex items-center gap-3"
-      >
-        <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0">
-          <Clock className="w-5 h-5 text-emerald-500" />
-        </div>
-        <div>
-          <p className="text-sm font-medium">3-Day Free Trial Included</p>
-          <p className="text-xs text-muted-foreground">Try all features free. You'll only be charged after the trial ends.</p>
-        </div>
-      </motion.div>
+      {/* Payment confirmed banner */}
+      {paymentCompleted && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 flex items-center gap-3"
+        >
+          <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0">
+            <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-emerald-600">Payment Complete</p>
+            <p className="text-xs text-muted-foreground">Your subscription is active. Press Next to set up your domain.</p>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Trial Notice — only when not yet paid */}
+      {!paymentCompleted && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/5 flex items-center gap-3"
+        >
+          <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0">
+            <Clock className="w-5 h-5 text-emerald-500" />
+          </div>
+          <div>
+            <p className="text-sm font-medium">3-Day Free Trial Included</p>
+            <p className="text-xs text-muted-foreground">Try all features free. You'll only be charged after the trial ends.</p>
+          </div>
+        </motion.div>
+      )}
 
       {/* Order Summary with glow */}
       <Card className={cn(
@@ -200,74 +225,96 @@ export const OnboardingPaymentStep = ({
           </div>
           <div className="flex items-center justify-between py-3">
             <span className="font-bold">Due Today</span>
-            <span className="text-xl font-bold text-primary">${planPrices[selectedPlan]}/mo</span>
+            <span className="text-xl font-bold text-primary">
+              {paymentCompleted ? (
+                <span className="flex items-center gap-1 text-emerald-500">
+                  <CheckCircle2 className="w-5 h-5" /> Paid
+                </span>
+              ) : (
+                `$${planPrices[selectedPlan]}/mo`
+              )}
+            </span>
           </div>
         </CardContent>
       </Card>
 
-      {/* Payment Methods */}
-      <div className="space-y-3">
-        <label className="text-sm font-medium">Select Payment Method</label>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {providers.map((provider) => (
-            <Card
-              key={provider.id}
-              className={cn(
-                "cursor-pointer transition-all duration-200",
-                selectedProvider === provider.provider_name
-                  ? "border-primary ring-2 ring-primary/20 bg-primary/5"
-                  : "border-border/50 hover:border-primary/50"
-              )}
-              onClick={() => setSelectedProvider(provider.provider_name)}
-            >
-              <CardContent className="p-4 flex items-center gap-3">
-                {getProviderIcon(provider.provider_name, provider.logo_url)}
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm truncate">{provider.display_name}</p>
-                  <Badge variant="outline" className="text-xs capitalize mt-1">{provider.category}</Badge>
-                </div>
-                {selectedProvider === provider.provider_name && (
-                  <CheckCircle2 className="w-5 h-5 text-primary shrink-0" />
+      {/* Payment Methods — hidden when already paid */}
+      {!paymentCompleted && (
+        <div className="space-y-3">
+          <label className="text-sm font-medium">Select Payment Method</label>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {providers.map((provider) => (
+              <Card
+                key={provider.id}
+                className={cn(
+                  "cursor-pointer transition-all duration-200",
+                  selectedProvider === provider.provider_name
+                    ? "border-primary ring-2 ring-primary/20 bg-primary/5"
+                    : "border-border/50 hover:border-primary/50"
                 )}
-              </CardContent>
-            </Card>
-          ))}
+                onClick={() => setSelectedProvider(provider.provider_name)}
+              >
+                <CardContent className="p-4 flex items-center gap-3">
+                  {getProviderIcon(provider.provider_name, provider.logo_url)}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm truncate">{provider.display_name}</p>
+                    <Badge variant="outline" className="text-xs capitalize mt-1">{provider.category}</Badge>
+                  </div>
+                  {selectedProvider === provider.provider_name && (
+                    <CheckCircle2 className="w-5 h-5 text-primary shrink-0" />
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Security */}
-      <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 text-sm text-muted-foreground">
-        <Shield className="w-4 h-4 shrink-0" />
-        <span>Your payment is secured with 256-bit SSL encryption</span>
-      </div>
+      {!paymentCompleted && (
+        <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 text-sm text-muted-foreground">
+          <Shield className="w-4 h-4 shrink-0" />
+          <span>Your payment is secured with 256-bit SSL encryption</span>
+        </div>
+      )}
 
       {/* Actions */}
       <div className="flex gap-3">
-        {onSkip && (
+        {onSkip && !paymentCompleted && (
           <Button variant="outline" onClick={handleSkipWithTrial} className="flex-1">
             Start Free Trial
           </Button>
         )}
-        <Button 
-          className={cn(
-            "flex-1 gap-2 relative overflow-hidden bg-gradient-to-r",
-            planGradient[selectedPlan]
-          )}
-          onClick={handlePayment}
-          disabled={!selectedProvider || processing}
-        >
-          {/* Shimmer effect */}
-          <span className="absolute inset-0 overflow-hidden">
-            <span className="absolute inset-0 -translate-x-full animate-shimmer-slide bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-          </span>
-          <span className="relative z-10 flex items-center gap-2">
-            {processing ? (
-              <><Loader2 className="w-4 h-4 animate-spin" /> Processing...</>
-            ) : (
-              <>Pay ${planPrices[selectedPlan]}/mo <ExternalLink className="w-4 h-4" /></>
+        {paymentCompleted ? (
+          <Button 
+            className="flex-1 gap-2 bg-emerald-600 hover:bg-emerald-600 cursor-default"
+            disabled
+          >
+            <Lock className="w-4 h-4" />
+            Paid — ${planPrices[selectedPlan]}/mo
+            <CheckCircle2 className="w-4 h-4" />
+          </Button>
+        ) : (
+          <Button 
+            className={cn(
+              "flex-1 gap-2 relative overflow-hidden bg-gradient-to-r",
+              planGradient[selectedPlan]
             )}
-          </span>
-        </Button>
+            onClick={handlePayment}
+            disabled={!selectedProvider || processing}
+          >
+            <span className="absolute inset-0 overflow-hidden">
+              <span className="absolute inset-0 -translate-x-full animate-shimmer-slide bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+            </span>
+            <span className="relative z-10 flex items-center gap-2">
+              {processing ? (
+                <><Loader2 className="w-4 h-4 animate-spin" /> Processing...</>
+              ) : (
+                <>Pay ${planPrices[selectedPlan]}/mo <ExternalLink className="w-4 h-4" /></>
+              )}
+            </span>
+          </Button>
+        )}
       </div>
     </div>
   );

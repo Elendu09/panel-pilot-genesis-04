@@ -739,6 +739,7 @@ const PanelOnboardingV2 = () => {
               selectedPlan={selectedPlan as 'basic' | 'pro'}
               panelId={createdPanelIdRef.current || undefined}
               onPaymentSuccess={handlePaymentSuccess}
+              paymentCompleted={paymentCompleted}
               onSkip={async () => {
                 // Trial: mark payment as done but don't auto-advance
                 setPaymentCompleted(true);
