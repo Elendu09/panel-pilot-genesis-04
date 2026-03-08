@@ -122,9 +122,11 @@ const featureCategories = [
   },
   {
     id: "theme-editor",
-    title: "Visual Theme Editor",
+    title: "Storefront Builder",
     icon: Palette,
     features: [
+      { title: "7+ Pre-built Templates", description: "Choose from professionally designed templates and customize them to match your brand." },
+      { title: "Live Preview", description: "See exactly how your storefront looks to customers before publishing changes." },
       { title: "Create Pages", description: "Create public & internal pages with customizable blocks." },
       { title: "Block Types", description: "A variety of block types (media, text, etc) for different purposes." },
       { title: "Block Styles", description: "Edit block styles and components to transform your panel's look." },
