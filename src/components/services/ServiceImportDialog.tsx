@@ -638,11 +638,21 @@ export const ServiceImportDialog = ({
               )}
             </div>
 
+            {/* Import Progress Stepper - shown during fetch */}
+            {showStepper && step === "select" && (
+              <ImportProgressStepper
+                currentStep={importStep}
+                progress={importStepProgress}
+                servicesCount={fetchedServiceCount}
+                error={fetchError || undefined}
+              />
+            )}
+
             <DialogFooter className="pt-4">
               <Button variant="outline" onClick={reset}>Cancel</Button>
               <Button 
                 onClick={handleFetchServices}
-                disabled={isFetching || !selectedProvider}
+                disabled={isFetching || !selectedProvider || showStepper}
                 className="bg-gradient-to-r from-primary to-primary/80"
               >
                 {isFetching ? (
