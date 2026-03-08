@@ -108,6 +108,11 @@ export const OnboardingDomainStep = ({
   const [verificationStep, setVerificationStep] = useState<'configure' | 'txt-pending' | 'dns-pending' | 'verified'>('configure');
   const [pollingActive, setPollingActive] = useState(false);
 
+  // Report verification state changes to parent
+  useEffect(() => {
+    onVerificationStateChange?.({ step: verificationStep, token: verificationToken });
+  }, [verificationStep, verificationToken]);
+
   useEffect(() => {
     if (!pollingActive || !customDomain || verificationStep === 'verified') return;
 
