@@ -184,15 +184,22 @@ export const ServiceImportDialog = ({
     
     setIsFetching(true);
     setFetchError(null);
+    setShowStepper(true);
+    setImportStep("connecting");
+    setImportStepProgress(5);
     
     try {
       const provider = providers.find(p => p.id === selectedProvider);
       
       if (!provider?.api_endpoint || !provider?.api_key) {
         setFetchError("Provider missing API credentials. Please update the provider settings first.");
+        setImportStep("error");
         toast({ variant: "destructive", title: "Provider missing API credentials" });
         return;
       }
+
+      setImportStepProgress(15);
+      setImportStep("fetching");
 
       // Call the provider-services edge function to fetch real services
       const { data, error } = await supabase.functions.invoke('provider-services', {
@@ -205,48 +212,66 @@ export const ServiceImportDialog = ({
       if (error) {
         const errorMsg = error.message || 'Unknown error';
         setFetchError(`API Error: ${errorMsg}`);
+        setImportStep("error");
         throw new Error(errorMsg);
       }
 
       if (!data?.services || data.services.length === 0) {
         setFetchError("No services returned from provider. Check API credentials or provider status.");
+        setImportStep("error");
         toast({ title: "No services found from this provider", variant: "destructive" });
         setFetchedServices([]);
         return;
       }
+      
+      setImportStepProgress(50);
+      setImportStep("processing");
       
       // Get provider currency settings for rate conversion
       const providerCurrency = provider.currency || 'USD';
       const rateToUsd = provider.currency_rate_to_usd || 1.0;
       
       // Map the API response to our format
-      // NOTE: Provider rate is already "per 1K" - DO NOT divide by 1000!
-      // Use AI detection on service NAME (not provider category) for accurate classification
+      // Use edge function's detected category first, fall back to client-side detection
       const mappedServices: FetchedService[] = data.services.map((s: any, index: number) => {
         const serviceName = s.name || `Service ${s.service || s.id}`;
-        // Try provider category first, then fall back to service name detection
         const providerCategory = s.category || s.network || '';
-        const { platform: nameDetected, confidence: nameConfidence } = detectPlatformEnhanced(serviceName);
-        const { platform: catDetected, confidence: catConfidence } = detectPlatformEnhanced(providerCategory);
         
-        // Use whichever has higher confidence, prioritizing name detection
-        const detectedPlatform = nameConfidence >= catConfidence ? nameDetected : catDetected;
+        // Use edge function's category detection first (it already ran detectPlatform)
+        // Only fall back to client-side if edge returned "other" or empty
+        let detectedPlatform = providerCategory.toLowerCase();
+        
+        // Check if edge detection returned a valid platform (not "other" or empty)
+        const validEdgePlatforms = ['instagram', 'facebook', 'twitter', 'youtube', 'tiktok', 'telegram',
+          'linkedin', 'spotify', 'twitch', 'discord', 'threads', 'pinterest', 'snapchat', 'reddit',
+          'soundcloud', 'audiomack', 'clubhouse', 'tumblr', 'vk', 'ok', 'wechat', 'line', 'viber',
+          'whatsapp', 'signal', 'google', 'google_business', 'yelp', 'trustpilot', 'tripadvisor',
+          'apple_music', 'tidal', 'deezer', 'shazam', 'reverbnation', 'mixcloud', 'dailymotion',
+          'vimeo', 'rumble', 'kick', 'trovo', 'likee', 'kwai', 'shopee'];
+        
+        if (!validEdgePlatforms.includes(detectedPlatform)) {
+          // Fall back to client-side detection from service name
+          const { platform: nameDetected, confidence: nameConfidence } = detectPlatformEnhanced(serviceName);
+          const { platform: catDetected, confidence: catConfidence } = detectPlatformEnhanced(providerCategory);
+          detectedPlatform = nameConfidence >= catConfidence ? nameDetected : catDetected;
+        }
+        
         const iconUrl = `icon:${detectedPlatform}`;
         
         // Get raw rate and convert to USD
         const rawRate = parseFloat(s.rate || s.price || 0);
-        const rateInUsd = rawRate * rateToUsd; // Convert to USD
+        const rateInUsd = rawRate * rateToUsd;
         
         return {
           id: s.service || s.id || index + 1,
           name: serviceName,
-          category: detectedPlatform, // AI-detected from service name + category (50+ platforms)
-          price: rateInUsd, // USD-converted rate for display and import
-          originalProviderRate: rawRate, // Keep original for reference
+          category: detectedPlatform,
+          price: rateInUsd,
+          originalProviderRate: rawRate,
           minQty: parseInt(s.min || s.min_quantity || 100),
           maxQty: parseInt(s.max || s.max_quantity || 10000),
           description: s.description || s.name || '',
-          iconUrl, // Pre-computed icon URL for import
+          iconUrl,
         };
       });
       
@@ -254,6 +279,8 @@ export const ServiceImportDialog = ({
       if (providerCurrency !== 'USD') {
         console.log(`[Import] Converting ${providerCurrency} → USD (rate: ${rateToUsd})`);
       }
+      
+      setImportStepProgress(75);
       
       // Log detection results for debugging
       console.log(`[Import] Detected platforms from ${mappedServices.length} services:`);
@@ -281,6 +308,10 @@ export const ServiceImportDialog = ({
       setExistingServiceIds(existingIds);
       
       setFetchedServices(mappedServices);
+      setFetchedServiceCount(mappedServices.length);
+      
+      setImportStepProgress(100);
+      setImportStep("complete");
       
       const importedCount = mappedServices.filter(s => existingIds.has(s.id)).length;
       toast({ 
@@ -290,7 +321,12 @@ export const ServiceImportDialog = ({
       
       setSelectedServices([]);
       setServiceMarkups({});
-      setStep("services");
+      
+      // Auto-advance to services step after brief delay
+      setTimeout(() => {
+        setShowStepper(false);
+        setStep("services");
+      }, 1500);
     } catch (error: any) {
       console.error('Error fetching services:', error);
       toast({ 
