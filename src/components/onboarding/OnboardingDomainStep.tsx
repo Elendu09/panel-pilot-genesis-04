@@ -121,9 +121,13 @@ export const OnboardingDomainStep = ({
     
     setAddingDomain(true);
     try {
-      const effectivePanelId = panelId || 'pending';
+      if (!panelId) {
+        toast({ variant: 'destructive', title: 'Panel not ready', description: 'Please complete previous steps first so your panel is created.' });
+        setAddingDomain(false);
+        return;
+      }
       const { data, error } = await supabase.functions.invoke('add-vercel-domain', {
-        body: { domain: customDomain, panel_id: effectivePanelId }
+        body: { domain: customDomain, panel_id: panelId }
       });
 
       if (error) throw error;
