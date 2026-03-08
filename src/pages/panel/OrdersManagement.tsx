@@ -126,6 +126,27 @@ const OrdersManagement = () => {
   useEffect(() => {
     if (panel?.id) {
       fetchOrders();
+
+      // Realtime subscription for order updates
+      const channel = supabase
+        .channel('orders-realtime')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'orders',
+          filter: `panel_id=eq.${panel.id}`
+        }, (payload) => {
+          if (payload.eventType === 'INSERT') {
+            fetchOrders();
+          } else if (payload.eventType === 'UPDATE') {
+            setOrders(prev => prev.map(o => 
+              o.id === (payload.new as any).id ? { ...o, ...(payload.new as any) } : o
+            ));
+          }
+        })
+        .subscribe();
+
+      return () => { supabase.removeChannel(channel); };
     }
   }, [panel?.id]);
 
