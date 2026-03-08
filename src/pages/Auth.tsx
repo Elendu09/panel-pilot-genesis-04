@@ -274,9 +274,7 @@ const Auth = () => {
       <div className="hidden lg:flex lg:w-1/2 relative flex-col justify-center px-12 xl:px-20 bg-muted/30 border-r border-border">
         <div className="relative z-10 max-w-lg">
           <div className="flex items-center gap-3 mb-8">
-            <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center shadow-lg">
-              <Zap className="w-6 h-6 text-primary-foreground" />
-            </div>
+            <img src={brandIcon} alt="Home of SMM" className="w-12 h-12 rounded-xl shadow-lg object-contain" />
             <h1 className="text-3xl font-bold text-foreground">HOME OF SMM</h1>
           </div>
           
