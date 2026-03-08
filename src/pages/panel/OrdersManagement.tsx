@@ -262,6 +262,9 @@ const OrdersManagement = () => {
     if (!selectedOrder) return;
     
     try {
+      const refundAmt = parseFloat(refundAmount);
+
+      // Update order status
       const { error } = await supabase
         .from('orders')
         .update({ 
@@ -273,10 +276,29 @@ const OrdersManagement = () => {
 
       if (error) throw error;
 
+      // Restore buyer balance
+      if (selectedOrder.buyer_id && refundAmt > 0) {
+        const { data: buyer } = await supabase
+          .from('client_users')
+          .select('balance, total_spent')
+          .eq('id', selectedOrder.buyer_id)
+          .single();
+
+        if (buyer) {
+          await supabase
+            .from('client_users')
+            .update({
+              balance: parseFloat(buyer.balance || 0) + refundAmt,
+              total_spent: Math.max(0, parseFloat(buyer.total_spent || 0) - refundAmt)
+            })
+            .eq('id', selectedOrder.buyer_id);
+        }
+      }
+
       setOrders(prev => prev.map(o => 
         o.id === selectedOrder.id ? { ...o, status: "cancelled", notes: `Refund: $${refundAmount} - ${refundReason}` } : o
       ));
-      toast({ title: `Refund of $${refundAmount} processed` });
+      toast({ title: `Refund of $${refundAmount} processed and balance restored` });
       setIsRefundOpen(false);
       setRefundReason("");
     } catch (error) {
