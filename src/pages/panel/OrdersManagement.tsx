@@ -870,6 +870,8 @@ const OrdersManagement = () => {
                       <th className="text-left p-4 font-medium text-muted-foreground">Order</th>
                       <th className="text-left p-4 font-medium text-muted-foreground">Customer</th>
                       <th className="text-left p-4 font-medium text-muted-foreground hidden lg:table-cell">Quantity</th>
+                      <th className="text-left p-4 font-medium text-muted-foreground hidden xl:table-cell">Start Count</th>
+                      <th className="text-left p-4 font-medium text-muted-foreground hidden xl:table-cell">Remains</th>
                       <th className="text-left p-4 font-medium text-muted-foreground">Status</th>
                       <th className="text-left p-4 font-medium text-muted-foreground">Progress</th>
                       <th className="text-left p-4 font-medium text-muted-foreground">Price</th>
