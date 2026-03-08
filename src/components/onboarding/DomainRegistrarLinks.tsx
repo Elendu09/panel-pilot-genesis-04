@@ -109,10 +109,10 @@ export const DomainRegistrarLinks = ({ searchDomain = '' }: DomainRegistrarLinks
             key={index} 
             className={`transition-all hover:border-primary/50 ${registrar.featured ? 'border-primary/30 bg-primary/5' : ''}`}
           >
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between gap-4">
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <span className="font-semibold">{registrar.name}</span>
                     {registrar.featured && (
                       <Badge className="bg-primary/10 text-primary text-xs">
@@ -121,14 +121,14 @@ export const DomainRegistrarLinks = ({ searchDomain = '' }: DomainRegistrarLinks
                       </Badge>
                     )}
                   </div>
-                  <p className="text-sm text-muted-foreground truncate">{registrar.description}</p>
+                  <p className="text-sm text-muted-foreground line-clamp-2">{registrar.description}</p>
                   <p className="text-xs text-primary mt-1">Starting from {registrar.startingPrice}</p>
                 </div>
                 <Button 
                   variant="outline" 
                   size="sm"
                   onClick={() => window.open(getRegistrarUrl(registrar), '_blank')}
-                  className="shrink-0 gap-2"
+                  className="w-full sm:w-auto shrink-0 gap-2"
                 >
                   Register
                   <ExternalLink className="w-4 h-4" />
