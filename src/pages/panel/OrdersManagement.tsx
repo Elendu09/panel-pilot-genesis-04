@@ -425,6 +425,36 @@ const OrdersManagement = () => {
     }
   };
 
+  const retryForwardOrder = async (order: Order) => {
+    if (!panel?.id) return;
+    try {
+      toast({ title: "Retrying provider forwarding...", description: `Order ${order.order_number}` });
+      
+      const { data, error } = await supabase.functions.invoke('buyer-order', {
+        body: {
+          panelId: panel.id,
+          buyerId: order.buyer_id,
+          serviceId: order.service?.name ? undefined : undefined, // We'll use the order's existing service_id
+          retryOrderId: order.id,
+        }
+      });
+
+      // Since buyer-order doesn't support retry natively, invoke sync for just this order
+      // Use the sync-orders function targeting this specific order
+      const { data: syncData, error: syncError } = await supabase.functions.invoke('sync-orders', {
+        body: { panelId: panel.id, orderIds: [order.id] },
+      });
+
+      if (syncError) throw syncError;
+      
+      toast({ title: "Forward retry completed", description: "Check order status for updates" });
+      await fetchOrders();
+    } catch (error) {
+      console.error('Retry forward error:', error);
+      toast({ variant: 'destructive', title: 'Retry failed', description: 'Could not forward order to provider' });
+    }
+  };
+
   const exportOrders = () => {
     const csv = [
       ["Order ID", "Service", "Customer", "Link", "Quantity", "Price", "Status", "Progress", "Date"],
