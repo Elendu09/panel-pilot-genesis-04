@@ -268,7 +268,7 @@ fnRouter.post('/buyer-auth', async (req, res) => {
         if (!user) return res.json({ error: 'User not found' });
         if (user.is_banned) return res.json({ error: 'Account banned', reason: user.ban_reason });
         if (!user.is_active) return res.json({ error: 'Account suspended' });
-        const { password_hash, password_temp, ...safeUser } = user;
+        const { password_hash, password_temp, api_key: _ak3, ...safeUser } = user;
         return res.json({ success: true, user: safeUser });
       }
 
