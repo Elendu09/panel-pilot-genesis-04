@@ -388,6 +388,11 @@ export const ServiceImportDialog = ({
       return;
     }
     
+    // Show stepper for import
+    setShowStepper(true);
+    setImportStep("connecting");
+    setImportStepProgress(5);
+    setFetchedServiceCount(total);
     setImportProgress({ importing: true, current: 0, total });
     
     try {
@@ -400,17 +405,28 @@ export const ServiceImportDialog = ({
         allMarkups[s.id] = serviceMarkups[s.id] ?? globalMarkup;
       });
       
-      setImportProgress({ importing: true, current: Math.round(total * 0.1), total });
+      setImportStep("processing");
+      setImportStepProgress(20);
+      
       await onImport(selectedServiceData, allMarkups, providerId, providerName);
+      
+      setImportStepProgress(100);
+      setImportStep("complete");
       setImportProgress({ importing: true, current: total, total });
       
       toast({ title: `${total} services imported successfully!` });
+      
+      // Auto-close after success
+      setTimeout(() => {
+        setImportProgress({ importing: false, current: 0, total: 0 });
+        setShowStepper(false);
+        reset();
+      }, 2000);
     } catch (error) {
       console.error('Import error:', error);
+      setImportStep("error");
       toast({ title: "Import failed", variant: "destructive" });
-    } finally {
       setImportProgress({ importing: false, current: 0, total: 0 });
-      reset();
     }
   };
 
