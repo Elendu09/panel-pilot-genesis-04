@@ -868,6 +868,11 @@ const OrdersManagement = () => {
                                   <Play className="w-4 h-4 mr-2" /> Resume
                                 </DropdownMenuItem>
                               )}
+                              {order.status === 'pending' && !order.provider_order_id && (
+                                <DropdownMenuItem onClick={() => retryForwardOrder(order)}>
+                                  <Send className="w-4 h-4 mr-2" /> Retry Forward
+                                </DropdownMenuItem>
+                              )}
                               <DropdownMenuSeparator />
                               <DropdownMenuItem onClick={() => cancelOrder(order.id)} className="text-destructive">
                                 <XCircle className="w-4 h-4 mr-2" /> Cancel
