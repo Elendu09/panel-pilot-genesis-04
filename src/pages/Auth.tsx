@@ -311,9 +311,7 @@ const Auth = () => {
       <div className="flex-1 flex items-center justify-center p-4 sm:p-8">
         <Card className="w-full max-w-md bg-card border-border shadow-xl">
           <CardHeader className="text-center pb-2">
-            <div className="lg:hidden mx-auto mb-3 w-12 h-12 rounded-xl bg-primary flex items-center justify-center shadow-lg">
-              <Zap className="w-6 h-6 text-primary-foreground" />
-            </div>
+            <img src={brandIcon} alt="Home of SMM" className="lg:hidden mx-auto mb-3 w-12 h-12 rounded-xl shadow-lg object-contain" />
             <CardTitle className="text-2xl font-bold text-foreground">
               <span className="lg:hidden">HOME OF SMM</span>
               <span className="hidden lg:inline">Welcome Back</span>
