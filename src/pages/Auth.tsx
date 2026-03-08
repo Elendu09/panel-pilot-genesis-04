@@ -11,7 +11,8 @@ import { Helmet } from 'react-helmet-async';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import EmailVerificationKanban from '@/components/auth/EmailVerificationKanban';
-import { Loader2, User, Mail, ArrowRight, Zap, Shield, Globe, BarChart3, Sparkles } from 'lucide-react';
+import { Loader2, User, Mail, ArrowRight, Shield, Globe, BarChart3, Sparkles } from 'lucide-react';
+import brandIcon from '@/assets/brand-icon.png';
 
 const LAST_PANEL_ROUTE_KEY = 'homeofsmm_last_panel_route';
 
