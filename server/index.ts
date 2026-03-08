@@ -206,7 +206,7 @@ fnRouter.post('/buyer-auth', async (req, res) => {
         clearFailedAttempts(rlKey);
         await supabase.from('client_users').update({ last_login_at: new Date().toISOString() }).eq('id', user.id);
         const token = await createJWT({ sub: user.id, email: user.email, panelId, type: 'buyer' });
-        const { password_hash, password_temp, ...safeUser } = user;
+        const { password_hash, password_temp, api_key: _ak, ...safeUser } = user;
         return res.json({ success: true, user: safeUser, token, expiresIn: JWT_EXPIRY });
       }
 
