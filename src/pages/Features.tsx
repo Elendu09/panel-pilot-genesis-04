@@ -69,6 +69,7 @@ const featureCategories = [
       { title: "Cancel Services", description: "Easily cancel services you don't plan to offer anymore." },
       { title: "Bulk Actions", description: "Perform various actions related to user, order, and service management in bulk." },
       { title: "Auto Complete", description: "The system automatically changes the order status once complete." },
+      { title: "Provider Ad Marketplace", description: "Browse and display provider advertisements on your panel to earn extra revenue." },
     ]
   },
   {
