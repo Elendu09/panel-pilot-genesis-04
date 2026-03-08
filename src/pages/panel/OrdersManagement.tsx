@@ -1037,6 +1037,20 @@ const OrdersManagement = () => {
                   <p className="text-sm text-muted-foreground">Price</p>
                   <p className="font-medium">${selectedOrder.price.toFixed(2)}</p>
                 </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Start Count</p>
+                  <p className="font-medium">{selectedOrder.start_count || 0}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Remains</p>
+                  <p className="font-medium">{selectedOrder.remains || 0}</p>
+                </div>
+                {selectedOrder.provider_order_id && (
+                  <div className="col-span-1 sm:col-span-2">
+                    <p className="text-sm text-muted-foreground">Provider Order ID</p>
+                    <p className="font-medium font-mono text-xs">{selectedOrder.provider_order_id}</p>
+                  </div>
+                )}
               </div>
               
               <div>
