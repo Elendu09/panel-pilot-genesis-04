@@ -943,6 +943,7 @@ const OrdersManagement = () => {
                               </td>
                               <td className="p-4 hidden xl:table-cell">
                                 <span className="text-sm">{order.remains || 0}</span>
+                              </td>
                               <td className="p-4">
                                 <Badge variant="outline" className={cn(statusInfo.color, "shadow-sm", statusInfo.glow)}>
                                   <StatusIcon className={cn("w-3 h-3 mr-1", order.status === "in_progress" && "animate-spin")} />
