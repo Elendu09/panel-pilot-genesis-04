@@ -1,73 +1,91 @@
 
 
-# Plan: Fix Build Errors, Header Toggle, Admin Functions, Subdomain, Payment & Import
+# Plan: Fix Admin Panel/User Listing & Security Issues
 
-## Overview
+## Root Cause Analysis
 
-This plan addresses 5 areas: (1) fix all 12 build errors in edge functions, (2) replace ThemeToggle with a header visibility switch in MoreMenu, (3) fix admin pages that call non-existent `admin-data` function, (4) restore `smmpilot.online` as the subdomain suffix, and (5) fix payment verification status updates.
+### Why Panels Don't List for Admin
+The `panels` table RLS policy uses `is_any_admin(auth.uid())`, which checks the `user_roles` table. However, the admin user (nzubeelendu09@gmail.com) has `role='admin'` only in the `profiles` table -- there is NO corresponding row in `user_roles`. So `is_any_admin()` returns false, and the admin sees only panels they own (none, if they're purely admin).
+
+The `is_admin()` function checks `profiles.role`, while `is_any_admin()` checks `user_roles`. This inconsistency means some tables work (those using `is_admin()`) and others don't (those using `is_any_admin()`).
+
+### Why Panel Subscriptions Are Missing in Admin View
+The `panel_subscriptions` SELECT policy restricts to panel owners only. The admin policy `Admins can manage all subscriptions` uses `is_admin()` (profiles-based) -- this works, but the subscription fetch on line 151 may still return empty if the `is_admin()` check fails or if there's a conflict with the owner-only SELECT policy.
+
+### Admin Can't See Transactions in Panel Details
+The `transactions` SELECT policy only allows users to view their own transactions or their panel's transactions. No admin override exists, so the panel details finance tab shows nothing.
+
+### Security Vulnerabilities Found
+1. **`orders` table**: `Public can view orders` with `USING(true)` exposes ALL orders (target URLs, prices, buyer IDs) to unauthenticated users
+2. **`platform_payment_providers` table**: `Public can view enabled providers` exposes the `config` JSONB column containing Flutterwave/Paystack secret keys
+3. **`profiles` INSERT policy**: `WITH CHECK(true)` lets any user self-assign `role='admin'` on signup
 
 ---
 
-## 1. Fix Build Errors (12 TypeScript errors across 6 edge functions)
+## Database Migration
 
-| File | Error | Fix |
-|------|-------|-----|
-| `dns-lookup/index.ts` L210, L295 | `'error' is of type 'unknown'` | Cast to `(error as Error).message` |
-| `domain-health-check/index.ts` L167 | TXT returns `string[][]` not `string[]` | Cast: `as unknown as string[]` or flatten |
-| `import-provider-services/index.ts` L612 | `'error' is of type 'unknown'` | Cast to `(error as Error).message` |
-| `mfa-setup/index.ts` L59, L85 | `Uint8Array` not assignable to `BufferSource` | Cast: `key as unknown as ArrayBuffer` or use `.buffer` |
-| `security-audit/index.ts` L89 | `'err' is of type 'unknown'` | Cast to `(err as Error).message` |
-| `serve-favicon/index.ts` L100-101 | `custom_branding` not on array type | Add `.single()` type assertion or check `Array.isArray` |
-| `webhook-notify/index.ts` L191 | `string | null` not assignable to fetch | Add null guard before fetch |
-| `webhook-notify/index.ts` L232-233 | `supabaseAdmin.rpc` always truthy, `.raw` doesn't exist | Replace with simple `failure_count: 1` (increment via SQL or just set 1) |
+### 1. Fix `is_any_admin()` to also check `profiles.role`
+```sql
+CREATE OR REPLACE FUNCTION public.is_any_admin(_user_id uuid)
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public'
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.user_roles
+    WHERE user_id = _user_id AND role IN ('super_admin', 'admin')
+      AND (expires_at IS NULL OR expires_at > now())
+  )
+  OR EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE user_id = _user_id AND role = 'admin'
+  )
+$$;
+```
 
-## 2. MoreMenu: Replace ThemeToggle with Header Menu Icon Toggle
+### 2. Add admin SELECT for `transactions`
+```sql
+CREATE POLICY "Admins can view all transactions" ON public.transactions
+FOR SELECT TO authenticated USING (public.is_any_admin(auth.uid()));
+```
 
-Replace `<ThemeToggle />` in the user profile card with a `<Switch>` component labeled "Show Menu Icon" that controls whether the hamburger/menu icon appears in the mobile header.
+### 3. Add admin SELECT for `client_users`
+```sql
+CREATE POLICY "Admins can view all buyers" ON public.client_users
+FOR SELECT TO authenticated USING (public.is_any_admin(auth.uid()));
+```
 
-- Store setting in `localStorage` key `header-menu-visible` (default: `false` = disabled = hidden)
-- Create a simple context or use localStorage directly; the header component reads this value
-- The switch is only rendered in mobile mode (use `useIsMobile()`)
-- When enabled → show the hamburger menu icon in the dashboard header
-- When disabled → hide it (current default behavior for clean mobile UI)
+### 4. Remove dangerous public orders policy
+```sql
+DROP POLICY "Public can view orders" ON public.orders;
+```
 
-## 3. Fix Admin Pages — Replace `admin-data` with Direct Supabase Calls
+### 5. Fix payment provider secret exposure
+Replace the public policy with a safe view:
+```sql
+DROP POLICY "Public can view enabled providers" ON public.platform_payment_providers;
+CREATE POLICY "Public can view enabled provider names" ON public.platform_payment_providers
+FOR SELECT USING (is_enabled = true AND (
+  public.is_any_admin(auth.uid()) OR true
+));
+```
+Actually, a better approach: create a view that excludes `config`, and use that in public-facing code. But the existing `platform_providers_public` view pattern is already established -- we just need to ensure the `config` column is stripped from the public SELECT. Since the current policy returns ALL columns, restrict to authenticated admins for full access and create a safe public view.
 
-Six admin pages call `/functions/v1/admin-data` which **does not exist** as an edge function. The existing function is `admin-panel-ops` (handles add_funds, update_subscription, bulk_update only — not data fetching).
+### 6. Fix profile INSERT role escalation
+```sql
+DROP POLICY "Anyone can insert profile" ON public.profiles;
+CREATE POLICY "Anyone can insert profile" ON public.profiles
+FOR INSERT TO public WITH CHECK (role = 'panel_owner' OR role IS NULL);
+```
 
-**Fix**: Replace `fetch('/functions/v1/admin-data', ...)` calls with direct `supabase.from(...)` queries using the service role via RLS policies (admin already has `is_any_admin` policies on panels).
+---
 
-Affected pages and their replacement queries:
-- **`PanelManagement.tsx`**: `get_panels` → `supabase.from('panels').select('*, owner:profiles!panels_owner_id_fkey(email, full_name), subscription:panel_subscriptions(plan_type, status)')` 
-- **`AdminOverview.tsx`**: `get_dashboard_stats` → aggregate from panels, orders, transactions, client_users tables
-- **`UserManagement.tsx`**: `get_users` → `supabase.from('profiles').select('*')`
-- **`PaymentManagement.tsx`**: `get_transactions` → `supabase.from('transactions').select('*')`
-- **`SystemHealth.tsx`**: `get_system_health` → compute from table counts
-- **`SupportTickets.tsx`**: `get_tickets` / `update_ticket` → `supabase.from('support_tickets').select/update`
+## Code Changes
 
-Also fix CORS on `admin-panel-ops/index.ts` (line 5 missing platform headers).
+### `src/pages/admin/PanelManagement.tsx`
+- Add error logging for the subscription fetch to surface RLS issues
+- No code changes needed -- the RLS fix will make data visible
 
-## 4. Restore Subdomain Suffix to `smmpilot.online`
-
-Update references in:
-- `tenant-domain-config.ts`: Change default fallback from `homeofsmm.com` to `smmpilot.online` (line 39)
-- `generate-sitemap/index.ts`: Change `homeofsmm.com` URLs to `smmpilot.online`
-- `docs/DocsHub.tsx`: Change example URLs from `homeofsmm.com` to `smmpilot.online`
-- Remove Replit patterns from `DEV_PATTERNS` in `tenant-domain-config.ts` (lines 80-83) and `TenantRouter.tsx` (lines 39-42)
-- Keep `homeofsmm.com` in `PLATFORM_DOMAINS` array (it's the brand) but ensure `smmpilot.online` is primary for subdomains
-
-## 5. Fix Payment Verification & Subscription Upgrade Flow
-
-### Deposit status not updating in transaction history
-The verification flow in `Billing.tsx` (lines 183-226) already calls `verify-payment` on return. The issue is timing — if the gateway hasn't confirmed yet, verification returns `pending`. 
-
-**Fix**: Add a retry loop (poll 3 times with 5s intervals) when status comes back as `pending` after returning from payment.
-
-### Subscription upgrade from balance
-Currently `handleUpgrade` always goes through the payment gateway. Add an option to pay from panel balance:
-- Before calling `process-payment`, check if `panelBalance >= plan.price`
-- Show a dialog asking: "Pay from balance ($X available) or use payment gateway?"
-- If balance: directly deduct from `panels.balance`, create completed transaction, update subscription — all via a new `balance-payment` action in `process-payment`
+### No other file changes needed
+The admin pages already query correctly with `.limit(5000)`. The issue is purely RLS.
 
 ---
 
@@ -75,25 +93,6 @@ Currently `handleUpgrade` always goes through the payment gateway. Add an option
 
 | File | Change |
 |------|--------|
-| `supabase/functions/dns-lookup/index.ts` | Cast error types |
-| `supabase/functions/domain-health-check/index.ts` | Fix TXT record type |
-| `supabase/functions/import-provider-services/index.ts` | Cast error type |
-| `supabase/functions/mfa-setup/index.ts` | Fix crypto key type |
-| `supabase/functions/security-audit/index.ts` | Cast error type |
-| `supabase/functions/serve-favicon/index.ts` | Fix panel type check |
-| `supabase/functions/webhook-notify/index.ts` | Fix null check + remove `.rpc`/`.raw` |
-| `supabase/functions/admin-panel-ops/index.ts` | Fix CORS headers |
-| `src/pages/panel/MoreMenu.tsx` | Replace ThemeToggle with header menu switch |
-| `src/pages/admin/PanelManagement.tsx` | Replace admin-data with direct Supabase |
-| `src/pages/admin/AdminOverview.tsx` | Replace admin-data with direct Supabase |
-| `src/pages/admin/UserManagement.tsx` | Replace admin-data with direct Supabase |
-| `src/pages/admin/PaymentManagement.tsx` | Replace admin-data with direct Supabase |
-| `src/pages/admin/SystemHealth.tsx` | Replace admin-data with direct Supabase |
-| `src/pages/admin/SupportTickets.tsx` | Replace admin-data with direct Supabase |
-| `src/lib/tenant-domain-config.ts` | Fix default domain, remove Replit |
-| `src/pages/TenantRouter.tsx` | Remove Replit patterns |
-| `supabase/functions/generate-sitemap/index.ts` | Fix URLs |
-| `src/pages/docs/DocsHub.tsx` | Fix example URLs |
-| `src/pages/panel/Billing.tsx` | Add retry polling, balance payment option |
-| `supabase/functions/process-payment/index.ts` | Add balance-payment action |
+| SQL Migration | Fix `is_any_admin()`, add admin SELECT policies, fix security |
+| No code files | RLS fixes resolve the listing issues |
 
