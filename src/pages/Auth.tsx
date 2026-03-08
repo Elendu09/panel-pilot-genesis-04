@@ -11,7 +11,8 @@ import { Helmet } from 'react-helmet-async';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import EmailVerificationKanban from '@/components/auth/EmailVerificationKanban';
-import { Loader2, User, Mail, ArrowRight, Zap, Shield, Globe, BarChart3, Sparkles } from 'lucide-react';
+import { Loader2, User, Mail, ArrowRight, Shield, Globe, BarChart3, Sparkles } from 'lucide-react';
+import brandIcon from '@/assets/brand-icon.png';
 
 const LAST_PANEL_ROUTE_KEY = 'homeofsmm_last_panel_route';
 
@@ -273,9 +274,7 @@ const Auth = () => {
       <div className="hidden lg:flex lg:w-1/2 relative flex-col justify-center px-12 xl:px-20 bg-muted/30 border-r border-border">
         <div className="relative z-10 max-w-lg">
           <div className="flex items-center gap-3 mb-8">
-            <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center shadow-lg">
-              <Zap className="w-6 h-6 text-primary-foreground" />
-            </div>
+            <img src={brandIcon} alt="Home of SMM" className="w-12 h-12 rounded-xl shadow-lg object-contain" />
             <h1 className="text-3xl font-bold text-foreground">HOME OF SMM</h1>
           </div>
           
@@ -312,9 +311,7 @@ const Auth = () => {
       <div className="flex-1 flex items-center justify-center p-4 sm:p-8">
         <Card className="w-full max-w-md bg-card border-border shadow-xl">
           <CardHeader className="text-center pb-2">
-            <div className="lg:hidden mx-auto mb-3 w-12 h-12 rounded-xl bg-primary flex items-center justify-center shadow-lg">
-              <Zap className="w-6 h-6 text-primary-foreground" />
-            </div>
+            <img src={brandIcon} alt="Home of SMM" className="lg:hidden mx-auto mb-3 w-12 h-12 rounded-xl shadow-lg object-contain" />
             <CardTitle className="text-2xl font-bold text-foreground">
               <span className="lg:hidden">HOME OF SMM</span>
               <span className="hidden lg:inline">Welcome Back</span>
