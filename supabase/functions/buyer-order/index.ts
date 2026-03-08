@@ -23,7 +23,6 @@ async function resolveExternalServiceId(
   supabase: any,
   service: { provider_service_id?: string; provider_service_ref?: string }
 ): Promise<string | null> {
-  // If provider_service_ref exists, look up the external_service_id from provider_services table
   if (service.provider_service_ref) {
     const { data: providerService } = await supabase
       .from('provider_services')
@@ -37,7 +36,6 @@ async function resolveExternalServiceId(
     }
   }
 
-  // Fall back to provider_service_id if it looks like an external ID (numeric or short string, not a UUID)
   if (service.provider_service_id) {
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(service.provider_service_id);
     if (!isUUID) {
@@ -45,7 +43,6 @@ async function resolveExternalServiceId(
       return service.provider_service_id;
     }
 
-    // If provider_service_id is a UUID, try to look it up in provider_services table
     const { data: providerService } = await supabase
       .from('provider_services')
       .select('external_service_id')
@@ -70,7 +67,6 @@ async function forwardToProvider(
   orderId: string
 ): Promise<{ success: boolean; externalOrderId?: string; error?: string }> {
   try {
-    // Get service's provider info
     const { data: service } = await supabase
       .from('services')
       .select('provider_id, provider_service_id, provider_service_ref')
@@ -82,14 +78,12 @@ async function forwardToProvider(
       return { success: false, error: 'No provider linked' };
     }
 
-    // Resolve the correct external service ID for the provider API
     const externalServiceId = await resolveExternalServiceId(supabase, service);
     if (!externalServiceId) {
       console.log('[buyer-order] Could not resolve external service ID');
       return { success: false, error: 'No external service ID found' };
     }
 
-    // Get provider API credentials
     const { data: provider } = await supabase
       .from('providers')
       .select('api_endpoint, api_key, is_active')
@@ -103,7 +97,6 @@ async function forwardToProvider(
 
     console.log(`[buyer-order] Forwarding to provider: ${provider.api_endpoint}, service=${externalServiceId}`);
 
-    // Call provider's API (standard SMM panel API format)
     const formData = new URLSearchParams();
     formData.append('key', provider.api_key);
     formData.append('action', 'add');
@@ -121,7 +114,6 @@ async function forwardToProvider(
     console.log('[buyer-order] Provider response:', JSON.stringify(result));
 
     if (result.order) {
-      // Update order with provider's order ID and set to processing
       await supabase
         .from('orders')
         .update({
@@ -133,7 +125,6 @@ async function forwardToProvider(
       return { success: true, externalOrderId: String(result.order) };
     } else {
       const errorMsg = result.error || 'Unknown provider error';
-      // Mark order with appropriate error status
       const isServiceError = errorMsg.toLowerCase().includes('incorrect service') || 
                              errorMsg.toLowerCase().includes('invalid service') ||
                              errorMsg.toLowerCase().includes('service not found');
@@ -152,9 +143,9 @@ async function forwardToProvider(
     console.error('[buyer-order] Provider forwarding error:', error);
     await supabase
       .from('orders')
-      .update({ notes: `Forwarding failed: ${error.message}` })
+      .update({ notes: `Forwarding failed: ${(error as Error).message}` })
       .eq('id', orderId);
-    return { success: false, error: error.message };
+    return { success: false, error: (error as Error).message };
   }
 }
 
@@ -174,7 +165,6 @@ serve(async (req) => {
 
     console.log(`[buyer-order] Creating order for buyer ${buyerId} on panel ${panelId}, paymentType: ${paymentType}`);
 
-    // Validate required fields
     if (!panelId || !buyerId || !serviceId || !quantity || !targetUrl || price === undefined) {
       return new Response(
         JSON.stringify({ success: false, error: 'Missing required fields' }),
@@ -197,7 +187,6 @@ serve(async (req) => {
       );
     }
 
-    // Check balance for balance payment type
     const currentBalance = buyer.balance || 0;
     if (paymentType === 'balance' && currentBalance < price) {
       return new Response(
@@ -228,7 +217,6 @@ serve(async (req) => {
       );
     }
 
-    // Validate quantity
     const minQty = service.min_quantity || 1;
     const maxQty = service.max_quantity || 1000000;
     if (quantity < minQty || quantity > maxQty) {
@@ -238,10 +226,8 @@ serve(async (req) => {
       );
     }
 
-    // Generate order number
     const orderNumber = `ORD${Date.now()}${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
-    // Create the order
     const orderStatus = paymentType === 'direct' ? 'awaiting_payment' : 'pending';
     const providerCostAtOrder = service.provider_cost || service.cost_usd || 0;
     const { data: order, error: orderError } = await supabase
@@ -298,7 +284,7 @@ serve(async (req) => {
       console.log(`[buyer-order] Provider forwarding result:`, providerResult);
     }
 
-    // Create notification
+    // Create buyer notification
     const notificationMessage = paymentType === 'direct'
       ? `Order #${orderNumber} created. Complete payment to start processing.`
       : `Order #${orderNumber} for ${quantity.toLocaleString()} ${service.name} has been placed successfully.`;
@@ -333,13 +319,25 @@ serve(async (req) => {
       console.error('[buyer-order] Panel notification error (non-fatal):', notifErr);
     }
 
-    // Update promo code usage if used
+    // Update promo code usage if used — fixed: separate read + increment
     if (promoCode) {
-      await supabase
-        .from('promo_codes')
-        .update({ used_count: supabase.rpc('increment_promo_usage', { promo_code: promoCode }) })
-        .eq('code', promoCode)
-        .eq('panel_id', panelId);
+      try {
+        const { data: promoData } = await supabase
+          .from('promo_codes')
+          .select('id, used_count')
+          .eq('code', promoCode)
+          .eq('panel_id', panelId)
+          .maybeSingle();
+
+        if (promoData) {
+          await supabase
+            .from('promo_codes')
+            .update({ used_count: (promoData.used_count || 0) + 1 })
+            .eq('id', promoData.id);
+        }
+      } catch (promoErr) {
+        console.error('[buyer-order] Promo code update error (non-fatal):', promoErr);
+      }
     }
 
     console.log(`[buyer-order] Order ${orderNumber} created successfully`);
@@ -364,9 +362,9 @@ serve(async (req) => {
     );
 
   } catch (error: any) {
-    console.error('[buyer-order] Error:', error);
+    console.error('[buyer-order] Error:', (error as Error).message);
     return new Response(
-      JSON.stringify({ success: false, error: error.message || 'Internal server error' }),
+      JSON.stringify({ success: false, error: (error as Error).message || 'Internal server error' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

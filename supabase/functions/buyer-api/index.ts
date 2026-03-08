@@ -68,7 +68,7 @@ serve(async (req) => {
         }
       }
     } catch (parseError: any) {
-      console.error('[buyer-api] Parse error:', parseError);
+      console.error('[buyer-api] Parse error:', (parseError as Error).message);
       return errorResponse("Invalid request body. Expected JSON.");
     }
 
@@ -146,8 +146,8 @@ serve(async (req) => {
     return response;
 
   } catch (error: any) {
-    console.error('[buyer-api] Error:', error);
-    return errorResponse(error.message || 'Internal server error');
+    console.error('[buyer-api] Error:', (error as Error).message);
+    return errorResponse((error as Error).message || 'Internal server error');
   }
 });
 
@@ -284,8 +284,8 @@ async function forwardOrderToProvider(
       return { success: false, error: result.error || 'Unknown provider error' };
     }
   } catch (error: any) {
-    console.error('[buyer-api] Provider forwarding error:', error);
-    return { success: false, error: error.message };
+    console.error('[buyer-api] Provider forwarding error:', (error as Error).message);
+    return { success: false, error: (error as Error).message };
   }
 }
 
@@ -296,13 +296,16 @@ async function handleAddOrder(supabase: any, panelId: string, buyerId: string | 
   if (!service) return errorResponse("Service ID is required");
   if (!link) return errorResponse("Link is required");
 
+  // Sanitize service ID to prevent injection in .or() query
+  const sanitizedService = String(service).replace(/[^a-zA-Z0-9_-]/g, '');
+
   // Find the service
   const { data: serviceData, error: serviceError } = await supabase
     .from('services')
     .select('*')
     .eq('panel_id', panelId)
     .eq('is_active', true)
-    .or(`provider_service_id.eq.${service},id.eq.${service}`)
+    .or(`provider_service_id.eq.${sanitizedService},id.eq.${sanitizedService}`)
     .maybeSingle();
 
   if (serviceError || !serviceData) return errorResponse("Service not found");
@@ -320,10 +323,10 @@ async function handleAddOrder(supabase: any, panelId: string, buyerId: string | 
 
   // ── Balance check & deduction ──
   if (buyerId) {
-    // Buyer-level API key: check buyer balance
+    // Buyer-level API key: check buyer balance + total_spent
     const { data: buyer, error: buyerErr } = await supabase
       .from('client_users')
-      .select('balance')
+      .select('balance, total_spent')
       .eq('id', buyerId)
       .single();
 
@@ -334,12 +337,12 @@ async function handleAddOrder(supabase: any, panelId: string, buyerId: string | 
       return errorResponse("Not enough funds");
     }
 
-    // Deduct balance atomically
+    // Deduct balance
     const { error: deductErr } = await supabase
       .from('client_users')
       .update({
         balance: currentBalance - price,
-        total_spent: (buyer.total_spent || 0) + price
+        total_spent: (parseFloat(buyer.total_spent || 0)) + price
       })
       .eq('id', buyerId);
 
@@ -395,12 +398,19 @@ async function handleAddOrder(supabase: any, panelId: string, buyerId: string | 
 
   if (orderError) {
     console.error('[buyer-api] Order creation error:', orderError);
-    // Refund balance on order creation failure
+    // Refund balance on order creation failure — direct update only (no non-existent RPC)
     if (buyerId) {
-      await supabase.rpc('increment_balance', { user_id: buyerId, amount: price }).catch(() => {});
-      // Fallback: direct update
-      const { data: b } = await supabase.from('client_users').select('balance').eq('id', buyerId).single();
-      if (b) await supabase.from('client_users').update({ balance: parseFloat(b.balance || 0) + price }).eq('id', buyerId);
+      try {
+        const { data: b } = await supabase.from('client_users').select('balance, total_spent').eq('id', buyerId).single();
+        if (b) {
+          await supabase.from('client_users').update({ 
+            balance: parseFloat(b.balance || 0) + price,
+            total_spent: Math.max(0, parseFloat(b.total_spent || 0) - price)
+          }).eq('id', buyerId);
+        }
+      } catch (refundErr) {
+        console.error('[buyer-api] Refund on failure error:', (refundErr as Error).message);
+      }
     }
     return errorResponse("Failed to create order");
   }
@@ -581,7 +591,7 @@ async function handleRefillStatus(supabase: any, panelId: string, params: BuyerA
   return jsonResponse(result);
 }
 
-// Cancel orders
+// Cancel orders — with proper balance refund
 async function handleCancel(supabase: any, panelId: string, params: BuyerApiRequest) {
   const { orders } = params;
   if (!orders) return errorResponse("Order IDs are required");
@@ -615,13 +625,23 @@ async function handleCancel(supabase: any, panelId: string, params: BuyerApiRequ
     if (updateError) {
       results.push({ order: orderId, cancel: { error: "Failed to cancel order" } });
     } else {
-      // Refund balance on cancellation
+      // Refund balance on cancellation — read balance+total_spent together
       if (orderData.buyer_id && orderData.price) {
-        const { data: buyer } = await supabase.from('client_users').select('balance').eq('id', orderData.buyer_id).single();
-        if (buyer) {
-          await supabase.from('client_users').update({ 
-            balance: parseFloat(buyer.balance || 0) + parseFloat(orderData.price) 
-          }).eq('id', orderData.buyer_id);
+        try {
+          const { data: buyer } = await supabase
+            .from('client_users')
+            .select('balance, total_spent')
+            .eq('id', orderData.buyer_id)
+            .single();
+          if (buyer) {
+            const refundPrice = parseFloat(orderData.price);
+            await supabase.from('client_users').update({ 
+              balance: parseFloat(buyer.balance || 0) + refundPrice,
+              total_spent: Math.max(0, parseFloat(buyer.total_spent || 0) - refundPrice)
+            }).eq('id', orderData.buyer_id);
+          }
+        } catch (refundErr) {
+          console.error('[buyer-api] Cancel refund error:', (refundErr as Error).message);
         }
       }
       results.push({ order: orderId, cancel: true });
