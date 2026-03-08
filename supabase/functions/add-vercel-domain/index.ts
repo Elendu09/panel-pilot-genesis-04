@@ -73,20 +73,27 @@ serve(async (req) => {
       
       const verificationToken = crypto.randomUUID().substring(0, 16);
       
-      // Store domain in panel_domains
-      await supabase
-        .from('panel_domains')
-        .upsert({
-          panel_id,
-          domain,
-          verification_status: 'pending',
-          verification_token: verificationToken,
-          txt_verification_record: `smmpilot-verify=${verificationToken}`,
-          expected_target: '76.76.21.21',
-          dns_configured: false,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        }, { onConflict: 'panel_id,domain' });
+      // Store domain in panel_domains (graceful — don't fail if FK violation)
+      try {
+        const { error: upsertError } = await supabase
+          .from('panel_domains')
+          .upsert({
+            panel_id,
+            domain,
+            verification_status: 'pending',
+            verification_token: verificationToken,
+            txt_verification_record: `smmpilot-verify=${verificationToken}`,
+            expected_target: '76.76.21.21',
+            dns_configured: false,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'panel_id,domain' });
+        if (upsertError) {
+          console.error("Non-fatal: could not store domain in panel_domains:", upsertError.message);
+        }
+      } catch (dbErr) {
+        console.error("Non-fatal: panel_domains upsert exception:", dbErr);
+      }
 
       return new Response(
         JSON.stringify({

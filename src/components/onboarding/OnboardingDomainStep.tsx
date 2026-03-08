@@ -589,7 +589,7 @@ export const OnboardingDomainStep = ({
           </div>
 
           {domainOption === 'register-new' && (
-            <div className="px-4 pb-4 pt-0 space-y-4">
+            <div className="px-4 pb-4 pt-0 space-y-4 overflow-hidden min-w-0">
               {/* Domain Search */}
               <div className="space-y-2">
                 <Label>Search for a domain</Label>
