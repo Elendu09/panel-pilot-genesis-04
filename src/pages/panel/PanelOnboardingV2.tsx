@@ -610,18 +610,23 @@ const PanelOnboardingV2 = () => {
 
         // Sync custom domain to panel_domains if configured
         if (domainType === 'custom' && customDomain) {
-          const verificationToken = `smmpilot-verify=${crypto.randomUUID()}`;
+          const token = domainVerificationState.token || crypto.randomUUID();
+          const isFullyVerified = domainVerificationState.step === 'verified';
+          const isTxtVerified = domainVerificationState.step === 'dns-pending';
+          
+          const verificationStatus = isFullyVerified ? 'verified' : isTxtVerified ? 'txt_verified' : 'pending';
+          
           await supabase
             .from('panel_domains')
             .upsert({
               panel_id: panelData.id,
               domain: customDomain,
               is_primary: true,
-              verification_status: 'verified',
-              dns_configured: true,
-              verified_at: new Date().toISOString(),
-              txt_verification_record: verificationToken,
-              txt_verified_at: new Date().toISOString(),
+              verification_status: verificationStatus,
+              dns_configured: isFullyVerified,
+              verified_at: isFullyVerified ? new Date().toISOString() : null,
+              txt_verification_record: `smmpilot-verify=${token}`,
+              txt_verified_at: isTxtVerified || isFullyVerified ? new Date().toISOString() : null,
               hosting_provider: 'lovable',
             }, { onConflict: 'domain' });
         }
