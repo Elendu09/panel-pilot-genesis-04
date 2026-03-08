@@ -46,6 +46,7 @@ import { cn } from "@/lib/utils";
 import { MarkupEducation } from "./MarkupEducation";
 import { supabase } from "@/integrations/supabase/client";
 import { detectPlatformEnhanced, getServiceIcon } from "@/lib/service-icon-detection";
+import { ImportProgressStepper, type ImportStep } from "@/components/panel/ImportProgressStepper";
 
 interface FetchedService {
   id: number;
