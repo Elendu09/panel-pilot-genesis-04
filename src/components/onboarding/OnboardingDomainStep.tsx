@@ -125,6 +125,13 @@ export const OnboardingDomainStep = ({
 
   const handleDomainSubmit = async () => {
     if (!customDomain || !canUseCustomDomain) return;
+
+    // Validate domain format - must have a valid TLD
+    const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z]{2,})+$/;
+    if (!domainRegex.test(customDomain)) {
+      toast({ variant: 'destructive', title: 'Invalid domain', description: 'Please enter a valid domain name (e.g. yourdomain.com)' });
+      return;
+    }
     
     setAddingDomain(true);
     try {
