@@ -288,8 +288,8 @@ const OrdersManagement = () => {
           await supabase
             .from('client_users')
             .update({
-              balance: parseFloat(buyer.balance || 0) + refundAmt,
-              total_spent: Math.max(0, parseFloat(buyer.total_spent || 0) - refundAmt)
+              balance: parseFloat(String(buyer.balance || 0)) + refundAmt,
+              total_spent: Math.max(0, parseFloat(String(buyer.total_spent || 0)) - refundAmt)
             })
             .eq('id', selectedOrder.buyer_id);
         }
