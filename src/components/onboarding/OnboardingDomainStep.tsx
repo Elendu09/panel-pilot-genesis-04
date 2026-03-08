@@ -89,7 +89,8 @@ export const OnboardingDomainStep = ({
   checkingSubdomain,
   currency = 'USD',
   onCurrencyChange,
-  panelId
+  panelId,
+  onVerificationStateChange
 }: OnboardingDomainStepProps) => {
   const { toast } = useToast();
   const canUseCustomDomain = selectedPlan !== 'free';
