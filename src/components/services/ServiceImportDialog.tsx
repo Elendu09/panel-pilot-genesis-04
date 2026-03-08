@@ -873,21 +873,22 @@ export const ServiceImportDialog = ({
             </ScrollArea>
 
             <DialogFooter className="flex-col gap-3">
-              {/* Import Progress */}
-              {importProgress.importing && (
-                <div className="w-full space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Importing services...</span>
-                    <span className="font-medium">{importProgress.current} / {importProgress.total}</span>
-                  </div>
-                  <Progress value={importPercentage} className="h-2" />
+              {/* Import Progress Stepper */}
+              {showStepper && importProgress.importing && (
+                <div className="w-full">
+                  <ImportProgressStepper
+                    currentStep={importStep}
+                    progress={importStepProgress}
+                    servicesCount={fetchedServiceCount}
+                    error={undefined}
+                  />
                 </div>
               )}
               
               <div className="flex flex-col sm:flex-row gap-2 w-full">
                 <Button 
                   variant="outline" 
-                  onClick={() => setStep("select")} 
+                  onClick={() => { setShowStepper(false); setStep("select"); }} 
                   className="w-full sm:w-auto"
                   disabled={importProgress.importing}
                 >
@@ -904,7 +905,7 @@ export const ServiceImportDialog = ({
                     <Download className="w-4 h-4 mr-2" />
                   )}
                   {importProgress.importing 
-                    ? `Importing ${importPercentage}%...` 
+                    ? `Importing ${importStepProgress}%...` 
                     : `Import ${selectedServices.length} Services`
                   }
                 </Button>
