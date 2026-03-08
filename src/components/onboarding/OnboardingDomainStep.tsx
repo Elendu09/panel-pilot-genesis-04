@@ -40,6 +40,7 @@ interface OnboardingDomainStepProps {
   currency?: string;
   onCurrencyChange?: (value: string) => void;
   panelId?: string;
+  onVerificationStateChange?: (state: { step: 'configure' | 'txt-pending' | 'dns-pending' | 'verified'; token: string | null }) => void;
 }
 
 type DomainOption = 'have-domain' | 'register-new' | 'free-subdomain';
@@ -88,7 +89,8 @@ export const OnboardingDomainStep = ({
   checkingSubdomain,
   currency = 'USD',
   onCurrencyChange,
-  panelId
+  panelId,
+  onVerificationStateChange
 }: OnboardingDomainStepProps) => {
   const { toast } = useToast();
   const canUseCustomDomain = selectedPlan !== 'free';
@@ -105,6 +107,11 @@ export const OnboardingDomainStep = ({
   const [dnsStatus, setDnsStatus] = useState<DnsStatus>({ checking: false, result: null });
   const [verificationStep, setVerificationStep] = useState<'configure' | 'txt-pending' | 'dns-pending' | 'verified'>('configure');
   const [pollingActive, setPollingActive] = useState(false);
+
+  // Report verification state changes to parent
+  useEffect(() => {
+    onVerificationStateChange?.({ step: verificationStep, token: verificationToken });
+  }, [verificationStep, verificationToken]);
 
   useEffect(() => {
     if (!pollingActive || !customDomain || verificationStep === 'verified') return;

@@ -156,22 +156,34 @@ const PlatformProviderManagement = () => {
     setSyncing(prev => new Set(prev).add(provider.id));
 
     try {
-      const { data, error } = await supabase.functions.invoke('provider-balance', {
-        body: { api_endpoint: provider.api_endpoint, api_key: provider.api_key }
+      // Call provider API directly with raw credentials (admin context)
+      const formData = new URLSearchParams();
+      formData.append('key', provider.api_key);
+      formData.append('action', 'balance');
+
+      const response = await fetch(provider.api_endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: formData,
       });
 
-      if (error) throw error;
+      if (!response.ok) throw new Error(`Provider API returned ${response.status}`);
+
+      const data = await response.json();
+      const balance = parseFloat(data.balance ?? data.funds ?? data.credit ?? '0');
+
+      if (isNaN(balance)) throw new Error('Could not parse balance from provider');
 
       await supabase
         .from('platform_providers')
         .update({
-          balance: data?.balance || 0,
+          balance,
           last_sync_at: new Date().toISOString(),
           sync_status: 'synced',
         })
         .eq('id', provider.id);
 
-      toast({ title: "Provider synced", description: `Balance: $${data?.balance?.toFixed(2) || 0}` });
+      toast({ title: "Provider synced", description: `Balance: $${balance.toFixed(2)}` });
       fetchProviders();
     } catch (error) {
       console.error('Sync error:', error);
