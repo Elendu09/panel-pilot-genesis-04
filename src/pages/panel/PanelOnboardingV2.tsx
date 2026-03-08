@@ -151,6 +151,7 @@ const PanelOnboardingV2 = () => {
           .select('id, onboarding_step, onboarding_data, default_currency, subscription_status')
           .eq('owner_id', profile.id)
           .eq('onboarding_completed', false)
+          .order('created_at', { ascending: false })
           .maybeSingle();
 
         if (incompletePanel) {
