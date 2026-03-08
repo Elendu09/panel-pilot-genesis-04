@@ -73,6 +73,7 @@ const PanelOnboardingV2 = () => {
   const createdPanelIdRef = useRef<string | null>(null);
   const [paymentCompleted, setPaymentCompleted] = useState(false);
   const [currency, setCurrency] = useState('USD');
+  const [domainVerificationState, setDomainVerificationState] = useState<{ step: 'configure' | 'txt-pending' | 'dns-pending' | 'verified'; token: string | null }>({ step: 'configure', token: null });
   
   // SEO state
   const [seoTitle, setSeoTitle] = useState('');
