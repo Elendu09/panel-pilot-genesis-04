@@ -34,6 +34,8 @@ const featureCategories = [
     title: "User Panel",
     icon: Users,
     features: [
+      { title: "Guided Onboarding", description: "6-step wizard walks new panel owners through setup: name, plan, payment, provider, domain, branding." },
+      { title: "Multi-Panel Support", description: "Create and manage multiple panels from one dashboard with a built-in panel switcher." },
       { title: "Mass Orders", description: "Let users set up mass orders for bulk delivery to save time." },
       { title: "User API", description: "Methods that allow your resellers to work with your panel via API." },
       { title: "Multi-currency", description: "Display service rates, user balance, and order charges based on selected currency." },
