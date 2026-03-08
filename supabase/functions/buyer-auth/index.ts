@@ -598,7 +598,7 @@ async function handleLogin(supabaseAdmin: any, body: any, req: Request) {
   });
 
   // Return user data (exclude sensitive fields)
-  const { password_hash, password_temp, ...safeUser } = user;
+  const { password_hash, password_temp, api_key: _ak, ...safeUser } = user;
   
   return jsonResponse({ 
     success: true, 
