@@ -352,12 +352,15 @@ async function handleServiceUpdate(supabase: any, panelId: string, params: Panel
     return errorResponse("service_id is required", 400);
   }
 
+  // Sanitize service_id to prevent injection in .or() clause
+  const sanitizedServiceId = String(service_id).replace(/[^a-zA-Z0-9_-]/g, '');
+
   // Verify service belongs to panel
   const { data: service, error: findError } = await supabase
     .from('services')
     .select('id')
     .eq('panel_id', panelId)
-    .or(`id.eq.${service_id},provider_service_id.eq.${service_id}`)
+    .or(`id.eq.${sanitizedServiceId},provider_service_id.eq.${sanitizedServiceId}`)
     .maybeSingle();
 
   if (findError || !service) {

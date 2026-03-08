@@ -77,11 +77,13 @@ interface Order {
   start_count: number;
   remains: number;
   provider_cost: number | null;
+  provider_order_id: string | null;
   notes: string | null;
   created_at: string;
   service_name?: string | null;
   service?: { name: string; category: string } | null;
   buyer?: { email: string; full_name: string | null } | null;
+  buyer_id?: string | null;
 }
 
 const statusConfig: Record<string, { label: string; color: string; icon: any; glow: string }> = {
@@ -126,6 +128,27 @@ const OrdersManagement = () => {
   useEffect(() => {
     if (panel?.id) {
       fetchOrders();
+
+      // Realtime subscription for order updates
+      const channel = supabase
+        .channel('orders-realtime')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'orders',
+          filter: `panel_id=eq.${panel.id}`
+        }, (payload) => {
+          if (payload.eventType === 'INSERT') {
+            fetchOrders();
+          } else if (payload.eventType === 'UPDATE') {
+            setOrders(prev => prev.map(o => 
+              o.id === (payload.new as any).id ? { ...o, ...(payload.new as any) } : o
+            ));
+          }
+        })
+        .subscribe();
+
+      return () => { supabase.removeChannel(channel); };
     }
   }, [panel?.id]);
 
@@ -239,6 +262,9 @@ const OrdersManagement = () => {
     if (!selectedOrder) return;
     
     try {
+      const refundAmt = parseFloat(refundAmount);
+
+      // Update order status
       const { error } = await supabase
         .from('orders')
         .update({ 
@@ -250,10 +276,29 @@ const OrdersManagement = () => {
 
       if (error) throw error;
 
+      // Restore buyer balance
+      if (selectedOrder.buyer_id && refundAmt > 0) {
+        const { data: buyer } = await supabase
+          .from('client_users')
+          .select('balance, total_spent')
+          .eq('id', selectedOrder.buyer_id)
+          .single();
+
+        if (buyer) {
+          await supabase
+            .from('client_users')
+            .update({
+              balance: parseFloat(String(buyer.balance || 0)) + refundAmt,
+              total_spent: Math.max(0, parseFloat(String(buyer.total_spent || 0)) - refundAmt)
+            })
+            .eq('id', selectedOrder.buyer_id);
+        }
+      }
+
       setOrders(prev => prev.map(o => 
         o.id === selectedOrder.id ? { ...o, status: "cancelled", notes: `Refund: $${refundAmount} - ${refundReason}` } : o
       ));
-      toast({ title: `Refund of $${refundAmount} processed` });
+      toast({ title: `Refund of $${refundAmount} processed and balance restored` });
       setIsRefundOpen(false);
       setRefundReason("");
     } catch (error) {
@@ -361,17 +406,15 @@ const OrdersManagement = () => {
     if (!panel?.id) return;
     setSyncing(true);
     try {
-      const response = await fetch('/functions/v1/sync-orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ panelId: panel.id }),
+      const { data, error } = await supabase.functions.invoke('sync-orders', {
+        body: { panelId: panel.id },
       });
-      const data = await response.json();
-      if (data.success) {
+      if (error) throw error;
+      if (data?.success) {
         toast({ title: "Orders synced", description: `${data.updated} of ${data.total} active orders updated from providers` });
         if (data.updated > 0) await fetchOrders();
       } else {
-        toast({ variant: 'destructive', title: 'Sync failed', description: data.error || 'Failed to sync orders' });
+        toast({ variant: 'destructive', title: 'Sync failed', description: data?.error || 'Failed to sync orders' });
       }
     } catch (error) {
       console.error('Sync error:', error);
@@ -612,39 +655,45 @@ const OrdersManagement = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
-            className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-50 w-[calc(100vw-2rem)] max-w-2xl"
+            className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-50 w-[calc(100vw-1.5rem)] max-w-lg"
           >
-            <div className="flex items-center gap-2 sm:gap-4 p-3 sm:p-4 bg-background/95 backdrop-blur-xl rounded-xl border border-primary/30 shadow-2xl">
-              <div className="flex items-center gap-2 shrink-0">
-                <CheckSquare className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-                <span className="font-medium text-sm sm:text-base">{selectedOrders.size} selected</span>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-3 bg-background/95 backdrop-blur-xl rounded-2xl border border-primary/30 shadow-2xl">
+              <div className="flex items-center justify-between sm:justify-start gap-2">
+                <div className="flex items-center gap-2 shrink-0">
+                  <CheckSquare className="w-4 h-4 text-primary" />
+                  <span className="font-medium text-sm">{selectedOrders.size} selected</span>
+                </div>
+                <Button variant="ghost" size="icon" className="h-7 w-7 sm:hidden" onClick={() => setSelectedOrders(new Set())} data-testid="button-clear-selection-mobile">
+                  <XCircle className="w-4 h-4" />
+                </Button>
               </div>
-              <div className="flex-1 min-w-0" />
-              <Select value={bulkAction} onValueChange={setBulkAction}>
-                <SelectTrigger className="w-[130px] sm:w-[180px]" data-testid="select-bulk-action">
-                  <SelectValue placeholder="Action..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="cancel">Cancel Orders</SelectItem>
-                  <SelectItem value="complete">Mark Complete</SelectItem>
-                  <SelectItem value="in_progress">Set In Progress</SelectItem>
-                  <SelectItem value="pause">Pause Orders</SelectItem>
-                  <SelectItem value="resume">Resume Orders</SelectItem>
-                  <SelectItem value="refund">Process Refund</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button 
-                onClick={() => setIsBulkActionOpen(true)} 
-                disabled={!bulkAction}
-                className="bg-primary"
-                size="sm"
-                data-testid="button-apply-bulk"
-              >
-                Apply
-              </Button>
-              <Button variant="ghost" size="icon" onClick={() => setSelectedOrders(new Set())} data-testid="button-clear-selection">
-                <XCircle className="w-4 h-4" />
-              </Button>
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <Select value={bulkAction} onValueChange={setBulkAction}>
+                  <SelectTrigger className="flex-1 min-w-0 h-9" data-testid="select-bulk-action">
+                    <SelectValue placeholder="Action..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cancel">Cancel Orders</SelectItem>
+                    <SelectItem value="complete">Mark Complete</SelectItem>
+                    <SelectItem value="in_progress">Set In Progress</SelectItem>
+                    <SelectItem value="pause">Pause Orders</SelectItem>
+                    <SelectItem value="resume">Resume Orders</SelectItem>
+                    <SelectItem value="refund">Process Refund</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button 
+                  onClick={() => setIsBulkActionOpen(true)} 
+                  disabled={!bulkAction}
+                  className="bg-primary shrink-0"
+                  size="sm"
+                  data-testid="button-apply-bulk"
+                >
+                  Apply
+                </Button>
+                <Button variant="ghost" size="icon" className="hidden sm:flex h-8 w-8 shrink-0" onClick={() => setSelectedOrders(new Set())} data-testid="button-clear-selection">
+                  <XCircle className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
           </motion.div>
         )}
@@ -821,6 +870,8 @@ const OrdersManagement = () => {
                       <th className="text-left p-4 font-medium text-muted-foreground">Order</th>
                       <th className="text-left p-4 font-medium text-muted-foreground">Customer</th>
                       <th className="text-left p-4 font-medium text-muted-foreground hidden lg:table-cell">Quantity</th>
+                      <th className="text-left p-4 font-medium text-muted-foreground hidden xl:table-cell">Start Count</th>
+                      <th className="text-left p-4 font-medium text-muted-foreground hidden xl:table-cell">Remains</th>
                       <th className="text-left p-4 font-medium text-muted-foreground">Status</th>
                       <th className="text-left p-4 font-medium text-muted-foreground">Progress</th>
                       <th className="text-left p-4 font-medium text-muted-foreground">Price</th>
@@ -830,7 +881,7 @@ const OrdersManagement = () => {
                   <tbody>
                     {filteredOrders.length === 0 ? (
                       <tr>
-                        <td colSpan={8} className="p-12 text-center">
+                        <td colSpan={10} className="p-12 text-center">
                           <div className="flex flex-col items-center gap-4">
                             <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center">
                               <ShoppingCart className="w-8 h-8 text-muted-foreground/50" />
@@ -886,6 +937,12 @@ const OrdersManagement = () => {
                               </td>
                               <td className="p-4 hidden lg:table-cell">
                                 <span className="text-sm">{order.quantity.toLocaleString()}</span>
+                              </td>
+                              <td className="p-4 hidden xl:table-cell">
+                                <span className="text-sm">{order.start_count || 0}</span>
+                              </td>
+                              <td className="p-4 hidden xl:table-cell">
+                                <span className="text-sm">{order.remains || 0}</span>
                               </td>
                               <td className="p-4">
                                 <Badge variant="outline" className={cn(statusInfo.color, "shadow-sm", statusInfo.glow)}>
@@ -980,6 +1037,20 @@ const OrdersManagement = () => {
                   <p className="text-sm text-muted-foreground">Price</p>
                   <p className="font-medium">${selectedOrder.price.toFixed(2)}</p>
                 </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Start Count</p>
+                  <p className="font-medium">{selectedOrder.start_count || 0}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Remains</p>
+                  <p className="font-medium">{selectedOrder.remains || 0}</p>
+                </div>
+                {selectedOrder.provider_order_id && (
+                  <div className="col-span-1 sm:col-span-2">
+                    <p className="text-sm text-muted-foreground">Provider Order ID</p>
+                    <p className="font-medium font-mono text-xs">{selectedOrder.provider_order_id}</p>
+                  </div>
+                )}
               </div>
               
               <div>
