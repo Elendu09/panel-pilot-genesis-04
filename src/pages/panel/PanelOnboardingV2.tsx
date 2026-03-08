@@ -148,7 +148,7 @@ const PanelOnboardingV2 = () => {
         // This prevents the loop: completed panel → /panel → incomplete exists → /onboarding → completed found → /panel
         const { data: incompletePanel } = await supabase
           .from('panels')
-          .select('id, onboarding_step, onboarding_data, default_currency')
+          .select('id, onboarding_step, onboarding_data, default_currency, subscription_status')
           .eq('owner_id', profile.id)
           .eq('onboarding_completed', false)
           .maybeSingle();
