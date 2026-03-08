@@ -287,8 +287,8 @@ serve(async (req) => {
     if (!buyerEmail) {
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('email')
-        .eq('id', buyerId)
+        .select('email, full_name')
+        .eq('user_id', buyerId)
         .single();
       buyerEmail = profileData?.email || `user-${buyerId}@platform.local`;
     }

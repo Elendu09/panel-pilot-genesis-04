@@ -101,8 +101,8 @@ const PanelOnboardingV2 = () => {
     { id: 6, key: STEP_KEYS.COMPLETE, title: 'Complete', icon: Rocket, description: 'Launch panel' },
   ];
 
-  // Filter steps to show (hide payment if free plan)
-  const shouldShowPaymentStep = selectedPlan !== 'free' && !paymentCompleted;
+  // Filter steps to show (hide payment if free plan, but always show if on payment step)
+  const shouldShowPaymentStep = selectedPlan !== 'free';
   const visibleSteps = allSteps.filter(step => 
     step.key !== STEP_KEYS.PAYMENT || shouldShowPaymentStep
   );
@@ -144,20 +144,8 @@ const PanelOnboardingV2 = () => {
           return;
         }
 
-        // Check for completed panels (use collection query for multi-panel support)
-        const { data: existingPanels } = await supabase
-          .from('panels')
-          .select('id')
-          .eq('owner_id', profile.id)
-          .eq('onboarding_completed', true)
-          .limit(1);
-          
-        if (existingPanels && existingPanels.length > 0) {
-          navigate('/panel');
-          return;
-        }
-
-        // Check for incomplete onboarding to resume
+        // FIRST check for incomplete panels — resume them instead of redirecting
+        // This prevents the loop: completed panel → /panel → incomplete exists → /onboarding → completed found → /panel
         const { data: incompletePanel } = await supabase
           .from('panels')
           .select('id, onboarding_step, onboarding_data, default_currency')
@@ -193,8 +181,27 @@ const PanelOnboardingV2 = () => {
             if (savedData.seoKeywords) setSeoKeywords(savedData.seoKeywords);
           }
           
+          // If subscription is already active/trial, mark payment as completed
+          if (incompletePanel.subscription_status && 
+              ['active', 'trial'].includes(incompletePanel.subscription_status)) {
+            setPaymentCompleted(true);
+          }
+          
           if (incompletePanel.default_currency) {
             setCurrency(incompletePanel.default_currency);
+          }
+        } else {
+          // No incomplete panel — check if all panels are completed
+          const { data: completedPanels } = await supabase
+            .from('panels')
+            .select('id')
+            .eq('owner_id', profile.id)
+            .eq('onboarding_completed', true)
+            .limit(1);
+            
+          if (completedPanels && completedPanels.length > 0) {
+            navigate('/panel');
+            return;
           }
         }
       } catch (error) {
@@ -443,10 +450,22 @@ const PanelOnboardingV2 = () => {
     }
   };
 
-  const handlePaymentSuccess = () => {
+  const handlePaymentSuccess = async () => {
     setPaymentCompleted(true);
     markStepComplete(currentStep);
-    setCurrentStep(currentStep + 1); // Move to Domain step
+    // Persist paymentCompleted to DB
+    if (createdPanelIdRef.current) {
+      const progressData = {
+        panelName, description, selectedPlan, subdomain, customDomain,
+        domainType, primaryColor, secondaryColor, paymentCompleted: true,
+        selectedTheme, brandingMode, seoTitle, seoDescription, seoKeywords, currency
+      };
+      await supabase.from('panels').update({
+        onboarding_data: progressData,
+        subscription_status: 'active',
+      }).eq('id', createdPanelIdRef.current);
+    }
+    // Don't auto-advance — user clicks Next
   };
 
   const handleComplete = async () => {
@@ -719,11 +738,22 @@ const PanelOnboardingV2 = () => {
               selectedPlan={selectedPlan as 'basic' | 'pro'}
               panelId={createdPanelIdRef.current || undefined}
               onPaymentSuccess={handlePaymentSuccess}
-              onSkip={() => {
-                // Keep selectedPlan as-is (trial logic preserves the plan choice)
+              onSkip={async () => {
+                // Trial: mark payment as done but don't auto-advance
                 setPaymentCompleted(true);
                 markStepComplete(currentStep);
-                setCurrentStep(currentStep + 1);
+                // Persist to DB
+                if (createdPanelIdRef.current) {
+                  const progressData = {
+                    panelName, description, selectedPlan, subdomain, customDomain,
+                    domainType, primaryColor, secondaryColor, paymentCompleted: true,
+                    selectedTheme, brandingMode, seoTitle, seoDescription, seoKeywords, currency
+                  };
+                  await supabase.from('panels').update({
+                    onboarding_data: progressData,
+                    subscription_status: 'trial',
+                  }).eq('id', createdPanelIdRef.current);
+                }
               }}
             />
           </motion.div>
@@ -1288,8 +1318,12 @@ const PanelOnboardingV2 = () => {
               <ArrowLeft className="w-4 h-4" />
               Back
             </Button>
-            <Button onClick={handleNext} className="gap-2">
-              {isPaymentStep && !paymentCompleted ? 'Skip' : 'Next'}
+            <Button 
+              onClick={handleNext} 
+              className="gap-2"
+              disabled={isPaymentStep && !paymentCompleted}
+            >
+              Next
               <ArrowRight className="w-4 h-4" />
             </Button>
           </div>
@@ -1309,8 +1343,12 @@ const PanelOnboardingV2 = () => {
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
             </Button>
-            <Button onClick={handleNext} className="flex-1 h-12">
-              {isPaymentStep && !paymentCompleted ? 'Skip' : 'Next'}
+            <Button 
+              onClick={handleNext} 
+              className="flex-1 h-12"
+              disabled={isPaymentStep && !paymentCompleted}
+            >
+              Next
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </div>
