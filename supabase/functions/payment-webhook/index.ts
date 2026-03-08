@@ -621,9 +621,10 @@ serve(async (req) => {
     } else if (status === 'failed') {
       const userId = tx?.user_id || buyerId;
       const txPanelId = tx?.panel_id || panelId;
+      const failedAmount = tx?.amount || amount;
       
       if (userId) {
-        // Create notification for failed payment
+        // Create notification for failed payment (buyer)
         await supabase
           .from('buyer_notifications')
           .insert({
@@ -633,6 +634,29 @@ serve(async (req) => {
             title: 'Payment Failed',
             message: `Your ${gateway} payment could not be processed. Please try again.`,
           });
+      }
+
+      // Notify panel owner about failed payment
+      if (txPanelId) {
+        try {
+          const { data: panelOwner } = await supabase
+            .from('panels')
+            .select('owner_id')
+            .eq('id', txPanelId)
+            .single();
+
+          if (panelOwner?.owner_id) {
+            await supabase.from('panel_notifications').insert({
+              panel_id: txPanelId,
+              user_id: panelOwner.owner_id,
+              type: 'payment',
+              title: 'Payment Failed',
+              message: `A ${gateway} payment of $${failedAmount.toFixed(2)} failed.`,
+            });
+          }
+        } catch (notifErr) {
+          console.error('[payment-webhook] Panel owner fail notification error:', notifErr);
+        }
       }
     }
 

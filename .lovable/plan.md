@@ -1,70 +1,73 @@
 
 
-# Plan: Domain Uniqueness, Notification Flow Audit & Transaction Status Sync
+# Plan: Fix Build Errors, Header Toggle, Admin Functions, Subdomain, Payment & Import
 
-## 3 Areas to Fix
+## Overview
 
----
-
-### 1. Domain Uniqueness Enforcement
-
-**Current state**: `panel_domains` has a unique index on `domain` column (`idx_panel_domains_domain_unique`) — so the DB already prevents the same domain from being used twice. However, neither the `add-vercel-domain` edge function nor `DomainSettings.tsx` checks for this before inserting, leading to cryptic DB errors.
-
-**Fixes**:
-
-**`supabase/functions/add-vercel-domain/index.ts`**: Before upserting, query `panel_domains` to check if `domain` is already used by a *different* `panel_id`. If so, return a clear error: "This domain is already connected to another panel."
-
-**`src/pages/panel/DomainSettings.tsx`** (`handleAddDomain`, line ~283): Before inserting, query `panel_domains` for existing domain. Show clear error if taken.
-
-**`src/components/onboarding/OnboardingDomainStep.tsx`** (`handleDomainSubmit`, line ~143): The edge function will now handle this, but add client-side error message mapping for the "already in use" error.
-
-**One custom domain per panel** is already enforced in `DomainSettings.tsx` (line 254: `if (domains.length > 0)`). The onboarding flow also only allows one domain. No change needed here.
+This plan addresses 5 areas: (1) fix all 12 build errors in edge functions, (2) replace ThemeToggle with a header visibility switch in MoreMenu, (3) fix admin pages that call non-existent `admin-data` function, (4) restore `smmpilot.online` as the subdomain suffix, and (5) fix payment verification status updates.
 
 ---
 
-### 2. Notification Flow Audit & Gaps
+## 1. Fix Build Errors (12 TypeScript errors across 6 edge functions)
 
-**Currently working notifications**:
-- ✅ Subscription activated (payment-webhook)
-- ✅ Panel owner deposit (payment-webhook)
-- ✅ Commission paid (payment-webhook)
-- ✅ Buyer deposit (payment-webhook → buyer_notifications)
-- ✅ Buyer order placed (buyer-order → buyer_notifications)
-- ✅ Admin fund add/deduct (admin-panel-ops → panel_notifications)
-- ✅ Manual transfer pending (ManualTransferDialog)
-- ✅ Provider synced (DB trigger `notify_on_provider_sync`)
-- ✅ New order received (DB trigger `notify_on_new_order`)
-- ✅ Payment failed (payment-webhook → buyer_notifications)
+| File | Error | Fix |
+|------|-------|-----|
+| `dns-lookup/index.ts` L210, L295 | `'error' is of type 'unknown'` | Cast to `(error as Error).message` |
+| `domain-health-check/index.ts` L167 | TXT returns `string[][]` not `string[]` | Cast: `as unknown as string[]` or flatten |
+| `import-provider-services/index.ts` L612 | `'error' is of type 'unknown'` | Cast to `(error as Error).message` |
+| `mfa-setup/index.ts` L59, L85 | `Uint8Array` not assignable to `BufferSource` | Cast: `key as unknown as ArrayBuffer` or use `.buffer` |
+| `security-audit/index.ts` L89 | `'err' is of type 'unknown'` | Cast to `(err as Error).message` |
+| `serve-favicon/index.ts` L100-101 | `custom_branding` not on array type | Add `.single()` type assertion or check `Array.isArray` |
+| `webhook-notify/index.ts` L191 | `string | null` not assignable to fetch | Add null guard before fetch |
+| `webhook-notify/index.ts` L232-233 | `supabaseAdmin.rpc` always truthy, `.raw` doesn't exist | Replace with simple `failure_count: 1` (increment via SQL or just set 1) |
 
-**Missing notifications**:
-- ❌ **Panel owner not notified on new buyer order** — `buyer-order` only creates `buyer_notifications` for the buyer, not `panel_notifications` for the panel owner. The DB trigger `notify_on_new_order` exists in functions list but there are no triggers in the database (per config: "There are no triggers in the database"). **This is a gap.**
-- ❌ **Subscription upgrade/downgrade** — Only admin-initiated changes create notifications. When a user self-upgrades via billing, no notification is created.
-- ❌ **Ad purchase** — When a panel owner buys an ad, no notification is created for confirmation.
-- ❌ **Failed payment notification for panel owner** — payment-webhook only sends to `buyer_notifications` on failure, not `panel_notifications`.
+## 2. MoreMenu: Replace ThemeToggle with Header Menu Icon Toggle
 
-**Fixes**:
+Replace `<ThemeToggle />` in the user profile card with a `<Switch>` component labeled "Show Menu Icon" that controls whether the hamburger/menu icon appears in the mobile header.
 
-**`supabase/functions/buyer-order/index.ts`** (~line 313): After buyer notification insert, add `panel_notifications` insert for the panel owner with title "New Order Received" and order details.
+- Store setting in `localStorage` key `header-menu-visible` (default: `false` = disabled = hidden)
+- Create a simple context or use localStorage directly; the header component reads this value
+- The switch is only rendered in mobile mode (use `useIsMobile()`)
+- When enabled → show the hamburger menu icon in the dashboard header
+- When disabled → hide it (current default behavior for clean mobile UI)
 
-**`supabase/functions/payment-webhook/index.ts`**: 
-- On failed payment with `txPanelId`, also insert into `panel_notifications` for the panel owner.
-- The subscription, deposit, and commission notifications already exist.
+## 3. Fix Admin Pages — Replace `admin-data` with Direct Supabase Calls
 
-**`src/components/billing/SubscriptionPlans.tsx` or equivalent**: After successful self-upgrade payment, add a notification. (This is handled by the webhook flow already when payment completes — the webhook creates the "Subscription Activated" notification. This is actually fine.)
+Six admin pages call `/functions/v1/admin-data` which **does not exist** as an edge function. The existing function is `admin-panel-ops` (handles add_funds, update_subscription, bulk_update only — not data fetching).
 
-**Ad purchase notification**: Find where ad purchases happen and add notification insert.
+**Fix**: Replace `fetch('/functions/v1/admin-data', ...)` calls with direct `supabase.from(...)` queries using the service role via RLS policies (admin already has `is_any_admin` policies on panels).
 
----
+Affected pages and their replacement queries:
+- **`PanelManagement.tsx`**: `get_panels` → `supabase.from('panels').select('*, owner:profiles!panels_owner_id_fkey(email, full_name), subscription:panel_subscriptions(plan_type, status)')` 
+- **`AdminOverview.tsx`**: `get_dashboard_stats` → aggregate from panels, orders, transactions, client_users tables
+- **`UserManagement.tsx`**: `get_users` → `supabase.from('profiles').select('*')`
+- **`PaymentManagement.tsx`**: `get_transactions` → `supabase.from('transactions').select('*')`
+- **`SystemHealth.tsx`**: `get_system_health` → compute from table counts
+- **`SupportTickets.tsx`**: `get_tickets` / `update_ticket` → `supabase.from('support_tickets').select/update`
 
-### 3. Transaction History Real-time Status Updates
+Also fix CORS on `admin-panel-ops/index.ts` (line 5 missing platform headers).
 
-**Current state**: TransactionHistory already has a realtime UPDATE subscription (lines 75-90) that updates status in-place and shows a toast. The `getStatusColor` function (line 146) already maps completed→green, pending→yellow, failed→red. Both mobile and desktop views already show colored status badges.
+## 4. Restore Subdomain Suffix to `smmpilot.online`
 
-**What's actually working**: The realtime listener correctly handles status transitions. When the `payment-webhook` updates a transaction from `pending` to `completed` or `failed`, the UI will update via the realtime channel.
+Update references in:
+- `tenant-domain-config.ts`: Change default fallback from `homeofsmm.com` to `smmpilot.online` (line 39)
+- `generate-sitemap/index.ts`: Change `homeofsmm.com` URLs to `smmpilot.online`
+- `docs/DocsHub.tsx`: Change example URLs from `homeofsmm.com` to `smmpilot.online`
+- Remove Replit patterns from `DEV_PATTERNS` in `tenant-domain-config.ts` (lines 80-83) and `TenantRouter.tsx` (lines 39-42)
+- Keep `homeofsmm.com` in `PLATFORM_DOMAINS` array (it's the brand) but ensure `smmpilot.online` is primary for subdomains
 
-**Gap found**: The payment-webhook updates `transactions.status` to `completed` but this happens in the webhook flow. If the status update doesn't propagate through Supabase Realtime (e.g., if Realtime is not enabled on the `transactions` table), the UI won't update.
+## 5. Fix Payment Verification & Subscription Upgrade Flow
 
-**Fix**: Verify Realtime is enabled. The code is correct — no UI changes needed. Add a periodic poll fallback (every 30s) for pending transactions to catch missed realtime events.
+### Deposit status not updating in transaction history
+The verification flow in `Billing.tsx` (lines 183-226) already calls `verify-payment` on return. The issue is timing — if the gateway hasn't confirmed yet, verification returns `pending`. 
+
+**Fix**: Add a retry loop (poll 3 times with 5s intervals) when status comes back as `pending` after returning from payment.
+
+### Subscription upgrade from balance
+Currently `handleUpgrade` always goes through the payment gateway. Add an option to pay from panel balance:
+- Before calling `process-payment`, check if `panelBalance >= plan.price`
+- Show a dialog asking: "Pay from balance ($X available) or use payment gateway?"
+- If balance: directly deduct from `panels.balance`, create completed transaction, update subscription — all via a new `balance-payment` action in `process-payment`
 
 ---
 
@@ -72,10 +75,25 @@
 
 | File | Change |
 |------|--------|
-| `supabase/functions/add-vercel-domain/index.ts` | Check domain uniqueness across panels before upsert |
-| `src/pages/panel/DomainSettings.tsx` | Check domain uniqueness before insert in `handleAddDomain` |
-| `src/components/onboarding/OnboardingDomainStep.tsx` | Map "already in use" error from edge function |
-| `supabase/functions/buyer-order/index.ts` | Add panel owner notification on new order |
-| `supabase/functions/payment-webhook/index.ts` | Add panel owner notification on failed buyer payment |
-| `src/components/billing/TransactionHistory.tsx` | Add polling fallback for pending transactions |
+| `supabase/functions/dns-lookup/index.ts` | Cast error types |
+| `supabase/functions/domain-health-check/index.ts` | Fix TXT record type |
+| `supabase/functions/import-provider-services/index.ts` | Cast error type |
+| `supabase/functions/mfa-setup/index.ts` | Fix crypto key type |
+| `supabase/functions/security-audit/index.ts` | Cast error type |
+| `supabase/functions/serve-favicon/index.ts` | Fix panel type check |
+| `supabase/functions/webhook-notify/index.ts` | Fix null check + remove `.rpc`/`.raw` |
+| `supabase/functions/admin-panel-ops/index.ts` | Fix CORS headers |
+| `src/pages/panel/MoreMenu.tsx` | Replace ThemeToggle with header menu switch |
+| `src/pages/admin/PanelManagement.tsx` | Replace admin-data with direct Supabase |
+| `src/pages/admin/AdminOverview.tsx` | Replace admin-data with direct Supabase |
+| `src/pages/admin/UserManagement.tsx` | Replace admin-data with direct Supabase |
+| `src/pages/admin/PaymentManagement.tsx` | Replace admin-data with direct Supabase |
+| `src/pages/admin/SystemHealth.tsx` | Replace admin-data with direct Supabase |
+| `src/pages/admin/SupportTickets.tsx` | Replace admin-data with direct Supabase |
+| `src/lib/tenant-domain-config.ts` | Fix default domain, remove Replit |
+| `src/pages/TenantRouter.tsx` | Remove Replit patterns |
+| `supabase/functions/generate-sitemap/index.ts` | Fix URLs |
+| `src/pages/docs/DocsHub.tsx` | Fix example URLs |
+| `src/pages/panel/Billing.tsx` | Add retry polling, balance payment option |
+| `supabase/functions/process-payment/index.ts` | Add balance-payment action |
 

@@ -312,6 +312,27 @@ serve(async (req) => {
       message: notificationMessage,
     });
 
+    // Notify panel owner about new order
+    try {
+      const { data: panelOwner } = await supabase
+        .from('panels')
+        .select('owner_id')
+        .eq('id', panelId)
+        .single();
+
+      if (panelOwner?.owner_id) {
+        await supabase.from('panel_notifications').insert({
+          panel_id: panelId,
+          user_id: panelOwner.owner_id,
+          type: 'order',
+          title: 'New Order Received',
+          message: `Order #${orderNumber} — ${quantity.toLocaleString()} × ${service.name} ($${price.toFixed(2)})`,
+        });
+      }
+    } catch (notifErr) {
+      console.error('[buyer-order] Panel notification error (non-fatal):', notifErr);
+    }
+
     // Update promo code usage if used
     if (promoCode) {
       await supabase

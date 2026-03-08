@@ -276,15 +276,29 @@ const DomainSettings = () => {
     
     setAdding(true);
     try {
-      const verificationToken = crypto.randomUUID().substring(0, 16);
+      const domainLower = newDomain.trim().toLowerCase();
       
+      // Check if domain is already used by another panel
+      const { data: existingDomain } = await supabase
+        .from('panel_domains')
+        .select('panel_id')
+        .eq('domain', domainLower)
+        .maybeSingle();
+
+      if (existingDomain && existingDomain.panel_id !== panel.id) {
+        toast({ variant: "destructive", title: "Domain Unavailable", description: "This domain is already connected to another panel." });
+        setAdding(false);
+        return;
+      }
+
+      const verificationToken = crypto.randomUUID().substring(0, 16);
       const txtRecord = `smmpilot-verify=${verificationToken}`;
       
       const { error } = await supabase
         .from('panel_domains')
         .insert({
           panel_id: panel.id,
-          domain: newDomain.trim().toLowerCase(),
+          domain: domainLower,
           is_primary: true,
           verification_status: 'txt_pending',
           ssl_status: 'pending',

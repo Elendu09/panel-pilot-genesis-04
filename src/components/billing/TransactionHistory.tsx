@@ -52,6 +52,40 @@ export const TransactionHistory = ({ panelId }: TransactionHistoryProps) => {
   const [page, setPage] = useState(1);
   const perPage = 10;
 
+  // Poll pending transactions every 30s as realtime fallback
+  useEffect(() => {
+    if (!panelId) return;
+    const hasPending = transactions.some(tx => tx.status === 'pending');
+    if (!hasPending) return;
+
+    const interval = setInterval(async () => {
+      const pendingIds = transactions.filter(tx => tx.status === 'pending').map(tx => tx.id);
+      if (pendingIds.length === 0) return;
+
+      const { data } = await supabase
+        .from('transactions')
+        .select('*')
+        .in('id', pendingIds);
+
+      if (data) {
+        setTransactions(prev => prev.map(tx => {
+          const updated = data.find(d => d.id === tx.id);
+          if (updated && updated.status !== tx.status) {
+            if (updated.status === 'completed') {
+              toast.success('Payment Completed', { description: `$${Math.abs(updated.amount).toFixed(2)} has been processed` });
+            } else if (updated.status === 'failed') {
+              toast.error('Payment Failed', { description: `$${Math.abs(updated.amount).toFixed(2)} payment failed` });
+            }
+            return updated as Transaction;
+          }
+          return tx;
+        }));
+      }
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [panelId, transactions]);
+
   useEffect(() => {
     fetchTransactions();
 
@@ -85,6 +119,10 @@ export const TransactionHistory = ({ panelId }: TransactionHistoryProps) => {
         if (updatedTx.status === 'completed' && payload.old?.status !== 'completed') {
           toast.success('Payment Completed', {
             description: `$${Math.abs(updatedTx.amount).toFixed(2)} has been processed`
+          });
+        } else if (updatedTx.status === 'failed' && payload.old?.status !== 'failed') {
+          toast.error('Payment Failed', {
+            description: `$${Math.abs(updatedTx.amount).toFixed(2)} payment failed`
           });
         }
       })

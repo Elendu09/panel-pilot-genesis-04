@@ -160,7 +160,9 @@ export const OnboardingDomainStep = ({
       toast({ title: 'Domain configured', description: 'Now add the DNS records shown below.' });
     } catch (error: any) {
       console.error('Error adding domain:', error);
-      toast({ variant: 'destructive', title: 'Error', description: error.message || 'Failed to configure domain' });
+      const msg = error.message || 'Failed to configure domain';
+      const description = msg.includes('already connected') ? 'This domain is already connected to another panel.' : msg;
+      toast({ variant: 'destructive', title: 'Error', description });
     } finally {
       setAddingDomain(false);
     }
