@@ -691,7 +691,7 @@ const PanelOnboardingV2 = () => {
               <Input
                 id="panelName"
                 value={panelName}
-                onChange={(e) => setPanelName(e.target.value)}
+                onChange={(e) => setPanelName(e.target.value.replace(/^\s+/, ''))}
                 placeholder="My SMM Business"
                 className="bg-background/50"
               />
