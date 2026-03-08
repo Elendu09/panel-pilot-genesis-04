@@ -1,73 +1,81 @@
 
 
-# Plan: Fix Build Errors, Header Toggle, Admin Functions, Subdomain, Payment & Import
+# Plan: Fix Service Import, Order Forwarding & Data Integrity
 
-## Overview
-
-This plan addresses 5 areas: (1) fix all 12 build errors in edge functions, (2) replace ThemeToggle with a header visibility switch in MoreMenu, (3) fix admin pages that call non-existent `admin-data` function, (4) restore `smmpilot.online` as the subdomain suffix, and (5) fix payment verification status updates.
+## 3 User Concerns Analyzed
 
 ---
 
-## 1. Fix Build Errors (12 TypeScript errors across 6 edge functions)
+### 1. "What happens if I delete imported services?"
 
-| File | Error | Fix |
-|------|-------|-----|
-| `dns-lookup/index.ts` L210, L295 | `'error' is of type 'unknown'` | Cast to `(error as Error).message` |
-| `domain-health-check/index.ts` L167 | TXT returns `string[][]` not `string[]` | Cast: `as unknown as string[]` or flatten |
-| `import-provider-services/index.ts` L612 | `'error' is of type 'unknown'` | Cast to `(error as Error).message` |
-| `mfa-setup/index.ts` L59, L85 | `Uint8Array` not assignable to `BufferSource` | Cast: `key as unknown as ArrayBuffer` or use `.buffer` |
-| `security-audit/index.ts` L89 | `'err' is of type 'unknown'` | Cast to `(err as Error).message` |
-| `serve-favicon/index.ts` L100-101 | `custom_branding` not on array type | Add `.single()` type assertion or check `Array.isArray` |
-| `webhook-notify/index.ts` L191 | `string | null` not assignable to fetch | Add null guard before fetch |
-| `webhook-notify/index.ts` L232-233 | `supabaseAdmin.rpc` always truthy, `.raw` doesn't exist | Replace with simple `failure_count: 1` (increment via SQL or just set 1) |
+**Finding: Data is safe.** Orders store `service_name` directly on the `orders` table (not just a FK). The `service_id` FK on orders is nullable, so deleting a service sets it to null but the order retains: `order_number`, `service_name`, `target_url`, `quantity`, `price`, `status`, `provider_order_id`, `buyer_id`, and all other fields. No cascading deletes exist.
 
-## 2. MoreMenu: Replace ThemeToggle with Header Menu Icon Toggle
+However, the current `deleteService` function does a raw `.delete()` without checking for active orders. The UI falls back to `order.service_name || 'Unknown Service'` which works, but we should:
+- **Soft-delete services** (set `is_active = false`) instead of hard delete when orders reference them
+- Show a warning before deleting services with active orders
 
-Replace `<ThemeToggle />` in the user profile card with a `<Switch>` component labeled "Show Menu Icon" that controls whether the hamburger/menu icon appears in the mobile header.
+---
 
-- Store setting in `localStorage` key `header-menu-visible` (default: `false` = disabled = hidden)
-- Create a simple context or use localStorage directly; the header component reads this value
-- The switch is only rendered in mobile mode (use `useIsMobile()`)
-- When enabled → show the hamburger menu icon in the dashboard header
-- When disabled → hide it (current default behavior for clean mobile UI)
+### 2. "Orders don't go to providers when tenant buyers order"
 
-## 3. Fix Admin Pages — Replace `admin-data` with Direct Supabase Calls
+**Root cause identified:** The forwarding logic in both `buyer-order` and `buyer-api` works correctly in code. The issue is **the `provider_service_id` mapping**. Here's the chain:
 
-Six admin pages call `/functions/v1/admin-data` which **does not exist** as an edge function. The existing function is `admin-panel-ops` (handles add_funds, update_subscription, bulk_update only — not data fetching).
+1. Import stores `provider_service_id = String(service.id)` on the `services` table (e.g., `"1234"`)
+2. `resolveExternalServiceId()` checks if `provider_service_id` is a UUID — if not, it uses it directly as the external ID
+3. But `provider_service_ref` (the FK to `provider_services` table) is also set during import
 
-**Fix**: Replace `fetch('/functions/v1/admin-data', ...)` calls with direct `supabase.from(...)` queries using the service role via RLS policies (admin already has `is_any_admin` policies on panels).
+**Bug:** `resolveExternalServiceId()` checks `provider_service_ref` first, but the `provider_services` row's `external_service_id` may not match the actual provider's service ID. During import, `external_service_id` is set to `String(service.id)` which IS correct. So the chain works... unless:
+- The provider is not linked (`provider_id` is null on the service) — forwarding silently skips
+- The provider is inactive — forwarding silently skips
+- The `provider_service_id` on the `services` table was overwritten during sync
 
-Affected pages and their replacement queries:
-- **`PanelManagement.tsx`**: `get_panels` → `supabase.from('panels').select('*, owner:profiles!panels_owner_id_fkey(email, full_name), subscription:panel_subscriptions(plan_type, status)')` 
-- **`AdminOverview.tsx`**: `get_dashboard_stats` → aggregate from panels, orders, transactions, client_users tables
-- **`UserManagement.tsx`**: `get_users` → `supabase.from('profiles').select('*')`
-- **`PaymentManagement.tsx`**: `get_transactions` → `supabase.from('transactions').select('*')`
-- **`SystemHealth.tsx`**: `get_system_health` → compute from table counts
-- **`SupportTickets.tsx`**: `get_tickets` / `update_ticket` → `supabase.from('support_tickets').select/update`
+**Real fix needed:** Add better logging and error surfacing. When forwarding fails or is skipped, the order stays "pending" forever with no feedback to the panel owner. We need to:
+- Log forwarding attempts and results to `panel_notifications`
+- Show provider forwarding status in Order Management UI
+- Add a "Retry Forward" button for failed/skipped orders
 
-Also fix CORS on `admin-panel-ops/index.ts` (line 5 missing platform headers).
+---
 
-## 4. Restore Subdomain Suffix to `smmpilot.online`
+### 3. "Service import crashes, is slow, services go to 'other'"
 
-Update references in:
-- `tenant-domain-config.ts`: Change default fallback from `homeofsmm.com` to `smmpilot.online` (line 39)
-- `generate-sitemap/index.ts`: Change `homeofsmm.com` URLs to `smmpilot.online`
-- `docs/DocsHub.tsx`: Change example URLs from `homeofsmm.com` to `smmpilot.online`
-- Remove Replit patterns from `DEV_PATTERNS` in `tenant-domain-config.ts` (lines 80-83) and `TenantRouter.tsx` (lines 39-42)
-- Keep `homeofsmm.com` in `PLATFORM_DOMAINS` array (it's the brand) but ensure `smmpilot.online` is primary for subdomains
+**Multiple bugs found:**
 
-## 5. Fix Payment Verification & Subscription Upgrade Flow
+**A. Import is slow / crashes:** The import in `ServicesManagement.tsx` does 3 sequential bulk upserts to the database (provider_services → normalized_services → services). For large imports (1000+ services), this is a single massive payload. No chunking, no progress updates between steps. The progress bar jumps from 10% to 100% with nothing in between (line 360-362).
 
-### Deposit status not updating in transaction history
-The verification flow in `Billing.tsx` (lines 183-226) already calls `verify-payment` on return. The issue is timing — if the gateway hasn't confirmed yet, verification returns `pending`. 
+**B. Services going to "other":** Two separate detection systems exist:
+- **Client-side** (`src/lib/service-icon-detection.ts`): `detectPlatformEnhanced()` — used during import in `ServiceImportDialog.tsx`
+- **Edge function** (`provider-services/index.ts`): `detectPlatform()` — used when fetching from provider API
 
-**Fix**: Add a retry loop (poll 3 times with 5s intervals) when status comes back as `pending` after returning from payment.
+The edge function returns `category` as the detected platform. Then `ServiceImportDialog.tsx` runs its OWN detection on the service name, **ignoring the edge function's detection**. This double-detection causes mismatches. The edge function's `detectPlatform()` uses the provider's raw category string + service name. The client's `detectPlatformEnhanced()` only uses the service name.
 
-### Subscription upgrade from balance
-Currently `handleUpgrade` always goes through the payment gateway. Add an option to pay from panel balance:
-- Before calling `process-payment`, check if `panelBalance >= plan.price`
-- Show a dialog asking: "Pay from balance ($X available) or use payment gateway?"
-- If balance: directly deduct from `panels.balance`, create completed transaction, update subscription — all via a new `balance-payment` action in `process-payment`
+**Key problem: NEGATIVE_KEYWORDS are too aggressive.** Words like "google review", "yelp", "trustpilot", "tripadvisor", "google map", "google business" are in `NEGATIVE_KEYWORDS` (line 292-293), which forces services to "other" with confidence 1.0 — **even though** these are valid platforms in `VALID_CATEGORIES` and have their own detection patterns. This means Google Business reviews, Trustpilot reviews, Yelp reviews all get forced to "other".
+
+**C. Progress doesn't show flow:** The stepper component `ImportProgressStepper.tsx` exists but is never used in the import flow. `ServiceImportDialog.tsx` only shows a simple progress bar.
+
+---
+
+## Changes
+
+### `src/pages/panel/ServicesManagement.tsx`
+- **Soft-delete with warning**: Change `deleteService` to check for active orders first. If orders exist, set `is_active = false` instead of deleting. Show warning dialog.
+- **Chunked import with real progress**: Split the import into chunks of 200 services. Update progress after each chunk (connecting → fetching → processing → complete). Use the existing `ImportProgressStepper` component.
+- **Show forwarding status**: After import, surface the provider link status.
+
+### `src/components/services/ServiceImportDialog.tsx`
+- **Use edge function's detection**: When mapping fetched services, use the `category` returned by the edge function (which already does detection) instead of re-running `detectPlatformEnhanced()`. Only fall back to client-side detection if edge returns "other".
+- **Integrate ImportProgressStepper**: Replace the simple progress bar with the 4-step stepper (connecting → fetching → processing → complete) during fetch and import.
+
+### `src/lib/service-icon-detection.ts`
+- **Fix NEGATIVE_KEYWORDS conflict**: Remove platform names that are valid categories from `NEGATIVE_KEYWORDS`: "google review", "google map", "google business", "yelp", "trustpilot", "tripadvisor". These should be detected as their respective platforms, not forced to "other".
+
+### `supabase/functions/buyer-order/index.ts`
+- **Better error handling on forwarding failure**: When `forwardToProvider` returns `{ success: false }`, update order status to reflect the issue (not leave as "pending" silently). Add `panel_notifications` entry for forwarding failures.
+
+### `supabase/functions/buyer-api/index.ts`
+- **Same forwarding failure handling**: When `forwardOrderToProvider` fails, surface the error in the order notes and notify panel owner.
+
+### `src/pages/panel/OrdersManagement.tsx`
+- **Add "Retry Forward" action**: For orders with status "pending" that have no `provider_order_id`, add a button to retry provider forwarding.
 
 ---
 
@@ -75,25 +83,10 @@ Currently `handleUpgrade` always goes through the payment gateway. Add an option
 
 | File | Change |
 |------|--------|
-| `supabase/functions/dns-lookup/index.ts` | Cast error types |
-| `supabase/functions/domain-health-check/index.ts` | Fix TXT record type |
-| `supabase/functions/import-provider-services/index.ts` | Cast error type |
-| `supabase/functions/mfa-setup/index.ts` | Fix crypto key type |
-| `supabase/functions/security-audit/index.ts` | Cast error type |
-| `supabase/functions/serve-favicon/index.ts` | Fix panel type check |
-| `supabase/functions/webhook-notify/index.ts` | Fix null check + remove `.rpc`/`.raw` |
-| `supabase/functions/admin-panel-ops/index.ts` | Fix CORS headers |
-| `src/pages/panel/MoreMenu.tsx` | Replace ThemeToggle with header menu switch |
-| `src/pages/admin/PanelManagement.tsx` | Replace admin-data with direct Supabase |
-| `src/pages/admin/AdminOverview.tsx` | Replace admin-data with direct Supabase |
-| `src/pages/admin/UserManagement.tsx` | Replace admin-data with direct Supabase |
-| `src/pages/admin/PaymentManagement.tsx` | Replace admin-data with direct Supabase |
-| `src/pages/admin/SystemHealth.tsx` | Replace admin-data with direct Supabase |
-| `src/pages/admin/SupportTickets.tsx` | Replace admin-data with direct Supabase |
-| `src/lib/tenant-domain-config.ts` | Fix default domain, remove Replit |
-| `src/pages/TenantRouter.tsx` | Remove Replit patterns |
-| `supabase/functions/generate-sitemap/index.ts` | Fix URLs |
-| `src/pages/docs/DocsHub.tsx` | Fix example URLs |
-| `src/pages/panel/Billing.tsx` | Add retry polling, balance payment option |
-| `supabase/functions/process-payment/index.ts` | Add balance-payment action |
+| `src/pages/panel/ServicesManagement.tsx` | Soft-delete with order check, chunked import with real progress |
+| `src/components/services/ServiceImportDialog.tsx` | Use edge detection, integrate ImportProgressStepper, chunk-aware progress |
+| `src/lib/service-icon-detection.ts` | Remove platform names from NEGATIVE_KEYWORDS |
+| `supabase/functions/buyer-order/index.ts` | Surface forwarding failures, notify panel owner |
+| `supabase/functions/buyer-api/index.ts` | Surface forwarding failures in order notes |
+| `src/pages/panel/OrdersManagement.tsx` | Add retry forward button for stuck orders |
 
