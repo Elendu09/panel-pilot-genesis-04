@@ -412,6 +412,18 @@ const PanelOnboardingV2 = () => {
       }
     }
 
+    // Gate custom domain: must be fully verified before proceeding
+    if (currentStepKey === STEP_KEYS.DOMAIN && domainType === 'custom') {
+      if (domainVerificationState.step !== 'verified') {
+        toast({ 
+          variant: "destructive", 
+          title: "Domain not verified", 
+          description: "Please complete domain verification before continuing." 
+        });
+        return;
+      }
+    }
+
     // Validate SEO before leaving SEO step
     if (currentStepKey === STEP_KEYS.SEO) {
       const titlePx = measureTextPx(seoTitle || '');
