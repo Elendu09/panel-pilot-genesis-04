@@ -995,6 +995,9 @@ const ProviderManagement = () => {
             </div>
           )}
 
+          {/* Interstitial Ad between sections */}
+          <InterstitialAdCard currentPanelId={panel?.id} />
+
           {/* All HomeOfSMM Providers (Kanban List Style) */}
           <div className="space-y-4">
             <div className="flex items-center gap-2">
