@@ -243,19 +243,42 @@ const ProviderManagement = () => {
         }
       }
 
-      // Fetch service counts for each panel
+      // Fetch service counts, customer counts, and order counts in parallel
       const panelIds = panels?.map(p => p.id) || [];
       let serviceCounts: Record<string, number> = {};
+      let customerCounts: Record<string, number> = {};
+      let orderCounts: Record<string, number> = {};
       
       if (panelIds.length > 0) {
-        const { data: services } = await supabase
-          .from('services')
-          .select('panel_id')
-          .in('panel_id', panelIds)
-          .eq('is_active', true);
+        const [servicesRes, customersRes, ordersRes] = await Promise.all([
+          supabase
+            .from('services')
+            .select('panel_id')
+            .in('panel_id', panelIds)
+            .eq('is_active', true),
+          supabase
+            .from('client_users')
+            .select('panel_id')
+            .in('panel_id', panelIds)
+            .eq('is_active', true),
+          supabase
+            .from('orders')
+            .select('panel_id')
+            .in('panel_id', panelIds),
+        ]);
         
-        serviceCounts = (services || []).reduce((acc, s) => {
-          acc[s.panel_id] = (acc[s.panel_id] || 0) + 1;
+        serviceCounts = (servicesRes.data || []).reduce((acc, s) => {
+          acc[s.panel_id!] = (acc[s.panel_id!] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+        
+        customerCounts = (customersRes.data || []).reduce((acc, c) => {
+          acc[c.panel_id!] = (acc[c.panel_id!] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+        
+        orderCounts = (ordersRes.data || []).reduce((acc, o) => {
+          acc[o.panel_id!] = (acc[o.panel_id!] || 0) + 1;
           return acc;
         }, {} as Record<string, number>);
       }
@@ -264,10 +287,17 @@ const ProviderManagement = () => {
         ...p,
         ad_type: adMap.get(p.id) as any || null,
         is_connected: connectedIds.has(p.id),
-        service_count: serviceCounts[p.id] || 0
-      }));
+        service_count: serviceCounts[p.id] || 0,
+        customer_count: customerCounts[p.id] || 0,
+        order_count: orderCounts[p.id] || 0,
+      })).filter(p => {
+        // Always show panels with ads
+        if (p.ad_type) return true;
+        // For non-ad panels: only show if they have services AND (customers OR significant orders)
+        return p.service_count > 0 && (p.customer_count > 0 || p.order_count > 10);
+      });
 
-      // Sort: sponsored first, then top, then best, then others
+      // Sort: ad panels by priority then spend, non-ad panels after
       const adPriority: Record<string, number> = { sponsored: 0, top: 1, best: 2, featured: 3 };
       directPanels.sort((a, b) => {
         const aPriority = a.ad_type ? adPriority[a.ad_type] ?? 99 : 99;
