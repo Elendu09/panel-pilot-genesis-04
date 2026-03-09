@@ -40,7 +40,8 @@ import {
   BarChart2,
   Tag,
   Star,
-  Info
+  Info,
+  Zap
 } from "lucide-react";
 import {
   Tooltip,
