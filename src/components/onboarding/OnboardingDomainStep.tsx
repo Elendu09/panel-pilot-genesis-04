@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { 
   Globe, 
   CheckCircle, 
@@ -17,7 +18,8 @@ import {
   AlertCircle,
   RefreshCw,
   ExternalLink,
-  Sparkles
+  Sparkles,
+  ChevronDown
 } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -41,9 +43,12 @@ interface OnboardingDomainStepProps {
   onCurrencyChange?: (value: string) => void;
   panelId?: string;
   onVerificationStateChange?: (state: { step: 'configure' | 'txt-pending' | 'dns-pending' | 'verified'; token: string | null }) => void;
+  initialVerificationStep?: string;
+  initialVerificationToken?: string;
+  initialCustomDomain?: string;
 }
 
-type DomainOption = 'have-domain' | 'register-new' | 'free-subdomain';
+type DomainOption = 'custom-domain' | 'free-subdomain';
 
 const tldOptions = [
   { value: '.com', label: '.com', price: '$10-15/yr' },
@@ -90,23 +95,60 @@ export const OnboardingDomainStep = ({
   currency = 'USD',
   onCurrencyChange,
   panelId,
-  onVerificationStateChange
+  onVerificationStateChange,
+  initialVerificationStep,
+  initialVerificationToken,
+  initialCustomDomain
 }: OnboardingDomainStepProps) => {
   const { toast } = useToast();
   const canUseCustomDomain = selectedPlan !== 'free';
   
-  const [domainOption, setDomainOption] = useState<DomainOption>('have-domain');
+  // Determine initial domain option based on domainType prop
+  const initialDomainOption: DomainOption = domainType === 'custom' ? 'custom-domain' : 'free-subdomain';
+  const [domainOption, setDomainOption] = useState<DomainOption>(initialDomainOption);
   const [searchDomain, setSearchDomain] = useState('');
   const [selectedTld, setSelectedTld] = useState('.com');
+  const [registrarOpen, setRegistrarOpen] = useState(false);
   const [dnsRecords, setDnsRecords] = useState<DnsRecord[]>([
     { type: 'A', name: '@', value: VERCEL_IP, ttl: 3600, description: 'Root domain' },
     { type: 'CNAME', name: 'www', value: VERCEL_CNAME, ttl: 3600, description: 'WWW subdomain' }
   ]);
-  const [verificationToken, setVerificationToken] = useState<string | null>(null);
+  
+  // Initialize verification state from props (persistence restore)
+  const resolvedInitialStep = (initialVerificationStep as 'configure' | 'txt-pending' | 'dns-pending' | 'verified') || 'configure';
+  const [verificationToken, setVerificationToken] = useState<string | null>(initialVerificationToken || null);
   const [addingDomain, setAddingDomain] = useState(false);
   const [dnsStatus, setDnsStatus] = useState<DnsStatus>({ checking: false, result: null });
-  const [verificationStep, setVerificationStep] = useState<'configure' | 'txt-pending' | 'dns-pending' | 'verified'>('configure');
+  const [verificationStep, setVerificationStep] = useState<'configure' | 'txt-pending' | 'dns-pending' | 'verified'>(resolvedInitialStep);
   const [pollingActive, setPollingActive] = useState(false);
+
+  // On mount: if restoring a non-configure state, load DNS records from panel_domains and resume polling
+  useEffect(() => {
+    if (resolvedInitialStep !== 'configure' && panelId && customDomain) {
+      // Restore DNS records from panel_domains
+      const restoreDnsState = async () => {
+        try {
+          const { data } = await supabase
+            .from('panel_domains')
+            .select('*')
+            .eq('panel_id', panelId)
+            .eq('domain', customDomain)
+            .maybeSingle();
+          
+          if (data) {
+            // DNS records are standard Vercel records, already set as defaults
+            // Just resume polling if not yet verified
+            if (resolvedInitialStep !== 'verified') {
+              setPollingActive(true);
+            }
+          }
+        } catch (e) {
+          console.error('Error restoring domain state:', e);
+        }
+      };
+      restoreDnsState();
+    }
+  }, []); // Run once on mount
 
   // Report verification state changes to parent
   useEffect(() => {
@@ -314,7 +356,7 @@ export const OnboardingDomainStep = ({
     );
   }
 
-  // Pro/Basic plans - show custom domain options
+  // Pro/Basic plans - show custom domain options (2 options: Custom Domain + Free Subdomain)
   return (
     <div className="space-y-6">
       <div className="text-center">
@@ -330,27 +372,27 @@ export const OnboardingDomainStep = ({
         }}
         className="space-y-4"
       >
-        {/* Option 1: I have a domain */}
+        {/* Option 1: Custom Domain (combines "I have a domain" + "Register new") */}
         <div className={cn(
           "rounded-xl border-2 transition-all",
-          domainOption === 'have-domain' ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
+          domainOption === 'custom-domain' ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
         )}>
           <div 
             className="flex items-start space-x-3 p-4 cursor-pointer"
-            onClick={() => setDomainOption('have-domain')}
+            onClick={() => { setDomainOption('custom-domain'); onDomainTypeChange('custom'); }}
           >
-            <RadioGroupItem value="have-domain" id="have-domain" className="mt-1" />
+            <RadioGroupItem value="custom-domain" id="custom-domain" className="mt-1" />
             <div className="flex-1">
-              <Label htmlFor="have-domain" className="font-medium cursor-pointer text-base">
-                I have a domain name
+              <Label htmlFor="custom-domain" className="font-medium cursor-pointer text-base">
+                Custom Domain
               </Label>
               <p className="text-sm text-muted-foreground mt-1">
-                Enter your domain and configure DNS records to point to your panel
+                Use your own domain name for a professional branded panel
               </p>
             </div>
           </div>
 
-          {domainOption === 'have-domain' && (
+          {domainOption === 'custom-domain' && (
             <div className="px-4 pb-4 pt-0 space-y-4">
               {/* Domain Input */}
               <div className="space-y-2">
@@ -579,73 +621,61 @@ export const OnboardingDomainStep = ({
                   )}
                 </div>
               )}
+
+              {/* Collapsible: Don't have a domain yet? */}
+              <Collapsible open={registrarOpen} onOpenChange={setRegistrarOpen}>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" className="w-full justify-between text-sm text-muted-foreground hover:text-foreground gap-2 h-auto py-2.5">
+                    <div className="flex items-center gap-2">
+                      <ShoppingCart className="w-4 h-4" />
+                      <span>Don't have a domain yet? Buy one</span>
+                    </div>
+                    <ChevronDown className={cn("w-4 h-4 transition-transform", registrarOpen && "rotate-180")} />
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-4 pt-2">
+                  {/* Domain Search */}
+                  <div className="space-y-2">
+                    <Label className="text-sm">Search for a domain</Label>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <Input
+                        value={searchDomain}
+                        onChange={(e) => setSearchDomain(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                        placeholder="mydomain"
+                        className="bg-background/50 flex-1"
+                      />
+                      <Select value={selectedTld} onValueChange={setSelectedTld}>
+                        <SelectTrigger className="w-full sm:w-[100px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {tldOptions.map(tld => (
+                            <SelectItem key={tld.value} value={tld.value}>
+                              <span className="flex items-center justify-between gap-2">
+                                <span>{tld.label}</span>
+                                <span className="text-[10px] text-muted-foreground">{tld.price}</span>
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {searchDomain && (
+                      <p className="text-sm text-muted-foreground">
+                        Searching for: <strong>{searchDomain}{selectedTld}</strong>
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Registrar Links */}
+                  <DomainRegistrarLinks searchDomain={searchDomain ? `${searchDomain}${selectedTld}` : ''} />
+                </CollapsibleContent>
+              </Collapsible>
             </div>
           )}
         </div>
 
-        {/* Option 2: Register new domain */}
-        <div className={cn(
-          "rounded-xl border-2 transition-all",
-          domainOption === 'register-new' ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
-        )}>
-          <div 
-            className="flex items-start space-x-3 p-4 cursor-pointer"
-            onClick={() => setDomainOption('register-new')}
-          >
-            <RadioGroupItem value="register-new" id="register-new" className="mt-1" />
-            <div className="flex-1">
-              <Label htmlFor="register-new" className="font-medium cursor-pointer text-base">
-                I want to register a new domain
-              </Label>
-              <p className="text-sm text-muted-foreground mt-1">
-                Find and purchase your perfect domain name from trusted registrars
-              </p>
-            </div>
-            <ShoppingCart className="w-5 h-5 text-muted-foreground" />
-          </div>
-
-          {domainOption === 'register-new' && (
-            <div className="px-4 pb-4 pt-0 space-y-4 overflow-hidden min-w-0">
-              {/* Domain Search */}
-              <div className="space-y-2">
-                <Label>Search for a domain</Label>
-              <div className="flex flex-col sm:flex-row gap-2">
-                  <Input
-                    value={searchDomain}
-                    onChange={(e) => setSearchDomain(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
-                    placeholder="mydomain"
-                    className="bg-background/50 flex-1"
-                  />
-                  <Select value={selectedTld} onValueChange={setSelectedTld}>
-                    <SelectTrigger className="w-full sm:w-[100px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {tldOptions.map(tld => (
-                        <SelectItem key={tld.value} value={tld.value}>
-                          <span className="flex items-center justify-between gap-2">
-                            <span>{tld.label}</span>
-                            <span className="text-[10px] text-muted-foreground">{tld.price}</span>
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                {searchDomain && (
-                  <p className="text-sm text-muted-foreground">
-                    Searching for: <strong>{searchDomain}{selectedTld}</strong>
-                  </p>
-                )}
-              </div>
-
-              {/* Registrar Links */}
-              <DomainRegistrarLinks searchDomain={searchDomain ? `${searchDomain}${selectedTld}` : ''} />
-            </div>
-          )}
-        </div>
-
-        {/* Option 3: Free Subdomain */}
+        {/* Option 2: Free Subdomain */}
         <div className={cn(
           "rounded-xl border-2 transition-all",
           domainOption === 'free-subdomain' ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
@@ -719,9 +749,7 @@ export const OnboardingDomainStep = ({
                   ? `https://${subdomain || 'yourname'}.${PRIMARY_PLATFORM_DOMAIN}`
                   : customDomain 
                     ? `https://${customDomain}`
-                    : searchDomain 
-                      ? `https://${searchDomain}${selectedTld}` 
-                      : `https://${subdomain || 'yourname'}.${PRIMARY_PLATFORM_DOMAIN}`
+                    : `https://${subdomain || 'yourname'}.${PRIMARY_PLATFORM_DOMAIN}`
                 }
               </p>
             </div>
