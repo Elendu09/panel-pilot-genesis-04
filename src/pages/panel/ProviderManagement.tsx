@@ -882,6 +882,9 @@ const ProviderManagement = () => {
         </TabsContent>
 
         <TabsContent value="marketplace" className="space-y-6">
+          {/* Featured Providers Banner (cross-panel ads) */}
+          <SponsoredProviderBanner currentPanelId={panel?.id} />
+
           {/* Search Bar */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
