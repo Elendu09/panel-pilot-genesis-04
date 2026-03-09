@@ -181,6 +181,13 @@ const PanelOnboardingV2 = () => {
             if (savedData.seoTitle) setSeoTitle(savedData.seoTitle);
             if (savedData.seoDescription) setSeoDescription(savedData.seoDescription);
             if (savedData.seoKeywords) setSeoKeywords(savedData.seoKeywords);
+            // Restore domain verification state
+            if (savedData.domainVerificationStep) {
+              setDomainVerificationState({
+                step: savedData.domainVerificationStep,
+                token: savedData.domainVerificationToken || null
+              });
+            }
           }
           
           // If subscription is already active/trial, mark payment as completed
@@ -344,7 +351,9 @@ const PanelOnboardingV2 = () => {
       panelName, description, selectedPlan, subdomain, customDomain, 
       domainType, primaryColor, secondaryColor, paymentCompleted,
       selectedTheme, brandingMode, seoTitle, seoDescription, seoKeywords,
-      currency
+      currency,
+      domainVerificationStep: domainVerificationState.step,
+      domainVerificationToken: domainVerificationState.token,
     };
 
     try {
@@ -380,6 +389,31 @@ const PanelOnboardingV2 = () => {
           setCreatedPanelId(newPanel.id);
         }
       }
+
+      // Sync custom domain to panel_domains mid-flow for persistence
+      const panelIdForDomain = createdPanelIdRef.current;
+      if (panelIdForDomain && domainType === 'custom' && customDomain && domainVerificationState.token) {
+        const isFullyVerified = domainVerificationState.step === 'verified';
+        const isTxtVerified = domainVerificationState.step === 'dns-pending';
+        const verificationStatus = isFullyVerified ? 'verified' : isTxtVerified ? 'txt_verified' : 'pending';
+
+        await supabase
+          .from('panel_domains')
+          .upsert({
+            panel_id: panelIdForDomain,
+            domain: customDomain,
+            is_primary: true,
+            verification_status: verificationStatus,
+            dns_configured: isFullyVerified,
+            verified_at: isFullyVerified ? new Date().toISOString() : null,
+            txt_verification_record: `smmpilot-verify=${domainVerificationState.token}`,
+            txt_verified_at: isTxtVerified || isFullyVerified ? new Date().toISOString() : null,
+            hosting_provider: 'lovable',
+          }, { onConflict: 'domain' })
+          .then(({ error }) => {
+            if (error) console.error('Error syncing domain mid-flow:', error);
+          });
+      }
     } catch (error) {
       console.error('Error saving progress:', error);
     }
@@ -399,6 +433,18 @@ const PanelOnboardingV2 = () => {
       }
       if (!subdomainAvailable) {
         toast({ variant: "destructive", title: "Please choose an available subdomain" });
+        return;
+      }
+    }
+
+    // Gate custom domain: must be fully verified before proceeding
+    if (currentStepKey === STEP_KEYS.DOMAIN && domainType === 'custom') {
+      if (domainVerificationState.step !== 'verified') {
+        toast({ 
+          variant: "destructive", 
+          title: "Domain not verified", 
+          description: "Please complete domain verification before continuing." 
+        });
         return;
       }
     }
@@ -791,6 +837,9 @@ const PanelOnboardingV2 = () => {
               onCurrencyChange={setCurrency}
               panelId={createdPanelIdRef.current || undefined}
               onVerificationStateChange={setDomainVerificationState}
+              initialVerificationStep={domainVerificationState.step}
+              initialVerificationToken={domainVerificationState.token || undefined}
+              initialCustomDomain={customDomain}
             />
           </motion.div>
         );
@@ -1212,6 +1261,8 @@ const PanelOnboardingV2 = () => {
 
   const isLastStep = currentStepKey === STEP_KEYS.COMPLETE;
   const isPaymentStep = currentStepKey === STEP_KEYS.PAYMENT;
+  const isDomainStep = currentStepKey === STEP_KEYS.DOMAIN;
+  const isNextDisabled = (isPaymentStep && !paymentCompleted) || (isDomainStep && domainType === 'custom' && domainVerificationState.step !== 'verified');
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-secondary/10 pb-24 sm:pb-8">
@@ -1330,7 +1381,7 @@ const PanelOnboardingV2 = () => {
             <Button 
               onClick={handleNext} 
               className="gap-2"
-              disabled={isPaymentStep && !paymentCompleted}
+              disabled={isNextDisabled}
             >
               Next
               <ArrowRight className="w-4 h-4" />
@@ -1355,7 +1406,7 @@ const PanelOnboardingV2 = () => {
             <Button 
               onClick={handleNext} 
               className="flex-1 h-12"
-              disabled={isPaymentStep && !paymentCompleted}
+              disabled={isNextDisabled}
             >
               Next
               <ArrowRight className="w-4 h-4 ml-2" />
