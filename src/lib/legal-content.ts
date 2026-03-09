@@ -48,11 +48,13 @@ You are solely responsible for ensuring that your use of our services complies w
       title: '4. Service Usage Guidelines',
       content: `We are committed to responsible service delivery. When using our platform, you agree to:
 
-- Use services in accordance with third-party platform terms and policies
-- Maintain authentic engagement practices
-- Respect balanced pacing and sustainable delivery methods
-- Not use services for any unlawful or prohibited purposes
-- Not attempt to circumvent any platform limitations or security measures
+- Provide valid, publicly accessible social media account links or URLs for all orders
+- Only use accounts that you own or have explicit authorization to manage
+- Not use stolen, hacked, or fraudulently obtained accounts
+- Use services in accordance with third-party social media platform terms and policies
+- Not use services for any unlawful, harassing, or prohibited purposes
+- Not attempt to circumvent any platform limitations, rate limits, or security measures
+- Accept that some services may experience natural drops due to platform algorithm changes
 
 We reserve the right to refuse service or terminate accounts that violate these guidelines.`
     },
