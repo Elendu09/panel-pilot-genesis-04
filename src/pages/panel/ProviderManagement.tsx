@@ -49,6 +49,7 @@ import { ProviderLimitBanner } from "@/components/providers/ProviderLimitBanner"
 import { DirectProviderCard } from "@/components/providers/DirectProviderCard";
 import { ProviderListItem } from "@/components/providers/ProviderListItem";
 import { SponsoredProviderSlider } from "@/components/providers/SponsoredProviderSlider";
+import { SponsoredProviderBanner, InterstitialAdCard } from "@/components/buyer/SponsoredProviderBanner";
 import { trackAdImpression, trackAdClick, trackAdConversion } from "@/lib/ad-tracking";
 
 interface Provider {
