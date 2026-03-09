@@ -52,7 +52,7 @@ export const TransactionHistory = ({ panelId }: TransactionHistoryProps) => {
   const [page, setPage] = useState(1);
   const perPage = 10;
 
-  // Poll pending transactions every 30s as realtime fallback
+  // Poll pending transactions every 10s as realtime fallback (faster for status updates)
   useEffect(() => {
     if (!panelId) return;
     const hasPending = transactions.some(tx => tx.status === 'pending');
@@ -81,7 +81,7 @@ export const TransactionHistory = ({ panelId }: TransactionHistoryProps) => {
           return tx;
         }));
       }
-    }, 30000);
+    }, 10000);
 
     return () => clearInterval(interval);
   }, [panelId, transactions]);

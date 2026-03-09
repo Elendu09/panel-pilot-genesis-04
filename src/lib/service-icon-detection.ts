@@ -284,13 +284,14 @@ export const IGNORED_PREFIXES: string[] = [
 
 // Negative keywords that should force the category to "other"
 // These are generic/non-platform-specific services
+// IMPORTANT: Do NOT include valid platform names here (google review, yelp, trustpilot, etc.)
+// Those are real platforms with their own categories and should be detected correctly
 export const NEGATIVE_KEYWORDS: string[] = [
   "traffic", "geo target", "geo-target", "geotarget", "website", "seo", 
   "backlink", "pbn", "domain", "web visitor", "alexa", "press release", 
   "article", "blog post", "guest post", "content writing", "crypto niche",
-  "adult", "gambling", "casino", "nft", "token", "dating", "email",
-  "mobile app", "app install", "app review", "google review", "yelp",
-  "trustpilot", "tripadvisor", "google map", "google business",
+  "adult", "gambling", "casino", "nft", "token", "dating",
+  "mobile app", "app install", "app review",
   "captcha", "survey", "signups", "sign up", "registration",
   "referral", "ref link", "shortlink", "download", "software",
   "forex", "binary", "betting", "promotion", "ads ", " ads",
