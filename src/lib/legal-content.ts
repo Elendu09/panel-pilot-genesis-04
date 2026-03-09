@@ -76,11 +76,13 @@ All transactions are processed securely through trusted payment providers.`
       title: '6. Service Delivery',
       content: `Service delivery is provided with optimized timing and balanced pacing:
 
-- **Processing**: Orders are processed promptly after confirmation
-- **Timeline**: Estimated completion times are provided as guidance only
-- **Status Tracking**: Real-time order status is available through your dashboard
-- **No Guarantees**: We do not guarantee specific outcomes or results from any service
-- **Third-Party Factors**: Delivery may be affected by external platform changes or policies
+- **Processing**: Orders are processed promptly after confirmation and sent to our trusted providers
+- **Gradual Delivery**: Most services are delivered gradually to mimic organic growth patterns
+- **Timeline**: Estimated completion times are provided as guidance only and may vary by service type
+- **Status Tracking**: Real-time order status, start count, and remaining count are available through your dashboard
+- **Drop Protection**: Some services include drop protection or refill guarantees — check individual service descriptions
+- **Natural Drops**: Minor fluctuations in counts (likes, followers, views) may occur due to platform algorithm updates and are not considered service failures
+- **Third-Party Factors**: Delivery may be affected by external social media platform changes, API updates, or provider capacity
 
 We strive to provide consistent, quality service while respecting platform guidelines.`
     },
