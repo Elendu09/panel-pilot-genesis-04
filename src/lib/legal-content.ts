@@ -14,21 +14,21 @@ export const getDefaultTermsOfService = (panelName: string, supportEmail?: strin
     {
       id: 'introduction',
       title: '1. Introduction & Acceptance',
-      content: `Welcome to ${panelName}. By accessing or using our platform, you agree to be bound by these Terms of Service. Our platform provides digital marketing assistance tools and audience engagement support services designed to help users manage their online presence effectively.
+      content: `Welcome to ${panelName}. By accessing or using our platform, you agree to be bound by these Terms of Service. Our platform provides social media marketing (SMM) services — including likes, followers, views, comments, shares, and other engagement services — designed to help users grow and manage their online presence across major social media platforms.
 
 If you do not agree to these terms, please do not use our services. We reserve the right to modify these terms at any time, and your continued use of the platform constitutes acceptance of any changes.`
     },
     {
       id: 'service-description',
       title: '2. Service Description',
-      content: `${panelName} offers a range of digital services including:
+      content: `${panelName} is a social media marketing (SMM) panel that acts as an intermediary between service providers and end users. We offer a range of SMM services including:
 
-- **Audience Engagement Support**: Tools designed to help you connect with your target audience
-- **Visibility Enhancement Services**: Solutions to support your content's discoverability
-- **Workflow Optimization Features**: Streamlined tools for managing your digital presence
-- **Performance Insights**: Analytics and reporting to help you understand your progress
+- **Social Media Growth**: Followers, subscribers, and page likes for platforms like Instagram, TikTok, YouTube, Facebook, Twitter/X, Telegram, and more
+- **Engagement Services**: Likes, views, comments, shares, saves, and reactions to boost content visibility
+- **Content Promotion**: Video views, story views, reel plays, and impression boosts
+- **Analytics & Tracking**: Real-time order tracking, delivery status, and performance insights
 
-Our services are designed to complement your existing marketing efforts and support your long-term digital strategy.`
+Service delivery is handled through trusted third-party providers. Results may vary based on platform algorithms and provider capacity.`
     },
     {
       id: 'account-responsibilities',
