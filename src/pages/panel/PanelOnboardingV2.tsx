@@ -181,6 +181,13 @@ const PanelOnboardingV2 = () => {
             if (savedData.seoTitle) setSeoTitle(savedData.seoTitle);
             if (savedData.seoDescription) setSeoDescription(savedData.seoDescription);
             if (savedData.seoKeywords) setSeoKeywords(savedData.seoKeywords);
+            // Restore domain verification state
+            if (savedData.domainVerificationStep) {
+              setDomainVerificationState({
+                step: savedData.domainVerificationStep,
+                token: savedData.domainVerificationToken || null
+              });
+            }
           }
           
           // If subscription is already active/trial, mark payment as completed
