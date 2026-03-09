@@ -115,12 +115,14 @@ export const ServiceImportDialog = ({
   const [hideAlreadyImported, setHideAlreadyImported] = useState(true);
   const [existingServiceIds, setExistingServiceIds] = useState<Set<number>>(new Set());
   
-  // Import progress state
+  // Import progress state with step tracking
   const [importProgress, setImportProgress] = useState<{
     importing: boolean;
     current: number;
     total: number;
-  }>({ importing: false, current: 0, total: 0 });
+    step: 'idle' | 'connecting' | 'fetching' | 'processing' | 'complete' | 'error';
+    stepMessage: string;
+  }>({ importing: false, current: 0, total: 0, step: 'idle', stepMessage: '' });
   
   // Provider balance state
   const [providerBalance, setProviderBalance] = useState<number | null>(null);

@@ -7,16 +7,7 @@ const corsHeaders = {
 };
 
 interface BalanceRequest {
-  providerId: string; // ID of provider in database - credentials fetched securely
-}
-
-interface BalanceResponse {
-  success: boolean;
-  balance?: number;          // USD equivalent
-  originalBalance?: number;  // Original provider currency balance
-  currency?: string;         // Provider's configured currency
-  rateToUsd?: number;        // Exchange rate used
-  error?: string;
+  providerId: string;
 }
 
 // Rate limiting
@@ -41,13 +32,11 @@ function checkRateLimit(key: string): boolean {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Authentication check
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return new Response(
@@ -56,7 +45,6 @@ serve(async (req) => {
       );
     }
 
-    // Verify the token
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_ANON_KEY')!,
@@ -82,7 +70,6 @@ serve(async (req) => {
       );
     }
 
-    // Rate limit per user+provider
     const rateLimitKey = `${claims.user.id}:${providerId}`;
     if (!checkRateLimit(rateLimitKey)) {
       return new Response(
@@ -91,14 +78,12 @@ serve(async (req) => {
       );
     }
 
-    // Create admin client to fetch provider credentials
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
       { auth: { persistSession: false } }
     );
 
-    // Get the user's profile to find their panel
     const { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('id')
@@ -112,7 +97,6 @@ serve(async (req) => {
       );
     }
 
-    // Fetch provider credentials from database - verify ownership AND get currency settings
     const { data: provider, error: providerError } = await supabaseAdmin
       .from('providers')
       .select('id, api_endpoint, api_key, panel_id, currency, currency_rate_to_usd')
@@ -126,7 +110,6 @@ serve(async (req) => {
       );
     }
 
-    // Verify the user owns the panel this provider belongs to
     const { data: panel } = await supabaseAdmin
       .from('panels')
       .select('owner_id')
@@ -140,38 +123,127 @@ serve(async (req) => {
       );
     }
 
-    // Get provider's currency settings
     const providerCurrency = provider.currency || 'USD';
     const rateToUsd = provider.currency_rate_to_usd || 1.0;
 
-    console.log(`Fetching balance for provider: ${providerId} (currency: ${providerCurrency}, rate: ${rateToUsd}) by user ${claims.user.id}`);
+    console.log(`Fetching balance for provider: ${providerId} (currency: ${providerCurrency}, rate: ${rateToUsd})`);
 
-    // SMM Panel standard API format for balance check
-    const formData = new URLSearchParams();
-    formData.append('key', provider.api_key);
-    formData.append('action', 'balance');
+    // Validate API endpoint
+    let apiUrl: URL;
+    try {
+      apiUrl = new URL(provider.api_endpoint);
+    } catch {
+      return new Response(
+        JSON.stringify({ success: false, error: "Invalid provider API endpoint URL" }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
-    const response = await fetch(provider.api_endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: formData,
-    });
+    // Try POST first (most SMM panels use POST), then GET as fallback
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
 
-    if (!response.ok) {
-      console.error(`Provider API returned status: ${response.status}`);
+    let response: Response | null = null;
+    let lastError: string | null = null;
+
+    // Method 1: POST with form data (standard SMM panel format)
+    try {
+      const formData = new URLSearchParams();
+      formData.append('key', provider.api_key);
+      formData.append('action', 'balance');
+
+      response = await fetch(provider.api_endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'User-Agent': 'SMM-Panel/2.0',
+          'Accept': 'application/json',
+        },
+        body: formData,
+        signal: controller.signal,
+      });
+    } catch (postErr: unknown) {
+      lastError = (postErr as Error).message;
+      console.log('POST failed, trying GET fallback...');
+    }
+
+    // Method 2: GET with query params (fallback for some providers)
+    if (!response || !response.ok) {
+      try {
+        const getUrl = new URL(provider.api_endpoint);
+        getUrl.searchParams.set('key', provider.api_key);
+        getUrl.searchParams.set('action', 'balance');
+
+        response = await fetch(getUrl.toString(), {
+          method: 'GET',
+          headers: {
+            'User-Agent': 'SMM-Panel/2.0',
+            'Accept': 'application/json',
+          },
+          signal: controller.signal,
+        });
+      } catch (getErr: unknown) {
+        clearTimeout(timeout);
+        const errMsg = lastError || (getErr as Error).message;
+        
+        if ((getErr as Error).name === 'AbortError') {
+          return new Response(
+            JSON.stringify({ success: false, error: "Provider API timed out after 15 seconds" }),
+            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        return new Response(
+          JSON.stringify({ success: false, error: `Network error: ${errMsg}` }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    clearTimeout(timeout);
+
+    if (!response || !response.ok) {
+      const status = response?.status || 'unknown';
+      console.error(`Provider API returned status: ${status}`);
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: `Provider API returned status ${response.status}` 
+          error: `Provider API returned status ${status}. Check the API endpoint URL is correct.` 
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const data = await response.json();
-    console.log("Provider response received");
+    // Parse response with fallback for malformed JSON
+    const responseText = await response.text();
+    let data: any;
+    try {
+      data = JSON.parse(responseText);
+    } catch {
+      // Try cleaning malformed JSON
+      const cleaned = responseText
+        .trim()
+        .replace(/^\uFEFF/, '')
+        .replace(/[\x00-\x1F\x7F]/g, '')
+        .replace(/,\s*}/g, '}')
+        .replace(/,\s*]/g, ']');
+      try {
+        data = JSON.parse(cleaned);
+      } catch {
+        return new Response(
+          JSON.stringify({ success: false, error: "Invalid JSON response from provider" }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    // Check for error response first
+    if (data.error) {
+      return new Response(
+        JSON.stringify({ success: false, error: `Provider error: ${data.error}` }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Handle different response formats from various SMM providers
     let originalBalance: number | undefined;
@@ -185,16 +257,17 @@ serve(async (req) => {
     }
 
     if (originalBalance !== undefined && !isNaN(originalBalance)) {
-      // Convert to USD using the configured rate
       const balanceUsd = originalBalance * rateToUsd;
       
       console.log(`Original balance: ${originalBalance} ${providerCurrency}, USD equivalent: $${balanceUsd.toFixed(4)}`);
 
-      // Update provider balance in database (store USD equivalent)
+      // Update provider balance in database
       await supabaseAdmin
         .from('providers')
         .update({ 
           balance: balanceUsd, 
+          sync_status: 'synced',
+          last_sync_at: new Date().toISOString(),
           updated_at: new Date().toISOString() 
         })
         .eq('id', providerId);
@@ -202,21 +275,10 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           success: true, 
-          balance: balanceUsd,           // USD equivalent
-          originalBalance: originalBalance, // Original provider currency
-          currency: providerCurrency,     // Provider's currency code
-          rateToUsd: rateToUsd           // Exchange rate used
-        }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Check for error response
-    if (data.error) {
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: data.error 
+          balance: balanceUsd,
+          originalBalance: originalBalance,
+          currency: providerCurrency,
+          rateToUsd: rateToUsd
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );

@@ -12,10 +12,10 @@ export interface Notification {
   timestamp: Date;
   read: boolean;
   actionUrl?: string;
+  panelId?: string | null;
 }
 
 const mapDbTypeToNotificationType = (dbType: string | null, title?: string): NotificationType => {
-  // If DB type is specific, use it
   switch (dbType) {
     case 'order': return 'order';
     case 'payment': return 'payment';
@@ -25,7 +25,6 @@ const mapDbTypeToNotificationType = (dbType: string | null, title?: string): Not
     case 'error': return 'error';
   }
   
-  // For 'info' or null, try to infer from title
   if (title) {
     const low = title.toLowerCase();
     if (low.includes('payment') || low.includes('deposit') || low.includes('transfer') || low.includes('transaction') || low.includes('ad purchase')) return 'payment';
@@ -39,27 +38,21 @@ const mapDbTypeToNotificationType = (dbType: string | null, title?: string): Not
 const getActionUrlFromType = (type: string | null, title: string): string | undefined => {
   const lowTitle = title.toLowerCase();
   
-  // Orders
   if (type === 'order' || lowTitle.includes('order')) return '/panel/orders';
   
-  // Ad purchases / promotions -> Promote page
   if (lowTitle.includes('ad purchase') || lowTitle.includes('promotion') || lowTitle.includes('advertis') || lowTitle.includes('promote') || lowTitle.includes('ad campaign')) {
     return '/panel/promote';
   }
   
-  // Deposit from tenants -> Payments (Transactions tab)
   if (lowTitle.includes('deposit') || lowTitle.includes('pending verification') || lowTitle.includes('manual transfer') || lowTitle.includes('buyer payment')) {
     return '/panel/payments?tab=transactions';
   }
   
-  // Subscription/balance/commission -> Billing  
   if (lowTitle.includes('subscription') || lowTitle.includes('commission') || lowTitle.includes('plan') || lowTitle.includes('balance')) {
     return '/panel/billing';
   }
   
-  // Generic payment type -> Transactions
   if (type === 'payment') return '/panel/transactions';
-  
   if (type === 'provider' || lowTitle.includes('provider') || lowTitle.includes('sync')) return '/panel/providers';
   if (lowTitle.includes('domain') || lowTitle.includes('dns') || lowTitle.includes('ssl')) return '/panel/domain';
   if (lowTitle.includes('service')) return '/panel/services';
@@ -69,12 +62,17 @@ const getActionUrlFromType = (type: string | null, title: string): string | unde
   return undefined;
 };
 
-export const useNotifications = () => {
+interface UseNotificationsOptions {
+  panelId?: string | null;
+}
+
+export const useNotifications = (options?: UseNotificationsOptions) => {
   const { profile } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const panelId = options?.panelId;
 
-  // Fetch notifications from database
+  // Fetch notifications from database - filtered by panel if provided
   const fetchNotifications = useCallback(async () => {
     if (!profile?.id) {
       setNotifications([]);
@@ -83,12 +81,19 @@ export const useNotifications = () => {
     }
 
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('panel_notifications')
         .select('*')
         .eq('user_id', profile.id)
         .order('created_at', { ascending: false })
         .limit(50);
+
+      // Multi-panel support: filter by panel_id when provided
+      if (panelId) {
+        query = query.or(`panel_id.eq.${panelId},panel_id.is.null`);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
@@ -100,6 +105,7 @@ export const useNotifications = () => {
         timestamp: new Date(n.created_at),
         read: n.is_read || false,
         actionUrl: getActionUrlFromType(n.type, n.title),
+        panelId: n.panel_id,
       }));
 
       setNotifications(mappedNotifications);
@@ -108,9 +114,9 @@ export const useNotifications = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [profile?.id]);
+  }, [profile?.id, panelId]);
 
-  // Set up realtime subscription
+  // Set up realtime subscription + polling fallback
   useEffect(() => {
     if (!profile?.id) {
       setIsLoading(false);
@@ -119,9 +125,9 @@ export const useNotifications = () => {
 
     fetchNotifications();
 
-    // Subscribe to realtime changes
+    // Realtime subscription for new/updated/deleted notifications
     const channel = supabase
-      .channel('notifications-realtime')
+      .channel(`notifications-realtime-${panelId || 'all'}`)
       .on(
         'postgres_changes',
         {
@@ -132,6 +138,9 @@ export const useNotifications = () => {
         },
         (payload) => {
           const newNotif = payload.new as any;
+          // For multi-panel: only add if matches current panel or is global
+          if (panelId && newNotif.panel_id && newNotif.panel_id !== panelId) return;
+          
           const notification: Notification = {
             id: newNotif.id,
             type: mapDbTypeToNotificationType(newNotif.type, newNotif.title),
@@ -140,6 +149,7 @@ export const useNotifications = () => {
             timestamp: new Date(newNotif.created_at),
             read: newNotif.is_read || false,
             actionUrl: getActionUrlFromType(newNotif.type, newNotif.title),
+            panelId: newNotif.panel_id,
           };
           setNotifications(prev => [notification, ...prev]);
         }
@@ -174,15 +184,20 @@ export const useNotifications = () => {
       )
       .subscribe();
 
+    // Polling fallback every 60s for missed realtime events
+    const pollInterval = setInterval(() => {
+      fetchNotifications();
+    }, 60000);
+
     return () => {
       supabase.removeChannel(channel);
+      clearInterval(pollInterval);
     };
-  }, [profile?.id, fetchNotifications]);
+  }, [profile?.id, panelId, fetchNotifications]);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
   const markAsRead = useCallback(async (id: string) => {
-    // Optimistic update
     setNotifications(prev => 
       prev.map(n => n.id === id ? { ...n, read: true } : n)
     );
@@ -200,35 +215,47 @@ export const useNotifications = () => {
   const markAllAsRead = useCallback(async () => {
     if (!profile?.id) return;
 
-    // Optimistic update
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
 
     try {
-      await supabase
+      let query = supabase
         .from('panel_notifications')
         .update({ is_read: true })
         .eq('user_id', profile.id)
         .eq('is_read', false);
+
+      // Only mark read for current panel's notifications
+      if (panelId) {
+        query = query.or(`panel_id.eq.${panelId},panel_id.is.null`);
+      }
+
+      await query;
     } catch (error) {
       console.error('Error marking all as read:', error);
     }
-  }, [profile?.id]);
+  }, [profile?.id, panelId]);
 
   const clearAll = useCallback(async () => {
     if (!profile?.id) return;
 
-    // Optimistic update
     setNotifications([]);
 
     try {
-      await supabase
+      let query = supabase
         .from('panel_notifications')
         .delete()
         .eq('user_id', profile.id);
+
+      // Only clear current panel's notifications
+      if (panelId) {
+        query = query.or(`panel_id.eq.${panelId},panel_id.is.null`);
+      }
+
+      await query;
     } catch (error) {
       console.error('Error clearing notifications:', error);
     }
-  }, [profile?.id]);
+  }, [profile?.id, panelId]);
 
   const addNotification = useCallback(async (notification: Omit<Notification, "id" | "timestamp" | "read">) => {
     if (!profile?.id) return;
@@ -238,6 +265,7 @@ export const useNotifications = () => {
         .from('panel_notifications')
         .insert({
           user_id: profile.id,
+          panel_id: panelId || null,
           title: notification.title,
           message: notification.message,
           type: notification.type,
@@ -246,7 +274,7 @@ export const useNotifications = () => {
     } catch (error) {
       console.error('Error adding notification:', error);
     }
-  }, [profile?.id]);
+  }, [profile?.id, panelId]);
 
   const getByType = useCallback((type: NotificationType) => {
     return notifications.filter(n => n.type === type);
