@@ -812,6 +812,9 @@ const PanelOnboardingV2 = () => {
               onCurrencyChange={setCurrency}
               panelId={createdPanelIdRef.current || undefined}
               onVerificationStateChange={setDomainVerificationState}
+              initialVerificationStep={domainVerificationState.step}
+              initialVerificationToken={domainVerificationState.token || undefined}
+              initialCustomDomain={customDomain}
             />
           </motion.div>
         );
