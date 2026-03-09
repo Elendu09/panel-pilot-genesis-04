@@ -1381,7 +1381,7 @@ const PanelOnboardingV2 = () => {
             <Button 
               onClick={handleNext} 
               className="flex-1 h-12"
-              disabled={isPaymentStep && !paymentCompleted}
+              disabled={isNextDisabled}
             >
               Next
               <ArrowRight className="w-4 h-4 ml-2" />
