@@ -213,6 +213,7 @@ const ITEMS_PER_PAGE_OPTIONS = [25, 50, 100, 200];
 
 const ServicesManagement = () => {
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
   const { panel, resolvedTier, loading: panelLoading } = usePanel();
 
   const SERVICE_LIMITS: Record<string, number> = {
