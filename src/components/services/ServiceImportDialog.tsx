@@ -46,7 +46,6 @@ import { cn } from "@/lib/utils";
 import { MarkupEducation } from "./MarkupEducation";
 import { supabase } from "@/integrations/supabase/client";
 import { detectPlatformEnhanced, getServiceIcon } from "@/lib/service-icon-detection";
-import { ImportProgressStepper, type ImportStep } from "@/components/panel/ImportProgressStepper";
 
 interface FetchedService {
   id: number;
@@ -123,12 +122,6 @@ export const ServiceImportDialog = ({
     total: number;
   }>({ importing: false, current: 0, total: 0 });
   
-  // Stepper state for fetch + import flow
-  const [importStep, setImportStep] = useState<ImportStep>("connecting");
-  const [importStepProgress, setImportStepProgress] = useState(0);
-  const [fetchedServiceCount, setFetchedServiceCount] = useState(0);
-  const [showStepper, setShowStepper] = useState(false);
-  
   // Provider balance state
   const [providerBalance, setProviderBalance] = useState<number | null>(null);
   const [isCheckingBalance, setIsCheckingBalance] = useState(false);
@@ -184,22 +177,15 @@ export const ServiceImportDialog = ({
     
     setIsFetching(true);
     setFetchError(null);
-    setShowStepper(true);
-    setImportStep("connecting");
-    setImportStepProgress(5);
     
     try {
       const provider = providers.find(p => p.id === selectedProvider);
       
       if (!provider?.api_endpoint || !provider?.api_key) {
         setFetchError("Provider missing API credentials. Please update the provider settings first.");
-        setImportStep("error");
         toast({ variant: "destructive", title: "Provider missing API credentials" });
         return;
       }
-
-      setImportStepProgress(15);
-      setImportStep("fetching");
 
       // Call the provider-services edge function to fetch real services
       const { data, error } = await supabase.functions.invoke('provider-services', {
@@ -212,66 +198,48 @@ export const ServiceImportDialog = ({
       if (error) {
         const errorMsg = error.message || 'Unknown error';
         setFetchError(`API Error: ${errorMsg}`);
-        setImportStep("error");
         throw new Error(errorMsg);
       }
 
       if (!data?.services || data.services.length === 0) {
         setFetchError("No services returned from provider. Check API credentials or provider status.");
-        setImportStep("error");
         toast({ title: "No services found from this provider", variant: "destructive" });
         setFetchedServices([]);
         return;
       }
-      
-      setImportStepProgress(50);
-      setImportStep("processing");
       
       // Get provider currency settings for rate conversion
       const providerCurrency = provider.currency || 'USD';
       const rateToUsd = provider.currency_rate_to_usd || 1.0;
       
       // Map the API response to our format
-      // Use edge function's detected category first, fall back to client-side detection
+      // NOTE: Provider rate is already "per 1K" - DO NOT divide by 1000!
+      // Use AI detection on service NAME (not provider category) for accurate classification
       const mappedServices: FetchedService[] = data.services.map((s: any, index: number) => {
         const serviceName = s.name || `Service ${s.service || s.id}`;
+        // Try provider category first, then fall back to service name detection
         const providerCategory = s.category || s.network || '';
+        const { platform: nameDetected, confidence: nameConfidence } = detectPlatformEnhanced(serviceName);
+        const { platform: catDetected, confidence: catConfidence } = detectPlatformEnhanced(providerCategory);
         
-        // Use edge function's category detection first (it already ran detectPlatform)
-        // Only fall back to client-side if edge returned "other" or empty
-        let detectedPlatform = providerCategory.toLowerCase();
-        
-        // Check if edge detection returned a valid platform (not "other" or empty)
-        const validEdgePlatforms = ['instagram', 'facebook', 'twitter', 'youtube', 'tiktok', 'telegram',
-          'linkedin', 'spotify', 'twitch', 'discord', 'threads', 'pinterest', 'snapchat', 'reddit',
-          'soundcloud', 'audiomack', 'clubhouse', 'tumblr', 'vk', 'ok', 'wechat', 'line', 'viber',
-          'whatsapp', 'signal', 'google', 'google_business', 'yelp', 'trustpilot', 'tripadvisor',
-          'apple_music', 'tidal', 'deezer', 'shazam', 'reverbnation', 'mixcloud', 'dailymotion',
-          'vimeo', 'rumble', 'kick', 'trovo', 'likee', 'kwai', 'shopee'];
-        
-        if (!validEdgePlatforms.includes(detectedPlatform)) {
-          // Fall back to client-side detection from service name
-          const { platform: nameDetected, confidence: nameConfidence } = detectPlatformEnhanced(serviceName);
-          const { platform: catDetected, confidence: catConfidence } = detectPlatformEnhanced(providerCategory);
-          detectedPlatform = nameConfidence >= catConfidence ? nameDetected : catDetected;
-        }
-        
+        // Use whichever has higher confidence, prioritizing name detection
+        const detectedPlatform = nameConfidence >= catConfidence ? nameDetected : catDetected;
         const iconUrl = `icon:${detectedPlatform}`;
         
         // Get raw rate and convert to USD
         const rawRate = parseFloat(s.rate || s.price || 0);
-        const rateInUsd = rawRate * rateToUsd;
+        const rateInUsd = rawRate * rateToUsd; // Convert to USD
         
         return {
           id: s.service || s.id || index + 1,
           name: serviceName,
-          category: detectedPlatform,
-          price: rateInUsd,
-          originalProviderRate: rawRate,
+          category: detectedPlatform, // AI-detected from service name + category (50+ platforms)
+          price: rateInUsd, // USD-converted rate for display and import
+          originalProviderRate: rawRate, // Keep original for reference
           minQty: parseInt(s.min || s.min_quantity || 100),
           maxQty: parseInt(s.max || s.max_quantity || 10000),
           description: s.description || s.name || '',
-          iconUrl,
+          iconUrl, // Pre-computed icon URL for import
         };
       });
       
@@ -279,8 +247,6 @@ export const ServiceImportDialog = ({
       if (providerCurrency !== 'USD') {
         console.log(`[Import] Converting ${providerCurrency} → USD (rate: ${rateToUsd})`);
       }
-      
-      setImportStepProgress(75);
       
       // Log detection results for debugging
       console.log(`[Import] Detected platforms from ${mappedServices.length} services:`);
@@ -308,10 +274,6 @@ export const ServiceImportDialog = ({
       setExistingServiceIds(existingIds);
       
       setFetchedServices(mappedServices);
-      setFetchedServiceCount(mappedServices.length);
-      
-      setImportStepProgress(100);
-      setImportStep("complete");
       
       const importedCount = mappedServices.filter(s => existingIds.has(s.id)).length;
       toast({ 
@@ -321,12 +283,7 @@ export const ServiceImportDialog = ({
       
       setSelectedServices([]);
       setServiceMarkups({});
-      
-      // Auto-advance to services step after brief delay
-      setTimeout(() => {
-        setShowStepper(false);
-        setStep("services");
-      }, 1500);
+      setStep("services");
     } catch (error: any) {
       console.error('Error fetching services:', error);
       toast({ 
@@ -388,11 +345,6 @@ export const ServiceImportDialog = ({
       return;
     }
     
-    // Show stepper for import
-    setShowStepper(true);
-    setImportStep("connecting");
-    setImportStepProgress(5);
-    setFetchedServiceCount(total);
     setImportProgress({ importing: true, current: 0, total });
     
     try {
@@ -405,28 +357,17 @@ export const ServiceImportDialog = ({
         allMarkups[s.id] = serviceMarkups[s.id] ?? globalMarkup;
       });
       
-      setImportStep("processing");
-      setImportStepProgress(20);
-      
+      setImportProgress({ importing: true, current: Math.round(total * 0.1), total });
       await onImport(selectedServiceData, allMarkups, providerId, providerName);
-      
-      setImportStepProgress(100);
-      setImportStep("complete");
       setImportProgress({ importing: true, current: total, total });
       
       toast({ title: `${total} services imported successfully!` });
-      
-      // Auto-close after success
-      setTimeout(() => {
-        setImportProgress({ importing: false, current: 0, total: 0 });
-        setShowStepper(false);
-        reset();
-      }, 2000);
     } catch (error) {
       console.error('Import error:', error);
-      setImportStep("error");
       toast({ title: "Import failed", variant: "destructive" });
+    } finally {
       setImportProgress({ importing: false, current: 0, total: 0 });
+      reset();
     }
   };
 
@@ -444,10 +385,6 @@ export const ServiceImportDialog = ({
     setExistingServiceIds(new Set());
     setHideAlreadyImported(true);
     setImportProgress({ importing: false, current: 0, total: 0 });
-    setShowStepper(false);
-    setImportStep("connecting");
-    setImportStepProgress(0);
-    setFetchedServiceCount(0);
   };
 
   // Calculate import percentage
@@ -638,21 +575,11 @@ export const ServiceImportDialog = ({
               )}
             </div>
 
-            {/* Import Progress Stepper - shown during fetch */}
-            {showStepper && step === "select" && (
-              <ImportProgressStepper
-                currentStep={importStep}
-                progress={importStepProgress}
-                servicesCount={fetchedServiceCount}
-                error={fetchError || undefined}
-              />
-            )}
-
             <DialogFooter className="pt-4">
               <Button variant="outline" onClick={reset}>Cancel</Button>
               <Button 
                 onClick={handleFetchServices}
-                disabled={isFetching || !selectedProvider || showStepper}
+                disabled={isFetching || !selectedProvider}
                 className="bg-gradient-to-r from-primary to-primary/80"
               >
                 {isFetching ? (
@@ -873,22 +800,21 @@ export const ServiceImportDialog = ({
             </ScrollArea>
 
             <DialogFooter className="flex-col gap-3">
-              {/* Import Progress Stepper */}
-              {showStepper && importProgress.importing && (
-                <div className="w-full">
-                  <ImportProgressStepper
-                    currentStep={importStep}
-                    progress={importStepProgress}
-                    servicesCount={fetchedServiceCount}
-                    error={undefined}
-                  />
+              {/* Import Progress */}
+              {importProgress.importing && (
+                <div className="w-full space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Importing services...</span>
+                    <span className="font-medium">{importProgress.current} / {importProgress.total}</span>
+                  </div>
+                  <Progress value={importPercentage} className="h-2" />
                 </div>
               )}
               
               <div className="flex flex-col sm:flex-row gap-2 w-full">
                 <Button 
                   variant="outline" 
-                  onClick={() => { setShowStepper(false); setStep("select"); }} 
+                  onClick={() => setStep("select")} 
                   className="w-full sm:w-auto"
                   disabled={importProgress.importing}
                 >
@@ -905,7 +831,7 @@ export const ServiceImportDialog = ({
                     <Download className="w-4 h-4 mr-2" />
                   )}
                   {importProgress.importing 
-                    ? `Importing ${importStepProgress}%...` 
+                    ? `Importing ${importPercentage}%...` 
                     : `Import ${selectedServices.length} Services`
                   }
                 </Button>
