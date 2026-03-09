@@ -74,7 +74,7 @@ const Privacy = () => {
                   We collect information you provide directly to us, such as when you create an account, make a purchase, or contact us for support.
                 </p>
                 <ul className="list-disc pl-6 text-muted-foreground space-y-2">
-                  <li>Account information (email, username, password)</li>
+                  <li>Account information (full name, email, username, password)</li>
                   <li>Payment information (processed securely through third-party providers)</li>
                   <li>Service usage data and order history</li>
                   <li>Communication records when you contact support</li>

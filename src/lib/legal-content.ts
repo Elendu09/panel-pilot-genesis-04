@@ -177,7 +177,7 @@ By using our services, you consent to the data practices described in this polic
       content: `We collect information necessary to provide and improve our services:
 
 **Account Information:**
-- Email address and username
+- Full name, email address, and username
 - Password (encrypted and securely stored)
 - Profile preferences and settings
 
