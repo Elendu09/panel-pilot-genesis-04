@@ -930,84 +930,20 @@ const ProviderManagement = () => {
             />
           </div>
 
-          {/* Sponsored Providers Slider */}
-          {filteredDirect.filter(p => p.ad_type === 'sponsored').length > 0 && (
-            <SponsoredProviderSlider
-              providers={filteredDirect.filter(p => p.ad_type === 'sponsored')}
-              onEnable={handleEnableDirectProvider}
-              enablingId={enablingProvider}
-            />
-          )}
-
-          {/* Top Providers Section - Gold bordered grid */}
-          {filteredDirect.filter(p => p.ad_type === 'top').length > 0 && (
+          {/* Ranked Ad Providers (1st, 2nd, 3rd with crown icons) */}
+          {filteredDirect.filter(p => p.ad_type).length > 0 && (
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <div className="p-2 rounded-lg bg-gradient-to-br from-amber-500/20 to-yellow-500/10">
-                  <TrendingUp className="w-5 h-5 text-amber-500" />
+                  <Crown className="w-5 h-5 text-amber-500" />
                 </div>
-                <h3 className="font-semibold text-lg">Top Providers</h3>
-                <Badge variant="outline" className="border-amber-500/30 text-amber-500">{filteredDirect.filter(p => p.ad_type === 'top').length}</Badge>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {filteredDirect.filter(p => p.ad_type === 'top').map((provider) => (
-                  <DirectProviderCard
-                    key={provider.id}
-                    provider={provider}
-                    onEnable={handleEnableDirectProvider}
-                    isEnabled={provider.is_connected}
-                    isLoading={enablingProvider === provider.id}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Best Providers Section */}
-          {filteredDirect.filter(p => p.ad_type === 'best').length > 0 && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500/20 to-cyan-500/10">
-                  <Sparkles className="w-5 h-5 text-blue-500" />
-                </div>
-                <h3 className="font-semibold text-lg">Best Providers</h3>
-                <Badge variant="outline" className="border-blue-500/30 text-blue-500">{filteredDirect.filter(p => p.ad_type === 'best').length}</Badge>
+                <h3 className="font-semibold text-lg">Top Ranked Providers</h3>
+                <Badge variant="outline" className="border-amber-500/30 text-amber-500">
+                  {filteredDirect.filter(p => p.ad_type).length}
+                </Badge>
               </div>
               <div className="space-y-2">
-                {filteredDirect.filter(p => p.ad_type === 'best').map((provider, index) => (
-                  <ProviderListItem
-                    key={provider.id}
-                    id={provider.id}
-                    name={provider.name}
-                    domain={provider.custom_domain || `${provider.subdomain}.smmpilot.online`}
-                    logoUrl={provider.logo_url}
-                    serviceCount={provider.service_count}
-                    adType={provider.ad_type}
-                    isConnected={provider.is_connected}
-                    onAction={() => handleEnableDirectProvider(provider)}
-                    onManualConnect={() => openManualConnect(provider)}
-                    isLoading={enablingProvider === provider.id}
-                    actionLabel="Enable"
-                    rank={index + 1}
-                    showRank={true}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Featured Providers Section */}
-          {filteredDirect.filter(p => p.ad_type === 'featured').length > 0 && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-lg bg-gradient-to-br from-purple-500/20 to-pink-500/10">
-                  <Crown className="w-5 h-5 text-purple-500" />
-                </div>
-                <h3 className="font-semibold text-lg">Featured Providers</h3>
-                <Badge variant="outline" className="border-purple-500/30 text-purple-500">{filteredDirect.filter(p => p.ad_type === 'featured').length}</Badge>
-              </div>
-              <div className="space-y-2">
-                {filteredDirect.filter(p => p.ad_type === 'featured').map((provider, index) => (
+                {filteredDirect.filter(p => p.ad_type).map((provider, index) => (
                   <ProviderListItem
                     key={provider.id}
                     id={provider.id}
@@ -1032,7 +968,7 @@ const ProviderManagement = () => {
           {/* Interstitial Ad between sections */}
           <InterstitialAdCard currentPanelId={panel?.id} />
 
-          {/* All HomeOfSMM Providers (Kanban List Style) */}
+          {/* Qualified HomeOfSMM Providers (no rank numbers) */}
           <div className="space-y-4">
             <div className="flex items-center gap-2">
               <div className="p-2 rounded-lg bg-primary/10">
@@ -1049,12 +985,12 @@ const ProviderManagement = () => {
               <Card className="glass-card">
                 <CardContent className="py-12 text-center">
                   <Home className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                  <p className="text-muted-foreground">No HomeOfSMM panels available yet</p>
+                  <p className="text-muted-foreground">No qualified panels yet — panels need active services and customers to appear here</p>
                 </CardContent>
               </Card>
             ) : (
               <div className="space-y-2">
-                {filteredDirect.filter(p => !p.ad_type).map((provider, index) => (
+                {filteredDirect.filter(p => !p.ad_type).map((provider) => (
                   <ProviderListItem
                     key={provider.id}
                     id={provider.id}
@@ -1067,8 +1003,6 @@ const ProviderManagement = () => {
                     onManualConnect={() => openManualConnect(provider)}
                     isLoading={enablingProvider === provider.id}
                     actionLabel="Enable"
-                    rank={index + 1}
-                    showRank={true}
                   />
                 ))}
               </div>
