@@ -1356,7 +1356,7 @@ const PanelOnboardingV2 = () => {
             <Button 
               onClick={handleNext} 
               className="gap-2"
-              disabled={isPaymentStep && !paymentCompleted}
+              disabled={isNextDisabled}
             >
               Next
               <ArrowRight className="w-4 h-4" />
