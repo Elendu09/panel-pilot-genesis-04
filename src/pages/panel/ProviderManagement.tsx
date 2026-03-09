@@ -791,7 +791,7 @@ const ProviderManagement = () => {
         ))}
       </div>
 
-      <Tabs defaultValue="providers" className="space-y-6">
+      <Tabs defaultValue={searchParams.get('tab') || 'providers'} className="space-y-6">
         <TabsList className="glass-card p-1">
           <TabsTrigger value="providers" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
             <Server className="w-4 h-4 mr-2" /> My Providers
