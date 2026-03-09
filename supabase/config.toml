@@ -147,3 +147,6 @@ verify_jwt = false
 [functions.transfer-provider-balance]
 verify_jwt = false
 
+[functions.team-data]
+verify_jwt = false
+
