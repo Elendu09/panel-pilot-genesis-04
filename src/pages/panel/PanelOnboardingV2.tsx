@@ -351,7 +351,9 @@ const PanelOnboardingV2 = () => {
       panelName, description, selectedPlan, subdomain, customDomain, 
       domainType, primaryColor, secondaryColor, paymentCompleted,
       selectedTheme, brandingMode, seoTitle, seoDescription, seoKeywords,
-      currency
+      currency,
+      domainVerificationStep: domainVerificationState.step,
+      domainVerificationToken: domainVerificationState.token,
     };
 
     try {
