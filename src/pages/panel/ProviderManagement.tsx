@@ -135,6 +135,7 @@ const planLimits: Record<string, number> = {
 };
 
 const ProviderManagement = () => {
+  const [searchParams] = useSearchParams();
   const { profile } = useAuth();
   const { panel, refreshPanel } = usePanel();
   const { toast } = useToast();
