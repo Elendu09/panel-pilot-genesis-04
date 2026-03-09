@@ -347,7 +347,7 @@ export const ServiceImportDialog = ({
       return;
     }
     
-    setImportProgress({ importing: true, current: 0, total });
+    setImportProgress({ importing: true, current: 0, total, step: 'connecting', stepMessage: 'Preparing import...' });
     
     try {
       const provider = providers.find(p => p.id === selectedProvider);
@@ -359,17 +359,20 @@ export const ServiceImportDialog = ({
         allMarkups[s.id] = serviceMarkups[s.id] ?? globalMarkup;
       });
       
-      setImportProgress({ importing: true, current: Math.round(total * 0.1), total });
+      setImportProgress({ importing: true, current: Math.round(total * 0.2), total, step: 'processing', stepMessage: 'Saving services to database...' });
       await onImport(selectedServiceData, allMarkups, providerId, providerName);
-      setImportProgress({ importing: true, current: total, total });
+      setImportProgress({ importing: true, current: total, total, step: 'complete', stepMessage: 'Import complete!' });
       
       toast({ title: `${total} services imported successfully!` });
     } catch (error) {
       console.error('Import error:', error);
+      setImportProgress({ importing: false, current: 0, total: 0, step: 'error', stepMessage: 'Import failed' });
       toast({ title: "Import failed", variant: "destructive" });
     } finally {
-      setImportProgress({ importing: false, current: 0, total: 0 });
-      reset();
+      setTimeout(() => {
+        setImportProgress({ importing: false, current: 0, total: 0, step: 'idle', stepMessage: '' });
+        reset();
+      }, 500);
     }
   };
 
@@ -386,7 +389,7 @@ export const ServiceImportDialog = ({
     setFetchError(null);
     setExistingServiceIds(new Set());
     setHideAlreadyImported(true);
-    setImportProgress({ importing: false, current: 0, total: 0 });
+    setImportProgress({ importing: false, current: 0, total: 0, step: 'idle', stepMessage: '' });
   };
 
   // Calculate import percentage
