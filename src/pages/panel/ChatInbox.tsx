@@ -1112,38 +1112,47 @@ const ChatInbox = ({ embedded = false }: ChatInboxProps) => {
               <p>No conversations yet</p>
             </div>
           ) : (
-            filteredSessions.map((session) => (
-              <div
-                key={session.id}
-                onClick={() => setSelectedSession(session)}
-                className={cn(
-                  "p-4 border-b cursor-pointer hover:bg-muted/50 transition-colors",
-                  selectedSession?.id === session.id && "bg-muted"
-                )}
-              >
-                <div className="flex items-start gap-3">
-                  <Avatar className="w-10 h-10">
-                    <AvatarFallback className="bg-primary/10 text-primary">
-                      {session.visitor_name?.[0] || 'V'}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-medium truncate">
-                        {session.visitor_name || 'Visitor'}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {formatTime(session.last_message_at)}
-                      </span>
-                    </div>
-                    <p className="text-sm text-muted-foreground truncate">
-                      {session.last_message}
-                    </p>
-                  </div>
-                  {(session.unread_count || 0) > 0 && (
-                    <Badge className="shrink-0">{session.unread_count}</Badge>
+            filteredSessions.map((session, index) => (
+              <div key={session.id}>
+                <div
+                  onClick={() => setSelectedSession(session)}
+                  className={cn(
+                    "p-4 border-b cursor-pointer hover:bg-muted/50 transition-colors",
+                    selectedSession?.id === session.id && "bg-muted"
                   )}
+                >
+                  <div className="flex items-start gap-3">
+                    <Avatar className="w-10 h-10">
+                      <AvatarFallback className="bg-primary/10 text-primary">
+                        {session.visitor_name?.[0] || 'V'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-medium truncate">
+                          {session.visitor_name || 'Visitor'}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {formatTime(session.last_message_at)}
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground truncate">
+                        {session.last_message}
+                      </p>
+                    </div>
+                    {(session.unread_count || 0) > 0 && (
+                      <Badge className="shrink-0">{session.unread_count}</Badge>
+                    )}
+                  </div>
                 </div>
+                {/* Show sponsored promotion every 5 sessions on desktop */}
+                {sponsoredPanels.length > 0 && (index + 1) % 5 === 0 && index < filteredSessions.length - 1 && (
+                  <SponsoredPromotionCard 
+                    promotion={sponsoredPanels[(Math.floor(index / 5)) % sponsoredPanels.length]}
+                    onImpression={(pid) => trackAdImpression(pid, 'featured')}
+                    onClickAd={(pid) => trackAdClick(pid, 'featured')}
+                  />
+                )}
               </div>
             ))
           )}
