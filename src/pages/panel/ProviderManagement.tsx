@@ -74,6 +74,8 @@ interface DirectPanel {
   custom_domain: string | null;
   logo_url: string | null;
   service_count?: number;
+  customer_count?: number;
+  order_count?: number;
   ad_type?: 'sponsored' | 'top' | 'best' | 'featured' | null;
   is_connected?: boolean;
 }
