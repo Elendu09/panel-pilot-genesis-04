@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -73,6 +74,8 @@ interface DirectPanel {
   custom_domain: string | null;
   logo_url: string | null;
   service_count?: number;
+  customer_count?: number;
+  order_count?: number;
   ad_type?: 'sponsored' | 'top' | 'best' | 'featured' | null;
   is_connected?: boolean;
 }
@@ -132,6 +135,7 @@ const planLimits: Record<string, number> = {
 };
 
 const ProviderManagement = () => {
+  const [searchParams] = useSearchParams();
   const { profile } = useAuth();
   const { panel, refreshPanel } = usePanel();
   const { toast } = useToast();
@@ -239,19 +243,42 @@ const ProviderManagement = () => {
         }
       }
 
-      // Fetch service counts for each panel
+      // Fetch service counts, customer counts, and order counts in parallel
       const panelIds = panels?.map(p => p.id) || [];
       let serviceCounts: Record<string, number> = {};
+      let customerCounts: Record<string, number> = {};
+      let orderCounts: Record<string, number> = {};
       
       if (panelIds.length > 0) {
-        const { data: services } = await supabase
-          .from('services')
-          .select('panel_id')
-          .in('panel_id', panelIds)
-          .eq('is_active', true);
+        const [servicesRes, customersRes, ordersRes] = await Promise.all([
+          supabase
+            .from('services')
+            .select('panel_id')
+            .in('panel_id', panelIds)
+            .eq('is_active', true),
+          supabase
+            .from('client_users')
+            .select('panel_id')
+            .in('panel_id', panelIds)
+            .eq('is_active', true),
+          supabase
+            .from('orders')
+            .select('panel_id')
+            .in('panel_id', panelIds),
+        ]);
         
-        serviceCounts = (services || []).reduce((acc, s) => {
-          acc[s.panel_id] = (acc[s.panel_id] || 0) + 1;
+        serviceCounts = (servicesRes.data || []).reduce((acc, s) => {
+          acc[s.panel_id!] = (acc[s.panel_id!] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+        
+        customerCounts = (customersRes.data || []).reduce((acc, c) => {
+          acc[c.panel_id!] = (acc[c.panel_id!] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+        
+        orderCounts = (ordersRes.data || []).reduce((acc, o) => {
+          acc[o.panel_id!] = (acc[o.panel_id!] || 0) + 1;
           return acc;
         }, {} as Record<string, number>);
       }
@@ -260,10 +287,17 @@ const ProviderManagement = () => {
         ...p,
         ad_type: adMap.get(p.id) as any || null,
         is_connected: connectedIds.has(p.id),
-        service_count: serviceCounts[p.id] || 0
-      }));
+        service_count: serviceCounts[p.id] || 0,
+        customer_count: customerCounts[p.id] || 0,
+        order_count: orderCounts[p.id] || 0,
+      })).filter(p => {
+        // Always show panels with ads
+        if (p.ad_type) return true;
+        // For non-ad panels: only show if they have services AND (customers OR significant orders)
+        return p.service_count > 0 && (p.customer_count > 0 || p.order_count > 10);
+      });
 
-      // Sort: sponsored first, then top, then best, then others
+      // Sort: ad panels by priority then spend, non-ad panels after
       const adPriority: Record<string, number> = { sponsored: 0, top: 1, best: 2, featured: 3 };
       directPanels.sort((a, b) => {
         const aPriority = a.ad_type ? adPriority[a.ad_type] ?? 99 : 99;
@@ -757,7 +791,7 @@ const ProviderManagement = () => {
         ))}
       </div>
 
-      <Tabs defaultValue="providers" className="space-y-6">
+      <Tabs defaultValue={searchParams.get('tab') || 'providers'} className="space-y-6">
         <TabsList className="glass-card p-1">
           <TabsTrigger value="providers" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
             <Server className="w-4 h-4 mr-2" /> My Providers
@@ -896,84 +930,20 @@ const ProviderManagement = () => {
             />
           </div>
 
-          {/* Sponsored Providers Slider */}
-          {filteredDirect.filter(p => p.ad_type === 'sponsored').length > 0 && (
-            <SponsoredProviderSlider
-              providers={filteredDirect.filter(p => p.ad_type === 'sponsored')}
-              onEnable={handleEnableDirectProvider}
-              enablingId={enablingProvider}
-            />
-          )}
-
-          {/* Top Providers Section - Gold bordered grid */}
-          {filteredDirect.filter(p => p.ad_type === 'top').length > 0 && (
+          {/* Ranked Ad Providers (1st, 2nd, 3rd with crown icons) */}
+          {filteredDirect.filter(p => p.ad_type).length > 0 && (
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <div className="p-2 rounded-lg bg-gradient-to-br from-amber-500/20 to-yellow-500/10">
-                  <TrendingUp className="w-5 h-5 text-amber-500" />
+                  <Crown className="w-5 h-5 text-amber-500" />
                 </div>
-                <h3 className="font-semibold text-lg">Top Providers</h3>
-                <Badge variant="outline" className="border-amber-500/30 text-amber-500">{filteredDirect.filter(p => p.ad_type === 'top').length}</Badge>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {filteredDirect.filter(p => p.ad_type === 'top').map((provider) => (
-                  <DirectProviderCard
-                    key={provider.id}
-                    provider={provider}
-                    onEnable={handleEnableDirectProvider}
-                    isEnabled={provider.is_connected}
-                    isLoading={enablingProvider === provider.id}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Best Providers Section */}
-          {filteredDirect.filter(p => p.ad_type === 'best').length > 0 && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500/20 to-cyan-500/10">
-                  <Sparkles className="w-5 h-5 text-blue-500" />
-                </div>
-                <h3 className="font-semibold text-lg">Best Providers</h3>
-                <Badge variant="outline" className="border-blue-500/30 text-blue-500">{filteredDirect.filter(p => p.ad_type === 'best').length}</Badge>
+                <h3 className="font-semibold text-lg">Top Ranked Providers</h3>
+                <Badge variant="outline" className="border-amber-500/30 text-amber-500">
+                  {filteredDirect.filter(p => p.ad_type).length}
+                </Badge>
               </div>
               <div className="space-y-2">
-                {filteredDirect.filter(p => p.ad_type === 'best').map((provider, index) => (
-                  <ProviderListItem
-                    key={provider.id}
-                    id={provider.id}
-                    name={provider.name}
-                    domain={provider.custom_domain || `${provider.subdomain}.smmpilot.online`}
-                    logoUrl={provider.logo_url}
-                    serviceCount={provider.service_count}
-                    adType={provider.ad_type}
-                    isConnected={provider.is_connected}
-                    onAction={() => handleEnableDirectProvider(provider)}
-                    onManualConnect={() => openManualConnect(provider)}
-                    isLoading={enablingProvider === provider.id}
-                    actionLabel="Enable"
-                    rank={index + 1}
-                    showRank={true}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Featured Providers Section */}
-          {filteredDirect.filter(p => p.ad_type === 'featured').length > 0 && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-lg bg-gradient-to-br from-purple-500/20 to-pink-500/10">
-                  <Crown className="w-5 h-5 text-purple-500" />
-                </div>
-                <h3 className="font-semibold text-lg">Featured Providers</h3>
-                <Badge variant="outline" className="border-purple-500/30 text-purple-500">{filteredDirect.filter(p => p.ad_type === 'featured').length}</Badge>
-              </div>
-              <div className="space-y-2">
-                {filteredDirect.filter(p => p.ad_type === 'featured').map((provider, index) => (
+                {filteredDirect.filter(p => p.ad_type).map((provider, index) => (
                   <ProviderListItem
                     key={provider.id}
                     id={provider.id}
@@ -998,7 +968,7 @@ const ProviderManagement = () => {
           {/* Interstitial Ad between sections */}
           <InterstitialAdCard currentPanelId={panel?.id} />
 
-          {/* All HomeOfSMM Providers (Kanban List Style) */}
+          {/* Qualified HomeOfSMM Providers (no rank numbers) */}
           <div className="space-y-4">
             <div className="flex items-center gap-2">
               <div className="p-2 rounded-lg bg-primary/10">
@@ -1015,12 +985,12 @@ const ProviderManagement = () => {
               <Card className="glass-card">
                 <CardContent className="py-12 text-center">
                   <Home className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                  <p className="text-muted-foreground">No HomeOfSMM panels available yet</p>
+                  <p className="text-muted-foreground">No qualified panels yet — panels need active services and customers to appear here</p>
                 </CardContent>
               </Card>
             ) : (
               <div className="space-y-2">
-                {filteredDirect.filter(p => !p.ad_type).map((provider, index) => (
+                {filteredDirect.filter(p => !p.ad_type).map((provider) => (
                   <ProviderListItem
                     key={provider.id}
                     id={provider.id}
@@ -1033,8 +1003,6 @@ const ProviderManagement = () => {
                     onManualConnect={() => openManualConnect(provider)}
                     isLoading={enablingProvider === provider.id}
                     actionLabel="Enable"
-                    rank={index + 1}
-                    showRank={true}
                   />
                 ))}
               </div>

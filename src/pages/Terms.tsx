@@ -71,50 +71,64 @@ const Terms = () => {
               <section id="acceptance" className="scroll-mt-[100px]">
                 <h2 className="text-2xl font-semibold mb-4">1. Acceptance of Terms</h2>
                 <p className="text-muted-foreground leading-relaxed">
-                  By accessing and using our platform, you accept and agree to be bound by the terms and provision of this agreement.
-                  If you do not agree to abide by the above, please do not use this service.
+                  By accessing and using SMMPilot, you accept and agree to be bound by these Terms of Service. 
+                  SMMPilot is a social media marketing (SMM) platform that enables panel owners and end users to purchase 
+                  engagement services such as likes, followers, views, comments, and shares across major social media platforms.
+                  If you do not agree, please do not use this service.
                 </p>
               </section>
 
               <section id="service-description" className="scroll-mt-[100px]">
                 <h2 className="text-2xl font-semibold mb-4">2. Service Description</h2>
-                <p className="text-muted-foreground leading-relaxed">
-                  Our platform provides SMM (Social Media Marketing) panel services that allow users to purchase social media 
-                  engagement services. We act as an intermediary between service providers and end users.
+                <p className="text-muted-foreground leading-relaxed mb-4">
+                  SMMPilot acts as an intermediary between SMM service providers and end users. Our platform allows panel owners to create 
+                  and manage their own SMM storefronts, connect to third-party providers, and offer services to their customers.
                 </p>
+                <ul className="list-disc pl-6 text-muted-foreground space-y-2">
+                  <li><strong>Social Media Growth</strong> — Followers, subscribers, and page likes for Instagram, TikTok, YouTube, Facebook, Twitter/X, Telegram, and more</li>
+                  <li><strong>Engagement Services</strong> — Likes, views, comments, shares, saves, and reactions</li>
+                  <li><strong>Content Promotion</strong> — Video views, story views, reel plays, and impression boosts</li>
+                  <li><strong>Analytics & Tracking</strong> — Real-time order tracking, delivery status, and performance insights</li>
+                </ul>
               </section>
 
               <section id="user-responsibilities" className="scroll-mt-[100px]">
                 <h2 className="text-2xl font-semibold mb-4">3. User Responsibilities</h2>
                 <ul className="list-disc pl-6 text-muted-foreground space-y-2">
                   <li>You must be at least 18 years old to use our services</li>
-                  <li>You are responsible for maintaining the confidentiality of your account</li>
-                  <li>You agree not to use the service for any unlawful purposes</li>
-                  <li>You understand that services may take time to complete</li>
+                  <li>You are responsible for maintaining the confidentiality of your account credentials</li>
+                  <li>You must provide valid, publicly accessible social media URLs for orders</li>
+                  <li>You must only use accounts you own or are authorized to manage</li>
+                  <li>You agree not to use the service for any unlawful or prohibited purposes</li>
+                  <li>You understand that services are delivered gradually and may take time to complete</li>
                 </ul>
               </section>
 
               <section id="payment-refunds" className="scroll-mt-[100px]">
                 <h2 className="text-2xl font-semibold mb-4">4. Payment and Refunds</h2>
                 <p className="text-muted-foreground leading-relaxed">
-                  All payments are processed securely. Refunds are provided only in cases where services cannot be delivered
-                  due to technical issues on our end. No refunds will be provided for delivered services.
+                  All payments are processed securely through trusted payment providers. The platform operates on a prepaid balance system. 
+                  Refunds are provided only when services cannot be delivered due to technical issues on our end. 
+                  No refunds will be provided for completed or partially delivered services. Minor count drops due to platform algorithms 
+                  are not considered service failures.
                 </p>
               </section>
 
               <section id="service-quality" className="scroll-mt-[100px]">
                 <h2 className="text-2xl font-semibold mb-4">5. Service Quality</h2>
                 <p className="text-muted-foreground leading-relaxed">
-                  While we strive to provide high-quality services, we cannot guarantee specific results or timelines.
-                  Service delivery depends on various factors including platform algorithms and external providers.
+                  While we strive to provide high-quality services, we cannot guarantee specific results or timelines. 
+                  Delivery depends on third-party provider capacity and social media platform algorithms. 
+                  Some services include drop protection or refill guarantees — check individual service descriptions for details.
                 </p>
               </section>
 
               <section id="liability" className="scroll-mt-[100px]">
                 <h2 className="text-2xl font-semibold mb-4">6. Limitation of Liability</h2>
                 <p className="text-muted-foreground leading-relaxed">
-                  Our platform shall not be liable for any direct, indirect, incidental, or consequential damages
-                  arising from the use of our services.
+                  SMMPilot shall not be liable for any direct, indirect, incidental, or consequential damages arising from 
+                  the use of our services, including but not limited to account suspensions by third-party platforms, 
+                  follower/like drops, or delivery delays caused by external factors.
                 </p>
               </section>
 
@@ -122,14 +136,14 @@ const Terms = () => {
                 <h2 className="text-2xl font-semibold mb-4">7. Changes to Terms</h2>
                 <p className="text-muted-foreground leading-relaxed">
                   We reserve the right to modify these terms at any time. Changes will be effective immediately upon
-                  posting on the platform.
+                  posting on the platform. Continued use constitutes acceptance of updated terms.
                 </p>
               </section>
 
               <section id="contact" className="scroll-mt-[100px]">
                 <h2 className="text-2xl font-semibold mb-4">8. Contact Information</h2>
                 <p className="text-muted-foreground leading-relaxed">
-                  For questions about these Terms of Service, please contact our support team through the platform.
+                  For questions about these Terms of Service, please contact our support team through the platform dashboard.
                 </p>
               </section>
             </div>

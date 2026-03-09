@@ -14,21 +14,21 @@ export const getDefaultTermsOfService = (panelName: string, supportEmail?: strin
     {
       id: 'introduction',
       title: '1. Introduction & Acceptance',
-      content: `Welcome to ${panelName}. By accessing or using our platform, you agree to be bound by these Terms of Service. Our platform provides digital marketing assistance tools and audience engagement support services designed to help users manage their online presence effectively.
+      content: `Welcome to ${panelName}. By accessing or using our platform, you agree to be bound by these Terms of Service. Our platform provides social media marketing (SMM) services — including likes, followers, views, comments, shares, and other engagement services — designed to help users grow and manage their online presence across major social media platforms.
 
 If you do not agree to these terms, please do not use our services. We reserve the right to modify these terms at any time, and your continued use of the platform constitutes acceptance of any changes.`
     },
     {
       id: 'service-description',
       title: '2. Service Description',
-      content: `${panelName} offers a range of digital services including:
+      content: `${panelName} is a social media marketing (SMM) panel that acts as an intermediary between service providers and end users. We offer a range of SMM services including:
 
-- **Audience Engagement Support**: Tools designed to help you connect with your target audience
-- **Visibility Enhancement Services**: Solutions to support your content's discoverability
-- **Workflow Optimization Features**: Streamlined tools for managing your digital presence
-- **Performance Insights**: Analytics and reporting to help you understand your progress
+- **Social Media Growth**: Followers, subscribers, and page likes for platforms like Instagram, TikTok, YouTube, Facebook, Twitter/X, Telegram, and more
+- **Engagement Services**: Likes, views, comments, shares, saves, and reactions to boost content visibility
+- **Content Promotion**: Video views, story views, reel plays, and impression boosts
+- **Analytics & Tracking**: Real-time order tracking, delivery status, and performance insights
 
-Our services are designed to complement your existing marketing efforts and support your long-term digital strategy.`
+Service delivery is handled through trusted third-party providers. Results may vary based on platform algorithms and provider capacity.`
     },
     {
       id: 'account-responsibilities',
@@ -48,11 +48,13 @@ You are solely responsible for ensuring that your use of our services complies w
       title: '4. Service Usage Guidelines',
       content: `We are committed to responsible service delivery. When using our platform, you agree to:
 
-- Use services in accordance with third-party platform terms and policies
-- Maintain authentic engagement practices
-- Respect balanced pacing and sustainable delivery methods
-- Not use services for any unlawful or prohibited purposes
-- Not attempt to circumvent any platform limitations or security measures
+- Provide valid, publicly accessible social media account links or URLs for all orders
+- Only use accounts that you own or have explicit authorization to manage
+- Not use stolen, hacked, or fraudulently obtained accounts
+- Use services in accordance with third-party social media platform terms and policies
+- Not use services for any unlawful, harassing, or prohibited purposes
+- Not attempt to circumvent any platform limitations, rate limits, or security measures
+- Accept that some services may experience natural drops due to platform algorithm changes
 
 We reserve the right to refuse service or terminate accounts that violate these guidelines.`
     },
@@ -74,11 +76,13 @@ All transactions are processed securely through trusted payment providers.`
       title: '6. Service Delivery',
       content: `Service delivery is provided with optimized timing and balanced pacing:
 
-- **Processing**: Orders are processed promptly after confirmation
-- **Timeline**: Estimated completion times are provided as guidance only
-- **Status Tracking**: Real-time order status is available through your dashboard
-- **No Guarantees**: We do not guarantee specific outcomes or results from any service
-- **Third-Party Factors**: Delivery may be affected by external platform changes or policies
+- **Processing**: Orders are processed promptly after confirmation and sent to our trusted providers
+- **Gradual Delivery**: Most services are delivered gradually to mimic organic growth patterns
+- **Timeline**: Estimated completion times are provided as guidance only and may vary by service type
+- **Status Tracking**: Real-time order status, start count, and remaining count are available through your dashboard
+- **Drop Protection**: Some services include drop protection or refill guarantees — check individual service descriptions
+- **Natural Drops**: Minor fluctuations in counts (likes, followers, views) may occur due to platform algorithm updates and are not considered service failures
+- **Third-Party Factors**: Delivery may be affected by external social media platform changes, API updates, or provider capacity
 
 We strive to provide consistent, quality service while respecting platform guidelines.`
     },
@@ -173,7 +177,7 @@ By using our services, you consent to the data practices described in this polic
       content: `We collect information necessary to provide and improve our services:
 
 **Account Information:**
-- Email address and username
+- Full name, email address, and username
 - Password (encrypted and securely stored)
 - Profile preferences and settings
 

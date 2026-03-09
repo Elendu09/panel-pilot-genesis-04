@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { 
   Package, 
   Plus, 
@@ -40,7 +40,8 @@ import {
   BarChart2,
   Tag,
   Star,
-  Info
+  Info,
+  Zap
 } from "lucide-react";
 import {
   Tooltip,
@@ -212,6 +213,7 @@ const ITEMS_PER_PAGE_OPTIONS = [25, 50, 100, 200];
 
 const ServicesManagement = () => {
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
   const { panel, resolvedTier, loading: panelLoading } = usePanel();
 
   const SERVICE_LIMITS: Record<string, number> = {
@@ -2172,6 +2174,52 @@ const ServicesManagement = () => {
           ))}
         </div>
       </TooltipProvider>
+
+      {/* Quick Action Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <Card 
+          className="cursor-pointer border border-border/50 hover:border-primary/30 transition-all hover:shadow-lg group"
+          onClick={() => setIsAddDialogOpen(true)}
+        >
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+              <Plus className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-sm">Add Service</h3>
+              <p className="text-xs text-muted-foreground">Create a new service manually</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card 
+          className="cursor-pointer border border-border/50 hover:border-primary/30 transition-all hover:shadow-lg group"
+          onClick={() => setIsImportDialogOpen(true)}
+        >
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-500 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+              <Download className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-sm">Import Services</h3>
+              <p className="text-xs text-muted-foreground">Import from a provider API</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card 
+          className="cursor-pointer border border-border/50 hover:border-primary/30 transition-all hover:shadow-lg group"
+          onClick={() => navigate('/panel/providers?tab=marketplace')}
+        >
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-500 group-hover:bg-amber-500 group-hover:text-white transition-colors">
+              <Zap className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-sm">Direct Providers</h3>
+              <p className="text-xs text-muted-foreground">Connect to marketplace panels</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Service Tools Cards */}
       <ServiceToolsCards
