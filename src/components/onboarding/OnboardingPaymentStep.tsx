@@ -24,6 +24,7 @@ interface OnboardingPaymentStepProps {
   onPaymentSuccess: () => void;
   onSkip?: () => void;
   paymentCompleted?: boolean;
+  trialStarted?: boolean;
 }
 
 const planPrices = { basic: 5, pro: 15 };
