@@ -569,6 +569,9 @@ const PanelOverview = () => {
         <meta name="robots" content="noindex,nofollow" />
       </Helmet>
 
+      {/* Trial Expiry Banner */}
+      <TrialExpiryBanner panelId={panelData?.id} />
+
       {/* Enhanced Welcome Header with Stacked Cards Effect */}
       <div className="relative isolate pt-6 sm:pt-8">
         {/* Stack card 2 (furthest back) - visible at top */}
