@@ -293,6 +293,10 @@ export const OnboardingPaymentStep = ({
                 <span className="flex items-center gap-1 text-emerald-500">
                   <CheckCircle2 className="w-5 h-5" /> Paid
                 </span>
+              ) : trialStarted ? (
+                <span className="flex items-center gap-1 text-amber-500">
+                  <Clock className="w-5 h-5" /> Trial
+                </span>
               ) : (
                 `$${planPrices[selectedPlan]}/mo`
               )}
