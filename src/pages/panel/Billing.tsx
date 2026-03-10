@@ -546,6 +546,9 @@ const Billing = () => {
         <p className="text-muted-foreground">Manage your subscription, balance, and pricing plans</p>
       </motion.div>
 
+      {/* Trial Expiry Banner */}
+      <TrialExpiryBanner panelId={panel?.id} />
+
       {/* Overview Cards Row */}
       <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Balance Card */}
