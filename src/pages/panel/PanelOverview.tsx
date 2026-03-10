@@ -44,6 +44,7 @@ import { calculateChange, getPreviousPeriodRange } from '@/lib/analytics-utils';
 import SubdomainPreview from '@/components/panel/SubdomainPreview';
 import { RecommendedProviderWidget } from '@/components/dashboard/RecommendedProviderWidget';
 import { Skeleton } from '@/components/ui/skeleton';
+import { TrialExpiryBanner } from '@/components/billing/TrialExpiryBanner';
 
 interface LiveOrder {
   id: string;
@@ -568,6 +569,9 @@ const PanelOverview = () => {
         <meta name="description" content="Manage your SMM panel, track orders and revenue." />
         <meta name="robots" content="noindex,nofollow" />
       </Helmet>
+
+      {/* Trial Expiry Banner */}
+      <TrialExpiryBanner panelId={panelData?.id} />
 
       {/* Enhanced Welcome Header with Stacked Cards Effect */}
       <div className="relative isolate pt-6 sm:pt-8">

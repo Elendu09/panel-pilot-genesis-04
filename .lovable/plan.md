@@ -1,127 +1,99 @@
 
 
-# Plan: Trial vs Paid Differentiation, Trial Expiry System, Branding Fixes
+# Plan: Fix Build Errors, Header Toggle, Admin Functions, Subdomain, Payment & Import
 
-## Problem Summary
+## Overview
 
-1. **Trial sets paymentCompleted=true** — clicking "Start Free Trial" marks the onboarding as fully paid, showing the green "Paid" badge. This is wrong: trial should show "Trial" status, not "Paid".
-2. **No trial expiry handling** — after 3 days, nothing happens. No reminders, no downgrade, no lock.
-3. **Billing page doesn't show trial status** — no banner warning about trial countdown, no way to subscribe from locked panel state.
-4. **Terms page describes reselling SMM services** — should describe creating/managing SMM panels (platform-as-a-service).
-5. **"SMMPilot" branding** still appears in ~10 files (Helmet titles, meta tags, legal text, 2FA downloads).
-6. **Panel Not Found pages** have no "Create Panel" link to homeofsmm.com.
+This plan addresses 5 areas: (1) fix all 12 build errors in edge functions, (2) replace ThemeToggle with a header visibility switch in MoreMenu, (3) fix admin pages that call non-existent `admin-data` function, (4) restore `smmpilot.online` as the subdomain suffix, and (5) fix payment verification status updates.
 
 ---
 
-## 1. Fix Trial vs Paid State in Onboarding
+## 1. Fix Build Errors (12 TypeScript errors across 6 edge functions)
 
-**Root cause**: `onSkip` callback in `PanelOnboardingV2.tsx` (line 797) sets `paymentCompleted: true` and persists it. The `OnboardingPaymentStep` then shows the "Paid" banner.
+| File | Error | Fix |
+|------|-------|-----|
+| `dns-lookup/index.ts` L210, L295 | `'error' is of type 'unknown'` | Cast to `(error as Error).message` |
+| `domain-health-check/index.ts` L167 | TXT returns `string[][]` not `string[]` | Cast: `as unknown as string[]` or flatten |
+| `import-provider-services/index.ts` L612 | `'error' is of type 'unknown'` | Cast to `(error as Error).message` |
+| `mfa-setup/index.ts` L59, L85 | `Uint8Array` not assignable to `BufferSource` | Cast: `key as unknown as ArrayBuffer` or use `.buffer` |
+| `security-audit/index.ts` L89 | `'err' is of type 'unknown'` | Cast to `(err as Error).message` |
+| `serve-favicon/index.ts` L100-101 | `custom_branding` not on array type | Add `.single()` type assertion or check `Array.isArray` |
+| `webhook-notify/index.ts` L191 | `string | null` not assignable to fetch | Add null guard before fetch |
+| `webhook-notify/index.ts` L232-233 | `supabaseAdmin.rpc` always truthy, `.raw` doesn't exist | Replace with simple `failure_count: 1` (increment via SQL or just set 1) |
 
-**Fix**: Introduce a `trialStarted` state separate from `paymentCompleted`.
+## 2. MoreMenu: Replace ThemeToggle with Header Menu Icon Toggle
 
-### Changes to `PanelOnboardingV2.tsx`:
-- Add `trialStarted` state alongside `paymentCompleted`
-- `onSkip` sets `trialStarted = true` (NOT `paymentCompleted = true`) and persists `{ trialStarted: true, paymentCompleted: false }` in `onboarding_data`
-- `markStepComplete` still fires so user can proceed
-- `handlePaymentSuccess` sets `paymentCompleted = true, trialStarted = false`
-- Pass both `paymentCompleted` and `trialStarted` to `OnboardingPaymentStep`
+Replace `<ThemeToggle />` in the user profile card with a `<Switch>` component labeled "Show Menu Icon" that controls whether the hamburger/menu icon appears in the mobile header.
 
-### Changes to `OnboardingPaymentStep.tsx`:
-- Accept new `trialStarted` prop
-- When `trialStarted && !paymentCompleted`: show an amber "Trial Active" banner (not green "Paid") with trial end date, and a "Subscribe Now" button
-- When `paymentCompleted`: show green "Paid" banner (existing behavior)
-- The "Next" button works in both states (trial or paid)
-- Remove setting `subscription_status: 'trial'` as "active" subscription status — keep it as `trial`
+- Store setting in `localStorage` key `header-menu-visible` (default: `false` = disabled = hidden)
+- Create a simple context or use localStorage directly; the header component reads this value
+- The switch is only rendered in mobile mode (use `useIsMobile()`)
+- When enabled → show the hamburger menu icon in the dashboard header
+- When disabled → hide it (current default behavior for clean mobile UI)
 
----
+## 3. Fix Admin Pages — Replace `admin-data` with Direct Supabase Calls
 
-## 2. Trial Expiry & Reminder System
+Six admin pages call `/functions/v1/admin-data` which **does not exist** as an edge function. The existing function is `admin-panel-ops` (handles add_funds, update_subscription, bulk_update only — not data fetching).
 
-### A. Trial banner on Panel Dashboard
-**New component**: `TrialExpiryBanner.tsx`
-- Fetches `panel_subscriptions.trial_ends_at` for the active panel
-- If trial is active: shows countdown banner ("Your trial ends in X days — Subscribe now")
-- If trial expired: shows urgent red banner ("Trial expired — your panel is locked. Subscribe to continue")
-- Renders at the top of panel dashboard layout (`PanelLayout` or `PanelOverview`)
+**Fix**: Replace `fetch('/functions/v1/admin-data', ...)` calls with direct `supabase.from(...)` queries using the service role via RLS policies (admin already has `is_any_admin` policies on panels).
 
-### B. Trial expiry enforcement in `usePanel.tsx`
-- When fetching panel data, check if `subscription_status === 'trial'` and `trial_ends_at < now`
-- If expired: auto-set `subscription_status` to `expired` and `subscription_tier` to `free`
-- Mark panel as locked until payment is made
+Affected pages and their replacement queries:
+- **`PanelManagement.tsx`**: `get_panels` → `supabase.from('panels').select('*, owner:profiles!panels_owner_id_fkey(email, full_name), subscription:panel_subscriptions(plan_type, status)')` 
+- **`AdminOverview.tsx`**: `get_dashboard_stats` → aggregate from panels, orders, transactions, client_users tables
+- **`UserManagement.tsx`**: `get_users` → `supabase.from('profiles').select('*')`
+- **`PaymentManagement.tsx`**: `get_transactions` → `supabase.from('transactions').select('*')`
+- **`SystemHealth.tsx`**: `get_system_health` → compute from table counts
+- **`SupportTickets.tsx`**: `get_tickets` / `update_ticket` → `supabase.from('support_tickets').select/update`
 
-### C. Billing page trial awareness
-**Changes to `Billing.tsx`**:
-- Show trial badge on "Current Plan" card when `subscription_status === 'trial'`
-- Add trial countdown banner at the top with "Subscribe Now" button that triggers `handleUpgrade`
-- After trial expiry, the plan cards show "Subscribe" instead of "Upgrade" for the plan they were trialing
+Also fix CORS on `admin-panel-ops/index.ts` (line 5 missing platform headers).
 
----
+## 4. Restore Subdomain Suffix to `smmpilot.online`
 
-## 3. Billing Page as Subscription Hub for Locked Panels
+Update references in:
+- `tenant-domain-config.ts`: Change default fallback from `homeofsmm.com` to `smmpilot.online` (line 39)
+- `generate-sitemap/index.ts`: Change `homeofsmm.com` URLs to `smmpilot.online`
+- `docs/DocsHub.tsx`: Change example URLs from `homeofsmm.com` to `smmpilot.online`
+- Remove Replit patterns from `DEV_PATTERNS` in `tenant-domain-config.ts` (lines 80-83) and `TenantRouter.tsx` (lines 39-42)
+- Keep `homeofsmm.com` in `PLATFORM_DOMAINS` array (it's the brand) but ensure `smmpilot.online` is primary for subdomains
 
-Currently if a panel is locked (downgrade or trial expiry), there's no way to subscribe from the billing page.
+## 5. Fix Payment Verification & Subscription Upgrade Flow
 
-**Changes to `Billing.tsx`**:
-- Detect if panel is locked via `isPanelLocked` from `usePanel`
-- Show prominent "Panel Locked" alert with subscribe action
-- Plan cards remain functional for subscription even when locked
+### Deposit status not updating in transaction history
+The verification flow in `Billing.tsx` (lines 183-226) already calls `verify-payment` on return. The issue is timing — if the gateway hasn't confirmed yet, verification returns `pending`. 
 
----
+**Fix**: Add a retry loop (poll 3 times with 5s intervals) when status comes back as `pending` after returning from payment.
 
-## 4. Terms of Service Rewrite
-
-The Terms page currently describes Home of SMM as an "intermediary between SMM service providers and end users" (reselling). It should describe it as a **platform for creating and managing SMM panels**.
-
-**Changes to `Terms.tsx`**:
-- Section 1: "Home of SMM is a platform that enables entrepreneurs to create, manage, and operate their own Social Media Marketing (SMM) panels"
-- Section 2: Replace service list with panel creation features — panel setup, service management, team management, payment integration, custom domains, analytics
-- Section 3: User responsibilities for panel owners (managing their own buyers, service quality, compliance)
-- Section 4: Platform fees, subscription billing, trial periods
-- Section 5: Platform availability, uptime commitments
-- Section 6: Liability for panel operations vs platform infrastructure
-- All references to "SMMPilot" replaced with "Home of SMM"
+### Subscription upgrade from balance
+Currently `handleUpgrade` always goes through the payment gateway. Add an option to pay from panel balance:
+- Before calling `process-payment`, check if `panelBalance >= plan.price`
+- Show a dialog asking: "Pay from balance ($X available) or use payment gateway?"
+- If balance: directly deduct from `panels.balance`, create completed transaction, update subscription — all via a new `balance-payment` action in `process-payment`
 
 ---
 
-## 5. Branding: Replace "SMMPilot" with "Home of SMM"
+## Files to Change
 
-Files to update (Helmet titles, meta tags, text content):
 | File | Change |
 |------|--------|
-| `src/pages/Terms.tsx` | Title, canonical, all body text |
-| `src/pages/Privacy.tsx` | Title, canonical |
-| `src/pages/panel/Billing.tsx` | Helmet title |
-| `src/pages/panel/TransactionHistoryPage.tsx` | Helmet title |
-| `src/pages/panel/SecuritySettings.tsx` | Helmet title |
-| `src/pages/panel/GeneralSettings.tsx` | Helmet title |
-| `src/pages/admin/AdminOverview.tsx` | Helmet title |
-| `src/pages/admin/PlatformSettings.tsx` | Default settings values |
-| `src/components/auth/TwoFactorSetup.tsx` | Backup codes header |
-| `src/hooks/use-webhooks.tsx` | Test webhook message |
-
----
-
-## 6. Panel Not Found — Add "Create Panel" Link
-
-**Changes to `Storefront.tsx`** (Panel Not Found block) and `FastOrder.tsx`:
-- Add a "Create Your Own Panel" button/link pointing to `https://homeofsmm.com/auth`
-- Styled as secondary action below the error message
-
----
-
-## Files to Create/Modify
-
-| File | Action |
-|------|--------|
-| `src/components/billing/TrialExpiryBanner.tsx` | **Create** — trial countdown + expiry alert |
-| `src/components/onboarding/OnboardingPaymentStep.tsx` | **Modify** — add `trialStarted` prop, show trial vs paid states |
-| `src/pages/panel/PanelOnboardingV2.tsx` | **Modify** — separate `trialStarted` from `paymentCompleted` |
-| `src/pages/panel/Billing.tsx` | **Modify** — trial awareness, locked panel subscription |
-| `src/pages/panel/PanelOverview.tsx` | **Modify** — render `TrialExpiryBanner` |
-| `src/hooks/usePanel.tsx` | **Modify** — trial expiry check |
-| `src/pages/Terms.tsx` | **Modify** — full rewrite for panel-creation platform |
-| `src/pages/Privacy.tsx` | **Modify** — branding fix |
-| `src/pages/Storefront.tsx` | **Modify** — add create panel link |
-| `src/pages/FastOrder.tsx` | **Modify** — add create panel link |
-| ~8 more files | **Modify** — "SMMPilot" → "Home of SMM" in titles/meta |
+| `supabase/functions/dns-lookup/index.ts` | Cast error types |
+| `supabase/functions/domain-health-check/index.ts` | Fix TXT record type |
+| `supabase/functions/import-provider-services/index.ts` | Cast error type |
+| `supabase/functions/mfa-setup/index.ts` | Fix crypto key type |
+| `supabase/functions/security-audit/index.ts` | Cast error type |
+| `supabase/functions/serve-favicon/index.ts` | Fix panel type check |
+| `supabase/functions/webhook-notify/index.ts` | Fix null check + remove `.rpc`/`.raw` |
+| `supabase/functions/admin-panel-ops/index.ts` | Fix CORS headers |
+| `src/pages/panel/MoreMenu.tsx` | Replace ThemeToggle with header menu switch |
+| `src/pages/admin/PanelManagement.tsx` | Replace admin-data with direct Supabase |
+| `src/pages/admin/AdminOverview.tsx` | Replace admin-data with direct Supabase |
+| `src/pages/admin/UserManagement.tsx` | Replace admin-data with direct Supabase |
+| `src/pages/admin/PaymentManagement.tsx` | Replace admin-data with direct Supabase |
+| `src/pages/admin/SystemHealth.tsx` | Replace admin-data with direct Supabase |
+| `src/pages/admin/SupportTickets.tsx` | Replace admin-data with direct Supabase |
+| `src/lib/tenant-domain-config.ts` | Fix default domain, remove Replit |
+| `src/pages/TenantRouter.tsx` | Remove Replit patterns |
+| `supabase/functions/generate-sitemap/index.ts` | Fix URLs |
+| `src/pages/docs/DocsHub.tsx` | Fix example URLs |
+| `src/pages/panel/Billing.tsx` | Add retry polling, balance payment option |
+| `supabase/functions/process-payment/index.ts` | Add balance-payment action |
 

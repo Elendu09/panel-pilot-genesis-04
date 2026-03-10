@@ -72,6 +72,7 @@ const PanelOnboardingV2 = () => {
   const [createdPanelId, setCreatedPanelId] = useState<string | null>(null);
   const createdPanelIdRef = useRef<string | null>(null);
   const [paymentCompleted, setPaymentCompleted] = useState(false);
+  const [trialStarted, setTrialStarted] = useState(false);
   const [currency, setCurrency] = useState('USD');
   const [domainVerificationState, setDomainVerificationState] = useState<{ step: 'configure' | 'txt-pending' | 'dns-pending' | 'verified'; token: string | null }>({ step: 'configure', token: null });
   
@@ -176,6 +177,7 @@ const PanelOnboardingV2 = () => {
             if (savedData.primaryColor) setPrimaryColor(savedData.primaryColor);
             if (savedData.secondaryColor) setSecondaryColor(savedData.secondaryColor);
             if (savedData.paymentCompleted) setPaymentCompleted(savedData.paymentCompleted);
+            if (savedData.trialStarted) setTrialStarted(savedData.trialStarted);
             if (savedData.selectedTheme) setSelectedTheme(savedData.selectedTheme);
             if (savedData.brandingMode) setBrandingMode(savedData.brandingMode);
             if (savedData.seoTitle) setSeoTitle(savedData.seoTitle);
@@ -190,10 +192,11 @@ const PanelOnboardingV2 = () => {
             }
           }
           
-          // If subscription is already active/trial, mark payment as completed
-          if (incompletePanel.subscription_status && 
-              ['active', 'trial'].includes(incompletePanel.subscription_status)) {
+          // If subscription is already active, mark payment as completed. If trial, mark trial.
+          if (incompletePanel.subscription_status === 'active') {
             setPaymentCompleted(true);
+          } else if (incompletePanel.subscription_status === 'trial') {
+            setTrialStarted(true);
           }
           
           if (incompletePanel.default_currency) {
@@ -792,15 +795,18 @@ const PanelOnboardingV2 = () => {
               panelId={createdPanelIdRef.current || undefined}
               onPaymentSuccess={handlePaymentSuccess}
               paymentCompleted={paymentCompleted}
+              trialStarted={trialStarted}
               onSkip={async () => {
-                // Trial: mark payment as done but don't auto-advance
-                setPaymentCompleted(true);
+                // Trial: mark trial started but NOT payment completed
+                setTrialStarted(true);
+                setPaymentCompleted(false);
                 markStepComplete(currentStep);
                 // Persist to DB
                 if (createdPanelIdRef.current) {
                   const progressData = {
                     panelName, description, selectedPlan, subdomain, customDomain,
-                    domainType, primaryColor, secondaryColor, paymentCompleted: true,
+                    domainType, primaryColor, secondaryColor, paymentCompleted: false,
+                    trialStarted: true,
                     selectedTheme, brandingMode, seoTitle, seoDescription, seoKeywords, currency
                   };
                   await supabase.from('panels').update({

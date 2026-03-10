@@ -456,7 +456,12 @@ const FastOrderContent = () => {
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">Panel Not Found</h1>
           <p className="text-muted-foreground mb-6">{error || 'Unable to load panel data'}</p>
-          <Button onClick={() => navigate('/')}>Go Home</Button>
+          <div className="flex gap-3 justify-center">
+            <Button onClick={() => navigate('/')}>Go Home</Button>
+            <Button variant="outline" asChild>
+              <a href="https://homeofsmm.com/auth">Create Your Own Panel</a>
+            </Button>
+          </div>
         </div>
       </div>
     );

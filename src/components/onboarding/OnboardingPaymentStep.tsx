@@ -24,6 +24,7 @@ interface OnboardingPaymentStepProps {
   onPaymentSuccess: () => void;
   onSkip?: () => void;
   paymentCompleted?: boolean;
+  trialStarted?: boolean;
 }
 
 const planPrices = { basic: 5, pro: 15 };
@@ -37,7 +38,7 @@ const planGradient = {
 };
 
 export const OnboardingPaymentStep = ({ 
-  selectedPlan, panelId, onPaymentSuccess, onSkip, paymentCompleted = false
+  selectedPlan, panelId, onPaymentSuccess, onSkip, paymentCompleted = false, trialStarted = false
 }: OnboardingPaymentStepProps) => {
   const { toast } = useToast();
   const [providers, setProviders] = useState<PaymentProvider[]>([]);
@@ -159,7 +160,7 @@ export const OnboardingPaymentStep = ({
         panel_id: panelId,
         plan_type: selectedPlan,
         price: planPrices[selectedPlan],
-        status: 'active' as any,
+        status: 'trial' as any,
         started_at: new Date().toISOString(),
         expires_at: trialEndsAt.toISOString(),
         trial_ends_at: trialEndsAt.toISOString(),
@@ -202,12 +203,14 @@ export const OnboardingPaymentStep = ({
     <div className="space-y-6">
       <div className="text-center">
         <h2 className="text-2xl font-bold mb-2">
-          {paymentCompleted ? 'Payment Confirmed' : 'Complete Payment'}
+          {paymentCompleted ? 'Payment Confirmed' : trialStarted ? 'Trial Active' : 'Complete Payment'}
         </h2>
         <p className="text-muted-foreground">
           {paymentCompleted 
             ? `Your ${selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)} plan is active. Click Next to continue.`
-            : `Subscribe to ${selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)} plan`
+            : trialStarted
+              ? `Your 3-day trial for the ${selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)} plan is active. Subscribe anytime to continue after the trial.`
+              : `Subscribe to ${selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)} plan`
           }
         </p>
       </div>
@@ -229,8 +232,25 @@ export const OnboardingPaymentStep = ({
         </motion.div>
       )}
 
-      {/* Trial Notice — only when not yet paid */}
-      {!paymentCompleted && (
+      {/* Trial Active banner — amber, NOT green */}
+      {trialStarted && !paymentCompleted && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/10 flex items-center gap-3"
+        >
+          <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center shrink-0">
+            <Clock className="w-5 h-5 text-amber-500" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-amber-600">3-Day Trial Active</p>
+            <p className="text-xs text-muted-foreground">Your trial ends in 3 days. Subscribe before it expires to keep your panel active.</p>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Trial Notice — only when not yet paid AND not trialing */}
+      {!paymentCompleted && !trialStarted && (
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -273,6 +293,10 @@ export const OnboardingPaymentStep = ({
                 <span className="flex items-center gap-1 text-emerald-500">
                   <CheckCircle2 className="w-5 h-5" /> Paid
                 </span>
+              ) : trialStarted ? (
+                <span className="flex items-center gap-1 text-amber-500">
+                  <Clock className="w-5 h-5" /> Trial
+                </span>
               ) : (
                 `$${planPrices[selectedPlan]}/mo`
               )}
@@ -281,8 +305,8 @@ export const OnboardingPaymentStep = ({
         </CardContent>
       </Card>
 
-      {/* Payment Methods — hidden when already paid */}
-      {!paymentCompleted && (
+      {/* Payment Methods — hidden when already paid or trial started */}
+      {!paymentCompleted && !trialStarted && (
         <div className="space-y-3">
           <label className="text-sm font-medium">Select Payment Method</label>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -314,7 +338,7 @@ export const OnboardingPaymentStep = ({
       )}
 
       {/* Security */}
-      {!paymentCompleted && (
+      {!paymentCompleted && !trialStarted && (
         <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 text-sm text-muted-foreground">
           <Shield className="w-4 h-4 shrink-0" />
           <span>Your payment is secured with 256-bit SSL encryption</span>
@@ -323,7 +347,7 @@ export const OnboardingPaymentStep = ({
 
       {/* Actions */}
       <div className="flex gap-3">
-        {onSkip && !paymentCompleted && (
+        {onSkip && !paymentCompleted && !trialStarted && (
           <Button variant="outline" onClick={handleSkipWithTrial} className="flex-1">
             Start Free Trial
           </Button>
@@ -336,6 +360,14 @@ export const OnboardingPaymentStep = ({
             <Lock className="w-4 h-4" />
             Paid — ${planPrices[selectedPlan]}/mo
             <CheckCircle2 className="w-4 h-4" />
+          </Button>
+        ) : trialStarted ? (
+          <Button 
+            className="flex-1 gap-2 bg-amber-600 hover:bg-amber-600 cursor-default"
+            disabled
+          >
+            <Clock className="w-4 h-4" />
+            Trial Active — Click Next to continue
           </Button>
         ) : (
           <Button 

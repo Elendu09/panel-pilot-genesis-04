@@ -56,9 +56,9 @@ const Privacy = () => {
   return (
     <div className="min-h-screen bg-background">
       <Helmet>
-        <title>Privacy Policy - SMMPilot</title>
-        <meta name="description" content="Privacy policy for SMMPilot platform." />
-        <link rel="canonical" href="https://smmpilot.online/privacy" />
+        <title>Privacy Policy - Home of SMM</title>
+        <meta name="description" content="Privacy policy for the Home of SMM platform." />
+        <link rel="canonical" href="https://homeofsmm.com/privacy" />
       </Helmet>
       <Navigation />
       <div className="container mx-auto px-4 py-12">

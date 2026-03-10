@@ -7,11 +7,13 @@ import { cn } from "@/lib/utils";
 
 const sections = [
   { id: "acceptance", title: "Acceptance of Terms" },
-  { id: "service-description", title: "Service Description" },
+  { id: "platform-description", title: "Platform Description" },
   { id: "user-responsibilities", title: "User Responsibilities" },
-  { id: "payment-refunds", title: "Payment and Refunds" },
-  { id: "service-quality", title: "Service Quality" },
+  { id: "subscriptions", title: "Subscriptions & Billing" },
+  { id: "trial", title: "Free Trial Policy" },
+  { id: "platform-availability", title: "Platform Availability" },
   { id: "liability", title: "Limitation of Liability" },
+  { id: "termination", title: "Termination" },
   { id: "changes", title: "Changes to Terms" },
   { id: "contact", title: "Contact Information" },
 ];
@@ -19,7 +21,6 @@ const sections = [
 const Terms = () => {
   const [activeSection, setActiveSection] = useState("acceptance");
 
-  // IntersectionObserver for accurate active section tracking
   useEffect(() => {
     const observers: IntersectionObserver[] = [];
 
@@ -56,9 +57,9 @@ const Terms = () => {
   return (
     <div className="min-h-screen bg-background">
       <Helmet>
-        <title>Terms of Service - SMMPilot</title>
-        <meta name="description" content="Terms of service for SMMPilot platform." />
-        <link rel="canonical" href="https://smmpilot.online/terms" />
+        <title>Terms of Service - Home of SMM</title>
+        <meta name="description" content="Terms of service for the Home of SMM panel creation and management platform." />
+        <link rel="canonical" href="https://homeofsmm.com/terms" />
       </Helmet>
       <Navigation />
       <div className="container mx-auto px-4 py-12">
@@ -71,79 +72,116 @@ const Terms = () => {
               <section id="acceptance" className="scroll-mt-[100px]">
                 <h2 className="text-2xl font-semibold mb-4">1. Acceptance of Terms</h2>
                 <p className="text-muted-foreground leading-relaxed">
-                  By accessing and using SMMPilot, you accept and agree to be bound by these Terms of Service. 
-                  SMMPilot is a social media marketing (SMM) platform that enables panel owners and end users to purchase 
-                  engagement services such as likes, followers, views, comments, and shares across major social media platforms.
-                  If you do not agree, please do not use this service.
+                  By accessing and using Home of SMM, you accept and agree to be bound by these Terms of Service.
+                  Home of SMM is a platform-as-a-service (PaaS) that enables entrepreneurs, businesses, and individuals
+                  to create, manage, and operate their own Social Media Marketing (SMM) panels.
+                  If you do not agree to these terms, please do not use this platform.
                 </p>
               </section>
 
-              <section id="service-description" className="scroll-mt-[100px]">
-                <h2 className="text-2xl font-semibold mb-4">2. Service Description</h2>
+              <section id="platform-description" className="scroll-mt-[100px]">
+                <h2 className="text-2xl font-semibold mb-4">2. Platform Description</h2>
                 <p className="text-muted-foreground leading-relaxed mb-4">
-                  SMMPilot acts as an intermediary between SMM service providers and end users. Our platform allows panel owners to create 
-                  and manage their own SMM storefronts, connect to third-party providers, and offer services to their customers.
+                  Home of SMM provides the technology infrastructure for you to build and run your own SMM panel business.
+                  We are not a reseller of SMM services — we provide the tools for you to create your own storefront.
                 </p>
                 <ul className="list-disc pl-6 text-muted-foreground space-y-2">
-                  <li><strong>Social Media Growth</strong> — Followers, subscribers, and page likes for Instagram, TikTok, YouTube, Facebook, Twitter/X, Telegram, and more</li>
-                  <li><strong>Engagement Services</strong> — Likes, views, comments, shares, saves, and reactions</li>
-                  <li><strong>Content Promotion</strong> — Video views, story views, reel plays, and impression boosts</li>
-                  <li><strong>Analytics & Tracking</strong> — Real-time order tracking, delivery status, and performance insights</li>
+                  <li><strong>Panel Creation</strong> — Set up your own branded SMM panel with custom domain, themes, and branding</li>
+                  <li><strong>Service Management</strong> — Import, configure, and price services from your own providers</li>
+                  <li><strong>Customer Management</strong> — Manage buyer accounts, balances, and order fulfillment on your panel</li>
+                  <li><strong>Payment Integration</strong> — Connect your own payment gateways to accept payments from your customers</li>
+                  <li><strong>Analytics & Reporting</strong> — Track orders, revenue, and customer activity across your panel</li>
+                  <li><strong>Multi-Panel Support</strong> — Create and manage multiple panels from a single account (based on subscription tier)</li>
                 </ul>
               </section>
 
               <section id="user-responsibilities" className="scroll-mt-[100px]">
                 <h2 className="text-2xl font-semibold mb-4">3. User Responsibilities</h2>
+                <p className="text-muted-foreground leading-relaxed mb-4">
+                  As a panel owner on Home of SMM, you are responsible for:
+                </p>
                 <ul className="list-disc pl-6 text-muted-foreground space-y-2">
-                  <li>You must be at least 18 years old to use our services</li>
-                  <li>You are responsible for maintaining the confidentiality of your account credentials</li>
-                  <li>You must provide valid, publicly accessible social media URLs for orders</li>
-                  <li>You must only use accounts you own or are authorized to manage</li>
-                  <li>You agree not to use the service for any unlawful or prohibited purposes</li>
-                  <li>You understand that services are delivered gradually and may take time to complete</li>
+                  <li>You must be at least 18 years old to use our platform</li>
+                  <li>You are responsible for maintaining the security of your account and panel credentials</li>
+                  <li>You are solely responsible for the services you offer to your customers through your panel</li>
+                  <li>You must ensure your panel operations comply with all applicable laws in your jurisdiction</li>
+                  <li>You are responsible for handling customer disputes, refunds, and support on your own panel</li>
+                  <li>You must not use the platform for any unlawful, fraudulent, or prohibited purposes</li>
+                  <li>You agree to provide accurate information during registration and panel setup</li>
                 </ul>
               </section>
 
-              <section id="payment-refunds" className="scroll-mt-[100px]">
-                <h2 className="text-2xl font-semibold mb-4">4. Payment and Refunds</h2>
-                <p className="text-muted-foreground leading-relaxed">
-                  All payments are processed securely through trusted payment providers. The platform operates on a prepaid balance system. 
-                  Refunds are provided only when services cannot be delivered due to technical issues on our end. 
-                  No refunds will be provided for completed or partially delivered services. Minor count drops due to platform algorithms 
-                  are not considered service failures.
+              <section id="subscriptions" className="scroll-mt-[100px]">
+                <h2 className="text-2xl font-semibold mb-4">4. Subscriptions & Billing</h2>
+                <p className="text-muted-foreground leading-relaxed mb-4">
+                  Home of SMM operates on a subscription-based model with the following tiers:
+                </p>
+                <ul className="list-disc pl-6 text-muted-foreground space-y-2">
+                  <li><strong>Free Plan</strong> — 1 panel, basic features, subdomain only</li>
+                  <li><strong>Basic Plan ($5/mo)</strong> — Up to 2 panels, custom domain, full analytics, API access</li>
+                  <li><strong>Pro Plan ($15/mo)</strong> — Up to 5 panels, advanced features, priority support, white-label branding</li>
+                </ul>
+                <p className="text-muted-foreground leading-relaxed mt-4">
+                  All payments are processed through trusted third-party payment providers. Subscriptions renew automatically
+                  unless cancelled. A 5% platform commission applies to orders processed through your panel.
+                  Refunds for subscription fees are provided only in cases of service unavailability on our end.
                 </p>
               </section>
 
-              <section id="service-quality" className="scroll-mt-[100px]">
-                <h2 className="text-2xl font-semibold mb-4">5. Service Quality</h2>
+              <section id="trial" className="scroll-mt-[100px]">
+                <h2 className="text-2xl font-semibold mb-4">5. Free Trial Policy</h2>
                 <p className="text-muted-foreground leading-relaxed">
-                  While we strive to provide high-quality services, we cannot guarantee specific results or timelines. 
-                  Delivery depends on third-party provider capacity and social media platform algorithms. 
-                  Some services include drop protection or refill guarantees — check individual service descriptions for details.
+                  New users selecting a paid plan (Basic or Pro) receive a 3-day free trial. During the trial period,
+                  you have full access to all features of your selected plan. If payment is not made before the trial expires,
+                  your panel will be locked and downgraded to the Free plan. You may unlock your panel at any time by
+                  subscribing through the Billing page. No charges are incurred during the trial period.
+                </p>
+              </section>
+
+              <section id="platform-availability" className="scroll-mt-[100px]">
+                <h2 className="text-2xl font-semibold mb-4">6. Platform Availability</h2>
+                <p className="text-muted-foreground leading-relaxed">
+                  We strive to maintain 99.9% uptime for the Home of SMM platform. However, we do not guarantee
+                  uninterrupted service. Scheduled maintenance, updates, and unforeseen technical issues may cause
+                  temporary downtime. We will make reasonable efforts to notify users of planned maintenance in advance.
                 </p>
               </section>
 
               <section id="liability" className="scroll-mt-[100px]">
-                <h2 className="text-2xl font-semibold mb-4">6. Limitation of Liability</h2>
+                <h2 className="text-2xl font-semibold mb-4">7. Limitation of Liability</h2>
                 <p className="text-muted-foreground leading-relaxed">
-                  SMMPilot shall not be liable for any direct, indirect, incidental, or consequential damages arising from 
-                  the use of our services, including but not limited to account suspensions by third-party platforms, 
-                  follower/like drops, or delivery delays caused by external factors.
+                  Home of SMM provides the technology platform only. We are not responsible for the services you sell
+                  through your panel, the quality of third-party providers you connect to, or any disputes between you
+                  and your customers. Home of SMM shall not be liable for any direct, indirect, incidental, or
+                  consequential damages arising from the use of our platform, including loss of revenue, data, or
+                  business opportunities.
+                </p>
+              </section>
+
+              <section id="termination" className="scroll-mt-[100px]">
+                <h2 className="text-2xl font-semibold mb-4">8. Termination</h2>
+                <p className="text-muted-foreground leading-relaxed">
+                  We reserve the right to suspend or terminate your account and panels if you violate these terms,
+                  engage in fraudulent activity, or fail to pay subscription fees. You may cancel your subscription
+                  and delete your panels at any time through your dashboard. Upon termination, your panel data may
+                  be retained for up to 30 days before permanent deletion.
                 </p>
               </section>
 
               <section id="changes" className="scroll-mt-[100px]">
-                <h2 className="text-2xl font-semibold mb-4">7. Changes to Terms</h2>
+                <h2 className="text-2xl font-semibold mb-4">9. Changes to Terms</h2>
                 <p className="text-muted-foreground leading-relaxed">
                   We reserve the right to modify these terms at any time. Changes will be effective immediately upon
-                  posting on the platform. Continued use constitutes acceptance of updated terms.
+                  posting on the platform. We will notify users of significant changes via email or platform notification.
+                  Continued use constitutes acceptance of updated terms.
                 </p>
               </section>
 
               <section id="contact" className="scroll-mt-[100px]">
-                <h2 className="text-2xl font-semibold mb-4">8. Contact Information</h2>
+                <h2 className="text-2xl font-semibold mb-4">10. Contact Information</h2>
                 <p className="text-muted-foreground leading-relaxed">
-                  For questions about these Terms of Service, please contact our support team through the platform dashboard.
+                  For questions about these Terms of Service, please contact our support team at{' '}
+                  <a href="mailto:support@homeofsmm.com" className="text-primary hover:underline">support@homeofsmm.com</a>.
                 </p>
               </section>
             </div>

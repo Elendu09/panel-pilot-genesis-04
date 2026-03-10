@@ -112,12 +112,12 @@ export function TwoFactorSetup({ onStatusChange }: TwoFactorSetupProps) {
   };
 
   const downloadBackupCodes = () => {
-    const content = `SMMPilot 2FA Backup Codes\n${'='.repeat(30)}\n\n${backupCodes.join('\n')}\n\nEach code can only be used once.\nStore these codes in a safe place.`;
+    const content = `Home of SMM 2FA Backup Codes\n${'='.repeat(30)}\n\n${backupCodes.join('\n')}\n\nEach code can only be used once.\nStore these codes in a safe place.`;
     const blob = new Blob([content], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'smmpilot-2fa-backup-codes.txt';
+    a.download = 'homeofsmm-2fa-backup-codes.txt';
     a.click();
     URL.revokeObjectURL(url);
   };

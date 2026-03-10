@@ -677,7 +677,7 @@ const SecuritySettings = () => {
   return (
     <div className="space-y-6">
       <Helmet>
-        <title>Security Settings | SMMPilot Panel</title>
+        <title>Security Settings | Home of SMM</title>
         <meta name="description" content="Configure authentication, 2FA, sessions, IP rules and audit logs for your panel." />
         <meta name="robots" content="noindex,nofollow" />
         <link rel="canonical" href={canonicalUrl} />

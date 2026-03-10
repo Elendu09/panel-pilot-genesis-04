@@ -24,6 +24,7 @@ import { motion } from 'framer-motion';
 
 import { CommissionTracker } from '@/components/billing/CommissionTracker';
 import { QuickDeposit } from '@/components/billing/QuickDeposit';
+import { TrialExpiryBanner } from '@/components/billing/TrialExpiryBanner';
 import { usePanel } from '@/hooks/usePanel';
 import { useAdminPaymentGateways } from '@/hooks/useAdminPaymentGateways';
 
@@ -535,7 +536,7 @@ const Billing = () => {
       className="space-y-6"
     >
       <Helmet>
-        <title>Billing & Subscription - SMMPilot</title>
+        <title>Billing & Subscription - Home of SMM</title>
         <meta name="robots" content="noindex,nofollow" />
       </Helmet>
 
@@ -544,6 +545,9 @@ const Billing = () => {
         <h1 className="text-2xl md:text-3xl font-bold">Billing & Subscription</h1>
         <p className="text-muted-foreground">Manage your subscription, balance, and pricing plans</p>
       </motion.div>
+
+      {/* Trial Expiry Banner */}
+      <TrialExpiryBanner panelId={panel?.id} />
 
       {/* Overview Cards Row */}
       <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -585,7 +589,9 @@ const Billing = () => {
               <p className="text-2xl lg:text-3xl font-bold capitalize">{currentPlan}</p>
               <Badge className={cn(
                 "capitalize",
-                subscription?.status === 'active' && "bg-emerald-500/20 text-emerald-500"
+                subscription?.status === 'active' && "bg-emerald-500/20 text-emerald-500",
+                (subscription?.status as any) === 'trial' && "bg-amber-500/20 text-amber-500",
+                subscription?.status === 'expired' && "bg-destructive/20 text-destructive"
               )}>
                 {subscription?.status || 'active'}
               </Badge>
