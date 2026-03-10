@@ -205,7 +205,7 @@ const AdminOverview = () => {
     return (
       <div className="space-y-6">
         <Helmet>
-          <title>Admin Overview - SMMPilot Platform</title>
+          <title>Admin Overview - Home of SMM Platform</title>
           <meta name="description" content="Platform overview and management dashboard for super administrators." />
           <meta name="robots" content="noindex,nofollow" />
         </Helmet>
