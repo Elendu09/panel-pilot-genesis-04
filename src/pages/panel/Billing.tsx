@@ -589,7 +589,9 @@ const Billing = () => {
               <p className="text-2xl lg:text-3xl font-bold capitalize">{currentPlan}</p>
               <Badge className={cn(
                 "capitalize",
-                subscription?.status === 'active' && "bg-emerald-500/20 text-emerald-500"
+                subscription?.status === 'active' && "bg-emerald-500/20 text-emerald-500",
+                (subscription?.status as any) === 'trial' && "bg-amber-500/20 text-amber-500",
+                subscription?.status === 'expired' && "bg-destructive/20 text-destructive"
               )}>
                 {subscription?.status || 'active'}
               </Badge>
