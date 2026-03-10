@@ -305,8 +305,8 @@ export const OnboardingPaymentStep = ({
         </CardContent>
       </Card>
 
-      {/* Payment Methods — hidden when already paid */}
-      {!paymentCompleted && (
+      {/* Payment Methods — hidden when already paid or trial started */}
+      {!paymentCompleted && !trialStarted && (
         <div className="space-y-3">
           <label className="text-sm font-medium">Select Payment Method</label>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -338,7 +338,7 @@ export const OnboardingPaymentStep = ({
       )}
 
       {/* Security */}
-      {!paymentCompleted && (
+      {!paymentCompleted && !trialStarted && (
         <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 text-sm text-muted-foreground">
           <Shield className="w-4 h-4 shrink-0" />
           <span>Your payment is secured with 256-bit SSL encryption</span>
@@ -347,7 +347,7 @@ export const OnboardingPaymentStep = ({
 
       {/* Actions */}
       <div className="flex gap-3">
-        {onSkip && !paymentCompleted && (
+        {onSkip && !paymentCompleted && !trialStarted && (
           <Button variant="outline" onClick={handleSkipWithTrial} className="flex-1">
             Start Free Trial
           </Button>
@@ -360,6 +360,14 @@ export const OnboardingPaymentStep = ({
             <Lock className="w-4 h-4" />
             Paid — ${planPrices[selectedPlan]}/mo
             <CheckCircle2 className="w-4 h-4" />
+          </Button>
+        ) : trialStarted ? (
+          <Button 
+            className="flex-1 gap-2 bg-amber-600 hover:bg-amber-600 cursor-default"
+            disabled
+          >
+            <Clock className="w-4 h-4" />
+            Trial Active — Click Next to continue
           </Button>
         ) : (
           <Button 
