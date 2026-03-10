@@ -160,7 +160,7 @@ export const OnboardingPaymentStep = ({
         panel_id: panelId,
         plan_type: selectedPlan,
         price: planPrices[selectedPlan],
-        status: 'active' as any,
+        status: 'trial' as any,
         started_at: new Date().toISOString(),
         expires_at: trialEndsAt.toISOString(),
         trial_ends_at: trialEndsAt.toISOString(),
