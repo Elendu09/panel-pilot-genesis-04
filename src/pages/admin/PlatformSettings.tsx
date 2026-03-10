@@ -57,9 +57,9 @@ const PlatformSettings = () => {
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("general");
   const [settings, setSettings] = useState({
-    platformName: "SMMPilot",
-    platformDescription: "The ultimate SMM panel management platform",
-    supportEmail: "support@smmpilot.online",
+    platformName: "Home of SMM",
+    platformDescription: "The ultimate SMM panel creation and management platform",
+    supportEmail: "support@homeofsmm.com",
     maintenanceMode: false,
     allowRegistration: true,
     requireEmailVerification: true,

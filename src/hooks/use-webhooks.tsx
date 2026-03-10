@@ -131,7 +131,7 @@ export const useWebhooks = () => {
       const { data, error } = await supabase.functions.invoke("webhook-notify", {
         body: {
           event: "test",
-          payload: { message: "Test webhook from SMMPilot" },
+          payload: { message: "Test webhook from Home of SMM" },
           webhookUrl,
         },
       });
