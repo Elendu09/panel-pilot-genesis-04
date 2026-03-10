@@ -535,7 +535,7 @@ const Billing = () => {
       className="space-y-6"
     >
       <Helmet>
-        <title>Billing & Subscription - SMMPilot</title>
+        <title>Billing & Subscription - Home of SMM</title>
         <meta name="robots" content="noindex,nofollow" />
       </Helmet>
 

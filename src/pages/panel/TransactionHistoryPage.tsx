@@ -13,7 +13,7 @@ const TransactionHistoryPage = () => {
       className="space-y-6"
     >
       <Helmet>
-        <title>Transaction History - SMMPilot</title>
+        <title>Transaction History - Home of SMM</title>
         <meta name="robots" content="noindex,nofollow" />
       </Helmet>
 

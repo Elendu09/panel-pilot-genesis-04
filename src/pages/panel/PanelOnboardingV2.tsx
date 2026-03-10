@@ -795,15 +795,18 @@ const PanelOnboardingV2 = () => {
               panelId={createdPanelIdRef.current || undefined}
               onPaymentSuccess={handlePaymentSuccess}
               paymentCompleted={paymentCompleted}
+              trialStarted={trialStarted}
               onSkip={async () => {
-                // Trial: mark payment as done but don't auto-advance
-                setPaymentCompleted(true);
+                // Trial: mark trial started but NOT payment completed
+                setTrialStarted(true);
+                setPaymentCompleted(false);
                 markStepComplete(currentStep);
                 // Persist to DB
                 if (createdPanelIdRef.current) {
                   const progressData = {
                     panelName, description, selectedPlan, subdomain, customDomain,
-                    domainType, primaryColor, secondaryColor, paymentCompleted: true,
+                    domainType, primaryColor, secondaryColor, paymentCompleted: false,
+                    trialStarted: true,
                     selectedTheme, brandingMode, seoTitle, seoDescription, seoKeywords, currency
                   };
                   await supabase.from('panels').update({

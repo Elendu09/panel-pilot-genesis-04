@@ -154,9 +154,15 @@ const Storefront = () => {
       <div className="min-h-screen flex items-center justify-center bg-slate-900">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-white mb-4">Panel Not Found</h1>
-          <p className="text-slate-400">
+          <p className="text-slate-400 mb-6">
             {tenantError || 'This panel is not available or has been deactivated.'}
           </p>
+          <a
+            href="https://homeofsmm.com/auth"
+            className="inline-flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-primary to-primary/80 text-white rounded-lg hover:opacity-90 transition-opacity text-sm font-medium"
+          >
+            Create Your Own Panel
+          </a>
         </div>
       </div>
     );
