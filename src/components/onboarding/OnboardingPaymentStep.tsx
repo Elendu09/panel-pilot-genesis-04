@@ -203,12 +203,14 @@ export const OnboardingPaymentStep = ({
     <div className="space-y-6">
       <div className="text-center">
         <h2 className="text-2xl font-bold mb-2">
-          {paymentCompleted ? 'Payment Confirmed' : 'Complete Payment'}
+          {paymentCompleted ? 'Payment Confirmed' : trialStarted ? 'Trial Active' : 'Complete Payment'}
         </h2>
         <p className="text-muted-foreground">
           {paymentCompleted 
             ? `Your ${selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)} plan is active. Click Next to continue.`
-            : `Subscribe to ${selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)} plan`
+            : trialStarted
+              ? `Your 3-day trial for the ${selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)} plan is active. Subscribe anytime to continue after the trial.`
+              : `Subscribe to ${selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)} plan`
           }
         </p>
       </div>
@@ -230,8 +232,25 @@ export const OnboardingPaymentStep = ({
         </motion.div>
       )}
 
-      {/* Trial Notice — only when not yet paid */}
-      {!paymentCompleted && (
+      {/* Trial Active banner — amber, NOT green */}
+      {trialStarted && !paymentCompleted && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/10 flex items-center gap-3"
+        >
+          <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center shrink-0">
+            <Clock className="w-5 h-5 text-amber-500" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-amber-600">3-Day Trial Active</p>
+            <p className="text-xs text-muted-foreground">Your trial ends in 3 days. Subscribe before it expires to keep your panel active.</p>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Trial Notice — only when not yet paid AND not trialing */}
+      {!paymentCompleted && !trialStarted && (
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
