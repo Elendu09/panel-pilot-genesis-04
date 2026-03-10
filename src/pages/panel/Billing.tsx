@@ -24,6 +24,7 @@ import { motion } from 'framer-motion';
 
 import { CommissionTracker } from '@/components/billing/CommissionTracker';
 import { QuickDeposit } from '@/components/billing/QuickDeposit';
+import { TrialExpiryBanner } from '@/components/billing/TrialExpiryBanner';
 import { usePanel } from '@/hooks/usePanel';
 import { useAdminPaymentGateways } from '@/hooks/useAdminPaymentGateways';
 
