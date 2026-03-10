@@ -361,7 +361,7 @@ const GeneralSettings = () => {
   return (
     <div className="space-y-6">
       <Helmet>
-        <title>Panel Settings | SMMPilot</title>
+        <title>Panel Settings | Home of SMM</title>
         <meta name="description" content="Configure your panel settings, SEO, branding, and order preferences." />
         <meta name="robots" content="noindex,nofollow" />
         <link rel="canonical" href={canonicalUrl} />
