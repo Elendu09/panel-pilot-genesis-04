@@ -63,6 +63,30 @@ export function usePanel() {
         return;
       }
 
+      // Check for expired trials and auto-downgrade
+      for (const p of panelList) {
+        if ((p as any).subscription_status === 'trial') {
+          const { data: sub } = await supabase
+            .from('panel_subscriptions')
+            .select('trial_ends_at')
+            .eq('panel_id', p.id)
+            .maybeSingle();
+          
+          if (sub?.trial_ends_at && new Date(sub.trial_ends_at) < new Date()) {
+            // Trial expired — auto-downgrade
+            await supabase.from('panels').update({
+              subscription_status: 'expired',
+              subscription_tier: 'free',
+            }).eq('id', p.id);
+            await supabase.from('panel_subscriptions').update({
+              status: 'expired' as any,
+            }).eq('panel_id', p.id);
+            (p as any).subscription_status = 'expired';
+            (p as any).subscription_tier = 'free';
+          }
+        }
+      }
+
       // Query panel_subscriptions for active plans to get the real tier
       const panelIds = panelList.map(p => p.id);
       const { data: subscriptions } = await supabase

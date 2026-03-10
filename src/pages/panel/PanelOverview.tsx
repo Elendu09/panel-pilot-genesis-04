@@ -44,6 +44,7 @@ import { calculateChange, getPreviousPeriodRange } from '@/lib/analytics-utils';
 import SubdomainPreview from '@/components/panel/SubdomainPreview';
 import { RecommendedProviderWidget } from '@/components/dashboard/RecommendedProviderWidget';
 import { Skeleton } from '@/components/ui/skeleton';
+import { TrialExpiryBanner } from '@/components/billing/TrialExpiryBanner';
 
 interface LiveOrder {
   id: string;
