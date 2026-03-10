@@ -192,10 +192,11 @@ const PanelOnboardingV2 = () => {
             }
           }
           
-          // If subscription is already active/trial, mark payment as completed
-          if (incompletePanel.subscription_status && 
-              ['active', 'trial'].includes(incompletePanel.subscription_status)) {
+          // If subscription is already active, mark payment as completed. If trial, mark trial.
+          if (incompletePanel.subscription_status === 'active') {
             setPaymentCompleted(true);
+          } else if (incompletePanel.subscription_status === 'trial') {
+            setTrialStarted(true);
           }
           
           if (incompletePanel.default_currency) {
