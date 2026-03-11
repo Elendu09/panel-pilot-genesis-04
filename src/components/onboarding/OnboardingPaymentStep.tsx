@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, CreditCard, ExternalLink, CheckCircle2, Shield, Clock, Sparkles, Lock } from "lucide-react";
+import { SlideToUnlock } from './SlideToUnlock';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from "@/lib/utils";
