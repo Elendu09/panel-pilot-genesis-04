@@ -825,23 +825,42 @@ const PanelOnboardingV2 = () => {
               onPaymentSuccess={handlePaymentSuccess}
               paymentCompleted={paymentCompleted}
               trialStarted={trialStarted}
+              onSlideUnlocked={() => setTrialSlideUnlocked(true)}
+              slideUnlocked={trialSlideUnlocked}
               onSkip={async () => {
                 // Trial: mark trial started but NOT payment completed
                 setTrialStarted(true);
                 setPaymentCompleted(false);
+                setTrialPlan(selectedPlan as 'basic' | 'pro');
+                setTrialSlideUnlocked(false);
                 markStepComplete(currentStep);
                 // Persist to DB
                 if (createdPanelIdRef.current) {
+                  const planPrices = { basic: 5, pro: 15 };
                   const progressData = {
                     panelName, description, selectedPlan, subdomain, customDomain,
                     domainType, primaryColor, secondaryColor, paymentCompleted: false,
-                    trialStarted: true,
+                    trialStarted: true, trialPlan: selectedPlan,
                     selectedTheme, brandingMode, seoTitle, seoDescription, seoKeywords, currency
                   };
                   await supabase.from('panels').update({
                     onboarding_data: progressData,
                     subscription_status: 'trial',
+                    subscription_tier: selectedPlan,
                   }).eq('id', createdPanelIdRef.current);
+                  
+                  // Upsert trial subscription record
+                  const trialEndsAt = new Date();
+                  trialEndsAt.setDate(trialEndsAt.getDate() + 3);
+                  await supabase.from('panel_subscriptions').upsert({
+                    panel_id: createdPanelIdRef.current,
+                    plan_type: selectedPlan,
+                    price: planPrices[selectedPlan as 'basic' | 'pro'],
+                    status: 'trial' as any,
+                    started_at: new Date().toISOString(),
+                    expires_at: trialEndsAt.toISOString(),
+                    trial_ends_at: trialEndsAt.toISOString(),
+                  }, { onConflict: 'panel_id' });
                 }
               }}
             />
