@@ -366,13 +366,13 @@ export const OnboardingPaymentStep = ({
             <CheckCircle2 className="w-4 h-4" />
           </Button>
         ) : trialStarted ? (
-          <Button 
-            className="flex-1 gap-2 bg-amber-600 hover:bg-amber-600 cursor-default"
-            disabled
-          >
-            <Clock className="w-4 h-4" />
-            Trial Active — Click Next to continue
-          </Button>
+          <div className="flex-1 space-y-3">
+            <SlideToUnlock 
+              onUnlock={() => onSlideUnlocked?.()}
+              unlocked={slideUnlocked}
+              label="Slide right to continue"
+            />
+          </div>
         ) : (
           <Button 
             className={cn(
