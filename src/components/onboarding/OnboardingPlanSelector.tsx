@@ -90,6 +90,7 @@ const plans: Plan[] = [
 interface OnboardingPlanSelectorProps {
   selectedPlan: 'free' | 'basic' | 'pro';
   onSelectPlan: (plan: 'free' | 'basic' | 'pro') => void;
+  lockedPlan?: 'free' | 'basic' | 'pro' | null;
 }
 
 export const OnboardingPlanSelector = ({ selectedPlan, onSelectPlan }: OnboardingPlanSelectorProps) => {
