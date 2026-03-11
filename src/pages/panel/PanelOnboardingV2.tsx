@@ -73,6 +73,8 @@ const PanelOnboardingV2 = () => {
   const createdPanelIdRef = useRef<string | null>(null);
   const [paymentCompleted, setPaymentCompleted] = useState(false);
   const [trialStarted, setTrialStarted] = useState(false);
+  const [trialSlideUnlocked, setTrialSlideUnlocked] = useState(false);
+  const [trialPlan, setTrialPlan] = useState<'basic' | 'pro' | null>(null);
   const [currency, setCurrency] = useState('USD');
   const [domainVerificationState, setDomainVerificationState] = useState<{ step: 'configure' | 'txt-pending' | 'dns-pending' | 'verified'; token: string | null }>({ step: 'configure', token: null });
   
