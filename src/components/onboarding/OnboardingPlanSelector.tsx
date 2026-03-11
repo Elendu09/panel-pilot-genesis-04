@@ -93,7 +93,7 @@ interface OnboardingPlanSelectorProps {
   lockedPlan?: 'free' | 'basic' | 'pro' | null;
 }
 
-export const OnboardingPlanSelector = ({ selectedPlan, onSelectPlan }: OnboardingPlanSelectorProps) => {
+export const OnboardingPlanSelector = ({ selectedPlan, onSelectPlan, lockedPlan }: OnboardingPlanSelectorProps) => {
   return (
     <div className="space-y-6">
       <div className="text-center">
@@ -101,10 +101,20 @@ export const OnboardingPlanSelector = ({ selectedPlan, onSelectPlan }: Onboardin
         <p className="text-muted-foreground">Select a plan that fits your business needs</p>
       </div>
 
+      {lockedPlan && (
+        <div className="p-4 rounded-xl border border-primary/30 bg-primary/5 flex items-center gap-3">
+          <Lock className="w-5 h-5 text-primary shrink-0" />
+          <p className="text-sm text-muted-foreground">
+            You've already subscribed to the <strong className="text-foreground">{lockedPlan.charAt(0).toUpperCase() + lockedPlan.slice(1)}</strong> plan. Continue with your current plan.
+          </p>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {plans.map((plan) => {
           const Icon = plan.icon;
           const isSelected = selectedPlan === plan.id;
+          const isLocked = !!lockedPlan && plan.id !== lockedPlan;
           
           return (
             <motion.div
