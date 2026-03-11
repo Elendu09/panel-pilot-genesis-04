@@ -133,13 +133,14 @@ export const OnboardingPlanSelector = ({ selectedPlan, onSelectPlan, lockedPlan 
               )}
               <Card 
                 className={cn(
-                  "bg-card/60 backdrop-blur-xl border-2 h-full cursor-pointer transition-all duration-300",
-                  plan.highlighted && "border-primary/50 shadow-lg shadow-primary/10",
-                  isSelected && "ring-2 ring-primary border-primary",
-                  !isSelected && "border-border/50 hover:border-primary/30",
-                  plan.glowColor
+                  "bg-card/60 backdrop-blur-xl border-2 h-full transition-all duration-300",
+                  isLocked ? "cursor-not-allowed opacity-50" : "cursor-pointer",
+                  plan.highlighted && !isLocked && "border-primary/50 shadow-lg shadow-primary/10",
+                  isSelected && !isLocked && "ring-2 ring-primary border-primary",
+                  !isSelected && !isLocked && "border-border/50 hover:border-primary/30",
+                  !isLocked && plan.glowColor
                 )}
-                onClick={() => onSelectPlan(plan.id)}
+                onClick={() => !isLocked && onSelectPlan(plan.id)}
               >
                 <div className={cn(
                   "absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl opacity-30",
